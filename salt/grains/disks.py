@@ -169,13 +169,19 @@ def _windows_disks():
         drive_info = [drive_info]
 
     for drive in drive_info:
+        media_type = drive.get("MediaType")
         # Make sure we have a valid drive type
-        if drive["MediaType"].lower() not in ["hdd", "ssd", "scm", "unspecified"]:
-            log.trace(f'Unknown media type: {drive["MediaType"]}')
+        if media_type is None or media_type.lower() not in [
+            "hdd",
+            "ssd",
+            "scm",
+            "unspecified",
+        ]:
+            log.trace(f"Unknown media type: {media_type}")
             continue
         device = rf'\\.\PhysicalDrive{drive["DeviceID"]}'
         ret["disks"].append(device)
-        if drive["MediaType"].lower() == "ssd":
+        if media_type.lower() == "ssd":
             ret["ssds"].append(device)
 
     return ret
