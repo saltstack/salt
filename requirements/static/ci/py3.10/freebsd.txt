@@ -148,6 +148,8 @@ gitpython==3.1.43
     # via -r requirements/static/ci/common.in
 google-auth==2.27.0
     # via kubernetes
+greenlet==3.2.3
+    # via sqlalchemy
 hglib==2.6.2
     # via -r requirements/static/ci/freebsd.in
 idna==3.7
@@ -487,6 +489,8 @@ six==1.16.0
     #   websocket-client
 smmap==5.0.1
     # via gitdb
+sqlalchemy==2.0.41
+    # via -r requirements/static/ci/common.in
 sqlparse==0.5.0
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
@@ -529,6 +533,7 @@ typing-extensions==4.8.0
     # via
     #   napalm
     #   pytest-system-statistics
+    #   sqlalchemy
 urllib3==1.26.20
     # via
     #   -c requirements/static/ci/../pkg/py3.10/freebsd.txt
