@@ -73,12 +73,12 @@ Install libraries
 
 (Optional) If you are using the Salt Windows package manager with package
 definition files hosted on a Salt Git repo, install the libraries ``GitPython``
-or ``pygit2``\.
+or ``pygit2``.
 
 .. _populate-git-repo:
 
 Populate the local Git repository
-**********************************
+*********************************
 
 The SLS files used to install Windows packages are not distributed by default
 with Salt. Assuming no changes to the default configuration (``file_roots``),
@@ -210,11 +210,11 @@ winrepo_dir_ng
 :conf_master:`winrepo_dir_ng` (str)
 
 The location in the ``file_roots`` where the winrepo files are kept. The default
-is ``/srv/salt/win/repo-ng``\.
+is ``/srv/salt/win/repo-ng``.
 
 .. warning::
     You can change the location of the winrepo directory. However, it must
-    always be set to a path that is inside the ``file_roots``\.  Otherwise, the
+    always be set to a path that is inside the ``file_roots``.  Otherwise, the
     software definition files will be unreachable by the minion.
 
 .. important::
@@ -271,7 +271,7 @@ winrepo_provider
 
 :conf_master:`winrepo_provider` (str)
 
-The provider to be used for winrepo. Default is ``pygit2``\. Falls back to
+The provider to be used for winrepo. Default is ``pygit2``. Falls back to
 ``gitpython`` when ``pygit2`` is not available
 
 winrepo_ssl_verify
@@ -288,7 +288,7 @@ Master Configuration (pygit2)
 =============================
 
 The following configuration options only apply when the
-:conf_master:`winrepo_provider` option is set to ``pygit2``\.
+:conf_master:`winrepo_provider` option is set to ``pygit2``.
 
 - :conf_master:`winrepo_insecure_auth`
 - :conf_master:`winrepo_passphrase`
@@ -390,7 +390,7 @@ winrepo_cachefile
 :conf_minion:`winrepo_cachefile` (str)
 
 The file name of the winrepo cache file. The file is placed at the root of
-``winrepo_dir_ng``\. Default is ``winrepo.p``\.
+``winrepo_dir_ng``. Default is ``winrepo.p``.
 
 winrepo_source_dir
 ------------------
@@ -398,13 +398,13 @@ winrepo_source_dir
 :conf_minion:`winrepo_source_dir` (str)
 
 The location of the .sls files on the Salt file server. This allows for using
-different environments. Default is ``salt://win/repo-ng/``\.
+different environments. Default is ``salt://win/repo-ng/``.
 
 .. warning::
     If the default for ``winrepo_dir_ng`` is changed, this setting may need to
     be changed on each minion. The default setting for ``winrepo_dir_ng`` is
-    ``/srv/salt/win/repo-ng``\. If that were changed to
-    ``/srv/salt/new/repo-ng``\, then the ``winrepo_source_dir`` would need to be
+    ``/srv/salt/win/repo-ng``. If that were changed to
+    ``/srv/salt/new/repo-ng``, then the ``winrepo_source_dir`` would need to be
     changed to ``salt://new/repo-ng``
 
 .. _masterless-minion-config:
@@ -438,17 +438,17 @@ winrepo_dir_ng
 :conf_minion:`winrepo_dir_ng` (str)
 
 The location in the ``file_roots`` where the winrepo files are kept. The default
-is ``C:\salt\srv\salt\win\repo-ng``\.
+is ``C:\salt\srv\salt\win\repo-ng``.
 
 .. warning::
     You can change the location of the winrepo directory. However, it must
-    always be set to a path that is inside the ``file_roots``\.  Otherwise, the
+    always be set to a path that is inside the ``file_roots``.  Otherwise, the
     software definition files will be unreachable by the minion.
 
 .. important::
     A common mistake is to change the ``file_roots`` setting and fail to update
     the ``winrepo_dir_ng`` and ``winrepo_dir`` settings so that they are inside
-    the ``file_roots``\. You might also want to verify ``winrepo_source_dir`` on
+    the ``file_roots``. You might also want to verify ``winrepo_source_dir`` on
     the minion as well.
 
 winrepo_remotes
@@ -812,12 +812,12 @@ create the metadata file on the minion.
 
 You can maintain standalone package definition files that point to software on
 other servers or on the internet. In this case the file name is the short name
-of the software with the ``.sls`` extension, for example,``firefox.sls``\.
+of the software with the ``.sls`` extension, for example,``firefox.sls``.
 
 You can also store the binaries for your software together with their software
 definition files in their own directory. In this scenario, the directory name
 is the short name for the software and the package definition file stored that
-directory is named ``init.sls``\.
+directory is named ``init.sls``.
 
 Look at the following example directory structure on a Linux master assuming
 default config settings:
@@ -862,7 +862,7 @@ In the above directory structure:
   files.
 
   - A folder for MS Office 2013 that contains the installer files for all the
-    MS Office software and a package definition file named ``init.sls``\.
+    MS Office software and a package definition file named ``init.sls``.
   - Two additional standalone package definition files ``openssl.sls`` and
     ``zoom.sls`` to install OpenSSl and Zoom.
 
@@ -871,7 +871,7 @@ In the above directory structure:
 
 .. warning::
     Do not modify the files in the ``salt-winrepo-ng`` directory as it breaks
-    future runs of ``winrepo.update_git_repos``\.
+    future runs of ``winrepo.update_git_repos``.
 
 .. warning::
     Do not place any custom software definition files in the ``salt-winrepo-ng``
@@ -920,7 +920,7 @@ three indentation levels:
   numbers for a package but they must be unique within the file.
 
 .. note::
-    When running ``pkg.list_pkgs``\, the short name and version number are
+    When running ``pkg.list_pkgs``, the short name and version number are
     displayed when Salt finds a match in the repo. Otherwise, the full package
     name is displayed.
 
@@ -980,7 +980,7 @@ Here is a pure YAML example of a simple package definition file for Firefox:
         uninstaller: '%ProgramFiles(x86)%/Mozilla Firefox/uninstall/helper.exe'
         uninstall_flags: '/S'
 
-The first line is the short name of the software which is ``firefox_x64``\.
+The first line is the short name of the software which is ``firefox_x64``.
 
 .. important::
     The short name must be unique across all other short names in the software
@@ -991,7 +991,7 @@ The second line is the ``software version`` and is indented two spaces.
 .. important::
     The version number must be enclosed in quotes or the YAML parser removes the
     trailing zeros. For example, if the version number ``74.0`` is not enclosed
-    within quotes, then the version number is rendered as ``74``\.
+    within quotes, then the version number is rendered as ``74``.
 
 The lines following the ``version`` are indented two more spaces and contain all
 the information needed to install the Firefox package.
@@ -1044,13 +1044,13 @@ In this example, JINJA is used to generate a package definition file that
 defines how to install 12 versions of Firefox. Jinja is used to create a list of
 available versions. The list is iterated through a ``for loop`` where each
 version is placed in the ``version`` variable. The version is inserted
-everywhere there is a ``{{ version }}`` marker inside the ``for loop``\.
+everywhere there is a ``{{ version }}`` marker inside the ``for loop``.
 
 The single variable (``lang``) defined at the top of the package definition
 identifies the language of the package. You can access the Salt modules using
 the ``salt`` keyword. In this case, the ``config.get`` function is invoked to
 retrieve the language setting. If the ``lang`` variable is not defined then the
-default value is ``en-US``\.
+default value is ``en-US``.
 
 .. _example-latest:
 
@@ -1078,9 +1078,9 @@ example of a package definition file to install the latest version of Chrome.
 
 In the above example:
 
-- ``Version`` is set to ``latest``\. Salt then installs the latest version of
+- ``Version`` is set to ``latest``. Salt then installs the latest version of
   Chrome at the URL and displays that version.
-- ``msiexec`` is set to ``True``\, hence the software is installed using an MSI.
+- ``msiexec`` is set to ``True``, hence the software is installed using an MSI.
 
 .. _example-patch:
 
@@ -1121,7 +1121,7 @@ In the above example:
   include any special values.
 
 Version ``1.1`` of the software uses the same installer file as Version
-``1.0``\. Now, to apply a patch to Version 1.0, make the following changes in
+``1.0``. Now, to apply a patch to Version 1.0, make the following changes in
 the package definition file:
 
 - Place the patch file (MSP file) in the same directory as the installer file
@@ -1151,7 +1151,7 @@ full_name (str)
 
 The full name of the software as shown in "Add/Remove Programs". You can also
 retrieve the full name of the package by installing the package manually and
-then running ``pkg.list_pkgs``\. Here's an example of the output from
+then running ``pkg.list_pkgs``. Here's an example of the output from
 ``pkg.list_pkgs``:
 
 .. code-block:: bash
@@ -1168,7 +1168,7 @@ then running ``pkg.list_pkgs``\. Here's an example of the output from
         salt-minion-py3:
             3001
 
-Notice the full Name for Firefox: ``Mozilla Firefox 74.0 (x64 en-US)``\. The
+Notice the full Name for Firefox: ``Mozilla Firefox 74.0 (x64 en-US)``. The
 ``full_name`` parameter in the package definition file must match this name.
 
 The example below shows the ``pkg.list_pkgs`` for a machine that has Mozilla
@@ -1188,7 +1188,7 @@ Firefox.
         salt-minion-py3:
             3001
 
-On running ``pkg.list_pkgs``\, if any of the software installed on the machine
+On running ``pkg.list_pkgs``, if any of the software installed on the machine
 matches the full name defined in any one of the software definition files in the
 repository, then the package name is displayed in the output.
 
@@ -1198,9 +1198,9 @@ repository, then the package name is displayed in the output.
     state system.
 
 .. note::
-    You can successfully install packages using ``pkg.install``\, even if the
+    You can successfully install packages using ``pkg.install``, even if the
     ``full_name`` or the version number doesn't match. The module will complete
-    successfully, but continue to display the full name in ``pkg.list_pkgs``\.
+    successfully, but continue to display the full name in ``pkg.list_pkgs``.
     If this is happening, verify that the ``full_name`` and the ``version``
     match exactly what is displayed in Add/Remove Programs.
 
@@ -1217,7 +1217,7 @@ repository, then the package name is displayed in the output.
 installer (str)
 ---------------
 
-The path to the binary (``.exe``\, ``.msi``) that installs the package.
+The path to the binary (``.exe``, ``.msi``) that installs the package.
 
 This can be a local path or a URL. If it is a URL or a Salt path (``salt://``),
 then the package is cached locally and then executed. If it is a path to a file
@@ -1229,7 +1229,7 @@ on disk or a file share, then it is executed directly.
     - Create a sub folder named after the package.
     - Store the package definition file named ``init.sls`` and the binary
       installer in the same sub folder if you are hosting those files on the
-      ``file_roots``\.
+      ``file_roots``.
 
 .. note::
     The ``pkg.refresh_db`` command processes all ``.sls`` files in all sub
@@ -1326,19 +1326,19 @@ allusers (bool)
 ---------------
 
 This parameter is specific to ``.msi`` installations. It tells ``msiexec`` to
-install the software for all users. The default is ``True``\.
+install the software for all users. The default is ``True``.
 
 cache_dir (bool)
 ----------------
 
 This setting requires the software to be stored on the ``file_roots`` and only
-applies to URLs that begin with ``salt://``\. If set to ``True``\, then the
+applies to URLs that begin with ``salt://``. If set to ``True``, then the
 entire directory where the installer resides is recursively cached. This is
 useful for installers that depend on other files in the same directory for
 installation.
 
 .. warning::
-    If set to ``True``\, then all files and directories in the same location as
+    If set to ``True``, then all files and directories in the same location as
     the installer file are copied down to the minion. For example, if you place
     your package definition file with ``cache_dir: True`` in the root of winrepo
     (``/srv/salt/win/repo-ng``) then the entire contents of winrepo is cached to
@@ -1361,7 +1361,7 @@ cache_file (str)
 ----------------
 
 This setting requires the file to be stored on the ``file_roots`` and only
-applies to URLs that begin with ``salt://``\. It indicates that the single file
+applies to URLs that begin with ``salt://``. It indicates that the single file
 specified is copied down for use with the installer. It is copied to the same
 location as the installer. Use this setting instead of ``cache_dir`` when you
 only need to cache a single file.
@@ -1369,7 +1369,7 @@ only need to cache a single file.
 use_scheduler (bool)
 --------------------
 
-If set to ``True``\, Windows uses the task scheduler to run the installation. A
+If set to ``True``, Windows uses the task scheduler to run the installation. A
 one-time task is created in the task scheduler and launched. The return to the
 minion is that the task was launched successfully, not that the software was
 installed successfully.
@@ -1387,7 +1387,7 @@ source_hash (str)
 -----------------
 
 This setting informs Salt to compare a hash sum of the installer to the provided
-hash sum before execution. The value can be formatted as ``<hash_algorithm>=<hash_sum>``\,
+hash sum before execution. The value can be formatted as ``<hash_algorithm>=<hash_sum>``,
 or it can be a URI to a file containing the hash sum.
 
 For a list of supported algorithms, see the `hashlib documentation
@@ -1541,7 +1541,7 @@ these directories when a repo is removed from the config file.
     salt-run winrepo.update_git_repos clean=True
 
 If a mix of git and non-git Windows Repo definition files are used, then
-do not pass ``clean=True``\, as it removes the directories containing non-git
+do not pass ``clean=True``, as it removes the directories containing non-git
 definitions.
 
 .. _name-collisions:
@@ -1564,7 +1564,7 @@ are detected. Consider the following configuration:
 With the above configuration, the :mod:`winrepo.update_git_repos <salt.runners.winrepo.update_git_repos>`
 runner fails to execute as all three repos would be checked out to the same
 directory. To resolve this conflict, use the per-remote parameter called
-``name``\.
+``name``.
 
 .. code-block:: yaml
 
