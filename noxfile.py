@@ -283,7 +283,7 @@ def _install_requirements(
     onedir=False,
 ):
     if onedir and IS_LINUX:
-        session_run_always(session, "python3", "-m", "relenv", "toolchain", "fetch")
+        session_run_always(session, "python3", "-m", "pip", "install", "ppbt")
 
     if not _upgrade_pip_setuptools_and_wheel(session):
         return False
