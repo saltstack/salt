@@ -3,6 +3,7 @@ import logging
 import pathlib
 import sys
 import textwrap
+import time
 from subprocess import CompletedProcess
 
 import ptscripts
@@ -18,6 +19,14 @@ def _add_as_extra_site_packages(self) -> None:
         capture=True,
         check=False,
     )
+    if ret.returncode == 3221225595:
+        self.ctx.info("Failed once!")
+        time.sleep(1)
+        ret = self.run_code(
+            "import json,site; print(json.dumps(site.getsitepackages()))",
+            capture=True,
+            check=False,
+        )
     if ret.returncode:
         self.ctx.error(
             f"1 Failed to get the virtualenv's site packages path: {ret.returncode} {ret.stdout.decode()}  {ret.stderr.decode()}"
@@ -111,7 +120,6 @@ ptscripts.register_tools_module("tools.precommit.loader")
 ptscripts.register_tools_module("tools.release", venv_config=RELEASE_VENV_CONFIG)
 ptscripts.register_tools_module("tools.testsuite")
 ptscripts.register_tools_module("tools.testsuite.download")
-ptscripts.register_tools_module("tools.vm")
 
 for name in ("boto3", "botocore", "urllib3"):
     logging.getLogger(name).setLevel(logging.INFO)
