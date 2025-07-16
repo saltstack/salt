@@ -3,81 +3,9 @@ import logging
 import pathlib
 import sys
 import textwrap
-import time
-from subprocess import CompletedProcess
 
 import ptscripts
-import ptscripts.virtualenv
 from ptscripts.models import DefaultPipConfig, VirtualEnvPipConfig
-
-
-def _add_as_extra_site_packages(self) -> None:
-    if self.config.add_as_extra_site_packages is False:
-        return
-    ret = self.run_code(
-        "import json,site; print(json.dumps(site.getsitepackages()))",
-        capture=True,
-        check=False,
-    )
-    if ret.returncode == 3221225595:
-        self.ctx.info("Failed once!")
-        time.sleep(1)
-        ret = self.run_code(
-            "import json,site; print(json.dumps(site.getsitepackages()))",
-            capture=True,
-            check=False,
-        )
-    if ret.returncode:
-        self.ctx.error(
-            f"1 Failed to get the virtualenv's site packages path: {ret.returncode} {ret.stdout.decode()}  {ret.stderr.decode()}"
-        )
-        self.ctx.exit(1)
-    for path in json.loads(ret.stdout.strip().decode()):
-        if path not in sys.path:
-            sys.path.append(path)
-
-
-def _remove_extra_site_packages(self) -> None:
-    if self.config.add_as_extra_site_packages is False:
-        return
-    ret = self.run_code(
-        "import json,site; print(json.dumps(site.getsitepackages()))",
-        capture=True,
-        check=False,
-    )
-    if ret.returncode:
-        self.ctx.error(
-            f"2 Failed to get the virtualenv's site packages path: {ret.stdout.decode()} {ret.stderr.decode()}"
-        )
-        self.ctx.exit(1)
-    for path in json.loads(ret.stdout.strip().decode()):
-        if path in sys.path:
-            sys.path.remove(path)
-
-
-def run_code(
-    self, code_string: str, python: str | None = None, **kwargs
-) -> CompletedProcess[bytes]:
-    """
-    Run a code string against the virtual environment.
-    """
-    if code_string.startswith("\n"):
-        code_string = code_string[1:]
-    code_string = textwrap.dedent(code_string).rstrip()
-    # log.debug("Code to run passed to python:\n>>>>>>>>>>\n%s\n<<<<<<<<<<", code_string)
-    self.ctx.info(f"Python iterpreter {self.venv_python}")
-    if python is None:
-        python = str(self.venv_python)
-    return self.run(python, "-c", code_string, **kwargs)
-
-
-ptscripts.virtualenv.VirtualEnv._add_as_extra_site_packages = (
-    _add_as_extra_site_packages
-)
-ptscripts.virtualenv.VirtualEnv._remove_extra_site_packages = (
-    _remove_extra_site_packages
-)
-ptscripts.virtualenv.VirtualEnv.run_code = run_code
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 REQUIREMENTS_FILES_PATH = REPO_ROOT / "requirements"
