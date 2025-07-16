@@ -73,12 +73,26 @@ def test_ansible_playbook(salt_call_cli, ansible_inventory, tmp_path):
     ---
     - hosts: all
       tasks:
-      - name: remove postfix
-        yum:
+      - name: remove postfix dnf
+        ansible.builtin.dnf:
           name: postfix
           state: absent
         become: true
-        become_user: root
+        when: ansible_pkg_mgr == 'dnf'
+
+      - name: remove postfix yum
+        ansible.builtin.yum:
+          name: postfix
+          state: absent
+        become: true
+        when: ansible_pkg_mgr == 'yum'
+
+      - name: remove postfix apt
+        ansible.builtin.apt:
+          name: postfix
+          state: absent
+        become: true
+        when: ansible_pkg_mgr == 'apt'
     """
     )
     remove_playbook = rundir / "remove.yml"
@@ -88,12 +102,26 @@ def test_ansible_playbook(salt_call_cli, ansible_inventory, tmp_path):
     ---
     - hosts: all
       tasks:
-      - name: install postfix
-        yum:
+      - name: install postfix dnf
+        ansible.builtin.dnf:
           name: postfix
           state: present
         become: true
-        become_user: root
+        when: ansible_pkg_mgr == 'dnf'
+
+      - name: install postfix yum
+        ansible.builtin.yum:
+          name: postfix
+          state: present
+        become: true
+        when: ansible_pkg_mgr == 'yum'
+
+      - name: install postfix apt
+        ansible.builtin.apt:
+          name: postfix
+          state: present
+        become: true
+        when: ansible_pkg_mgr == 'apt'
     """
     )
     install_playbook = rundir / "install.yml"
