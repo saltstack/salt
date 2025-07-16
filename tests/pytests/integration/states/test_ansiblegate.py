@@ -74,11 +74,10 @@ def test_ansible_playbook(salt_call_cli, ansible_inventory, tmp_path):
     - hosts: all
       tasks:
       - name: remove postfix
-        yum:
+        dnf:
           name: postfix
           state: absent
         become: true
-        become_user: root
     """
     )
     remove_playbook = rundir / "remove.yml"
@@ -89,11 +88,10 @@ def test_ansible_playbook(salt_call_cli, ansible_inventory, tmp_path):
     - hosts: all
       tasks:
       - name: install postfix
-        yum:
+        dnf:
           name: postfix
           state: present
         become: true
-        become_user: root
     """
     )
     install_playbook = rundir / "install.yml"
