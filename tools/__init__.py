@@ -1,9 +1,55 @@
+import json
 import logging
 import pathlib
 import sys
 
 import ptscripts
+import ptscripts.virtualenv
 from ptscripts.models import DefaultPipConfig, VirtualEnvPipConfig
+
+
+def _add_as_extra_site_packages(self) -> None:
+    if self.config.add_as_extra_site_packages is False:
+        return
+    ret = self.run_code(
+        "import json,site; print(json.dumps(site.getsitepackages()))",
+        capture=True,
+        check=False,
+    )
+    if ret.returncode:
+        self.ctx.error(
+            f"1 Failed to get the virtualenv's site packages path: {ret.stdout.decode()}  {ret.stderr.decode()}"
+        )
+        self.ctx.exit(1)
+    for path in json.loads(ret.stdout.strip().decode()):
+        if path not in sys.path:
+            sys.path.append(path)
+
+
+def _remove_extra_site_packages(self) -> None:
+    if self.config.add_as_extra_site_packages is False:
+        return
+    ret = self.run_code(
+        "import json,site; print(json.dumps(site.getsitepackages()))",
+        capture=True,
+        check=False,
+    )
+    if ret.returncode:
+        self.ctx.error(
+            f"2 Failed to get the virtualenv's site packages path: {ret.stdout.decode()} {ret.stderr.decode()}"
+        )
+        self.ctx.exit(1)
+    for path in json.loads(ret.stdout.strip().decode()):
+        if path in sys.path:
+            sys.path.remove(path)
+
+
+ptscripts.virtualenv.VirtualEnv._add_as_extra_site_packages = (
+    _add_as_extra_site_packages
+)
+ptscripts.virtualenv.VirtualEnv._remove_extra_site_packages = (
+    _remove_extra_site_packages
+)
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 REQUIREMENTS_FILES_PATH = REPO_ROOT / "requirements"
