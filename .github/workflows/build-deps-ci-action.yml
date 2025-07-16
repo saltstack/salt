@@ -301,7 +301,7 @@ jobs:
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         uses: ./.github/actions/setup-python-tools-scripts
         with:
-          cache-prefix: ${{ inputs.cache-prefix }}-build-deps-ci
+          cache-prefix: ${{ inputs.cache-prefix }}-build-deps-ci-${{ matrix.arch }}
 
       - name: Install System Dependencies
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
