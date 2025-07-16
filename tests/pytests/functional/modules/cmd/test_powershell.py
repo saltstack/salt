@@ -207,5 +207,6 @@ def test_cmd_run_encoded_cmd_runas(shell, account, cmd, expected, encoded_cmd):
         encoded_cmd=encoded_cmd,
         runas=account.username,
         password=account.password,
+        redirect_stderr=False,
     )
     assert ret == expected
