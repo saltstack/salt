@@ -1876,7 +1876,7 @@ def ci_test_onedir_pkgs(session):
 
     if IS_LINUX:
         # Fetch the toolchain
-        session_run_always(session, "python3", "-m", "relenv", "toolchain", "fetch")
+        session_run_always(session, "python3", "-m", "pip", "install", "ppbt")
 
     # Install requirements
     if _upgrade_pip_setuptools_and_wheel(session):
