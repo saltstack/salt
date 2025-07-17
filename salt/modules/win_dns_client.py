@@ -81,8 +81,8 @@ def rm_dns(ip, interface="Local Area Connection"):
         "ip",
         "delete",
         "dns",
-        f'"{interface}"',
-        f'"{ip}"',
+        interface,
+        ip,
         "validate=no",
     ]
     return __salt__["cmd.retcode"](cmd, python_shell=False) == 0
@@ -125,8 +125,8 @@ def add_dns(ip, interface="Local Area Connection", index=1):
         "ip",
         "add",
         "dns",
-        f'"{interface}"',
-        f'"{ip}"',
+        interface,
+        ip,
         f"index={index}",
         "validate=no",
     ]
@@ -144,7 +144,7 @@ def dns_dhcp(interface="Local Area Connection"):
 
         salt '*' win_dns_client.dns_dhcp <interface>
     """
-    cmd = ["netsh", "interface", "ip", "set", "dns", f'"{interface}"', "source=dhcp"]
+    cmd = ["netsh", "interface", "ip", "set", "dns", interface, "source=dhcp"]
     return __salt__["cmd.retcode"](cmd, python_shell=False) == 0
 
 
