@@ -23,26 +23,26 @@ class EnabledTest(ModuleCase):
     )
 
     @pytest.mark.skip_on_windows(reason="Skip on Windows OS")
-    @pytest.mark.skip_on_freebsd
-    def test_shell_default_enabled(self):
+    def test_shell_default_disabled(self):
         """
-        ensure that python_shell defaults to True for cmd.run
-        """
-        enabled_ret = "3\nsaltines"  # the result of running self.cmd in a shell
-        ret = self.run_function("cmd.run", [self.cmd])
-        self.assertEqual(ret.strip(), enabled_ret)
-
-    @pytest.mark.skip_on_windows(reason="Skip on Windows OS")
-    def test_shell_disabled(self):
-        """
-        test shell disabled output for cmd.run
+        ensure that python_shell defaults to False for cmd.run
         """
         disabled_ret = (
             "first\nsecond\nthird\n|\nwc\n-l\n;\nexport\nSALTY_VARIABLE=saltines"
             "\n&&\necho\n$SALTY_VARIABLE\n;\necho\nduh\n&>\n/dev/null"
         )
-        ret = self.run_function("cmd.run", [self.cmd], python_shell=False)
+        ret = self.run_function("cmd.run", [self.cmd])
         self.assertEqual(ret, disabled_ret)
+
+    @pytest.mark.skip_on_windows(reason="Skip on Windows OS")
+    @pytest.mark.skip_on_freebsd
+    def test_shell_enabled(self):
+        """
+        test shell enabled output for cmd.run
+        """
+        enabled_ret = "3\nsaltines"  # the result of running self.cmd in a shell
+        ret = self.run_function("cmd.run", [self.cmd], python_shell=True)
+        self.assertEqual(ret.strip(), enabled_ret)
 
     @pytest.mark.skip_on_windows(reason="Skip on Windows OS")
     @pytest.mark.skip_on_freebsd
