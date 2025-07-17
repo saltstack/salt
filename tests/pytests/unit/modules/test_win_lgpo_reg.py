@@ -135,6 +135,9 @@ def reg_pol_user():
         vdata="squidward",
         vtype="REG_SZ",
     )
+    assert salt.utils.win_reg.value_exists(
+        hive="HKCU", key="SOFTWARE\\MyKey1", vname="MyValue1"
+    )
     salt.utils.win_reg.set_value(
         hive="HKCU",
         key="SOFTWARE\\MyKey2",
@@ -142,9 +145,14 @@ def reg_pol_user():
         vdata=["spongebob", "squarepants"],
         vtype="REG_MULTI_SZ",
     )
+    assert salt.utils.win_reg.value_exists(
+        hive="HKCU", key="SOFTWARE\\MyKey2", vname="MyValue3"
+    )
     yield
     salt.utils.win_reg.delete_key_recursive(hive="HKCU", key="SOFTWARE\\MyKey1")
     salt.utils.win_reg.delete_key_recursive(hive="HKCU", key="SOFTWARE\\MyKey2")
+    assert not salt.utils.win_reg.key_exists(hive="HKCU", key="SOFTWARE\\MyKey1")
+    assert not salt.utils.win_reg.key_exists(hive="HKCU", key="SOFTWARE\\MyKey2")
     class_info = salt.utils.win_lgpo_reg.CLASS_INFO
     reg_pol_file = class_info["User"]["policy_path"]
     with salt.utils.files.fopen(reg_pol_file, "wb") as f:
@@ -444,17 +452,9 @@ def test_user_set_value(empty_reg_pol_user):
     expected = {"data": 1, "type": "REG_DWORD"}
     result = lgpo_reg.get_value(key=key, v_name=v_name, policy_class="User")
     assert result == expected
-    # Test that the registry value has been set
-    expected = {
-        "hive": "HKCU",
-        "key": key,
-        "vname": v_name,
-        "vdata": 1,
-        "vtype": "REG_DWORD",
-        "success": True,
-    }
-    result = salt.utils.win_reg.read_value(hive="HKCU", key=key, vname=v_name)
-    assert result == expected
+    # Test that the registry value has not been set
+    result = salt.utils.win_reg.value_exists(hive="HKCU", key=key, vname=v_name)
+    assert result is False
 
 
 def test_user_set_value_existing_change(reg_pol_user):
@@ -464,16 +464,9 @@ def test_user_set_value_existing_change(reg_pol_user):
     lgpo_reg.set_value(key=key, v_name=v_name, v_data="1", policy_class="User")
     result = lgpo_reg.get_value(key=key, v_name=v_name, policy_class="User")
     assert result == expected
-    expected = {
-        "hive": "HKCU",
-        "key": key,
-        "vname": v_name,
-        "vdata": 1,
-        "vtype": "REG_DWORD",
-        "success": True,
-    }
-    result = salt.utils.win_reg.read_value(hive="HKCU", key=key, vname=v_name)
-    assert result == expected
+    # Test that the registry value has not been set
+    result = salt.utils.win_reg.value_exists(hive="HKCU", key=key, vname=v_name)
+    assert result is False
 
 
 def test_user_set_value_existing_no_change(reg_pol_user):
@@ -503,9 +496,9 @@ def test_user_disable_value(reg_pol_user):
     }
     result = lgpo_reg.get_key(key=key, policy_class="User")
     assert result == expected
-    # Test that the registry value has been removed
+    # Test that the registry value has not been removed
     result = salt.utils.win_reg.value_exists(hive="HKCU", key=key, vname="MyValue1")
-    assert result is False
+    assert result is True
 
 
 def test_user_disable_value_no_change(reg_pol_user):
@@ -533,9 +526,9 @@ def test_user_delete_value_existing(reg_pol_user):
     }
     result = lgpo_reg.get_key(key=key, policy_class="User")
     assert result == expected
-    # Test that the registry entry has been removed
-    result = salt.utils.win_reg.value_exists(hive="HKCU", key=key, vname="MyValue2")
-    assert result is False
+    # Test that the registry entry has not been removed
+    result = salt.utils.win_reg.value_exists(hive="HKCU", key=key, vname="MyValue1")
+    assert result is True
 
 
 def test_user_delete_value_no_change(empty_reg_pol_user):

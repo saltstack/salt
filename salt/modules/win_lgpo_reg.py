@@ -391,15 +391,20 @@ def set_value(
         log.error("LGPO_REG Mod: Failed to write registry.pol file")
         success = False
 
-    if not salt.utils.win_reg.set_value(
-        hive=hive,
-        key=key,
-        vname=v_name,
-        vdata=v_data,
-        vtype=v_type,
-    ):
-        log.error("LGPO_REG Mod: Failed to set registry entry")
-        success = False
+    # We only want to modify the actual registry value if this is machine policy
+    # The user policy will be applied by the user registry.pol when the user
+    # logs in. Setting it here only sets it on the user running the salt minion,
+    # most likely SYSTEM, which doesn't make sense here
+    if policy_class == "Machine":
+        if not salt.utils.win_reg.set_value(
+            hive=hive,
+            key=key,
+            vname=v_name,
+            vdata=v_data,
+            vtype=v_type,
+        ):
+            log.error("LGPO_REG Mod: Failed to set registry entry")
+            success = False
 
     return success
 
@@ -486,13 +491,18 @@ def disable_value(key, v_name, policy_class="machine"):
         log.error("LGPO_REG Mod: Failed to write registry.pol file")
         success = False
 
-    ret = salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
-    if not ret:
-        if ret is None:
-            log.debug("LGPO_REG Mod: Registry key/value already missing")
-        else:
-            log.error("LGPO_REG Mod: Failed to remove registry entry")
-            success = False
+    # We only want to modify the actual registry value if this is machine policy
+    # The user policy will be applied by the user registry.pol when the user
+    # logs in. Setting it here only sets it on the user running the salt minion,
+    # most likely SYSTEM, which doesn't make sense here
+    if policy_class == "Machine":
+        ret = salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
+        if not ret:
+            if ret is None:
+                log.debug("LGPO_REG Mod: Registry key/value already missing")
+            else:
+                log.error("LGPO_REG Mod: Failed to remove registry entry")
+                success = False
 
     return success
 
@@ -573,13 +583,18 @@ def delete_value(key, v_name, policy_class="Machine"):
         log.error("LGPO_REG Mod: Failed to write registry.pol file")
         success = False
 
-    ret = salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
-    if not ret:
-        if ret is None:
-            log.debug("LGPO_REG Mod: Registry key/value already missing")
-        else:
-            log.error("LGPO_REG Mod: Failed to remove registry entry")
-            success = False
+    # We only want to modify the actual registry value if this is machine policy
+    # The user policy will be applied by the user registry.pol when the user
+    # logs in. Setting it here only sets it on the user running the salt minion,
+    # most likely SYSTEM, which doesn't make sense here
+    if policy_class == "Machine":
+        ret = salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
+        if not ret:
+            if ret is None:
+                log.debug("LGPO_REG Mod: Registry key/value already missing")
+            else:
+                log.error("LGPO_REG Mod: Failed to remove registry entry")
+                success = False
 
     return success
 
