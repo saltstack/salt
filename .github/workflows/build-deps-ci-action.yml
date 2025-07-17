@@ -245,7 +245,7 @@ jobs:
 
   windows-dependencies:
     name: Windows
-    runs-on: windows-latest
+    runs-on: windows-2025
     if: ${{ toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
     env:
       USE_S3_CACHE: 'false'
