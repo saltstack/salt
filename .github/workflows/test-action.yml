@@ -1060,6 +1060,13 @@ jobs:
         run: |
           nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }}
 
+      - name: Show System Info
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_SYSTEM_INFO_ONLY: "1"
+        run: |
+          nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }}
+
       - name: Run Changed Tests
         id: run-fast-changed-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
