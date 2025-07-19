@@ -167,7 +167,7 @@ jobs:
       max-parallel: 2
       matrix:
         include: ${{ fromJSON(inputs.matrix)['windows'] }}
-    runs-on: windows-2025
+    runs-on: windows-latest
     env:
       PIP_INDEX_URL: https://pypi.org/simple
       USE_S3_CACHE: 'false'
