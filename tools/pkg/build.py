@@ -574,12 +574,14 @@ def onedir_dependencies(
         env["OPENSSL_DIR"] = f"{dest}"
 
     if platform == "linux":
+        # This installs the ppbt package. We'll remove it after installing all
+        # of our python packages.
         ctx.run(
             str(python_bin),
             "-m",
             "pip",
             "install",
-            "ppbt",
+            "relenv[toolchain]",
         )
 
     version_info = ctx.run(
@@ -790,6 +792,19 @@ def salt_onedir(
         dst = pathlib.Path(site_packages) / fname
         ctx.info(f"Copying '{src.relative_to(tools.utils.REPO_ROOT)}' to '{dst}' ...")
         shutil.copyfile(src, dst)
+
+    if platform == "linux":
+        # The ppbt package is very large. It is only needed when installing
+        # python modules that need to be compiled. Do not ship ppbt by default,
+        # it can be installed later if needed.
+        ctx.run(
+            str(python_executable),
+            "-m",
+            "pip",
+            "uninstall",
+            "-y",
+            "ppbt",
+        )
 
 
 def _check_pkg_build_files_exist(ctx: Context, **kwargs):
