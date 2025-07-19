@@ -283,7 +283,9 @@ def _install_requirements(
     onedir=False,
 ):
     if onedir and IS_LINUX:
-        session_run_always(session, "python3", "-m", "pip", "install", "ppbt")
+        session_run_always(
+            session, "python3", "-m", "pip", "install", "relenv[toolchain]"
+        )
 
     if not _upgrade_pip_setuptools_and_wheel(session):
         return False
@@ -1269,6 +1271,8 @@ def decompress_dependencies(session):
     session.log("Finding broken 'python' symlinks and configs under '.nox/' ...")
     for dirname in os.scandir(REPO_ROOT / ".nox"):
         scan_path = REPO_ROOT.joinpath(".nox", dirname, scripts_dir_name)
+
+        # Fix the values of the directories in a pyvenv.cfg file.
         config = pathlib.Path(dirname) / "pyvenv.cfg"
         values = {}
         if config.exists():
@@ -1290,6 +1294,7 @@ def decompress_dependencies(session):
                     fp.write(f"{key} = {values[key]}\n")
         else:
             session.log(f"{config} does not exist")
+
         script_paths = {str(p): p for p in os.scandir(scan_path)}
         fixed_shebang = f"#!{scan_path / 'python'}"
         for key in sorted(script_paths):
