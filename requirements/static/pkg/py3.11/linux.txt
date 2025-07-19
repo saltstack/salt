@@ -42,8 +42,10 @@ idna==3.7
     # via
     #   requests
     #   yarl
-immutables==0.15
-    # via contextvars
+immutables==0.21
+    # via
+    #   -r requirements/base.txt
+    #   contextvars
 importlib-metadata==6.6.0
     # via -r requirements/base.txt
 jaraco.collections==4.1.0
