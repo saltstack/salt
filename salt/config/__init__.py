@@ -14,6 +14,7 @@ import urllib.parse
 from copy import deepcopy
 
 import salt.crypt
+import salt.defaults
 import salt.defaults.exitcodes
 import salt.exceptions
 import salt.features
@@ -1020,6 +1021,7 @@ VALID_OPTS = immutabletypes.freeze(
         "keys.cache_driver": (type(None), str),
         "request_server_ttl": int,
         "request_server_aes_session": int,
+        "ipc_write_timeout": int,
     }
 )
 
@@ -1687,6 +1689,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "keys.cache_driver": "localfs_key",
         "request_server_aes_session": 0,
         "request_server_ttl": 0,
+        "ipc_write_timeout": salt.defaults.IPC_WRITE_TIMEOUT,
     }
 )
 

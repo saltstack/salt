@@ -607,9 +607,9 @@ class SaltPkgInstall:
             "import sys; print('{}.{}'.format(*sys.version_info))",
         ).stdout.strip()
 
-    def install(self, upgrade=False, downgrade=False):
+    def install(self, upgrade=False, downgrade=False, stop_services=True):
         self._install_pkgs(upgrade=upgrade, downgrade=downgrade)
-        if self.distro_id in ("ubuntu", "debian"):
+        if self.distro_id in ("ubuntu", "debian") and stop_services:
             self.stop_services()
 
     def stop_services(self):
@@ -878,12 +878,7 @@ class SaltPkgInstall:
                 )
                 assert ret.returncode in [0, 3010]
             else:
-                batch_file = pkg_path.parent / "install_nsis.cmd"
-                batch_content = f'start "" /wait {str(pkg_path)} /start-minion=0 /S'
-                with salt.utils.files.fopen(batch_file, "w") as fp:
-                    fp.write(batch_content)
-                # Now run the batch file
-                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
+                ret = self.proc.run(str(pkg_path), "/start-minion=0", "/S", timeout=600)
                 self._check_retcode(ret)
 
             # XXX This should be temporary. See also a similar thing happening

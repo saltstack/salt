@@ -17,6 +17,7 @@ import salt.grains.core
 import salt.modules.win_file as win_file
 import salt.modules.win_lgpo as win_lgpo
 import salt.utils.files
+import salt.utils.versions
 import salt.utils.win_dacl as win_dacl
 from tests.support.mock import patch
 
@@ -52,9 +53,9 @@ def configure_loader_modules(tmp_path):
 
 
 @pytest.fixture(scope="module")
-def osrelease():
+def osversion():
     grains = salt.grains.core.os_data()
-    yield grains.get("osrelease", None)
+    yield grains.get("osversion", None)
 
 
 @pytest.fixture
@@ -349,48 +350,6 @@ def _test_set_user_policy(lgpo_bin, shell, name, setting, exp_regexes):
             ],
         ),
         (
-            # This will need to be fixed for Windows Server 2025
-            # The bottom two options have been removed in 2025
-            # Though not set here, we're verifying there were set
-            "Specify settings for optional component installation and component repair",
-            "Disabled",
-            [
-                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*LocalSourcePath[\s]*DELETE",
-                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*UseWindowsUpdate[\s]*DELETE",
-                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*RepairContentServerSource[\s]*DELETE",
-            ],
-        ),
-        (
-            # This will need to be fixed for Windows Server 2025
-            # The bottom two options have been removed in 2025
-            "Specify settings for optional component installation and component repair",
-            {
-                "Alternate source file path": "",
-                "Never attempt to download payload from Windows Update": True,
-                "CheckBox_SidestepWSUS": False,
-            },
-            [
-                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*LocalSourcePath[\s]*EXSZ:",
-                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*UseWindowsUpdate[\s]*DWORD:2",
-                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*RepairContentServerSource[\s]*DELETE",
-            ],
-        ),
-        (
-            # This will need to be fixed for Windows Server 2025
-            # The bottom two options have been removed in 2025
-            "Specify settings for optional component installation and component repair",
-            {
-                "Alternate source file path": r"\\some\fake\server",
-                "Never attempt to download payload from Windows Update": True,
-                "CheckBox_SidestepWSUS": False,
-            },
-            [
-                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*LocalSourcePath[\s]*EXSZ:\\\\\\\\some\\\\fake\\\\server",
-                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*UseWindowsUpdate[\s]*DWORD:2",
-                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*RepairContentServerSource[\s]*DELETE",
-            ],
-        ),
-        (
             "Specify settings for optional component installation and component repair",
             "Not Configured",
             [
@@ -472,6 +431,115 @@ def _test_set_user_policy(lgpo_bin, shell, name, setting, exp_regexes):
 )
 @pytest.mark.destructive_test
 def test_set_computer_policy(clean_comp, lgpo_bin, shell, name, setting, exp_regexes):
+    _test_set_computer_policy(
+        lgpo_bin=lgpo_bin,
+        shell=shell,
+        name=name,
+        setting=setting,
+        exp_regexes=exp_regexes,
+    )
+
+
+@pytest.mark.parametrize(
+    "name, setting, exp_regexes",
+    [
+        (
+            "Specify settings for optional component installation and component repair",
+            "Disabled",
+            [
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*LocalSourcePath[\s]*DELETE",
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*UseWindowsUpdate[\s]*DELETE",
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*RepairContentServerSource[\s]*DELETE",
+            ],
+        ),
+        (
+            "Specify settings for optional component installation and component repair",
+            {
+                "Alternate source file path": "",
+                "Never attempt to download payload from Windows Update": True,
+                "CheckBox_SidestepWSUS": False,
+            },
+            [
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*LocalSourcePath[\s]*EXSZ:",
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*UseWindowsUpdate[\s]*DWORD:2",
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*RepairContentServerSource[\s]*DELETE",
+            ],
+        ),
+        (
+            "Specify settings for optional component installation and component repair",
+            {
+                "Alternate source file path": r"\\some\fake\server",
+                "Never attempt to download payload from Windows Update": True,
+                "CheckBox_SidestepWSUS": False,
+            },
+            [
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*LocalSourcePath[\s]*EXSZ:\\\\\\\\some\\\\fake\\\\server",
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*UseWindowsUpdate[\s]*DWORD:2",
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*RepairContentServerSource[\s]*DELETE",
+            ],
+        ),
+    ],
+)
+@pytest.mark.destructive_test
+def test_set_computer_policy_old(
+    clean_comp, lgpo_bin, shell, name, setting, exp_regexes, osversion
+):
+    """
+    This tests the policy on Windows Server 2022 and older. Newer versions have
+    removed a couple parameters
+    """
+    if salt.utils.versions.compare(ver1=osversion, oper=">=", ver2="10.0.26100"):
+        pytest.skip(f"Test not compatible with {osversion}")
+
+    _test_set_computer_policy(
+        lgpo_bin=lgpo_bin,
+        shell=shell,
+        name=name,
+        setting=setting,
+        exp_regexes=exp_regexes,
+    )
+
+
+@pytest.mark.parametrize(
+    "name, setting, exp_regexes",
+    [
+        (
+            "Specify settings for optional component installation and component repair",
+            "Disabled",
+            [
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*LocalSourcePath[\s]*DELETE",
+            ],
+        ),
+        (
+            "Specify settings for optional component installation and component repair",
+            {
+                "Alternate source file path": "",
+            },
+            [
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*LocalSourcePath[\s]*EXSZ:",
+            ],
+        ),
+        (
+            "Specify settings for optional component installation and component repair",
+            {
+                "Alternate source file path": r"\\some\fake\server",
+            },
+            [
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*LocalSourcePath[\s]*EXSZ:\\\\\\\\some\\\\fake\\\\server",
+            ],
+        ),
+    ],
+)
+@pytest.mark.destructive_test
+def test_set_computer_policy_new(
+    clean_comp, lgpo_bin, shell, name, setting, exp_regexes, osversion
+):
+    """
+    This tests the policy on Windows Server 2025. Older versions have additional
+    parameters that are set.
+    """
+    if salt.utils.versions.compare(ver1=osversion, oper="<", ver2="10.0.26100"):
+        pytest.skip(f"Test not compatible with {osversion}")
     _test_set_computer_policy(
         lgpo_bin=lgpo_bin,
         shell=shell,

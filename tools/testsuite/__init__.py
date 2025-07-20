@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from ptscripts import Context, command_group
 
+import tools.precommit.workflows
 import tools.utils
 import tools.utils.gh
 from tools.utils import ExitCode
@@ -51,7 +52,7 @@ ts = command_group(name="ts", help="Test Suite Related Commands", description=__
         "slug": {
             "help": "The OS slug",
             "required": True,
-            "choices": sorted(tools.utils.get_golden_images()),
+            "choices": sorted(tools.precommit.workflows.slugs()),
         },
         "pkg": {
             "help": "Also download package test artifacts",
@@ -86,7 +87,7 @@ def setup_testsuite(
      * Setup the local checkout for running the tests in Windows 2019, from the
        artifacts in the latest nightly build from branch 3006.x
 
-         tools ts setup --platform linux --slug windows-2019 --nightly 3006.x
+         tools ts setup --platform linux --slug windows-2025 --nightly 3006.x
     """
     if TYPE_CHECKING:
         assert platform is not None

@@ -9,6 +9,7 @@ import salt.grains.core
 import salt.modules.win_file as win_file
 import salt.modules.win_lgpo as win_lgpo
 import salt.utils.files
+import salt.utils.versions
 import salt.utils.win_dacl as win_dacl
 
 log = logging.getLogger(__name__)
@@ -39,9 +40,9 @@ def configure_loader_modules(minion_opts):
 
 
 @pytest.fixture(scope="module")
-def osrelease():
+def osversion():
     grains = salt.grains.core.os_data()
-    yield grains.get("osrelease", None)
+    yield grains.get("osversion", None)
 
 
 @pytest.fixture
@@ -72,10 +73,10 @@ def checkbox_policy():
         win_lgpo.set_computer_policy(name=policy_name, setting="Not Configured")
 
 
-def test_name(osrelease):
-    if osrelease == "2022Server":
-        pytest.skip(f"Test is failing on {osrelease}")
-    if osrelease == "11":
+def test_name(osversion):
+    # Windows 10.0.17763 and lower use "Allow Telemetry"
+    # Newer versions use "Allow Diagnostic Data"
+    if salt.utils.versions.compare(ver1=osversion, oper=">", ver2="10.0.17763"):
         policy_name = "Allow Diagnostic Data"
     else:
         policy_name = "Allow Telemetry"
@@ -102,10 +103,10 @@ def test_id():
     assert result == expected
 
 
-def test_name_full_return_full_names(osrelease):
-    if osrelease == "2022Server":
-        pytest.skip(f"Test is failing on {osrelease}")
-    if osrelease == "11":
+def test_name_full_return_full_names(osversion):
+    # Windows 10.0.17763 and lower use "Allow Telemetry"
+    # Newer versions use "Allow Diagnostic Data"
+    if salt.utils.versions.compare(ver1=osversion, oper=">", ver2="10.0.17763"):
         policy_name = "Allow Diagnostic Data"
     else:
         policy_name = "Allow Telemetry"
@@ -121,10 +122,10 @@ def test_name_full_return_full_names(osrelease):
     assert result == expected
 
 
-def test_id_full_return_full_names(osrelease):
-    if osrelease == "2022Server":
-        pytest.skip(f"Test is failing on {osrelease}")
-    if osrelease == "11":
+def test_id_full_return_full_names(osversion):
+    # Windows 10.0.17763 and lower use "Allow Telemetry"
+    # Newer versions use "Allow Diagnostic Data"
+    if salt.utils.versions.compare(ver1=osversion, oper=">", ver2="10.0.17763"):
         policy_name = "Allow Diagnostic Data"
     else:
         policy_name = "Allow Telemetry"
@@ -140,10 +141,10 @@ def test_id_full_return_full_names(osrelease):
     assert result == expected
 
 
-def test_name_full_return_ids(osrelease):
-    if osrelease == "2022Server":
-        pytest.skip(f"Test is failing on {osrelease}")
-    if osrelease == "11":
+def test_name_full_return_ids(osversion):
+    # Windows 10.0.17763 and lower use "Allow Telemetry"
+    # Newer versions use "Allow Diagnostic Data"
+    if salt.utils.versions.compare(ver1=osversion, oper=">", ver2="10.0.17763"):
         policy_name = "Allow Diagnostic Data"
     else:
         policy_name = "Allow Telemetry"
@@ -192,10 +193,10 @@ def test_id_full_return_ids_hierarchical():
     assert result == expected
 
 
-def test_name_return_full_names_hierarchical(osrelease):
-    if osrelease == "2022Server":
-        pytest.skip(f"Test is failing on {osrelease}")
-    if osrelease == "11":
+def test_name_return_full_names_hierarchical(osversion):
+    # Windows 10.0.17763 and lower use "Allow Telemetry"
+    # Newer versions use "Allow Diagnostic Data"
+    if salt.utils.versions.compare(ver1=osversion, oper=">", ver2="10.0.17763"):
         policy_name = "Allow Diagnostic Data"
     else:
         policy_name = "Allow Telemetry"
