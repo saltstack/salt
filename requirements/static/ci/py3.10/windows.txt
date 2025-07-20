@@ -156,7 +156,7 @@ idna==3.7
     #   requests
     #   trustme
     #   yarl
-immutables==0.21
+immutables==0.21 ; sys_platform != "linux"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -r requirements/base.txt

@@ -48,7 +48,8 @@ croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'
 contextvars
 
 # immutables is a requirement of contextvars
-immutables>=0.21
+immutables==0.15 ; sys_platform == 'linux'
+immutables>=0.21 ; sys_platform != 'linux'
 cryptography>=42.0.0
 
 urllib3>=1.26.20,<2.0.0; python_version < '3.10'
