@@ -77,9 +77,10 @@ idna==3.7
     #   yarl
 imagesize==1.4.1
     # via sphinx
-immutables==0.15
+immutables==0.15 ; sys_platform == "linux"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
     #   contextvars
 importlib-metadata==6.6.0
     # via

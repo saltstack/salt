@@ -36,6 +36,9 @@ cherrypy>=18.6.1
 
 # We need contextvars for salt-ssh
 contextvars
+# immutables is a requirement of contextvars
+immutables==0.15 ; sys_platform == 'linux'
+immutables>=0.21 ; sys_platform != 'linux'
 importlib-metadata>=3.3.0
 cryptography>=42.0.0; python_version < '3.13'
 cryptography==42.0.2; python_version >= '3.13'
