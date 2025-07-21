@@ -1,6 +1,8 @@
+import json
 import logging
 import pathlib
 import sys
+import textwrap
 
 import ptscripts
 from ptscripts.models import DefaultPipConfig, VirtualEnvPipConfig
@@ -46,7 +48,6 @@ ptscripts.register_tools_module("tools.precommit.loader")
 ptscripts.register_tools_module("tools.release", venv_config=RELEASE_VENV_CONFIG)
 ptscripts.register_tools_module("tools.testsuite")
 ptscripts.register_tools_module("tools.testsuite.download")
-ptscripts.register_tools_module("tools.vm")
 
 for name in ("boto3", "botocore", "urllib3"):
     logging.getLogger(name).setLevel(logging.INFO)

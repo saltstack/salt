@@ -45,6 +45,8 @@ vcert; sys_platform != 'win32'
 virtualenv>=20.3.0
 watchdog>=0.9.0
 xmldiff>=2.4
+# werkzeug is a dependency of moto
+werkzeug>=3.0.6
 textfsm
 # Available template libraries that can be used
 genshi>=0.7.3
