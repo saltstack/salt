@@ -488,8 +488,8 @@ def _get_test_value(test=None, **kwargs):
             ret = True
         else:
             ret = __opts__.get("test", None)
-    else:
-        ret = test
+    elif test is False:
+        ret = False
     return ret
 
 

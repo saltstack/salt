@@ -631,6 +631,15 @@ def onedir_dependencies(
     if platform == "macos":
         env["OPENSSL_DIR"] = f"{dest}"
 
+    if platform == "linux":
+        ctx.run(
+            str(python_bin),
+            "-m",
+            "pip",
+            "install",
+            "ppbt",
+        )
+
     version_info = ctx.run(
         str(python_bin),
         "-c",

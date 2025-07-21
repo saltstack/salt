@@ -38,7 +38,7 @@ on:
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-1  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-6  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
@@ -193,10 +193,10 @@ jobs:
                 - *tests_added_modified
                 - *pkg_tests_added_modified
 
-      - name: Set up Python 3.10
+      - name: Set up Python <{ gh_actions_workflows_python_version }>
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "<{ gh_actions_workflows_python_version }>"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts

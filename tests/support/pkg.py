@@ -527,6 +527,9 @@ class SaltPkgInstall:
                 # tdnf does not detect nightly build versions to be higher version
                 # than release versions
                 upgrade_cmd = "install"
+                if "+" in self.pkgs[0]:
+                    # self.pkgs are not signed unless this is a release.
+                    args.append("--nogpgcheck")
             ret = self.proc.run(
                 self.pkg_mngr,
                 upgrade_cmd,
@@ -535,6 +538,7 @@ class SaltPkgInstall:
                 env=env,
             )
         else:
+            args = ["install", "-y"]
             if self.distro_id == "photon":
                 ret = self.proc.run(
                     "rpm",
@@ -542,8 +546,12 @@ class SaltPkgInstall:
                     "https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public",
                 )
                 self._check_retcode(ret)
+                if "+" in self.pkgs[0]:
+                    # self.pkgs are not signed unless this is a release.
+                    args.append("--nogpgcheck")
             log.info("Installing packages:\n%s", pprint.pformat(self.pkgs))
-            ret = self.proc.run(self.pkg_mngr, "install", "-y", *self.pkgs)
+            args += self.pkgs
+            ret = self.proc.run(self.pkg_mngr, *args)
 
         if not platform.is_darwin() and not platform.is_windows():
             # Make sure we don't have any trailing references to old package file locations

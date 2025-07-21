@@ -13,7 +13,7 @@
     with:
       nox-session: ci-test-onedir
       nox-version: <{ nox_version  }>
-      python-version: "<{ gh_actions_workflows_python_version }>"
+      ci-python-version: "<{ gh_actions_workflows_python_version }>"
       testrun: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['testrun']) }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
