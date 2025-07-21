@@ -907,3 +907,47 @@ def test_get_device_from_path(tmp_path):
                 assert ret is None
                 ret = mount.get_device_from_path(path)
                 assert ret == "mydevice"
+
+
+def test_set_fstab_ceph_special_filesystem():
+    """
+    Test that 'ceph' filesystem type is treated as special filesystem
+    and matches by name instead of device when match_on='auto'
+    """
+    existing_fstab_data = "mon1,mon2,mon3:/ /mnt/ceph ceph defaults,_netdev 0 0\n"
+
+    mock = MagicMock(return_value=True)
+    with patch.object(os.path, "isfile", mock):
+        with patch("salt.utils.files.fopen", mock_open(read_data=existing_fstab_data)):
+            result = mount.set_fstab(
+                name="/mnt/ceph",
+                device="mon1,mon2,mon3:/",
+                fstype="ceph",
+                opts="defaults,_netdev",
+                match_on="auto",
+            )
+            assert result == "present"
+
+    mock = MagicMock(return_value=True)
+    with patch.object(os.path, "isfile", mock):
+        with patch("salt.utils.files.fopen", mock_open(read_data=existing_fstab_data)):
+            result = mount.set_fstab(
+                name="/mnt/ceph",
+                device="mon4,mon5,mon6:/",  # Different device, same mount point
+                fstype="ceph",
+                opts="defaults,_netdev",
+                match_on="auto",
+            )
+            assert result == "change"
+
+    mock = MagicMock(return_value=True)
+    with patch.object(os.path, "isfile", mock):
+        with patch("salt.utils.files.fopen", mock_open(read_data=existing_fstab_data)):
+            result = mount.set_fstab(
+                name="/mnt/cephfs",
+                device="mon1,mon2,mon3:/",
+                fstype="ceph",
+                opts="defaults,_netdev",
+                match_on="auto",
+            )
+            assert result == "new"
