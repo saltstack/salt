@@ -481,7 +481,7 @@ jobs:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       relenv-version: "0.20.1"
-      python-version: "3.11.11"
+      python-version: "3.11.13"
       ci-python-version: "3.11"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
@@ -497,7 +497,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
       relenv-version: "0.20.1"
-      python-version: "3.11.11"
+      python-version: "3.11.13"
       ci-python-version: "3.11"
       source: "onedir"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
@@ -512,10 +512,10 @@ jobs:
     with:
       nox-session: ci-test-onedir
       nox-version: 2022.8.7
-      python-version: "3.11.11"
+      python-version: "3.11.13"
       ci-python-version: "3.11"
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.13
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
@@ -532,7 +532,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       nox-version: 2022.8.7
       ci-python-version: "3.11"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.13
       skip-code-coverage: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['pkg-test-matrix']) }}
@@ -550,7 +550,7 @@ jobs:
       ci-python-version: "3.11"
       testrun: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['testrun']) }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.11
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.13
       skip-code-coverage: true
       workflow-slug: scheduled
       default-timeout: 360
