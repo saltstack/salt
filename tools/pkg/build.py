@@ -737,6 +737,17 @@ def salt_onedir(
     else:
         env["RELENV_PIP_DIR"] = "1"
         pip_bin = env_scripts_dir / "pip3"
+        if platform == "linux":
+            # This installs the ppbt package. We'll remove it after installing all
+            # of our python packages.
+            ctx.run(
+                str(pip_bin),
+                "-m",
+                "pip",
+                "install",
+                "relenv[toolchain]",
+            )
+
         ctx.run(
             str(pip_bin),
             "install",
