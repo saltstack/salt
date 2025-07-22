@@ -1471,6 +1471,13 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
             .. versionadded:: 2016.11.0
 
+        force (bool):
+            If ``True``, the installation will run whether the package is
+            already installed or not. If ``False``, the installation will not
+            run if the correct version of the package is already installed.
+
+            .. versionadded:: 3006.15
+
     Returns:
         dict: Return a dict containing the new package names and versions. If
         the package is already installed, an empty dict is returned.
@@ -1603,12 +1610,13 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         # If the version was not passed, version_num will be None
         if not version_num:
             if pkg_name in old:
-                log.debug(
-                    "pkg.install: '%s' version '%s' is already installed",
-                    pkg_name,
-                    old[pkg_name][0],
-                )
-                continue
+                if not kwargs.get("force", False):
+                    log.debug(
+                        "pkg.install: '%s' version '%s' is already installed",
+                        pkg_name,
+                        old[pkg_name][0],
+                    )
+                    continue
             # Get the most recent version number available from winrepo.p
             # May also return `latest` or an empty string
             version_num = _get_latest_pkg_version(pkginfo)
@@ -1621,12 +1629,13 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         # Check if the version is already installed
         if version_num in old.get(pkg_name, []):
             # Desired version number already installed
-            log.debug(
-                "pkg.install: '%s' version '%s' is already installed",
-                pkg_name,
-                version_num,
-            )
-            continue
+            if not kwargs.get("force", False):
+                log.debug(
+                    "pkg.install: '%s' version '%s' is already installed",
+                    pkg_name,
+                    version_num,
+                )
+                continue
         # If version number not installed, is the version available?
         elif version_num != "latest" and version_num not in pkginfo:
             log.error("Version %s not found for package %s", version_num, pkg_name)
