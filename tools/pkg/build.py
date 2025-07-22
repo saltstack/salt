@@ -578,6 +578,8 @@ def onedir_dependencies(
         # of our python packages.
         ctx.run(
             str(python_bin),
+            "-m",
+            "pip",
             "install",
             "relenv[toolchain]",
         )
