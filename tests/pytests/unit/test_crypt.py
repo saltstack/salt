@@ -1,6 +1,7 @@
 import pytest
 
 import salt.crypt as crypt
+import salt.exceptions
 
 
 @pytest.fixture
@@ -180,3 +181,10 @@ def test_sauth_aes_key_rotation(minion_root, io_loop):
     assert isinstance(auth._creds, dict)
     assert auth._creds["aes"] == aes1
     assert auth._creds["session"] == session1
+
+
+def test_get_key_with_evict_bad_key(tmp_path):
+    key_path = tmp_path / "key"
+    key_path.write_text("asdfasoiasdofaoiu0923jnoiausbd98sb9")
+    with pytest.raises(salt.exceptions.InvalidKeyError):
+        crypt._get_key_with_evict(str(key_path), 1, None)

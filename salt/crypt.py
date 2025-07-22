@@ -332,10 +332,15 @@ def _get_key_with_evict(path, timestamp, passphrase):
     else:
         password = None
     with salt.utils.files.fopen(path, "rb") as f:
-        return serialization.load_pem_private_key(
-            f.read(),
-            password=password,
-        )
+        try:
+            return serialization.load_pem_private_key(
+                f.read(),
+                password=password,
+            )
+        except ValueError:
+            raise InvalidKeyError("Encountered bad RSA public key")
+        except cryptography.exceptions.UnsupportedAlgorithm:
+            raise InvalidKeyError("Unsupported key algorithm")
 
 
 def get_rsa_key(path, passphrase):
