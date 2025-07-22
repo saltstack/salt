@@ -474,7 +474,7 @@ jobs:
 
   build-pkgs-onedir:
     name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] }}
     needs:
       - prepare-workflow
       - build-source-tarball
@@ -496,7 +496,7 @@ jobs:
 
   build-pkgs-src:
     name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] != 'full' }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] != 'full' }}
     needs:
       - prepare-workflow
       - build-source-tarball

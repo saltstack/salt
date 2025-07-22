@@ -9,9 +9,9 @@
   <{ job_name }>:
     name: Build Packages
     <%- if backend == "src" %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] != 'full' }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] != 'full' }}
     <%- else %>
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] }}
     <%- endif %>
     needs:
       - prepare-workflow
