@@ -578,8 +578,6 @@ def onedir_dependencies(
         # of our python packages.
         ctx.run(
             str(python_bin),
-            "-m",
-            "pip",
             "install",
             "relenv[toolchain]",
         )
@@ -742,8 +740,6 @@ def salt_onedir(
             # of our python packages.
             ctx.run(
                 str(pip_bin),
-                "-m",
-                "pip",
                 "install",
                 "relenv[toolchain]",
             )
