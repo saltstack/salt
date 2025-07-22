@@ -495,7 +495,7 @@ jobs:
 
   build-pkgs-src:
     name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] != 'full' }}
     needs:
       - prepare-workflow
       - build-salt-onedir

@@ -1,8 +1,5 @@
-<%- if gh_environment != "ci" -%>
 <%- set pkg_types = ("onedir", "src") %>
-<%- else -%>
-<%- set pkg_types = ("onedir",) %>
-<%- endif -%>
+
   <%- for backend in pkg_types %>
   <%- set job_name = "build-pkgs-{}".format(backend) %>
   <%- if backend == "src" %>
@@ -11,7 +8,11 @@
 
   <{ job_name }>:
     name: Build Packages
+    <%- if backend == "src" %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] != 'full' }}
+    <%- else %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] }}
+    <%- endif %>
     needs:
       - prepare-workflow
       - build-salt-onedir
