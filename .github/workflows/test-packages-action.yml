@@ -382,7 +382,6 @@ jobs:
 
       - name: List Important Directories
         run: |
-          dir d:/
           dir .
           dir artifacts/
           dir artifacts/pkg

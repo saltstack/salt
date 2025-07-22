@@ -4,8 +4,12 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.9/darwin.txt requirements/darwin.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/darwin.in requirements/static/pkg/darwin.in
 #
-aiohttp==3.9.4
-    # via etcd3-py
+aiohappyeyeballs==2.6.1
+    # via aiohttp
+aiohttp==3.12.13
+    # via
+    #   -r requirements/static/ci/common.in
+    #   etcd3-py
 aiosignal==1.2.0
     # via aiohttp
 apache-libcloud==2.5.0 ; sys_platform != "win32"
@@ -323,6 +327,10 @@ portend==2.6
     # via
     #   -c requirements/static/ci/../pkg/py3.9/darwin.txt
     #   cherrypy
+propcache==0.3.2
+    # via
+    #   aiohttp
+    #   yarl
 psutil==5.8.0 ; python_version <= "3.9"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/darwin.txt
@@ -575,7 +583,7 @@ yamlordereddictloader==0.4.0
     # via
     #   -r requirements/static/ci/darwin.in
     #   junos-eznc
-yarl==1.7.2
+yarl==1.20.1
     # via aiohttp
 zc.lockfile==2.0
     # via
