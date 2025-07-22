@@ -466,14 +466,14 @@ jobs:
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.20.1"
+      relenv-version: "0.20.2"
       python-version: "3.10.18"
       ci-python-version: "3.11"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
 
   build-pkgs-onedir:
-    name: Build Source Packages
+    name: Build Onedir Packages
     if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] }}
     needs:
       - prepare-workflow
@@ -483,7 +483,7 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.20.1"
+      relenv-version: "0.20.2"
       python-version: "3.10.18"
       ci-python-version: "3.11"
       source: "onedir"
@@ -495,7 +495,7 @@ jobs:
       sign-windows-packages: false
 
   build-pkgs-src:
-    name: Build Onedir Packages
+    name: Build Source Packages
     if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
     needs:
       - prepare-workflow
@@ -504,7 +504,7 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.20.1"
+      relenv-version: "0.20.2"
       python-version: "3.10.18"
       ci-python-version: "3.11"
       source: "src"
