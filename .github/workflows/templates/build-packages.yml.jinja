@@ -15,7 +15,10 @@
     <%- endif %>
     needs:
       - prepare-workflow
+      - build-source-tarball
+      <%- if backend == "onedir" %>
       - build-salt-onedir
+      <%- endif %>
     uses: ./.github/workflows/build-packages.yml
     <% if gh_environment == 'staging' -%>
     secrets: inherit

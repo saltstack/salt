@@ -458,6 +458,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] }}
     needs:
       - prepare-workflow
+      - build-source-tarball
       - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
     secrets: inherit
@@ -480,7 +481,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] != 'full' }}
     needs:
       - prepare-workflow
-      - build-salt-onedir
+      - build-source-tarball
     uses: ./.github/workflows/build-packages.yml
     secrets: inherit
     with:
