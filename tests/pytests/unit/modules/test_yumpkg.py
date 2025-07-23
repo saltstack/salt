@@ -2477,7 +2477,7 @@ def test_get_yum_config(grains):
         # This one seems to be in all of them...
         # If this ever breaks in the future, we'll need to get more specific
         # than os_family
-        setting = "installonly_limit"
+        setting = "reposdir"
     result = yumpkg._get_yum_config()
     assert setting in result
 
