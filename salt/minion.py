@@ -1213,7 +1213,26 @@ class MinionManager(MinionBase):
                 return True
         return False
 
-    def stop(self, signum):
+    def stop(self, signum, parent_sig_handler):
+        """
+        Stop minions managed by the MinionManager
+
+        Called from cli.daemons.Minion._handle_signals().
+        Adds stop_async as callback to the io_loop to prevent blocking.
+        """
+        self.io_loop.add_callback(self.stop_async, signum, parent_sig_handler)
+
+    @salt.ext.tornado.gen.coroutine
+    def stop_async(self, signum, parent_sig_handler):
+        """
+        Stop minions managed by the MinionManager allowing the io_loop to run
+        and any remaining events to be processed before stopping the minions.
+        """
+
+        # Sleep to allow any remaining events to be processed
+        yield salt.ext.tornado.gen.sleep(5)
+
+        # Continue to stop the minions
         for minion in self.minions:
             minion.process_manager.stop_restarting()
             minion.process_manager.send_signal_to_processes(signum)
@@ -1226,6 +1245,9 @@ class MinionManager(MinionBase):
         if self.event is not None:
             self.event.destroy()
             self.event = None
+
+        # Call the parent signal handler
+        parent_sig_handler(signum, None)
 
     def destroy(self):
         for minion in self.minions:
