@@ -862,7 +862,7 @@ def stop(name, no_block=False):
     Stop the specified service with systemd
 
     no_block : False
-        Set to ``True`` to start the service using ``--no-block``.
+        Set to ``True`` to stop the service using ``--no-block``.
 
         .. versionadded:: 2017.7.0
 
@@ -899,7 +899,7 @@ def restart(name, no_block=False, unmask=False, unmask_runtime=False):
     Restart the specified service with systemd
 
     no_block : False
-        Set to ``True`` to start the service using ``--no-block``.
+        Set to ``True`` to restart the service using ``--no-block``.
 
         .. versionadded:: 2017.7.0
 
@@ -1015,7 +1015,7 @@ def force_reload(name, no_block=True, unmask=False, unmask_runtime=False):
     Force-reload the specified service with systemd
 
     no_block : False
-        Set to ``True`` to start the service using ``--no-block``.
+        Set to ``True`` to force_reload the service using ``--no-block``.
 
         .. versionadded:: 2017.7.0
 
@@ -1122,7 +1122,7 @@ def enable(
     Enable the named service to start when the system boots
 
     no_block : False
-        Set to ``True`` to start the service using ``--no-block``.
+        Set to ``True`` to enable the service using ``--no-block``.
 
         .. versionadded:: 2017.7.0
 
@@ -1203,7 +1203,7 @@ def disable(
     Disable the named service to not start when the system boots
 
     no_block : False
-        Set to ``True`` to start the service using ``--no-block``.
+        Set to ``True`` to disable the service using ``--no-block``.
 
         .. versionadded:: 2017.7.0
 
