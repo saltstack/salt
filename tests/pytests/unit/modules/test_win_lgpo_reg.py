@@ -273,9 +273,16 @@ def test_mach_write_reg_pol(empty_reg_pol_mach):
     assert result == data_to_write
 
 
-def test_mach_get_value(reg_pol_mach):
-    expected = {"data": "squidward", "type": "REG_SZ"}
-    result = lgpo_reg.get_value(key="SOFTWARE\\MyKey1", v_name="MyValue1")
+@pytest.mark.parametrize(
+    "name,expected",
+    [
+        ("MyValue", {}),
+        ("MyValue1", {"data": "squidward", "type": "REG_SZ"}),
+        ("MyValue2", {"data": "**del.MyValue2", "type": "REG_SZ"}),
+    ],
+)
+def test_mach_get_value(reg_pol_mach, name, expected):
+    result = lgpo_reg.get_value(key="SOFTWARE\\MyKey1", v_name=name)
     assert result == expected
 
 
@@ -416,11 +423,18 @@ def test_user_write_reg_pol(empty_reg_pol_user):
     assert result == data_to_write
 
 
-def test_user_get_value(reg_pol_user):
-    expected = {"data": "squidward", "type": "REG_SZ"}
+@pytest.mark.parametrize(
+    "name,expected",
+    [
+        ("MyValue", {}),
+        ("MyValue1", {"data": "squidward", "type": "REG_SZ"}),
+        ("MyValue2", {"data": "**del.MyValue2", "type": "REG_SZ"}),
+    ],
+)
+def test_user_get_value(reg_pol_user, name, expected):
     result = lgpo_reg.get_value(
         key="SOFTWARE\\MyKey1",
-        v_name="MyValue1",
+        v_name=name,
         policy_class="User",
     )
     assert result == expected

@@ -212,7 +212,7 @@ def get_value(key, v_name, policy_class="Machine"):
         if key.lower() == p_key.lower():
             found_key = p_key
             for p_name in pol_data[p_key]:
-                if v_name.lower() in p_name.lower():
+                if v_name.lower() in p_name.lower().split("."):
                     found_name = p_name
 
     if found_key:
