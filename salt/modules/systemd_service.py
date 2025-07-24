@@ -51,6 +51,7 @@ VALID_UNIT_TYPES = (
     "path",
     "timer",
 )
+SALT_MINION_SERVICE = "salt-minion.service"
 
 # Define the module's virtual name
 __virtualname__ = "service"
@@ -378,6 +379,26 @@ def _unit_file_changed(name):
     """
     status = _systemctl_status(name)["stdout"].lower()
     return "'systemctl daemon-reload'" in status
+
+
+def _salt_minion_service(name):
+    """
+    Returns True if the service name is the salt-minion service, otherwise
+    returns False.
+    """
+    return _canonical_unit_name(name) == SALT_MINION_SERVICE
+
+
+def _no_block_default(name, no_block):
+    """
+    Return the default value for no_block if it is not set.
+
+    Defaults to True if the service is the salt-minion service, otherwise
+    defaults to False.
+    """
+    if no_block is None:
+        return True if _salt_minion_service(name) else False
+    return no_block
 
 
 def systemctl_reload():
@@ -846,7 +867,7 @@ def start(name, no_block=False, unmask=False, unmask_runtime=False):
     return True
 
 
-def stop(name, no_block=False):
+def stop(name, no_block=None):
     """
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
@@ -863,8 +884,15 @@ def stop(name, no_block=False):
 
     no_block : False
         Set to ``True`` to stop the service using ``--no-block``.
+        Defaults to ``True`` for the salt-minion service.
 
         .. versionadded:: 2017.7.0
+
+        .. versionchanged:: 3006.15
+            The default value for this argument has changed if the service is
+            the salt-minion service, where it now defaults to ``True`` to
+            prevent a deadlock with the minion waiting for the service to stop
+            before exiting.
 
     CLI Example:
 
@@ -872,6 +900,7 @@ def stop(name, no_block=False):
 
         salt '*' service.stop <service name>
     """
+    no_block = _no_block_default(name, no_block)
     _check_for_unit_changes(name)
     # Using cmd.run_all instead of cmd.retcode here to make unit tests easier
     return (
@@ -883,7 +912,7 @@ def stop(name, no_block=False):
     )
 
 
-def restart(name, no_block=False, unmask=False, unmask_runtime=False):
+def restart(name, no_block=None, unmask=False, unmask_runtime=False):
     """
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
@@ -900,8 +929,15 @@ def restart(name, no_block=False, unmask=False, unmask_runtime=False):
 
     no_block : False
         Set to ``True`` to restart the service using ``--no-block``.
+        Defaults to ``True`` for the salt-minion service.
 
         .. versionadded:: 2017.7.0
+
+        .. versionchanged:: 3006.15
+            The default value for this argument has changed if the service is
+            the salt-minion service, where it now defaults to ``True``
+            to prevent a deadlock with the minion waiting for the service to
+            stop before exiting.
 
     unmask : False
         Set to ``True`` to remove an indefinite mask before attempting to
@@ -925,6 +961,7 @@ def restart(name, no_block=False, unmask=False, unmask_runtime=False):
 
         salt '*' service.restart <service name>
     """
+    no_block = _no_block_default(name, no_block)
     _check_for_unit_changes(name)
     _check_unmask(name, unmask, unmask_runtime)
     ret = __salt__["cmd.run_all"](
