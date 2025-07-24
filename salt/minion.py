@@ -1220,7 +1220,9 @@ class MinionManager(MinionBase):
         Called from cli.daemons.Minion._handle_signals().
         Adds stop_async as callback to the io_loop to prevent blocking.
         """
-        self.io_loop.add_callback(self.stop_async, signum, parent_sig_handler)
+        self.io_loop.add_callback(  # pylint: disable=not-callable
+            self.stop_async, signum, parent_sig_handler
+        )
 
     @salt.ext.tornado.gen.coroutine
     def stop_async(self, signum, parent_sig_handler):
