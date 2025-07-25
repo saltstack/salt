@@ -27,7 +27,6 @@ def minion_opts(tmp_path):
     opts["fips_mode"] = FIPS_TESTRUN
     opts["encryption_algorithm"] = "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1"
     opts["signing_algorithm"] = "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
-    opts["sock_dir"] = tmp_path / "sock"
     return opts
 
 
