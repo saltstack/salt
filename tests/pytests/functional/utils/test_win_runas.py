@@ -50,7 +50,7 @@ def test_compound_runas(user, cmd, expected):
     if expected == "username":
         expected = user.username
     result = win_runas.runas(
-        cmd=salt.platform.win.prepend_cmd(cmd),
+        cmd=salt.platform.win.prepend_cmd("cmd", cmd),
         username=user.username,
         password=user.password,
     )
@@ -69,7 +69,7 @@ def test_compound_runas_unpriv(user, cmd, expected):
     if expected == "username":
         expected = user.username
     result = win_runas.runas_unpriv(
-        cmd=salt.platform.win.prepend_cmd(cmd),
+        cmd=salt.platform.win.prepend_cmd("cmd", cmd),
         username=user.username,
         password=user.password,
     )
