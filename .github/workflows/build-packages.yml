@@ -95,6 +95,13 @@ jobs:
           name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
           path: pkgs/checkout/artifacts/
 
+      - name: Install toolchain
+        if: inputs.source != 'onedir'
+        run: |
+          python3 -m venv venv
+          venv/bin/python3 -m pip install relenv ppbt
+          venv/bin/python3 -c 'from relenv import common; common.get_toolchain()'
+
       - name: Download Release Patch
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         uses: actions/download-artifact@v4
@@ -181,6 +188,13 @@ jobs:
         with:
           name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
           path: artifacts/
+
+      - name: Install toolchain
+        if: inputs.source != 'onedir'
+        run: |
+          python3 -m venv venv
+          venv/bin/python3 -m pip install relenv ppbt
+          venv/bin/python3 -c 'from relenv import common; common.get_toolchain()'
 
       - name: Download Release Patch
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
