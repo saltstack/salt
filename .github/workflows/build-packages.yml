@@ -98,6 +98,7 @@ jobs:
       - name: Install toolchain
         if: inputs.source != 'onedir'
         run: |
+          mkdir -p ~/.local/relenv
           python3 -m venv venv
           venv/bin/python3 -m pip install relenv ppbt
           venv/bin/python3 -c 'from relenv import common; common.get_toolchain()'
@@ -192,6 +193,7 @@ jobs:
       - name: Install toolchain
         if: inputs.source != 'onedir'
         run: |
+          mkdir -p ~/.local/relenv
           python3 -m venv venv
           venv/bin/python3 -m pip install relenv ppbt
           venv/bin/python3 -c 'from relenv import common; common.get_toolchain()'
