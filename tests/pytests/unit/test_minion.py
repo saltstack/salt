@@ -1171,11 +1171,16 @@ async def test_connect_master_general_exception_error(minion_opts, connect_maste
     assert minion.connect_master.calls == 2
 
 
-async def test_minion_manager_async_stop(io_loop, minion_opts):
+async def test_minion_manager_async_stop(io_loop, minion_opts, tmp_path):
     """
     Ensure MinionManager's stop method works correctly and calls the
     stop_async method
     """
+
+    # Setup sock_dir with short path
+    minion_opts["sock_dir"] = str(tmp_path / "sock")
+
+    # Create a MinionManager instance with a mock minion
     mm = salt.minion.MinionManager(minion_opts)
     minion = MagicMock(name="minion")
     parent_signal_handler = MagicMock(name="parent_signal_handler")
