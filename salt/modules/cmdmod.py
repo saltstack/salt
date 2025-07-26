@@ -53,6 +53,8 @@ except ImportError:
     pass
 
 if salt.utils.platform.is_windows():
+    import pywintypes
+
     import salt.platform.win
     from salt.utils.win_functions import escape_argument as _cmd_quote
     from salt.utils.win_runas import runas as win_runas
@@ -210,6 +212,21 @@ def _parse_env(env):
     if not isinstance(env, dict):
         env = {}
     return env
+
+
+def _ensure_env_str(env):
+    """
+    Ensure that environment variables are strings
+    """
+    if not env:
+        env = {}
+    if not isinstance(env, dict):
+        env = {}
+    for key, val in env.items():
+        if not isinstance(val, str):
+            env[key] = str(val)
+        if not isinstance(key, str):
+            env[str(key)] = env.pop(key)
 
 
 def _gather_pillar(pillarenv, pillar_override):
@@ -672,7 +689,8 @@ def _run(
             env.setdefault("LC_IDENTIFICATION", "C")
             env.setdefault("LANGUAGE", "C")
 
-    if clean_env:
+    if clean_env or (runas and salt.utils.platform.is_windows()):
+        # always use a clean environment with CreateProcess on Windows
         run_env = env
 
     else:
@@ -689,6 +707,8 @@ def _run(
 
     if "NOTIFY_SOCKET" not in env:
         run_env.pop("NOTIFY_SOCKET", None)
+
+    _ensure_env_str(run_env)
 
     if python_shell is None:
         python_shell = False
@@ -774,15 +794,41 @@ def _run(
         # This is where the magic happens
 
         if runas and salt.utils.platform.is_windows():
-
             # We can't use TimedProc with runas on Windows
-            if change_windows_codepage:
-                salt.utils.win_chcp.set_codepage_id(windows_codepage)
+            new_kwargs.update(
+                {
+                    "redirect_stderr": True if stderr == subprocess.STDOUT else False,
+                }
+            )
 
-            ret = win_runas(cmd, runas, password, cwd)
+            try:
+                if change_windows_codepage:
+                    salt.utils.win_chcp.set_codepage_id(windows_codepage)
+                try:
+                    proc = win_runas(cmd, runas, password, **new_kwargs)
+                except (OSError, pywintypes.error) as exc:
+                    msg = "Unable to run command '{}' with the context '{}', reason: {}".format(
+                        cmd if output_loglevel is not None else "REDACTED",
+                        new_kwargs,
+                        exc,
+                    )
+                    raise CommandExecutionError(msg)
+                except TimedProcTimeoutError as exc:
+                    ret["stdout"] = str(exc)
+                    ret["stderr"] = ""
+                    ret["retcode"] = ""
+                    ret["pid"] = ""
+                    # ok return code for timeouts?
+                    ret["retcode"] = 1
+                    return ret
+            finally:
+                if change_windows_codepage:
+                    salt.utils.win_chcp.set_codepage_id(previous_windows_codepage)
 
-            if change_windows_codepage:
-                salt.utils.win_chcp.set_codepage_id(previous_windows_codepage)
+            proc_pid = proc.get("pid")
+            proc_retcode = proc.get("retcode")
+            proc_stdout = proc.get("stdout")
+            proc_stderr = proc.get("stderr")
 
         else:
             try:
@@ -797,7 +843,6 @@ def _run(
                         exc,
                     )
                     raise CommandExecutionError(msg)
-
                 try:
                     proc.run()
                 except TimedProcTimeoutError as exc:
@@ -812,61 +857,67 @@ def _run(
                 if change_windows_codepage:
                     salt.utils.win_chcp.set_codepage_id(previous_windows_codepage)
 
-            if output_loglevel != "quiet" and output_encoding is not None:
-                log.debug(
-                    "Decoding output from command %s using %s encoding",
-                    cmd,
-                    output_encoding,
+            proc_pid = proc.process.pid
+            proc_retcode = proc.process.returncode
+            proc_stdout = proc.stdout
+            proc_stderr = proc.stderr
+
+        if output_loglevel != "quiet" and output_encoding is not None:
+            log.debug(
+                "Decoding output from command %s using %s encoding",
+                cmd,
+                output_encoding,
+            )
+
+        try:
+            out = salt.utils.stringutils.to_unicode(
+                proc_stdout, encoding=output_encoding
+            )
+        except TypeError:
+            # stdout is None
+            out = ""
+        except UnicodeDecodeError:
+            out = salt.utils.stringutils.to_unicode(
+                proc_stdout, encoding=output_encoding, errors="replace"
+            )
+            if output_loglevel != "quiet":
+                log.error(
+                    "Failed to decode stdout from command %s, non-decodable "
+                    "characters have been replaced",
+                    _log_cmd(cmd),
                 )
 
-            try:
-                out = salt.utils.stringutils.to_unicode(
-                    proc.stdout, encoding=output_encoding
+        try:
+            err = salt.utils.stringutils.to_unicode(
+                proc_stderr, encoding=output_encoding
+            )
+        except TypeError:
+            # stderr is None
+            err = ""
+        except UnicodeDecodeError:
+            err = salt.utils.stringutils.to_unicode(
+                proc_stderr, encoding=output_encoding, errors="replace"
+            )
+            if output_loglevel != "quiet":
+                log.error(
+                    "Failed to decode stderr from command %s, non-decodable "
+                    "characters have been replaced",
+                    _log_cmd(cmd),
                 )
-            except TypeError:
-                # stdout is None
-                out = ""
-            except UnicodeDecodeError:
-                out = salt.utils.stringutils.to_unicode(
-                    proc.stdout, encoding=output_encoding, errors="replace"
-                )
-                if output_loglevel != "quiet":
-                    log.error(
-                        "Failed to decode stdout from command %s, non-decodable "
-                        "characters have been replaced",
-                        _log_cmd(cmd),
-                    )
 
-            try:
-                err = salt.utils.stringutils.to_unicode(
-                    proc.stderr, encoding=output_encoding
-                )
-            except TypeError:
-                # stderr is None
-                err = ""
-            except UnicodeDecodeError:
-                err = salt.utils.stringutils.to_unicode(
-                    proc.stderr, encoding=output_encoding, errors="replace"
-                )
-                if output_loglevel != "quiet":
-                    log.error(
-                        "Failed to decode stderr from command %s, non-decodable "
-                        "characters have been replaced",
-                        _log_cmd(cmd),
-                    )
+        # Encoded commands dump CLIXML data in stderr. It's not an actual error
+        if encoded_cmd and "CLIXML" in err:
+            err = ""
+        if rstrip:
+            if out is not None:
+                out = out.rstrip()
+            if err is not None:
+                err = err.rstrip()
 
-            # Encoded commands dump CLIXML data in stderr. It's not an actual error
-            if encoded_cmd and "CLIXML" in err:
-                err = ""
-            if rstrip:
-                if out is not None:
-                    out = out.rstrip()
-                if err is not None:
-                    err = err.rstrip()
-            ret["pid"] = proc.process.pid
-            ret["retcode"] = proc.process.returncode
-            ret["stdout"] = out
-            ret["stderr"] = err
+        ret["pid"] = proc_pid
+        ret["retcode"] = proc_retcode
+        ret["stdout"] = out
+        ret["stderr"] = err
 
         if ret["retcode"] in success_retcodes:
             ret["retcode"] = 0
@@ -875,6 +926,7 @@ def _run(
             + [stde in ret["stderr"] for stde in success_stderr]
         ):
             ret["retcode"] = 0
+
     else:
         formatted_timeout = ""
         if timeout:
@@ -1164,6 +1216,9 @@ def run(
 
         .. versionadded:: 2016.3.0
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param dict env: Environment variables to be set prior to execution.
 
         .. note::
@@ -1178,6 +1233,9 @@ def run(
             When using environment variables on Window's, case-sensitivity
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
@@ -1238,6 +1296,9 @@ def run(
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
 
@@ -1246,6 +1307,9 @@ def run(
         the retcode and output is desired. Default is ``True``
 
         .. versionadded:: 3006.9
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param bool encoded_cmd: Specify if the supplied command is encoded.
         Only applies to shell 'powershell' and 'pwsh'.
@@ -1485,6 +1549,9 @@ def shell(
     :param bool bg: If True, run command in background and do not await or
         deliver its results
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param dict env: Environment variables to be set prior to execution.
 
         .. note::
@@ -1499,6 +1566,9 @@ def shell(
             When using environment variables on Window's, case-sensitivity
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
@@ -1559,6 +1629,9 @@ def shell(
 
     :param int timeout: A timeout in seconds for the executed process to
         return.
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
@@ -1758,6 +1831,9 @@ def run_stdout(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -1817,6 +1893,9 @@ def run_stdout(
 
     :param int timeout: A timeout in seconds for the executed process to
         return.
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
@@ -1992,6 +2071,9 @@ def run_stderr(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -2051,6 +2133,9 @@ def run_stderr(
 
     :param int timeout: A timeout in seconds for the executed process to
         return.
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
@@ -2228,6 +2313,9 @@ def run_all(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -2288,6 +2376,9 @@ def run_all(
     :param int timeout: A timeout in seconds for the executed process to
         return.
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
 
@@ -2322,6 +2413,9 @@ def run_all(
 
         .. versionadded:: 2015.8.2
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
 
@@ -2331,6 +2425,9 @@ def run_all(
         deliver its results
 
         .. versionadded:: 2016.3.6
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
@@ -2505,6 +2602,9 @@ def retcode(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -2549,6 +2649,9 @@ def retcode(
         skip logging the output if the command has a nonzero exit code.
 
     :param int timeout: A timeout in seconds for the executed process to return.
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
       more interactively to the console and the logs. This is experimental.
@@ -2792,6 +2895,9 @@ def script(
     :param bool bg: If True, run script in background and do not await or
         deliver its results
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param dict env: Environment variables to be set prior to execution.
 
         .. note::
@@ -2806,6 +2912,9 @@ def script(
             When using environment variables on Window's, case-sensitivity
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param str template: If this setting is applied then the named templating
         engine will be used to render the downloaded file. Currently jinja,
@@ -2855,6 +2964,9 @@ def script(
     :param int timeout: If the command has not terminated after timeout
         seconds, send the subprocess sigterm, and if sigterm is ignored, follow
         up with sigkill
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
@@ -3110,6 +3222,9 @@ def script_retcode(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param str template: If this setting is applied then the named templating
         engine will be used to render the downloaded file. Currently jinja,
         mako, and wempy are supported.
@@ -3149,6 +3264,9 @@ def script_retcode(
     :param int timeout: If the command has not terminated after timeout
         seconds, send the subprocess sigterm, and if sigterm is ignored, follow
         up with sigkill
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
@@ -4014,6 +4132,9 @@ def powershell(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -4067,6 +4188,9 @@ def powershell(
         .. versionadded:: 2018.3.0
 
     :param int timeout: A timeout in seconds for the executed process to return.
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
@@ -4356,6 +4480,9 @@ def powershell_all(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -4401,6 +4528,9 @@ def powershell_all(
 
     :param int timeout: A timeout in seconds for the executed process to
         return.
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
@@ -4725,6 +4855,9 @@ def run_bg(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -4741,6 +4874,9 @@ def run_bg(
     :param str umask: The umask (in octal) to use when running the command.
 
     :param int timeout: A timeout in seconds for the executed process to return.
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     .. warning::
 
