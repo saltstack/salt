@@ -179,8 +179,7 @@ cd $RPM_BUILD_DIR
   export PY=$(build/venv/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()')
   build/venv/bin/python3 -m pip install -r %{_salt_src}/requirements/static/ci/py${PY}/tools.txt
   build/venv/bin/relenv fetch --python=${SALT_PYTHON_VERSION}
-  build/venv/bin/pip3 install relenv[toolchain]
-  build/venv/bin/relenv toolchain fetch
+  build/venv/bin/pip3 install ppbt
   cd %{_salt_src}
 	$RPM_BUILD_DIR/build/venv/bin/tools pkg build onedir-dependencies --arch ${SALT_PACKAGE_ARCH} --relenv-version=${SALT_RELENV_VERSION} --python-version ${SALT_PYTHON_VERSION} --package-name $RPM_BUILD_DIR/build/salt --platform linux
 
@@ -190,6 +189,7 @@ cd $RPM_BUILD_DIR
 
   $RPM_BUILD_DIR/build/venv/bin/tools pkg build salt-onedir . --package-name $RPM_BUILD_DIR/build/salt --platform linux
   $RPM_BUILD_DIR/build/venv/bin/tools pkg pre-archive-cleanup --pkg $RPM_BUILD_DIR/build/salt
+  build/venv/bin/pip3 uninstall ppbt
 
   # Generate master config
   sed 's/#user: root/user: salt/g' %{_salt_src}/conf/master > $RPM_BUILD_DIR/build/master
