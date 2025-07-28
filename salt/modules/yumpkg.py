@@ -731,7 +731,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
     for line in output.splitlines():
         pkginfo = salt.utils.pkg.rpm.parse_pkginfo(line, osarch=__grains__["osarch"])
         if pkginfo is not None:
-            # see rpm version string rules available at https://goo.gl/UGKPNd
+            # see rpm version string rules available at
+            # https://blog.jasonantman.com/2014/07/how-yum-and-rpm-compare-versions/#package-naming-and-parsing
             pkgver = pkginfo.version
             epoch = None
             release = None
