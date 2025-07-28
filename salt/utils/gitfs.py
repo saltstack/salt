@@ -716,8 +716,8 @@ class GitProvider:
 
         # Attempt to force all output to plain ascii english, which is what some parsing code
         # may expect.
-        # According to stackoverflow (http://goo.gl/l74GC8), we are setting LANGUAGE as well
-        # just to be sure.
+        # According to stackoverflow, we are setting LANGUAGE as well just to be sure.
+        # https://askubuntu.com/q/311767
         env = os.environ.copy()
         if not salt.utils.platform.is_windows():
             env[b"LANGUAGE"] = b"C"
