@@ -2134,7 +2134,8 @@ def _parse_repo_keys_output(cmd_ret):
     lines = [line for line in cmd_ret.splitlines() if line.strip()]
 
     # Reference for the meaning of each item in the colon-separated
-    # record can be found here: https://goo.gl/KIZbvp
+    # record can be found here:
+    # https://github.com/CSNW/gnupg/blob/master/doc/DETAILS
     for line in lines:
         items = [
             _convert_if_int(item.strip()) if item.strip() else None
