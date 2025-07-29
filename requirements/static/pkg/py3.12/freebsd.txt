@@ -16,8 +16,10 @@ charset-normalizer==3.2.0
     # via requests
 cheroot==8.5.2
     # via cherrypy
-cherrypy==18.6.1
-    # via -r requirements/static/pkg/freebsd.in
+cherrypy==18.10.0 ; python_version >= "3.11"
+    # via
+    #   -r requirements/base.txt
+    #   -r requirements/static/pkg/freebsd.in
 contextvars==2.4
     # via -r requirements/base.txt
 croniter==2.0.5 ; sys_platform != "win32"
@@ -74,7 +76,7 @@ more-itertools==5.0.0
     #   jaraco.text
 msgpack==1.0.2
     # via -r requirements/base.txt
-packaging==24.0
+packaging==24.0 ; python_version > "3.10"
     # via -r requirements/base.txt
 portend==2.4
     # via cherrypy
@@ -113,8 +115,10 @@ six==1.16.0
     #   python-dateutil
 tempora==4.1.1
     # via portend
-timelib==0.2.5
-    # via -r requirements/static/pkg/freebsd.in
+timelib==0.3.0
+    # via
+    #   -r requirements/base.txt
+    #   -r requirements/static/pkg/freebsd.in
 urllib3==2.5.0 ; python_version >= "3.10"
     # via
     #   -r requirements/base.txt
