@@ -1475,6 +1475,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             If ``True``, the installation will run whether the package is
             already installed or not. If ``False``, the installation will not
             run if the correct version of the package is already installed.
+            Default is ``False``.
 
             .. versionadded:: 3006.15
 
