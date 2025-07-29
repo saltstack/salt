@@ -35,7 +35,7 @@ runs:
         platform: ${{ inputs.platform }}
         arch: ${{ inputs.arch }}
         python-version: "${{ inputs.python-version }}"
-        cache-prefix: ${{ inputs.cache-prefix }}|relenv|${{ inputs.salt-version }}
+        cache-prefix: ${{ inputs.cache-prefix }}|relenv|${{ inputs.python-version }}|${{ inputs.salt-version }}
 
     - name: Download Source Tarball
       uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
