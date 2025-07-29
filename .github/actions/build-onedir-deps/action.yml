@@ -35,6 +35,7 @@ runs:
             hashFiles(
               format('{0}/.relenv/**/*.xz', github.workspace),
               'requirements/static/pkg/*/*.txt',
+              'tools/pkg/build.py',
               '.github/actions/build-onedir-deps/action.yml',
               '.github/workflows/build-deps-onedir-*.yml',
               'cicd/shared-gh-workflows-context.yml'

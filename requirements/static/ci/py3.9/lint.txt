@@ -52,7 +52,7 @@ tomli==2.0.1
     #   pylint
 tomlkit==0.12.3
     # via pylint
-typing-extensions==4.8.0
+typing-extensions==4.14.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   astroid

@@ -19,10 +19,12 @@ def test_present():
     """
     Test to verify that the specified host is known by the specified user.
     """
+    config = ".ssh/known_hosts"
     name = "github.com"
     user = "root"
-    key = "16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48"
-    fingerprint = [key]
+    enc = "ssh-ed25519"
+    key = "AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl"
+    fingerprint = "65:96:2d:fc:e8:d5:a9:11:64:0c:0f:ea:00:6e:5b:bd"
 
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
@@ -42,15 +44,15 @@ def test_present():
 
         mock = MagicMock(side_effect=["exists", "add", "update"])
         with patch.dict(ssh_known_hosts.__salt__, {"ssh.check_known_host": mock}):
-            comt = "Host github.com is already in .ssh/known_hosts"
+            comt = f"Host github.com is already in {config}"
             ret.update({"comment": comt, "result": True})
             assert ssh_known_hosts.present(name, user) == ret
 
-            comt = "Key for github.com is set to be added to .ssh/known_hosts"
+            comt = f"Key for github.com is set to be added to {config}"
             ret.update({"comment": comt, "result": None})
             assert ssh_known_hosts.present(name, user) == ret
 
-            comt = "Key for github.com is set to be updated in .ssh/known_hosts"
+            comt = f"Key for github.com is set to be updated in {config}"
             ret.update({"comment": comt})
             assert ssh_known_hosts.present(name, user) == ret
 
@@ -58,7 +60,7 @@ def test_present():
         result = {"status": "exists", "error": ""}
         mock = MagicMock(return_value=result)
         with patch.dict(ssh_known_hosts.__salt__, {"ssh.set_known_host": mock}):
-            comt = "github.com already exists in .ssh/known_hosts"
+            comt = f"github.com already exists in {config}"
             ret.update({"comment": comt, "result": True})
             assert ssh_known_hosts.present(name, user) == ret
 
@@ -76,7 +78,7 @@ def test_present():
         }
         mock = MagicMock(return_value=result)
         with patch.dict(ssh_known_hosts.__salt__, {"ssh.set_known_host": mock}):
-            comt = f"{name}'s key saved to .ssh/known_hosts (key: {key})"
+            comt = f"{name}'s key saved to {config} (key: {key})"
             ret.update(
                 {
                     "comment": comt,
@@ -89,9 +91,15 @@ def test_present():
             )
             assert ssh_known_hosts.present(name, user, key=key) == ret
 
-            comt = "{}'s key saved to .ssh/known_hosts (fingerprint: {})".format(
-                name, fingerprint
-            )
+            comt = f"{name}'s key saved to {config} (fingerprint: {fingerprint})"
+            ret.update({"comment": comt})
+            assert ssh_known_hosts.present(name, user, fingerprint=fingerprint) == ret
+
+            comt = f"{name}'s {enc} key saved to {config} (key: {key})"
+            ret.update({"comment": comt})
+            assert ssh_known_hosts.present(name, user, enc=enc) == ret
+
+            comt = f"{name}'s key(s) saved to {config}"
             ret.update({"comment": comt})
             assert ssh_known_hosts.present(name, user) == ret
 
