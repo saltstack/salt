@@ -17,7 +17,7 @@ psutil>=5.0.0; python_version >= '3.10'
 packaging==24.0
 looseversion
 tornado>=6.4.1
-aiohttp>=3.9.0
+aiohttp>=3.10.2
 
 croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'
 

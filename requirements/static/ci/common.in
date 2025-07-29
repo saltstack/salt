@@ -15,6 +15,8 @@ cherrypy>=17.4.1
 clustershell
 dnspython
 etcd3-py==0.1.6
+# aiohttp is a dependency of etcd3-py
+aiohttp>=3.10.2
 gitpython>=3.1.37
 jmespath
 jsonschema
