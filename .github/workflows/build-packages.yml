@@ -102,10 +102,19 @@ jobs:
             pkgs/checkout/
 
       - name: Download Onedir Tarball as an Artifact
+        if:  inputs.source == 'onedir'
         uses: actions/download-artifact@v4
         with:
           name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
           path: pkgs/checkout/artifacts/
+
+      - name: Install toolchain
+        if: inputs.source != 'onedir'
+        run: |
+          mkdir -p ~/.local/relenv
+          python3 -m venv venv
+          venv/bin/python3 -m pip install relenv ppbt
+          venv/bin/python3 -c 'from relenv import common; common.get_toolchain()'
 
       - name: Download Release Patch
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
@@ -188,10 +197,19 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Download Onedir Tarball as an Artifact
+        if:  inputs.source == 'onedir'
         uses: actions/download-artifact@v4
         with:
           name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
           path: artifacts/
+
+      - name: Install toolchain
+        if: inputs.source != 'onedir'
+        run: |
+          mkdir -p ~/.local/relenv
+          python3 -m venv venv
+          venv/bin/python3 -m pip install relenv ppbt
+          venv/bin/python3 -c 'from relenv import common; common.get_toolchain()'
 
       - name: Download Release Patch
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
@@ -319,6 +337,7 @@ jobs:
           salt-version: "${{ inputs.salt-version }}"
 
       - name: Download Onedir Tarball as an Artifact
+        if:  inputs.source == 'onedir'
         uses: actions/download-artifact@v4
         with:
           name: salt-${{ inputs.salt-version }}-onedir-macos-${{ matrix.arch }}.tar.xz
@@ -442,6 +461,7 @@ jobs:
           salt-version: "${{ inputs.salt-version }}"
 
       - name: Download Onedir Tarball as an Artifact
+        if:  inputs.source == 'onedir'
         uses: actions/download-artifact@v4
         with:
           name: salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip

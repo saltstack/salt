@@ -5132,7 +5132,7 @@ def line(
             it will be added.
 
             The differences are that multiple (and non-matching) lines are
-            alloweed between ``before`` and ``after``, if they are
+            allowed between ``before`` and ``after``, if they are
             specified. The line will always be inserted right before
             ``before``. ``insert`` also allows the use of ``location`` to
             specify that the line should be added at the beginning or end of
