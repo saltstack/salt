@@ -2,6 +2,7 @@ import pytest
 
 import salt.crypt as crypt
 import salt.exceptions
+from tests.support.mock import patch
 
 
 @pytest.fixture
@@ -188,3 +189,46 @@ def test_get_key_with_evict_bad_key(tmp_path):
     key_path.write_text("asdfasoiasdofaoiu0923jnoiausbd98sb9")
     with pytest.raises(salt.exceptions.InvalidKeyError):
         crypt._get_key_with_evict(str(key_path), 1, None)
+
+
+def test_async_auth_cache_private_key(minion_root, io_loop):
+
+    pki_dir = minion_root / "etc" / "salt" / "pki"
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "pki_dir": str(pki_dir),
+        "master_uri": "tcp://127.0.0.1:4505",
+        "keysize": 4096,
+        "acceptance_wait_time": 60,
+        "acceptance_wait_time_max": 60,
+    }
+
+    auth = crypt.AsyncAuth(opts, io_loop)
+
+    # The private key is cached.
+    assert isinstance(auth._private_key, crypt.PrivateKey)
+
+    # get_keys returns the cached instance
+    _id = id(auth._private_key)
+    assert _id == id(auth.get_keys())
+
+
+def test_async_auth_cache_token(minion_root, io_loop):
+    pki_dir = minion_root / "etc" / "salt" / "pki"
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "pki_dir": str(pki_dir),
+        "master_uri": "tcp://127.0.0.1:4505",
+        "keysize": 4096,
+        "acceptance_wait_time": 60,
+        "acceptance_wait_time_max": 60,
+    }
+
+    auth = crypt.AsyncAuth(opts, io_loop)
+
+    with patch("salt.crypt.private_encrypt") as moc:
+        auth.gen_token("salt")
+        auth.gen_token("salt")
+        moc.assert_called_once()
