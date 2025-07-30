@@ -1,5 +1,6 @@
 """
-Module to provide information about minions
+Module to provide information about minions and handle killing and restarting
+minions
 """
 
 import os
@@ -8,9 +9,29 @@ import time
 
 import salt.key
 import salt.utils.data
+import salt.utils.systemd
+from salt.exceptions import CommandExecutionError
 
 # Don't shadow built-ins.
 __func_alias__ = {"list_": "list"}
+
+
+def _is_systemd_system():
+    """
+    Check if the system uses systemd
+    """
+    is_linux = __grains__.get("kernel") == "Linux"
+    is_booted = salt.utils.systemd.booted(__context__)
+    if is_linux and is_booted:
+        return True
+    return False
+
+
+def _is_windows_system():
+    """
+    Check if the system is Windows
+    """
+    return __grains__.get("kernel") == "Windows"
 
 
 def list_():
@@ -137,17 +158,27 @@ def kill(timeout=15):
 
 def restart():
     """
-    Kill and restart the salt minion.
+    Restart the salt minion.
 
-    The configuration key ``minion_restart_command`` is an argv list for the
-    command to restart the minion.  If ``minion_restart_command`` is not
-    specified or empty then the ``argv`` of the current process will be used.
+    The method to restart the minion will be chosen as follows:
 
-    if the configuration value ``minion_restart_command`` is not set and the
-    ``-d`` (daemonize) argument is missing from ``argv`` then the minion
-    *will* be killed but will *not* be restarted and will require the parent
-    process to perform the restart.  This behavior is intended for managed
-    salt minion processes.
+    - If ``minion_restart_command`` is set in the minion configuration then
+    the command specified will be used to restart the minion.
+
+    - If the minion is running as a Systemd service then the minion will be
+    restarted using the systemd_service module
+
+    - If the minion is running as a Windows service then the minion will be
+    restarted using the win_service module
+
+    - If the salt-minion process is running in daemon mode (the ``-d``
+    argument is present in ``argv``) then the minion will be killed and
+    restarted using the same command line arguments, if possible.
+
+    - If the salt-minion process is running in the foreground (the ``-d``
+    argument is not present in ``argv``) then the minion will be killed but not
+    restarted. This behavior is intended for minion processes that are managed
+    by a process supervisor.
 
     CLI Example:
 
@@ -206,6 +237,7 @@ def restart():
     ret = {
         "killed": None,
         "restart": {},
+        "service_restart": {},
         "retcode": 0,
     }
 
@@ -213,6 +245,18 @@ def restart():
     if restart_cmd:
         comment.append("Using configuration minion_restart_command:")
         comment.extend([f"    {arg}" for arg in restart_cmd])
+    elif _is_systemd_system():
+        # If we are using systemd then we will restart the minion using
+        # service.restart (systemd_service.restart)
+        comment.append("Using systemctl to restart salt-minion")
+        should_kill = False
+        should_restart = False
+    elif _is_windows_system():
+        # If we are on Windows then we will restart the minion using
+        # service.restart (win_service.restart)
+        comment.append("Using windows service manager to restart salt-minion")
+        should_kill = False
+        should_restart = False
     else:
         if "-d" in sys.argv:
             restart_cmd = sys.argv
@@ -248,6 +292,25 @@ def restart():
         if "retcode" in ret["restart"]:
             # Just want a single retcode
             del ret["restart"]["retcode"]
+
+    if not restart_cmd:
+        if _is_systemd_system():
+            try:
+                ret["service_restart"]["result"] = __salt__["service.restart"](
+                    "salt-minion", no_block=True
+                )
+            except CommandExecutionError as e:
+                comment.append("Service restart failed")
+                ret["service_restart"]["result"] = False
+                ret["service_restart"]["stderr"] = str(e)
+                ret["retcode"] = salt.defaults.exitcodes.EX_SOFTWARE
+        elif _is_windows_system():
+            ret["service_restart"]["result"] = __salt__["service.restart"](
+                "salt-minion"
+            )
+            if not ret["service_restart"]:
+                comment.append("Service restart failed")
+                ret["retcode"] = salt.defaults.exitcodes.EX_SOFTWARE
 
     if comment:
         ret["comment"] = comment
