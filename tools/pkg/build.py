@@ -631,6 +631,17 @@ def onedir_dependencies(
     if platform == "macos":
         env["OPENSSL_DIR"] = f"{dest}"
 
+    if platform == "linux":
+        # This installs the ppbt package. We'll remove it after installing all
+        # of our python packages.
+        ctx.run(
+            str(python_bin),
+            "-m",
+            "pip",
+            "install",
+            "relenv[toolchain]",
+        )
+
     version_info = ctx.run(
         str(python_bin),
         "-c",
@@ -784,6 +795,15 @@ def salt_onedir(
     else:
         env["RELENV_PIP_DIR"] = "1"
         pip_bin = env_scripts_dir / "pip3"
+        if platform == "linux":
+            # This installs the ppbt package. We'll remove it after installing all
+            # of our python packages.
+            ctx.run(
+                str(pip_bin),
+                "install",
+                "relenv[toolchain]",
+            )
+
         ctx.run(
             str(pip_bin),
             "install",
@@ -839,6 +859,19 @@ def salt_onedir(
         dst = pathlib.Path(site_packages) / fname
         ctx.info(f"Copying '{src.relative_to(tools.utils.REPO_ROOT)}' to '{dst}' ...")
         shutil.copyfile(src, dst)
+
+    if platform == "linux":
+        # The ppbt package is very large. It is only needed when installing
+        # python modules that need to be compiled. Do not ship ppbt by default,
+        # it can be installed later if needed.
+        ctx.run(
+            str(python_executable),
+            "-m",
+            "pip",
+            "uninstall",
+            "-y",
+            "ppbt",
+        )
 
     # Add package type file for package grain
     with open(

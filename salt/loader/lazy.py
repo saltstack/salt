@@ -153,7 +153,10 @@ class LoadedFunc:
         if hasattr(mod, "__opts__"):
             if not isinstance(mod.__opts__, salt.loader.context.NamedLoaderContext):
                 if "test" in self.loader.opts:
-                    mod.__opts__["test"] = self.loader.opts["test"]
+                    if self.loader.opts["test"] is False:
+                        mod.__opts__["test"] = False
+                    else:
+                        mod.__opts__["test"] = True
                     set_test = True
         if self.loader.inject_globals:
             run_func = global_injector_decorator(self.loader.inject_globals)(run_func)

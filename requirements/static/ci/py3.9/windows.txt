@@ -4,12 +4,17 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.9/windows.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/windows.in requirements/static/pkg/windows.in requirements/windows.txt
 #
-aiohttp==3.9.5
+aiohappyeyeballs==2.6.1
+    # via
+    #   -c requirements/static/ci/../pkg/py3.9/windows.txt
+    #   aiohttp
+aiohttp==3.12.15
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/base.txt
+    #   -r requirements/static/ci/common.in
     #   etcd3-py
-aiosignal==1.3.1
+aiosignal==1.4.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   aiohttp
@@ -33,14 +38,15 @@ autocommand==2.2.2
     #   jaraco.text
 bcrypt==4.0.1
     # via -r requirements/static/ci/common.in
-boto3==1.26.152
+boto3==1.39.4
     # via
     #   -r requirements/static/ci/common.in
     #   moto
 boto==2.49.0
     # via -r requirements/static/ci/common.in
-botocore==1.29.152
+botocore==1.39.4
     # via
+    #   -r requirements/static/ci/common.in
     #   boto3
     #   moto
     #   s3transfer
@@ -155,9 +161,10 @@ idna==3.7
     #   requests
     #   trustme
     #   yarl
-immutables==0.15
+immutables==0.21 ; sys_platform != "linux"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
+    #   -r requirements/base.txt
     #   contextvars
 importlib-metadata==6.6.0
     # via
@@ -235,7 +242,7 @@ more-itertools==9.1.0
     #   cherrypy
     #   jaraco.functools
     #   jaraco.text
-moto==4.1.11
+moto==5.1.8
     # via -r requirements/static/ci/common.in
 msgpack==1.0.7 ; python_version < "3.13"
     # via
@@ -252,7 +259,7 @@ networkx==3.1
     #   -c requirements/constraints.txt
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/base.txt
-packaging==23.1
+packaging==24.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/base.txt
@@ -271,6 +278,11 @@ portend==3.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   cherrypy
+propcache==0.3.2
+    # via
+    #   -c requirements/static/ci/../pkg/py3.9/windows.txt
+    #   aiohttp
+    #   yarl
 psutil==5.9.6 ; python_version <= "3.9"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
@@ -419,7 +431,7 @@ rfc3987==1.3.8
     # via -r requirements/static/ci/common.in
 rsa==4.9
     # via google-auth
-s3transfer==0.6.1
+s3transfer==0.13.0
     # via boto3
 sed==0.3.1
     # via -r requirements/static/ci/windows.in
@@ -474,11 +486,13 @@ trustme==1.1.0
     # via -r requirements/pytest.txt
 types-pyyaml==6.0.1
     # via responses
-typing-extensions==4.8.0
+typing-extensions==4.14.1
     # via
+    #   -c requirements/static/ci/../pkg/py3.9/windows.txt
+    #   aiosignal
     #   pytest-shell-utilities
     #   pytest-system-statistics
-urllib3==1.26.20
+urllib3==1.26.20 ; python_version < "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/base.txt
@@ -498,8 +512,9 @@ websocket-client==0.40.0
     # via kubernetes
 wempy==0.2.1
     # via -r requirements/static/ci/common.in
-werkzeug==3.0.3
+werkzeug==3.1.3
     # via
+    #   -r requirements/static/ci/common.in
     #   moto
     #   pytest-httpserver
 wmi==1.5.1 ; sys_platform == "win32"
@@ -516,7 +531,7 @@ xmltodict==0.13.0 ; sys_platform == "win32"
     #   pywinrm
 yamllint==1.32.0
     # via -r requirements/static/ci/windows.in
-yarl==1.9.4
+yarl==1.20.1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   aiohttp

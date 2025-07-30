@@ -1,6 +1,13 @@
 import pytest
 
-pytestmark = [pytest.mark.slow_test]
+from tests.pytests.integration.ssh import check_system_python_version
+
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.skipif(
+        not check_system_python_version(), reason="Needs system python >= 3.9"
+    ),
+]
 
 
 def test_items(salt_ssh_cli):

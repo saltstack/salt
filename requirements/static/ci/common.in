@@ -4,15 +4,19 @@
 
 --constraint=../pkg/py{py_version}/{platform}.txt
 
+
 apache-libcloud>=1.5.0; sys_platform != 'win32'
-boto3>=1.21.46
-boto>=2.46.0
+boto3>=1.30.0
+boto>=2.47.0
+botocore>=1.30.0
 cassandra-driver>=2.0
 cffi>=1.14.6
 cherrypy>=17.4.1
 clustershell
 dnspython
 etcd3-py==0.1.6
+# aiohttp is a dependency of etcd3-py
+aiohttp>=3.10.2
 gitpython>=3.1.37
 jmespath
 jsonschema
@@ -21,10 +25,11 @@ junit-xml>=1.9
 jxmlease; sys_platform != 'win32'
 kazoo; sys_platform != 'win32' and sys_platform != 'darwin'
 keyring==5.7.1
-kubernetes<4.0
+kubernetes<4.0.0
 libnacl>=1.7.1; sys_platform != 'win32' and sys_platform != 'darwin'
-moto>=2.0.0
-napalm; sys_platform != 'win32'
+moto>=5.0.0
+# Napalm pulls in pyeapi which does not work on Py3.10
+napalm; sys_platform != 'win32' and python_version < '3.10'
 paramiko>=2.10.1; sys_platform != 'win32' and sys_platform != 'darwin'
 # bcrypt is an extra requirement for passlib, and we shouldn't use extras, like, passlib[bcrypt]
 # since that will break using the compiled static requirements files as contraints file
@@ -42,6 +47,8 @@ vcert; sys_platform != 'win32' and python_version < '3.13.0'
 virtualenv>=20.3.0
 watchdog>=0.9.0
 xmldiff>=2.4
+# werkzeug is a dependency of moto
+werkzeug>=3.0.6
 textfsm
 # Available template libraries that can be used
 genshi>=0.7.3
