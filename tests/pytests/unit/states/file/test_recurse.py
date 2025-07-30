@@ -17,7 +17,8 @@ def configure_loader_modules():
 
 def test__gen_recurse_managed_files():
     """
-    Test _gen_recurse_managed_files to make sure it puts symlinks at the end of the list of files.
+    Test _gen_recurse_managed_files to make sure it does not include
+    symlinks in the list of files that is passed to file.managed.
     """
     target_dir = pathlib.Path(f"{os.sep}some{os.sep}path{os.sep}target")
     cp_list_master = MagicMock(
@@ -28,6 +29,12 @@ def test__gen_recurse_managed_files():
             "target/notasymlink",
         ],
     )
+    cp_list_master_dirs = MagicMock(
+        return_value=[
+            "target",
+            "target/not_a_symlink",
+        ],
+    )
     cp_list_master_symlinks = MagicMock(
         return_value={
             "target/symlink": f"{target_dir}{os.sep}not_a_symlink{os.sep}symlink"
@@ -35,14 +42,24 @@ def test__gen_recurse_managed_files():
     )
     patch_salt = {
         "cp.list_master": cp_list_master,
+        "cp.list_master_dirs": cp_list_master_dirs,
         "cp.list_master_symlinks": cp_list_master_symlinks,
     }
     with patch.dict(filestate.__salt__, patch_salt):
         files, dirs, links, keep = filestate._gen_recurse_managed_files(
-            name=str(target_dir), source=f"salt://{target_dir.name}", keep_symlinks=True
+            name=str(target_dir),
+            sources=[f"salt://{target_dir.name}"],
+            keep_symlinks=True,
         )
-    expected = (
+    unexpected = (
         f"{os.sep}some{os.sep}path{os.sep}target{os.sep}symlink",
         "salt://target/symlink?saltenv=base",
     )
-    assert files[-1] == expected
+    assert unexpected not in files
+    expected_dest = f"{os.sep}some{os.sep}path{os.sep}target{os.sep}symlink"
+    expected = (
+        f"{os.sep}some{os.sep}path{os.sep}target{os.sep}not_a_symlink{os.sep}symlink",
+        f"{os.sep}some{os.sep}path{os.sep}target{os.sep}not_a_symlink{os.sep}symlink",
+    )
+    assert expected_dest in links
+    assert links[expected_dest] == expected

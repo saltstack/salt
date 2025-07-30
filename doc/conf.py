@@ -352,7 +352,6 @@ authors = [
 ]
 
 man_pages = [
-    ("contents", "salt", "Salt Documentation", authors, 7),
     ("ref/cli/salt", "salt", "salt", authors, 1),
     ("ref/cli/salt-master", "salt-master", "salt-master Documentation", authors, 1),
     ("ref/cli/salt-minion", "salt-minion", "salt-minion Documentation", authors, 1),

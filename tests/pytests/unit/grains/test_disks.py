@@ -56,6 +56,39 @@ def test__windows_disks_list():
         assert result == expected
 
 
+def test__windows_disks_without_mediatype_dict():
+    """
+    test grains._windows_disks with a single disk missing the MediaType property
+    returned as a dict
+    Should return empty lists
+    """
+    devices = {"DeviceID": 0, "MediaType": None}
+    mock_powershell = MagicMock(return_value=devices)
+
+    with patch.dict(disks.__salt__, {"cmd.powershell": mock_powershell}):
+        expected = {"disks": [], "ssds": []}
+        result = disks._windows_disks()
+        assert result == expected
+
+
+def test__windows_disks_without_mediatype_list():
+    """
+    test grains._windows_disks with multiple disks missing the MediaType property
+    as a list of dicts
+    Should return empty lists
+    """
+    devices = [
+        {"DeviceID": 0, "MediaType": None},
+        {"DeviceID": 1, "MediaType": None},
+    ]
+    mock_powershell = MagicMock(return_value=devices)
+
+    with patch.dict(disks.__salt__, {"cmd.powershell": mock_powershell}):
+        expected = {"disks": [], "ssds": []}
+        result = disks._windows_disks()
+        assert result == expected
+
+
 def test__windows_disks_empty():
     """
     Test grains._windows_disks when nothing is returned

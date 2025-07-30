@@ -701,7 +701,7 @@ def test_fstab_present_macos_test_present():
     """
     ret = {
         "name": "/dev/sda1",
-        "result": None,
+        "result": True,
         "changes": {},
         "comment": ["/home entry is already in /etc/auto_salt."],
     }
@@ -730,7 +730,7 @@ def test_fstab_present_aix_test_present():
     """
     ret = {
         "name": "/dev/sda1",
-        "result": None,
+        "result": True,
         "changes": {},
         "comment": ["/home entry is already in /etc/filesystems."],
     }
@@ -761,7 +761,7 @@ def test_fstab_present_test_present():
     """
     ret = {
         "name": "/dev/sda1",
-        "result": None,
+        "result": True,
         "changes": {},
         "comment": ["/home entry is already in /etc/fstab."],
     }

@@ -41,3 +41,69 @@ def test_compare_keys_newline_tgt(key_data, linesep):
     assert not src_key.endswith(linesep)
     assert tgt_key.endswith("\n")
     assert server.ReqServerChannel.compare_keys(src_key, tgt_key) is True
+
+
+@pytest.fixture
+def root_dir(tmp_path):
+    (tmp_path / "var").mkdir()
+    (tmp_path / "var" / "cache").mkdir()
+    (tmp_path / "var" / "run").mkdir()
+    (tmp_path / "etc").mkdir()
+    (tmp_path / "etc" / "salt").mkdir()
+    (tmp_path / "etc" / "salt" / "pki").mkdir()
+    (tmp_path / "etc" / "salt" / "pki" / "minions").mkdir()
+    yield tmp_path
+
+
+def test_req_server_validate_token_removes_token(root_dir):
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "master_uri": "tcp://127.0.0.1:4505",
+        "cachedir": str(root_dir / "var" / "cache"),
+        "pki_dir": str(root_dir / "etc" / "salt" / "pki"),
+        "sock_dir": str(root_dir / "var" / "run"),
+        "key_pass": "",
+        "keysize": 2048,
+        "master_sign_pubkey": False,
+        "keys.cache_driver": "localfs_key",
+        "optimization_order": (0, 1, 2),
+        "permissive_pki_access": False,
+        "cluster_id": "",
+    }
+    reqsrv = server.ReqServerChannel.factory(opts)
+    payload = {
+        "load": {
+            "id": "minion",
+            "tok": "asdf",
+        }
+    }
+    assert reqsrv.validate_token(payload) is False
+    assert "tok" not in payload["load"]
+
+
+def test_req_server_validate_token_removes_token_id_traversal(root_dir):
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "master_uri": "tcp://127.0.0.1:4505",
+        "cachedir": str(root_dir / "var" / "cache"),
+        "pki_dir": str(root_dir / "etc" / "salt" / "pki"),
+        "sock_dir": str(root_dir / "var" / "run"),
+        "key_pass": "",
+        "keysize": 2048,
+        "master_sign_pubkey": False,
+        "keys.cache_driver": "localfs_key",
+        "optimization_order": (0, 1, 2),
+        "permissive_pki_access": False,
+        "cluster_id": "",
+    }
+    reqsrv = server.ReqServerChannel.factory(opts)
+    payload = {
+        "load": {
+            "id": "minion/../../foo",
+            "tok": "asdf",
+        }
+    }
+    assert reqsrv.validate_token(payload) is False
+    assert "tok" not in payload["load"]

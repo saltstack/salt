@@ -18,6 +18,26 @@ def configure_loader_modules():
     }
 
 
+def test_name_change():
+    """
+    Test when only the key_url is changed that a change is triggered
+    """
+    kwargs = {
+        "name": "deb http://apt.example.com/{{grains['os'] | lower}} {{grains['oscodename']}} main",
+        "disabled": False,
+        "key_url": "https://mock/changed_gpg.key",
+    }
+
+    new = kwargs.copy()
+    new["name"] = (
+        "deb [arch=amd64] http://apt.example.com/{{grains['os'] | lower}} {{grains['oscodename']}} main"
+    )
+
+    with patch.dict(pkgrepo.__salt__, {"pkg.get_repo": MagicMock(return_value=kwargs)}):
+        ret = pkgrepo.managed(**new)
+        assert ret["changes"] == {"name": {"old": kwargs["name"], "new": new["name"]}}
+
+
 def test_new_key_url():
     """
     Test when only the key_url is changed that a change is triggered

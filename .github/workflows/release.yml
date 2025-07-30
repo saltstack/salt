@@ -84,15 +84,6 @@ jobs:
           salt-version: "${{ inputs.salt-version }}"
           validate-version: true
 
-      - name: Check Existing Releases
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
-          if [ "${{ github.event.repository.private }}" = "true" ]; then
-            tools pkg repo confirm-unreleased --repository saltstack/salt ${{ steps.setup-salt-version.outputs.salt-version }}
-          fi
-
       - name: Get Salt Releases
         id: get-salt-releases
         env:
@@ -186,6 +177,7 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "github-actions@users.noreply.github.com"
           git push origin v${{ inputs.salt-version }}
+          git push
 
   publish-pypi:
     name: Publish to PyPi

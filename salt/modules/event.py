@@ -63,7 +63,6 @@ def fire_master(data, tag, preload=None):
             "id": __opts__["id"],
             "tag": tag,
             "data": data,
-            "tok": auth.gen_token(b"salt"),
             "cmd": "_minion_event",
         }
 

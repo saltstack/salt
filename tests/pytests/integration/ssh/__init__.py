@@ -3,7 +3,7 @@ import subprocess
 import packaging
 
 
-def check_system_python_version():
+def check_system_python_version(version="3.9"):
     """
     Validate the system python version is greater than 3.9
     """
@@ -14,4 +14,4 @@ def check_system_python_version():
     except FileNotFoundError:
         return None
     ver = ret.stdout.decode().split(" ", 1)[-1]
-    return packaging.version.Version(ver) >= packaging.version.Version("3.9")
+    return packaging.version.Version(ver) >= packaging.version.Version(version)

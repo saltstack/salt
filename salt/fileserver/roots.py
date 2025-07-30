@@ -413,6 +413,12 @@ def _file_lists(load, form):
                             abs_path,
                         )
                         link_dest = abs_path
+                    # Not sure what the purpose of this is since symlinks that point outside
+                    # the file roots are allowed (when following symlinks). Either way, this does not do what
+                    # it's intended to do since a symlink that starts with ../ is not resolved
+                    # relative to its full path, but to the containing directory as well.
+                    # This allows symlinks to point to the parent and sibling directories of the file root
+                    # and still be listed here.
                     if link_dest.startswith(".."):
                         joined = os.path.join(abs_path, link_dest)
                     else:
@@ -428,10 +434,10 @@ def _file_lists(load, form):
                         # Only count the link if it does not point
                         # outside of the root dir of the fileserver
                         # (i.e. the "path" variable)
-                        ret["links"][rel_path] = link_dest
+                        ret["links"][rel_path] = _translate_sep(link_dest)
                     else:
                         if not __opts__["fileserver_followsymlinks"]:
-                            ret["links"][rel_path] = link_dest
+                            ret["links"][rel_path] = _translate_sep(link_dest)
 
         for path in __opts__["file_roots"][saltenv]:
             if saltenv == "__env__":

@@ -437,10 +437,11 @@ async def test_when_async_req_channel_with_syndic_role_should_use_syndic_master_
         "acceptance_wait_time": 30,
         "acceptance_wait_time_max": 30,
         "signing_algorithm": "MOCK",
+        "keys.cache_driver": "localfs_key",
     }
     client = salt.channel.client.ReqChannel.factory(opts, io_loop=mockloop)
     assert client.master_pubkey_path == expected_pubkey_path
-    with patch("salt.crypt.PublicKey", return_value=MagicMock()) as mock:
+    with patch("salt.crypt.PublicKey.from_file", return_value=MagicMock()) as mock:
         client.verify_signature("mockdata", "mocksig")
         assert mock.call_args_list[0][0][0] == expected_pubkey_path
 
@@ -461,6 +462,7 @@ async def test_mixin_should_use_correct_path_when_syndic():
         "keysize": 4096,
         "sign_pub_messages": True,
         "transport": "tcp",
+        "keys.cache_driver": "localfs_key",
     }
     client = salt.channel.client.AsyncPubChannel.factory(opts, io_loop=mockloop)
     client.master_pubkey_path = expected_pubkey_path

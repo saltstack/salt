@@ -40,6 +40,15 @@ SHARED_WORKFLOW_CONTEXT_FILEPATH = (
 )
 
 
+class UpdateProgress:
+    def __init__(self, progress, task):
+        self.progress = progress
+        self.task = task
+
+    def __call__(self, chunk_size):
+        self.progress.update(self.task, advance=chunk_size)
+
+
 class ExitCode(IntEnum):
     OK = 0
     FAIL = 1
@@ -421,14 +430,3 @@ def get_cicd_shared_context():
     """
     shared_context_file = REPO_ROOT / "cicd" / "shared-gh-workflows-context.yml"
     return yaml.safe_load(shared_context_file.read_text())
-
-
-@cache
-def get_golden_images():
-    """
-    Return the golden images information stored on file.
-    """
-    with REPO_ROOT.joinpath("cicd", "golden-images.json").open(
-        "r", encoding="utf-8"
-    ) as rfh:
-        return json.load(rfh)

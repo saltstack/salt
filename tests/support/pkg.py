@@ -527,6 +527,9 @@ class SaltPkgInstall:
                 # tdnf does not detect nightly build versions to be higher version
                 # than release versions
                 upgrade_cmd = "install"
+                if "+" in self.pkgs[0]:
+                    # self.pkgs are not signed unless this is a release.
+                    args.append("--nogpgcheck")
             ret = self.proc.run(
                 self.pkg_mngr,
                 upgrade_cmd,
@@ -535,8 +538,20 @@ class SaltPkgInstall:
                 env=env,
             )
         else:
+            args = ["install", "-y"]
+            if self.distro_id == "photon":
+                ret = self.proc.run(
+                    "rpm",
+                    "--import",
+                    "https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public",
+                )
+                self._check_retcode(ret)
+                if "+" in self.pkgs[0]:
+                    # self.pkgs are not signed unless this is a release.
+                    args.append("--nogpgcheck")
             log.info("Installing packages:\n%s", pprint.pformat(self.pkgs))
-            ret = self.proc.run(self.pkg_mngr, "install", "-y", *self.pkgs)
+            args += self.pkgs
+            ret = self.proc.run(self.pkg_mngr, *args)
 
         if not platform.is_darwin() and not platform.is_windows():
             # Make sure we don't have any trailing references to old package file locations
@@ -600,9 +615,9 @@ class SaltPkgInstall:
             "import sys; print('{}.{}'.format(*sys.version_info))",
         ).stdout.strip()
 
-    def install(self, upgrade=False, downgrade=False):
+    def install(self, upgrade=False, downgrade=False, stop_services=True):
         self._install_pkgs(upgrade=upgrade, downgrade=downgrade)
-        if self.distro_id in ("ubuntu", "debian"):
+        if self.distro_id in ("ubuntu", "debian") and stop_services:
             self.stop_services()
 
     def stop_services(self):
@@ -688,25 +703,36 @@ class SaltPkgInstall:
                 f"/etc/yum.repos.d/salt-{distro_name}.repo",
             )
 
-            if "3007" in self.prev_version:
-                ret = self.proc.run(
-                    self.pkg_mngr, "config-manager", "--enable", "salt-repo-3007-sts"
-                )
-                self._check_retcode(ret)
-            else:
-                ret = self.proc.run(
-                    self.pkg_mngr, "config-manager", "--disable", "salt-repo-3007-sts"
-                )
-                self._check_retcode(ret)
-
-            if self.distro_name == "photon":
-                # yum version on photon doesn't support expire-cache
-                ret = self.proc.run(self.pkg_mngr, "clean", "all")
-            else:
-                ret = self.proc.run(self.pkg_mngr, "clean", "expire-cache")
-            self._check_retcode(ret)
             cmd_action = "downgrade" if downgrade else "install"
             pkgs_to_install = self.salt_pkgs.copy()
+
+            if self.distro_name == "photon":
+                orig_pkgs = pkgs_to_install[:]
+                pkgs_to_install = []
+                for _ in orig_pkgs:
+                    pkgs_to_install.append(f"{_}-{self.prev_version}")
+                ret = self.proc.run(self.pkg_mngr, "clean", "all")
+                self._check_retcode(ret)
+            else:
+                if "3007" in self.prev_version:
+                    ret = self.proc.run(
+                        self.pkg_mngr,
+                        "config-manager",
+                        "--enable",
+                        "salt-repo-3007-sts",
+                    )
+                    self._check_retcode(ret)
+                else:
+                    ret = self.proc.run(
+                        self.pkg_mngr,
+                        "config-manager",
+                        "--disable",
+                        "salt-repo-3007-sts",
+                    )
+                    self._check_retcode(ret)
+                ret = self.proc.run(self.pkg_mngr, "clean", "expire-cache")
+                self._check_retcode(ret)
+
             if self.distro_version == "8" and self.classic:
                 # centosstream 8 doesn't downgrade properly using the downgrade command for some reason
                 # So we explicitly install the correct version here
@@ -860,12 +886,7 @@ class SaltPkgInstall:
                 )
                 assert ret.returncode in [0, 3010]
             else:
-                batch_file = pkg_path.parent / "install_nsis.cmd"
-                batch_content = f'start "" /wait {str(pkg_path)} /start-minion=0 /S'
-                with salt.utils.files.fopen(batch_file, "w") as fp:
-                    fp.write(batch_content)
-                # Now run the batch file
-                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
+                ret = self.proc.run(str(pkg_path), "/start-minion=0", "/S", timeout=600)
                 self._check_retcode(ret)
 
             # XXX This should be temporary. See also a similar thing happening

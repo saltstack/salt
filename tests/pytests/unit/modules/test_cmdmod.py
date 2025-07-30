@@ -670,11 +670,15 @@ def test_run_all_output_loglevel_debug(caplog):
     stdout = b"test"
     proc = MagicMock(return_value=MockTimedProc(stdout=stdout))
 
-    msg = "Executing command 'some' in directory"
+    if salt.utils.platform.is_windows():
+        expected = "Executing command 'cmd' in directory"
+    else:
+        expected = "Executing command 'some' in directory"
     with patch("salt.utils.timed_subprocess.TimedProc", proc):
         with caplog.at_level(logging.DEBUG, logger="salt.modules.cmdmod"):
             ret = cmdmod.run_all("some command", output_loglevel="debug")
-        assert msg in caplog.text
+        result = caplog.text
+        assert expected in result
 
     assert ret["stdout"] == salt.utils.stringutils.to_unicode(stdout)
 
@@ -1069,6 +1073,39 @@ def test_prep_powershell_cmd_no_powershell():
         ("Write-Host foo", "& Write-Host foo"),
         ("$PSVersionTable", "$PSVersionTable"),
         ("try {this} catch {that}", "try {this} catch {that}"),
+        ("[bool]@{value = 0}", "[bool]@{value = 0}"),
+        (
+            "(Get-Date(Get-Date).ToUniversalTime() -UFormat %s)",
+            "(Get-Date(Get-Date).ToUniversalTime() -UFormat %s)",
+        ),
+        (
+            "if (1 -eq 1) { exit 0 } else { exit 1 }",
+            "if (1 -eq 1) { exit 0 } else { exit 1 }",
+        ),
+        (
+            "do { $count++; $a++; } while ($x[$a] -ne 0)",
+            "do { $count++; $a++; } while ($x[$a] -ne 0)",
+        ),
+        (
+            "while ($val -ne 3) { $val++; Write-Host $val }",
+            "while ($val -ne 3) { $val++; Write-Host $val }",
+        ),
+        (
+            "trap { 'Error found.' }",
+            "trap { 'Error found.' }",
+        ),
+        (
+            "for ($i=1; $i -le 10; $i++) { Write-Host $i }",
+            "for ($i=1; $i -le 10; $i++) { Write-Host $i }",
+        ),
+        (
+            "foreach ($file in Get-ChildItem) { Write-Host $file }",
+            "foreach ($file in Get-ChildItem) { Write-Host $file }",
+        ),
+        (
+            'data { if ($null) { "To get help for this cmdlet, type Get-Help New-Dictionary." } }',
+            'data { if ($null) { "To get help for this cmdlet, type Get-Help New-Dictionary." } }',
+        ),
     ],
 )
 @pytest.mark.skip_unless_on_windows
@@ -1083,15 +1120,17 @@ def test_prep_powershell_cmd(cmd, parsed):
         ret = cmdmod._prep_powershell_cmd(
             win_shell="powershell", cmd=cmd, encoded_cmd=False
         )
-        expected = [
-            "C:\\powershell.exe",
-            "-NonInteractive",
-            "-NoProfile",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-Command",
-            parsed,
-        ]
+        expected = " ".join(
+            [
+                '"C:\\powershell.exe"',
+                "-NonInteractive",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                f'"{parsed}"',
+            ],
+        )
         assert ret == expected
 
 
@@ -1109,15 +1148,17 @@ def test_prep_powershell_cmd_encoded():
         ret = cmdmod._prep_powershell_cmd(
             win_shell="powershell", cmd=e_cmd, encoded_cmd=True
         )
-        expected = [
-            "C:\\powershell.exe",
-            "-NonInteractive",
-            "-NoProfile",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-EncodedCommand",
-            f"{e_cmd}",
-        ]
+        expected = " ".join(
+            [
+                '"C:\\powershell.exe"',
+                "-NonInteractive",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-EncodedCommand",
+                f'"{e_cmd}"',
+            ],
+        )
         assert ret == expected
 
 
@@ -1134,15 +1175,17 @@ def test_prep_powershell_cmd_script():
         ret = cmdmod._prep_powershell_cmd(
             win_shell="powershell", cmd=script, encoded_cmd=False
         )
-        expected = [
-            "C:\\powershell.exe",
-            "-NonInteractive",
-            "-NoProfile",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-Command",
-            f"& {script}; exit $LASTEXITCODE",
-        ]
+        expected = " ".join(
+            [
+                '"C:\\powershell.exe"',
+                "-NonInteractive",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                f'"& {script}; exit $LASTEXITCODE"',
+            ],
+        )
         assert ret == expected
 
 
