@@ -74,6 +74,7 @@ from salt.exceptions import (
 from salt.template import SLS_ENCODING
 from salt.utils.ctx import RequestContext
 from salt.utils.debug import enable_sigusr1_handler
+from salt.utils.decorators.start_event import fire_started_event_job_wrapper
 from salt.utils.event import tagify
 from salt.utils.network import parse_host_port
 from salt.utils.odict import OrderedDict
@@ -2015,6 +2016,7 @@ class Minion(MinionBase):
         return None
 
     @classmethod
+    @fire_started_event_job_wrapper
     def _thread_return(cls, minion_instance, opts, data):
         """
         This method should be used as a threading target, start the actual
@@ -2220,6 +2222,7 @@ class Minion(MinionBase):
                     log.exception("The return failed for job %s: %s", data["jid"], exc)
 
     @classmethod
+    @fire_started_event_job_wrapper
     def _thread_multi_return(cls, minion_instance, opts, data):
         """
         This method should be used as a threading target, start the actual
