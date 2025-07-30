@@ -156,7 +156,7 @@ def kill(timeout=15):
     return ret
 
 
-def restart():
+def restart(systemd=True, win_service=True):
     """
     Restart the salt minion.
 
@@ -165,11 +165,13 @@ def restart():
     - If ``minion_restart_command`` is set in the minion configuration then
     the command specified will be used to restart the minion.
 
-    - If the minion is running as a Systemd service then the minion will be
-    restarted using the systemd_service module
+    - If the minion is running as a systemd service then the minion will be
+    restarted using the systemd_service module, unless ``systemd`` is
+    set to ``False``
 
     - If the minion is running as a Windows service then the minion will be
-    restarted using the win_service module
+    restarted using the win_service module, unless ``win_service`` is
+    set to ``False``
 
     - If the salt-minion process is running in daemon mode (the ``-d``
     argument is present in ``argv``) then the minion will be killed and
@@ -179,6 +181,14 @@ def restart():
     argument is not present in ``argv``) then the minion will be killed but not
     restarted. This behavior is intended for minion processes that are managed
     by a process supervisor.
+
+    systemd
+        If set to ``False`` then systemd will not be used to restart the minion.
+        Defaults to ``True``.
+
+    win_service
+        If set to ``False`` then the Windows service manager will not be used to
+        restart the minion. Defaults to ``True``.
 
     CLI Example:
 
@@ -245,13 +255,13 @@ def restart():
     if restart_cmd:
         comment.append("Using configuration minion_restart_command:")
         comment.extend([f"    {arg}" for arg in restart_cmd])
-    elif _is_systemd_system():
+    elif systemd and _is_systemd_system():
         # If we are using systemd then we will restart the minion using
         # service.restart (systemd_service.restart)
         comment.append("Using systemctl to restart salt-minion")
         should_kill = False
         should_restart = False
-    elif _is_windows_system():
+    elif win_service and _is_windows_system():
         # If we are on Windows then we will restart the minion using
         # service.restart (win_service.restart)
         comment.append("Using windows service manager to restart salt-minion")
@@ -294,7 +304,7 @@ def restart():
             del ret["restart"]["retcode"]
 
     if not restart_cmd:
-        if _is_systemd_system():
+        if systemd and _is_systemd_system():
             try:
                 ret["service_restart"]["result"] = __salt__["service.restart"](
                     "salt-minion", no_block=True
@@ -304,7 +314,7 @@ def restart():
                 ret["service_restart"]["result"] = False
                 ret["service_restart"]["stderr"] = str(e)
                 ret["retcode"] = salt.defaults.exitcodes.EX_SOFTWARE
-        elif _is_windows_system():
+        elif win_service and _is_windows_system():
             ret["service_restart"]["result"] = __salt__["service.restart"](
                 "salt-minion"
             )
