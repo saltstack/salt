@@ -148,10 +148,13 @@ IMCAC - Immediate Custom Action - It's immediate
     Another application has exclusive access to the file \salt\var\log\salt\minion
     Please shut down the application
     -->
-    <CustomAction Id="stopSalt" Script="vbscript">
-      On error resume next
-      Set objShell = CreateObject("WScript.Shell")
-      objShell.Run "net stop salt-minion", 0, true
+    <CustomAction Id="stopSalt" Script="jscript">
+      try {
+        var objShell = new ActiveXObject("WScript.Shell");
+        objShell.Run("net stop salt-minion", 0, true);
+      } catch (e) {
+        // Handle error if needed
+      }
     </CustomAction>
 
     <!-- This is the import statement for the Custom Actions:

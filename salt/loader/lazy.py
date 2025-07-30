@@ -153,7 +153,10 @@ class LoadedFunc:
         if hasattr(mod, "__opts__"):
             if not isinstance(mod.__opts__, salt.loader.context.NamedLoaderContext):
                 if "test" in self.loader.opts:
-                    mod.__opts__["test"] = self.loader.opts["test"]
+                    if self.loader.opts["test"] is False:
+                        mod.__opts__["test"] = False
+                    else:
+                        mod.__opts__["test"] = True
                     set_test = True
         if self.loader.inject_globals:
             run_func = global_injector_decorator(self.loader.inject_globals)(run_func)
@@ -1120,7 +1123,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             for name in self.file_mapping:
                 if name in self.loaded_files or name in self.missing_modules:
                     continue
-                self._load_module(name)
+                try:
+                    self._load_module(name)
+                except FileNotFoundError:
+                    log.warning("Module file not found %s", name)
+                    self.missing_modules[name] = f"Module file not found {name}"
 
             self.loaded = True
 

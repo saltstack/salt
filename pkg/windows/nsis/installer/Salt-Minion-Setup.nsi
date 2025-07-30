@@ -587,11 +587,9 @@ Section -copy_prereqs
 SectionEnd
 
 
-# Check and install Visual C++ redist 2022 packages
+# Install Visual C++ Redistributable 2022
 # Hidden section (-) to install VCRedist
 Section -install_vcredist_2022
-
-    ${DisableX64FSRedirection}
 
     Var /GLOBAL VcRedistName
     # Determine which architecture needs to be installed
@@ -602,80 +600,53 @@ Section -install_vcredist_2022
     ${endif}
     detailPrint "Selected $VcRedistName installer"
 
-    # Check for the presence of vcruntime140.dll
-    IfFileExists "$WINDIR\System32\vcruntime140.dll" file_found
-
-    file_not_found:
-        detailPrint "$VcRedistName not found"
-        # Install
-        Call InstallVCRedist
-        Goto end_of_section
-
-    file_found:
-        detailPrint "$VcRedistName found, install will continue"
-
-    end_of_section:
-
-    ${EnableX64FSRedirection}
+    # Install
+    Call InstallVCRedist
 
 SectionEnd
 
 
 Function InstallVCRedist
-    detailPrint "System requires $VcRedistName"
-    MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 \
-        "$VcRedistName is currently not installed. Would you like to install?" \
-        /SD IDYES IDYES InstallVcRedist
 
-    detailPrint "$VcRedistName not installed"
-    detailPrint ">>>Installation aborted by user<<<"
-    MessageBox MB_ICONEXCLAMATION \
-        "$VcRedistName not installed. Aborted by user.$\n$\n\
-        Installer will now close." \
+    # If an output variable is specified ($0 in the case below), ExecWait
+    # sets the variable with the exit code (and only sets the error flag if
+    # an error occurs; if an error occurs, the contents of the user
+    # variable are undefined).
+    # http://nsis.sourceforge.net/Reference/ExecWait
+    ClearErrors
+    detailPrint "Installing $VcRedistName..."
+    ExecWait '"$PLUGINSDIR\$VcRedistName.exe" /install /quiet /norestart' $0
+
+    IfErrors 0 CheckVcRedistErrorCode
+
+    detailPrint "An error occurred during installation of $VcRedistName"
+    MessageBox MB_OK|MB_ICONEXCLAMATION \
+        "$VcRedistName failed to install. Try installing the package \
+        manually.$\n$\n\
+        The installer will now close." \
         /SD IDOK
-    Quit
+        Quit
 
-    InstallVcRedist:
+    CheckVcRedistErrorCode:
+    # Check for Reboot Error Code (3010)
+    ${If} $0 == 3010
+        detailPrint "$VcRedistName installed but requires a restart to complete."
+        detailPrint "Reboot and run Salt install again"
+        MessageBox MB_OK|MB_ICONINFORMATION \
+            "$VcRedistName installed but requires a restart to complete." \
+            /SD IDOK
 
-        # If an output variable is specified ($0 in the case below), ExecWait
-        # sets the variable with the exit code (and only sets the error flag if
-        # an error occurs; if an error occurs, the contents of the user
-        # variable are undefined).
-        # http://nsis.sourceforge.net/Reference/ExecWait
-        ClearErrors
-        detailPrint "Installing $VcRedistName..."
-        ExecWait '"$PLUGINSDIR\$VcRedistName.exe" /install /quiet /norestart' $0
-
-        IfErrors 0 CheckVcRedistErrorCode
-
+    # Check for any other errors
+    ${ElseIfNot} $0 == 0
         detailPrint "An error occurred during installation of $VcRedistName"
+        detailPrint "Error: $0"
         MessageBox MB_OK|MB_ICONEXCLAMATION \
             "$VcRedistName failed to install. Try installing the package \
-            manually.$\n$\n\
+            mnually.$\n\
+            ErrorCode: $0$\n\
             The installer will now close." \
             /SD IDOK
-            Quit
-
-        CheckVcRedistErrorCode:
-        # Check for Reboot Error Code (3010)
-        ${If} $0 == 3010
-            detailPrint "$VcRedistName installed but requires a restart to complete."
-            detailPrint "Reboot and run Salt install again"
-            MessageBox MB_OK|MB_ICONINFORMATION \
-                "$VcRedistName installed but requires a restart to complete." \
-                /SD IDOK
-
-        # Check for any other errors
-        ${ElseIfNot} $0 == 0
-            detailPrint "An error occurred during installation of $VcRedistName"
-            detailPrint "Error: $0"
-            MessageBox MB_OK|MB_ICONEXCLAMATION \
-                "$VcRedistName failed to install. Try installing the package \
-                mnually.$\n\
-                ErrorCode: $0$\n\
-                The installer will now close." \
-                /SD IDOK
-        ${EndIf}
+    ${EndIf}
 
 FunctionEnd
 

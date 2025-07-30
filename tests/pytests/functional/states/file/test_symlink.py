@@ -40,3 +40,37 @@ def test_symlink_test(file, tmp_path):
     ret = file.symlink(str(symlink), target=str(target), test=True)
     assert ret.result is None
     assert symlink.exists() is False
+
+
+@pytest.mark.parametrize("typ", ("dir", "file"))
+@pytest.mark.parametrize("relation", ("parent", "sibling", "child"))
+def test_symlink_relative(file, tmp_path, typ, relation):
+    """
+    Ensure symlinks with relative targets work as expected.
+    This is especiallly important on windows, where symlinks
+    don't dynamically switch types between file and directory.
+    """
+    if relation == "parent":
+        symlink = tmp_path / "subdirectory" / "symlink"
+        target_spec = "../target"
+    elif relation == "sibling":
+        symlink = tmp_path / "symlink"
+        target_spec = "target"
+    else:
+        symlink = tmp_path / "symlink"
+        target_spec = "subdirectory/target"
+    target = (symlink.parent / target_spec).resolve()
+    if typ == "dir":
+        target.mkdir(parents=True)
+        check_file = symlink / "file_in_target"
+        (target / "file_in_target").write_text("resolved")
+    else:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("resolved")
+        check_file = symlink
+    res = file.symlink(str(symlink), target=target_spec, makedirs=True)
+    assert res.result is True
+    assert symlink.exists()
+    assert symlink.is_symlink()
+    assert symlink.is_dir() is (typ == "dir")
+    assert check_file.read_text() == "resolved"

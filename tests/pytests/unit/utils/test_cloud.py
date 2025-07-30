@@ -580,6 +580,11 @@ def test_ssh_gateway_arguments_alive_args():
     assert f"-oServerAliveCountMax={server_alive_count_max}" in arguments
 
 
+def test_ssh_gateway_arguments_contains_proxy_command():
+    arguments = ssh_gateway_arguments({"ssh_gateway": "host"})
+    assert "-oProxyCommand=" in arguments
+
+
 def test_wait_for_port_default_alive_args():
     server_alive_interval = 60
     server_alive_count_max = 3

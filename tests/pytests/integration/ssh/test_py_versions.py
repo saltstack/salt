@@ -9,9 +9,11 @@ import time
 import pytest
 from saltfactories.utils import random_string
 
+from salt.utils.versions import Version
+from tests.pytests.integration.ssh import check_system_python_version
 from tests.support.helpers import Keys
 
-pytest.importorskip("docker")
+docker = pytest.importorskip("docker")
 
 
 log = logging.getLogger(__name__)
@@ -19,6 +21,13 @@ log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("dockerd"),
+    pytest.mark.skipif(
+        Version(docker.__version__) < Version("4.0.0"),
+        reason="Test does not work in this version of docker-py",
+    ),
+    pytest.mark.skipif(
+        not check_system_python_version("3.10"), reason="Needs system python >= 3.9"
+    ),
 ]
 
 

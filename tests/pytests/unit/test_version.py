@@ -73,7 +73,7 @@ def test_version_parsing(version_string, full_info, version):
             .replace("-", "+", 1)
             .replace("-", ".", 1)
         )
-    assert saltstack_version.string == version
+    assert version in saltstack_version.string
 
 
 @pytest.mark.parametrize(

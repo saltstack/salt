@@ -35,6 +35,7 @@
       - prepare-workflow
     with:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
+      full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
 
   <%- endif %>
 
@@ -48,6 +49,8 @@
       - prepare-workflow
     with:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
+      full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
+      ci-python-version: "<{ gh_actions_workflows_python_version }>"
 
   <%- endif %>
 
@@ -64,10 +67,11 @@
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.10
+      - name: Set up Python <{ gh_actions_workflows_python_version }>
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "<{ gh_actions_workflows_python_version }>"
+
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -215,10 +219,10 @@
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.10
+      - name: Set up Python <{ gh_actions_workflows_python_version }>
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "<{ gh_actions_workflows_python_version }>"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -254,6 +258,7 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
+      ci-python-version: "<{ gh_actions_workflows_python_version }>"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
 
@@ -296,10 +301,11 @@
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.10
+      - name: Set up Python <{ gh_actions_workflows_python_version }>
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "<{ gh_actions_workflows_python_version }>"
+
 
       - name: Setup Python Tools Scripts
         id: python-tools-scripts

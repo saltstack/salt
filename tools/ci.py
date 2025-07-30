@@ -143,205 +143,6 @@ def process_changed_files(ctx: Context, event_name: str, changed_files: pathlib.
     ctx.exit(0)
 
 
-@ci.command(
-    name="define-jobs",
-    arguments={
-        "event_name": {
-            "help": "The name of the GitHub event being processed.",
-        },
-        "skip_tests": {
-            "help": "Skip running the Salt tests",
-        },
-        "skip_pkg_tests": {
-            "help": "Skip running the Salt Package tests",
-        },
-        "skip_pkg_download_tests": {
-            "help": "Skip running the Salt Package download tests",
-        },
-        "changed_files": {
-            "help": (
-                "Path to '.json' file containing the payload of changed files "
-                "from the 'dorny/paths-filter' GitHub action."
-            ),
-        },
-    },
-)
-def define_jobs(
-    ctx: Context,
-    event_name: str,
-    changed_files: pathlib.Path,
-    skip_tests: bool = False,
-    skip_pkg_tests: bool = False,
-    skip_pkg_download_tests: bool = False,
-):
-    """
-    Set GH Actions 'jobs' output to know which jobs should run.
-    """
-    github_output = os.environ.get("GITHUB_OUTPUT")
-    if github_output is None:
-        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
-        ctx.exit(1)
-
-    if TYPE_CHECKING:
-        assert github_output is not None
-
-    github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
-    if github_step_summary is None:
-        ctx.warn("The 'GITHUB_STEP_SUMMARY' variable is not set.")
-        ctx.exit(1)
-
-    if TYPE_CHECKING:
-        assert github_step_summary is not None
-
-    jobs = {
-        "lint": True,
-        "test": True,
-        "test-pkg": True,
-        "test-pkg-download": True,
-        "prepare-release": True,
-        "build-docs": True,
-        "build-source-tarball": True,
-        "build-deps-onedir": True,
-        "build-salt-onedir": True,
-        "build-pkgs": True,
-        "build-deps-ci": True,
-    }
-
-    if skip_tests:
-        jobs["test"] = False
-    if skip_pkg_tests:
-        jobs["test-pkg"] = False
-    if skip_pkg_download_tests:
-        jobs["test-pkg-download"] = False
-
-    if event_name != "pull_request":
-        # In this case, all defined jobs should run
-        with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write("Selected Jobs:\n")
-            for name, value in sorted(jobs.items()):
-                wfh.write(f" - `{name}`: {value}\n")
-
-        ctx.info("Writing 'jobs' to the github outputs file")
-        with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"jobs={json.dumps(jobs)}\n")
-
-        with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write(
-                f"All defined jobs will run due to event type of `{event_name}`.\n"
-            )
-        return
-
-    # This is a pull-request
-
-    labels: list[str] = []
-    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
-    if gh_event_path is not None:
-        try:
-            gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
-        except Exception as exc:
-            ctx.error(
-                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc  # type: ignore[arg-type]
-            )
-            ctx.exit(1)
-
-        labels.extend(
-            label[0] for label in _get_pr_test_labels_from_event_payload(gh_event)
-        )
-
-    if not changed_files.exists():
-        ctx.error(f"The '{changed_files}' file does not exist.")
-        ctx.error(
-            "FYI, the command 'tools process-changed-files <changed-files-path>' "
-            "needs to run prior to this one."
-        )
-        ctx.exit(1)
-    try:
-        changed_files_contents = json.loads(changed_files.read_text())
-    except Exception as exc:
-        ctx.error(f"Could not load the changed files from '{changed_files}': {exc}")
-        ctx.exit(1)
-
-    # So, it's a pull request...
-    # Based on which files changed, we can decide what jobs to run.
-    required_lint_changes: set[str] = {
-        changed_files_contents["salt"],
-        changed_files_contents["tests"],
-        changed_files_contents["lint"],
-    }
-    if required_lint_changes == {"false"}:
-        with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write("De-selecting the 'lint' job.\n")
-        jobs["lint"] = False
-
-    required_docs_changes: set[str] = {
-        changed_files_contents["salt"],
-        changed_files_contents["docs"],
-    }
-    if required_docs_changes == {"false"}:
-        with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write("De-selecting the 'build-docs' job.\n")
-        jobs["build-docs"] = False
-
-    required_test_changes: set[str] = {
-        changed_files_contents["testrun"],
-        changed_files_contents["workflows"],
-        changed_files_contents["golden_images"],
-    }
-    if jobs["test"] and required_test_changes == {"false"}:
-        with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write("De-selecting the 'test' job.\n")
-        jobs["test"] = False
-
-    required_pkg_test_changes: set[str] = {
-        changed_files_contents["pkg_tests"],
-        changed_files_contents["workflows"],
-        changed_files_contents["golden_images"],
-    }
-    if "test:os:all" in labels or any([_.startswith("test:os:macos") for _ in labels]):
-        jobs["build-deps-onedir-macos"] = True
-        jobs["build-salt-onedir-macos"] = True
-    if jobs["test-pkg"] and required_pkg_test_changes == {"false"}:
-        if "test:pkg" in labels:
-            with open(github_step_summary, "a", encoding="utf-8") as wfh:
-                wfh.write(
-                    "The 'test-pkg' job is forcefully selected by the use of the 'test:pkg' label.\n"
-                )
-            jobs["test-pkg"] = True
-        else:
-            with open(github_step_summary, "a", encoding="utf-8") as wfh:
-                wfh.write("De-selecting the 'test-pkg' job.\n")
-            jobs["test-pkg"] = False
-
-    if jobs["test-pkg-download"] and required_pkg_test_changes == {"false"}:
-        with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write("De-selecting the 'test-pkg-download' job.\n")
-        jobs["test-pkg-download"] = False
-
-    if not jobs["test"] and not jobs["test-pkg"] and not jobs["test-pkg-download"]:
-        with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            for job in (
-                "build-deps-ci",
-                "build-deps-onedir",
-                "build-salt-onedir",
-                "build-pkgs",
-            ):
-                wfh.write(f"De-selecting the '{job}' job.\n")
-                jobs[job] = False
-            if not jobs["build-docs"]:
-                with open(github_step_summary, "a", encoding="utf-8") as wfh:
-                    wfh.write("De-selecting the 'build-source-tarball' job.\n")
-                jobs["build-source-tarball"] = False
-
-    with open(github_step_summary, "a", encoding="utf-8") as wfh:
-        wfh.write("Selected Jobs:\n")
-        for name, value in sorted(jobs.items()):
-            wfh.write(f" - `{name}`: {value}\n")
-
-    ctx.info("Writing 'jobs' to the github outputs file")
-    with open(github_output, "a", encoding="utf-8") as wfh:
-        wfh.write(f"jobs={json.dumps(jobs)}\n")
-
-
 class TestRun(TypedDict):
     type: str
     skip_code_coverage: bool
@@ -450,140 +251,6 @@ def get_release_changelog_target(ctx: Context, event_name: str):
     ctx.exit(0)
 
 
-@ci.command(
-    name="get-pr-test-labels",
-    arguments={
-        "pr": {
-            "help": "Pull request number",
-        },
-        "repository": {
-            "help": "Github repository.",
-        },
-    },
-)
-def get_pr_test_labels(
-    ctx: Context, repository: str = "saltstack/salt", pr: int = None
-):
-    """
-    Set the pull-request labels.
-    """
-    github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
-    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
-    if gh_event_path is None:
-        labels = _get_pr_test_labels_from_api(ctx, repository, pr=pr)
-    else:
-        if TYPE_CHECKING:
-            assert gh_event_path is not None
-
-        try:
-            gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
-        except Exception as exc:
-            ctx.error(
-                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc  # type: ignore[arg-type]
-            )
-            ctx.exit(1)
-
-        if "pull_request" not in gh_event:
-            ctx.warn("The 'pull_request' key was not found on the event payload.")
-            ctx.exit(1)
-
-        pr = gh_event["pull_request"]["number"]
-        labels = _get_pr_test_labels_from_event_payload(gh_event)
-
-    shared_context = tools.utils.get_cicd_shared_context()
-    mandatory_os_slugs = set(shared_context["mandatory_os_slugs"])
-    available = set(tools.utils.get_golden_images())
-    # Add MacOS provided by GitHub
-    available.update({"macos-12", "macos-13", "macos-13-arm64"})
-    # Remove mandatory OS'ss
-    available.difference_update(mandatory_os_slugs)
-    select_all = set(available)
-    selected = set()
-    test_labels = []
-    if labels:
-        ctx.info(f"Test labels for pull-request #{pr} on {repository}:")
-        for name, description in sorted(labels):
-            ctx.info(
-                f" * [yellow]{name}[/yellow]: {description or '[red][No description][/red]'}"
-            )
-            if name.startswith("test:os:"):
-                slug = name.split("test:os:", 1)[-1]
-                if slug not in available and name != "test:os:all":
-                    ctx.warn(
-                        f"The '{slug}' slug exists as a label but not as an available OS."
-                    )
-                selected.add(slug)
-                if slug != "all" and slug in available:
-                    available.remove(slug)
-                continue
-            test_labels.append(name)
-
-    else:
-        ctx.info(f"No test labels for pull-request #{pr} on {repository}")
-
-    if "test:coverage" in test_labels:
-        ctx.info(
-            "Selecting ALL available OS'es because the label 'test:coverage' is set."
-        )
-        selected.add("all")
-        if github_step_summary is not None:
-            with open(github_step_summary, "a", encoding="utf-8") as wfh:
-                wfh.write(
-                    "Selecting ALL available OS'es because the label `test:coverage` is set.\n"
-                )
-
-    if "all" in selected:
-        selected = select_all
-        available.clear()
-
-    github_output = os.environ.get("GITHUB_OUTPUT")
-    if github_output is None:
-        ctx.exit(0)
-
-    if TYPE_CHECKING:
-        assert github_output is not None
-
-    ctx.info("Writing 'labels' to the github outputs file...")
-    ctx.info("Test Labels:")
-    if not test_labels:
-        ctx.info(" * None")
-    else:
-        for label in sorted(test_labels):
-            ctx.info(f" * [yellow]{label}[/yellow]")
-    ctx.info("* OS Labels:")
-    if not selected:
-        ctx.info(" * None")
-    else:
-        for slug in sorted(selected):
-            ctx.info(f" * [yellow]{slug}[/yellow]")
-    with open(github_output, "a", encoding="utf-8") as wfh:
-        wfh.write(f"os-labels={json.dumps([label for label in selected])}\n")
-        wfh.write(f"test-labels={json.dumps([label for label in test_labels])}\n")
-
-    github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
-    if github_step_summary is not None:
-        with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write("Mandatory OS Test Runs:\n")
-            for slug in sorted(mandatory_os_slugs):
-                wfh.write(f"* `{slug}`\n")
-
-            wfh.write("\nOptional OS Test Runs(selected by label):\n")
-            if not selected:
-                wfh.write("* None\n")
-            else:
-                for slug in sorted(selected):
-                    wfh.write(f"* `{slug}`\n")
-
-            wfh.write("\nSkipped OS Tests Runs(NOT selected by label):\n")
-            if not available:
-                wfh.write("* None\n")
-            else:
-                for slug in sorted(available):
-                    wfh.write(f"* `{slug}`\n")
-
-    ctx.exit(0)
-
-
 def _get_pr_test_labels_from_api(
     ctx: Context, repository: str = "saltstack/salt", pr: int = None
 ) -> list[tuple[str, str]]:
@@ -626,6 +293,10 @@ def _get_pr_test_labels_from_event_payload(
 
 
 def _filter_test_labels(labels: list[dict[str, Any]]) -> list[tuple[str, str]]:
+    """
+    Filter labels that can affect the workflow configuration. Return a tuple of
+    their name and description.
+    """
     return [
         (label["name"], label["description"])
         for label in labels
@@ -888,7 +559,7 @@ def _os_test_filter(osdef, transport, chunk, arm_runner, requested_slugs):
         return False
     if "macos" in osdef.slug and chunk == "scenarios":
         return False
-    if not arm_runner:
+    if osdef.platform == "linux" and osdef.arch == "arm64" and not arm_runner:
         return False
     if transport == "tcp" and osdef.slug not in (
         "rockylinux-9",
@@ -1096,7 +767,7 @@ def workflow_config(
     gh_event: dict[str, Any] = {}
     config: dict[str, Any] = {}
     labels: list[tuple[str, str]] = []
-    slugs: list[str] = []
+    slugs: str | list[str] = []
 
     ctx.info(f"{'==== environment ====':^80s}")
     ctx.info(f"{pprint.pformat(dict(os.environ))}")
@@ -1133,17 +804,19 @@ def workflow_config(
 
     if event_name != "pull_request" or "test:full" in [_[0] for _ in labels]:
         full = True
-        requested_slugs = _environment_slugs(
-            ctx,
-            tools.utils.get_cicd_shared_context()["full-testrun-slugs"],
-            labels,
-        )
+        slugs = os.environ.get("FULL_TESTRUN_SLUGS", "")
+        if not slugs:
+            slugs = tools.utils.get_cicd_shared_context()["full-testrun-slugs"]
     else:
-        requested_slugs = _environment_slugs(
-            ctx,
-            tools.utils.get_cicd_shared_context()["pr-testrun-slugs"],
-            labels,
-        )
+        slugs = os.environ.get("PR_TESTRUN_SLUGS", "")
+        if not slugs:
+            slugs = tools.utils.get_cicd_shared_context()["pr-testrun-slugs"]
+
+    requested_slugs = _environment_slugs(
+        ctx,
+        slugs,
+        labels,
+    )
 
     ctx.info(f"{'==== requested slugs ====':^80s}")
     ctx.info(f"{pprint.pformat(requested_slugs)}")
@@ -1265,6 +938,14 @@ def workflow_config(
             ]
         for version in str_releases:
             for platform in platforms:
+
+                if platform == "windows" and "3006" in version:
+                    # The salt_master_cli.py script used by the windows pakcage
+                    # tests doesn't play nice with trying to go from 3006.x to
+                    # >=3007.x.
+                    ctx.info("3006.x upgrade/downgrade tests do not work on windows")
+                    continue
+
                 pkg_test_matrix[platform] += [
                     dict(
                         {
@@ -1276,10 +957,6 @@ def workflow_config(
                     for _ in TEST_SALT_PKG_LISTING[platform]
                     if _.slug in requested_slugs
                 ]
-                # Skipping downgrade tests on windows. These tests have never
-                # been run and currently fail. This should be fixed.
-                if platform == "windows":
-                    continue
                 pkg_test_matrix[platform] += [
                     dict(
                         {
@@ -1289,7 +966,7 @@ def workflow_config(
                         **_.as_dict(),
                     )
                     for _ in TEST_SALT_PKG_LISTING[platform]
-                    if _.slug in requested_slugs
+                    if _.slug in requested_slugs and "photon" not in _.slug
                 ]
     ctx.info(f"{'==== pkg test matrix ====':^80s}")
     ctx.info(f"{pprint.pformat(pkg_test_matrix)}")
@@ -1304,7 +981,12 @@ def workflow_config(
         "unit": 4,
     }
 
-    test_matrix: dict[str, list] = {}
+    test_matrix: dict[str, list] = {
+        "linux-x86_64": [],
+        "linux-arm64": [],
+        "macos": [],
+        "windows": [],
+    }
     if not skip_tests:
         for platform in platforms:
             for transport in ("zeromq", "tcp"):

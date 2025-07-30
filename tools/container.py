@@ -1,8 +1,14 @@
 import os
+import pathlib
+import platform
+import tempfile
 
 from ptscripts import Context, command_group
 
 cmd = command_group(name="container", help="Container Commands", description=__doc__)
+
+
+architecture = platform.machine().lower()
 
 
 def has_network(ctx, name):
@@ -31,18 +37,21 @@ def create_network(ctx, name):
     arguments={
         "image": {"help": "Name the container image to use."},
         "name": {"help": "Name the container being created.", "default": ""},
+        "platform": {"help": "The platform to run tests as,", "default": ""},
     },
 )
-def create(ctx: Context, image: str, name: str = ""):
+def create(ctx: Context, image: str, name: str = "", platform: str = ""):
     onci = "GITHUB_WORKFLOW" in os.environ
     workdir = "/salt"
     home = "/root"
     network = "ip6net"
+    tmpdir = tempfile.mkdtemp(prefix="salt-test-container")
     if not onci and not has_network(ctx, network):
         ctx.info(f"Creating docker network: {network}")
         create_network(ctx, network)
     if onci:
-        workdir = "/__w/salt/salt"
+        cwdname = pathlib.Path().resolve().name
+        workdir = f"/__w/{cwdname}/{cwdname}"
         home = "/github/home"
     env = {
         "HOME": home,
@@ -74,6 +83,9 @@ def create(ctx: Context, image: str, name: str = ""):
     ]:
         if var in os.environ:
             env[var] = os.environ[var]
+
+    pathlib.Path("/tmp/docker-var").mkdir(exist_ok=True)
+
     cmd = [
         "/usr/bin/docker",
         "create",
@@ -81,8 +93,35 @@ def create(ctx: Context, image: str, name: str = ""):
         "--privileged",
         f"--workdir={workdir}",
         "-v",
-        "/tmp/:/var/lib/docker",
+        f"{tmpdir}:/var/lib/docker",
     ]
+    if platform:
+        if platform == "aarch64" or platform == "arm64":
+            if architecture == "x86_64":
+                cmd.extend(["--platform", "linux/arm64/v8"])
+        elif platform == "x86_64":
+            if "arm" in architecture or "aarch64" in architecture:
+                cmd.extend(["--platform", "linux/amd64"])
+    if "--platform" in cmd:
+        proc = ctx.run(*["docker", "image", "ls"], capture=True, check=True)
+        if "multiarch/qemu-user-static" not in proc.stdout.decode():
+            ctx.info(
+                "Installing multiarch/qemu-user-static image for emulation support"
+            )
+            ctx.run(
+                *[
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--privileged",
+                    "multiarch/qemu-user-static",
+                    "--reset",
+                    "-p",
+                    "yes",
+                ],
+                capture=True,
+                check=True,
+            )
     for key in env:
         cmd.extend(["-e", f"{key}={env[key]}"])
     if onci:

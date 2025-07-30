@@ -4,6 +4,7 @@ import os
 import ssl
 import traceback
 import warnings
+from abc import ABC, abstractmethod
 
 import salt.utils.stringutils
 
@@ -102,20 +103,27 @@ def publish_server(opts, **kwargs):
     if ttype == "zeromq":
         import salt.transport.zeromq
 
-        return salt.transport.zeromq.PublishServer(opts, **kwargs)
+        transcls = salt.transport.zeromq.PublishServer
     elif ttype == "tcp":
         import salt.transport.tcp
 
-        return salt.transport.tcp.PublishServer(opts, **kwargs)
+        transcls = salt.transport.tcp.PublishServer
     elif ttype == "ws":
         import salt.transport.ws
 
-        return salt.transport.ws.PublishServer(opts, **kwargs)
+        transcls = salt.transport.ws.PublishServer
     elif ttype == "local":  # TODO:
         import salt.transport.local
 
-        return salt.transport.local.LocalPubServerChannel(opts, **kwargs)
-    raise Exception(f"Transport type not found: {ttype}")
+        transcls = salt.transport.local.LocalPubServerChannel
+    else:
+        raise Exception(f"Transport type not found: {ttype}")
+
+    if not transcls.support_ssl():
+        if "ssl" in kwargs:
+            log.warning("SSL is not supported for transport: %s", ttype)
+            kwargs.pop("ssl")
+    return transcls(opts, **kwargs)
 
 
 def publish_client(
@@ -353,12 +361,13 @@ class DaemonizedRequestServer(RequestServer):
         raise NotImplementedError
 
 
-class PublishServer:
+class PublishServer(ABC):
     """
     The PublishServer publishes messages to PublishClients or to a borker
     service.
     """
 
+    @abstractmethod
     def publish(self, payload, **kwargs):
         """
         Publish "load" to minions. This send the load to the publisher daemon
@@ -374,9 +383,34 @@ class DaemonizedPublishServer(PublishServer):
     PublishServer that has a daemon associated with it.
     """
 
-    def pre_fork(self, process_manager):
+    @abstractmethod
+    def __init__(
+        self,
+        opts,
+        pub_host=None,
+        pub_port=None,
+        pub_path=None,
+        pull_host=None,
+        pull_port=None,
+        pull_path=None,
+        pull_path_perms=0o600,
+        pub_path_perms=0o600,
+        started=None,
+    ):
         raise NotImplementedError
 
+    @classmethod
+    @abstractmethod
+    def support_ssl(cls):
+        """If the transport supports SSL then this should be True."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def topic_support(self):
+        """If the transport supports topics."""
+        raise NotImplementedError
+
+    @abstractmethod
     def publish_daemon(
         self,
         publish_payload,
@@ -395,6 +429,32 @@ class DaemonizedPublishServer(PublishServer):
                                               notify the channel a client is no
                                               longer present
         """
+        raise NotImplementedError
+
+    @abstractmethod
+    def pre_fork(self, process_manager):
+        raise NotImplementedError
+
+    @abstractmethod
+    async def publisher(
+        self,
+        publish_payload,
+        presence_callback=None,
+        remove_presence_callback=None,
+        io_loop=None,
+    ):
+        raise NotImplementedError
+
+    @abstractmethod
+    async def publish_payload(self, payload, topic_list=None):
+        raise NotImplementedError
+
+    @abstractmethod
+    def publish(self, payload, **kwargs):
+        raise NotImplementedError
+
+    @abstractmethod
+    def connect(self, timeout=None):
         raise NotImplementedError
 
 

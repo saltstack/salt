@@ -27,8 +27,13 @@ on:
       python-version:
         required: false
         type: string
-        description: The python version to run tests with
-        default: "3.10"
+        description: The python version bundled with Salt
+        default: "3.11"
+      ci-python-version:
+        required: false
+        type: string
+        description: The python version used by workflows
+        default: "3.11"
       package-name:
         required: false
         type: string
@@ -69,9 +74,10 @@ jobs:
       matrix:
         include: ${{ fromJSON(inputs.matrix)['linux'] }}
     steps:
-      - uses: actions/setup-python@v5
+      - name: Setup Python Version ${{ inputs.ci-python-version }}
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: ${{ inputs.ci-python-version }}
 
       - name: "Throttle Builds"
         shell: bash
@@ -80,10 +86,6 @@ jobs:
 
       - name: Checkout Source Code
         uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
 
       - name: Cache nox.linux.${{ matrix.arch }}.tar.* for session ${{ inputs.nox-session }}
         id: nox-dependencies-cache
@@ -196,11 +198,11 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-macos-${{ matrix.arch }}.tar.xz
 
-      - name: Set up Python ${{ inputs.python-version }}
+      - name: Set up Python ${{ inputs.ci-python-version }}
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         uses: actions/setup-python@v5
         with:
-          python-version: "${{ inputs.python-version }}"
+          python-version: "${{ inputs.ci-python-version }}"
 
       - name: Install System Dependencies
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
@@ -289,11 +291,11 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.tar.xz
 
-      - name: Set up Python ${{ inputs.python-version }}
+      - name: Set up Python ${{ inputs.ci-python-version }}
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         uses: actions/setup-python@v5
         with:
-          python-version: "${{ inputs.python-version }}"
+          python-version: "${{ inputs.ci-python-version }}"
 
       - name: Setup Python Tools Scripts
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'

@@ -39,12 +39,13 @@ def test_multimaster_dns(
             log.info("Removed secondary master IP address.")
             # Wait for the minion's master_alive_interval, adding a second for
             # reliablity.
-            time.sleep(master_alive_interval + 10)
+            wait_time = (master_alive_interval * 2) + 10
+            time.sleep(wait_time)
             assert (
                 "Master ip address changed from 172.16.0.1 to 127.0.0.1" in caplog.text
             )
             ret = mm_master_1_salt_cli.run("test.ping", minion_tgt="mm-minion-1")
-            assert ret.returncode == 0
+            assert ret.returncode == 0, f"Failed after waiting for {wait_time} seconds"
             assert (
                 "Master ip address changed from 172.16.0.1 to 127.0.0.1" in caplog.text
             )

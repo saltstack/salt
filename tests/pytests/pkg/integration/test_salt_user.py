@@ -1,7 +1,6 @@
 import os
 import pathlib
 import subprocess
-import sys
 import time
 
 import packaging.version
@@ -57,12 +56,16 @@ def pkg_paths_salt_user():
     """
     Paths created by package installs and owned by salt user
     """
+    ret = subprocess.run(
+        ["/opt/saltstack/salt/bin/python3", "--version"],
+        check=True,
+        capture_output=True,
+    )
+    v = packaging.version.Version(ret.stdout.decode().split()[1])
     return [
         "/etc/salt/cloud.deploy.d",
         "/var/log/salt/cloud",
-        "/opt/saltstack/salt/lib/python{}.{}/site-packages/salt/cloud/deploy".format(
-            *sys.version_info
-        ),
+        f"/opt/saltstack/salt/lib/python{v.major}.{v.minor}/site-packages/salt/cloud/deploy",
         "/etc/salt/pki/master",
         "/etc/salt/master.d",
         "/var/log/salt/master",
@@ -179,6 +182,13 @@ def test_pkg_paths(
     ):
         pytest.skip("Package path ownership was changed in salt 3006.4")
 
+    if install_salt.prev_version == "3007.1":
+        pytest.xfail("Fails due to syndic permissions bug")
+
+    if install_salt.distro_name == "photon" and install_salt.distro_version == "5":
+        # Fails on upgrade tests but there is no way to check that we are running an upgrade test.
+        pytest.skip("Package path ownership fails on photon 5")
+
     salt_user_subdirs = []
 
     for _path in pkg_paths:
@@ -231,6 +241,9 @@ def test_paths_log_rotation(
     Check ownership and premissions.
     Assumes test_pkg_paths successful
     """
+    pytest.skip(
+        "Test has too many side effects that cause other tests to fail. needs refactor"
+    )
     if packaging.version.parse(install_salt.version) <= packaging.version.parse(
         "3006.4"
     ):

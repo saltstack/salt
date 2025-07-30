@@ -14,6 +14,7 @@ from functools import total_ordering
 MAX_SIZE = sys.maxsize
 VERSION_LIMIT = MAX_SIZE - 200
 
+
 # ----- ATTENTION --------------------------------------------------------------------------------------------------->
 #
 # ALL major version bumps, new release codenames, MUST be defined in the SaltStackVersion.NAMES dictionary, i.e.:
@@ -456,7 +457,7 @@ class SaltStackVersion:
             version_string += f".{self.mbugfix}"
         if self.pre_type:
             version_string += f"{self.pre_type}{self.pre_num}"
-        if self.noc and self.sha:
+        if self.noc is not None and self.sha:
             noc = self.noc
             if noc < 0:
                 noc = "0na"
@@ -615,6 +616,7 @@ def __discover_version(saltstack_version):
                 "--match",
                 "v[0-9]*",
                 "--always",
+                "--candidates=150",
             ],
             **kwargs,
         )

@@ -362,6 +362,12 @@ class AuthorizationError(SaltException):
     """
 
 
+class SaltValidationError(SaltException):
+    """
+    Thrown when a value fails validation
+    """
+
+
 class UnsupportedAlgorithm(SaltException):
     """
     Thrown when a requested encryption or signing algorithm is un-supported.

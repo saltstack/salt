@@ -4,6 +4,8 @@ There are four valid values for this option, which are validated by checking the
 executed after minion start.
 """
 
+import time
+
 import pytest
 
 
@@ -17,6 +19,7 @@ def salt_minion_startup_states_empty_string(salt_master, salt_minion_id):
         overrides=config_overrides,
     )
     with factory.started():
+        time.sleep(10)
         yield factory
 
 
@@ -30,6 +33,7 @@ def salt_minion_startup_states_highstate(salt_master, salt_minion_id):
         overrides=config_overrides,
     )
     with factory.started():
+        time.sleep(10)
         yield factory
 
 
@@ -41,6 +45,7 @@ def salt_minion_startup_states_sls(salt_master, salt_minion_id):
         overrides=config_overrides,
     )
     with factory.started():
+        time.sleep(10)
         yield factory
 
 
@@ -52,6 +57,7 @@ def salt_minion_startup_states_top(salt_master, salt_minion_id):
         overrides=config_overrides,
     )
     with factory.started():
+        time.sleep(10)
         yield factory
 
 
