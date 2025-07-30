@@ -710,6 +710,7 @@ class AsyncAuth:
         self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
         self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
         self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
+        self._private_key = None
         if self.opts["__role"] == "syndic":
             self.mpub = "syndic_master.pub"
         else:
@@ -1087,22 +1088,23 @@ class AsyncAuth:
         :rtype: Crypto.PublicKey.RSA._RSAobj
         :return: The RSA keypair
         """
-        # Make sure all key parent directories are accessible
-        user = self.opts.get("user", "root")
-        salt.utils.verify.check_path_traversal(self.opts["pki_dir"], user)
+        if self._private_key is None:
+            # Make sure all key parent directories are accessible
+            user = self.opts.get("user", "root")
+            salt.utils.verify.check_path_traversal(self.opts["pki_dir"], user)
 
-        if not os.path.exists(self.rsa_path):
-            log.info("Generating keys: %s", self.opts["pki_dir"])
-            gen_keys(
-                self.opts["pki_dir"],
-                "minion",
-                self.opts["keysize"],
-                self.opts.get("user"),
-            )
-        key = PrivateKey(self.rsa_path, None)
-        log.debug("Loaded minion key: %s", self.rsa_path)
-        return key
+            if not os.path.exists(self.rsa_path):
+                log.info("Generating keys: %s", self.opts["pki_dir"])
+                gen_keys(
+                    self.opts["pki_dir"],
+                    "minion",
+                    self.opts["keysize"],
+                    self.opts.get("user"),
+                )
+            self._private_key = PrivateKey(self.rsa_path, None)
+        return self._private_key
 
+    @salt.utils.decorators.memoize
     def gen_token(self, clear_tok):
         """
         Encrypt a string with the minion private key to verify identity
