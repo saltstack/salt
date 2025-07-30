@@ -1033,6 +1033,9 @@ class AsyncAuth:
         return self._private_key
 
     @salt.utils.decorators.memoize
+    def _gen_token(self, key, token):
+        return private_encrypt(key, token)
+
     def gen_token(self, clear_tok):
         """
         Encrypt a string with the minion private key to verify identity
@@ -1042,7 +1045,7 @@ class AsyncAuth:
         :return: Encrypted token
         :rtype: str
         """
-        return private_encrypt(self.get_keys(), clear_tok)
+        return self._gen_token(self.get_keys(), clear_tok)
 
     def minion_sign_in_payload(self):
         """
@@ -1411,6 +1414,7 @@ class SAuth(AsyncAuth):
         self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
         self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
         self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
+        self._private_key = None
         self._creds = None
         if "syndic_master" in self.opts:
             self.mpub = "syndic_master.pub"
