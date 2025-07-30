@@ -448,6 +448,7 @@ jobs:
     if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-salt-onedir'] }}
     needs:
       - prepare-workflow
+      - build-docs
       - build-source-tarball
     uses: ./.github/workflows/build-salt-onedir.yml
     with:
