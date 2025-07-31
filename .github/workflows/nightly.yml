@@ -421,7 +421,7 @@ jobs:
     if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-docs'] }}
     needs:
       - prepare-workflow
-      - build-source-tarball
+      - prepare-release
     uses: ./.github/workflows/build-docs.yml
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
@@ -433,6 +433,7 @@ jobs:
     needs:
       - prepare-workflow
       - prepare-release
+      - build-docs
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -452,6 +453,20 @@ jobs:
         uses: ./.github/actions/setup-salt-version
         with:
           salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+
+      - name: Download Man Pages Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs-man.tar.xz
+
+      - name: Extract and Remove Man Pages Artifact
+        shell: bash
+        run: |
+          pwd
+          mkdir -p doc/man
+          tar -xvf salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs-man.tar.xz -C doc/man
+          ls -la doc/man
+          rm salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs-man.tar.xz
 
       - name: Build Source Tarball
         uses: ./.github/actions/build-source-tarball
