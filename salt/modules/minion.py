@@ -3,14 +3,19 @@ Module to provide information about minions and handle killing and restarting
 minions
 """
 
+import datetime
+import logging
 import os
 import sys
 import time
 
 import salt.key
 import salt.utils.data
+import salt.utils.path
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError
+
+log = logging.getLogger(__name__)
 
 # Don't shadow built-ins.
 __func_alias__ = {"list_": "list"}
@@ -32,6 +37,75 @@ def _is_windows_system():
     Check if the system is Windows
     """
     return __grains__.get("kernel") == "Windows"
+
+
+def _schedule_retry_systemd(retry_delay):
+    """
+    Schedule a retry for the minion restart on systemd systems
+    """
+    if not _is_systemd_system():
+        return False
+
+    # systemd-run --on-active=180 bash -c "systemctl is-active salt-minion || systemctl start salt-minion"
+    cmd = [
+        salt.utils.path.which("systemd-run"),
+        f"--on-active={retry_delay}",
+        "/bin/sh",
+        "-c",
+        "systemctl is-active salt-minion || systemctl start salt-minion",
+    ]
+
+    out = __salt__["cmd.run_all"](cmd, python_shell=False)
+    if out["retcode"] != 0:
+        raise CommandExecutionError(out["stderr"])
+    return out
+
+
+def _schedule_retry_windows(retry_delay):
+    """
+    Schedule a retry for the minion restart on Windows systems
+    """
+    if not _is_windows_system():
+        return False
+
+    when = datetime.datetime.now() + datetime.timedelta(seconds=retry_delay)
+    cmd = salt.utils.path.which("powershell.exe")
+    args = "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -Command \"if ((Get-Service -Name salt-minion).Status -ne 'Running') { Start-Service -Name salt-minion }\""
+    out = __salt__["task.create_task"](
+        name="retry-minion-restart",
+        user_name="System",
+        force=True,
+        action_type="Execute",
+        cmd=cmd,
+        arguments=args,
+        trigger_type="Once",
+        start_date=when.strftime("%Y-%m-%d"),
+        start_time=when.strftime("%H:%M:%S"),
+    )
+    if not out:
+        raise CommandExecutionError("Failed to add retry task")
+    return out
+
+
+def _schedule_retry(retry_delay):
+    """
+    Schedule a retry for the minion restart
+
+    """
+
+    try:
+        int(retry_delay)
+    except (ValueError, TypeError):
+        raise CommandExecutionError(
+            "Invalid retry_delay value: {}. Must be a number of seconds.".format(
+                retry_delay
+            )
+        )
+    if _is_systemd_system():
+        return _schedule_retry_systemd(retry_delay)
+    elif _is_windows_system():
+        return _schedule_retry_windows(retry_delay)
+    return False
 
 
 def list_():
@@ -156,7 +230,7 @@ def kill(timeout=15):
     return ret
 
 
-def restart(systemd=True, win_service=True):
+def restart(systemd=True, win_service=True, schedule_retry=False, retry_delay=180):
     """
     Restart the salt minion.
 
@@ -305,21 +379,70 @@ def restart(systemd=True, win_service=True):
 
     if not restart_cmd:
         if systemd and _is_systemd_system():
+            schedule_retry_failed = False
             try:
+                if schedule_retry:
+                    ret["service_restart"]["schedule_retry"] = {}
+
+                    schedule_retry_failed = True
+                    sched = _schedule_retry(retry_delay)
+                    schedule_retry_failed = False
+
+                    ret["service_restart"]["schedule_retry"]["detail"] = sched.get(
+                        "stderr", ""
+                    )
+                    ret["service_restart"]["schedule_retry"]["delay"] = retry_delay
+                    comment.append(
+                        "Scheduled retry for minion restart in {} seconds".format(
+                            retry_delay
+                        )
+                    )
+
                 ret["service_restart"]["result"] = __salt__["service.restart"](
                     "salt-minion", no_block=True
                 )
+                comment.append("Service restart successful")
             except CommandExecutionError as e:
-                comment.append("Service restart failed")
+                comment.append(
+                    "Adding scheduled retry failed"
+                    if schedule_retry_failed
+                    else "Service restart failed"
+                )
                 ret["service_restart"]["result"] = False
                 ret["service_restart"]["stderr"] = str(e)
                 ret["retcode"] = salt.defaults.exitcodes.EX_SOFTWARE
+
         elif win_service and _is_windows_system():
-            ret["service_restart"]["result"] = __salt__["service.restart"](
-                "salt-minion"
-            )
-            if not ret["service_restart"]:
-                comment.append("Service restart failed")
+            schedule_retry_failed = False
+            try:
+                if schedule_retry:
+                    ret["service_restart"]["schedule_retry"] = {}
+
+                    schedule_retry_failed = True
+                    sched = _schedule_retry(retry_delay)
+                    schedule_retry_failed = False
+
+                    ret["service_restart"]["schedule_retry"]["delay"] = retry_delay
+                    comment.append(
+                        "Scheduled retry for minion restart in {} seconds".format(
+                            retry_delay
+                        )
+                    )
+
+                ret["service_restart"]["result"] = __salt__["service.restart"](
+                    "salt-minion"
+                )
+                if not ret["service_restart"]:
+                    raise CommandExecutionError("Failed to restart salt-minion service")
+                comment.append("Service restart successful")
+            except CommandExecutionError as e:
+                comment.append(
+                    "Adding scheduled retry failed"
+                    if schedule_retry_failed
+                    else "Service restart failed"
+                )
+                ret["service_restart"]["result"] = False
+                ret["service_restart"]["stderr"] = str(e)
                 ret["retcode"] = salt.defaults.exitcodes.EX_SOFTWARE
 
     if comment:
