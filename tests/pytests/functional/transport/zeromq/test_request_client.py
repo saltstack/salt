@@ -1,10 +1,34 @@
+import asyncio
+import logging
+
 import pytest
 import pytestshellutils.utils.ports
 import zmq
 import zmq.eventloop.zmqstream
 
+import salt.exceptions
 import salt.ext.tornado.gen
 import salt.transport.zeromq
+
+log = logging.getLogger(__name__)
+
+
+@pytest.fixture
+def io_loop():
+    """
+    Create new io loop for each test, and tear it down after.
+
+    This overrides the global io_loop fixture swaping the ioloop for an asyncio
+    based loop.
+    """
+    loop = salt.ext.tornado.platform.asyncio.AsyncIOLoop()
+    # loop = salt.ext.tornado.ioloop.IOLoop()
+    loop.make_current()
+    try:
+        yield loop
+    finally:
+        loop.clear_current()
+        loop.close(all_fds=True)
 
 
 @pytest.fixture
@@ -23,9 +47,8 @@ async def test_request_channel_issue_64627(io_loop, minion_opts, port):
     socket.bind(minion_opts["master_uri"])
     stream = zmq.eventloop.zmqstream.ZMQStream(socket, io_loop=io_loop)
 
-    @salt.ext.tornado.gen.coroutine
-    def req_handler(stream, msg):
-        yield stream.send(msg[0])
+    async def req_handler(stream, msg):
+        stream.send(msg[0])
 
     stream.on_recv_stream(req_handler)
 
@@ -37,3 +60,72 @@ async def test_request_channel_issue_64627(io_loop, minion_opts, port):
     assert req_socket is request_client.message_client.socket
     request_client.close()
     assert request_client.message_client.socket is None
+
+
+@pytest.fixture
+def request_client(io_loop, minion_opts, port):
+    minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
+    client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
+    try:
+        yield client
+    finally:
+        client.close()
+
+
+async def test_request_channel_issue_65265(io_loop, request_client, minion_opts, port):
+    import time
+
+    import salt.ext.tornado.platform
+
+    minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
+
+    ctx = zmq.Context()
+    socket = ctx.socket(zmq.REP)
+    socket.bind(minion_opts["master_uri"])
+    stream = zmq.eventloop.zmqstream.ZMQStream(socket, io_loop=io_loop)
+    send_complete = asyncio.Event()
+
+    async def no_handler(stream, msg):
+        """
+        The server never responds.
+        """
+        stream.close()
+
+    stream.on_recv_stream(no_handler)
+
+    async def send_request():
+        """
+        The request will timeout becuse the server does not respond.
+        """
+        ret = None
+        with pytest.raises(salt.exceptions.SaltReqTimeoutError):
+            await request_client.send("foo", timeout=1)
+        send_complete.set()
+        return ret
+
+    start = time.monotonic()
+    io_loop.spawn_callback(send_request)
+
+    await send_complete.wait()
+
+    # Ensure the lock was released when the request timed out.
+
+    locked = request_client.message_client.lock._block._value
+    assert locked == 0
+
+    # Create a new server, the old socket has been closed.
+
+    async def req_handler(stream, msg):
+        """
+        The server responds
+        """
+        stream.send(salt.payload.dumps("bar"))
+
+    socket = ctx.socket(zmq.REP)
+    socket.bind(minion_opts["master_uri"])
+    stream = zmq.eventloop.zmqstream.ZMQStream(socket, io_loop=io_loop)
+    stream.on_recv_stream(req_handler)
+    send_complete = asyncio.Event()
+
+    ret = await request_client.send("foo", timeout=1)
+    assert ret == "bar"
