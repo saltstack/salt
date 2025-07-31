@@ -57,11 +57,15 @@ def test_no_block_default(service_name, no_block, expected):
         ("stop", "stop"),
     ],
 )
-def test_operation_no_block_default(operation, expected_command):
+def test_operation_no_block_default(operation, expected_command, grains):
     """
     Test restart/stop functions to ensure they use the correct default value for
     no_block when operating on the salt-minion service.
     """
+
+    if grains["osfinger"] == "Amazon Linux-2":
+        pytest.skip("Amazon Linux 2 CI containers do not support systemd fully")
+
     mock_none = MagicMock(return_value=None)
     mock_true = MagicMock(return_value=True)
     mock_run_all_success = MagicMock(
