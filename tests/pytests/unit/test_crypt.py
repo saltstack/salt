@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 import salt.crypt as crypt
@@ -56,12 +58,13 @@ async def test_auth_aes_key_rotation(minion_root, io_loop):
         "acceptance_wait_time": 60,
         "acceptance_wait_time_max": 60,
     }
+    crypt.gen_keys(pki_dir, "minion", opts["keysize"])
     credskey = (
         opts["pki_dir"],  # where the keys are stored
         opts["id"],  # minion ID
         opts["master_uri"],  # master ID
+        str(os.path.getmtime(os.path.join(opts["pki_dir"], "minion.pem"))),
     )
-    crypt.gen_keys(pki_dir, "minion", opts["keysize"])
 
     aes = crypt.Crypticle.generate_key_string()
     session = crypt.Crypticle.generate_key_string()
@@ -126,11 +129,6 @@ def test_sauth_aes_key_rotation(minion_root, io_loop):
         "acceptance_wait_time": 60,
         "acceptance_wait_time_max": 60,
     }
-    credskey = (
-        opts["pki_dir"],  # where the keys are stored
-        opts["id"],  # minion ID
-        opts["master_uri"],  # master ID
-    )
     crypt.gen_keys(pki_dir, "minion", opts["keysize"])
 
     aes = crypt.Crypticle.generate_key_string()
