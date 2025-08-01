@@ -613,10 +613,15 @@ class AsyncAuth:
 
     @classmethod
     def __key(cls, opts, io_loop=None):
+        keypath = os.path.join(opts["pki_dir"], "minion.pem")
+        keytime = "0"
+        if os.path.exists(keypath):
+            keytime = str(os.path.getmtime(keypath))
         return (
             opts["pki_dir"],  # where the keys are stored
             opts["id"],  # minion ID
             opts["master_uri"],  # master ID
+            keytime,
         )
 
     # has to remain empty for singletons, since __init__ will *always* be called
