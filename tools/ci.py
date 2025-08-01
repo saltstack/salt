@@ -166,6 +166,38 @@ def _build_matrix(os_kind, linux_arm_runner):
     return _matrix
 
 
+def _onedir_build_matrix(os_kind, linux_arm_runner, python_versions=None):
+    """
+    Generate matrix onedir python builds.
+    """
+    if python_versions is None:
+        python_versions = [
+            "3.10.18",
+            "3.11.13",
+            "3.12.11",
+        ]
+    _matrix = []
+    if os_kind == "windows":
+        for version in python_versions:
+            _matrix.extend(
+                [
+                    {"python": version, "arch": "amd64"},
+                    {"python": version, "arch": "x86"},
+                ]
+            )
+    else:
+        for version in python_versions:
+            _matrix.append({"python": version, "arch": "x86_64"})
+
+    if os_kind == "macos":
+        for version in python_versions:
+            _matrix.append({"python": version, "arch": "arm64"})
+    elif os_kind == "linux" and linux_arm_runner:
+        for version in python_versions:
+            _matrix.append({"python": version, "arch": "arm64"})
+    return _matrix
+
+
 @ci.command(
     name="get-releases",
     arguments={
@@ -808,6 +840,7 @@ def workflow_config(
         jobs["test-pkg-download"] = False
 
     config["jobs"] = jobs
+
     config["build-matrix"] = {
         platform: _build_matrix(platform, config["linux_arm_runner"])
         for platform in platforms
@@ -815,6 +848,15 @@ def workflow_config(
     ctx.info(f"{'==== build matrix ====':^80s}")
     ctx.info(f"{pprint.pformat(config['build-matrix'])}")
     ctx.info(f"{'==== end build matrix ====':^80s}")
+
+    config["onedir-matrix"] = {
+        platform: _onedir_build_matrix(platform, config["linux_arm_runner"])
+        for platform in platforms
+    }
+    ctx.info(f"{'==== onedir build matrix ====':^80s}")
+    ctx.info(f"{pprint.pformat(config['onedir-matrix'])}")
+    ctx.info(f"{'==== end onedir build matrix ====':^80s}")
+
     config["artifact-matrix"] = []
     for platform in platforms:
         config["artifact-matrix"] += [

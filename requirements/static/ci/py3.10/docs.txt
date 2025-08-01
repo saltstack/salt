@@ -33,9 +33,10 @@ cheroot==8.5.2
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   cherrypy
-cherrypy==18.10.0
+cherrypy==18.10.0 ; python_version < "3.11"
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/docs.in
 contextvars==2.4
     # via
@@ -133,7 +134,7 @@ msgpack==1.0.2
     #   -r requirements/base.txt
 myst-docutils[linkify]==0.18.1
     # via -r requirements/static/ci/docs.in
-packaging==24.0
+packaging==24.0 ; python_version <= "3.10"
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/base.txt
@@ -215,6 +216,10 @@ tempora==4.1.1
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   portend
+timelib==0.3.0
+    # via
+    #   -c requirements/static/ci/py3.10/linux.txt
+    #   -r requirements/base.txt
 typing-extensions==4.8.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt

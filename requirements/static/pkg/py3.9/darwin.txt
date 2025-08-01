@@ -20,8 +20,10 @@ charset-normalizer==3.2.0
     # via requests
 cheroot==8.5.2
     # via cherrypy
-cherrypy==18.6.1
-    # via -r requirements/darwin.txt
+cherrypy==18.6.1 ; python_version < "3.11"
+    # via
+    #   -r requirements/base.txt
+    #   -r requirements/darwin.txt
 contextvars==2.4
     # via -r requirements/base.txt
 croniter==2.0.5 ; sys_platform != "win32"
@@ -86,7 +88,7 @@ more-itertools==10.7.0
     #   jaraco.text
 msgpack==1.0.2
     # via -r requirements/base.txt
-packaging==24.0
+packaging==24.0 ; python_version <= "3.10"
     # via -r requirements/base.txt
 portend==2.6
     # via cherrypy
@@ -131,8 +133,10 @@ smmap==4.0.0
     # via gitdb
 tempora==4.1.1
     # via portend
-timelib==0.2.5
-    # via -r requirements/darwin.txt
+timelib==0.3.0
+    # via
+    #   -r requirements/base.txt
+    #   -r requirements/darwin.txt
 urllib3==1.26.20 ; python_version < "3.10"
     # via
     #   -r requirements/base.txt
