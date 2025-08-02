@@ -40,6 +40,8 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+REQUEST_TIMEOUT = 60
+
 
 def _get_master_uri(master_ip, master_port, source_ip=None, source_port=None):
     """
@@ -494,6 +496,29 @@ def _set_tcp_keepalive(zmq_socket, opts):
             zmq_socket.setsockopt(zmq.TCP_KEEPALIVE_INTVL, opts["tcp_keepalive_intvl"])
 
 
+class BackoffTimeout:
+    """
+    Return a backoff value. Backoff from the start value to a maximum value.
+    Each time the object is called the backoff value is increased by the
+    provided percentage.
+    """
+
+    def __init__(self, start=0.0003, maximum=0.3, percent=0.01, _count=0):
+        self._backoff = start
+        self._count = _count
+        self.start = start
+        self.maximum = maximum
+        self.percent = percent
+
+    def __call__(self):
+        self._count += 1
+        backoff = self._backoff
+        if self._backoff > self.maximum:
+            return self.maximum
+        self._backoff += self._backoff * self.percent * self._count
+        return backoff
+
+
 # TODO: unit tests!
 class AsyncReqMessageClient:
     """
@@ -532,6 +557,9 @@ class AsyncReqMessageClient:
         self.ident = threading.get_ident()
 
     def connect(self):
+        if self.context is None:
+            self.context = zmq.eventloop.future.Context()
+
         if hasattr(self, "socket") and self.socket:
             return
         # wire up sockets
@@ -542,11 +570,15 @@ class AsyncReqMessageClient:
             return
         else:
             self._closing = True
-            if hasattr(self, "socket") and self.socket is not None:
-                self.socket.close(0)
-                self.socket = None
-            if self.context.closed is False:
-                self.context.term()
+            try:
+                if hasattr(self, "socket") and self.socket is not None:
+                    self.socket.close(0)
+                    self.socket = None
+                if self.context.closed is False:
+                    self.context.term()
+                    self.context = None
+            finally:
+                self._closing = False
 
     def _init_socket(self):
         self.socket = self.context.socket(zmq.REQ)
@@ -601,17 +633,31 @@ class AsyncReqMessageClient:
             future.set_exception(SaltReqTimeoutError("Message timed out"))
 
     @salt.ext.tornado.gen.coroutine
-    def _send_recv(self, message, future):
+    def _send_recv(self, message, future, timeout=REQUEST_TIMEOUT):
+        """
+        Send and recv updating the future if we get a response. After sending
+        the the REQ socket we poll the socket for a response. If the provided
+        future is marked as done before we get a response we consider the
+        request timedout and we give up.
+        """
+        backoff = BackoffTimeout()
         try:
             with (yield self.lock.acquire()):
                 yield self.socket.send(message)
-                try:
-                    recv = yield self.socket.recv()
-                except zmq.eventloop.future.CancelledError as exc:
-                    if not future.done():
-                        future.set_exception(exc)
-                    return
-
+                while True:
+                    try:
+                        recv = yield self.socket.recv(flags=zmq.NOBLOCK)
+                        break
+                    except (zmq.error.ZMQError, zmq.error.Again):
+                        if future.done():
+                            # send's timeout callback timed out the future.
+                            # Since we're going to bail on this request we need
+                            # to reset the connection otherwise the socket is
+                            # left in an invalid state.
+                            self.close()
+                            self.connect()
+                            break
+                        yield salt.ext.tornado.gen.sleep(backoff())
             if not future.done():
                 data = salt.payload.loads(recv)
                 future.set_result(data)
@@ -918,7 +964,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self.message_client.connect()
 
     @salt.ext.tornado.gen.coroutine
-    def send(self, load, timeout=60):
+    def send(self, load, timeout=REQUEST_TIMEOUT):
         yield self.connect()
         ret = yield self.message_client.send(load, timeout=timeout)
         raise salt.ext.tornado.gen.Return(ret)
