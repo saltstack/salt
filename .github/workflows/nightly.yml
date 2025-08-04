@@ -490,7 +490,7 @@ jobs:
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
       environment: nightly
-      sign-macos-packages: false
+      sign-macos-packages: true
       sign-rpm-packages: false
       sign-windows-packages: false
 
@@ -511,7 +511,7 @@ jobs:
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
       environment: nightly
-      sign-macos-packages: false
+      sign-macos-packages: true
       sign-rpm-packages: false
       sign-windows-packages: false
   build-ci-deps:
