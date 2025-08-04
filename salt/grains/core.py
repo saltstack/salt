@@ -2479,6 +2479,18 @@ def _legacy_linux_distribution_data(grains, os_release, lsb_has_error):
         grains["oscodename"] = oscodename
     if "os" not in grains:
         grains["os"] = _derive_os_grain(grains["osfullname"])
+    if "SUSE_SUPPORT_PRODUCT" in os_release and "SUSE_SUPPORT_PRODUCT_VERSION":
+        # It's a workaround for very specific case of SL Micro 6.2
+        # SL Micro 6.2 is different than prevoius ones and identifies itself
+        # as SLES-16, but transactional. This workaround was made to make the grains
+        # of SL Micro 6.2 aligned with the previous versions.
+        grains["oscodename"] = os_release.get(
+            "SUSE_PRETTY_NAME",
+            f"{os_release['SUSE_SUPPORT_PRODUCT']} {os_release['SUSE_SUPPORT_PRODUCT_VERSION']}",
+        )
+        grains["osrelease"] = os_release["SUSE_SUPPORT_PRODUCT_VERSION"]
+        if os_release["SUSE_SUPPORT_PRODUCT"] == "SUSE Linux Micro":
+            grains["osfullname"] = "SL-Micro"
     # this assigns family names based on the os name
     # family defaults to the os name if not found
     grains["os_family"] = _OS_FAMILY_MAP.get(grains["os"], grains["os"])
