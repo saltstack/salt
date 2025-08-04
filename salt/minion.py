@@ -1221,7 +1221,7 @@ class MinionManager(MinionBase):
             self.stop_async, signum, parent_sig_handler
         )
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def stop_async(self, signum, parent_sig_handler):
         """
         Stop minions managed by the MinionManager allowing the io_loop to run
@@ -1229,7 +1229,7 @@ class MinionManager(MinionBase):
         """
 
         # Sleep to allow any remaining events to be processed
-        yield salt.ext.tornado.gen.sleep(5)
+        yield tornado.gen.sleep(5)
 
         # Continue to stop the minions
         for minion in self.minions:

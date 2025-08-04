@@ -1096,7 +1096,7 @@ class AsyncAuth:
         Return keypair object for the minion.
 
         :rtype: Crypto.PublicKey.RSA._RSAobj
-        :return: The RSA keypair
+        :return: PrivateKey of the RSA Private Key Pair
         """
         if self._private_key is None:
             # Make sure all key parent directories are accessible
@@ -1116,7 +1116,7 @@ class AsyncAuth:
 
     @salt.utils.decorators.memoize
     def _gen_token(self, key, token):
-        return private_encrypt(key, token)
+        return key.encrypt(token)
 
     def gen_token(self, clear_tok):
         """

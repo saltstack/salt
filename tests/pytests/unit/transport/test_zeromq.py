@@ -2035,6 +2035,7 @@ async def test_request_server_continue_on_errors_log_debug(io_loop, caplog):
         assert "Exception in request handler" in caplog.text
         assert "Traceback" in caplog.text
 
+
 def test_backoff_timer():
     start = 0.0003
     maximum = 0.3

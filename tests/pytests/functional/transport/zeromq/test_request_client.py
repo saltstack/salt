@@ -4,13 +4,12 @@ import logging
 import pytest
 import pytestshellutils.utils.ports
 import tornado.gen
+import tornado.locks
+import tornado.platform.asyncio
 import zmq
 import zmq.eventloop.zmqstream
 
 import salt.exceptions
-import tornado.gen
-import tornado.locks
-import tornado.platform.asyncio
 import salt.transport.zeromq
 
 log = logging.getLogger(__name__)
@@ -43,7 +42,7 @@ async def test_request_channel_issue_64627(io_loop, request_client, minion_opts,
     stream = zmq.eventloop.zmqstream.ZMQStream(socket, io_loop=io_loop)
     try:
 
-        @salt.ext.tornado.gen.coroutine
+        @tornado.gen.coroutine
         def req_handler(stream, msg):
             stream.send(msg[0])
 
@@ -63,7 +62,7 @@ async def test_request_channel_issue_64627(io_loop, request_client, minion_opts,
 async def test_request_channel_issue_65265(io_loop, request_client, minion_opts, port):
     import time
 
-    import salt.ext.tornado.platform
+    import tornado.platform
 
     minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
 
@@ -73,9 +72,9 @@ async def test_request_channel_issue_65265(io_loop, request_client, minion_opts,
     stream = zmq.eventloop.zmqstream.ZMQStream(socket, io_loop=io_loop)
 
     try:
-        send_complete = salt.ext.tornado.locks.Event()
+        send_complete = tornado.locks.Event()
 
-        @salt.ext.tornado.gen.coroutine
+        @tornado.gen.coroutine
         def no_handler(stream, msg):
             """
             The server never responds.
@@ -84,7 +83,7 @@ async def test_request_channel_issue_65265(io_loop, request_client, minion_opts,
 
         stream.on_recv_stream(no_handler)
 
-        @salt.ext.tornado.gen.coroutine
+        @tornado.gen.coroutine
         def send_request():
             """
             The request will timeout becuse the server does not respond.
