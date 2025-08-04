@@ -2,6 +2,8 @@ import asyncio
 import copy
 import logging
 import os
+import signal
+import time
 import uuid
 
 import pytest
@@ -1187,3 +1189,59 @@ async def test_connect_master_general_exception_error(minion_opts, connect_maste
     # The first call raised an error which caused minion.destroy to get called,
     # the second call is a success.
     assert minion.connect_master.calls == 2
+
+
+async def test_minion_manager_async_stop(io_loop, minion_opts, tmp_path):
+    """
+    Ensure MinionManager's stop method works correctly and calls the
+    stop_async method
+    """
+
+    # Setup sock_dir with short path
+    minion_opts["sock_dir"] = str(tmp_path / "sock")
+
+    # Create a MinionManager instance with a mock minion
+    mm = salt.minion.MinionManager(minion_opts)
+    minion = MagicMock(name="minion")
+    parent_signal_handler = MagicMock(name="parent_signal_handler")
+    mm.minions.append(minion)
+
+    # Set up event publisher and event
+    mm._bind()
+    assert mm.event_publisher is not None
+    assert mm.event is not None
+
+    # Check io_loop is running
+    assert mm.io_loop._running
+
+    # Set up values for event to send
+    load = {"key": "value"}
+    ret = {}
+
+    # Connect to minion event bus
+    with salt.utils.event.get_event("minion", opts=minion_opts, listen=True) as event:
+
+        # call stop to start stopping the minion
+        # mm.stop(signal.SIGTERM, parent_signal_handler)
+        mm.stop(signal.SIGTERM, parent_signal_handler)
+
+        # Fire an event and ensure we can still read it back while the minion
+        # is stopping
+        await event.fire_event_async(load, "test_event", timeout=1)
+        start = time.time()
+        while time.time() - start < 5:
+            ret = event.get_event(tag="test_event", wait=0.3)
+            if ret:
+                break
+            await salt.ext.tornado.gen.sleep(0.3)
+    assert "key" in ret
+    assert ret["key"] == "value"
+
+    # Sleep to allow stop_async to complete
+    await salt.ext.tornado.gen.sleep(5)
+
+    # Ensure stop_async has been called
+    minion.destroy.assert_called_once()
+    parent_signal_handler.assert_called_once_with(signal.SIGTERM, None)
+    assert mm.event_publisher is None
+    assert mm.event is None

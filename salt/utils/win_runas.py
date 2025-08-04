@@ -6,6 +6,7 @@ Run processes as a different user in Windows
 import ctypes
 import logging
 import os
+import subprocess
 import time
 
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError
@@ -195,6 +196,12 @@ def runas(cmd, username, password=None, **kwargs):
         log.debug("Unable to impersonate SYSTEM user")
         impersonation_token = None
         win32api.CloseHandle(th)
+
+    if isinstance(cmd, (list, tuple)):
+        # CreateProcess parameter lpCommandLine must be a string.
+        # Since it is called directly and not via the subprocess module,
+        # the arguments must be processed manually.
+        cmd = subprocess.list2cmdline(cmd)
 
     # Impersonation of the SYSTEM user failed. Fallback to an un-privileged
     # runas.
