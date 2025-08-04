@@ -863,6 +863,34 @@ def test_suse_os_grains_tumbleweed():
 
 
 @pytest.mark.skip_unless_on_linux
+def test_suse_os_grains_slmicro62():
+    """
+    Test if OS grains are parsed correctly in SL Micro 6.2
+    """
+    _os_release_data = {
+        "NAME": "SLES",
+        "VERSION": "16.0",
+        "VERSION_ID": "16.0",
+        "PRETTY_NAME": "SUSE Linux Enterprise Server 16.0",
+        "ID": "sles",
+        "ANSI_COLOR": "0;32",
+        "CPE_NAME": "cpe:/o:suse:sles:16:16.0",
+        "SUSE_SUPPORT_PRODUCT": "SUSE Linux Micro",
+        "SUSE_SUPPORT_PRODUCT_VERSION": "6.2",
+        "SUSE_PRETTY_NAME": "SUSE Linux Micro 6.2",
+    }
+    expectation = {
+        "oscodename": "SUSE Linux Micro 6.2",
+        "osfullname": "SL-Micro",
+        "osrelease": "6.2",
+        "osrelease_info": (6, 2),
+        "osmajorrelease": 6,
+        "osfinger": "SL-Micro-6",
+    }
+    _run_suse_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
 def test_debian_9_os_grains():
     """
     Test if OS grains are parsed correctly in Debian 9 "stretch"
