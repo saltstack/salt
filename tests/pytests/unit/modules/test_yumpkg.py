@@ -3319,3 +3319,51 @@ def test_normalize_name_with_arch_x86_64_v2():
         assert yumpkg.normalize_name("chrony.x86_64") == "chrony.x86_64"
     with patch("salt.utils.pkg.rpm.get_osarch", MagicMock(return_value="x86_64")):
         assert yumpkg.normalize_name("rootfiles.noarch") == "rootfiles"
+
+
+def test_67975_dnf5_group_info():
+    """
+    Test yumpkg.group_info parsing for dnf5 format
+    """
+    expected = {
+            'mandatory': [
+                "libreoffice-calc",
+                "libreoffice-emailmerge",
+                "libreoffice-graphicfilter",
+                "libreoffice-impress",
+                "libreoffice-writer",
+                ],
+            'optional': [
+                "libreoffice-base",
+                "libreoffice-draw",
+                "libreoffice-math",
+                "libreoffice-pyuno",
+                ],
+            'default': [],
+            'conditional': [],
+            'group': 'LibreOffice',
+            'id': 'libreoffice',
+            'description': 'LibreOffice Productivity Suite'
+            }
+    cmd_out = """Id                   : libreoffice
+     Name                 : LibreOffice
+     Description          : LibreOffice Productivity Suite
+     Installed            : yes
+     Order                :
+     Langonly             :
+     Uservisible          : yes
+     Repositories         : @System
+     Mandatory packages   : libreoffice-calc
+                          : libreoffice-emailmerge
+                          : libreoffice-graphicfilter
+                          : libreoffice-impress
+                          : libreoffice-writer
+     Optional packages    : libreoffice-base
+                          : libreoffice-draw
+                          : libreoffice-math
+                          : libreoffice-pyuno"""
+    with patch.dict(
+        yumpkg.__salt__, {"cmd.run_stdout": MagicMock(return_value=cmd_out)}
+    ):
+        info = yumpkg.group_info("libreoffice")
+        assert info == expected
