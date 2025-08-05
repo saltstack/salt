@@ -2642,7 +2642,8 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
     for pkgtype in pkgtypes:
         target_found = False
         for line in salt.utils.itertools.split(out, "\n"):
-            line = line.strip().lstrip(string.punctuation)
+            line = line.strip().lstrip(string.punctuation).lstrip()
+            # dnf
             match = re.match(
                 pkgtypes_capturegroup + r" (?:groups|packages):\s*$", line.lower()
             )
@@ -2655,6 +2656,24 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
                         # We've reached the targeted section
                         target_found = True
                     continue
+            # dnf5
+            match_dnf5 = re.match(
+                pkgtypes_capturegroup + r" (?:groups|packages)\s*:\s*(.*?)$", line.lower()
+            )
+            if match_dnf5:
+                if target_found:
+                    # We've reached a new section, break from loop
+                    break
+                else:
+                    if match_dnf5.group(1) == pkgtype:
+                        # We've reached the targeted section
+                        target_found = True
+                        # The difference here from dnf (above) is that this line
+                        # also contains the first package of this section.
+                        # Let line be the match we found, and then simply
+                        # continue on, where we'll add this to the appropriate group
+                        line = match_dnf5.group(2)
+
             if target_found:
                 if expand and ret["type"] == "environment group":
                     if not line or line in completed_groups:
