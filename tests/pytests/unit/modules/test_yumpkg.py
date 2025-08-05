@@ -3240,3 +3240,50 @@ def test_59705_version_as_accidental_float_should_become_text(
         yumpkg.install("fnord", version=new)
         call = cmd_mock.mock_calls[0][1][0]
         assert call == expected_cmd
+
+def test_67975_dnf5_group_info():
+    """
+    Test yumpkg.group_info parsing for dnf5 format
+    """
+    expected = {
+            'mandatory': [
+                "libreoffice-calc",
+                "libreoffice-emailmerge",
+                "libreoffice-graphicfilter",
+                "libreoffice-impress",
+                "libreoffice-writer",
+                ], 
+            'optional': [
+                "libreoffice-base",
+                "libreoffice-draw",
+                "libreoffice-math",
+                "libreoffice-pyuno",
+                ], 
+            'default': [], 
+            'conditional': [], 
+            'group': 'LibreOffice', 
+            'id': 'libreoffice', 
+            'description': 'LibreOffice Productivity Suite'
+            }
+    cmd_out = """Id                   : libreoffice
+     Name                 : LibreOffice
+     Description          : LibreOffice Productivity Suite
+     Installed            : yes
+     Order                :
+     Langonly             :
+     Uservisible          : yes
+     Repositories         : @System
+     Mandatory packages   : libreoffice-calc
+                          : libreoffice-emailmerge
+                          : libreoffice-graphicfilter
+                          : libreoffice-impress
+                          : libreoffice-writer
+     Optional packages    : libreoffice-base
+                          : libreoffice-draw
+                          : libreoffice-math
+                          : libreoffice-pyuno"""
+    with patch.dict(
+        yumpkg.__salt__, {"cmd.run_stdout": MagicMock(return_value=cmd_out)}
+    ):
+        info = yumpkg.group_info("libreoffice")
+        assert info == expected
