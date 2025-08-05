@@ -2512,7 +2512,7 @@ def group_list():
     }
 
     out = __salt__["cmd.run_stdout"](
-        [_yum(), "group", "list", "hidden"], output_loglevel="trace", python_shell=False
+        [_yum(), "group", "list", "--hidden"], output_loglevel="trace", python_shell=False
     )
     key = None
     for line in salt.utils.itertools.split(out, "\n"):
