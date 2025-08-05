@@ -226,7 +226,7 @@ def test_async_auth_cache_token(minion_root, io_loop):
 
     auth = crypt.AsyncAuth(opts, io_loop)
 
-    with patch("salt.crypt.private_encrypt") as moc:
+    with patch("salt.crypt.PrivateKey.encrypt") as moc:
         auth.gen_token("salt")
         auth.gen_token("salt")
         moc.assert_called_once()

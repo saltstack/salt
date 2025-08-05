@@ -1061,9 +1061,11 @@ class MinionManager(MinionBase):
 
     def _bind(self):
         # start up the event publisher, so we can see events during startup
-        ipc_publisher = salt.transport.ipc_publish_server("minion", self.opts)
+        self.event_publisher = salt.transport.ipc_publish_server("minion", self.opts)
         self.io_loop.spawn_callback(
-            ipc_publisher.publisher, ipc_publisher.publish_payload, self.io_loop
+            self.event_publisher.publisher,
+            self.event_publisher.publish_payload,
+            self.io_loop,
         )
         self.event = salt.utils.event.get_event(
             "minion", opts=self.opts, io_loop=self.io_loop

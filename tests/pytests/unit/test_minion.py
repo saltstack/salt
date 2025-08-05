@@ -2,6 +2,7 @@ import asyncio
 import copy
 import logging
 import os
+import pathlib
 import signal
 import time
 import uuid
@@ -1196,9 +1197,10 @@ async def test_minion_manager_async_stop(io_loop, minion_opts, tmp_path):
     Ensure MinionManager's stop method works correctly and calls the
     stop_async method
     """
-
     # Setup sock_dir with short path
     minion_opts["sock_dir"] = str(tmp_path / "sock")
+
+    os.makedirs(minion_opts["sock_dir"])
 
     # Create a MinionManager instance with a mock minion
     mm = salt.minion.MinionManager(minion_opts)
@@ -1212,7 +1214,11 @@ async def test_minion_manager_async_stop(io_loop, minion_opts, tmp_path):
     assert mm.event is not None
 
     # Check io_loop is running
-    assert mm.io_loop._running
+    assert mm.io_loop.asyncio_loop.is_running()
+
+    # Wait for the ipc socket to be created, meaning the publish server is listening.
+    while not list(pathlib.Path(minion_opts["sock_dir"]).glob("*")):
+        await tornado.gen.sleep(0.3)
 
     # Set up values for event to send
     load = {"key": "value"}
@@ -1227,18 +1233,18 @@ async def test_minion_manager_async_stop(io_loop, minion_opts, tmp_path):
 
         # Fire an event and ensure we can still read it back while the minion
         # is stopping
-        await event.fire_event_async(load, "test_event", timeout=1)
-        start = time.time()
-        while time.time() - start < 5:
-            ret = event.get_event(tag="test_event", wait=0.3)
+        assert await event.fire_event_async(load, "test_event", timeout=1) is not False
+        start = time.monotonic()
+        while time.monotonic() - start < 5:
+            ret = event.get_event(tag="test_event", wait=1)
             if ret:
                 break
-            await salt.ext.tornado.gen.sleep(0.3)
+            await tornado.gen.sleep(0.3)
     assert "key" in ret
     assert ret["key"] == "value"
 
     # Sleep to allow stop_async to complete
-    await salt.ext.tornado.gen.sleep(5)
+    await tornado.gen.sleep(5)
 
     # Ensure stop_async has been called
     minion.destroy.assert_called_once()
