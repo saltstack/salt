@@ -2511,8 +2511,28 @@ def group_list():
         "available language groups:": "available languages",
     }
 
+    if _yum() in ("dnf5"):
+        out = __salt__["cmd.run_stdout"](
+            [_yum(), "group","list", "--hidden"], output_loglevel="trace", python_shell=False
+        )
+
+        for line in salt.utils.itertools.split(out, "\n"):
+            line_lc = line.lower()
+            # split line into 3 parts: ID (no spaces), Name (contains spaces), and
+            # Installed (one of 'yes' or 'no')
+            match = re.match(r"^(\S+?)\s+(.+?)\s*(yes|no)$" ,line_lc)
+            if match:
+                pkg_id, pkg_name, pkg_installed = match.groups()
+                if pkg_id not in ("id"):
+                    if pkg_installed in ("yes"):
+                        ret["installed"].append(pkg_id)
+                    else:
+                        ret["available"].append(pkg_id)
+        return ret
+
+    # else: not dnf5
     out = __salt__["cmd.run_stdout"](
-        [_yum(), "group", "list", "--hidden"], output_loglevel="trace", python_shell=False
+        [_yum(), "grouplist", "hidden"], output_loglevel="trace", python_shell=False
     )
     key = None
     for line in salt.utils.itertools.split(out, "\n"):
@@ -2614,7 +2634,10 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
         }
     )
 
-    cmd = [_yum(), "--quiet"] + options + ["group", "info", name]
+    if _yum() in ("dnf5"):
+        cmd = [_yum(), "--quiet"] + options + ["group", "info", name]
+    else:
+        cmd = [_yum(), "--quiet"] + options + ["groupinfo", name]
     out = __salt__["cmd.run_stdout"](cmd, output_loglevel="trace", python_shell=False)
 
     g_info = {}
