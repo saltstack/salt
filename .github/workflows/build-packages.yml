@@ -340,7 +340,7 @@ jobs:
                 '--onedir salt-{0}-onedir-macos-{1}.tar.xz --salt-version {0} {2}',
                 inputs.salt-version,
                 matrix.arch,
-                inputs.sign-macos-packages == 'true' && '--sign' || ''
+                inputs.sign-macos-packages && '--sign' || ''
               )
               ||
               format('--salt-version {0}', inputs.salt-version)
