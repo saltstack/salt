@@ -364,7 +364,7 @@ jobs:
       - name: Clean Keychain
         env:
           KEYCHAIN_NAME: ${{ secrets.MAC_SIGN_DEV_KEYCHAIN }}
-        if: ${{ always() }}
+        if: ${{ inputs.sign-macos-packages }}
         run: |
           # https://docs.github.com/en/actions/how-tos/deploy/deploy-to-third-party-platforms/sign-xcode-applications#add-a-step-to-your-workflow
 
