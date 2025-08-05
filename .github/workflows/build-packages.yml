@@ -308,6 +308,7 @@ jobs:
           path: artifacts/
 
       - name: Setup Keychain
+        id: setup-keychain
         env:
           APP_CERT_BASE64: ${{ secrets.MAC_SIGN_DEV_APP_CERT_B64 }}
           INS_CERT_BASE64: ${{ secrets.MAC_SIGN_DEV_INSTALL_CERT_B64 }}
@@ -341,6 +342,8 @@ jobs:
           rm $APP_CERT_PATH
           rm $INS_CERT_PATH
 
+          echo "keychain-created=true" >> "$GITHUB_OUTPUT"
+
       - name: Build MacOS Package
         env:
           DEV_APP_CERT: "${{ secrets.MAC_SIGN_DEV_APP_CERT }}"
@@ -364,7 +367,7 @@ jobs:
       - name: Clean Keychain
         env:
           KEYCHAIN_NAME: ${{ secrets.MAC_SIGN_DEV_KEYCHAIN }}
-        if: ${{ always() }}
+        if: ${{ steps.setup-keychain.outputs.keychain-created == 'true' }}
         run: |
           # https://docs.github.com/en/actions/how-tos/deploy/deploy-to-third-party-platforms/sign-xcode-applications#add-a-step-to-your-workflow
 
