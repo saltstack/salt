@@ -307,24 +307,39 @@ jobs:
           name: salt-${{ inputs.salt-version }}-onedir-macos-${{ matrix.arch }}.tar.xz
           path: artifacts/
 
-      - name: Prepare Package Signing
+      - name: Setup Keychain
+        env:
+          APP_CERT_BASE64: ${{ secrets.MAC_SIGN_DEV_APP_CERT_B64 }}
+          INS_CERT_BASE64: ${{ secrets.MAC_SIGN_DEV_INSTALL_CERT_B64 }}
+          SIGNING_PASSWORD: ${{ secrets.MAC_SIGN_DEV_PASSWORD }}
+          KEYCHAIN_NAME: ${{ secrets.MAC_SIGN_DEV_KEYCHAIN }}
         if: ${{ inputs.sign-macos-packages }}
         run: |
-          echo ${{ secrets.MAC_SIGN_DEV_APP_CERT_B64 }} | base64 --decode > app-cert.p12
-          echo ${{ secrets.MAC_SIGN_DEV_INSTALL_CERT_B64 }} | base64 --decode > install-cert.p12
-          # Create SaltSigning keychain. This will contain the certificates for signing
-          security create-keychain -p "${{ secrets.MAC_SIGN_DEV_PASSWORD }}" "${{ secrets.MAC_SIGN_DEV_KEYCHAIN }}"
-          # Append SaltSigning keychain to the search list
-          security list-keychains -d user -s "${{ secrets.MAC_SIGN_DEV_KEYCHAIN }}" "$(security list-keychains -d user | sed s/\"//g)"
-          # Unlock the keychain so we can import certs
-          security unlock-keychain -p "${{ secrets.MAC_SIGN_DEV_PASSWORD }}" "${{ secrets.MAC_SIGN_DEV_KEYCHAIN }}"
-          # Developer Application Certificate
-          security import "app-cert.p12" -t agg -k "${{ secrets.MAC_SIGN_DEV_KEYCHAIN }}" -P "${{ secrets.MAC_SIGN_DEV_PASSWORD }}" -A
-          rm app-cert.p12
-          # Developer Installer Certificate
-          security import "install-cert.p12" -t agg -k "${{ secrets.MAC_SIGN_DEV_KEYCHAIN }}" -P "${{ secrets.MAC_SIGN_DEV_PASSWORD }}" -A
-          rm install-cert.p12
-          security set-key-partition-list -S apple-tool:,apple: -k "${{ secrets.MAC_SIGN_DEV_PASSWORD }}" "${{ secrets.MAC_SIGN_DEV_KEYCHAIN }}" &> /dev/null
+          # https://docs.github.com/en/actions/how-tos/deploy/deploy-to-third-party-platforms/sign-xcode-applications#add-a-step-to-your-workflow
+
+          # Create variables
+          APP_CERT_PATH=$RUNNER_TEMP/app_cert.p12
+          INS_CERT_PATH=$RUNNER_TEMP/installer_cert.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/$KEYCHAIN_NAME
+
+          # Decode certificates from secrets
+          echo -n "$APP_CERT_BASE64" | base64 --decode -o $APP_CERT_PATH
+          echo -n "$INS_CERT_BASE64" | base64 --decode -o $INS_CERT_PATH
+
+          # Create temporary keychain
+          security create-keychain -p "$SIGNING_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$SIGNING_PASSWORD" $KEYCHAIN_PATH
+
+          # Import certificates to keychain
+          security import $APP_CERT_PATH -P "$SIGNING_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security import $INS_CERT_PATH -P "$SIGNING_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool,apple: -k "$SIGNING_PASSWORD" $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          # Cleanup certificate files
+          rm $APP_CERT_PATH
+          rm $INS_CERT_PATH
 
       - name: Build MacOS Package
         env:
@@ -345,6 +360,19 @@ jobs:
               ||
               format('--salt-version {0}', inputs.salt-version)
           }}
+
+      - name: Clean Keychain
+        env:
+          KEYCHAIN_NAME: ${{ secrets.MAC_SIGN_DEV_KEYCHAIN }}
+        if: ${{ always() }}
+        run: |
+          # https://docs.github.com/en/actions/how-tos/deploy/deploy-to-third-party-platforms/sign-xcode-applications#add-a-step-to-your-workflow
+
+          # Create Variables
+          KEYCHAIN_PATH=$RUNNER_TEMP/$KEYCHAIN_NAME
+
+          # Cleanup
+          security delete-keychain $KEYCHAIN_PATH
 
       - name: Set Artifact Name
         id: set-artifact-name
