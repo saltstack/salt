@@ -205,7 +205,7 @@ data like so:
 
 If you need to use this value in a decrypted state within another pillar file you can do so as follows:
 
-.. code-block:: yaml
+.. code-block:: text
 
     #!jinja|yaml|gpg
 
