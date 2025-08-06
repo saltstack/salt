@@ -210,7 +210,7 @@ If you need to use this value in a decrypted state within another pillar file yo
     #!jinja|yaml|gpg
 
     {% import_yaml "hidden_secret.sls" as hidden_secret %}
-    
+
     foo:
       bar: {{ hidden_secret.a_secret }}
 
