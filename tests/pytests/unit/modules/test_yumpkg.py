@@ -3241,31 +3241,32 @@ def test_59705_version_as_accidental_float_should_become_text(
         call = cmd_mock.mock_calls[0][1][0]
         assert call == expected_cmd
 
+
 def test_67975_dnf5_group_info():
     """
     Test yumpkg.group_info parsing for dnf5 format
     """
     patch_yum = patch("salt.modules.yumpkg._yum", Mock(return_value="dnf5"))
     expected = {
-            'mandatory': [
-                "libreoffice-calc",
-                "libreoffice-emailmerge",
-                "libreoffice-graphicfilter",
-                "libreoffice-impress",
-                "libreoffice-writer",
-                ], 
-            'optional': [
-                "libreoffice-base",
-                "libreoffice-draw",
-                "libreoffice-math",
-                "libreoffice-pyuno",
-                ], 
-            'default': [], 
-            'conditional': [], 
-            'group': 'LibreOffice', 
-            'id': 'libreoffice', 
-            'description': 'LibreOffice Productivity Suite'
-            }
+        'mandatory': [
+            "libreoffice-calc",
+            "libreoffice-emailmerge",
+            "libreoffice-graphicfilter",
+            "libreoffice-impress",
+            "libreoffice-writer",
+            ],
+        'optional': [
+            "libreoffice-base",
+            "libreoffice-draw",
+            "libreoffice-math",
+            "libreoffice-pyuno",
+            ],
+        'default': [], 
+        'conditional': [], 
+        'group': 'LibreOffice', 
+        'id': 'libreoffice', 
+        'description': 'LibreOffice Productivity Suite'
+    }
     cmd_out = """Id                   : libreoffice
      Name                 : LibreOffice
      Description          : LibreOffice Productivity Suite
@@ -3285,10 +3286,11 @@ def test_67975_dnf5_group_info():
                           : libreoffice-pyuno"""
     with patch_yum:
         with patch.dict(
-                yumpkg.__salt__, {"cmd.run_stdout": MagicMock(return_value=cmd_out)}
-            ):
+            yumpkg.__salt__, {"cmd.run_stdout": MagicMock(return_value=cmd_out)}
+        ):
             info = yumpkg.group_info("libreoffice")
             assert info == expected
+
 
 def test_67975_dnf5_group_list():
     patch_yum = patch("salt.modules.yumpkg._yum", Mock(return_value="dnf5"))
@@ -3300,7 +3302,8 @@ bar                  Bar package             no
 brackets             Just (testing) yes     yes
 cleaners             Mop and bucket         yes
 last                 But not least           no\
-    """)
+    """
+    )
     patch_grplist = patch.dict(yumpkg.__salt__, {"cmd.run_stdout": mock_out})
     with patch_yum:
         with patch_grplist:
@@ -3313,4 +3316,3 @@ last                 But not least           no\
         "available languages": {}, 
     }
     assert result == expected
-
