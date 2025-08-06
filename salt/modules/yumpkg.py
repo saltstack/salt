@@ -2513,14 +2513,14 @@ def group_list():
 
     if _yum() in ("dnf5"):
         out = __salt__["cmd.run_stdout"](
-            [_yum(), "group","list", "--hidden"], output_loglevel="trace", python_shell=False
+            [_yum(), "group", "list", "--hidden"], output_loglevel="trace", python_shell=False
         )
 
         for line in salt.utils.itertools.split(out, "\n"):
             line_lc = line.lower()
             # split line into 3 parts: ID (no spaces), Name (contains spaces), and
             # Installed (one of 'yes' or 'no')
-            match = re.match(r"^(\S+?)\s+(.+?)\s*(yes|no)$" ,line_lc)
+            match = re.match(r"^(\S+?)\s+(.+?)\s*(yes|no)$", line_lc)
             if match:
                 pkg_id, pkg_name, pkg_installed = match.groups()
                 if pkg_id not in ("id"):
