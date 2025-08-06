@@ -40,7 +40,7 @@
 %define fish_dir %{_datadir}/fish/vendor_functions.d
 
 Name:    salt
-Version: 3007.5
+Version: 3007.6
 Release: 0
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
@@ -179,9 +179,8 @@ cd $RPM_BUILD_DIR
   export PY=$(build/venv/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()')
   build/venv/bin/python3 -m pip install -r %{_salt_src}/requirements/static/ci/py${PY}/tools.txt
   build/venv/bin/relenv fetch --python=${SALT_PYTHON_VERSION}
-  build/venv/bin/pip3 install relenv[toolchain]
-  build/venv/bin/relenv toolchain fetch
-  cd %{_salt_src}
+  build/venv/bin/pip install ppbt
+  pushd %{_salt_src}
 	$RPM_BUILD_DIR/build/venv/bin/tools pkg build onedir-dependencies --arch ${SALT_PACKAGE_ARCH} --relenv-version=${SALT_RELENV_VERSION} --python-version ${SALT_PYTHON_VERSION} --package-name $RPM_BUILD_DIR/build/salt --platform linux
 
   # Fix any hardcoded paths to the relenv python binary on any of the scripts installed in
@@ -190,6 +189,8 @@ cd $RPM_BUILD_DIR
 
   $RPM_BUILD_DIR/build/venv/bin/tools pkg build salt-onedir . --package-name $RPM_BUILD_DIR/build/salt --platform linux
   $RPM_BUILD_DIR/build/venv/bin/tools pkg pre-archive-cleanup --pkg $RPM_BUILD_DIR/build/salt
+  popd
+  build/venv/bin/python3 -m pip uninstall -y ppbt
 
   # Generate master config
   sed 's/#user: root/user: salt/g' %{_salt_src}/conf/master > $RPM_BUILD_DIR/build/master
@@ -734,6 +735,19 @@ if [ $1 -ge 1 ] ; then
 fi
 
 %changelog
+* Thu Jul 10 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3007.6
+
+# Fixed
+
+- Onedir packages include relenv 0.19.4.
+  - Update sqlite to 3500200
+  - Update libffi to 3.5.1
+  - Update python 3.13 to 3.13.5
+  - Load default openssl modules when no system openssl binary exists [#68014](https://github.com/saltstack/salt/issues/68014)
+- pkgrepo.managed not applying changes / account for 'name' attr being part of the state [#68107](https://github.com/saltstack/salt/issues/68107)
+- Fix `test mode` causing unintended execution when non-boolean values are passed. [#68121](https://github.com/saltstack/salt/issues/68121)
+
+
 * Thu Jun 26 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3007.5
 
 # Fixed
@@ -741,6 +755,19 @@ fi
 - Zeromq RequestServer continues to serve requests after encountering an
   un-handled exception [#66519](https://github.com/saltstack/salt/issues/66519)
 - * Added support for `icmpv6-type` to salt.modules.nftables [#67882](https://github.com/saltstack/salt/issues/67882)
+
+
+* Thu Jul 10 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.14
+
+# Fixed
+
+- Onedir packages include relenv 0.19.4.
+  - Update sqlite to 3500200
+  - Update libffi to 3.5.1
+  - Update python 3.13 to 3.13.5
+  - Load default openssl modules when no system openssl binary exists [#68014](https://github.com/saltstack/salt/issues/68014)
+- pkgrepo.managed not applying changes / account for 'name' attr being part of the state [#68107](https://github.com/saltstack/salt/issues/68107)
+- Fix `test mode` causing unintended execution when non-boolean values are passed. [#68121](https://github.com/saltstack/salt/issues/68121)
 
 
 * Thu Jun 26 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.13

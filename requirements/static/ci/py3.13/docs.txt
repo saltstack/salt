@@ -81,9 +81,10 @@ idna==3.10
     #   yarl
 imagesize==1.4.1
     # via sphinx
-immutables==0.21
+immutables==0.15 ; sys_platform == "linux"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
+    #   -r requirements/base.txt
     #   contextvars
 importlib-metadata==8.5.0
     # via
@@ -273,7 +274,7 @@ tornado==6.4.1
     #   -r requirements/base.txt
 uc-micro-py==1.0.3
     # via linkify-it-py
-urllib3==1.26.20
+urllib3==2.5.0 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt

@@ -20,6 +20,10 @@ on:
         required: true
         type: string
         description: The version of python to use with relenv
+      ci-python-version:
+        required: true
+        type: string
+        description: The version of python in workflows
       matrix:
         type: string
         required: true
@@ -64,7 +68,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: ${{ inputs.ci-python-version }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -120,10 +124,10 @@ jobs:
           t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
 
       - uses: actions/checkout@v4
-      - name: Set up Python 3.10
+      - name: Set up Python ${{ inputs.ci-python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "${{ inputs.ci-python-version }}"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -176,10 +180,10 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.10
+      - name: Set up Python ${{ inputs.ci-python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "${{ inputs.ci-python-version }}"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
