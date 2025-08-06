@@ -14,7 +14,8 @@ psutil<6.0.0; python_version <= '3.9'
 psutil>=5.0.0; python_version >= '3.10'
 # Packaging 24.1 imports annotations from __future__ which breaks salt ssh
 # tests on target hosts with older python versions.
-packaging==24.0
+packaging<=24.0; python_version <= '3.10'
+packaging>=21.3,<=24.0; python_version > '3.10'
 looseversion
 croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'
 # We need contextvars for salt-ssh
@@ -27,3 +28,9 @@ urllib3>=2.5.0; python_version >= '3.10'
 
 jaraco.text>=4.0.0
 jaraco.functools>=4.1.0
+cherrypy>=18.6.1; python_version < '3.11'
+cherrypy>=18.8.0; python_version >= '3.11'
+
+timelib>=0.3.0
+lxml>=4.6.3; sys_platform == 'win32' and python_version < '3.11'
+lxml>=5.3.2; sys_platform == 'win32' and python_version >= '3.11'

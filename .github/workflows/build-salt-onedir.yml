@@ -89,7 +89,7 @@ jobs:
           arch: ${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}
           version: ${{ inputs.relenv-version }}
           cache-seed: ${{ inputs.cache-seed }}
-          python-version: ${{ inputs.python-version }}
+          python-version: ${{ matrix.python }}
 
       - name: Install Salt into Relenv Onedir
         uses: ./.github/actions/build-onedir-salt
@@ -97,7 +97,7 @@ jobs:
           platform: linux
           arch: ${{ matrix.arch }}
           salt-version: "${{ inputs.salt-version }}"
-          python-version: "${{ inputs.python-version }}"
+          python-version: "${{ matrix.python }}"
           cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}
 
   build-salt-macos:
@@ -148,7 +148,7 @@ jobs:
           arch: ${{ matrix.arch }}
           version: ${{ inputs.relenv-version }}
           cache-seed: ${{ inputs.cache-seed }}
-          python-version: ${{ inputs.python-version }}
+          python-version: ${{ matrix.python }}
 
       - name: Install Salt into Relenv Onedir
         uses: ./.github/actions/build-onedir-salt
@@ -156,7 +156,7 @@ jobs:
           platform: macos
           arch: ${{ matrix.arch }}
           salt-version: "${{ inputs.salt-version }}"
-          python-version: "${{ inputs.python-version }}"
+          python-version: "${{ matrix.python }}"
           cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}
 
   build-salt-windows:
@@ -204,7 +204,7 @@ jobs:
           arch: ${{ matrix.arch }}
           version: ${{ inputs.relenv-version }}
           cache-seed: ${{ inputs.cache-seed }}
-          python-version: ${{ inputs.python-version }}
+          python-version: ${{ matrix.python }}
 
       - name: Install Salt into Relenv Onedir
         uses: ./.github/actions/build-onedir-salt
@@ -212,5 +212,5 @@ jobs:
           platform: windows
           arch: ${{ matrix.arch }}
           salt-version: "${{ inputs.salt-version }}"
-          python-version: "${{ inputs.python-version }}"
+          python-version: "${{ matrix.python }}"
           cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}
