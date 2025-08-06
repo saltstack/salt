@@ -2513,7 +2513,9 @@ def group_list():
 
     if _yum() in ("dnf5"):
         out = __salt__["cmd.run_stdout"](
-            [_yum(), "group", "list", "--hidden"], output_loglevel="trace", python_shell=False
+            [_yum(), "group", "list", "--hidden"],
+            output_loglevel="trace",
+            python_shell=False,
         )
 
         for line in salt.utils.itertools.split(out, "\n"):
@@ -2653,8 +2655,12 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
     elif "group" in g_info:
         ret["type"] = "package group"
 
-    ret["group"] = g_info.get("environment group") or g_info.get("group") or g_info.get("name")
-    ret["id"] = g_info.get("environment-id") or g_info.get("group-id") or g_info.get("id")
+    ret["group"] = (
+        g_info.get("environment group") or g_info.get("group") or g_info.get("name")
+    )
+    ret["id"] = (
+        g_info.get("environment-id") or g_info.get("group-id") or g_info.get("id")
+    )
     if not ret["group"] and not ret["id"]:
         raise CommandExecutionError(f"Group '{name}' not found")
 
@@ -2681,7 +2687,8 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
                     continue
             # dnf5
             match_dnf5 = re.match(
-                pkgtypes_capturegroup + r" (?:groups|packages)\s*:\s*(.*?)$", line.lower()
+                pkgtypes_capturegroup + r" (?:groups|packages)\s*:\s*(.*?)$",
+                line.lower(),
             )
             if match_dnf5:
                 if target_found:

@@ -3248,24 +3248,24 @@ def test_67975_dnf5_group_info():
     """
     patch_yum = patch("salt.modules.yumpkg._yum", Mock(return_value="dnf5"))
     expected = {
-        'mandatory': [
+        "mandatory": [
             "libreoffice-calc",
             "libreoffice-emailmerge",
             "libreoffice-graphicfilter",
             "libreoffice-impress",
             "libreoffice-writer",
             ],
-        'optional': [
+        "optional": [
             "libreoffice-base",
             "libreoffice-draw",
             "libreoffice-math",
             "libreoffice-pyuno",
             ],
-        'default': [], 
-        'conditional': [], 
-        'group': 'LibreOffice', 
-        'id': 'libreoffice', 
-        'description': 'LibreOffice Productivity Suite'
+        "default": [], 
+        "conditional": [], 
+        "group": "LibreOffice", 
+        "id": "libreoffice", 
+        "description": "LibreOffice Productivity Suite"
     }
     cmd_out = """Id                   : libreoffice
      Name                 : LibreOffice
@@ -3309,10 +3309,10 @@ last                 But not least           no\
         with patch_grplist:
             result = yumpkg.group_list()
     expected = {
-        "installed": ["brackets","cleaners"],
-        "available": ["foo","bar"],
+        "installed": ["brackets", "cleaners"],
+        "available": ["foo", "bar"],
         "installed environments": [],
         "available environments": [],
-        "available languages": {}, 
+        "available languages": {},
     }
     assert result == expected
