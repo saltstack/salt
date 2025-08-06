@@ -353,5 +353,8 @@ class UtilDeepDictUpdateTestCase(TestCase):
         mdict["A"] = [1, 2]
         with self.assertRaises(TypeError):
             dictupdate.update(
-                copy.deepcopy(mdict), {"A": {"key": "value"}}, merge_lists=True, strict=True
+                copy.deepcopy(mdict),
+                {"A": {"key": "value"}},
+                merge_lists=True,
+                strict=True,
             )
