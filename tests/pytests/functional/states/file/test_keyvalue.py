@@ -59,6 +59,7 @@ def test_keyvalue(file, tmp_path):
         assert "prohibit-password" not in changed_contents
         assert "PermitRootLogin no" in changed_contents
 
+
 def test_keyvalue_multiple(file, tmp_path):
     """
     file.keyvalue
@@ -78,7 +79,7 @@ def test_keyvalue_multiple(file, tmp_path):
             separator=" ",
             uncomment=" #",
             key_ignore_case=True,
-            key_values={"permitrootlogin": "no", "maxauthtries": 2, "maxsessions": 1}
+            key_values={"permitrootlogin": "no", "maxauthtries": 2, "maxsessions": 1},
         )
         assert ret.result is True
         changed_contents = name.read_text()
@@ -91,6 +92,7 @@ def test_keyvalue_multiple(file, tmp_path):
         # ensure no out of scope lines were deleted
         assert "#LoginGraceTime 2m" in changed_contents
         assert "#StrictModes yes" in changed_contents
+
 
 def test_keyvalue_prune(file, tmp_path):
     """
@@ -115,9 +117,10 @@ def test_keyvalue_prune(file, tmp_path):
         assert ret.result is True
         changed_contents = name.read_text()
         for line in contents.strip().split("\n"):
-          assert line not in changed_contents
+            assert line not in changed_contents
         assert "prohibit-password" not in changed_contents
         assert "PermitRootLogin no" in changed_contents
+
 
 def test_keyvalue_multiple_prune(file, tmp_path):
     """
@@ -138,12 +141,12 @@ def test_keyvalue_multiple_prune(file, tmp_path):
             uncomment="#",
             key_ignore_case=True,
             prune=True,
-            key_values={"permitrootlogin": "no", "maxauthtries": 2, "maxsessions": 1}
+            key_values={"permitrootlogin": "no", "maxauthtries": 2, "maxsessions": 1},
         )
         assert ret.result is True
         changed_contents = name.read_text()
         for line in contents.strip().split("\n"):
-          assert line not in changed_contents
+            assert line not in changed_contents
         assert "prohibit-password" not in changed_contents
         assert "PermitRootLogin no" in changed_contents
         assert "MaxAuthTries 2" in changed_contents
