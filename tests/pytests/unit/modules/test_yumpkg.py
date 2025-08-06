@@ -3254,18 +3254,18 @@ def test_67975_dnf5_group_info():
             "libreoffice-graphicfilter",
             "libreoffice-impress",
             "libreoffice-writer",
-            ],
+        ],
         "optional": [
             "libreoffice-base",
             "libreoffice-draw",
             "libreoffice-math",
             "libreoffice-pyuno",
-            ],
-        "default": [], 
-        "conditional": [], 
-        "group": "LibreOffice", 
-        "id": "libreoffice", 
-        "description": "LibreOffice Productivity Suite"
+        ],
+        "default": [],
+        "conditional": [],
+        "group": "LibreOffice",
+        "id": "libreoffice",
+        "description": "LibreOffice Productivity Suite",
     }
     cmd_out = """Id                   : libreoffice
      Name                 : LibreOffice
