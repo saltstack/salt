@@ -284,6 +284,29 @@ jobs:
       - ${{ matrix.arch == 'arm64' && 'macos-14' || 'macos-13' }}
 
     steps:
+      - name: Check Package Signing Enabled
+        shell: bash
+        id: check-pkg-sign
+        run: |
+          if [ "${{ inputs.sign-macos-packages }}" == "true" ]; then
+            if [ "${{ (secrets.MAC_SIGN_APPLE_ACCT != '' && contains(fromJSON('["nightly", "staging"]'), inputs.environment)) && 'true' || 'false' }}" != "true" ]; then
+              MSG="Secrets for signing packages are not available. The packages created will NOT be signed."
+              echo "${MSG}"
+              echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+              echo "sign-pkgs=false" >> "$GITHUB_OUTPUT"
+            else
+              MSG="The packages created WILL be signed."
+              echo "${MSG}"
+              echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+              echo "sign-pkgs=true" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            MSG="The sign-macos-packages input is false. The packages created will NOT be signed."
+            echo "${MSG}"
+            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+            echo "sign-pkgs=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -308,7 +331,7 @@ jobs:
           path: artifacts/
 
       - name: Prepare Package Signing
-        if: ${{ inputs.sign-macos-packages == 'true' }}
+        if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
         run: |
           echo ${{ secrets.MAC_SIGN_DEV_APP_CERT_B64 }} | base64 --decode > app-cert.p12
           echo ${{ secrets.MAC_SIGN_DEV_INSTALL_CERT_B64 }} | base64 --decode > install-cert.p12
@@ -340,7 +363,7 @@ jobs:
                 '--onedir salt-{0}-onedir-macos-{1}.tar.xz --salt-version {0} {2}',
                 inputs.salt-version,
                 matrix.arch,
-                inputs.sign-macos-packages == 'true' && '--sign' || ''
+                steps.check-pkg-sign.outputs.sign-pkgs == 'true' && '--sign' || ''
               )
               ||
               format('--salt-version {0}', inputs.salt-version)
