@@ -308,7 +308,7 @@ jobs:
           path: artifacts/
 
       - name: Prepare Package Signing
-        if: ${{ inputs.sign-macos-packages }}
+        if: ${{ inputs.sign-macos-packages == 'true' }}
         run: |
           echo ${{ secrets.MAC_SIGN_DEV_APP_CERT_B64 }} | base64 --decode > app-cert.p12
           echo ${{ secrets.MAC_SIGN_DEV_INSTALL_CERT_B64 }} | base64 --decode > install-cert.p12
