@@ -3,7 +3,6 @@ import time
 from pathlib import Path
 
 import pytest
-
 from saltfactories.utils import random_string
 
 
