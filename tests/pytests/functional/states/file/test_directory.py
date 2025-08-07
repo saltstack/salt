@@ -301,6 +301,7 @@ def test_directory_clean_require_in_good_message(modules, tmp_path, state_tree):
     if IS_WINDOWS:
         principal = salt.utils.win_functions.get_current_user()
         salt.utils.win_dacl.set_owner(obj_name=str(name), principal=principal)
+        salt.utils.win_dacl.set_inheritance(obj_name=str(name), enabled=True)
     dir = name / "one"
     dir.mkdir()
     good_file = dir / "good-file"
