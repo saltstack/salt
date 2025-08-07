@@ -433,6 +433,7 @@ class FileserverUpdate(salt.utils.process.SignalHandlingMultiprocessingProcess):
                 'interval of %d', interval
             )
             for backend, update_args in six.iteritems(backends):
+                log.debug('backend_name, update_func:=%s, %s', backend)
                 backend_name, update_func = backend
                 try:
                     if update_args:
@@ -452,11 +453,14 @@ class FileserverUpdate(salt.utils.process.SignalHandlingMultiprocessingProcess):
                         'cache', backend_name
                     )
 
+            # log.debug(
+            #     'Completed fileserver updates for items with an update '
+            #     'interval of %d, waiting %d seconds', interval, interval
+            # )
             log.debug(
-                'Completed fileserver updates for items with an update '
-                'interval of %d, waiting %d seconds', interval, interval
+                '[FILESERVER DEBUG] Completed fileserver updates for interval=%d. Backends: %s. Waiting %d seconds',
+                interval, list(backends.keys()), interval
             )
-
         condition = threading.Condition()
         _do_update()
         while True:

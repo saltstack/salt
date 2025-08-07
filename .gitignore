@@ -101,3 +101,4 @@ tests/integration/cloud/providers/pki/minions
 .bundle/
 Gemfile.lock
 /artifacts/
+venv-salt/

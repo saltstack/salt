@@ -36,11 +36,27 @@ from salt.ext import six
 
 log = logging.getLogger(__name__)
 
+def is_safe_path(base_path, user_path):
+    # Normalize and resolve paths
+    real_base = os.path.realpath(base_path)
+    target = os.path.realpath(os.path.join(base_path, user_path))
+    
+    # Prevent traversal OR direct access to dangerous locations
+    if not target.startswith(real_base):
+        return False
+    # Extra safety: ban absolute paths or suspicious inputs
+    if os.path.isabs(user_path) or user_path.startswith("..") or "../" in user_path:
+        return False
+    return True
 
 def find_file(path, saltenv='base', **kwargs):
     '''
     Search the environment for the relative path.
     '''
+    log.warning(f"[DEBUG] Requested path={path}, saltenv={saltenv}")
+
+    log.debug("📍 Entered roots.find_file with path=%s, saltenv=%s", path, saltenv)
+
     if 'env' in kwargs:
         # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
@@ -94,9 +110,21 @@ def find_file(path, saltenv='base', **kwargs):
             return _add_file_stat(fnd)
         return fnd
     for root in __opts__['file_roots'][saltenv]:
-        full = os.path.join(root, path)
-        if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
-            fnd['path'] = full
+        # full = os.path.join(root, path)
+        # Prevent directory traversal by resolving full path and checking root
+        log.warning(f"[DEBUG] Requested path={path}, saltenv={saltenv}")
+        root_real = os.path.realpath(root)
+        full_path = os.path.realpath(os.path.join(root, path))
+
+        if not full_path.startswith(root_real + os.sep):
+            log.warning("🚫 Blocked directory traversal attempt: requested path '%s' resolved to '%s' which is outside root '%s'",
+                        path, full_path, root_real)
+            return fnd  # Prevents access
+
+        if not os.path.exists(full_path):
+            continue
+        if os.path.isfile(full_path) and not salt.fileserver.is_file_ignored(__opts__, full_path):
+            fnd['path'] = full_path
             fnd['rel'] = path
             return _add_file_stat(fnd)
     return fnd

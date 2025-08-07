@@ -4,6 +4,7 @@ Set up the version of Salt
 '''
 
 # Import python libs
+
 from __future__ import absolute_import, print_function, unicode_literals
 import re
 import sys
@@ -18,7 +19,9 @@ except ImportError:
 # pylint: disable=invalid-name,redefined-builtin
 # Import 3rd-party libs
 from salt.ext import six
+# from salt.ext.six.moves import map
 from salt.ext.six.moves import map
+# from six.moves import map
 
 # Don't rely on external packages in this module since it's used at install time
 if sys.version_info[0] == 3:
