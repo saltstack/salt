@@ -335,10 +335,7 @@ def test_directory_clean_require_in_good_message(modules, tmp_path, state_tree):
         )
         for state_run in ret:
             if IS_WINDOWS:
-                if state_run.changes:
-                    expected_dir = f"Directory {name} updated"
-                else:
-                    expected_dir = f"Directory {name} is in the correct state"
+                expected_dir = f"Directory {name} is in the correct state"
             else:
                 expected_dir = f"The directory {name} is in the correct state"
             assert dir.exists()
