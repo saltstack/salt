@@ -334,7 +334,6 @@ def test_directory_clean_require_in_good_message(modules, tmp_path, state_tree):
             f"File {good_file} exists with proper permissions. No changes made."
         )
         for state_run in ret:
-            print("changes", state_run.changes)
             if IS_WINDOWS:
                 if state_run.changes:
                     expected_dir = f"Directory {name} updated"
