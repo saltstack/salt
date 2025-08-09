@@ -7,6 +7,7 @@ import uuid
 import hashlib
 import logging
 import psutil
+import pytest
 import shutil
 import signal
 import tempfile
@@ -43,6 +44,27 @@ class CPModuleTest(ModuleCase):
         return salt.utils.data.decode(
             super(CPModuleTest, self).run_function(*args, **kwargs)
         )
+
+
+
+    @pytest.mark.slow_test
+    def test_directory_traversal_blocked(salt_master, salt_minion):
+        '''
+        Test that salt:// path traversal is blocked (CVE-2025-XXXXX)
+        '''
+        # Target file path (attemptedcd  traversal)
+        salt_path = 'salt://../../../../etc/passwd'
+        dest_path = '/tmp/should_not_exist.txt'
+
+        # Run cp.get_file
+        ret = salt_minion.run('cp.get_file', salt_path, dest_path)
+
+        # Should return empty or failure
+        assert ret.returncode != 0 or not ret.data, "Traversal was not blocked as expected"
+
+        # File should not exist
+        assert not os.path.exists(dest_path), "Traversal succeeded in writing a system file!"
+
 
     @with_tempfile()
     def test_get_file(self, tgt):
