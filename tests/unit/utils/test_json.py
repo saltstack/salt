@@ -49,6 +49,18 @@ class JSONTestCase(TestCase):
         )
     )
 
+    def test_find_json_unbalanced_brace_in_string(self):
+        test_sample_json = '{"title": "I like curly braces like this one:{"}'
+        expected_ret = {"title": "I like curly braces like this one:{"}
+        ret = salt.utils.json.find_json(test_sample_json)
+        self.assertDictEqual(ret, expected_ret)
+
+    def test_find_json_unbalanced_square_bracket_in_string(self):
+        test_sample_json = '{"title": "I like square brackets like this one:["}'
+        expected_ret = {"title": "I like square brackets like this one:["}
+        ret = salt.utils.json.find_json(test_sample_json)
+        self.assertDictEqual(ret, expected_ret)
+
     def test_find_json(self):
         test_sample_json = """
                             {
