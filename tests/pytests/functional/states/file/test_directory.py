@@ -86,44 +86,40 @@ def test_directory_max_depth(file, tmp_path):
         return salt.utils.files.normalize_mode(oct(name.stat().st_mode & 0o777))
 
     top = tmp_path / "top_dir"
+    top_file = top / "top_file"
     sub = top / "sub_dir"
+    sub_file = sub / "sub_file"
     subsub = sub / "sub_sub_dir"
+    subsub_file = subsub / "subsub_file"
     dirs = [top, sub, subsub]
+    files = [top_file, sub_file, subsub_file]
 
-    initial_mode = "0111"
+    initial_mode = "0110"
     changed_mode = "0555"
 
-    # Check that we are not just running photon but the kernel matches. This
-    # check should fail if we are in a photon container running on and os other
-    # than photon.
-    if salt.utils.platform.is_photonos() and _kernel_check("photon"):
-        initial_modes = {
-            0: {sub: "0750", subsub: "0110"},
-            1: {sub: "0110", subsub: "0110"},
-            2: {sub: "0110", subsub: "0110"},
-        }
-    else:
-        initial_modes = {
-            0: {sub: "0755", subsub: "0111"},
-            1: {sub: "0111", subsub: "0111"},
-            2: {sub: "0111", subsub: "0111"},
-        }
+    for folder in dirs:
+        folder.mkdir(mode=int(initial_mode, 8))
 
-    subsub.mkdir(mode=int(initial_mode, 8), exist_ok=True, parents=True)
+    for _file in files:
+        _file.touch(mode=int(initial_mode, 8))
 
     for depth in range(3):
         ret = file.directory(
             name=str(top),
             max_depth=depth,
             dir_mode=changed_mode,
+            file_mode=changed_mode,
             recurse=["mode"],
         )
         assert ret.result is True
         for changed_dir in dirs[0 : depth + 1]:
             assert changed_mode == _get_oct_mode(changed_dir)
+        for changed_file in files[0:depth]:
+            assert changed_mode == _get_oct_mode(changed_file)
         for untouched_dir in dirs[depth + 1 :]:
-            _mode = initial_modes[depth][untouched_dir]
-            assert _mode == _get_oct_mode(untouched_dir)
+            assert initial_mode == _get_oct_mode(untouched_dir)
+        for untouched_file in files[depth:]:
+            assert initial_mode == _get_oct_mode(untouched_file)
 
 
 @pytest.mark.skip_on_windows
