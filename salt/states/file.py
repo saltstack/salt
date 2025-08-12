@@ -4002,9 +4002,10 @@ def _depth_limited_walk(top, max_depth=None):
 
         if max_depth is not None:
             if rel_depth >= max_depth:
-                # This clear actually does nothing, as in os_walk we return copies of data returned by os.walk,
-                # thus modifying this list has no effect on behaviour of os.walk (it won't skip folders too deep)
-                # If ever we fix this, this will actually speed up execution
+                # This clear does nothing because os_walk returns copies of data from os.walk,
+                # so modifying this list has no effect on recursion.
+                # If os_walk ever returns the "real" dirs list, this will speed up execution
+                # by preventing recursion into directories deeper than max_depth.
                 dirs.clear()
                 continue
 

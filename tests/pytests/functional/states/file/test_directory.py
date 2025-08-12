@@ -108,7 +108,6 @@ def test_directory_max_depth(file, tmp_path):
             name=str(top),
             max_depth=depth,
             dir_mode=changed_mode,
-            file_mode=changed_mode,
             recurse=["mode"],
         )
         assert ret.result is True
