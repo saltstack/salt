@@ -77,6 +77,11 @@ Options
     Set this directory as the base pillar root. Can be specified more than
     once to include multiple base pillar roots.
 
+.. option:: --states-dir=STATES_DIR
+
+    Set this directory to search for additional states. Can be specified more
+    than once to include multiple states directories.
+
 .. option:: --retcode-passthrough
 
     Exit with the salt call retcode and not the salt binary retcode
