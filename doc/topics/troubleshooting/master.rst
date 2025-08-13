@@ -235,10 +235,10 @@ service.
 .. note::
     recon_default:
 
-    The average number of seconds to wait between reconnection attempts.
+    The average number of milliseconds to wait between reconnection attempts.
 
     recon_max:
-       The maximum number of seconds to wait between reconnection attempts.
+       The maximum number of milliseconds to wait between reconnection attempts.
 
     recon_randomize:
         A flag to indicate whether the recon_default value should be randomized.
