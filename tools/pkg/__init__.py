@@ -399,7 +399,15 @@ def source_tarball(ctx: Context):
         },
     }
     ctx.run(
-        "python3",
+        "python",
+        "-m",
+        "pip",
+        "install",
+        "-r",
+        f"{tools.utils.REPO_ROOT}/requirements/build.txt",
+    )
+    ctx.run(
+        "python" if sys.platform.startswith("win") else "python3",
         "-m",
         "build",
         "--sdist",
@@ -419,7 +427,14 @@ def source_tarball(ctx: Context):
             for pkg in tools.utils.REPO_ROOT.joinpath("dist").iterdir()
         ]
         ctx.run("sha256sum", *packages)
-    ctx.run("python3", "-m", "twine", "check", "dist/*", check=True)
+    ctx.run(
+        "python" if sys.platform.startswith("win") else "python3",
+        "-m",
+        "twine",
+        "check",
+        "dist/*",
+        check=True,
+    )
 
 
 @pkg.command(
