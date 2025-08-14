@@ -168,9 +168,9 @@ def _calculate_fake_duration():
     Generate a NULL duration for when states do not run
     but we want the results to be consistent.
     """
-    utc_start_time = datetime.datetime.utcnow()
+    utc_start_time = datetime.datetime.now(datetime.UTC)
     local_start_time = utc_start_time - (
-        datetime.datetime.utcnow() - datetime.datetime.now()
+        datetime.datetime.now(datetime.UTC) - datetime.datetime.now()
     )
     utc_finish_time = datetime.datetime.utcnow()
     start_time = local_start_time.time().isoformat()
