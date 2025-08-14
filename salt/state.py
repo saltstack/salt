@@ -34,6 +34,7 @@ import salt.syspaths as syspaths
 import salt.utils.args
 import salt.utils.crypt
 import salt.utils.data
+import salt.utils.dateutils
 import salt.utils.decorators.state
 import salt.utils.dictupdate
 import salt.utils.event
@@ -166,9 +167,9 @@ def _calculate_fake_duration():
     Generate a NULL duration for when states do not run
     but we want the results to be consistent.
     """
-    utc_start_time = datetime.datetime.utcnow()
+    utc_start_time = salt.utils.dateutils.utcnow()
     local_start_time = utc_start_time - (
-        datetime.datetime.utcnow() - datetime.datetime.now()
+        salt.utils.dateutils.utcnow() - datetime.datetime.now()
     )
     utc_finish_time = datetime.datetime.utcnow()
     start_time = local_start_time.time().isoformat()

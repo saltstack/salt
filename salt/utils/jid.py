@@ -8,15 +8,9 @@ import os
 from calendar import month_abbr as months
 
 import salt.utils.stringutils
+from salt.utils.dateutils import utcnow as _utc_now
 
 LAST_JID_DATETIME = None
-
-
-def _utc_now():
-    """
-    Helper method so tests do not have to patch the built-in method.
-    """
-    return datetime.datetime.utcnow()
 
 
 def gen_jid(opts):

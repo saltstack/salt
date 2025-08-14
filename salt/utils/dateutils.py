@@ -87,3 +87,14 @@ def total_seconds(td):
     method which does not exist in versions of Python < 2.7.
     """
     return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
+
+
+def utcnow():
+    """
+    Helper method so tests do not have to patch the built-in method.
+    """
+    try:
+        return datetime.datetime.now(datetime.UTC)
+    except AttributeError:
+        # Backwards compatability
+        return datetime.datetime.utcnow()
