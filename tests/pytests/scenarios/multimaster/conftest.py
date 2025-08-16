@@ -241,33 +241,33 @@ def run_salt_cmds():
     return _run_salt_cmds_fn
 
 
-# @pytest.fixture(autouse=True)
-# def ensure_connections(
-#    salt_mm_minion_1,
-#    salt_mm_minion_2,
-#    mm_master_1_salt_cli,
-#    mm_master_2_salt_cli,
-#    run_salt_cmds,
-# ):
-#    # define the function
-#    def _ensure_connections_fn(clis, minions):
-#        log.error("ENSURE CONNECTIONS - START")
-#        retries = 3
-#        while retries:
-#            returned = run_salt_cmds(clis, minions)
-#            if len(returned) == len(clis) * len(minions):
-#                break
-#            time.sleep(10)
-#            retries -= 1
-#        else:
-#            pytest.fail("Could not ensure the connections were okay.")
-#        log.error("ENSURE CONNECTIONS - END")
-#
-#    # run the function to ensure initial connections
-#    _ensure_connections_fn(
-#        [mm_master_1_salt_cli, mm_master_2_salt_cli],
-#        [salt_mm_minion_1, salt_mm_minion_2],
-#    )
-#
-#    # Give this function back for further use in test fn bodies
-#    return _ensure_connections_fn
+@pytest.fixture
+def ensure_connections(
+    salt_mm_minion_1,
+    salt_mm_minion_2,
+    mm_master_1_salt_cli,
+    mm_master_2_salt_cli,
+    run_salt_cmds,
+):
+    # define the function
+    def _ensure_connections_fn(clis, minions):
+        log.error("ENSURE CONNECTIONS - START")
+        retries = 3
+        while retries:
+            returned = run_salt_cmds(clis, minions)
+            if len(returned) == len(clis) * len(minions):
+                break
+            time.sleep(10)
+            retries -= 1
+        else:
+            pytest.fail("Could not ensure the connections were okay.")
+        log.error("ENSURE CONNECTIONS - END")
+
+    # run the function to ensure initial connections
+    _ensure_connections_fn(
+        [mm_master_1_salt_cli, mm_master_2_salt_cli],
+        [salt_mm_minion_1, salt_mm_minion_2],
+    )
+
+    # Give this function back for further use in test fn bodies
+    return _ensure_connections_fn
