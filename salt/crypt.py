@@ -654,6 +654,19 @@ class MasterKeys(dict):
             shared_pub.write_bytes(master_pub.read_bytes())
 
 
+def _auth_singleton_key(opts):
+    keypath = os.path.join(opts["pki_dir"], "minion.pem")
+    keytime = "0"
+    if os.path.exists(keypath):
+        keytime = str(os.path.getmtime(keypath))
+    return (
+        opts["pki_dir"],  # where the keys are stored
+        opts["id"],  # minion ID
+        opts["master_uri"],  # master ID
+        keytime,
+    )
+
+
 class AsyncAuth:
     """
     Set up an Async object to maintain authentication with the salt master
@@ -692,16 +705,7 @@ class AsyncAuth:
 
     @classmethod
     def __key(cls, opts, io_loop=None):
-        keypath = os.path.join(opts["pki_dir"], "minion.pem")
-        keytime = "0"
-        if os.path.exists(keypath):
-            keytime = str(os.path.getmtime(keypath))
-        return (
-            opts["pki_dir"],  # where the keys are stored
-            opts["id"],  # minion ID
-            opts["master_uri"],  # master ID
-            keytime,
-        )
+        return _auth_singleton_key(opts)
 
     # has to remain empty for singletons, since __init__ will *always* be called
     def __init__(self, opts, io_loop=None):
@@ -1473,11 +1477,7 @@ class SAuth(AsyncAuth):
 
     @classmethod
     def __key(cls, opts, io_loop=None):
-        return (
-            opts["pki_dir"],  # where the keys are stored
-            opts["id"],  # minion ID
-            opts["master_uri"],  # master ID
-        )
+        return _auth_singleton_key(opts)
 
     # has to remain empty for singletons, since __init__ will *always* be called
     def __init__(self, opts, io_loop=None):
