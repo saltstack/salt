@@ -8,6 +8,8 @@ apache-libcloud==2.5.0
     # via -r requirements/darwin.txt
 autocommand==2.2.2
     # via jaraco.text
+backports.ssl-match-hostname==3.7.0.1
+    # via -r requirements/base.txt
 backports.tarfile==1.2.0
     # via jaraco.context
 certifi==2023.07.22 ; python_version < "3.10"

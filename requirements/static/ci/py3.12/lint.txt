@@ -54,6 +54,11 @@ backports.entry-points-selectable==1.1.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   virtualenv
+backports.ssl-match-hostname==3.7.0.1
+    # via
+    #   -c requirements/static/ci/../pkg/py3.12/linux.txt
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
 bcrypt==4.1.2
     # via
     #   -c requirements/static/ci/py3.12/linux.txt

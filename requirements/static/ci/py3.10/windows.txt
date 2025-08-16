@@ -26,6 +26,10 @@ autocommand==2.2.2
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   jaraco.text
+backports.ssl-match-hostname==3.7.0.1
+    # via
+    #   -c requirements/static/ci/../pkg/py3.10/windows.txt
+    #   -r requirements/base.txt
 backports.tarfile==1.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt

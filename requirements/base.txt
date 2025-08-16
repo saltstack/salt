@@ -27,3 +27,5 @@ urllib3>=2.5.0; python_version >= '3.10'
 
 jaraco.text>=4.0.0
 jaraco.functools>=4.1.0
+
+backports.ssl-match-hostname
