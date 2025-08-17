@@ -34,10 +34,6 @@ on:
         type: boolean
         default: false
         description: Skip running the Salt packages test suite.
-      skip-salt-pkg-download-test-suite:
-        type: boolean
-        default: false
-        description: Skip running the Salt packages download test suite.
 
 env:
   COLUMNS: 190
@@ -241,7 +237,7 @@ jobs:
       - name: Define workflow config
         id: workflow-config
         run: |
-          tools ci workflow-config${{ inputs.skip-salt-test-suite && ' --skip-tests' || '' }}${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }}${{ inputs.skip-salt-pkg-download-test-suite && ' --skip-pkg-download-tests' || '' }} ${{ steps.setup-salt-version.outputs.salt-version }} ${{ github.event_name }} changed-files.json
+          tools ci workflow-config${{ inputs.skip-salt-test-suite && ' --skip-tests' || '' }}${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }} ${{ steps.setup-salt-version.outputs.salt-version }} ${{ github.event_name }} changed-files.json
 
       - name: Check Contents of generated testrun-changed-files.txt
         if: ${{ fromJSON(steps.workflow-config.outputs.config)['testrun']['type'] != 'full' }}
@@ -468,7 +464,7 @@ jobs:
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.20.3"
+      relenv-version: "0.20.4"
       python-version: "3.10.18"
       ci-python-version: "3.11"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
@@ -486,14 +482,14 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.20.3"
+      relenv-version: "0.20.4"
       python-version: "3.10.18"
       ci-python-version: "3.11"
       source: "onedir"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
       environment: staging
-      sign-macos-packages: false
+      sign-macos-packages: true
       sign-rpm-packages: ${{ inputs.sign-rpm-packages }}
       sign-windows-packages: ${{ inputs.sign-windows-packages }}
 
@@ -508,14 +504,14 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.20.3"
+      relenv-version: "0.20.4"
       python-version: "3.10.18"
       ci-python-version: "3.11"
       source: "src"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
       environment: staging
-      sign-macos-packages: false
+      sign-macos-packages: true
       sign-rpm-packages: ${{ inputs.sign-rpm-packages }}
       sign-windows-packages: ${{ inputs.sign-windows-packages }}
   build-ci-deps:
