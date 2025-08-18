@@ -657,7 +657,14 @@ class AsyncReqMessageClient:
                             self.close()
                             self.connect()
                             break
-                        yield salt.ext.tornado.gen.sleep(backoff())
+                        try:
+                            yield salt.ext.tornado.gen.with_timeout(
+                                backoff(),
+                                future,
+                                quiet_exceptions=(SaltReqTimeoutError,),
+                            )
+                        except salt.ext.tornado.gen.TimeoutError:
+                            pass
             if not future.done():
                 data = salt.payload.loads(recv)
                 future.set_result(data)
