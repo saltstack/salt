@@ -1442,7 +1442,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
             Default is ``False``.
 
-        pkgs (:ofj:`list`, optional):
+        pkgs (:obj:`list`, optional):
             A list of packages to install from a software repository. All
             packages listed under ``pkgs`` will be installed via a single
             command.
