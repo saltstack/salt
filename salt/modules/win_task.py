@@ -488,7 +488,7 @@ def list_actions(name, location="\\"):
         name (str):
             The name of the task for which list actions.
 
-        location (:ob:`str`, optional):
+        location (:obj:`str`, optional):
             A string value representing the location of the task from which to
             list actions.
 
@@ -1972,7 +1972,7 @@ def add_trigger(
         name (str):
             The name of the task to which to add the trigger.
 
-        location (:ob:`str`, optional):
+        location (:obj:`str`, optional):
             A string value representing the location of the task.
             Default is ``\`` which is the root for the task scheduler
             (``C:\Windows\System32\tasks``).
