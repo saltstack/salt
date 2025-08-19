@@ -1,4 +1,3 @@
-import asyncio
 import logging
 
 import pytest
@@ -127,7 +126,7 @@ async def test_request_channel_issue_65265(io_loop, request_client, minion_opts,
     stream = zmq.eventloop.zmqstream.ZMQStream(socket, io_loop=io_loop)
     try:
         stream.on_recv_stream(req_handler)
-        send_complete = asyncio.Event()
+        await salt.ext.tornado.gen.sleep(1)
 
         ret = await request_client.send("foo", timeout=1)
         assert ret == "bar"
