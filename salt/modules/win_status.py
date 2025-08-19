@@ -1,7 +1,7 @@
 """
-Module for returning various status data about a minion.
-These data can be useful for compiling into stats later,
-or for problem solving if your minion is having problems.
+Module for returning various status data about a minion. These data can be
+useful for compiling into stats later, or for problem-solving if your minion is
+having problems.
 
 .. versionadded:: 0.12.0
 
@@ -158,7 +158,7 @@ def cpustats():
     Return information about the CPU.
 
     Returns
-        dict: A dictionary containing information about the CPU stats
+        dict: A dictionary containing information about the CPU stats.
 
     CLI Example:
 
@@ -189,10 +189,10 @@ def cpustats():
 
 def meminfo():
     """
-    Return information about physical and virtual memory on the system
+    Return information about physical and virtual memory on the system.
 
     Returns:
-        dict: A dictionary of information about memory on the system
+        dict: A dictionary of information about memory on the system.
 
     CLI Example:
 
@@ -229,10 +229,10 @@ def meminfo():
 
 def vmstats():
     """
-    Return information about the virtual memory on the machine
+    Return information about the virtual memory on the machine.
 
     Returns:
-        dict: A dictionary of virtual memory stats
+        dict: A dictionary of virtual memory stats.
 
     CLI Example:
 
@@ -260,10 +260,10 @@ def vmstats():
 
 def loadavg():
     """
-    Returns counter information related to the load of the machine
+    Returns counter information related to the load of the machine.
 
     Returns:
-        dict: A dictionary of counters
+        dict: A dictionary of counters.
 
     CLI Example:
 
@@ -294,7 +294,7 @@ def cpuload():
     """
     .. versionadded:: 2015.8.0
 
-    Return the processor load as a percentage
+    Return the processor load as a percentage.
 
     CLI Example:
 
@@ -309,10 +309,19 @@ def diskusage(human_readable=False, path=None):
     """
     .. versionadded:: 2015.8.0
 
-    Return the disk usage for this minion
+    Return the disk usage for this minion.
 
-    human_readable : False
-        If ``True``, usage will be in KB/MB/GB etc.
+    Args:
+
+        human_readable (:obj:`bool`, optional):
+            If ``True``, usage will be in KB/MB/GB etc.
+
+            Default is ``False``.
+
+        path (:obj:`str`, optional):
+            The path to the disk. Usually a drive letter such as ``C:\\``.
+
+            Default is ``None``.
 
     CLI Example:
 
@@ -340,12 +349,17 @@ def diskusage(human_readable=False, path=None):
 
 def procs(count=False):
     """
-    Return the process data
+    Return the process data.
 
-    count : False
-        If ``True``, this function will simply return the number of processes.
+    Args:
 
-        .. versionadded:: 2015.8.0
+        count (:obj:`bool`, optional):
+            If ``True``, this function will simply return the number of
+            processes.
+
+            .. versionadded:: 2015.8.0
+
+            Default is ``False``.
 
     CLI Example:
 
@@ -374,10 +388,14 @@ def saltmem(human_readable=False):
     """
     .. versionadded:: 2015.8.0
 
-    Returns the amount of memory that salt is using
+    Returns the amount of memory that salt is using.
 
-    human_readable : False
-        return the value in a nicely formatted number
+    Args:
+
+        human_readable (:obj:`bool`, optional):
+            Return the value in a nicely formatted number.
+
+            Default is ``False``.
 
     CLI Example:
 
@@ -403,21 +421,22 @@ def uptime(human_readable=False):
     """
     .. versionadded:: 2015.8.0
 
-    Return the system uptime for the machine
+    Return the system uptime for the machine.
 
     Args:
 
-        human_readable (bool):
-            Return uptime in human readable format if ``True``, otherwise
-            return seconds. Default is ``False``
+        human_readable (:obj:`bool`, optional):
+            If ``True``, return uptime in human-readable format, otherwise
+            return seconds.
+
+            Default is ``False``.
 
             .. note::
                 Human readable format is ``days, hours:min:sec``. Days will only
                 be displayed if more than 0
 
     Returns:
-        str:
-            The uptime in seconds or human readable format depending on the
+        str: The uptime in seconds or human-readable format depending on the
             value of ``human_readable``
 
     CLI Example:
@@ -519,6 +538,19 @@ def master(master=None, connected=True):
     function is meant to be run via a scheduled job from the minion. If
     master_ip is an FQDN/Hostname, is must be resolvable to a valid IPv4
     address.
+
+    Args:
+
+        master (:obj:`str`, optional):
+            The master address, FQDN, or hostname to connect to.
+
+            Default is ``None``.
+
+        connected (:obj:`bool`, optional):
+            If ``True``, fire an event if the master is connected, otherwise
+            fire an event if the master is disconnected.
+
+            Default is ``True``.
 
     CLI Example:
 

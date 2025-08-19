@@ -82,14 +82,15 @@ def read_reg_pol(policy_class="Machine"):
     human-readable dictionary.
 
     Args:
-        policy_class (str): The registry class to retrieve. Can be one of the
-            following:
+
+        policy_class (:obj:`str`, optional):
+            The registry class to retrieve. Can be one of the following:
 
             - Computer
             - Machine
             - User
 
-            Default is ``Machine``
+            Default is ``Machine``.
 
     Raises:
         SaltInvocationError: Invalid policy class
@@ -127,14 +128,14 @@ def write_reg_pol(data, policy_class="Machine"):
     Args:
         data (dict): A dictionary containing Registry.pol data
 
-        policy_class (str): The registry class to write to. Can be one of the
-            following:
+        policy_class (:obj:`str`, optional):
+            The registry class to write to. Can be one of the following:
 
             - Computer
             - Machine
             - User
 
-            Default is ``Machine``
+            Default is ``Machine``.
 
     Raises:
         SaltInvocationError: Invalid policy class
@@ -181,8 +182,14 @@ def get_value(key, v_name, policy_class="Machine"):
 
         v_name (str): The value name to retrieve
 
-        policy_class (str): The registry class to read from. Can be one of the
-            following:
+        policy_class (:obj:`str`, optional):
+            The registry class to read from. Can be one of the following:
+
+            - Computer
+            - Machine
+            - User
+
+            Default is ``Machine``.
 
     Raises:
         SaltInvocationError: Invalid policy class
@@ -231,8 +238,14 @@ def get_key(key, policy_class="Machine"):
     Args:
         key (str): The registry key where the values reside
 
-        policy_class (str): The registry class to read from. Can be one of the
-            following:
+        policy_class (:obj:`str`, optional):
+            The registry class to read from. Can be one of the following:
+
+            - Computer
+            - Machine
+            - User
+
+            Default is ``Machine``.
 
     Raises:
         SaltInvocationError: Invalid policy class
@@ -284,7 +297,8 @@ def set_value(
 
         v_data(str): The registry value
 
-        v_type (str): The registry value type. Must be one of the following:
+        v_type (:obj:`str`, optional):
+            The registry value type. Must be one of the following:
 
             - REG_BINARY
             - REG_DWORD
@@ -293,16 +307,16 @@ def set_value(
             - REG_QWORD
             - REG_SZ
 
-            Default is REG_DWORD
+            Default is REG_DWORD.
 
-        policy_class (str): The registry class to write to. Can be one of the
-            following:
+        policy_class (:obj:`str`, optional):
+            The registry class to write to. Can be one of the following:
 
             - Computer
             - Machine
             - User
 
-            Default is ``Machine``
+            Default is ``Machine``.
 
     Raises:
         SaltInvocationError: Invalid policy_class
@@ -310,7 +324,7 @@ def set_value(
         SaltInvocationError: v_data doesn't match v_type
 
     Returns:
-        bool: ``True`` if successful, otherwise ``False``
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -420,14 +434,14 @@ def disable_value(key, v_name, policy_class="machine"):
 
         v_name (str): The registry value name within the key
 
-        policy_class (str): The registry class to write to. Can be one of the
-            following:
+        policy_class (:obj:`str`, optional):
+            The registry class to write to. Can be one of the following:
 
             - Computer
             - Machine
             - User
 
-            Default is ``Machine``
+            Default is ``Machine``.
 
     Raises:
         SaltInvocationError: Invalid policy_class
@@ -518,14 +532,14 @@ def delete_value(key, v_name, policy_class="Machine"):
 
         v_name (str): The registry value name within the key
 
-        policy_class (str): The registry class to write to. Can be one of the
-            following:
+        policy_class (:obj:`str`, optional):
+            The registry class to write to. Can be one of the following:
 
             - Computer
             - Machine
             - User
 
-            Default is ``Machine``
+            Default is ``Machine``.
 
     Raises:
         SaltInvocationError: Invalid policy_class
