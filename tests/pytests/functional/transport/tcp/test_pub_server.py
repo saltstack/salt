@@ -28,7 +28,6 @@ async def test_pub_channel(master_opts, minion_opts, io_loop):
         payloads.append(payload)
 
     def on_recv(message):
-        print("ON RECV")
         publishes.append(message)
 
     thread = threading.Thread(
@@ -43,7 +42,6 @@ async def test_pub_channel(master_opts, minion_opts, io_loop):
     await client.connect(master_opts["publish_port"])
     client.on_recv(on_recv)
 
-    print("Publish message")
     server.publish({"meh": "bah"})
 
     start = time.monotonic()
