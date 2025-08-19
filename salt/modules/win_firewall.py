@@ -66,16 +66,19 @@ def disable(profile="allprofiles"):
     Disable firewall profile
 
     Args:
-        profile (Optional[str]): The name of the profile to disable. Default is
-            ``allprofiles``. Valid options are:
+
+        profile (:obj:`str`, optional):
+            The name of the profile to disable. Valid options are:
 
             - allprofiles
             - domainprofile
             - privateprofile
             - publicprofile
 
+            Default is ``allprofiles``.
+
     Returns:
-        bool: True if successful
+        bool: ``True`` if successful
 
     Raises:
         CommandExecutionError: If the command fails
@@ -101,8 +104,10 @@ def enable(profile="allprofiles"):
     Enable firewall profile
 
     Args:
-        profile (Optional[str]): The name of the profile to enable. Default is
-            ``allprofiles``. Valid options are:
+
+        profile (:obj:`str`, optional):
+            The name of the profile to enable. Default is ``allprofiles``. Valid
+            options are:
 
             - allprofiles
             - domainprofile
@@ -110,7 +115,7 @@ def enable(profile="allprofiles"):
             - publicprofile
 
     Returns:
-        bool: True if successful
+        bool: ``True`` if successful
 
     Raises:
         CommandExecutionError: If the command fails
@@ -136,8 +141,10 @@ def get_rule(name="all"):
     Display all matching rules as specified by name
 
     Args:
-        name (Optional[str]): The full name of the rule. ``all`` will return all
-            rules. Default is ``all``
+
+        name (:obj:`str`, optional):
+            The full name of the rule. ``all`` will return all rules. Default is
+            ``all``.
 
     Returns:
         dict: A dictionary of all rules or rules that match the name exactly
@@ -167,14 +174,17 @@ def add_rule(name, localport, protocol="tcp", action="allow", dir="in", remoteip
 
     Args:
 
-        name (str): The name of the rule. Must be unique and cannot be "all".
+        name (str):
+            The name of the rule. Must be unique and cannot be "all".
             Required.
 
-        localport (int): The port the rule applies to. Must be a number between
-            0 and 65535. Can be a range. Can specify multiple ports separated by
-            commas. Required.
+        localport (int):
+            The port the rule applies to. Must be a number between 0 and 65535.
+            Can be a range. Can specify multiple ports separated by commas.
+            Required.
 
-        protocol (Optional[str]): The protocol. Can be any of the following:
+        protocol (:obj:`str`, optional):
+            The protocol. Default is ``tcp``. Can be any of the following:
 
             - A number between 0 and 255
             - icmpv4
@@ -183,16 +193,19 @@ def add_rule(name, localport, protocol="tcp", action="allow", dir="in", remoteip
             - udp
             - any
 
-        action (Optional[str]): The action the rule performs. Can be any of the
-            following:
+        action (:obj:`str`, optional):
+            The action the rule performs. Default is ``allow``. Can be any of
+            the following:
 
             - allow
             - block
             - bypass
 
-        dir (Optional[str]): The direction. Can be ``in`` or ``out``.
+        dir (:obj:`str`, optional):
+            The direction. Can be ``in`` or ``out``. Default is ``in``.
 
-        remoteip (Optional [str]): The remote IP. Can be any of the following:
+        remoteip (:obj:`str`, optional):
+            The remote IP. Default is ``any``. Can be any of the following:
 
             - any
             - localsubnet
@@ -209,7 +222,7 @@ def add_rule(name, localport, protocol="tcp", action="allow", dir="in", remoteip
             Can be combinations of the above separated by commas.
 
     Returns:
-        bool: True if successful
+        bool: ``True`` if successful
 
     Raises:
         CommandExecutionError: If the command fails
@@ -254,21 +267,26 @@ def delete_rule(name=None, localport=None, protocol=None, dir=None, remoteip=Non
 
     Args:
 
-        name (str): The name of the rule to delete. If the name ``all`` is used
-            you must specify additional parameters.
+        name (str):
+            The name of the rule to delete. If the name ``all`` is used, you
+            must specify additional parameters.
 
-        localport (Optional[str]): The port of the rule. If protocol is not
-            specified, protocol will be set to ``tcp``
+        localport (:obj:`str`, optional):
+            The port of the rule. If protocol is not specified, protocol will be
+            set to ``tcp``. Default is ``None``.
 
-        protocol (Optional[str]): The protocol of the rule. Default is ``tcp``
-            when ``localport`` is specified
+        protocol (:obj:`str`, optional):
+            The protocol of the rule. Default is ``tcp`` when ``localport`` is
+            specified. Default is ``None``.
 
-        dir (Optional[str]): The direction of the rule.
+        dir (:obj:`str`, optional):
+            The direction of the rule. Default is ``None``.
 
-        remoteip (Optional[str]): The remote IP of the rule.
+        remoteip (:obj:`str`, optional):
+            The remote IP of the rule. Default is ``None``.
 
     Returns:
-        bool: True if successful
+        bool: ``True`` if successful
 
     Raises:
         CommandExecutionError: If the command fails
@@ -323,7 +341,7 @@ def rule_exists(name):
         name (str): The name of the rule
 
     Returns:
-        bool: True if exists, otherwise False
+        bool: ``True`` if exists, otherwise ``False``.
 
     CLI Example:
 
@@ -356,6 +374,8 @@ def get_settings(profile, section, store="local"):
             - public
             - private
 
+            Required.
+
         section (str):
             The property to query within the selected profile. Valid options
             are:
@@ -365,14 +385,16 @@ def get_settings(profile, section, store="local"):
             - settings : firewall properties
             - state : firewalls state (on | off)
 
-        store (str):
+            Required.
+
+        store (:obj:`str`, optional):
             The store to use. This is either the local firewall policy or the
             policy defined by local group policy. Valid options are:
 
             - lgpo
             - local
 
-            Default is ``local``
+            Default is ``local``.
 
     Returns:
         dict: A dictionary containing the properties for the specified profile
@@ -407,21 +429,23 @@ def get_all_settings(domain, store="local"):
 
     Args:
 
-        profile (str):
+        domain (str):
             The firewall profile to query. Valid options are:
 
             - domain
             - public
             - private
 
-        store (str):
+            Required.
+
+        store (:obj:`str`, optional):
             The store to use. This is either the local firewall policy or the
             policy defined by local group policy. Valid options are:
 
             - lgpo
             - local
 
-            Default is ``local``
+            Default is ``local``.
 
     Returns:
         dict: A dictionary containing the specified settings
@@ -449,14 +473,14 @@ def get_all_profiles(store="local"):
 
     Args:
 
-        store (str):
+        store (:obj:`str`, optional):
             The store to use. This is either the local firewall policy or the
             policy defined by local group policy. Valid options are:
 
             - lgpo
             - local
 
-            Default is ``local``
+            Default is ``local``.
 
     Returns:
         dict: A dictionary containing the specified settings for each profile
@@ -493,7 +517,7 @@ def set_firewall_settings(profile, inbound=None, outbound=None, store="local"):
             - public
             - private
 
-        inbound (str):
+        inbound (:obj:`str`, optional):
             The inbound setting. If ``None`` is passed, the setting will remain
             unchanged. Valid values are:
 
@@ -502,9 +526,9 @@ def set_firewall_settings(profile, inbound=None, outbound=None, store="local"):
             - allowinbound
             - notconfigured
 
-            Default is ``None``
+            Default is ``None``.
 
-        outbound (str):
+        outbound (:obj:`str`, optional):
             The outbound setting. If ``None`` is passed, the setting will remain
             unchanged. Valid values are:
 
@@ -512,16 +536,16 @@ def set_firewall_settings(profile, inbound=None, outbound=None, store="local"):
             - blockoutbound
             - notconfigured
 
-            Default is ``None``
+            Default is ``None``.
 
-        store (str):
+        store (:obj:`str`, optional):
             The store to use. This is either the local firewall policy or the
             policy defined by local group policy. Valid options are:
 
             - lgpo
             - local
 
-            Default is ``local``
+            Default is ``local``.
 
     Returns:
         bool: ``True`` if successful
@@ -604,14 +628,14 @@ def set_logging_settings(profile, setting, value, store="local"):
             .. note::
                 ``notconfigured`` can only be used when using the lgpo store
 
-        store (str):
+        store (:obj:`str`, optional):
             The store to use. This is either the local firewall policy or the
             policy defined by local group policy. Valid options are:
 
             - lgpo
             - local
 
-            Default is ``local``
+            Default is ``local``.
 
     Returns:
         bool: ``True`` if successful
@@ -679,14 +703,14 @@ def set_settings(profile, setting, value, store="local"):
             .. note::
                 ``notconfigured`` can only be used when using the lgpo store
 
-        store (str):
+        store (:obj:`str`, optional):
             The store to use. This is either the local firewall policy or the
             policy defined by local group policy. Valid options are:
 
             - lgpo
             - local
 
-            Default is ``local``
+            Default is ``local``.
 
     Returns:
         bool: ``True`` if successful
@@ -736,14 +760,14 @@ def set_state(profile, state, store="local"):
             .. note::
                 ``notconfigured`` can only be used when using the lgpo store
 
-        store (str):
+        store (:obj:`str`, optional):
             The store to use. This is either the local firewall policy or the
             policy defined by local group policy. Valid options are:
 
             - lgpo
             - local
 
-            Default is ``local``
+            Default is ``local``.
 
     Returns:
         bool: ``True`` if successful

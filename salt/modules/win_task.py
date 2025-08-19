@@ -348,13 +348,15 @@ def list_tasks(location="\\"):
 
     Args:
 
-        location (str):
+        location (:obj:`str`, optional):
             A string value representing the folder from which you want to list
-            tasks. Default is ``\`` which is the root for the task scheduler
+            tasks.
+
+            Default is ``\`` which is the root for the task scheduler
             (``C:\Windows\System32\tasks``).
 
     Returns:
-        list: Returns a list of tasks
+        list: Returns a list of tasks.
 
     CLI Example:
 
@@ -394,9 +396,11 @@ def list_folders(location="\\"):
 
     Args:
 
-        location (str):
+        location (:obj:`str`, optional):
             A string value representing the folder from which you want to list
-            tasks. Default is ``\`` which is the root for the task scheduler
+            tasks.
+
+            Default is ``\`` which is the root for the task scheduler
             (``C:\Windows\System32\tasks``).
 
     Returns:
@@ -437,10 +441,12 @@ def list_triggers(name, location="\\"):
         name (str):
             The name of the task for which list triggers.
 
-        location (str):
+        location (:obj:`str`, optional):
             A string value representing the location of the task from which to
-            list triggers. Default is ``\`` which is the root for the task
-            scheduler (``C:\Windows\System32\tasks``).
+            list triggers.
+
+            Default is ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         list: Returns a list of triggers.
@@ -482,10 +488,12 @@ def list_actions(name, location="\\"):
         name (str):
             The name of the task for which list actions.
 
-        location (str):
+        location (:ob:`str`, optional):
             A string value representing the location of the task from which to
-            list actions. Default is ``\`` which is the root for the task
-            scheduler (``C:\Windows\System32\tasks``).
+            list actions.
+
+            Default is ``\`` which is the root for the task scheduler
+            (``C:\Windows\System32\tasks``).
 
     Returns:
         list: Returns a list of actions.
@@ -534,25 +542,33 @@ def create_task(
         name (str):
             The name of the task. This will be displayed in the task scheduler.
 
-        location (str):
+        location (:obj:`str`, optional):
             A string value representing the location in which to create the
-            task. Default is ``\`` which is the root for the task scheduler
+            task.
+
+            Default is ``\`` which is the root for the task scheduler
             (``C:\Windows\System32\tasks``).
 
-        user_name (str):
+        user_name (:obj:`str`, optional):
             The user account under which to run the task. To specify the
             'System' account, use 'System'. The password will be ignored.
 
-        password (str):
+            Default is "System".
+
+        password (:obj:`str`, optional):
             The password to use for authentication. This should set the task to
             run whether the user is logged in or not, but is currently not
             working.
 
-        force (bool):
+            Default is ``None``.
+
+        force (:obj:`bool`, optional):
             If the task exists, overwrite the existing task.
 
+            Default is ``False``.
+
     Returns:
-        bool: ``True`` if successful, otherwise ``False``
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -615,31 +631,41 @@ def create_task_from_xml(
         name (str):
             The name of the task. This will be displayed in the task scheduler.
 
-        location (str):
+        location (:obj:`str`, optional):
             A string value representing the location in which to create the
-            task. Default is ``\`` which is the root for the task scheduler
+            task.
+
+            Default is ``\`` which is the root for the task scheduler
             (``C:\Windows\System32\tasks``).
 
-        xml_text (str):
+        xml_text (:obj:`str`, optional):
             A string of xml representing the task to be created. This will be
             overridden by ``xml_path`` if passed.
 
-        xml_path (str):
-            The path to an XML file on the local system containing the xml that
-            defines the task. This will override ``xml_text``
+            Default is ``None``.
 
-        user_name (str):
+        xml_path (:obj:`str`, optional):
+            The path to an XML file on the local system containing the xml that
+            defines the task. This will override ``xml_text``.
+
+            Default is ``None``.
+
+        user_name (:obj:`str`, optional):
             The user account under which to run the task. To specify the
             'System' account, use 'System'. The password will be ignored.
 
-        password (str):
+            Default is "System".
+
+        password (:obj:`str`, optional):
             The password to use for authentication. This should set the task to
             run whether the user is logged in or not, but is currently not
             working.
 
+            Default is ``None``.
+
     Returns:
-        bool: ``True`` if successful, otherwise ``False``
-        str: A string with the error message if there is an error
+        bool: ``True`` if successful, otherwise ``False``.
+        str: A string with the error message if there is an error.
 
     Raises:
         ArgumentValueError: If arguments are invalid
@@ -762,13 +788,15 @@ def create_folder(name, location="\\"):
             The name of the folder. This will be displayed in the task
             scheduler.
 
-        location (str):
+        location (:obj:`str`, optional):
             A string value representing the location in which to create the
-            folder. Default is ``\`` which is the root for the task scheduler
+            folder.
+
+            Default is ``\`` which is the root for the task scheduler
             (``C:\Windows\System32\tasks``).
 
     Returns:
-        bool: ``True`` if successful, otherwise ``False``
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -834,16 +862,20 @@ def edit_task(
         name (str):
             The name of the task. This will be displayed in the task scheduler.
 
-        location (str):
+        location (:obj:`str`, optional):
             A string value representing the location in which to create the
-            task. Default is ``\`` which is the root for the task scheduler
+            task.
+
+            Default is ``\`` which is the root for the task scheduler
             (``C:\Windows\System32\tasks``).
 
-        user_name (str):
+        user_name (:obj:`str`, optional):
             The user account under which to run the task. To specify the
             'System' account, use 'System'. The password will be ignored.
 
-        password (str):
+            Default is ``None``.
+
+        password (:obj:`str`, optional):
             The password to use for authentication. This should set the task to
             run whether the user is logged in or not, but is currently not
             working.
@@ -851,146 +883,192 @@ def edit_task(
             .. note::
 
                 The combination of user_name and password determine how the
-                task runs. For example, if a username is passed without at
+                task runs. For example, if a username is passed without a
                 password the task will only run when the user is logged in. If a
                 password is passed as well the task will run whether the user is
                 logged on or not. If you pass 'System' as the username the task
                 will run as the system account (the password parameter is
                 ignored).
 
-        description (str):
+            Default is ``None``.
+
+        description (:obj:`str`, optional):
             A string representing the text that will be displayed in the
             description field in the task scheduler.
 
-        enabled (bool):
+            Default is ``None``.
+
+        enabled (:obj:`bool`, optional):
             A boolean value representing whether or not the task is enabled.
 
-        hidden (bool):
-            A boolean value representing whether or not the task is hidden.
+            Default is ``False``.
 
-        run_if_idle (bool):
+        hidden (:obj:`bool`, optional):
+            A boolean value representing whether the task is hidden.
+
+            Default is ``False``.
+
+        run_if_idle (:obj:`bool`, optional):
             Boolean value that indicates that the Task Scheduler will run the
             task only if the computer is in an idle state.
 
-        idle_duration (str):
+            Default is ``False``.
+
+        idle_duration (:obj:`str`, optional):
             A value that indicates the amount of time that the computer must be
             in an idle state before the task is run. Valid values are:
 
-                - 1 minute
-                - 5 minutes
-                - 10 minutes
-                - 15 minutes
-                - 30 minutes
-                - 1 hour
+            - 1 minute
+            - 5 minutes
+            - 10 minutes
+            - 15 minutes
+            - 30 minutes
+            - 1 hour
 
-        idle_wait_timeout (str):
+            Default is ``None``.
+
+        idle_wait_timeout (:obj:`str`, optional):
             A value that indicates the amount of time that the Task Scheduler
             will wait for an idle condition to occur. Valid values are:
 
-                - Do not wait
-                - 1 minute
-                - 5 minutes
-                - 10 minutes
-                - 15 minutes
-                - 30 minutes
-                - 1 hour
-                - 2 hours
+            - Do not wait
+            - 1 minute
+            - 5 minutes
+            - 10 minutes
+            - 15 minutes
+            - 30 minutes
+            - 1 hour
+            - 2 hours
 
-        idle_stop_on_end (bool):
+            Default is ``None``.
+
+        idle_stop_on_end (:obj:`bool`, optional):
             Boolean value that indicates that the Task Scheduler will terminate
             the task if the idle condition ends before the task is completed.
 
-        idle_restart (bool):
+            Default is ``None``.
+
+        idle_restart (:obj:`bool`, optional):
             Boolean value that indicates whether the task is restarted when the
             computer cycles into an idle condition more than once.
 
-        ac_only (bool):
+            Default is ``None``.
+
+        ac_only (:obj:`bool`, optional):
             Boolean value that indicates that the Task Scheduler will launch the
             task only while on AC power.
 
-        stop_if_on_batteries (bool):
+            Default is ``None``.
+
+        stop_if_on_batteries (:obj:`bool`, optional):
             Boolean value that indicates that the task will be stopped if the
             computer begins to run on battery power.
 
-        wake_to_run (bool):
+            Default is ``None``.
+
+        wake_to_run (:obj:`bool`, optional):
             Boolean value that indicates that the Task Scheduler will wake the
             computer when it is time to run the task.
 
-        run_if_network (bool):
+            Default is ``None``.
+
+        run_if_network (:obj:`bool`, optional):
             Boolean value that indicates that the Task Scheduler will run the
             task only when a network is available.
 
-        network_id (guid):
+            Default is ``None``.
+
+        network_id (:obj:`guid`, optional):
             GUID value that identifies a network profile.
 
-        network_name (str):
+            Default is ``None``.
+
+        network_name (:obj:`str`, optional):
             Sets the name of a network profile. The name is used for display
             purposes.
 
-        allow_demand_start (bool):
+            Default is ``None``.
+
+        allow_demand_start (:obj:`bool`, optional):
             Boolean value that indicates that the task can be started by using
             either the Run command or the Context menu.
 
-        start_when_available (bool):
+            Default is ``None``.
+
+        start_when_available (:obj:`bool`, optional):
             Boolean value that indicates that the Task Scheduler can start the
             task at any time after its scheduled time has passed.
 
-        restart_every (str):
+            Default is ``None``.
+
+        restart_every (:obj:`str`, optional):
             A value that specifies the interval between task restart attempts.
             Valid values are:
 
-                - False (to disable)
-                - 1 minute
-                - 5 minutes
-                - 10 minutes
-                - 15 minutes
-                - 30 minutes
-                - 1 hour
-                - 2 hours
+            - False (to disable)
+            - 1 minute
+            - 5 minutes
+            - 10 minutes
+            - 15 minutes
+            - 30 minutes
+            - 1 hour
+            - 2 hours
 
-        restart_count (int):
+            Default is ``None``.
+
+        restart_count (:obj:`int`, optional):
             The number of times the Task Scheduler will attempt to restart the
             task. Valid values are integers 1 - 999.
 
-        execution_time_limit (bool, str):
+            Default is 3
+
+        execution_time_limit (:obj:`Union[bool, str]`, optional):
             The amount of time allowed to complete the task. Valid values are:
 
-                - False (to disable)
-                - 1 hour
-                - 2 hours
-                - 4 hours
-                - 8 hours
-                - 12 hours
-                - 1 day
-                - 3 days
+            - False (to disable)
+            - 1 hour
+            - 2 hours
+            - 4 hours
+            - 8 hours
+            - 12 hours
+            - 1 day
+            - 3 days
 
-        force_stop (bool):
+            Default is ``None``.
+
+        force_stop (:obj:`bool`, optional):
             Boolean value that indicates that the task may be terminated by
             using TerminateProcess.
 
-        delete_after (bool, str):
+            Default is ``None``.
+
+        delete_after (:obj:`Union[bool, str]`, optional):
             The amount of time that the Task Scheduler will wait before deleting
             the task after it expires. Requires a trigger with an expiration
             date. Valid values are:
 
-                - False (to disable)
-                - Immediately
-                - 30 days
-                - 90 days
-                - 180 days
-                - 365 days
+            - False (to disable)
+            - Immediately
+            - 30 days
+            - 90 days
+            - 180 days
+            - 365 days
 
-        multiple_instances (str):
+            Default is ``None``.
+
+        multiple_instances (:obj:`str`, optional):
             Sets the policy that defines how the Task Scheduler deals with
             multiple instances of the task. Valid values are:
 
-                - Parallel
-                - Queue
-                - No New Instance
-                - Stop Existing
+            - Parallel
+            - Queue
+            - No New Instance
+            - Stop Existing
+
+            Default is ``None``.
 
     Returns:
-        bool: ``True`` if successful, otherwise ``False``
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1179,13 +1257,14 @@ def delete_task(name, location="\\"):
         name (str):
             The name of the task to delete.
 
-        location (str):
-            A string value representing the location of the task. Default is
-            ``\`` which is the root for the task scheduler
+        location (:obj:`str`, optional):
+            A string value representing the location of the task.
+
+            Default is ``\`` which is the root for the task scheduler
             (``C:\Windows\System32\tasks``).
 
     Returns:
-        bool: ``True`` if successful, otherwise ``False``
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1220,13 +1299,14 @@ def delete_folder(name, location="\\"):
         name (str):
             The name of the folder to delete.
 
-        location (str):
-            A string value representing the location of the folder.  Default is
-            ``\`` which is the root for the task scheduler
+        location (:obj:`str`):
+            A string value representing the location of the folder.
+
+            Default is ``\`` which is the root for the task scheduler
             (``C:\Windows\System32\tasks``).
 
     Returns:
-        bool: ``True`` if successful, otherwise ``False``
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1263,12 +1343,13 @@ def run(name, location="\\"):
             The name of the task to run.
 
         location (str):
-            A string value representing the location of the task. Default is
-            ``\`` which is the root for the task scheduler
+            A string value representing the location of the task.
+
+            Default is ``\`` which is the root for the task scheduler
             (``C:\Windows\System32\tasks``).
 
     Returns:
-        bool: ``True`` if successful, otherwise ``False``
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1305,13 +1386,14 @@ def run_wait(name, location="\\"):
         name (str):
             The name of the task to run.
 
-        location (str):
-            A string value representing the location of the task. Default is
-            ``\`` which is the root for the task scheduler
+        location (:obj:`str`, optional):
+            A string value representing the location of the task.
+
+            Default is ``\`` which is the root for the task scheduler
             (``C:\Windows\System32\tasks``).
 
     Returns:
-        bool: ``True`` if successful, otherwise ``False``
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1366,13 +1448,14 @@ def stop(name, location="\\"):
         name (str):
             The name of the task to stop.
 
-        location (str):
-            A string value representing the location of the task. Default is
-            ``\`` which is the root for the task scheduler
+        location (:obj:`str`, optional):
+            A string value representing the location of the task.
+
+            Default is ``\`` which is the root for the task scheduler
             (``C:\Windows\System32\tasks``).
 
     Returns:
-        bool: ``True`` if successful, otherwise ``False``
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1409,9 +1492,10 @@ def status(name, location="\\"):
         name (str):
             The name of the task for which to return the status
 
-        location (str):
-            A string value representing the location of the task. Default is
-            ``\`` which is the root for the task scheduler
+        location (:obj:`str`, optional):
+            A string value representing the location of the task.
+
+            Default is ``\`` which is the root for the task scheduler
             (``C:\Windows\System32\tasks``).
 
     Returns:
@@ -1452,15 +1536,15 @@ def info(name, location="\\"):
     Args:
 
         name (str):
-            The name of the task for which to return the status
+            The name of the task for which to return the status.
 
-        location (str):
-            A string value representing the location of the task. Default is
-            ``\`` which is the root for the task scheduler
+        location (:obj:`str`, optional):
+            A string value representing the location of the task.
+            Default is ``\`` which is the root for the task scheduler
             (``C:\Windows\System32\tasks``).
 
     Returns:
-        dict: A dictionary containing the task configuration
+        dict: A dictionary containing the task configuration.
 
     CLI Example:
 
@@ -1623,21 +1707,23 @@ def add_action(name=None, location="\\", action_type="Execute", **kwargs):
         name (str):
             The name of the task to which to add the action.
 
-        location (str):
-            A string value representing the location of the task. Default is
-            ``\`` which is the root for the task scheduler
+        location (:obj:`str`, optional):
+            A string value representing the location of the task.
+            Default is ``\`` which is the root for the task scheduler
             (``C:\Windows\System32\tasks``).
 
-        action_type (str):
+        action_type (:obj:`str`, optional):
             The type of action to add. There are three action types. Each one
             requires its own set of Keyword Arguments (kwargs). Valid values
             are:
 
-                - Execute
-                - Email
-                - Message
+            - Execute
+            - Email
+            - Message
 
-    Required arguments for each action_type:
+            Default is "Execute".
+
+    Required keyword arguments for each action_type:
 
     **Execute**
 
@@ -1699,7 +1785,7 @@ def add_action(name=None, location="\\", action_type="Execute", **kwargs):
                 The dialog box message body
 
     Returns:
-        dict: A dictionary containing the task configuration
+        dict: A dictionary containing the task configuration.
 
     CLI Example:
 
@@ -1869,13 +1955,14 @@ def add_trigger(
     **kwargs,
 ):
     r"""
-    Add a trigger to a Windows Scheduled task
+    Add a trigger to a Windows Scheduled task.
 
     .. note::
 
-        Arguments are parsed by the YAML loader and are subject to
-        yaml's idiosyncrasies. Therefore, time values in some
-        formats (``%H:%M:%S`` and ``%H:%M``) should to be quoted.
+        Arguments are parsed by the YAML loader and are subject to yaml's
+        idiosyncrasies. Therefore, time values in some formats (``%H:%M:%S``
+        and ``%H:%M``) should to be quoted.
+
         See `YAML IDIOSYNCRASIES`_ for more details.
 
     .. _`YAML IDIOSYNCRASIES`: https://docs.saltproject.io/en/latest/topics/troubleshooting/yaml_idiosyncrasies.html#time-expressions
@@ -1885,151 +1972,175 @@ def add_trigger(
         name (str):
             The name of the task to which to add the trigger.
 
-        location (str):
-            A string value representing the location of the task. Default is
-            ``\`` which is the root for the task scheduler
+        location (:ob:`str`, optional):
+            A string value representing the location of the task.
+            Default is ``\`` which is the root for the task scheduler
             (``C:\Windows\System32\tasks``).
 
-        trigger_type (str):
+        trigger_type (:obj:`str`, optional):
             The type of trigger to create. This is defined when the trigger is
             created and cannot be changed later. Options are as follows:
 
-                - Event
-                - Once
-                - Daily
-                - Weekly
-                - Monthly
-                - MonthlyDay
-                - OnIdle
-                - OnTaskCreation
-                - OnBoot
-                - OnLogon
-                - OnSessionChange
+            - Event
+            - Once
+            - Daily
+            - Weekly
+            - Monthly
+            - MonthlyDay
+            - OnIdle
+            - OnTaskCreation
+            - OnBoot
+            - OnLogon
+            - OnSessionChange
 
-        trigger_enabled (bool):
+            Default is ``None``.
+
+        trigger_enabled (:obj:`bool`, optional):
             Boolean value that indicates whether the trigger is enabled.
 
-        start_date (str):
+            Default is ``True``.
+
+        start_date (:obj:`str`, optional):
             The date when the trigger is activated. If no value is passed, the
             current date will be used. Can be one of the following formats:
 
-                - %Y-%m-%d
-                - %m-%d-%y
-                - %m-%d-%Y
-                - %m/%d/%y
-                - %m/%d/%Y
-                - %Y/%m/%d
+            - %Y-%m-%d
+            - %m-%d-%y
+            - %m-%d-%Y
+            - %m/%d/%y
+            - %m/%d/%Y
+            - %Y/%m/%d
 
-        start_time (str):
+            Default is ``None``.
+
+        start_time (:obj:`str`, optional):
             The time when the trigger is activated. If no value is passed,
             midnight will be used. Can be one of the following formats:
 
-                - %I:%M:%S %p
-                - %I:%M %p
-                - %H:%M:%S
-                - %H:%M
+            - %I:%M:%S %p
+            - %I:%M %p
+            - %H:%M:%S
+            - %H:%M
 
-        end_date (str):
+            Default is ``None``.
+
+        end_date (:obj:`str`, optional):
             The date when the trigger is deactivated. The trigger cannot start
             the task after it is deactivated. Can be one of the following
             formats:
 
-                - %Y-%m-%d
-                - %m-%d-%y
-                - %m-%d-%Y
-                - %m/%d/%y
-                - %m/%d/%Y
-                - %Y/%m/%d
+            - %Y-%m-%d
+            - %m-%d-%y
+            - %m-%d-%Y
+            - %m/%d/%y
+            - %m/%d/%Y
+            - %Y/%m/%d
 
-        end_time (str):
+            Default is ``None``.
+
+        end_time (:obj:`str`, optional):
             The time when the trigger is deactivated. If this is not passed
             with ``end_date`` it will be set to midnight. Can be one of the
             following formats:
 
-                - %I:%M:%S %p
-                - %I:%M %p
-                - %H:%M:%S
-                - %H:%M
+            - %I:%M:%S %p
+            - %I:%M %p
+            - %H:%M:%S
+            - %H:%M
 
-        random_delay (str):
+            Default is ``None``.
+
+        random_delay (:obj:`str`, optional):
             The delay time that is randomly added to the start time of the
             trigger. Valid values are:
 
-                - 30 seconds
-                - 1 minute
-                - 30 minutes
-                - 1 hour
-                - 8 hours
-                - 1 day
+            - 30 seconds
+            - 1 minute
+            - 30 minutes
+            - 1 hour
+            - 8 hours
+            - 1 day
+
+            Default is ``None``.
 
             .. note::
 
                 This parameter applies to the following trigger types
 
-                    - Once
-                    - Daily
-                    - Weekly
-                    - Monthly
-                    - MonthlyDay
+                - Once
+                - Daily
+                - Weekly
+                - Monthly
+                - MonthlyDay
 
-        repeat_interval (str):
+        repeat_interval (:obj:`str`, optional):
             The amount of time between each restart of the task. Valid values
             are:
 
-                - 5 minutes
-                - 10 minutes
-                - 15 minutes
-                - 30 minutes
-                - 1 hour
+            - 5 minutes
+            - 10 minutes
+            - 15 minutes
+            - 30 minutes
+            - 1 hour
 
-        repeat_duration (str):
+            Default is ``None``.
+
+        repeat_duration (:obj:`str`, optional):
             How long the pattern is repeated. Valid values are:
 
-                - Indefinitely
-                - 15 minutes
-                - 30 minutes
-                - 1 hour
-                - 12 hours
-                - 1 day
+            - Indefinitely
+            - 15 minutes
+            - 30 minutes
+            - 1 hour
+            - 12 hours
+            - 1 day
 
-        repeat_stop_at_duration_end (bool):
+            Default is ``None``.
+
+        repeat_stop_at_duration_end (:obj:`bool`, optional):
             Boolean value that indicates if a running instance of the task is
             stopped at the end of the repetition pattern duration.
 
-        execution_time_limit (str):
+            Default is ``False``.
+
+        execution_time_limit (:obj:`str`, optional):
             The maximum amount of time that the task launched by the trigger is
             allowed to run. Valid values are:
 
-                - 30 minutes
-                - 1 hour
-                - 2 hours
-                - 4 hours
-                - 8 hours
-                - 12 hours
-                - 1 day
-                - 3 days (default)
+            - 30 minutes
+            - 1 hour
+            - 2 hours
+            - 4 hours
+            - 8 hours
+            - 12 hours
+            - 1 day
+            - 3 days (default)
 
-        delay (str):
+            Default is ``None``.
+
+        delay (:obj:`str`, optional):
             The time the trigger waits after its activation to start the task.
             Valid values are:
 
-                - 15 seconds
-                - 30 seconds
-                - 1 minute
-                - 30 minutes
-                - 1 hour
-                - 8 hours
-                - 1 day
+            - 15 seconds
+            - 30 seconds
+            - 1 minute
+            - 30 minutes
+            - 1 hour
+            - 8 hours
+            - 1 day
+
+            Default is ``None``.
 
             .. note::
 
                 This parameter applies to the following trigger types:
 
-                    - OnLogon
-                    - OnBoot
-                    - Event
-                    - OnTaskCreation
-                    - OnSessionChange
+                - OnLogon
+                - OnBoot
+                - Event
+                - OnTaskCreation
+                - OnSessionChange
 
     **kwargs**
 
@@ -2167,7 +2278,7 @@ def add_trigger(
                     - SessionUnlock: When the workstation is unlocked
 
     Returns:
-        bool: ``True`` if successful, otherwise ``False``
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -2483,13 +2594,13 @@ def clear_triggers(name, location="\\"):
         name (str):
             The name of the task from which to clear all triggers.
 
-        location (str):
-            A string value representing the location of the task. Default is
-            ``\`` which is the root for the task scheduler
+        location (:obj:`str`, optional):
+            A string value representing the location of the task.
+            Default is ``\`` which is the root for the task scheduler
             (``C:\Windows\System32\tasks``).
 
     Returns:
-        bool: ``True`` if successful, otherwise ``False``
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
