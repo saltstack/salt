@@ -595,30 +595,16 @@ def managed(name, enabled=True, **kwargs):
 
     # Bring up/shutdown interface
     try:
-        # Get Interface current status
+        # Get Interfaces information
         interfaces = salt.utils.network.interfaces()
-        interface_status = False
-        if name in interfaces:
-            interface_status = interfaces[name].get("up")
+
+        # Check the interface current status
+        if name.split(":")[0] in interfaces:
+            interface_status = interfaces[name.split(":")[0]].get("up")
         else:
-            for iface in interfaces:
-                if "secondary" in interfaces[iface]:
-                    for second in interfaces[iface]["secondary"]:
-                        if second.get("label", "") == name:
-                            interface_status = True
-                if iface == "lo":
-                    if "inet" in interfaces[iface]:
-                        inet_data = interfaces[iface]["inet"]
-                        if len(inet_data) > 1:
-                            for data in inet_data:
-                                if data.get("label", "") == name:
-                                    interface_status = True
-                    if "inet6" in interfaces[iface]:
-                        inet6_data = interfaces[iface]["inet6"]
-                        if len(inet6_data) > 1:
-                            for data in inet6_data:
-                                if data.get("label", "") == name:
-                                    interface_status = True
+            interface_status = False
+
+        # Handle interface as desired
         if enabled:
             if "noifupdown" not in kwargs:
                 if interface_status:
