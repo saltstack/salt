@@ -321,10 +321,7 @@ class AsyncReqChannel:
         :param dict load: A load to send across the wire
         :param int timeout: The number of seconds on a response before failing
         """
-        ret = yield self.transport.send(
-            self._package_load(load),
-            timeout=timeout,
-        )
+        ret = yield self.transport.send(self._package_load(load), timeout=timeout)
 
         raise salt.ext.tornado.gen.Return(ret)
 

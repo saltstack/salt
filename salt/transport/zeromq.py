@@ -553,8 +553,6 @@ class AsyncReqMessageClient:
 
         self._closing = False
         self._send_future_map = {}
-        self.lock = salt.ext.tornado.locks.Lock()
-        self.ident = threading.get_ident()
 
     def connect(self):
         if self.context is None:
@@ -603,6 +601,7 @@ class AsyncReqMessageClient:
         Return a future which will be completed when the message has a response
         """
         future = salt.ext.tornado.concurrent.Future()
+        result_future = salt.ext.tornado.concurrent.Future()
 
         message = salt.payload.dumps(message)
 
@@ -621,10 +620,9 @@ class AsyncReqMessageClient:
             send_timeout = self.io_loop.call_later(
                 timeout, self._timeout_message, future
             )
+        self.io_loop.spawn_callback(self._send_recv, message, future, result_future)
 
-        self.io_loop.spawn_callback(self._send_recv, message, future)
-
-        recv = yield future
+        recv = yield result_future
 
         raise salt.ext.tornado.gen.Return(recv)
 
@@ -633,44 +631,54 @@ class AsyncReqMessageClient:
             future.set_exception(SaltReqTimeoutError("Message timed out"))
 
     @salt.ext.tornado.gen.coroutine
-    def _send_recv(self, message, future, timeout=REQUEST_TIMEOUT):
+    def _send_recv(self, message, future, result_future):
         """
         Send and recv updating the future if we get a response. After sending
         the the REQ socket we poll the socket for a response. If the provided
         future is marked as done before we get a response we consider the
         request timedout and we give up.
         """
-        backoff = BackoffTimeout()
         try:
-            with (yield self.lock.acquire()):
-                yield self.socket.send(message)
-                while True:
+            backoff = BackoffTimeout()
+            yield self.socket.send(message)
+            while True:
+                try:
+                    recv = yield self.socket.recv(flags=zmq.NOBLOCK)
+                    break
+                except (zmq.error.ZMQError, zmq.error.Again):
+                    # Wait a small amount before trying again.
                     try:
-                        recv = yield self.socket.recv(flags=zmq.NOBLOCK)
+                        yield salt.ext.tornado.gen.with_timeout(
+                            backoff(),
+                            future,
+                            quiet_exceptions=(SaltReqTimeoutError,),
+                        )
+                    except (salt.ext.tornado.gen.TimeoutError, SaltReqTimeoutError):
+                        # This is a no-op if waiting on the future times out.
+                        pass
+
+                    # The request timeout future finished meaning the resuest
+                    # should be timed out.
+                    if future.done():
                         break
-                    except (zmq.error.ZMQError, zmq.error.Again):
-                        if future.done():
-                            # send's timeout callback timed out the future.
-                            # Since we're going to bail on this request we need
-                            # to reset the connection otherwise the socket is
-                            # left in an invalid state.
-                            self.close()
-                            self.connect()
-                            break
-                        try:
-                            yield salt.ext.tornado.gen.with_timeout(
-                                backoff(),
-                                future,
-                                quiet_exceptions=(SaltReqTimeoutError,),
-                            )
-                        except salt.ext.tornado.gen.TimeoutError:
-                            pass
-            if not future.done():
+
+            if future.done():
+                log.trace("Request timed out while waiting for a response")
+                self.close()
+                self.connect()
+                result_future.set_exception(future.exception())
+            else:
                 data = salt.payload.loads(recv)
-                future.set_result(data)
+                result_future.set_result(data)
         except Exception as exc:  # pylint: disable=broad-except
-            if not future.done():
-                future.set_exception(exc)
+            log.error(
+                "Exception while sending request. %s",
+                exc,
+                exc_info_on_loglevel=logging.DEBUG,
+            )
+            self.close()
+            self.connect()
+            result_future.set_exception(exc)
 
 
 class ZeroMQSocketMonitor:
