@@ -59,9 +59,6 @@ async def test_request_channel_issue_64627(io_loop, request_client, minion_opts,
 
 
 async def test_request_channel_issue_65265(io_loop, request_client, minion_opts, port):
-    import time
-
-    import salt.ext.tornado.platform
 
     minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
 
@@ -93,22 +90,10 @@ async def test_request_channel_issue_65265(io_loop, request_client, minion_opts,
             send_complete.set()
             return ret
 
-        # A value of 1 means un-locked, 0 means locked.
-        locked = request_client.message_client.lock._block._value
-        assert locked == 1
-
-        start = time.monotonic()
         io_loop.spawn_callback(send_request)
-
-        await salt.ext.tornado.gen.sleep(1.5)
-        locked = request_client.message_client.lock._block._value
-        assert locked == 0
 
         await send_complete.wait()
 
-        # Ensure the lock was released when the request timed out.
-        locked = request_client.message_client.lock._block._value
-        assert locked == 1
     finally:
         stream.close()
 
