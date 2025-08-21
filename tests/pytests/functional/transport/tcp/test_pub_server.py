@@ -61,5 +61,5 @@ async def test_pub_channel(master_opts, minion_opts, io_loop):
                 assert False, "Message not published after 30 seconds"
     finally:
         server.close()
-        server.pub_server.close()
         client.close()
+        server.pub_server.close()
