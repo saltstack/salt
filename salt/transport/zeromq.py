@@ -632,6 +632,29 @@ def _set_tcp_keepalive(zmq_socket, opts):
             zmq_socket.setsockopt(zmq.TCP_KEEPALIVE_INTVL, opts["tcp_keepalive_intvl"])
 
 
+class BackoffTimeout:
+    """
+    Return a backoff value. Backoff from the start value to a maximum value.
+    Each time the object is called the backoff value is increased by the
+    provided percentage.
+    """
+
+    def __init__(self, start=0.0003, maximum=0.3, percent=0.01, _count=0):
+        self._backoff = start
+        self._count = _count
+        self.start = start
+        self.maximum = maximum
+        self.percent = percent
+
+    def __call__(self):
+        self._count += 1
+        backoff = self._backoff
+        if self._backoff > self.maximum:
+            return self.maximum
+        self._backoff += self._backoff * self.percent * self._count
+        return backoff
+
+
 class AsyncReqMessageClient:
     """
     This class wraps the underlying zeromq REQ socket and gives a future-based
