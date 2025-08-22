@@ -701,15 +701,19 @@ class AsyncReqMessageClient:
     def close(self):
         if self._closing:
             return
-        else:
-            self._closing = True
-            if hasattr(self, "socket") and self.socket is not None:
-                self.socket.close(0)
-                self.socket = None
-            if self.context.closed is False:
-                self.context.term()
+        self._closing = True
+        if hasattr(self, "socket") and self.socket is not None:
+            self.socket.close(0)
+            self.socket = None
+        if self.context.closed is False:
+            self.context.destroy(0)
+            self.context.term()
+            self.context = None
 
     def _init_socket(self):
+        self._closing = False
+        if not self.context:
+            self.context = zmq.eventloop.future.Context()
         self.socket = self.context.socket(zmq.REQ)
 
         # socket options
@@ -779,12 +783,12 @@ class AsyncReqMessageClient:
                 except (zmq.error.ZMQError, zmq.error.Again):
                     # Wait a small amount before trying again.
                     try:
-                        yield salt.ext.tornado.gen.with_timeout(
+                        yield tornado.gen.with_timeout(
                             backoff(),
                             future,
                             quiet_exceptions=(SaltReqTimeoutError,),
                         )
-                    except (salt.ext.tornado.gen.TimeoutError, SaltReqTimeoutError):
+                    except (tornado.gen.TimeoutError, SaltReqTimeoutError):
                         # This is a no-op if waiting on the future times out.
                         pass
 
