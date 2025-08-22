@@ -15,6 +15,7 @@ import socket
 import threading
 import urllib
 import uuid
+import warnings
 
 import salt.ext.tornado
 import salt.ext.tornado.concurrent
@@ -608,7 +609,7 @@ class MessageClient:
                     ip_bracket(self.host, strip=True),
                     self.port,
                     ssl_options=self.opts.get("ssl"),
-                    **kwargs
+                    **kwargs,
                 )
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
@@ -836,7 +837,7 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
             return
         self._closing = True
         for client in self.clients:
-            client.stream.disconnect()
+            client.close()
 
     # pylint: disable=W1701
     def __del__(self):
@@ -924,6 +925,9 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
     def __init__(self, opts):
         self.opts = opts
         self.pub_sock = None
+        self.pub_server = None
+        self.io_loop = None
+        self._closing = False
 
     @property
     def topic_support(self):
@@ -1020,9 +1024,26 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pub_sock.send(payload)
 
     def close(self):
+        self._closing = True
         if self.pub_sock:
             self.pub_sock.close()
             self.pub_sock = None
+        if self.pub_server:
+            self.pub_server.close()
+            self.pub_server = None
+        if self.io_loop:
+            self.io_loop.stop()
+            self.io_loop.close(all_fds=True)
+            self.io_loop = None
+
+    # pylint: disable=W1701
+    def __del__(self):
+        if not self._closing:
+            warnings.warn(
+                f"unclosed publish subscriber {self!r}", ResourceWarning, source=self
+            )
+
+    # pylint: enable=W1701
 
 
 class TCPReqClient(salt.transport.base.RequestClient):
