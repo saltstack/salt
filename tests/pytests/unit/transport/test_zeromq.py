@@ -1665,12 +1665,13 @@ async def test_client_send_recv_on_cancelled_error(minion_opts):
         minion_opts, "tcp://127.0.0.1:4506"
     )
 
+    result_future = MagicMock(**{"done.return_value": True})
     mock_future = MagicMock(**{"done.return_value": True})
 
     try:
         client.socket = AsyncMock()
         client.socket.recv.side_effect = zmq.eventloop.future.CancelledError
-        await client._send_recv({"meh": "bah"}, mock_future)
+        await client._send_recv({"meh": "bah"}, mock_future, result_future)
 
         mock_future.set_exception.assert_not_called()
     finally:
@@ -1682,11 +1683,12 @@ async def test_client_send_recv_on_exception(minion_opts):
         minion_opts, "tcp://127.0.0.1:4506"
     )
 
+    result_future = MagicMock(**{"done.return_value": True})
     mock_future = MagicMock(**{"done.return_value": True})
 
     try:
         client.socket = None
-        await client._send_recv({"meh": "bah"}, mock_future)
+        await client._send_recv({"meh": "bah"}, mock_future, result_future)
 
         mock_future.set_exception.assert_not_called()
     finally:

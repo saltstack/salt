@@ -31,6 +31,14 @@ def installed(product_key):
     Note: This is not 100% accurate as we can only see the last
      5 digits of the license.
 
+    Args:
+
+        product_key (str): The product key to check.
+
+    Returns:
+        bool: ``True`` if the last 5 digits match the current product key,
+            otherwise ``False``.
+
     CLI Example:
 
     .. code-block:: bash
@@ -45,6 +53,13 @@ def installed(product_key):
 def install(product_key):
     """
     Install the given product key
+
+    Args:
+
+        product_key (str): The product key to install.
+
+    Returns:
+        str: The output of the ``slmgr.vbs`` script
 
     CLI Example:
 

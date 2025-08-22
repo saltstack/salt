@@ -105,14 +105,17 @@ def key_exists(hive, key, use_32bit_registry=False):
 
     Args:
 
-        hive (str): The hive to connect to
+        hive (str): The hive to connect to.
 
-        key (str): The key to check
+        key (str): The key to check.
 
-        use_32bit_registry (bool): Look in the 32bit portion of the registry
+        use_32bit_registry (:obj:`bool`, optional):
+            Look in the 32bit portion of the registry.
+
+            Default is ``False``.
 
     Returns:
-        bool: True if exists, otherwise False
+        bool: ``True`` if exists, otherwise ``False``.
 
     CLI Example:
 
@@ -133,16 +136,19 @@ def value_exists(hive, key, vname, use_32bit_registry=False):
 
     Args:
 
-        hive (str): The hive to connect to
+        hive (str): The hive to connect to.
 
-        key (str): The key to check in
+        key (str): The key to check in.
 
-        vname (str): The name of the value/data pair you're checking
+        vname (str): The name of the value/data pair you're checking.
 
-        use_32bit_registry (bool): Look in the 32bit portion of the registry
+        use_32bit_registry (:obj:`bool`, optional):
+            Look in the 32bit portion of the registry.
+
+            Default is ``False``.
 
     Returns:
-        bool: True if exists, otherwise False
+        bool: ``True`` if exists, otherwise ``False``.
 
     CLI Example:
 
@@ -157,14 +163,14 @@ def value_exists(hive, key, vname, use_32bit_registry=False):
 
 def broadcast_change():
     """
-    Refresh the windows environment.
+    Refresh the Windows environment.
 
     .. note::
         This will only effect new processes and windows. Services will not see
         the change until the system restarts.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -184,19 +190,23 @@ def list_keys(hive, key=None, use_32bit_registry=False):
         hive (str):
             The name of the hive. Can be one of the following:
 
-                - HKEY_LOCAL_MACHINE or HKLM
-                - HKEY_CURRENT_USER or HKCU
-                - HKEY_USER or HKU
-                - HKEY_CLASSES_ROOT or HKCR
-                - HKEY_CURRENT_CONFIG or HKCC
+            - HKEY_LOCAL_MACHINE or HKLM
+            - HKEY_CURRENT_USER or HKCU
+            - HKEY_USER or HKU
+            - HKEY_CLASSES_ROOT or HKCR
+            - HKEY_CURRENT_CONFIG or HKCC
 
-        key (str):
+        key (:obj:`str`, optional):
             The key (looks like a path) to the value name. If a key is not
             passed, the keys under the hive will be returned.
 
-        use_32bit_registry (bool):
+            Default is ``None``.
+
+        use_32bit_registry (:obj:`bool`, optional):
             Accesses the 32bit portion of the registry on 64 bit installations.
             On 32bit machines this is ignored.
+
+            Default is ``False``.
 
     Returns:
         list: A list of keys/subkeys under the hive or key.
@@ -225,19 +235,23 @@ def list_values(hive, key=None, use_32bit_registry=False):
         hive (str):
             The name of the hive. Can be one of the following:
 
-                - HKEY_LOCAL_MACHINE or HKLM
-                - HKEY_CURRENT_USER or HKCU
-                - HKEY_USER or HKU
-                - HKEY_CLASSES_ROOT or HKCR
-                - HKEY_CURRENT_CONFIG or HKCC
+            - HKEY_LOCAL_MACHINE or HKLM
+            - HKEY_CURRENT_USER or HKCU
+            - HKEY_USER or HKU
+            - HKEY_CLASSES_ROOT or HKCR
+            - HKEY_CURRENT_CONFIG or HKCC
 
-        key (str):
+        key (:obj:`str`, optional):
             The key (looks like a path) to the value name. If a key is not
             passed, the values under the hive will be returned.
 
-        use_32bit_registry (bool):
+            Default is ``None``.
+
+        use_32bit_registry (:obj:`bool`, optional):
             Accesses the 32bit portion of the registry on 64 bit installations.
             On 32bit machines this is ignored.
+
+            Default is ``False``.
 
     Returns:
         list: A list of values under the hive or key.
@@ -256,34 +270,39 @@ def list_values(hive, key=None, use_32bit_registry=False):
 def read_value(hive, key, vname=None, use_32bit_registry=False):
     r"""
     Reads a registry value entry or the default value for a key. To read the
-    default value, don't pass ``vname``
+    default value, don't pass ``vname``.
 
     Args:
 
         hive (str): The name of the hive. Can be one of the following:
 
-            - HKEY_LOCAL_MACHINE or HKLM
-            - HKEY_CURRENT_USER or HKCU
-            - HKEY_USER or HKU
-            - HKEY_CLASSES_ROOT or HKCR
-            - HKEY_CURRENT_CONFIG or HKCC
+        - HKEY_LOCAL_MACHINE or HKLM
+        - HKEY_CURRENT_USER or HKCU
+        - HKEY_USER or HKU
+        - HKEY_CLASSES_ROOT or HKCR
+        - HKEY_CURRENT_CONFIG or HKCC
 
         key (str):
             The key (looks like a path) to the value name.
 
-        vname (str):
+        vname (:obj:`str`, optional):
             The value name. These are the individual name/data pairs under the
             key. If not passed, the key (Default) value will be returned.
 
-        use_32bit_registry (bool):
+            Default is ``None``.
+
+        use_32bit_registry (:obj:`bool`, optional):
             Accesses the 32bit portion of the registry on 64bit installations.
             On 32bit machines this is ignored.
 
+            Default is ``False``.
+
     Returns:
         dict: A dictionary containing the passed settings as well as the
-        value_data if successful. If unsuccessful, sets success to False.
+            value_data if successful. If unsuccessful, sets success to
+            ``False``.
 
-        bool: Returns False if the key is not found
+        bool: Returns ``False`` if the key is not found
 
         If vname is not passed:
 
@@ -332,20 +351,22 @@ def set_value(
         hive (str):
             The name of the hive. Can be one of the following
 
-                - HKEY_LOCAL_MACHINE or HKLM
-                - HKEY_CURRENT_USER or HKCU
-                - HKEY_USER or HKU
-                - HKEY_CLASSES_ROOT or HKCR
-                - HKEY_CURRENT_CONFIG or HKCC
+            - HKEY_LOCAL_MACHINE or HKLM
+            - HKEY_CURRENT_USER or HKCU
+            - HKEY_USER or HKU
+            - HKEY_CLASSES_ROOT or HKCR
+            - HKEY_CURRENT_CONFIG or HKCC
 
         key (str):
             The key (looks like a path) to the value name.
 
-        vname (str):
+        vname (:obj:`str`, optional):
             The value name. These are the individual name/data pairs under the
             key. If not passed, the key (Default) value will be set.
 
-        vdata (str, int, list, bytes):
+            Default is ``None``.
+
+        vdata (:obj:`Union[str, int, list, bytes]`, optional):
             The value you'd like to set. If a value name (vname) is passed, this
             will be the data for that value name. If not, this will be the
             (Default) value for the key.
@@ -353,16 +374,18 @@ def set_value(
             The type of data this parameter expects is determined by the value
             type specified in ``vtype``. The correspondence is as follows:
 
-                - REG_BINARY: Binary data (str in Py2, bytes in Py3)
-                - REG_DWORD: int
-                - REG_EXPAND_SZ: str
-                - REG_MULTI_SZ: list of str
-                - REG_QWORD: int
-                - REG_SZ: str
+            - REG_BINARY: Binary data (str in Py2, bytes in Py3)
+            - REG_DWORD: int
+            - REG_EXPAND_SZ: str
+            - REG_MULTI_SZ: list of str
+            - REG_QWORD: int
+            - REG_SZ: str
 
-                .. note::
-                    When setting REG_BINARY, string data will be converted to
-                    binary.
+            Default is ``None``.
+
+            .. note::
+                When setting REG_BINARY, string data will be converted to
+                binary.
 
             .. note::
                 The type for the (Default) value is always REG_SZ and cannot be
@@ -372,22 +395,28 @@ def set_value(
                 This parameter is optional. If ``vdata`` is not passed, the Key
                 will be created with no associated item/value pairs.
 
-        vtype (str):
+        vtype (:obj:`str`, optional):
             The value type. The possible values of the vtype parameter are
             indicated above in the description of the vdata parameter.
 
-        use_32bit_registry (bool):
+            Default is ``REG_SZ``.
+
+        use_32bit_registry (:obj:`bool`, optional):
             Sets the 32bit portion of the registry on 64bit installations. On
             32bit machines this is ignored.
 
-        volatile (bool):
-            When this parameter has a value of True, the registry key will be
-            made volatile (i.e. it will not persist beyond a system reset or
+            Default is ``False``.
+
+        volatile (:obj:`bool`, optional):
+            When this parameter has a value of ``True``, the registry key will
+            be made volatile (i.e. it will not persist beyond a system reset or
             shutdown). This parameter only has an effect when a key is being
             created and at no other time.
 
+            Default is ``False``.
+
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -414,7 +443,7 @@ def set_value(
 
         .. code-block:: bash
 
-            salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'str_data' vtype=REG_SZ vdata="'1.2'"
+            salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'str_data' vtype=REG_SZ vdata='"1.2"'
 
     CLI Example:
 
@@ -463,9 +492,11 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
             key (str):
                 The key to remove (looks like a path)
 
-            use_32bit_registry (bool):
+            use_32bit_registry (:obj:`bool`, optional):
                 Deletes the 32bit portion of the registry on 64bit
                 installations. On 32bit machines this is ignored.
+
+                Default is ``False``.
 
     Returns:
         dict: A dictionary listing the keys that deleted successfully as well as
@@ -503,16 +534,20 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
         key (str):
             The key (looks like a path) to the value name.
 
-        vname (str):
+        vname (:obj:`str`, optional):
             The value name. These are the individual name/data pairs under the
             key. If not passed, the key (Default) value will be deleted.
 
-        use_32bit_registry (bool):
+            Default is ``None``.
+
+        use_32bit_registry (:obj:`bool`, optional):
             Deletes the 32bit portion of the registry on 64bit installations. On
             32bit machines this is ignored.
 
+            Default is ``False``.
+
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -537,13 +572,15 @@ def import_file(source, use_32bit_registry=False):
             The full path of the ``REG`` file. This can be either a local file
             path or a URL type supported by salt (e.g. ``salt://salt_master_path``)
 
-        use_32bit_registry (bool):
+        use_32bit_registry (:obj:`bool`, optional):
             If the value of this parameter is ``True`` then the ``REG`` file
             will be imported into the Windows 32 bit registry. Otherwise the
             Windows 64 bit registry will be used.
 
+            Default is ``False``.
+
     Returns:
-        bool: True if successful, otherwise an error is raised
+        bool: ``True`` if successful, otherwise an error is raised
 
     Raises:
         ValueError: If the value of ``source`` is an invalid path or otherwise

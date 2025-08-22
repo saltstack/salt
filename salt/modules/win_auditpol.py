@@ -37,21 +37,21 @@ CLI Example:
 .. code-block:: bash
 
     # Get current state of all audit settings
-    salt * auditpol.get_settings
+    salt '*' auditpol.get_settings
 
     # Get the current state of all audit settings in the "Account Logon"
     # category
-    salt * auditpol.get_settings category="Account Logon"
+    salt '*' auditpol.get_settings category="Account Logon"
 
     # Get current state of the "Credential Validation" setting
-    salt * auditpol.get_setting name="Credential Validation"
+    salt '*' auditpol.get_setting name="Credential Validation"
 
     # Set the state of the "Credential Validation" setting to Success and
     # Failure
-    salt * auditpol.set_setting name="Credential Validation" value="Success and Failure"
+    salt '*' auditpol.set_setting name="Credential Validation" value="Success and Failure"
 
     # Set the state of the "Credential Validation" setting to No Auditing
-    salt * auditpol.set_setting name="Credential Validation" value="No Auditing"
+    salt '*' auditpol.set_setting name="Credential Validation" value="No Auditing"
 """
 
 import salt.utils.platform
@@ -76,7 +76,7 @@ def get_settings(category="All"):
     category
 
     Args:
-        category (str):
+        category (:obj:`str`, optional):
             One of the nine categories to return. Can also be ``All`` to return
             the settings for all categories. Valid options are:
 
@@ -91,7 +91,7 @@ def get_settings(category="All"):
             - System
             - All
 
-            Default value is ``All``
+            Default is ``All``.
 
     Returns:
         dict: A dictionary containing all subcategories for the specified
@@ -106,11 +106,11 @@ def get_settings(category="All"):
     .. code-block:: bash
 
         # Get current state of all audit settings
-        salt * auditipol.get_settings
+        salt '*' auditipol.get_settings
 
         # Get the current state of all audit settings in the "Account Logon"
         # category
-        salt * auditpol.get_settings "Account Logon"
+        salt '*' auditpol.get_settings 'Account Logon'
     """
     return __utils__["auditpol.get_settings"](category=category)
 
@@ -134,7 +134,7 @@ def get_setting(name):
     .. code-block:: bash
 
         # Get current state of the "Credential Validation" setting
-        salt * auditpol.get_setting "Credential Validation"
+        salt '*' auditpol.get_setting 'Credential Validation'
     """
     return __utils__["auditpol.get_setting"](name=name)
 
@@ -157,7 +157,7 @@ def set_setting(name, value):
             - Success and Failure
 
     Returns:
-        bool: True if successful
+        bool: ``True`` if successful
 
     Raises:
         KeyError: On invalid ``name`` or ``value``
@@ -169,9 +169,9 @@ def set_setting(name, value):
 
         # Set the state of the "Credential Validation" setting to Success and
         # Failure
-        salt * auditpol.set_setting "Credential Validation" "Success and Failure"
+        salt '*' auditpol.set_setting 'Credential Validation' 'Success and Failure'
 
         # Set the state of the "Credential Validation" setting to No Auditing
-        salt * auditpol.set_setting "Credential Validation" "No Auditing"
+        salt '*' auditpol.set_setting 'Credential Validation' 'No Auditing'
     """
     return __utils__["auditpol.set_setting"](name=name, value=value)

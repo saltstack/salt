@@ -632,6 +632,29 @@ def _set_tcp_keepalive(zmq_socket, opts):
             zmq_socket.setsockopt(zmq.TCP_KEEPALIVE_INTVL, opts["tcp_keepalive_intvl"])
 
 
+class BackoffTimeout:
+    """
+    Return a backoff value. Backoff from the start value to a maximum value.
+    Each time the object is called the backoff value is increased by the
+    provided percentage.
+    """
+
+    def __init__(self, start=0.0003, maximum=0.3, percent=0.01, _count=0):
+        self._backoff = start
+        self._count = _count
+        self.start = start
+        self.maximum = maximum
+        self.percent = percent
+
+    def __call__(self):
+        self._count += 1
+        backoff = self._backoff
+        if self._backoff > self.maximum:
+            return self.maximum
+        self._backoff += self._backoff * self.percent * self._count
+        return backoff
+
+
 class AsyncReqMessageClient:
     """
     This class wraps the underlying zeromq REQ socket and gives a future-based
@@ -668,7 +691,6 @@ class AsyncReqMessageClient:
         self.send_queue = []
 
         self._closing = False
-        self.lock = tornado.locks.Lock()
 
     def connect(self):
         if hasattr(self, "socket") and self.socket:
@@ -679,15 +701,19 @@ class AsyncReqMessageClient:
     def close(self):
         if self._closing:
             return
-        else:
-            self._closing = True
-            if hasattr(self, "socket") and self.socket is not None:
-                self.socket.close(0)
-                self.socket = None
-            if self.context.closed is False:
-                self.context.term()
+        self._closing = True
+        if hasattr(self, "socket") and self.socket is not None:
+            self.socket.close(0)
+            self.socket = None
+        if self.context.closed is False:
+            self.context.destroy(0)
+            self.context.term()
+            self.context = None
 
     def _init_socket(self):
+        self._closing = False
+        if not self.context:
+            self.context = zmq.eventloop.future.Context()
         self.socket = self.context.socket(zmq.REQ)
 
         # socket options
@@ -710,6 +736,7 @@ class AsyncReqMessageClient:
         Return a future which will be completed when the message has a response
         """
         future = tornado.concurrent.Future()
+        result_future = tornado.concurrent.Future()
 
         message = salt.payload.dumps(message)
 
@@ -728,10 +755,9 @@ class AsyncReqMessageClient:
             send_timeout = self.io_loop.call_later(
                 timeout, self._timeout_message, future
             )
+        self.io_loop.spawn_callback(self._send_recv, message, future, result_future)
 
-        self.io_loop.spawn_callback(self._send_recv, message, future)
-
-        recv = yield future
+        recv = yield result_future
 
         raise tornado.gen.Return(recv)
 
@@ -740,23 +766,54 @@ class AsyncReqMessageClient:
             future.set_exception(SaltReqTimeoutError("Message timed out"))
 
     @tornado.gen.coroutine
-    def _send_recv(self, message, future):
+    def _send_recv(self, message, future, result_future):
+        """
+        Send and recv updating the future if we get a response. After sending
+        the the REQ socket we poll the socket for a response. If the provided
+        future is marked as done before we get a response we consider the
+        request timedout and we give up.
+        """
         try:
-            with (yield self.lock.acquire()):
-                yield self.socket.send(message)
+            backoff = BackoffTimeout()
+            yield self.socket.send(message)
+            while True:
                 try:
-                    recv = yield self.socket.recv()
-                except zmq.eventloop.future.CancelledError as exc:
-                    if not future.done():
-                        future.set_exception(exc)
-                    return
+                    recv = yield self.socket.recv(flags=zmq.NOBLOCK)
+                    break
+                except (zmq.error.ZMQError, zmq.error.Again):
+                    # Wait a small amount before trying again.
+                    try:
+                        yield tornado.gen.with_timeout(
+                            backoff(),
+                            future,
+                            quiet_exceptions=(SaltReqTimeoutError,),
+                        )
+                    except (tornado.gen.TimeoutError, SaltReqTimeoutError):
+                        # This is a no-op if waiting on the future times out.
+                        pass
 
-            if not future.done():
+                    # The request timeout future finished meaning the resuest
+                    # should be timed out.
+                    if future.done():
+                        break
+
+            if future.done():
+                log.trace("Request timed out while waiting for a response")
+                self.close()
+                self.connect()
+                result_future.set_exception(future.exception())
+            else:
                 data = salt.payload.loads(recv)
-                future.set_result(data)
+                result_future.set_result(data)
         except Exception as exc:  # pylint: disable=broad-except
-            if not future.done():
-                future.set_exception(exc)
+            log.error(
+                "Exception while sending request. %s",
+                exc,
+                exc_info_on_loglevel=logging.DEBUG,
+            )
+            self.close()
+            self.connect()
+            result_future.set_exception(exc)
 
 
 class ZeroMQSocketMonitor:
