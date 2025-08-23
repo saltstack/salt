@@ -170,7 +170,7 @@ class LoadBalancerServer(SignalHandlingProcess):
         self._socket.bind(_get_bind_addr(self.opts, "ret_port"))
         self._socket.listen(self.backlog)
 
-        while True:
+        while self._socket and not self._socket._closed:
             try:
                 # Wait for a connection to occur since the socket is
                 # blocking.
@@ -185,6 +185,14 @@ class LoadBalancerServer(SignalHandlingProcess):
                 # (observed on FreeBSD).
                 if salt.ext.tornado.util.errno_from_exception(e) == errno.ECONNABORTED:
                     continue
+                elif e.errno == errno.EINVAL:
+                    # This can happen after socket.shutdown but before socket.close
+                    log.trace("Socket shutdown, bailing.")
+                    break
+                elif e.errno == errno.EBADF:
+                    # This can happen after socket.close
+                    log.trace("Socket closed, bailing.")
+                    break
                 raise
 
 
@@ -574,7 +582,7 @@ class MessageClient:
 
     # TODO: timeout inflight sessions
     def close(self):
-        if self._closing:
+        if self._closing or self._closed:
             return
         self._closing = True
         self.io_loop.add_timeout(1, self.check_close)
@@ -583,6 +591,8 @@ class MessageClient:
     def check_close(self):
         if not self.send_future_map:
             self._tcp_client.close()
+            if self._stream:
+                self._stream.close()
             self._stream = None
             self._closing = False
             self._closed = True
@@ -628,6 +638,7 @@ class MessageClient:
         if self._stream is None:
             self._stream = yield self.getstream()
             if self._stream:
+                self._closed = False
                 if not self._stream_return_running:
                     self.io_loop.spawn_callback(self._stream_return)
                 if self.connect_callback:
@@ -637,7 +648,7 @@ class MessageClient:
     def _stream_return(self):
         self._stream_return_running = True
         unpacker = salt.utils.msgpack.Unpacker()
-        while not self._closing:
+        while not self._closed and not self._closing:
             try:
                 wire_bytes = yield self._stream.read_bytes(4096, partial=True)
                 unpacker.feed(wire_bytes)
@@ -846,7 +857,9 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
     # pylint: enable=W1701
 
     @salt.ext.tornado.gen.coroutine
-    def _stream_read(self, client):
+    def _stream_read(
+        self, client, _StreamClosedError=salt.ext.tornado.iostream.StreamClosedError
+    ):
         unpacker = salt.utils.msgpack.Unpacker()
         while not self._closing:
             try:
@@ -858,7 +871,7 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
                     body = framed_msg["body"]
                     if self.presence_callback:
                         self.presence_callback(client, body)
-            except salt.ext.tornado.iostream.StreamClosedError as e:
+            except _StreamClosedError as e:
                 log.debug("tcp stream to %s closed, unable to recv", client.address)
                 client.close()
                 self.remove_presence_callback(client)
@@ -1040,7 +1053,7 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
     def __del__(self):
         if not self._closing:
             warnings.warn(
-                f"unclosed publish subscriber {self!r}", ResourceWarning, source=self
+                f"unclosed publish server {self!r}", ResourceWarning, source=self
             )
 
     # pylint: enable=W1701
