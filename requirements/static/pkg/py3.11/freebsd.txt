@@ -33,6 +33,8 @@ distro==1.5.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
+frozenlist==1.7.0 ; python_version >= "3.11"
+    # via -r requirements/base.txt
 idna==3.7
     # via requests
 immutables==0.21
@@ -115,8 +117,8 @@ six==1.16.0
     #   python-dateutil
 tempora==4.1.1
     # via portend
-timelib==0.2.5
-    # via -r requirements/static/pkg/freebsd.in
+timelib==0.3.0 ; python_version >= "3.11"
+    # via -r requirements/base.txt
 urllib3==2.5.0 ; python_version >= "3.10"
     # via
     #   -r requirements/base.txt

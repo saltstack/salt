@@ -31,6 +31,8 @@ cryptography==42.0.5
     #   pyopenssl
 distro==1.5.0
     # via -r requirements/base.txt
+frozenlist==1.7.0 ; python_version >= "3.11"
+    # via -r requirements/base.txt
 gitdb==4.0.7
     # via gitpython
 gitpython==3.1.41
@@ -132,8 +134,10 @@ smmap==4.0.0
     # via gitdb
 tempora==4.1.1
     # via portend
-timelib==0.2.5
-    # via -r requirements/windows.txt
+timelib==0.3.0 ; python_version >= "3.11"
+    # via
+    #   -r requirements/base.txt
+    #   -r requirements/windows.txt
 urllib3==2.5.0 ; python_version >= "3.10"
     # via
     #   -r requirements/base.txt

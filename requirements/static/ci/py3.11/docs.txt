@@ -55,6 +55,10 @@ distro==1.5.0
     #   -r requirements/base.txt
 docutils==0.19
     # via sphinx
+frozenlist==1.7.0 ; python_version >= "3.11"
+    # via
+    #   -c requirements/static/ci/py3.11/linux.txt
+    #   -r requirements/base.txt
 idna==3.7
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
@@ -215,6 +219,10 @@ tempora==4.1.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   portend
+timelib==0.3.0 ; python_version >= "3.11"
+    # via
+    #   -c requirements/static/ci/py3.11/linux.txt
+    #   -r requirements/base.txt
 typing-extensions==4.8.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt

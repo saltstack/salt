@@ -7,7 +7,6 @@ python-dateutil>=2.8.0
 python-gnupg>=0.4.4
 rpm-vercmp
 setproctitle>=1.2.3
-timelib>=0.2.5
 importlib-metadata>=3.3.0
 cryptography>=42.0.0
 more-itertools>=9.1.0
