@@ -184,7 +184,7 @@ class IPCServer:
                         write_callback(stream, framed_msg["head"]),
                     )
             except _StreamClosedError:
-                log.error("Client disconnected from IPC %s", self.socket_path)
+                log.trace("Client disconnected from IPC %s", self.socket_path)
                 break
             except OSError as exc:
                 # On occasion an exception will occur with

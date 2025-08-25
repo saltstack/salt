@@ -183,15 +183,18 @@ class LoadBalancerServer(SignalHandlingProcess):
                 # ECONNABORTED indicates that there was a connection
                 # but it was closed while still in the accept queue.
                 # (observed on FreeBSD).
+                name = self._socket.getsockname()
+                if isinstance(name, tuple):
+                    name = name[0]
                 if salt.ext.tornado.util.errno_from_exception(e) == errno.ECONNABORTED:
                     continue
                 elif e.errno == errno.EINVAL:
                     # This can happen after socket.shutdown but before socket.close
-                    log.trace("Socket shutdown, bailing.")
+                    log.trace("Socket shutdown: %s", name)
                     break
                 elif e.errno == errno.EBADF:
                     # This can happen after socket.close
-                    log.trace("Socket closed, bailing.")
+                    log.trace("Socket closed: %s", name)
                     break
                 raise
 
@@ -594,8 +597,8 @@ class MessageClient:
             if self._stream:
                 self._stream.close()
             self._stream = None
-            self._closing = False
             self._closed = True
+            self._closing = False
         else:
             self.io_loop.add_timeout(1, self.check_close)
 
@@ -638,6 +641,7 @@ class MessageClient:
         if self._stream is None:
             self._stream = yield self.getstream()
             if self._stream:
+                self._closing = False
                 self._closed = False
                 if not self._stream_return_running:
                     self.io_loop.spawn_callback(self._stream_return)
