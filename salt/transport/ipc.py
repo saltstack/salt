@@ -6,6 +6,7 @@ import errno
 import logging
 import socket
 import time
+import warnings
 
 import salt.ext.tornado
 import salt.ext.tornado.concurrent
@@ -140,7 +141,7 @@ class IPCServer:
         self._started = True
 
     @salt.ext.tornado.gen.coroutine
-    def handle_stream(self, stream):
+    def handle_stream(self, stream, _StreamClosedError=StreamClosedError):
         """
         Override this to handle the streams as they arrive
 
@@ -171,7 +172,7 @@ class IPCServer:
                 return _null
 
         unpacker = salt.utils.msgpack.Unpacker(raw=False)
-        while not stream.closed():
+        while not self._closing and not stream.closed():
             try:
                 wire_bytes = yield stream.read_bytes(4096, partial=True)
                 unpacker.feed(wire_bytes)
@@ -182,7 +183,7 @@ class IPCServer:
                         body,
                         write_callback(stream, framed_msg["head"]),
                     )
-            except StreamClosedError:
+            except _StreamClosedError:
                 log.trace("Client disconnected from IPC %s", self.socket_path)
                 break
             except OSError as exc:
@@ -645,6 +646,7 @@ class IPCMessageSubscriber(IPCClient):
         self._read_stream_future = None
         self._saved_data = []
         self._read_in_progress = Lock()
+        self._closing = False
 
     @salt.ext.tornado.gen.coroutine
     def _read(self, timeout, callback=None):
@@ -787,3 +789,14 @@ class IPCMessageSubscriber(IPCClient):
             exc = self._read_stream_future.exception()
             if exc and not isinstance(exc, StreamClosedError):
                 log.error("Read future returned exception %r", exc)
+
+    # pylint: disable=W1701
+    def __del__(self):
+        if not self._closing:
+            warnings.warn(
+                f"unclosed ipc message subscriber {self!r}",
+                ResourceWarning,
+                source=self,
+            )
+
+    # pylint: enable=W1701

@@ -821,7 +821,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         pull_sock.on_recv(on_recv)
         try:
             ioloop.start()
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, SystemExit):
             pass
         finally:
             pub_sock.close()

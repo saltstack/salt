@@ -1,7 +1,7 @@
 import copy
 import logging
+import multiprocessing
 import random
-import threading
 import time
 from contextlib import contextmanager
 
@@ -241,14 +241,18 @@ def test_zeromq_filtering_broadcast(salt_master, salt_minion):
 def test_pub_channel(master_opts):
     server = salt.transport.zeromq.PublishServer(master_opts)
 
-    payloads = []
+    manager = multiprocessing.Manager()
+
+    payloads = manager.list()
 
     def publish_payload(payload):
         server.publish_payload(payload)
         payloads.append(payload)
 
-    thread = threading.Thread(target=server.publish_daemon, args=(publish_payload,))
-    thread.start()
+    process = multiprocessing.Process(
+        target=server.publish_daemon, args=(publish_payload,)
+    )
+    process.start()
 
     server.publish({"meh": "bah"})
 
@@ -260,23 +264,26 @@ def test_pub_channel(master_opts):
                 assert False, "No message received after 30 seconds"
     finally:
         server.close()
-        server.io_loop.stop()
-        thread.join()
-        server.io_loop.close(all_fds=True)
+        process.terminate()
+        process.join()
 
 
 def test_pub_channel_filtering(master_opts):
     master_opts["zmq_filtering"] = True
     server = salt.transport.zeromq.PublishServer(master_opts)
 
-    payloads = []
+    manager = multiprocessing.Manager()
+
+    payloads = manager.list()
 
     def publish_payload(payload):
         server.publish_payload(payload)
         payloads.append(payload)
 
-    thread = threading.Thread(target=server.publish_daemon, args=(publish_payload,))
-    thread.start()
+    process = multiprocessing.Process(
+        target=server.publish_daemon, args=(publish_payload,)
+    )
+    process.start()
 
     server.publish({"meh": "bah"})
 
@@ -288,23 +295,25 @@ def test_pub_channel_filtering(master_opts):
                 assert False, "No message received after 30 seconds"
     finally:
         server.close()
-        server.io_loop.stop()
-        thread.join()
-        server.io_loop.close(all_fds=True)
+        process.terminate()
+        process.join()
 
 
 def test_pub_channel_filtering_topic(master_opts):
     master_opts["zmq_filtering"] = True
     server = salt.transport.zeromq.PublishServer(master_opts)
+    manager = multiprocessing.Manager()
 
-    payloads = []
+    payloads = manager.list()
 
     def publish_payload(payload):
         server.publish_payload(payload, topic_list=["meh"])
         payloads.append(payload)
 
-    thread = threading.Thread(target=server.publish_daemon, args=(publish_payload,))
-    thread.start()
+    process = multiprocessing.Process(
+        target=server.publish_daemon, args=(publish_payload,)
+    )
+    process.start()
 
     server.publish({"meh": "bah"})
 
@@ -316,6 +325,5 @@ def test_pub_channel_filtering_topic(master_opts):
                 assert False, "No message received after 30 seconds"
     finally:
         server.close()
-        server.io_loop.stop()
-        thread.join()
-        server.io_loop.close(all_fds=True)
+        process.terminate()
+        process.join()
