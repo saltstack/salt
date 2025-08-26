@@ -42,6 +42,18 @@ def test_item(salt_call_cli, minion_test_grain):
     assert ret.data["test_grain"] == minion_test_grain
 
 
+def test_item_no_duplicate(salt_call_cli):
+    """
+    grains.item
+    """
+    expected = ["one", "two", "three", "four"]
+    ret = salt_call_cli.run("grains.item", "roles")
+    assert ret.returncode == 0
+    assert ret.data
+    assert isinstance(ret.data, dict)
+    assert ret.data["roles"] == expected
+
+
 def test_ls(salt_call_cli, grains):
     """
     grains.ls

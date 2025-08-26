@@ -206,6 +206,10 @@ def item(*args, **kwargs):
         for arg, func in _SANITIZERS.items():
             if arg in ret:
                 ret[arg] = func(ret[arg])
+
+    if isinstance(ret[arg], list):
+        unique_ret = list(dict.fromkeys(ret[arg]))
+        ret[arg] = unique_ret
     return ret
 
 
