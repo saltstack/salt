@@ -69,9 +69,10 @@ distro==1.8.0
     #   -r requirements/base.txt
 docutils==0.20.1
     # via sphinx
-frozenlist==1.4.1
+frozenlist==1.7.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
     #   aiohttp
     #   aiosignal
 idna==3.7
@@ -261,7 +262,7 @@ tempora==5.3.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   portend
-timelib==0.3.0
+timelib==0.3.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
