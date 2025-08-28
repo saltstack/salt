@@ -40,11 +40,7 @@
 %define fish_dir %{_datadir}/fish/vendor_functions.d
 
 Name:    salt
-<<<<<<< HEAD
 Version: 3007.6
-=======
-Version: 3006.15
->>>>>>> 3006.x
 Release: 0
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
