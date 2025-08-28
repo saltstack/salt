@@ -554,6 +554,10 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
 
     def close(self):
         self._run.clear()
+        if self._socket is not None:
+            self._socket.shutdown(socket.SHUT_RDWR)
+            self._socket.close()
+            self._socket = None
 
 
 class RequestClient(salt.transport.base.RequestClient):

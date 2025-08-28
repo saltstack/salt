@@ -1,16 +1,163 @@
 """
-Module to provide information about minions
+Module to provide information about minions and handle killing and restarting
+minions
 """
 
+import datetime
+import logging
 import os
 import sys
 import time
 
 import salt.key
 import salt.utils.data
+import salt.utils.path
+import salt.utils.systemd
+from salt.exceptions import CommandExecutionError
+
+log = logging.getLogger(__name__)
 
 # Don't shadow built-ins.
 __func_alias__ = {"list_": "list"}
+
+
+def _is_systemd_system():
+    """
+    Check if the system uses systemd
+    """
+    is_linux = __grains__.get("kernel") == "Linux"
+    is_booted = salt.utils.systemd.booted(__context__)
+    if is_linux and is_booted:
+        return True
+    return False
+
+
+def _is_windows_system():
+    """
+    Check if the system is Windows
+    """
+    return __grains__.get("kernel") == "Windows"
+
+
+def _schedule_retry_systemd(retry_delay):
+    """
+    Schedule a retry for the minion restart on systemd systems
+    """
+    if not _is_systemd_system():
+        return False
+
+    # systemd-run --on-active=180 bash -c "systemctl is-active salt-minion || systemctl start salt-minion"
+    cmd = [
+        salt.utils.path.which("systemd-run"),
+        f"--on-active={retry_delay}",
+        "/bin/sh",
+        "-c",
+        "systemctl is-active salt-minion || systemctl start salt-minion",
+    ]
+
+    out = __salt__["cmd.run_all"](cmd, python_shell=False)
+    if out["retcode"] != 0:
+        raise CommandExecutionError(out["stderr"])
+    return out
+
+
+def _schedule_retry_windows(retry_delay):
+    """
+    Schedule a retry for the minion restart on Windows systems
+    """
+    if not _is_windows_system():
+        return False
+
+    when = datetime.datetime.now() + datetime.timedelta(seconds=retry_delay)
+    cmd = salt.utils.path.which("powershell.exe")
+    args = "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -Command \"if ((Get-Service -Name salt-minion).Status -ne 'Running') { Start-Service -Name salt-minion }\""
+    out = __salt__["task.create_task"](
+        name="retry-minion-restart",
+        user_name="System",
+        force=True,
+        action_type="Execute",
+        cmd=cmd,
+        arguments=args,
+        trigger_type="Once",
+        start_date=when.strftime("%Y-%m-%d"),
+        start_time=when.strftime("%H:%M:%S"),
+    )
+    if not out:
+        raise CommandExecutionError("Failed to add retry task")
+    return out
+
+
+def _schedule_retry(retry_delay):
+    """
+    Schedule a retry for the minion restart
+
+    """
+
+    try:
+        int(retry_delay)
+    except (ValueError, TypeError):
+        raise CommandExecutionError(
+            "Invalid retry_delay value: {}. Must be a number of seconds.".format(
+                retry_delay
+            )
+        )
+    if _is_systemd_system():
+        return _schedule_retry_systemd(retry_delay)
+    elif _is_windows_system():
+        return _schedule_retry_windows(retry_delay)
+    return False
+
+
+def _restart_service(
+    service_name, schedule_retry, retry_delay, comment, no_block=False
+):
+    """
+    Helper function to restart a service with optional retry scheduling
+    """
+    ret = {"service_restart": {}}
+    schedule_retry_failed = False
+
+    try:
+        if schedule_retry:
+            ret["service_restart"]["schedule_retry"] = {}
+
+            schedule_retry_failed = True
+            sched = _schedule_retry(retry_delay)
+            schedule_retry_failed = False
+
+            if _is_systemd_system():
+                ret["service_restart"]["schedule_retry"]["detail"] = sched.get(
+                    "stderr", ""
+                )
+            ret["service_restart"]["schedule_retry"]["delay"] = retry_delay
+            comment.append(
+                f"Scheduled retry for minion restart in {retry_delay} seconds"
+            )
+
+        # Restart the service
+        if no_block:
+            ret["service_restart"]["result"] = __salt__["service.restart"](
+                service_name, no_block=True
+            )
+        else:
+            ret["service_restart"]["result"] = __salt__["service.restart"](service_name)
+            if not ret["service_restart"]["result"]:
+                raise CommandExecutionError(f"Failed to restart {service_name} service")
+
+        comment.append("Service restart successful")
+        ret["retcode"] = 0
+
+    except CommandExecutionError as e:
+        comment.append(
+            "Adding scheduled retry failed"
+            if schedule_retry_failed
+            else "Service restart failed"
+        )
+        ret["service_restart"]["result"] = False
+        ret["service_restart"]["stderr"] = str(e)
+        ret["retcode"] = salt.defaults.exitcodes.EX_SOFTWARE
+
+    return ret
 
 
 def list_():
@@ -135,21 +282,92 @@ def kill(timeout=15):
     return ret
 
 
-def restart():
+def restart(systemd=True, win_service=True, schedule_retry=False, retry_delay=180):
     """
-    Kill and restart the salt minion.
+    Restart the salt minion.
 
-    The configuration key ``minion_restart_command`` is an argv list for the
-    command to restart the minion.  If ``minion_restart_command`` is not
-    specified or empty then the ``argv`` of the current process will be used.
+    The method to restart the minion will be chosen as follows:
 
-    if the configuration value ``minion_restart_command`` is not set and the
-    ``-d`` (daemonize) argument is missing from ``argv`` then the minion
-    *will* be killed but will *not* be restarted and will require the parent
-    process to perform the restart.  This behavior is intended for managed
-    salt minion processes.
+        If ``minion_restart_command`` is set in the minion configuration then
+        the command specified will be used to restart the minion.
 
-    CLI Example:
+        If the minion is running as a systemd service then the minion will be
+        restarted using the systemd_service module, unless ``systemd`` is
+        set to ``False``
+
+        If the minion is running as a Windows service then the minion will be
+        restarted using the win_service module, unless ``win_service`` is
+        set to ``False``
+
+        If the salt-minion process is running in daemon mode (the ``-d``
+        argument is present in ``argv``) then the minion will be killed and
+        restarted using the same command line arguments, if possible.
+
+        If the salt-minion process is running in the foreground (the ``-d``
+        argument is not present in ``argv``) then the minion will be killed but
+        not restarted. This behavior is intended for minion processes that are
+        managed by a process supervisor.
+
+    systemd
+        If set to ``False`` then systemd will not be used to restart the minion.
+        Defaults to ``True``.
+
+    win_service
+        If set to ``False`` then the Windows service manager will not be used to
+        restart the minion. Defaults to ``True``.
+
+    schedule_retry
+        If set to ``True`` then a scheduled job will be added to start the
+        minion if it has failed to restart after the retry_delay
+
+    retry_delay
+        The amount of time to wait before attempting to start the minion if it
+        has failed to restart. Defaults to 180 seconds.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt minion[12] minion.restart
+
+        minion1:
+        ----------
+            comment:
+                - Using systemctl to restart salt-minion
+                - Service restart successful
+            killed:
+                None
+            restart:
+                ----------
+            retcode:
+                0
+            service_restart:
+                ----------
+                result:
+                    True
+        minion2:
+            ----------
+            comment:
+                - Using windows service manager to restart salt-minion
+                - Service restart successful
+            killed:
+                None
+            restart:
+                ----------
+            retcode:
+                0
+            service_restart:
+                ----------
+                result:
+                    True
+
+    The result shows that ``minion1`` was restarted using systemd and
+    ``minion2`` was restarted using the Windows service manager. The
+    ``service_restart`` field indicates the result of the service restart
+    operation. The ``killed`` field is ``None`` because the minion was restarted
+    using the service manager and not by killing the process. The ``restart``
+    field is empty because the minion was restarted using the service manager
+    and not by running the command line arguments of the minion process.
 
     .. code-block:: bash
 
@@ -206,6 +424,7 @@ def restart():
     ret = {
         "killed": None,
         "restart": {},
+        "service_restart": {},
         "retcode": 0,
     }
 
@@ -213,6 +432,18 @@ def restart():
     if restart_cmd:
         comment.append("Using configuration minion_restart_command:")
         comment.extend([f"    {arg}" for arg in restart_cmd])
+    elif systemd and _is_systemd_system():
+        # If we are using systemd then we will restart the minion using
+        # service.restart (systemd_service.restart)
+        comment.append("Using systemctl to restart salt-minion")
+        should_kill = False
+        should_restart = False
+    elif win_service and _is_windows_system():
+        # If we are on Windows then we will restart the minion using
+        # service.restart (win_service.restart)
+        comment.append("Using windows service manager to restart salt-minion")
+        should_kill = False
+        should_restart = False
     else:
         if "-d" in sys.argv:
             restart_cmd = sys.argv
@@ -248,6 +479,18 @@ def restart():
         if "retcode" in ret["restart"]:
             # Just want a single retcode
             del ret["restart"]["retcode"]
+
+    if not restart_cmd:
+        if systemd and _is_systemd_system():
+            service_result = _restart_service(
+                "salt-minion", schedule_retry, retry_delay, comment, no_block=True
+            )
+            ret.update(service_result)
+        elif win_service and _is_windows_system():
+            service_result = _restart_service(
+                "salt-minion", schedule_retry, retry_delay, comment
+            )
+            ret.update(service_result)
 
     if comment:
         ret["comment"] = comment
