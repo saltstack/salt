@@ -1,3 +1,4 @@
+import asyncio
 import os
 import time
 
@@ -46,7 +47,7 @@ async def test_pub_channel(master_opts, minion_opts, io_loop):
     )
 
     # Wait for socket to bind.
-    await tornado.gen.sleep(3)
+    await asyncio.sleep(3)
 
     await client.connect(master_opts["publish_port"])
     client.on_recv(on_recv)
@@ -62,4 +63,3 @@ async def test_pub_channel(master_opts, minion_opts, io_loop):
     finally:
         server.close()
         client.close()
-        server.pub_server.close()

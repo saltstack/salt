@@ -1037,7 +1037,7 @@ class Subscriber:
     def __del__(self):
         if not self._closing:
             warnings.warn(
-                "unclosed publish subscriber {self!r}", ResourceWarning, source=self
+                f"unclosed publish subscriber {self!r}", ResourceWarning, source=self
             )
 
     # pylint: enable=W1701
@@ -1086,7 +1086,7 @@ class PubServer(tornado.tcpserver.TCPServer):
     # pylint: enable=W1701
 
     async def _stream_read(
-        self, client, _StreamClosedError=salt.ext.tornado.iostream.StreamClosedError
+        self, client, _StreamClosedError=tornado.iostream.StreamClosedError
     ):
         unpacker = salt.utils.msgpack.Unpacker()
         while not self._closing:
@@ -1300,7 +1300,7 @@ class TCPPuller:
     # pylint: disable=W1701
     def __del__(self):
         if not self._closing:
-            warnings.warn("unclosed tcp puller {self!r}", ResourceWarning, source=self)
+            warnings.warn(f"unclosed tcp puller {self!r}", ResourceWarning, source=self)
 
     # pylint: enable=W1701
 
@@ -1424,7 +1424,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         ctx = None
         if self.ssl is not None:
             ctx = salt.transport.base.ssl_context(self.ssl, server_side=True)
-        self.pub_server = pub_server = PubServer(
+        self.pub_server = PubServer(
             self.opts,
             io_loop=io_loop,
             presence_callback=presence_callback,
@@ -1453,10 +1453,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             sock.bind((self.pub_host, self.pub_port))
         sock.listen(self.backlog)
         # pub_server will take ownership of the socket
-        pub_server.add_socket(sock)
+        self.pub_server.add_socket(sock)
 
         # Set up Salt IPC server
-        self.pub_server = pub_server
         if self.pull_path:
             log.debug("Publish server binding pull to %s", self.pull_path)
             pull_path = self.pull_path
@@ -1525,6 +1524,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         if self.pub_server:
             self.pub_server.close()
             self.pub_server = None
+        if self.pull_sock:
+            self.pull_sock.close()
+            self.pull_sock = None
         if self.io_loop:
             self.io_loop.stop()
             self.io_loop.close(all_fds=True)
