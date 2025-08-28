@@ -1345,6 +1345,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pub_host = pub_host
         self.pub_port = pub_port
         self.pub_path = pub_path
+        self.pull_sock = None
         self.pull_host = pull_host
         self.pull_port = pull_port
         self.pull_path = pull_path
@@ -1923,6 +1924,12 @@ class RequestClient(salt.transport.base.RequestClient):
         if self._stream is not None:
             self._stream.close()
             self._stream = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
 
 class TCPReqClient(RequestClient):
