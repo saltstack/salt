@@ -176,7 +176,7 @@ class LoadBalancerServer(salt.utils.process.SignalHandlingProcess):
         self._socket.bind(_get_bind_addr(self.opts, "ret_port"))
         self._socket.listen(self.backlog)
 
-        while True:
+        while self._socket and not self._socket._closed:
             try:
                 # Wait for a connection to occur since the socket is
                 # blocking.
@@ -189,8 +189,19 @@ class LoadBalancerServer(salt.utils.process.SignalHandlingProcess):
                 # ECONNABORTED indicates that there was a connection
                 # but it was closed while still in the accept queue.
                 # (observed on FreeBSD).
+                name = self._socket.getsockname()
+                if isinstance(name, tuple):
+                    name = name[0]
                 if tornado.util.errno_from_exception(e) == errno.ECONNABORTED:
                     continue
+                elif e.errno == errno.EINVAL:
+                    # This can happen after socket.shutdown but before socket.close
+                    log.trace("Socket shutdown: %s", name)
+                    break
+                elif e.errno == errno.EBADF:
+                    # This can happen after socket.close
+                    log.trace("Socket closed: %s", name)
+                    break
                 raise
 
 
@@ -799,9 +810,11 @@ class MessageClient:
     def check_close(self):
         if not self.send_future_map:
             self._tcp_client.close()
+            if self._stream:
+                self._stream.close()
             self._stream = None
-            self._closing = False
             self._closed = True
+            self._closing = False
         else:
             self.io_loop.add_timeout(1, self.check_close)
 
@@ -844,6 +857,8 @@ class MessageClient:
         if self._stream is None:
             self._stream = yield self.getstream()
             if self._stream:
+                self._closing = False
+                self._closed = False
                 if not self._stream_return_running:
                     self.io_loop.spawn_callback(self._stream_return)
                 if self.connect_callback:
@@ -853,7 +868,7 @@ class MessageClient:
     def _stream_return(self):
         self._stream_return_running = True
         unpacker = salt.utils.msgpack.Unpacker()
-        while not self._closing:
+        while not self._closed and not self._closing:
             try:
                 wire_bytes = yield self._stream.read_bytes(4096, partial=True)
                 unpacker.feed(wire_bytes)
@@ -1022,7 +1037,7 @@ class Subscriber:
     def __del__(self):
         if not self._closing:
             warnings.warn(
-                "unclosed publish subscriber {self!r}", ResourceWarning, source=self
+                f"unclosed publish subscriber {self!r}", ResourceWarning, source=self
             )
 
     # pylint: enable=W1701
@@ -1062,7 +1077,7 @@ class PubServer(tornado.tcpserver.TCPServer):
             return
         self._closing = True
         for client in self.clients:
-            client.stream.close()
+            client.close()
 
     # pylint: disable=W1701
     def __del__(self):
@@ -1070,7 +1085,9 @@ class PubServer(tornado.tcpserver.TCPServer):
 
     # pylint: enable=W1701
 
-    async def _stream_read(self, client):
+    async def _stream_read(
+        self, client, _StreamClosedError=tornado.iostream.StreamClosedError
+    ):
         unpacker = salt.utils.msgpack.Unpacker()
         while not self._closing:
             try:
@@ -1082,7 +1099,7 @@ class PubServer(tornado.tcpserver.TCPServer):
                     body = framed_msg["body"]
                     if self.presence_callback:
                         self.presence_callback(client, body)
-            except tornado.iostream.StreamClosedError as e:
+            except _StreamClosedError as e:
                 log.debug("tcp stream to %s closed, unable to recv", client.address)
                 client.close()
                 self.remove_presence_callback(client)
@@ -1283,7 +1300,7 @@ class TCPPuller:
     # pylint: disable=W1701
     def __del__(self):
         if not self._closing:
-            warnings.warn("unclosed tcp puller {self!r}", ResourceWarning, source=self)
+            warnings.warn(f"unclosed tcp puller {self!r}", ResourceWarning, source=self)
 
     # pylint: enable=W1701
 
@@ -1328,6 +1345,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pub_host = pub_host
         self.pub_port = pub_port
         self.pub_path = pub_path
+        self.pull_sock = None
         self.pull_host = pull_host
         self.pull_port = pull_port
         self.pull_path = pull_path
@@ -1338,6 +1356,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.started = multiprocessing.Event()
         else:
             self.started = started
+        self.pub_server = None
+        self.io_loop = None
+        self._closing = False
 
     @classmethod
     def support_ssl(cls):
@@ -1404,7 +1425,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         ctx = None
         if self.ssl is not None:
             ctx = salt.transport.base.ssl_context(self.ssl, server_side=True)
-        self.pub_server = pub_server = PubServer(
+        self.pub_server = PubServer(
             self.opts,
             io_loop=io_loop,
             presence_callback=presence_callback,
@@ -1433,10 +1454,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             sock.bind((self.pub_host, self.pub_port))
         sock.listen(self.backlog)
         # pub_server will take ownership of the socket
-        pub_server.add_socket(sock)
+        self.pub_server.add_socket(sock)
 
         # Set up Salt IPC server
-        self.pub_server = pub_server
         if self.pull_path:
             log.debug("Publish server binding pull to %s", self.pull_path)
             pull_path = self.pull_path
@@ -1498,9 +1518,29 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pub_sock.send(payload)
 
     def close(self):
+        self._closing = True
         if self.pub_sock:
             self.pub_sock.close()
             self.pub_sock = None
+        if self.pub_server:
+            self.pub_server.close()
+            self.pub_server = None
+        if self.pull_sock:
+            self.pull_sock.close()
+            self.pull_sock = None
+        if self.io_loop:
+            self.io_loop.stop()
+            self.io_loop.close(all_fds=True)
+            self.io_loop = None
+
+    # pylint: disable=W1701
+    def __del__(self):
+        if not self._closing:
+            warnings.warn(
+                f"unclosed publish server {self!r}", ResourceWarning, source=self
+            )
+
+    # pylint: enable=W1701
 
 
 class TCPPublishServer(PublishServer):
@@ -1885,6 +1925,12 @@ class RequestClient(salt.transport.base.RequestClient):
         if self._stream is not None:
             self._stream.close()
             self._stream = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
 
 class TCPReqClient(RequestClient):

@@ -98,10 +98,14 @@ def latest_version(*names, **kwargs):
         ``refresh`` to ``False``.
 
     Args:
-        names (str): A single or multiple names to lookup
+
+        names (str, list):
+            A single name or a list of names to lookup
 
     Kwargs:
+
         saltenv (str): Salt environment. Default ``base``
+
         refresh (bool): Refresh package metadata. Default ``True``
 
     Returns:
@@ -192,17 +196,20 @@ def latest_version(*names, **kwargs):
 
 def upgrade_available(name, **kwargs):
     """
-    Check whether or not an upgrade is available for a given package
+    Check whether an upgrade is available for a given package
 
     Args:
+
         name (str): The name of a single package
 
     Kwargs:
+
         refresh (bool): Refresh package metadata. Default ``True``
+
         saltenv (str): The salt environment. Default ``base``
 
     Returns:
-        bool: True if new version available, otherwise False
+        bool: ``True`` if new version available, otherwise ``False``.
 
     CLI Example:
 
@@ -225,10 +232,15 @@ def list_upgrades(refresh=True, **kwargs):
     List all available package upgrades on this system
 
     Args:
-        refresh (bool): Refresh package metadata. Default ``True``
+
+        refresh (:obj:`bool`, optional):
+            Refresh package metadata.
+            Default is ``True``.
 
     Kwargs:
-        saltenv (str): Salt environment. Default ``base``
+
+        saltenv (str): Salt environment.
+        Default is ``base``
 
     Returns:
         dict: A dictionary of packages with available upgrades
@@ -265,16 +277,21 @@ def list_available(*names, **kwargs):
     Return a list of available versions of the specified package.
 
     Args:
-        names (str): One or more package names
+
+        names (str, list):
+            A single name or a list of names to check
 
     Kwargs:
 
-        saltenv (str): The salt environment to use. Default ``base``.
+        saltenv (str): The salt environment to use.
+        Default is ``base``.
 
-        refresh (bool): Refresh package metadata. Default ``False``.
+        refresh (bool): Refresh package metadata.
+            Default is ``False``.
 
         return_dict_always (bool):
-            Default ``False`` dict when a single package name is queried.
+            Return a dict when a single package name is queried.
+            Default is ``False``.
 
         reverse_sort (bool):
             Sort the versions for latest to oldest
@@ -406,10 +423,14 @@ def version(*names, **kwargs):
     name/version pairs is returned.
 
     Args:
-        name (str): One or more package names
+
+        name (str, list):
+            A single name or a list of package names to check
 
     Kwargs:
+
         saltenv (str): The salt environment to use. Default ``base``.
+
         refresh (bool): Refresh package metadata. Default ``False``.
 
     Returns:
@@ -461,22 +482,32 @@ def list_pkgs(
 
     Args:
 
-        versions_as_list (bool):
-            Returns the versions as a list
+        versions_as_list (:obj:`bool`, optional):
+            Returns the versions as a list.
 
-        include_components (bool):
-            Include sub components of installed software. Default is ``True``
+            Default is ``False``.
 
-        include_updates (bool):
-            Include software updates and Windows updates. Default is ``True``
+        include_components (:obj:`bool`, optional):
+            Include sub components of installed software.
+
+            Default is ``True``.
+
+        include_updates (:obj:`bool`, optional):
+            Include software updates and Windows updates.
+
+            Default is ``True``
 
     Kwargs:
 
         saltenv (str):
-            The salt environment to use. Default ``base``
+            The salt environment to use.
+
+            Default is ``base``.
 
         refresh (bool):
-            Refresh package metadata. Default ``False``
+            Refresh package metadata.
+
+            Default is ``False``
 
     Returns:
         dict: A dictionary of installed software with versions installed
@@ -1033,19 +1064,23 @@ def refresh_db(**kwargs):
     For more information see
     :ref:`Windows Software Repository <windows-package-manager>`
 
-    Arguments:
+    Kwargs:
 
-    saltenv (str): Salt environment. Default: ``base``
+        saltenv (str): Salt environment.
+            Default is ``base``.
 
-    verbose (bool):
-        Return a verbose data structure which includes 'success_list', a
-        list of all sls files and the package names contained within.
-        Default is 'False'
+        verbose (bool):
+            Return a verbose data structure which includes 'success_list', a
+            list of all sls files and the package names contained within.
 
-    failhard (bool):
-        If ``True``, an error will be raised if any repo SLS files fails to
-        process. If ``False``, no error will be raised, and a dictionary
-        containing the full results will be returned.
+            Default is ``False``.
+
+        failhard (bool):
+            If ``True``, an error will be raised if any repo SLS files fail to
+            process. If ``False``, no error will be raised, and a dictionary
+            containing the full results will be returned.
+
+            Default is ``True``.
 
     Returns:
         dict: A dictionary containing the results of the database refresh.
@@ -1201,17 +1236,22 @@ def genrepo(**kwargs):
 
     Kwargs:
 
-        saltenv (str): Salt environment. Default: ``base``
+        saltenv (str): Salt environment.
+
+            Default is ``base``.
 
         verbose (bool):
             Return verbose data structure which includes 'success_list', a list
             of all sls files and the package names contained within.
-            Default ``False``.
+
+            Default is ``False``.
 
         failhard (bool):
             If ``True``, an error will be raised if any repo SLS files failed
             to process. If ``False``, no error will be raised, and a dictionary
             containing the full results will be returned.
+
+            Default is ``True``.
 
     .. note::
         - Hidden directories (directories beginning with '`.`', such as
@@ -1452,6 +1492,7 @@ def normalize_name(name):
     .. versionadded:: 3006.0
 
     Args:
+
         name (str): The name of the package
 
     Returns:
@@ -1476,11 +1517,12 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             The name of a single package, or a comma-separated list of packages
             to install. (no spaces after the commas)
 
-        refresh (bool):
+        refresh (:obj:`bool`, optional):
             Boolean value representing whether or not to refresh the winrepo db.
-            Default ``False``.
 
-        pkgs (list):
+            Default is ``False``.
+
+        pkgs (:obj:`list`, optional):
             A list of packages to install from a software repository. All
             packages listed under ``pkgs`` will be installed via a single
             command.
@@ -1496,6 +1538,8 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
                 # will install the latest version of foo and version 1.2.3 of bar
                 salt '*' pkg.install pkgs='["foo", {"bar": "1.2.3"}]'
+
+            Default is ``None``.
 
     Kwargs:
 
@@ -1550,6 +1594,14 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             True.
 
             .. versionadded:: 2016.11.0
+
+        force (bool):
+            If ``True``, the installation will run whether the package is
+            already installed or not. If ``False``, the installation will not
+            run if the correct version of the package is already installed.
+            Default is ``False``.
+
+            .. versionadded:: 3006.15
 
     Returns:
         dict: Return a dict containing the new package names and versions. If
@@ -1683,12 +1735,13 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         # If the version was not passed, version_num will be None
         if not version_num:
             if pkg_name in old:
-                log.debug(
-                    "pkg.install: '%s' version '%s' is already installed",
-                    pkg_name,
-                    old[pkg_name][0],
-                )
-                continue
+                if not kwargs.get("force", False):
+                    log.debug(
+                        "pkg.install: '%s' version '%s' is already installed",
+                        pkg_name,
+                        old[pkg_name][0],
+                    )
+                    continue
             # Get the most recent version number available from winrepo.p
             # May also return `latest` or an empty string
             version_num = _get_latest_pkg_version(pkginfo)
@@ -1701,12 +1754,13 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         # Check if the version is already installed
         if version_num in old.get(pkg_name, []):
             # Desired version number already installed
-            log.debug(
-                "pkg.install: '%s' version '%s' is already installed",
-                pkg_name,
-                version_num,
-            )
-            continue
+            if not kwargs.get("force", False):
+                log.debug(
+                    "pkg.install: '%s' version '%s' is already installed",
+                    pkg_name,
+                    version_num,
+                )
+                continue
         # If version number not installed, is the version available?
         elif version_num != "latest" and version_num not in pkginfo:
             log.error("Version %s not found for package %s", version_num, pkg_name)
@@ -1992,8 +2046,14 @@ def upgrade(**kwargs):
     Upgrade all software. Currently not implemented
 
     Kwargs:
-        saltenv (str): The salt environment to use. Default ``base``.
-        refresh (bool): Refresh package metadata. Default ``True``.
+
+        saltenv (str): The salt environment to use.
+
+            Default is ``base``.
+
+        refresh (bool): Refresh package metadata.
+
+            Default is ``True``.
 
     .. note::
         This feature is not yet implemented for Windows.
@@ -2029,13 +2089,18 @@ def remove(name=None, pkgs=None, **kwargs):
     .. versionadded:: 0.16.0
 
     Args:
-        name (str):
-            The name(s) of the package(s) to be uninstalled. Can be a
-            single package or a comma delimited list of packages, no spaces.
 
-        pkgs (list):
+        name (:obj:`str`, optional):
+            The name(s) of the package(s) to be uninstalled. Can be a
+            single package or a comma-delimited list of packages, no spaces.
+
+            Default is ``None``.
+
+        pkgs (:obj:`list`, optional):
             A list of packages to delete. Must be passed as a python list. The
             ``name`` parameter will be ignored if this option is passed.
+
+            Default is ``None``.
 
     Kwargs:
 
@@ -2046,8 +2111,13 @@ def remove(name=None, pkgs=None, **kwargs):
             uninstalling a single package. If this parameter is omitted, the
             latest version will be uninstalled.
 
-        saltenv (str): Salt environment. Default ``base``
-        refresh (bool): Refresh package metadata. Default ``False``
+        saltenv (str): Salt environment.
+
+            Default is ``base``.
+
+        refresh (bool): Refresh package metadata.
+
+            Default is ``False``.
 
     Returns:
         dict: Returns a dict containing the changes.
@@ -2365,21 +2435,30 @@ def purge(name=None, pkgs=None, **kwargs):
 
     Args:
 
-        name (str): The name of the package to be deleted.
+        name (:obj:`str`, optional): The name of the package to be deleted.
+
+            Default is ``None``.
+
+        pkgs (:obj:`list`, optional):
+            A list of packages to delete. Must be passed as a python
+            list. The ``name`` parameter will be ignored if this option is
+            passed.
+
+            Default is ``None``.
+
+    Kwargs:
 
         version (str):
             The version of the package to be deleted. If this option is
             used in combination with the ``pkgs`` option below, then this
             version will be applied to all targeted packages.
 
-        pkgs (list):
-            A list of packages to delete. Must be passed as a python
-            list. The ``name`` parameter will be ignored if this option is
-            passed.
+        saltenv (str): Salt environment.
 
-    Kwargs:
-        saltenv (str): Salt environment. Default ``base``
-        refresh (bool): Refresh package metadata. Default ``False``
+            Default is ``base``.
+
+        refresh (bool): Refresh package metadata.
+            Default is ``False``.
 
     Returns:
         dict: A dict containing the changes.
@@ -2401,7 +2480,10 @@ def get_repo_data(saltenv="base"):
     exist, however will not refresh it.
 
     Args:
-        saltenv (str): Salt environment. Default ``base``
+
+        saltenv (:obj:`str`, optional): Salt environment.
+
+            Default is ``base``.
 
     Returns:
         dict: A dict containing contents of metadata db.
@@ -2461,7 +2543,9 @@ def get_package_info(name, saltenv="base"):
 
         name (str): The name of the package
 
-        saltenv (str): The salt environment to use. Default is "base"
+        saltenv (:obj:`str`, optional): The salt environment to use.
+
+            Default is ``base``.
 
     Returns:
         dict: A dictionary of package info, empty if package not available
@@ -2510,12 +2594,20 @@ def compare_versions(ver1="", oper="==", ver2=""):
     Compare software package versions. Made public for use with Jinja
 
     Args:
-        ver1 (str): A software version to compare
-        oper (str): The operand to use to compare
-        ver2 (str): A software version to compare
+
+        ver1 (:obj:`str`, optional): A software version to compare.
+
+            Default is "".
+
+        oper (:obj:`str`, optional): The operand to use to compare.
+
+            Default is "==".
+
+        ver2 (:obj:`str`, optional): A software version to compare.
+            Default is ""
 
     Returns:
-        bool: True if the comparison is valid, otherwise False
+        bool: ``True`` if the comparison is valid, otherwise ``False``.
 
     CLI Example:
 

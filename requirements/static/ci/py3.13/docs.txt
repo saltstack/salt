@@ -69,9 +69,10 @@ distro==1.9.0
     #   -r requirements/base.txt
 docutils==0.21.2
     # via sphinx
-frozenlist==1.4.1
+frozenlist==1.7.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
+    #   -r requirements/base.txt
     #   aiohttp
     #   aiosignal
 idna==3.10
@@ -264,7 +265,7 @@ tempora==5.7.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   portend
-timelib==0.3.0
+timelib==0.3.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
@@ -290,6 +291,7 @@ zc.lockfile==3.0.post1
 zipp==3.20.2
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
+    #   -r requirements/base.txt
     #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:

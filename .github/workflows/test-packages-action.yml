@@ -161,6 +161,7 @@ jobs:
           ${{ github.run_id }}_salt-test-pkg python3 -m nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
 
       - name: Run Package Tests
+        if: ${{ !cancelled() }}
         run: |
           docker exec \
           ${{ github.run_id }}_salt-test-pkg \
@@ -267,6 +268,7 @@ jobs:
           sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
 
       - name: Run Package Tests
+        if: ${{ !cancelled() }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
@@ -407,6 +409,7 @@ jobs:
           nox --force-color -f noxfile.py -e "${{ inputs.nox-session }}-pkgs" -- '${{ matrix.tests-chunk }}' --log-cli-level=debug
 
       - name: Run Package Tests
+        if: ${{ !cancelled() }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"

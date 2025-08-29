@@ -130,8 +130,12 @@ def avail_modules(desc=False):
     """
     List available modules in registered Powershell module repositories.
 
-    :param desc: If ``True``, the verbose description will be returned.
-    :type  desc: ``bool``
+    Args:
+
+        desc (:obj:`bool`, optional):
+            If ``True``, the verbose description will be returned.
+
+            Default is ``False``.
 
     CLI Example:
 
@@ -158,8 +162,10 @@ def list_modules(desc=False):
     """
     List currently installed PSGet Modules on the system.
 
-    :param desc: If ``True``, the verbose description will be returned.
-    :type  desc: ``bool``
+    Args:
+
+        desc (:obj:`bool`, optional):
+            If ``True``, the verbose description will be returned.
 
     CLI Example:
 
@@ -188,20 +194,28 @@ def install(
     """
     Install a Powershell module from powershell gallery on the system.
 
-    :param name: Name of a Powershell module
-    :type  name: ``str``
+    Args:
 
-    :param minimum_version: The maximum version to install, e.g. 1.23.2
-    :type  minimum_version: ``str``
+        name (str): Name of a Powershell module.
 
-    :param required_version: Install a specific version
-    :type  required_version: ``str``
+        minimum_version (:obj:`str`, optional):
+            The maximum version to install, e.g. 1.23.2.
 
-    :param scope: The scope to install the module to, e.g. CurrentUser, Computer
-    :type  scope: ``str``
+            Default is ``None``.
 
-    :param repository: The friendly name of a private repository, e.g. MyREpo
-    :type  repository: ``str``
+        required_version (:obj:`str`, optional): Install a specific version.
+
+            Default is ``None``.
+
+        scope (:obj:`str`, optional):
+            The scope to install the module to, e.g. CurrentUser, Computer.
+
+            Default is ``None``.
+
+        repository (:obj:`str`, optional):
+            The friendly name of a private repository, e.g. MyREpo.
+
+            Default is ``None``.
 
     CLI Example:
 
@@ -232,14 +246,18 @@ def update(name, maximum_version=None, required_version=None):
     """
     Update a PowerShell module to a specific version, or the newest
 
-    :param name: Name of a Powershell module
-    :type  name: ``str``
+    Args:
 
-    :param maximum_version: The maximum version to install, e.g. 1.23.2
-    :type  maximum_version: ``str``
+        name (str): Name of a Powershell module.
 
-    :param required_version: Install a specific version
-    :type  required_version: ``str``
+        maximum_version (:obj:`str`, optional):
+            The maximum version to install, e.g. 1.23.2.
+
+            Default is ``None``.
+
+        required_version (:obj:`str`, optional): Install a specific version.
+
+            Default is ``None``.
 
     CLI Example:
 
@@ -267,8 +285,9 @@ def remove(name):
     """
     Remove a Powershell DSC module from the system.
 
-    :param  name: Name of a Powershell DSC module
-    :type   name: ``str``
+    Args:
+
+        name (str): Name of a Powershell DSC module.
 
     CLI Example:
 
@@ -286,15 +305,16 @@ def register_repository(name, location, installation_policy=None):
     """
     Register a PSGet repository on the local machine
 
-    :param name: The name for the repository
-    :type  name: ``str``
+    Args:
 
-    :param location: The URI for the repository
-    :type  location: ``str``
+        name (str): The name for the repository.
 
-    :param installation_policy: The installation policy
-        for packages, e.g. Trusted, Untrusted
-    :type  installation_policy: ``str``
+        location (str): The URI for the repository.
+
+        installation_policy (:obj:`str`, optional):
+            The installation policy for packages, e.g. Trusted, Untrusted.
+
+            Default is ``None``.
 
     CLI Example:
 
@@ -321,8 +341,9 @@ def get_repository(name):
     """
     Get the details of a local PSGet repository
 
-    :param  name: Name of the repository
-    :type   name: ``str``
+    Args:
+
+        name (str): Name of the repository.
 
     CLI Example:
 

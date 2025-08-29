@@ -53,6 +53,8 @@ except ImportError:
     pass
 
 if salt.utils.platform.is_windows():
+    import pywintypes
+
     import salt.platform.win
     from salt.utils.win_functions import escape_argument as _cmd_quote
     from salt.utils.win_runas import runas as win_runas
@@ -100,20 +102,25 @@ def _check_cb(cb_):
     return lambda x: x
 
 
-def _python_shell_default(python_shell, __pub_jid):
+def _python_shell_default(python_shell, shell=False):
     """
-    Set python_shell default based on remote execution and __opts__['cmd_safe']
+    Set python_shell default based on the shell parameter and __opts__['cmd_safe']
     """
-    try:
-        # Default to python_shell=True when run directly from remote execution
-        # system. Cross-module calls won't have a jid.
-        if __pub_jid and python_shell is None:
-            return True
-        elif __opts__.get("cmd_safe", True) is False and python_shell is None:
-            # Override-switch for python_shell
-            return True
-    except NameError:
-        pass
+    if shell:
+        if salt.utils.platform.is_windows():
+            # On Windows python_shell / subprocess 'shell' parameter must always be
+            # False as we prepend the shell manually
+            return False
+        else:
+            # Non-Windows requires python_shell to be enabled
+            return True if python_shell is None else python_shell
+    else:
+        try:
+            if __opts__.get("cmd_safe", True) is False and python_shell is None:
+                # Override-switch for python_shell
+                return True
+        except NameError:
+            pass
     return python_shell
 
 
@@ -212,6 +219,21 @@ def _parse_env(env):
     return env
 
 
+def _ensure_env_str(env):
+    """
+    Ensure that environment variables are strings
+    """
+    if not env:
+        env = {}
+    if not isinstance(env, dict):
+        env = {}
+    for key, val in env.items():
+        if not isinstance(val, str):
+            env[key] = str(val)
+        if not isinstance(key, str):
+            env[str(key)] = env.pop(key)
+
+
 def _gather_pillar(pillarenv, pillar_override):
     """
     Whenever a state run starts, gather the pillar data fresh
@@ -259,18 +281,11 @@ def _check_avail(cmd):
 
 def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
     """
-    Prep cmd when shell is powershell. If we were called by script(), then fake
-    out the Windows shell to run a Powershell script. Otherwise, just run a
-    Powershell command.
+    Prep cmd when shell is powershell.exe or pwsh.exe. If we were called by script(), then
+    run it via the -File parameter, Otherwise, run the command via the -Command parameter.
     """
-    # Find the full path to the shell
-    win_shell = salt.utils.path.which(win_shell)
-
-    if not win_shell:
-        raise CommandExecutionError(f"PowerShell binary not found: {win_shell}")
-
     new_cmd = [
-        f'"{win_shell}"',
+        win_shell,
         "-NonInteractive",
         "-NoProfile",
         "-ExecutionPolicy",
@@ -282,52 +297,16 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
     # The third item[2] in each tuple is the name of that method.
     stack = traceback.extract_stack(limit=3)
     if stack[-3][2] == "script":
-        # If this is cmd.script, then we're running a file
-        # You might be tempted to use -File here instead of -Command
-        # The problem with using -File is that any arguments that contain
-        # powershell commands themselves will not be evaluated
-        # See GitHub issue #56195
+        new_cmd.append("-File")
+        new_cmd.extend(cmd)
+    elif encoded_cmd:
+        new_cmd.extend(["-EncodedCommand", cmd])
+    else:
         new_cmd.append("-Command")
         if isinstance(cmd, list):
             cmd = " ".join(cmd)
-        # We need to append $LASTEXITCODE here to return the actual exit code
-        # from the script. Otherwise, it will always return 1 on any non-zero
-        # exit code failure. Issue: #60884
-        new_cmd.append(f'"& {cmd.strip()}; exit $LASTEXITCODE"')
-    elif encoded_cmd:
-        new_cmd.extend(["-EncodedCommand", f'"{cmd}"'])
-    else:
-        # Strip whitespace
-        if isinstance(cmd, list):
-            cmd = " ".join(cmd)
+        new_cmd.append(cmd)
 
-        # Commands that are a specific keyword behave differently. They fail if
-        # you add a "&" to the front. Add those here as we find them:
-        keywords = [
-            "(",
-            "[",
-            "$",
-            "&",
-            ".",
-            "data",
-            "do",
-            "for",
-            "foreach",
-            "if",
-            "trap",
-            "while",
-            "try",
-            "Configuration",
-        ]
-
-        for keyword in keywords:
-            if cmd.lower().startswith(keyword.lower()):
-                new_cmd.extend(["-Command", f'"{cmd.strip()}"'])
-                break
-        else:
-            new_cmd.extend(["-Command", f'"& {cmd.strip()}"'])
-
-    new_cmd = " ".join(new_cmd)
     log.debug(new_cmd)
     return new_cmd
 
@@ -343,7 +322,7 @@ def _run(
     log_callback=None,
     runas=None,
     group=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=False,
     env=None,
     clean_env=False,
@@ -373,7 +352,9 @@ def _run(
     """
     if "pillar" in kwargs and not pillar_override:
         pillar_override = kwargs["pillar"]
-    if output_loglevel != "quiet" and _is_valid_shell(shell) is False:
+    if shell is None and python_shell and not salt.utils.platform.is_windows():
+        shell = DEFAULT_SHELL
+    if output_loglevel != "quiet" and shell and _is_valid_shell(shell) is False:
         log.warning(
             "Attempt to run a shell command with what may be an invalid shell! "
             "Check to ensure that the shell <%s> is valid for this user.",
@@ -415,9 +396,10 @@ def _run(
 
     change_windows_codepage = False
     if not salt.utils.platform.is_windows():
-        if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
-            msg = f"The shell {shell} is not available"
-            raise CommandExecutionError(msg)
+        if shell:
+            if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
+                msg = f"The shell {shell} is not available"
+                raise CommandExecutionError(msg)
     elif use_vt:  # Memoization so not much overhead
         raise CommandExecutionError("VT not available on windows")
     else:
@@ -446,10 +428,26 @@ def _run(
             if not HAS_WIN_RUNAS:
                 msg = "missing salt/utils/win_runas.py"
                 raise CommandExecutionError(msg)
-        if any(word in shell.lower().strip() for word in ["powershell", "pwsh"]):
-            cmd = _prep_powershell_cmd(shell, cmd, encoded_cmd)
+
+        if shell:
+            # Find the full path to the shell
+            win_shell = salt.utils.path.which(shell)
+            if not win_shell:
+                raise CommandExecutionError(f"shell binary not found: {win_shell}")
+
+            # Prepare the command to be executed
+            win_shell_lower = win_shell.lower()
+            if any(
+                win_shell_lower.endswith(word)
+                for word in ["powershell.exe", "pwsh.exe"]
+            ):
+                cmd = _prep_powershell_cmd(win_shell, cmd, encoded_cmd)
+            elif any(win_shell_lower.endswith(word) for word in ["cmd.exe"]):
+                cmd = salt.platform.win.prepend_cmd(win_shell, cmd)
+            else:
+                raise CommandExecutionError(f"unsupported shell type: {win_shell}")
         else:
-            cmd = salt.platform.win.prepend_cmd(cmd)
+            win_shell = None
 
     env = _parse_env(env)
 
@@ -555,10 +553,14 @@ def _run(
                     env_cmd.extend(["-u", runas])
                 if group:
                     env_cmd.extend(["-g", group])
-                if shell != DEFAULT_SHELL:
-                    env_cmd.extend(["-s", "--", shell, "-c"])
+                if shell:
+                    if shell != DEFAULT_SHELL:
+                        env_cmd.extend(["-s", "--", shell, "-c"])
+                    else:
+                        env_cmd.extend(["-i", "--"])
                 else:
-                    env_cmd.extend(["-i", "--"])
+                    # do not invoke a shell at all
+                    env_cmd.extend(["--"])
             elif __grains__["os"] in ["FreeBSD"]:
                 env_cmd = [
                     "su",
@@ -571,7 +573,11 @@ def _run(
             elif __grains__["os_family"] in ["AIX"]:
                 env_cmd = ["su", "-", runas, "-c"]
             else:
-                env_cmd = ["su", "-s", shell, "-", runas, "-c"]
+                # su invokes a shell by design
+                if shell:
+                    env_cmd = ["su", "-s", shell, "-", runas, "-c"]
+                else:
+                    env_cmd = ["su", "-", runas, "-c"]
 
             if not salt.utils.pkg.check_bundled():
                 if __grains__["os"] in ["FreeBSD"]:
@@ -672,7 +678,8 @@ def _run(
             env.setdefault("LC_IDENTIFICATION", "C")
             env.setdefault("LANGUAGE", "C")
 
-    if clean_env:
+    if clean_env or (runas and salt.utils.platform.is_windows()):
+        # always use a clean environment with CreateProcess on Windows
         run_env = env
 
     else:
@@ -689,6 +696,8 @@ def _run(
 
     if "NOTIFY_SOCKET" not in env:
         run_env.pop("NOTIFY_SOCKET", None)
+
+    _ensure_env_str(run_env)
 
     if python_shell is None:
         python_shell = False
@@ -774,15 +783,41 @@ def _run(
         # This is where the magic happens
 
         if runas and salt.utils.platform.is_windows():
-
             # We can't use TimedProc with runas on Windows
-            if change_windows_codepage:
-                salt.utils.win_chcp.set_codepage_id(windows_codepage)
+            new_kwargs.update(
+                {
+                    "redirect_stderr": True if stderr == subprocess.STDOUT else False,
+                }
+            )
 
-            ret = win_runas(cmd, runas, password, cwd)
+            try:
+                if change_windows_codepage:
+                    salt.utils.win_chcp.set_codepage_id(windows_codepage)
+                try:
+                    proc = win_runas(cmd, runas, password, **new_kwargs)
+                except (OSError, pywintypes.error) as exc:
+                    msg = "Unable to run command '{}' with the context '{}', reason: {}".format(
+                        cmd if output_loglevel is not None else "REDACTED",
+                        new_kwargs,
+                        exc,
+                    )
+                    raise CommandExecutionError(msg)
+                except TimedProcTimeoutError as exc:
+                    ret["stdout"] = str(exc)
+                    ret["stderr"] = ""
+                    ret["retcode"] = ""
+                    ret["pid"] = ""
+                    # ok return code for timeouts?
+                    ret["retcode"] = 1
+                    return ret
+            finally:
+                if change_windows_codepage:
+                    salt.utils.win_chcp.set_codepage_id(previous_windows_codepage)
 
-            if change_windows_codepage:
-                salt.utils.win_chcp.set_codepage_id(previous_windows_codepage)
+            proc_pid = proc.get("pid")
+            proc_retcode = proc.get("retcode")
+            proc_stdout = proc.get("stdout")
+            proc_stderr = proc.get("stderr")
 
         else:
             try:
@@ -797,7 +832,6 @@ def _run(
                         exc,
                     )
                     raise CommandExecutionError(msg)
-
                 try:
                     proc.run()
                 except TimedProcTimeoutError as exc:
@@ -812,61 +846,67 @@ def _run(
                 if change_windows_codepage:
                     salt.utils.win_chcp.set_codepage_id(previous_windows_codepage)
 
-            if output_loglevel != "quiet" and output_encoding is not None:
-                log.debug(
-                    "Decoding output from command %s using %s encoding",
-                    cmd,
-                    output_encoding,
+            proc_pid = proc.process.pid
+            proc_retcode = proc.process.returncode
+            proc_stdout = proc.stdout
+            proc_stderr = proc.stderr
+
+        if output_loglevel != "quiet" and output_encoding is not None:
+            log.debug(
+                "Decoding output from command %s using %s encoding",
+                cmd,
+                output_encoding,
+            )
+
+        try:
+            out = salt.utils.stringutils.to_unicode(
+                proc_stdout, encoding=output_encoding
+            )
+        except TypeError:
+            # stdout is None
+            out = ""
+        except UnicodeDecodeError:
+            out = salt.utils.stringutils.to_unicode(
+                proc_stdout, encoding=output_encoding, errors="replace"
+            )
+            if output_loglevel != "quiet":
+                log.error(
+                    "Failed to decode stdout from command %s, non-decodable "
+                    "characters have been replaced",
+                    _log_cmd(cmd),
                 )
 
-            try:
-                out = salt.utils.stringutils.to_unicode(
-                    proc.stdout, encoding=output_encoding
+        try:
+            err = salt.utils.stringutils.to_unicode(
+                proc_stderr, encoding=output_encoding
+            )
+        except TypeError:
+            # stderr is None
+            err = ""
+        except UnicodeDecodeError:
+            err = salt.utils.stringutils.to_unicode(
+                proc_stderr, encoding=output_encoding, errors="replace"
+            )
+            if output_loglevel != "quiet":
+                log.error(
+                    "Failed to decode stderr from command %s, non-decodable "
+                    "characters have been replaced",
+                    _log_cmd(cmd),
                 )
-            except TypeError:
-                # stdout is None
-                out = ""
-            except UnicodeDecodeError:
-                out = salt.utils.stringutils.to_unicode(
-                    proc.stdout, encoding=output_encoding, errors="replace"
-                )
-                if output_loglevel != "quiet":
-                    log.error(
-                        "Failed to decode stdout from command %s, non-decodable "
-                        "characters have been replaced",
-                        _log_cmd(cmd),
-                    )
 
-            try:
-                err = salt.utils.stringutils.to_unicode(
-                    proc.stderr, encoding=output_encoding
-                )
-            except TypeError:
-                # stderr is None
-                err = ""
-            except UnicodeDecodeError:
-                err = salt.utils.stringutils.to_unicode(
-                    proc.stderr, encoding=output_encoding, errors="replace"
-                )
-                if output_loglevel != "quiet":
-                    log.error(
-                        "Failed to decode stderr from command %s, non-decodable "
-                        "characters have been replaced",
-                        _log_cmd(cmd),
-                    )
+        # Encoded commands dump CLIXML data in stderr. It's not an actual error
+        if encoded_cmd and "CLIXML" in err:
+            err = ""
+        if rstrip:
+            if out is not None:
+                out = out.rstrip()
+            if err is not None:
+                err = err.rstrip()
 
-            # Encoded commands dump CLIXML data in stderr. It's not an actual error
-            if encoded_cmd and "CLIXML" in err:
-                err = ""
-            if rstrip:
-                if out is not None:
-                    out = out.rstrip()
-                if err is not None:
-                    err = err.rstrip()
-            ret["pid"] = proc.process.pid
-            ret["retcode"] = proc.process.returncode
-            ret["stdout"] = out
-            ret["stderr"] = err
+        ret["pid"] = proc_pid
+        ret["retcode"] = proc_retcode
+        ret["stdout"] = out
+        ret["stderr"] = err
 
         if ret["retcode"] in success_retcodes:
             ret["retcode"] = 0
@@ -875,6 +915,7 @@ def _run(
             + [stde in ret["stderr"] for stde in success_stderr]
         ):
             ret["retcode"] = 0
+
     else:
         formatted_timeout = ""
         if timeout:
@@ -984,7 +1025,7 @@ def _run_quiet(
     stdin=None,
     output_encoding=None,
     runas=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=False,
     env=None,
     template=None,
@@ -1033,7 +1074,7 @@ def _run_all_quiet(
     cwd=None,
     stdin=None,
     runas=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=False,
     env=None,
     template=None,
@@ -1089,7 +1130,7 @@ def run(
     stdin=None,
     runas=None,
     group=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -1164,6 +1205,9 @@ def run(
 
         .. versionadded:: 2016.3.0
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param dict env: Environment variables to be set prior to execution.
 
         .. note::
@@ -1178,6 +1222,9 @@ def run(
             When using environment variables on Window's, case-sensitivity
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
@@ -1238,6 +1285,9 @@ def run(
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
 
@@ -1246,6 +1296,9 @@ def run(
         the retcode and output is desired. Default is ``True``
 
         .. versionadded:: 3006.9
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param bool encoded_cmd: Specify if the supplied command is encoded.
         Only applies to shell 'powershell' and 'pwsh'.
@@ -1357,7 +1410,7 @@ def run(
 
         salt '*' cmd.run cmd='sed -e s/=/:/g'
     """
-    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
+    python_shell = _python_shell_default(python_shell, shell)
     stderr = subprocess.STDOUT if redirect_stderr else subprocess.PIPE
     ret = _run(
         cmd,
@@ -1485,6 +1538,9 @@ def shell(
     :param bool bg: If True, run command in background and do not await or
         deliver its results
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param dict env: Environment variables to be set prior to execution.
 
         .. note::
@@ -1499,6 +1555,9 @@ def shell(
             When using environment variables on Window's, case-sensitivity
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
@@ -1559,6 +1618,9 @@ def shell(
 
     :param int timeout: A timeout in seconds for the executed process to
         return.
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
@@ -1633,10 +1695,17 @@ def shell(
 
         salt '*' cmd.shell cmd='sed -e s/=/:/g'
     """
-    if "python_shell" in kwargs:
-        python_shell = kwargs.pop("python_shell")
+    if shell:
+        if salt.utils.platform.is_windows():
+            # shell invocations are handled manually
+            python_shell = False
+        else:
+            if "python_shell" in kwargs:
+                python_shell = kwargs.pop("python_shell")
+            else:
+                python_shell = True
     else:
-        python_shell = True
+        python_shell = False
     return run(
         cmd,
         cwd=cwd,
@@ -1675,7 +1744,7 @@ def run_stdout(
     stdin=None,
     runas=None,
     group=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -1758,6 +1827,9 @@ def run_stdout(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -1818,6 +1890,9 @@ def run_stdout(
     :param int timeout: A timeout in seconds for the executed process to
         return.
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
 
@@ -1870,7 +1945,7 @@ def run_stdout(
 
         salt '*' cmd.run_stdout "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     """
-    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
+    python_shell = _python_shell_default(python_shell, shell)
     ret = _run(
         cmd,
         runas=runas,
@@ -1909,7 +1984,7 @@ def run_stderr(
     stdin=None,
     runas=None,
     group=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -1992,6 +2067,9 @@ def run_stderr(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -2052,6 +2130,9 @@ def run_stderr(
     :param int timeout: A timeout in seconds for the executed process to
         return.
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
 
@@ -2104,7 +2185,7 @@ def run_stderr(
 
         salt '*' cmd.run_stderr "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     """
-    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
+    python_shell = _python_shell_default(python_shell, shell)
     ret = _run(
         cmd,
         runas=runas,
@@ -2143,7 +2224,7 @@ def run_all(
     stdin=None,
     runas=None,
     group=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -2228,6 +2309,9 @@ def run_all(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -2288,6 +2372,9 @@ def run_all(
     :param int timeout: A timeout in seconds for the executed process to
         return.
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
 
@@ -2322,6 +2409,9 @@ def run_all(
 
         .. versionadded:: 2015.8.2
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
 
@@ -2331,6 +2421,9 @@ def run_all(
         deliver its results
 
         .. versionadded:: 2016.3.6
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
@@ -2381,7 +2474,7 @@ def run_all(
 
         salt '*' cmd.run_all "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     """
-    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
+    python_shell = _python_shell_default(python_shell, shell)
     stderr = subprocess.STDOUT if redirect_stderr else subprocess.PIPE
     ret = _run(
         cmd,
@@ -2425,7 +2518,7 @@ def retcode(
     stdin=None,
     runas=None,
     group=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -2505,6 +2598,9 @@ def retcode(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -2549,6 +2645,9 @@ def retcode(
         skip logging the output if the command has a nonzero exit code.
 
     :param int timeout: A timeout in seconds for the executed process to return.
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
       more interactively to the console and the logs. This is experimental.
@@ -2606,8 +2705,7 @@ def retcode(
 
         salt '*' cmd.retcode "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     """
-    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
-
+    python_shell = _python_shell_default(python_shell, shell)
     ret = _run(
         cmd,
         runas=runas,
@@ -2644,7 +2742,7 @@ def _retcode_quiet(
     stdin=None,
     runas=None,
     group=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=False,
     env=None,
     clean_env=False,
@@ -2702,7 +2800,7 @@ def script(
     stdin=None,
     runas=None,
     group=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=None,
     env=None,
     template=None,
@@ -2792,6 +2890,9 @@ def script(
     :param bool bg: If True, run script in background and do not await or
         deliver its results
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param dict env: Environment variables to be set prior to execution.
 
         .. note::
@@ -2806,6 +2907,9 @@ def script(
             When using environment variables on Window's, case-sensitivity
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param str template: If this setting is applied then the named templating
         engine will be used to render the downloaded file. Currently jinja,
@@ -2855,6 +2959,9 @@ def script(
     :param int timeout: If the command has not terminated after timeout
         seconds, send the subprocess sigterm, and if sigterm is ignored, follow
         up with sigkill
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
@@ -2908,7 +3015,7 @@ def script(
             saltenv = __opts__.get("saltenv", "base")
         except NameError:
             saltenv = "base"
-    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
+    python_shell = _python_shell_default(python_shell, shell)
 
     def _cleanup_tempfile(path):
         try:
@@ -2939,9 +3046,17 @@ def script(
                 obj_name=cwd, principal=runas, permissions="full_control"
             )
 
-    path = salt.utils.files.mkstemp(
-        dir=cwd, suffix=os.path.splitext(salt.utils.url.split_env(source)[0])[1]
-    )
+    (_, ext) = os.path.splitext(salt.utils.url.split_env(source)[0])
+
+    if salt.utils.platform.is_windows() and not shell:
+        extension_map = {
+            ".bat": "cmd",
+            ".cmd": "cmd",
+            ".ps1": "powershell",
+        }
+        shell = extension_map.get(ext)
+
+    path = salt.utils.files.mkstemp(dir=cwd, suffix=ext)
 
     if template:
         if "pillarenv" in kwargs or "pillar" in kwargs:
@@ -2974,43 +3089,62 @@ def script(
                 "stderr": "",
                 "cache_error": True,
             }
-        shutil.copyfile(fn_, path)
+        try:
+            shutil.copyfile(fn_, path)
+        except FileNotFoundError:
+            _cleanup_tempfile(path)
+            # If a temp working directory was created (Windows), let's remove that
+            if win_cwd:
+                _cleanup_tempfile(cwd)
+            return {
+                "pid": 0,
+                "retcode": 1,
+                "stdout": "",
+                "stderr": "",
+                "cache_error": True,
+            }
     if not salt.utils.platform.is_windows():
         os.chmod(path, 320)
         os.chown(path, __salt__["file.user_to_uid"](runas), -1)
 
-    if salt.utils.platform.is_windows():
-        if shell.lower() not in ["powershell", "pwsh"]:
-            cmd_path = _cmd_quote(path, escape=False)
-        else:
-            cmd_path = path
+    if isinstance(args, (list, tuple)):
+        new_cmd = [path, *args] if args else [path]
     else:
-        cmd_path = _cmd_quote(path)
+        new_cmd = [path, str(args)] if args else [path]
 
-    ret = _run(
-        cmd_path + " " + str(args) if args else cmd_path,
-        cwd=cwd,
-        stdin=stdin,
-        output_encoding=output_encoding,
-        output_loglevel=output_loglevel,
-        log_callback=log_callback,
-        runas=runas,
-        group=group,
-        shell=shell,
-        python_shell=python_shell,
-        env=env,
-        umask=umask,
-        timeout=timeout,
-        reset_system_locale=reset_system_locale,
-        saltenv=saltenv,
-        use_vt=use_vt,
-        bg=bg,
-        password=password,
-        success_retcodes=success_retcodes,
-        success_stdout=success_stdout,
-        success_stderr=success_stderr,
-        **kwargs,
-    )
+    ret = {}
+    try:
+        ret = _run(
+            new_cmd,
+            cwd=cwd,
+            stdin=stdin,
+            output_encoding=output_encoding,
+            output_loglevel=output_loglevel,
+            log_callback=log_callback,
+            runas=runas,
+            group=group,
+            shell=shell,
+            python_shell=python_shell,
+            env=env,
+            umask=umask,
+            timeout=timeout,
+            reset_system_locale=reset_system_locale,
+            saltenv=saltenv,
+            use_vt=use_vt,
+            bg=bg,
+            password=password,
+            success_retcodes=success_retcodes,
+            success_stdout=success_stdout,
+            success_stderr=success_stderr,
+            **kwargs,
+        )
+    except (CommandExecutionError, SaltInvocationError) as exc:
+        log.error(
+            "cmd.script: Unable to run script '%s': %s",
+            new_cmd,
+            exc,
+            exc_info_on_loglevel=logging.DEBUG,
+        )
     _cleanup_tempfile(path)
     # If a temp working directory was created (Windows), let's remove that
     if win_cwd:
@@ -3028,7 +3162,7 @@ def script_retcode(
     stdin=None,
     runas=None,
     group=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=None,
     env=None,
     template="jinja",
@@ -3110,6 +3244,9 @@ def script_retcode(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param str template: If this setting is applied then the named templating
         engine will be used to render the downloaded file. Currently jinja,
         mako, and wempy are supported.
@@ -3149,6 +3286,9 @@ def script_retcode(
     :param int timeout: If the command has not terminated after timeout
         seconds, send the subprocess sigterm, and if sigterm is ignored, follow
         up with sigkill
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
@@ -3373,7 +3513,7 @@ def run_chroot(
     stdin=None,
     runas=None,
     group=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=True,
     binds=None,
     env=None,
@@ -4014,6 +4154,9 @@ def powershell(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -4067,6 +4210,9 @@ def powershell(
         .. versionadded:: 2018.3.0
 
     :param int timeout: A timeout in seconds for the executed process to return.
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
@@ -4129,7 +4275,7 @@ def powershell(
     if "python_shell" in kwargs:
         python_shell = kwargs.pop("python_shell")
     else:
-        python_shell = True
+        python_shell = False
 
     if isinstance(cmd, list):
         cmd = " ".join(cmd)
@@ -4147,7 +4293,7 @@ def powershell(
     # caught in a try/catch block. For example, the `Get-WmiObject` command will
     # often return a "Non Terminating Error". To fix this, make sure
     # `-ErrorAction Stop` is set in the powershell command
-    cmd = "try { " + cmd + ' } catch { "{}" }'
+    cmd = "try { " + cmd + " } catch { Write-Error $_ }"
 
     if encode_cmd:
         # Convert the cmd to UTF-16LE without a BOM and base64 encode.
@@ -4159,7 +4305,6 @@ def powershell(
         cmd = salt.utils.stringutils.to_str(cmd)
         encoded_cmd = True
     else:
-        cmd = f"{{ {cmd} }}"
         encoded_cmd = False
 
     # Retrieve the response, while overriding shell with 'powershell'
@@ -4356,6 +4501,9 @@ def powershell_all(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -4401,6 +4549,9 @@ def powershell_all(
 
     :param int timeout: A timeout in seconds for the executed process to
         return.
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
@@ -4494,7 +4645,7 @@ def powershell_all(
     if "python_shell" in kwargs:
         python_shell = kwargs.pop("python_shell")
     else:
-        python_shell = True
+        python_shell = False
 
     if isinstance(cmd, list):
         cmd = " ".join(cmd)
@@ -4606,7 +4757,7 @@ def run_bg(
     cwd=None,
     runas=None,
     group=None,
-    shell=DEFAULT_SHELL,
+    shell=None,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -4725,6 +4876,9 @@ def run_bg(
             matters, i.e. Window's uses `Path` as opposed to `PATH` for other
             systems.
 
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -4741,6 +4895,9 @@ def run_bg(
     :param str umask: The umask (in octal) to use when running the command.
 
     :param int timeout: A timeout in seconds for the executed process to return.
+
+        .. versionchanged:: 3007.7
+            Supported on Windows when running a command as an alternate user.
 
     .. warning::
 
@@ -4811,8 +4968,7 @@ def run_bg(
 
         salt '*' cmd.run_bg cmd='ls -lR / | sed -e s/=/:/g > /tmp/dontwait'
     """
-
-    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
+    python_shell = _python_shell_default(python_shell, shell)
     res = _run(
         cmd,
         stdin=None,

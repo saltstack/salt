@@ -34,8 +34,9 @@ cryptography==42.0.2 ; python_version >= "3.13"
     #   pyopenssl
 distro==1.9.0
     # via -r requirements/base.txt
-frozenlist==1.4.1
+frozenlist==1.7.0 ; python_version >= "3.11"
     # via
+    #   -r requirements/base.txt
     #   aiohttp
     #   aiosignal
 gitdb==4.0.11
@@ -136,7 +137,7 @@ smmap==5.0.1
     # via gitdb
 tempora==5.7.0
     # via portend
-timelib==0.3.0
+timelib==0.3.0 ; python_version >= "3.11"
     # via -r requirements/base.txt
 tornado==6.4.1
     # via -r requirements/base.txt
@@ -153,7 +154,9 @@ yarl==1.16.0
 zc.lockfile==3.0.post1
     # via cherrypy
 zipp==3.20.2
-    # via importlib-metadata
+    # via
+    #   -r requirements/base.txt
+    #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

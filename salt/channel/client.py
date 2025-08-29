@@ -321,10 +321,7 @@ class AsyncReqChannel:
         :param dict load: A load to send across the wire
         :param int timeout: The number of seconds on a response before failing
         """
-        ret = yield self.transport.send(
-            self._package_load(load),
-            timeout=timeout,
-        )
+        ret = yield self.transport.send(self._package_load(load), timeout=timeout)
 
         raise tornado.gen.Return(ret)
 
@@ -434,7 +431,11 @@ class AsyncPubChannel:
         self.opts = opts
         self.io_loop = io_loop
         self.auth = auth
-        self.token = self.auth.gen_token(b"salt")
+        try:
+            # This loads or generates the minion's public key.
+            self.token = self.auth.gen_token(b"salt")
+        except salt.exceptions.InvalidKeyError as exc:
+            raise salt.exceptions.SaltClientError(str(exc))
         self.transport = transport
         self._closing = False
         self._reconnected = False
