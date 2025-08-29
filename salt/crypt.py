@@ -1142,8 +1142,10 @@ class AsyncAuth:
                 # on master/minion for interacting with pki
                 self.cache.store("master_keys", "minion.pem", priv)
                 self.cache.store("master_keys", "minion.pub", pub)
+            else:
+                priv = self.cache.fetch("master_keys", "minion.pem")
 
-            self._private_key = PrivateKey(self.rsa_path, None)
+            self._private_key = PrivateKey(priv, None)
         return self._private_key
 
     @salt.utils.decorators.memoize
