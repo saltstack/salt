@@ -90,12 +90,12 @@ def latest_available():
     if not version:
         # Fallback: if regex fails, return the latest installed version
         return latest_installed()
-    
+
     # Extract version components: major.minor, patch, build/suffix
-    major_minor = version.group(1)    # e.g., "6.1" or "6.8"
-    patch = version.group(2)          # e.g., "147" or "0"
-    suffix = version.group(3)         # e.g., "1" or "45-generic"
-    
+    major_minor = version.group(1)  # e.g., "6.1" or "6.8"
+    patch = version.group(2)  # e.g., "147" or "0"
+    suffix = version.group(3)  # e.g., "1" or "45-generic"
+
     # For simple Debian format like "6.1.147-1", suffix is just build number
     # For Ubuntu format like "6.8.0-45-generic", extract build number from suffix
     if re.match(r"^\d+$", suffix):
