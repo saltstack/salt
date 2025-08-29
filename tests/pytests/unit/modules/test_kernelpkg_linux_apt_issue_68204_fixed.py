@@ -42,11 +42,11 @@ def test_issue_68204_debian_bookworm_format():
     # Mock pkg.latest_version to return Debian Bookworm format
     mock_latest_version = MagicMock(return_value="6.1.147-1")
     mock_latest_installed = MagicMock(return_value="6.1.0-38-cloud-amd64")
-    
+
     with patch.dict(kernelpkg.__salt__, {"pkg.latest_version": mock_latest_version}):
         with patch.object(kernelpkg, "latest_installed", mock_latest_installed):
             result = kernelpkg.latest_available()
-            
+
             # Should not crash and should return a properly formatted version
             assert isinstance(result, str)
             assert "6.1.147" in result
@@ -62,13 +62,15 @@ def test_issue_68204_ubuntu_noble_format():
     # Mock pkg.latest_version to return Ubuntu Noble format
     mock_latest_version = MagicMock(return_value="6.8.0-45-generic")
     mock_latest_installed = MagicMock(return_value="6.1.0-38-generic")
-    
+
     # Mock kernel type to return "generic" for this test
     with patch.object(kernelpkg, "_kernel_type", return_value="generic"):
-        with patch.dict(kernelpkg.__salt__, {"pkg.latest_version": mock_latest_version}):
+        with patch.dict(
+            kernelpkg.__salt__, {"pkg.latest_version": mock_latest_version}
+        ):
             with patch.object(kernelpkg, "latest_installed", mock_latest_installed):
                 result = kernelpkg.latest_available()
-                
+
                 # Should not crash and should return a properly formatted version
                 assert isinstance(result, str)
                 assert "6.8.0" in result
@@ -83,12 +85,14 @@ def test_issue_68204_debian_bullseye_format():
     """
     mock_latest_version = MagicMock(return_value="5.10.0-18-amd64")
     mock_latest_installed = MagicMock(return_value="5.10.0-17-amd64")
-    
+
     with patch.object(kernelpkg, "_kernel_type", return_value="amd64"):
-        with patch.dict(kernelpkg.__salt__, {"pkg.latest_version": mock_latest_version}):
+        with patch.dict(
+            kernelpkg.__salt__, {"pkg.latest_version": mock_latest_version}
+        ):
             with patch.object(kernelpkg, "latest_installed", mock_latest_installed):
                 result = kernelpkg.latest_available()
-                
+
                 assert isinstance(result, str)
                 assert "5.10.0" in result
                 assert "18" in result
@@ -102,12 +106,14 @@ def test_issue_68204_ubuntu_jammy_format():
     """
     mock_latest_version = MagicMock(return_value="5.15.0-91-generic")
     mock_latest_installed = MagicMock(return_value="5.15.0-90-generic")
-    
+
     with patch.object(kernelpkg, "_kernel_type", return_value="generic"):
-        with patch.dict(kernelpkg.__salt__, {"pkg.latest_version": mock_latest_version}):
+        with patch.dict(
+            kernelpkg.__salt__, {"pkg.latest_version": mock_latest_version}
+        ):
             with patch.object(kernelpkg, "latest_installed", mock_latest_installed):
                 result = kernelpkg.latest_available()
-                
+
                 assert isinstance(result, str)
                 assert "5.15.0" in result
                 assert "91" in result
@@ -121,11 +127,11 @@ def test_issue_68204_debian_security_update_format():
     """
     mock_latest_version = MagicMock(return_value="6.1.147-1+deb12u1")
     mock_latest_installed = MagicMock(return_value="6.1.0-38-cloud-amd64")
-    
+
     with patch.dict(kernelpkg.__salt__, {"pkg.latest_version": mock_latest_version}):
         with patch.object(kernelpkg, "latest_installed", mock_latest_installed):
             result = kernelpkg.latest_available()
-            
+
             assert isinstance(result, str)
             assert "6.1.147" in result
             # The security update suffix should be handled gracefully
@@ -138,12 +144,14 @@ def test_issue_68204_ubuntu_complex_format():
     """
     mock_latest_version = MagicMock(return_value="5.15.0-91.101-generic")
     mock_latest_installed = MagicMock(return_value="5.15.0-90-generic")
-    
+
     with patch.object(kernelpkg, "_kernel_type", return_value="generic"):
-        with patch.dict(kernelpkg.__salt__, {"pkg.latest_version": mock_latest_version}):
+        with patch.dict(
+            kernelpkg.__salt__, {"pkg.latest_version": mock_latest_version}
+        ):
             with patch.object(kernelpkg, "latest_installed", mock_latest_installed):
                 result = kernelpkg.latest_available()
-                
+
                 assert isinstance(result, str)
                 assert "5.15.0" in result
                 assert "91" in result
@@ -157,12 +165,14 @@ def test_issue_68204_backport_format():
     """
     mock_latest_version = MagicMock(return_value="6.1.147-1~bpo11+1")
     mock_latest_installed = MagicMock(return_value="5.10.0-18-amd64")
-    
+
     with patch.object(kernelpkg, "_kernel_type", return_value="amd64"):
-        with patch.dict(kernelpkg.__salt__, {"pkg.latest_version": mock_latest_version}):
+        with patch.dict(
+            kernelpkg.__salt__, {"pkg.latest_version": mock_latest_version}
+        ):
             with patch.object(kernelpkg, "latest_installed", mock_latest_installed):
                 result = kernelpkg.latest_available()
-                
+
                 assert isinstance(result, str)
                 assert "6.1.147" in result
                 # Backport suffix should be handled gracefully
@@ -175,11 +185,11 @@ def test_issue_68204_empty_result_fallback():
     """
     mock_latest_version = MagicMock(return_value="")
     mock_latest_installed = MagicMock(return_value="6.1.0-38-cloud-amd64")
-    
+
     with patch.dict(kernelpkg.__salt__, {"pkg.latest_version": mock_latest_version}):
         with patch.object(kernelpkg, "latest_installed", mock_latest_installed):
             result = kernelpkg.latest_available()
-            
+
             assert result == "6.1.0-38-cloud-amd64"
 
 
@@ -190,11 +200,11 @@ def test_issue_68204_malformed_version_fallback():
     """
     mock_latest_version = MagicMock(return_value="not-a-version-at-all")
     mock_latest_installed = MagicMock(return_value="6.1.0-38-cloud-amd64")
-    
+
     with patch.dict(kernelpkg.__salt__, {"pkg.latest_version": mock_latest_version}):
         with patch.object(kernelpkg, "latest_installed", mock_latest_installed):
             result = kernelpkg.latest_available()
-            
+
             assert result == "6.1.0-38-cloud-amd64"
 
 
@@ -206,15 +216,17 @@ def test_issue_68204_original_error_reproduction():
     """
     # These are the exact version formats that caused the original issue
     failing_versions = [
-        "6.1.147-1",      # Debian Bullseye/Bookworm
+        "6.1.147-1",  # Debian Bullseye/Bookworm
         "6.8.0-45-generic",  # Ubuntu Noble
     ]
-    
+
     for version in failing_versions:
         mock_latest_version = MagicMock(return_value=version)
         mock_latest_installed = MagicMock(return_value="6.1.0-38-cloud-amd64")
-        
-        with patch.dict(kernelpkg.__salt__, {"pkg.latest_version": mock_latest_version}):
+
+        with patch.dict(
+            kernelpkg.__salt__, {"pkg.latest_version": mock_latest_version}
+        ):
             with patch.object(kernelpkg, "latest_installed", mock_latest_installed):
                 # This line would have caused AttributeError with the old regex
                 # Now it should work without any exception
@@ -224,21 +236,26 @@ def test_issue_68204_original_error_reproduction():
                     assert isinstance(result, str)
                 except AttributeError as e:
                     if "'NoneType' object has no attribute 'group'" in str(e):
-                        pytest.fail(f"Original bug still present for version {version}: {e}")
+                        pytest.fail(
+                            f"Original bug still present for version {version}: {e}"
+                        )
                     else:
                         # Some other AttributeError, re-raise
                         raise
 
 
 @pytest.mark.skipif(not HAS_MODULES, reason="Salt modules could not be loaded")
-@pytest.mark.parametrize("version_string,description", [
-    ("6.1.147-1", "Debian 12 Bookworm"),
-    ("6.8.0-45-generic", "Ubuntu 24.04 Noble"),
-    ("6.1.0-18-amd64", "Debian 11 Bullseye"),
-    ("6.2.0-37-generic", "Ubuntu 23.04 Lunar"),
-    ("5.15.0-91-generic", "Ubuntu 22.04 Jammy"),
-    ("6.1.147-1+deb12u1", "Debian security update"),
-])
+@pytest.mark.parametrize(
+    "version_string,description",
+    [
+        ("6.1.147-1", "Debian 12 Bookworm"),
+        ("6.8.0-45-generic", "Ubuntu 24.04 Noble"),
+        ("6.1.0-18-amd64", "Debian 11 Bullseye"),
+        ("6.2.0-37-generic", "Ubuntu 23.04 Lunar"),
+        ("5.15.0-91-generic", "Ubuntu 22.04 Jammy"),
+        ("6.1.147-1+deb12u1", "Debian security update"),
+    ],
+)
 def test_issue_68204_comprehensive_format_validation(version_string, description):
     """
     Test - Comprehensive validation that all reported problematic formats now work
@@ -246,14 +263,18 @@ def test_issue_68204_comprehensive_format_validation(version_string, description
     """
     mock_latest_version = MagicMock(return_value=version_string)
     mock_latest_installed = MagicMock(return_value="6.1.0-38-cloud-amd64")
-    
+
     with patch.dict(kernelpkg.__salt__, {"pkg.latest_version": mock_latest_version}):
         with patch.object(kernelpkg, "latest_installed", mock_latest_installed):
             # This should NOT raise an AttributeError anymore
             result = kernelpkg.latest_available()
-            
+
             # Validate that we get a string result (no crash)
-            assert isinstance(result, str), f"Failed for {description} format: {version_string}"
-            
+            assert isinstance(
+                result, str
+            ), f"Failed for {description} format: {version_string}"
+
             # Validate that result is not empty
-            assert len(result) > 0, f"Empty result for {description} format: {version_string}"
+            assert (
+                len(result) > 0
+            ), f"Empty result for {description} format: {version_string}"
