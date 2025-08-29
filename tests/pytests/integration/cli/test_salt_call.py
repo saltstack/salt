@@ -99,9 +99,7 @@ def test_local_sls_call_multiple_file_roots(salt_master, salt_call_cli):
     """
     with salt_master.state_tree.base.temp_file(
         "saltcalllocal1.sls", sls_contents1
-    ), salt_master.state_tree.prod.temp_file(
-        "saltcalllocal2.sls", sls_contents2
-    ):
+    ), salt_master.state_tree.prod.temp_file("saltcalllocal2.sls", sls_contents2):
         ret = salt_call_cli.run(
             "--local",
             "--file-root",
@@ -236,7 +234,7 @@ def configured(name, setting="default2"):
     (states_dir1 / "teststate1.py").write_text(teststate1_content)
     (states_dir2 / "teststate2.py").write_text(teststate2_content)
 
-    sls_contents = '''
+    sls_contents = """
 test_from_states_dir1:
   teststate1.managed:
     - name: /tmp/test1
@@ -246,16 +244,19 @@ test_from_states_dir2:
   teststate2.configured:
     - name: /tmp/test2
     - setting: hello from dir2
-'''
+"""
 
     with salt_master.state_tree.base.temp_file("teststates.sls", sls_contents):
         # First test: verify both state modules are available
         ret = salt_call_cli.run(
             "--local",
-            "--states-dir", str(states_dir1),
-            "--states-dir", str(states_dir2),
-            "--file-root", str(salt_master.state_tree.base.paths[0]),
-            "sys.list_state_modules"
+            "--states-dir",
+            str(states_dir1),
+            "--states-dir",
+            str(states_dir2),
+            "--file-root",
+            str(salt_master.state_tree.base.paths[0]),
+            "sys.list_state_modules",
         )
         assert ret.returncode == 0
         assert "teststate1" in ret.data
@@ -264,11 +265,14 @@ test_from_states_dir2:
         # Second test: run the SLS that uses both custom states
         ret = salt_call_cli.run(
             "--local",
-            "--states-dir", str(states_dir1),
-            "--states-dir", str(states_dir2),
-            "--file-root", str(salt_master.state_tree.base.paths[0]),
+            "--states-dir",
+            str(states_dir1),
+            "--states-dir",
+            str(states_dir2),
+            "--file-root",
+            str(salt_master.state_tree.base.paths[0]),
             "state.sls",
-            "teststates"
+            "teststates",
         )
         assert ret.returncode == 0
 
