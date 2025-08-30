@@ -793,8 +793,17 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     spec = file_finder.find_spec(mod_namespace)
                     if spec is None:
                         raise ImportError()
-                    mod = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(mod)
+                    if mod_namespace in sys.modules:
+                        mod = sys.modules[mod_namespace]
+                        _update_module_attrs(mod, spec)
+                    else:
+                        mod = importlib.util.module_from_spec(spec)
+                    # We need to execute the module in this loader's context in case
+                    # we're reloading an already initialized module with NamedLoaderContext instances.
+                    # Accessing one of the Salt-specific dunders during initialization would throw a NameError usually,
+                    # but during reload without an active loader, NamedLoaderContexts resolve to None, which unexpectedly
+                    # raises a TypeError on access instead of a NameError.
+                    self.run(spec.loader.exec_module, mod)
                     # pylint: enable=no-member
                     sys.modules[mod_namespace] = mod
                     # reload all submodules if necessary
@@ -808,8 +817,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     )
                     if spec is None:
                         raise ImportError()
-                    mod = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(mod)
+                    if mod_namespace in sys.modules:
+                        mod = sys.modules[mod_namespace]
+                        _update_module_attrs(mod, spec)
+                    else:
+                        mod = importlib.util.module_from_spec(spec)
+                    self.run(spec.loader.exec_module, mod)
                     # pylint: enable=no-member
                     sys.modules[mod_namespace] = mod
         except OSError:
@@ -1328,3 +1341,31 @@ def global_injector_decorator(inject_globals):
         return wrapper
 
     return inner_decorator
+
+
+def _update_module_attrs(mod, spec):
+    """
+    The Salt loader used to rely on the deprecated load_module method, which
+    ensured module instances in sys.modules were updated instead of replaced when loading
+    a module repeatedly. After the switch to exec_module, we need to do it ourselves since
+    this assumption is part of Salt's code (see issue #68281).
+
+    This function does the same as importlib's _init_module_attrs
+    with override=True, which is what load_module relied on.
+    """
+    upd = {
+        "__name__": spec.name,
+        "__package__": spec.parent,
+        "__spec__": spec,
+        "__loader__": spec.loader,
+    }
+    if spec.submodule_search_locations is not None:
+        upd["__path__"] = spec.submodule_search_locations
+    if spec.has_location:
+        upd["__file__"] = spec.origin
+        upd["__cached__"] = spec.cached
+    for param, override in upd.items():
+        try:
+            setattr(mod, param, override)
+        except AttributeError:
+            pass
