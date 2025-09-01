@@ -2998,7 +2998,7 @@ def script(
     if isinstance(args, (list, tuple)):
         new_cmd = [path, *args] if args else [path]
     else:
-        new_cmd = [path, str(args)] if args else [path]
+        new_cmd = [path, *salt.utils.args.shlex_split(args)] if args else [path]
 
     ret = {}
     try:

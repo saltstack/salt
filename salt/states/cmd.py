@@ -325,6 +325,7 @@ def wait(
     root=None,
     runas=None,
     shell=None,
+    python_shell=True,
     env=(),
     stateful=False,
     output_loglevel="debug",
@@ -476,6 +477,7 @@ def wait_script(
     cwd=None,
     runas=None,
     shell=None,
+    python_shell=None,
     env=None,
     stateful=False,
     use_vt=False,
@@ -614,10 +616,12 @@ def wait_script(
 
 def run(
     name,
+    args=None,
     cwd=None,
     root=None,
     runas=None,
     shell=None,
+    python_shell=True,
     env=None,
     prepend_path=None,
     stateful=False,
@@ -834,7 +838,8 @@ def run(
             "root": root,
             "runas": runas,
             "use_vt": use_vt,
-            "shell": shell or __grains__["shell"],
+            "shell": shell,
+            "python_shell": python_shell,
             "env": env,
             "prepend_path": prepend_path,
             "output_loglevel": output_loglevel,
@@ -855,12 +860,24 @@ def run(
         ret["comment"] = f'Desired working directory "{cwd}" is not available'
         return ret
 
+    if shell is None and python_shell is not True:
+        # The program is executed directly. Use a list to clearly separate the
+        # program from the arguments. String splitting may be unreliable
+        if isinstance(args, (list, tuple)):
+            cmd = [name, *args] if args else [name]
+        else:
+            cmd = [name, *salt.utils.args.shlex_split(args)] if args else [name]
+    else:
+        # Execute a shell command. Always pass the command as a string
+        if isinstance(args, (list, tuple)):
+            cmd = " ".join([name, *args]) if args else name
+        else:
+            cmd = " ".join([name, args]) if args else name
+
     # Wow, we passed the test, run this sucker!
     try:
         run_cmd = "cmd.run_all" if not root else "cmd.run_chroot"
-        cmd_all = __salt__[run_cmd](
-            cmd=name, timeout=timeout, python_shell=True, **cmd_kwargs
-        )
+        cmd_all = __salt__[run_cmd](cmd=cmd, timeout=timeout, **cmd_kwargs)
     except Exception as err:  # pylint: disable=broad-except
         ret["comment"] = str(err)
         return ret
@@ -893,6 +910,7 @@ def script(
     runas=None,
     password=None,
     shell=None,
+    python_shell=None,
     env=None,
     stateful=False,
     timeout=None,
@@ -1122,7 +1140,8 @@ def script(
         {
             "runas": runas,
             "password": password,
-            "shell": shell or __grains__["shell"],
+            "shell": shell,
+            "python_shell": python_shell,
             "env": env,
             "cwd": cwd,
             "template": template,
@@ -1141,7 +1160,7 @@ def script(
     run_check_cmd_kwargs = {
         "cwd": cwd,
         "runas": runas,
-        "shell": shell or __grains__["shell"],
+        "shell": shell,
     }
 
     # Change the source to be the name arg if it is not specified
@@ -1163,7 +1182,7 @@ def script(
 
     # Wow, we passed the test, run this sucker!
     try:
-        cmd_all = __salt__["cmd.script"](source, python_shell=True, **cmd_kwargs)
+        cmd_all = __salt__["cmd.script"](source, **cmd_kwargs)
     except (CommandExecutionError, SaltRenderError, OSError) as err:
         ret["comment"] = str(err)
         return ret
@@ -1226,7 +1245,7 @@ def call(
     cmd_kwargs = {
         "cwd": kwargs.get("cwd"),
         "runas": kwargs.get("user"),
-        "shell": kwargs.get("shell") or __grains__["shell"],
+        "shell": kwargs.get("shell"),
         "env": kwargs.get("env"),
         "use_vt": use_vt,
         "output_loglevel": output_loglevel,
