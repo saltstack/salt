@@ -362,6 +362,12 @@ def wait(
     shell
         The shell to use for execution, defaults to /bin/sh
 
+    python_shell
+        Use the shell as the program to execute. Set to False to disable shell
+        features, such as pipes or redirection
+
+        .. versionadded:: 3006.16
+
     env
         A list of environment variables to be set prior to execution.
         Example:
@@ -517,6 +523,12 @@ def wait_script(
     shell
         The shell to use for execution, defaults to the shell grain
 
+    python_shell
+        Use the shell as the program to execute. Set to True to use shell features,
+        such as pipes or redirection
+
+        .. versionadded:: 3006.16
+
     env
         A list of environment variables to be set prior to execution.
         Example:
@@ -651,8 +663,19 @@ def run(
        refer to the :ref:`cmdmod documentation <cmdmod-module>`.
 
     name
-        The command to execute, remember that the command will execute with the
-        path and permissions of the salt-minion.
+        The command or program to execute. When running a program, consider
+        disabling shell features with ``python_shell`` and using ``args`` if required.
+        Otherwise character escaping and quoting needs to be handled manually.
+        Remember that the command will execute with the path and permissions of the
+        salt-minion.
+
+    args
+        List or string of command line args to pass to the executable. A list should
+        be preferred to avoid issues with quoting and special characters. To pass a
+        string containing spaces in YAML, you will need to doubly-quote it: "arg1
+        'arg two' arg3"
+
+        .. versionadded:: 3006.16
 
     cwd
         The current working directory to execute the command in, defaults to
@@ -667,6 +690,12 @@ def run(
 
     shell
         The shell to use for execution, defaults to the shell grain
+
+    python_shell
+        Use the shell as the program to execute. Set to False to disable shell
+        features, such as pipes or redirection
+
+        .. versionadded:: 3006.16
 
     env
         A list of environment variables to be set prior to execution.
@@ -941,6 +970,16 @@ def script(
         Either "cmd arg1 arg2 arg3..." (cmd is not used) or a source
         "salt://...".
 
+    args
+        List or string of command line args to pass to the executable. A list should
+        be preferred to avoid issues with quoting and special characters. To pass a
+        string containing spaces in YAML, you will need to doubly-quote it: "arg1
+        'arg two' arg3"
+
+        .. versionchanged:: 3006.15
+
+            Support a list of command line args.
+
     cwd
         The current working directory to execute the command in, defaults to
         /root
@@ -975,7 +1014,18 @@ def script(
         parameter will be ignored on non-Windows platforms.
 
     shell
-        The shell to use for execution. The default is set in grains['shell']
+        The shell to use for execution. Defaults to the shell grain if python_shell
+        is True. Examples: /bin/sh, cmd.exe
+
+        .. versionchanged:: 3006.16
+
+            Unset by default to run programs without using a shell
+
+    python_shell
+        Use the shell as the program to execute. Set to True to use shell features,
+        such as pipes or redirection
+
+        .. versionadded:: 3006.16
 
     env
         A list of environment variables to be set prior to execution.
@@ -1032,12 +1082,6 @@ def script(
     timeout
         If the command has not terminated after timeout seconds, send the
         subprocess sigterm, and if sigterm is ignored, follow up with sigkill
-
-    args
-        String of command line args to pass to the script.  Only used if no
-        args are specified as part of the `name` argument. To pass a string
-        containing spaces in YAML, you will need to doubly-quote it:  "arg1
-        'arg two' arg3"
 
     creates
         Only run if the file specified by ``creates`` do not exist. If you

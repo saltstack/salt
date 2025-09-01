@@ -2729,17 +2729,23 @@ def script(
         located on the master in the directory named spam, and is called eggs,
         the source string is salt://spam/eggs
 
-    :param str args: String of command line args to pass to the script. Only
-        used if no args are specified as part of the `name` argument. To pass a
-        string containing spaces in YAML, you will need to doubly-quote it.
-        Additionally, if you need to pass falsey values (e.g., "0", "", "False"),
-        you should doubly-quote them to ensure they are correctly interpreted:
+    :param list|str args: List or string of command line args to pass to the script.
+        A list should be preferred to avoid issues with quoting and special
+        characters. To pass a string containing spaces in YAML, you will need to
+        doubly-quote it. Additionally, if you need to pass falsey values
+        (e.g., "0", "", "False"), you should doubly-quote them to ensure they are
+        correctly interpreted:
 
         .. code-block:: bash
 
+            salt myminion cmd.script salt://foo.sh "['arg1','arg two','arg3']"
             salt myminion cmd.script salt://foo.sh "arg1 'arg two' arg3"
             salt myminion cmd.script salt://foo.sh "''0''"
             salt myminion cmd.script salt://foo.sh "''False''"
+
+        .. versionchanged:: 3006.15
+
+            Support a list of command line args.
 
     :param str cwd: The directory from which to execute the command. Defaults
         to the directory returned from Python's tempfile.mkstemp.
