@@ -1145,7 +1145,7 @@ class AsyncAuth:
             else:
                 priv = self.cache.fetch("master_keys", "minion.pem")
 
-            self._private_key = PrivateKey(priv, None)
+            self._private_key = PrivateKey.from_str(priv, None)
         return self._private_key
 
     @salt.utils.decorators.memoize
