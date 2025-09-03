@@ -235,7 +235,12 @@ class PrivateKey(BaseKey):
             password = passphrase.encode()
         else:
             password = None
-        self.key = serialization.load_pem_private_key(key_bytes, password=password)
+        try:
+            self.key = serialization.load_pem_private_key(key_bytes, password=password)
+        except ValueError:
+            raise InvalidKeyError("Encountered bad RSA private key")
+        except cryptography.exceptions.UnsupportedAlgorithm:
+            raise InvalidKeyError("Unsupported key algorithm")
 
     def encrypt(self, data):
         pem = self.key.private_bytes(
