@@ -1,4 +1,8 @@
+import json
 import logging
+from textwrap import dedent
+
+import pytest
 
 log = logging.getLogger(__name__)
 
@@ -77,3 +81,56 @@ def test_failing_sls_compound(salt_master, salt_minion, salt_cli, caplog):
         )
         for message in caplog.messages:
             assert "Event iteration failed with" not in message
+
+
+@pytest.fixture
+def _foobar_state(tmp_path, salt_master, salt_call_cli):
+    chaos_mod = dedent(
+        f"""
+        def foobar_d(name):
+            __salt__["state.single"]("file.managed", {json.dumps(str(tmp_path / 'foobar'))}, replace=False, test=True)
+            return {{"name": name, "result": True, "comment": "foobar_d file mod", "changes": {{}}}}
+        """
+    )
+    with salt_master.state_tree.base.temp_file("_states/issue_68281.py", chaos_mod):
+        ret = salt_call_cli.run("saltutil.sync_states")
+        assert ret.returncode == 0
+        assert "states.issue_68281" in ret.data
+        yield
+
+    ret = salt_call_cli.run("saltutil.sync_states")
+    assert ret.returncode == 0
+
+
+@pytest.mark.usefixtures("_foobar_state")
+def test_issue_68281(tmp_path, salt_master, salt_call_cli):
+    """
+    Ensure instantiating another state module loader during
+    a state run does not confuse the loader/break test mode handling.
+    """
+    sls = f"""
+    file:
+      file.managed:
+        - name: {json.dumps(str(tmp_path / 'ca.crt'))}
+        - contents: dummy
+
+    foobar-file:
+      issue_68281.foobar_d
+
+    kube-api-service:
+      test.nop:
+        - prereq:
+          - file: test-download
+
+    test-download:
+      file.managed:
+        - name: {json.dumps(str(tmp_path / 'foo'))}
+        - source: salt://cheese
+        - makedirs: true
+        - replace: true
+        - mode: '0755'
+    """
+    with salt_master.state_tree.base.temp_file("test_68281.sls", sls):
+        ret = salt_call_cli.run("state.apply", "test_68281")
+        assert ret.returncode == 0
+        assert ret.data[f"file_|-test-download_|-{tmp_path}/foo_|-managed"]["changes"]

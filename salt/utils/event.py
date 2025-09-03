@@ -410,11 +410,10 @@ class SaltEvent:
         """
         Close the pusher connection (if established)
         """
-        if not self.cpush:
-            return
-        self.pusher.close()
-        self.pusher = None
-        self.cpush = False
+        if self.pusher:
+            self.pusher.close()
+            self.pusher = None
+            self.cpush = False
 
     @classmethod
     def unpack(cls, raw):

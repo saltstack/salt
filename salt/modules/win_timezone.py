@@ -270,10 +270,11 @@ def set_zone(timezone):
     Sets the timezone using the tzutil.
 
     Args:
-        timezone (str): A valid timezone
+
+        timezone (str): A valid timezone.
 
     Returns:
-        bool: ``True`` if successful, otherwise ``False``
+        bool: ``True`` if successful, otherwise ``False``.
 
     Raises:
         CommandExecutionError: If invalid timezone is passed
@@ -313,12 +314,13 @@ def zone_compare(timezone):
     running state checks.
 
     Args:
+
         timezone (str):
             The timezone to compare. This can be in Windows or Unix format. Can
-            be any of the values returned by the ``timezone.list`` function
+            be any of the values returned by the ``timezone.list`` function.
 
     Returns:
-        bool: ``True`` if they match, otherwise ``False``
+        bool: ``True`` if they match, otherwise ``False``.
 
     Example:
 
@@ -349,12 +351,15 @@ def list(unix_style=True):
     .. versionadded:: 2018.3.3
 
     Args:
-        unix_style (bool):
+
+        unix_style (:obj:`bool`, optional):
             ``True`` returns Unix-style timezones. ``False`` returns
-            Windows-style timezones. Default is ``True``
+            Windows-style timezones. Default is ``True``.
+
+            Default is ``True``.
 
     Returns:
-        list: A list of supported timezones
+        list: A list of supported timezones.
 
     CLI Example:
 
@@ -378,7 +383,7 @@ def get_hwclock():
 
     .. note::
         The hardware clock is always local time on Windows so this will always
-        return "localtime"
+        return "localtime".
 
     CLI Example:
 
