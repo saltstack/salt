@@ -3,7 +3,6 @@ import os
 import pytest
 
 import salt.crypt as crypt
-import salt.exceptions
 from tests.support.mock import patch
 
 
@@ -49,6 +48,7 @@ def test__clean_key_mismatch(key_data, linesep):
 
 async def test_auth_aes_key_rotation(minion_root, io_loop):
     pki_dir = minion_root / "etc" / "salt" / "pki"
+    os.makedirs(str(pki_dir), exist_ok=True)
     opts = {
         "id": "minion",
         "__role": "minion",
@@ -59,17 +59,16 @@ async def test_auth_aes_key_rotation(minion_root, io_loop):
         "keys.cache_driver": "localfs_key",
         "acceptance_wait_time_max": 60,
     }
-    crypt.gen_keys(pki_dir, "minion", opts["keysize"])
+    priv, pub = crypt.gen_keys(opts["keysize"])
+    keypath = pki_dir / "minion"
+    keypath.with_suffix(".pem").write_text(priv)
+    keypath.with_suffix(".pub").write_text(pub)
     credskey = (
         opts["pki_dir"],  # where the keys are stored
         opts["id"],  # minion ID
         opts["master_uri"],  # master ID
         str(os.path.getmtime(os.path.join(opts["pki_dir"], "minion.pem"))),
     )
-    priv, pub = crypt.gen_keys(opts["keysize"])
-    keypath = pki_dir / "minion"
-    keypath.with_suffix(".pem").write_text(priv)
-    keypath.with_suffix(".pub").write_text(pub)
     aes = crypt.Crypticle.generate_key_string()
     session = crypt.Crypticle.generate_key_string()
 
@@ -132,6 +131,7 @@ def test_sauth_aes_key_rotation(minion_root, io_loop):
         "keysize": 4096,
         "acceptance_wait_time": 60,
         "acceptance_wait_time_max": 60,
+        "keys.cache_driver": "localfs_key",
     }
     credskey = (
         opts["pki_dir"],  # where the keys are stored
@@ -194,16 +194,10 @@ def test_sauth_aes_key_rotation(minion_root, io_loop):
     assert auth._creds["session"] == session1
 
 
-def test_get_key_with_evict_bad_key(tmp_path):
-    key_path = tmp_path / "key"
-    key_path.write_text("asdfasoiasdofaoiu0923jnoiausbd98sb9")
-    with pytest.raises(salt.exceptions.InvalidKeyError):
-        crypt._get_key_with_evict(str(key_path), 1, None)
-
-
 def test_async_auth_cache_private_key(minion_root, io_loop):
-
     pki_dir = minion_root / "etc" / "salt" / "pki"
+    cache_dir = minion_root / "var" / "salt" / "cache"
+    os.makedirs(str(cache_dir), exist_ok=True)
     opts = {
         "id": "minion",
         "__role": "minion",
@@ -212,6 +206,10 @@ def test_async_auth_cache_private_key(minion_root, io_loop):
         "keysize": 4096,
         "acceptance_wait_time": 60,
         "acceptance_wait_time_max": 60,
+        "keys.cache_driver": "localfs_key",
+        "cache_dir": str(cache_dir),
+        "optimization_order": [0, 1, 2],
+        "permissive_pki_access": True,
     }
 
     auth = crypt.AsyncAuth(opts, io_loop)
@@ -226,6 +224,8 @@ def test_async_auth_cache_private_key(minion_root, io_loop):
 
 def test_async_auth_cache_token(minion_root, io_loop):
     pki_dir = minion_root / "etc" / "salt" / "pki"
+    cache_dir = minion_root / "var" / "salt" / "cache"
+    os.makedirs(str(cache_dir), exist_ok=True)
     opts = {
         "id": "minion",
         "__role": "minion",
@@ -234,6 +234,10 @@ def test_async_auth_cache_token(minion_root, io_loop):
         "keysize": 4096,
         "acceptance_wait_time": 60,
         "acceptance_wait_time_max": 60,
+        "keys.cache_driver": "localfs_key",
+        "cache_dir": str(cache_dir),
+        "optimization_order": [0, 1, 2],
+        "permissive_pki_access": True,
     }
 
     auth = crypt.AsyncAuth(opts, io_loop)

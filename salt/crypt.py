@@ -749,7 +749,7 @@ class AsyncAuth:
         """
         self.opts = opts
         self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
-        self.cache = salt.cache.Cache(opts, driver=self.opts["keys.cache_driver"])
+        self.cache = salt.cache.Cache(opts, driver=opts["keys.cache_driver"])
         self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
         self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
         self._private_key = None
@@ -1524,6 +1524,7 @@ class SAuth(AsyncAuth):
         :rtype: Auth
         """
         self.opts = opts
+        self.cache = salt.cache.Cache(opts, driver=opts["keys.cache_driver"])
         self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
         self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
         self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
