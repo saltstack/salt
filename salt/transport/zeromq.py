@@ -2,7 +2,6 @@
 Zeromq transport classes
 """
 
-import collections
 import errno
 import hashlib
 import logging
@@ -21,6 +20,7 @@ import salt.ext.tornado.concurrent
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.ext.tornado.locks
+import salt.ext.tornado.queues
 import salt.payload
 import salt.transport.base
 import salt.utils.files
@@ -531,7 +531,7 @@ class AsyncReqMessageClient:
 
         self._closing = False
         self._send_recv_running = False
-        self._queue = collections.deque()
+        self._queue = salt.ext.tornado.queues.Queue()
 
     def connect(self):
         if self.context is None:
@@ -584,7 +584,7 @@ class AsyncReqMessageClient:
 
         message = salt.payload.dumps(message)
 
-        self._queue.append((future, message))
+        self._queue.put_nowait((future, message))
 
         if callback is not None:
 
@@ -611,7 +611,7 @@ class AsyncReqMessageClient:
             future.set_exception(SaltReqTimeoutError("Message timed out"))
 
     @salt.ext.tornado.gen.coroutine
-    def _send_recv(self):
+    def _send_recv(self, _TimeoutError=salt.ext.tornado.gen.TimeoutError):
         """
         Send and recv updating the future if we get a response. After sending
         the the REQ socket we poll the socket for a response. If the provided
@@ -621,11 +621,17 @@ class AsyncReqMessageClient:
         if self._send_recv_running:
             return
         self._send_recv_running = True
+        # Changing the value of  _send_recv_running anywhere outside of this
+        # method will introduce a race condition.
         while self._send_recv_running:
             try:
-                future, message = self._queue.popleft()
-            except IndexError:
-                yield salt.ext.tornado.gen.sleep(0.3)
+                future, message = yield self._queue.get(timeout=0.3)
+            except _TimeoutError:
+                try:
+                    ready = yield self.socket.poll(0, zmq.POLLOUT)
+                except zmq.ZMQError:
+                    log.trace("Recieve socket closed.")
+                    self._send_recv_running = False
                 continue
             try:
                 yield self.socket.send(message)
