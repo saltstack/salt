@@ -621,20 +621,27 @@ class AsyncReqMessageClient:
         if self._send_recv_running:
             return
         self._send_recv_running = True
+        # Hold on to the socket so we'll still have a referance to it after the
+        # close method is called. This allows us to fail gracefully once it's
+        # been closed.
+        socket = self.socket
         # Changing the value of  _send_recv_running anywhere outside of this
         # method will introduce a race condition.
         while self._send_recv_running:
             try:
                 future, message = yield self._queue.get(timeout=0.3)
             except _TimeoutError:
+                if self.socket is None:
+                    self._send_recv_running = False
+                    continue
                 try:
-                    ready = yield self.socket.poll(0, zmq.POLLOUT)
+                    ready = yield socket.poll(0, zmq.POLLOUT)
                 except zmq.ZMQError:
                     log.trace("Recieve socket closed.")
                     self._send_recv_running = False
                 continue
             try:
-                yield self.socket.send(message)
+                yield socket.send(message)
             except zmq.ZMQError as exc:
                 if exc.errno in [zmq.ENOTSOCK, zmq.ETERM, zmq.EINTR]:  # Socket closed.
                     log.trace("Send socket closed.")
@@ -653,7 +660,7 @@ class AsyncReqMessageClient:
 
             while True:
                 try:
-                    ready = yield self.socket.poll(0.3, zmq.POLLIN)
+                    ready = yield socket.poll(0.3, zmq.POLLIN)
                 except zmq.eventloop.future.CancelledError:
                     # The ioloop was closed before polling finished.
                     self.send_recv_running = False
@@ -663,7 +670,7 @@ class AsyncReqMessageClient:
                     self._send_recv_running = False
 
                 if ready:
-                    recv = yield self.socket.recv()
+                    recv = yield socket.recv()
                     break
                 elif future.done():
                     # Request timeout
