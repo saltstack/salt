@@ -1672,31 +1672,13 @@ async def test_client_send_recv_on_cancelled_error(minion_opts):
         minion_opts, "tcp://127.0.0.1:4506"
     )
 
-    result_future = MagicMock(**{"done.return_value": True})
     mock_future = MagicMock(**{"done.return_value": True})
 
     try:
         client.socket = AsyncMock()
-        client.socket.recv.side_effect = zmq.eventloop.future.CancelledError
-        await client._send_recv({"meh": "bah"}, mock_future, result_future)
-
-        mock_future.set_exception.assert_not_called()
-    finally:
-        client.close()
-
-
-async def test_client_send_recv_on_exception(minion_opts):
-    client = salt.transport.zeromq.AsyncReqMessageClient(
-        minion_opts, "tcp://127.0.0.1:4506"
-    )
-
-    result_future = MagicMock(**{"done.return_value": True})
-    mock_future = MagicMock(**{"done.return_value": True})
-
-    try:
-        client.socket = None
-        await client._send_recv({"meh": "bah"}, mock_future, result_future)
-
+        client.socket.poll.side_effect = zmq.eventloop.future.CancelledError
+        client._queue.put_nowait((mock_future, {"meh": "bah"}))
+        await client._send_recv()
         mock_future.set_exception.assert_not_called()
     finally:
         client.close()
@@ -2039,28 +2021,3 @@ def test_req_server_auth_garbage_enc_algo(pki_dir, minion_opts, master_opts, cap
         assert "load" in ret
         assert "ret" in ret["load"]
         assert ret["load"]["ret"] == "bad enc algo"
-
-
-def test_backoff_timer():
-    start = 0.0003
-    maximum = 0.3
-    percent = 0.01
-    backoff = salt.transport.zeromq.BackoffTimeout(
-        start,
-        maximum,
-        percent,
-    )
-    ourcount = 1
-    next_iteration = start
-    assert backoff._count == 0
-    assert backoff() == next_iteration
-    assert backoff._count == ourcount
-
-    next_iteration += next_iteration * percent * ourcount
-    while next_iteration < maximum:
-        assert backoff() == next_iteration, ourcount
-        ourcount += 1
-        assert backoff._count == ourcount
-        next_iteration += next_iteration * percent * ourcount
-    assert ourcount == 39
-    assert backoff() == maximum

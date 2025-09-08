@@ -94,8 +94,8 @@ def test_issue_36469_tcp(salt_master, salt_minion, transport):
 
     https://github.com/saltstack/salt/issues/36469
     """
-    if transport == "tcp":
-        pytest.skip("Test not applicable to the ZeroMQ transport.")
+    #  if transport == "tcp":
+    #      pytest.skip("Test not applicable to the ZeroMQ transport.")
 
     def _send_small(opts, sid, num=10):
         server_channel = salt.channel.server.PubServerChannel.factory(opts)
