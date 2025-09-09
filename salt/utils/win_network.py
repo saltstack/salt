@@ -171,11 +171,17 @@ def _get_base_properties(i_face):
 
 
 def _get_ip_base_properties(i_face):
-    ip_properties = i_face.GetIPProperties()
+    ip_properties = i_face.GetIPProperties()  # DNS Properties
+    ipv4_properties = ip_properties.GetIPv4Properties()  # DHCP Properties
     return {
+        # DNS
         "dns_suffix": ip_properties.DnsSuffix,
         "dns_enabled": ip_properties.IsDnsEnabled,
         "dynamic_dns_enabled": ip_properties.IsDynamicDnsEnabled,
+        # DHCP
+        "dhcp_enabled": ipv4_properties.IsDhcpEnabled,
+        "forwarding_enabled": ipv4_properties.IsForwardingEnabled,
+        "wins_enabled": ipv4_properties.UsesWins,
     }
 
 
@@ -348,10 +354,13 @@ def get_interface_info_dot_net_formatted():
     i_faces = {}
     for i_face in interfaces:
         if interfaces[i_face]["status"] == "Up":
-            name = interfaces[i_face]["description"]
-            i_faces.setdefault(name, {}).update(
-                {"hwaddr": interfaces[i_face]["physical_address"], "up": True}
-            )
+            name = i_face
+            i_faces.setdefault(name, {}).update({
+                "description": interfaces[i_face]["description"],
+                "hwaddr": interfaces[i_face]["physical_address"],
+                "up": True,
+                "dhcp_enabled": interfaces[i_face]["dhcp_enabled"],
+            })
             for ip in interfaces[i_face].get("ip_addresses", []):
                 i_faces[name].setdefault("inet", []).append(
                     {
