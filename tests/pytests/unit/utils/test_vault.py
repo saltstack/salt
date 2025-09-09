@@ -606,7 +606,7 @@ def test_get_vault_connection_config_location(tmp_path, conf_location, called, c
 
     opts = {"config_location": conf_location, "pki_dir": tmp_path / "pki"}
     with patch.object(vault, "_get_token_and_url_from_master") as patch_token:
-        patch_token.return_vaule = token_url
+        patch_token.return_value = token_url
         with patch.dict(vault.__opts__["vault"], opts):
             vault.get_vault_connection()
 
@@ -616,6 +616,30 @@ def test_get_vault_connection_config_location(tmp_path, conf_location, called, c
         patch_token.assert_not_called()
     if conf_location == "doesnotexist":
         assert "config_location must be either local or master" in caplog.text
+
+
+def test_get_vault_connection_config_vault_not_set():
+    """
+    test the get_vault_connection function when
+    config_location is not set in opts
+    """
+    token_url = {
+        "url": "http://127.0.0.1",
+        "namespace": None,
+        "token": "test",
+        "verify": None,
+        "issued": 1666100373,
+        "ttl": 3600,
+    }
+
+    with patch.object(vault, "_get_token_and_url_from_master") as patch_token:
+        patch_token.return_value = token_url
+        # Need to clear file_client from vault.__opts__ to get it to call _get_token_and_url_from_master
+        if "file_client" in vault.__opts__:
+            del vault.__opts__["file_client"]
+        vault.get_vault_connection()
+
+    patch_token.assert_called()
 
 
 def test_del_cache(tmp_cache):
