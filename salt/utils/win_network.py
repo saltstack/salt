@@ -355,12 +355,14 @@ def get_interface_info_dot_net_formatted():
     for i_face in interfaces:
         if interfaces[i_face]["status"] == "Up":
             name = i_face
-            i_faces.setdefault(name, {}).update({
-                "description": interfaces[i_face]["description"],
-                "hwaddr": interfaces[i_face]["physical_address"],
-                "up": True,
-                "dhcp_enabled": interfaces[i_face]["dhcp_enabled"],
-            })
+            i_faces.setdefault(name, {}).update(
+                {
+                    "description": interfaces[i_face]["description"],
+                    "hwaddr": interfaces[i_face]["physical_address"],
+                    "up": True,
+                    "dhcp_enabled": interfaces[i_face]["dhcp_enabled"],
+                }
+            )
             for ip in interfaces[i_face].get("ip_addresses", []):
                 i_faces[name].setdefault("inet", []).append(
                     {
