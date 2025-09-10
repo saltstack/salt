@@ -9,6 +9,7 @@ import os
 import signal
 import sys
 import threading
+import datetime
 from random import randint
 
 import zmq.error
@@ -620,10 +621,10 @@ class AsyncReqMessageClient:
         socket = self.socket
         while send_recv_running:
             try:
-                future, message = yield self._queue.get(timeout=0.3)
+                future, message = yield self._queue.get(timeout=datetime.timedelta(milliseconds=300))
             except _TimeoutError:
                 try:
-                    ready = yield socket.poll(0, zmq.POLLOUT)
+                    ready = yield socket.poll(datetime.timedelta(milliseconds=1), zmq.POLLOUT)
                 except zmq.eventloop.future.CancelledError:
                     log.trace("Loop closed while polling send socket.")
                     # The ioloop was closed before polling finished.
@@ -659,7 +660,7 @@ class AsyncReqMessageClient:
 
             while True:
                 try:
-                    ready = yield socket.poll(0.3, zmq.POLLIN)
+                    ready = yield socket.poll(datetime.timedelta(milliseconds=300), zmq.POLLIN)
                 except zmq.eventloop.future.CancelledError:
                     log.trace("loop closed while polling recv.")
                     # The ioloop was closed before polling finished.
