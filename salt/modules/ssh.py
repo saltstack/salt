@@ -83,7 +83,7 @@ def _refine_enc(enc):
     elif enc in also_allowed:
         return enc
     else:
-        raise CommandExecutionError("Incorrect encryption key type '{}'.".format(enc))
+        raise CommandExecutionError(f"Incorrect encryption key type '{enc}'.")
 
 
 def _format_auth_line(key, enc, comment, options):
@@ -93,7 +93,7 @@ def _format_auth_line(key, enc, comment, options):
     line = ""
     if options:
         line += "{} ".format(",".join(options))
-    line += "{} {} {}\n".format(enc, key, comment)
+    line += f"{enc} {key} {comment}\n"
     return line
 
 
@@ -134,7 +134,7 @@ def _get_config_file(user, config):
     """
     uinfo = __salt__["user.info"](user)
     if not uinfo:
-        raise CommandExecutionError("User '{}' does not exist".format(user))
+        raise CommandExecutionError(f"User '{user}' does not exist")
     home = uinfo["home"]
     config = _expand_authorized_keys_path(config, user, home)
     if not os.path.isabs(config):
@@ -183,9 +183,7 @@ def _replace_auth_key(
                 # Write out any changes
                 _fh.writelines(salt.utils.data.encode(lines))
     except OSError as exc:
-        raise CommandExecutionError(
-            "Problem reading or writing to key file: {}".format(exc)
-        )
+        raise CommandExecutionError(f"Problem reading or writing to key file: {exc}")
 
 
 def _validate_keys(key_file, fingerprint_hash_type):
@@ -241,7 +239,7 @@ def _validate_keys(key_file, fingerprint_hash_type):
                     "fingerprint": fingerprint,
                 }
     except OSError:
-        raise CommandExecutionError("Problem reading ssh key file {}".format(key_file))
+        raise CommandExecutionError(f"Problem reading ssh key file {key_file}")
 
     return ret
 
@@ -277,7 +275,7 @@ def _fingerprint(public_key, fingerprint_hash_type):
         hash_func = getattr(hashlib, hash_type)
     except AttributeError:
         raise CommandExecutionError(
-            "The fingerprint_hash_type {} is not supported.".format(hash_type)
+            f"The fingerprint_hash_type {hash_type} is not supported."
         )
 
     try:
@@ -305,7 +303,7 @@ def _get_known_hosts_file(config=None, user=None):
             if not uinfo:
                 return {
                     "status": "error",
-                    "error": "User {} does not exist".format(user),
+                    "error": f"User {user} does not exist",
                 }
             full = os.path.join(uinfo["home"], config)
         else:
@@ -433,7 +431,7 @@ def check_key_file(
         return {}
     s_keys = _validate_keys(keyfile, fingerprint_hash_type)
     if not s_keys:
-        err = "No keys detected in {}. Is file properly formatted?".format(source)
+        err = f"No keys detected in {source}. Is file properly formatted?"
         log.error(err)
         __context__["ssh_auth.error"] = err
         return {}
@@ -526,7 +524,7 @@ def rm_auth_key_from_file(
 
     s_keys = _validate_keys(lfile, fingerprint_hash_type)
     if not s_keys:
-        err = "No keys detected in {}. Is file properly formatted?".format(source)
+        err = f"No keys detected in {source}. Is file properly formatted?"
         log.error(err)
         __context__["ssh_auth.error"] = err
         return "fail"
@@ -568,7 +566,7 @@ def rm_auth_key(user, key, config=".ssh/authorized_keys", fingerprint_hash_type=
 
         # Return something sensible if the file doesn't exist
         if not os.path.isfile(full):
-            return "Authorized keys file {} not present".format(full)
+            return f"Authorized keys file {full} not present"
 
         lines = []
         try:
@@ -644,7 +642,7 @@ def set_auth_key_from_file(
 
     s_keys = _validate_keys(lfile, fingerprint_hash_type)
     if not s_keys:
-        err = "No keys detected in {}. Is file properly formatted?".format(source)
+        err = f"No keys detected in {source}. Is file properly formatted?"
         log.error(err)
         __context__["ssh_auth.error"] = err
         return "fail"
@@ -791,12 +789,11 @@ def _get_matched_host_line_numbers(lines, enc):
     number of known_hosts entries with encryption key type matching enc,
     one by one.
     """
-    enc = enc if enc else "rsa"
     for i, line in enumerate(lines):
         if i % 2 == 0:
             line_no = int(line.strip().split()[-1])
             line_enc = lines[i + 1].strip().split()[-2]
-            if line_enc != enc:
+            if enc is not None and line_enc != enc:
                 continue
             yield line_no
 
@@ -1009,7 +1006,7 @@ def rm_known_host(user=None, hostname=None, config=None, port=None):
     if not os.path.isfile(full):
         return {
             "status": "error",
-            "error": "Known hosts file {} does not exist".format(full),
+            "error": f"Known hosts file {full} does not exist",
         }
 
     ssh_hostname = _hostname_and_port_to_ssh_hostname(hostname, port)
@@ -1118,7 +1115,11 @@ def set_known_host(
         port=port,
         fingerprint_hash_type=fingerprint_hash_type,
     )
-    stored_keys = [h["key"] for h in stored_host_entries] if stored_host_entries else []
+    stored_keys = (
+        [h["key"] for h in stored_host_entries if enc is None or h["enc"] == enc]
+        if stored_host_entries
+        else []
+    )
     stored_fingerprints = (
         [h["fingerprint"] for h in stored_host_entries] if stored_host_entries else []
     )
@@ -1167,9 +1168,8 @@ def set_known_host(
             }
 
         if check_required:
-            for key in known_keys:
-                if key in stored_keys:
-                    return {"status": "exists", "keys": stored_keys}
+            if set(known_keys) == set(stored_keys):
+                return {"status": "exists", "keys": stored_keys}
 
     full = _get_known_hosts_file(config=config, user=user)
 
@@ -1252,7 +1252,7 @@ def set_known_host(
             ofile.writelines(salt.utils.data.encode(lines))
     except OSError as exception:
         raise CommandExecutionError(
-            "Couldn't append to known hosts file: '{}'".format(exception)
+            f"Couldn't append to known hosts file: '{exception}'"
         )
 
     if not salt.utils.platform.is_windows():
@@ -1378,7 +1378,7 @@ def hash_known_hosts(user=None, config=None):
     if not os.path.isfile(full):
         return {
             "status": "error",
-            "error": "Known hosts file {} does not exist".format(full),
+            "error": f"Known hosts file {full} does not exist",
         }
     origmode = os.stat(full).st_mode
     cmd = ["ssh-keygen", "-H", "-f", full]
@@ -1396,7 +1396,7 @@ def _hostname_and_port_to_ssh_hostname(hostname, port=DEFAULT_SSH_PORT):
     if not port or port == DEFAULT_SSH_PORT:
         return hostname
     else:
-        return "[{}]:{}".format(hostname, port)
+        return f"[{hostname}]:{port}"
 
 
 def key_is_encrypted(key):

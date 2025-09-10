@@ -6,6 +6,7 @@ from pytestshellutils.exceptions import FactoryNotStarted
 from saltfactories.utils import random_string
 
 import salt.defaults.exitcodes
+from tests.conftest import FIPS_TESTRUN
 from tests.support.helpers import PRE_PYTEST_SKIP_REASON
 
 pytestmark = [
@@ -39,7 +40,15 @@ def test_exit_status_unknown_user(salt_master, minion_id):
     """
     with pytest.raises(FactoryNotStarted) as exc:
         factory = salt_master.salt_minion_daemon(
-            minion_id, overrides={"user": "unknown-user"}
+            minion_id,
+            overrides={
+                "user": "unknown-user",
+                "fips_mode": FIPS_TESTRUN,
+                "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+                "signing_algorithm": (
+                    "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+                ),
+            },
         )
         factory.start(start_timeout=10, max_start_attempts=1)
 
@@ -52,7 +61,16 @@ def test_exit_status_unknown_argument(salt_master, minion_id):
     Ensure correct exit status when an unknown argument is passed to salt-minion.
     """
     with pytest.raises(FactoryNotStarted) as exc:
-        factory = salt_master.salt_minion_daemon(minion_id)
+        factory = salt_master.salt_minion_daemon(
+            minion_id,
+            overrides={
+                "fips_mode": FIPS_TESTRUN,
+                "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+                "signing_algorithm": (
+                    "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+                ),
+            },
+        )
         factory.start("--unknown-argument", start_timeout=10, max_start_attempts=1)
 
     assert exc.value.process_result.returncode == salt.defaults.exitcodes.EX_USAGE
@@ -66,6 +84,11 @@ def test_exit_status_correct_usage(salt_master, minion_id, salt_cli):
         minion_id,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
         defaults={"transport": salt_master.config["transport"]},
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        },
     )
     factory.start()
     assert factory.is_running()

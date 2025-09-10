@@ -5,7 +5,6 @@ noop_returner
 A returner that does nothing which is used to test the salt-master `event_return` functionality
 """
 
-
 import logging
 
 import salt.utils.jid

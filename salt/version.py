@@ -1,6 +1,7 @@
 """
 Set up the version of Salt
 """
+
 import argparse
 import operator
 import os
@@ -12,6 +13,7 @@ from functools import total_ordering
 
 MAX_SIZE = sys.maxsize
 VERSION_LIMIT = MAX_SIZE - 200
+
 
 # ----- ATTENTION --------------------------------------------------------------------------------------------------->
 #
@@ -58,7 +60,7 @@ class SaltVersionsInfo(type):
     _previous_release = None
     _next_release = None
 
-    # pylint: disable=bad-whitespace,multiple-spaces-before-operator
+    # pylint: disable=bad-whitespace
     # ----- Please refrain from fixing whitespace ---------------------------------->
     # The idea is to keep this readable.
     # -------------------------------------------------------------------------------
@@ -79,7 +81,7 @@ class SaltVersionsInfo(type):
     SILICON       = SaltVersion("Silicon"      , info=3004,       released=True)
     PHOSPHORUS    = SaltVersion("Phosphorus"   , info=3005,       released=True)
     SULFUR        = SaltVersion("Sulfur"       , info=3006,       released=True)
-    CHLORINE      = SaltVersion("Chlorine"     , info=3007)
+    CHLORINE      = SaltVersion("Chlorine"     , info=3007,       released=True)
     ARGON         = SaltVersion("Argon"        , info=3008)
     POTASSIUM     = SaltVersion("Potassium"    , info=3009)
     CALCIUM       = SaltVersion("Calcium"      , info=3010)
@@ -184,7 +186,7 @@ class SaltVersionsInfo(type):
     # <---- Please refrain from fixing whitespace -----------------------------------
     # The idea is to keep this readable.
     # -------------------------------------------------------------------------------
-    # pylint: enable=bad-whitespace,multiple-spaces-before-operator
+    # pylint: enable=bad-whitespace
     # fmt: on
 
     @classmethod
@@ -455,7 +457,7 @@ class SaltStackVersion:
             version_string += f".{self.mbugfix}"
         if self.pre_type:
             version_string += f"{self.pre_type}{self.pre_num}"
-        if self.noc and self.sha:
+        if self.noc is not None and self.sha:
             noc = self.noc
             if noc < 0:
                 noc = "0na"
@@ -614,6 +616,7 @@ def __discover_version(saltstack_version):
                 "--match",
                 "v[0-9]*",
                 "--always",
+                "--candidates=150",
             ],
             **kwargs,
         )
@@ -686,7 +689,6 @@ def salt_information():
 
 
 def package_information():
-
     """
     Report package type
     """
@@ -704,8 +706,10 @@ def dependency_information(include_salt_cloud=False):
         ("M2Crypto", "M2Crypto", "version"),
         ("msgpack", "msgpack", "version"),
         ("msgpack-pure", "msgpack_pure", "version"),
+        ("networkx", "networkx", "__version__"),
         ("pycrypto", "Crypto", "__version__"),
         ("pycryptodome", "Cryptodome", "version_info"),
+        ("cryptography", "cryptography", "__version__"),
         ("PyYAML", "yaml", "__version__"),
         ("PyZMQ", "zmq", "__version__"),
         ("ZMQ", "zmq", "zmq_version"),
@@ -872,7 +876,7 @@ def versions_information(include_salt_cloud=False, include_extensions=True):
     Report the versions of dependent software.
     """
     py_info = [
-        ("Python", sys.version.rsplit("\n")[0].strip()),
+        ("Python", sys.version.rsplit("\n", maxsplit=1)[0].strip()),
     ]
     salt_info = list(salt_information())
     lib_info = list(dependency_information(include_salt_cloud))

@@ -24,7 +24,7 @@ def test_present_existing():
         postgres_language.__salt__,
         {"postgres.language_list": mock_language_list},
     ):
-        comt = "Language {} is already installed".format(name)
+        comt = f"Language {name} is already installed"
         ret.update({"comment": comt, "result": True})
         assert postgres_language.present(name, "testdb") == ret
 
@@ -45,12 +45,12 @@ def test_present_non_existing_pass():
         },
     ):
         with patch.dict(postgres_language.__opts__, {"test": True}):
-            comt = "Language {} is set to be installed".format(name)
+            comt = f"Language {name} is set to be installed"
             ret.update({"comment": comt, "result": None})
             assert postgres_language.present(name, "testdb") == ret
 
         with patch.dict(postgres_language.__opts__, {"test": False}):
-            comt = "Language {} has been installed".format(name)
+            comt = f"Language {name} has been installed"
             ret.update(
                 {"comment": comt, "result": True, "changes": {"plpgsql": "Present"}}
             )
@@ -73,12 +73,12 @@ def test_present_non_existing_fail():
         },
     ):
         with patch.dict(postgres_language.__opts__, {"test": True}):
-            comt = "Language {} is set to be installed".format(name)
+            comt = f"Language {name} is set to be installed"
             ret.update({"comment": comt, "result": None})
             assert postgres_language.present(name, "testdb") == ret
 
         with patch.dict(postgres_language.__opts__, {"test": False}):
-            comt = "Failed to install language {}".format(name)
+            comt = f"Failed to install language {name}"
             ret.update({"comment": comt, "result": False})
             assert postgres_language.present(name, "testdb") == ret
 
@@ -95,12 +95,12 @@ def test_absent_existing():
         {"postgres.language_exists": mock_true, "postgres.language_remove": mock_true},
     ):
         with patch.dict(postgres_language.__opts__, {"test": True}):
-            comt = "Language {} is set to be removed".format(name)
+            comt = f"Language {name} is set to be removed"
             ret.update({"comment": comt, "result": None})
             assert postgres_language.absent(name, "testdb") == ret
 
         with patch.dict(postgres_language.__opts__, {"test": False}):
-            comt = "Language {} has been removed".format(name)
+            comt = f"Language {name} has been removed"
             ret.update(
                 {"comment": comt, "result": True, "changes": {"plpgsql": "Absent"}}
             )
@@ -118,6 +118,6 @@ def test_absent_non_existing():
         postgres_language.__salt__, {"postgres.language_exists": mock_false}
     ):
         with patch.dict(postgres_language.__opts__, {"test": True}):
-            comt = "Language {} is not present so it cannot be removed".format(name)
+            comt = f"Language {name} is not present so it cannot be removed"
             ret.update({"comment": comt, "result": True})
             assert postgres_language.absent(name, "testdb") == ret

@@ -1,39 +1,27 @@
 ---
 name: build-onedir-salt
 description: Build Onedir Package
+
 inputs:
   platform:
     required: true
-    type: string
     description: The platform to build
   arch:
     required: true
-    type: string
     description: The platform arch to build
   package-name:
     required: false
-    type: string
     description: The onedir package name to create
     default: salt
   cache-prefix:
     required: true
-    type: string
     description: Seed used to invalidate caches
   python-version:
     required: true
-    type: string
     description: The python version to build
   salt-version:
-    type: string
     required: true
     description: The Salt version to set prior to building packages.
-
-
-env:
-  COLUMNS: 190
-  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
-  RELENV_BUILDENV: 1
 
 
 runs:
@@ -41,21 +29,13 @@ runs:
 
   steps:
 
-    - name: Download Cached Deps Onedir Package Directory
-      id: onedir-bare-cache
-      uses: actions/cache@v3.3.1
+    - name: Install Salt Packaging Dependencies into Relenv Onedir
+      uses: ./.github/actions/build-onedir-deps
       with:
-        path: artifacts/${{ inputs.package-name }}
-        key: >
-          ${{ inputs.cache-prefix }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{
-            hashFiles(
-              format('{0}/.relenv/**/*.xz', github.workspace),
-              'requirements/static/pkg/*/*.txt',
-              '.github/actions/build-onedir-deps/action.yml',
-              '.github/workflows/build-deps-onedir-*.yml',
-              'cicd/shared-gh-workflows-context.yml'
-            )
-          }}
+        platform: ${{ inputs.platform }}
+        arch: ${{ inputs.arch }}
+        python-version: "${{ inputs.python-version }}"
+        cache-prefix: ${{ inputs.cache-prefix }}|relenv|${{ inputs.salt-version }}
 
     - name: Download Source Tarball
       uses: actions/download-artifact@v4
@@ -64,6 +44,8 @@ runs:
 
     - name: Install Salt Into Onedir
       shell: bash
+      env:
+        RELENV_BUILDENV: "1"
       run: |
         tools pkg build salt-onedir salt-${{ inputs.salt-version }}.tar.gz --platform ${{ inputs.platform }} --package-name artifacts/${{ inputs.package-name }}
 

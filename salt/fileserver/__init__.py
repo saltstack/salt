@@ -2,7 +2,6 @@
 File server pluggable modules and generic backend functions
 """
 
-
 import errno
 import fnmatch
 import logging
@@ -12,7 +11,6 @@ import time
 from collections.abc import Sequence
 
 import salt.loader
-import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 import salt.utils.url
@@ -148,13 +146,7 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                             opts.get("fileserver_list_cache_time", 20),
                             list_cache,
                         )
-                        return (
-                            salt.utils.data.decode(
-                                salt.payload.load(fp_).get(form, [])
-                            ),
-                            False,
-                            False,
-                        )
+                        return salt.payload.load(fp_).get(form, []), False, False
                 elif _lock_cache(w_lock):
                     # Set the w_lock and go
                     refresh_cache = True
@@ -190,7 +182,7 @@ def check_env_cache(opts, env_cache):
     try:
         with salt.utils.files.fopen(env_cache, "rb") as fp_:
             log.trace("Returning env cache data from %s", env_cache)
-            return salt.utils.data.decode(salt.payload.load(fp_))
+            return salt.payload.load(fp_)
     except OSError:
         pass
     return None
@@ -525,7 +517,7 @@ class Fileserver:
         if load is None:
             load = {}
         load.pop("cmd", None)
-        return self.envs(**load)
+        return self.envs(back=load.get("back", None), sources=load.get("sources", None))
 
     def init(self, back=None):
         """

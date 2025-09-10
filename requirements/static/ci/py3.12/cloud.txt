@@ -4,22 +4,23 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.12/cloud.txt requirements/base.txt requirements/pytest.txt requirements/static/ci/cloud.in requirements/static/ci/common.in requirements/static/pkg/linux.in requirements/zeromq.txt
 #
-aiohttp==3.9.2
-    # via
-    #   -c requirements/static/ci/../pkg/py3.12/linux.txt
-    #   -c requirements/static/ci/py3.12/linux.txt
-    #   -r requirements/base.txt
-    #   etcd3-py
-aiosignal==1.3.1
+aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
     #   aiohttp
-annotated-types==0.6.0
+aiohttp==3.12.15
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
-    #   pydantic
+    #   -r requirements/base.txt
+    #   -r requirements/static/ci/common.in
+    #   etcd3-py
+aiosignal==1.4.0
+    # via
+    #   -c requirements/static/ci/../pkg/py3.12/linux.txt
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   aiohttp
 apache-libcloud==3.7.0 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -50,7 +51,7 @@ bcrypt==4.0.1
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
     #   paramiko
-boto3==1.26.152
+boto3==1.39.4
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
@@ -59,9 +60,10 @@ boto==2.49.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
-botocore==1.29.152
+botocore==1.39.4
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/static/ci/common.in
     #   boto3
     #   moto
     #   s3transfer
@@ -73,11 +75,11 @@ cassandra-driver==3.28.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
-certifi==2023.07.22
+certifi==2024.7.4 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
-    #   -r requirements/static/ci/common.in
+    #   -r requirements/base.txt
     #   kubernetes
     #   requests
 certvalidator==0.11.1
@@ -90,7 +92,6 @@ cffi==1.16.0
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
     #   cryptography
-    #   napalm
     #   pynacl
 charset-normalizer==3.2.0
     # via
@@ -125,11 +126,12 @@ contextvars==2.4
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
-croniter==1.3.15 ; sys_platform != "win32"
+croniter==2.0.5 ; sys_platform != "win32"
     # via
+    #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
-    #   -r requirements/static/ci/common.in
-cryptography==42.0.3
+    #   -r requirements/base.txt
+cryptography==42.0.5 ; python_version < "3.13"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -153,12 +155,12 @@ distro==1.8.0
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
     #   pytest-skip-markers
-dnspython==2.3.0
+dnspython==2.6.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
     #   python-etcd
-docker==6.1.3
+docker==7.1.0 ; python_version >= "3.8"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/pytest.txt
@@ -170,7 +172,7 @@ filelock==3.13.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   virtualenv
-flaky==3.7.0
+flaky==3.8.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/pytest.txt
@@ -180,10 +182,9 @@ frozenlist==1.4.1
     #   -c requirements/static/ci/py3.12/linux.txt
     #   aiohttp
     #   aiosignal
-future==0.18.3
+future==1.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
-    #   napalm
     #   textfsm
 genshi==0.7.7
     # via
@@ -197,7 +198,7 @@ gitdb==4.0.10
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   gitpython
-gitpython==3.1.41
+gitpython==3.1.43
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
@@ -205,7 +206,7 @@ google-auth==2.27.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   kubernetes
-idna==3.4
+idna==3.7
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -213,21 +214,17 @@ idna==3.4
     #   requests
     #   trustme
     #   yarl
-immutables==0.15
+immutables==0.15 ; sys_platform == "linux"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
     #   contextvars
 importlib-metadata==6.6.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
-inflect==7.0.0
-    # via
-    #   -c requirements/static/ci/../pkg/py3.12/linux.txt
-    #   -c requirements/static/ci/py3.12/linux.txt
-    #   jaraco.text
 iniconfig==2.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -246,26 +243,27 @@ jaraco.context==4.3.0
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
     #   jaraco.text
-jaraco.functools==3.7.0
+jaraco.functools==4.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
     #   cheroot
     #   jaraco.text
     #   tempora
-jaraco.text==3.11.1
+jaraco.text==4.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
     #   jaraco.collections
-jinja2==3.1.3
+jinja2==3.1.6
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
     #   junos-eznc
     #   moto
-    #   napalm
 jmespath==1.0.1
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
@@ -286,7 +284,6 @@ junos-eznc==2.6.7 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
-    #   napalm
 jxmlease==1.0.3 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -316,7 +313,6 @@ lxml==4.9.2
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   junos-eznc
-    #   napalm
     #   ncclient
     #   xmldiff
 mako==1.2.4
@@ -344,11 +340,11 @@ more-itertools==5.0.0
     #   cherrypy
     #   jaraco.functools
     #   jaraco.text
-moto==4.1.11
+moto==5.1.8
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
-msgpack==1.0.7
+msgpack==1.0.7 ; python_version < "3.13"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -360,53 +356,37 @@ multidict==6.0.4
     #   -c requirements/static/ci/py3.12/linux.txt
     #   aiohttp
     #   yarl
-napalm==4.1.0 ; sys_platform != "win32"
-    # via
-    #   -c requirements/static/ci/py3.12/linux.txt
-    #   -r requirements/static/ci/common.in
 ncclient==0.6.13
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   junos-eznc
-    #   napalm
 netaddr==0.8.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/cloud.in
     #   junos-eznc
-    #   napalm
-    #   pyeapi
-netmiko==4.2.0
+networkx==3.1
     # via
+    #   -c requirements/constraints.txt
+    #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
-    #   napalm
-netutils==1.6.0
-    # via
-    #   -c requirements/static/ci/py3.12/linux.txt
-    #   napalm
-ntc-templates==4.0.1
-    # via
-    #   -c requirements/static/ci/py3.12/linux.txt
-    #   netmiko
+    #   -r requirements/base.txt
 oscrypto==1.3.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   certvalidator
-packaging==23.1
+packaging==24.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
-    #   docker
     #   pytest
 paramiko==3.4.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
     #   junos-eznc
-    #   napalm
     #   ncclient
-    #   netmiko
     #   scp
 passlib==1.7.4
     # via
@@ -416,7 +396,7 @@ platformdirs==4.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   virtualenv
-pluggy==1.0.0
+pluggy==1.4.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   pytest
@@ -427,7 +407,13 @@ portend==3.1.0
     #   cherrypy
 profitbricks==4.1.3
     # via -r requirements/static/ci/cloud.in
-psutil==5.9.6
+propcache==0.3.2
+    # via
+    #   -c requirements/static/ci/../pkg/py3.12/linux.txt
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   aiohttp
+    #   yarl
+psutil==5.9.6 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -454,20 +440,6 @@ pycryptodomex==3.19.1
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/crypto.txt
-pydantic-core==2.14.5
-    # via
-    #   -c requirements/static/ci/../pkg/py3.12/linux.txt
-    #   -c requirements/static/ci/py3.12/linux.txt
-    #   pydantic
-pydantic==2.5.2
-    # via
-    #   -c requirements/static/ci/../pkg/py3.12/linux.txt
-    #   -c requirements/static/ci/py3.12/linux.txt
-    #   inflect
-pyeapi==1.0.0
-    # via
-    #   -c requirements/static/ci/py3.12/linux.txt
-    #   napalm
 pyfakefs==5.3.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -501,7 +473,6 @@ pyserial==3.5
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   junos-eznc
-    #   netmiko
 pyspnego==0.9.0
     # via
     #   -r requirements/static/ci/cloud.in
@@ -521,17 +492,19 @@ pytest-httpserver==1.0.8
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc29
+pytest-salt-factories==1.0.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/pytest.txt
-pytest-shell-utilities==1.8.0
+pytest-shell-utilities==1.9.7 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/pytest.txt
     #   pytest-salt-factories
-pytest-skip-markers==1.5.0
+pytest-skip-markers==1.5.2 ; python_version >= "3.8"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/pytest.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
@@ -543,11 +516,11 @@ pytest-system-statistics==1.0.2
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   pytest-salt-factories
-pytest-timeout==1.4.2
+pytest-timeout==2.3.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/pytest.txt
-pytest==7.3.2
+pytest==8.1.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/pytest.txt
@@ -582,6 +555,7 @@ pytz==2024.1
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   croniter
     #   tempora
 pyvmomi==8.0.1.0.1
     # via
@@ -597,12 +571,10 @@ pyyaml==6.0.1
     #   clustershell
     #   junos-eznc
     #   kubernetes
-    #   napalm
-    #   netmiko
     #   pytest-salt-factories
     #   responses
     #   yamlordereddictloader
-pyzmq==25.1.2
+pyzmq==25.1.2 ; python_version < "3.13"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -610,18 +582,16 @@ pyzmq==25.1.2
     #   pytest-salt-factories
 requests-ntlm==1.2.0
     # via pywinrm
-requests==2.31.0
+requests==2.32.3 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
-    #   -r requirements/static/ci/common.in
     #   apache-libcloud
     #   docker
     #   etcd3-py
     #   kubernetes
     #   moto
-    #   napalm
     #   profitbricks
     #   pywinrm
     #   requests-ntlm
@@ -644,7 +614,7 @@ rsa==4.9
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   google-auth
-s3transfer==0.6.1
+s3transfer==0.13.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   boto3
@@ -652,8 +622,6 @@ scp==0.14.5
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   junos-eznc
-    #   napalm
-    #   netmiko
 semantic-version==2.10.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -690,11 +658,11 @@ smbprotocol==1.10.1
     # via
     #   -r requirements/static/ci/cloud.in
     #   pypsexec
-smmap==5.0.0
+smmap==5.0.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   gitdb
-sqlparse==0.4.4
+sqlparse==0.5.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
@@ -710,9 +678,7 @@ tempora==5.3.0
 textfsm==1.1.3
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
-    #   napalm
-    #   netmiko
-    #   ntc-templates
+    #   -r requirements/static/ci/common.in
 timelib==0.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
@@ -722,7 +688,7 @@ toml==0.10.2
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
-tornado==6.3.3
+tornado==6.4.2
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -735,40 +701,28 @@ trustme==1.1.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/pytest.txt
-ttp-templates==0.3.5
-    # via
-    #   -c requirements/static/ci/py3.12/linux.txt
-    #   napalm
-ttp==0.9.5
-    # via
-    #   -c requirements/static/ci/py3.12/linux.txt
-    #   napalm
-    #   ttp-templates
 types-pyyaml==6.0.12.12
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   responses
-typing-extensions==4.8.0
+typing-extensions==4.14.1
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
-    #   inflect
-    #   napalm
-    #   pydantic
-    #   pydantic-core
-    #   pytest-shell-utilities
+    #   aiosignal
     #   pytest-system-statistics
-urllib3==1.26.18
+urllib3==2.5.0 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
     #   botocore
     #   docker
     #   kubernetes
     #   python-etcd
     #   requests
     #   responses
-vcert==0.7.4 ; sys_platform != "win32"
+vcert==0.7.4 ; sys_platform != "win32" and python_version < "3.13.0"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
@@ -784,15 +738,15 @@ watchdog==3.0.0
 websocket-client==0.40.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
-    #   docker
     #   kubernetes
 wempy==0.2.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
-werkzeug==3.0.1
+werkzeug==3.1.3
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/static/ci/common.in
     #   moto
     #   pytest-httpserver
 xmldiff==2.6.3
@@ -808,7 +762,7 @@ yamlordereddictloader==0.4.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   junos-eznc
-yarl==1.9.4
+yarl==1.20.1
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt

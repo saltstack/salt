@@ -197,6 +197,15 @@ class RemotePillarMixin:
         log.trace("ext_pillar_extra_data = %s", extra_data)
         return extra_data
 
+    def validate_return(self, data):
+        if not isinstance(data, dict):
+            msg = "Got a bad pillar from master, type {}, expecting dict: {}".format(
+                type(data).__name__, data
+            )
+            log.error(msg)
+            # raise an exception! Pillar isn't empty, we can't sync it!
+            raise SaltClientError(msg)
+
 
 class AsyncRemotePillar(RemotePillarMixin):
     """
@@ -260,8 +269,8 @@ class AsyncRemotePillar(RemotePillarMixin):
             load["clean_cache"] = self.clean_cache
         if self.ext:
             load["ext"] = self.ext
+        start = time.monotonic()
         try:
-            start = time.monotonic()
             ret_pillar = yield self.channel.crypted_transfer_decode_dictentry(
                 load,
                 dictkey="pillar",
@@ -276,14 +285,7 @@ class AsyncRemotePillar(RemotePillarMixin):
         except Exception:  # pylint: disable=broad-except
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
-
-        if not isinstance(ret_pillar, dict):
-            msg = "Got a bad pillar from master, type {}, expecting dict: {}".format(
-                type(ret_pillar).__name__, ret_pillar
-            )
-            log.error(msg)
-            # raise an exception! Pillar isn't empty, we can't sync it!
-            raise SaltClientError(msg)
+        self.validate_return(ret_pillar)
         raise tornado.gen.Return(ret_pillar)
 
     def destroy(self):
@@ -358,8 +360,8 @@ class RemotePillar(RemotePillarMixin):
         if self.ext:
             load["ext"] = self.ext
 
+        start = time.monotonic()
         try:
-            start = time.monotonic()
             ret_pillar = self.channel.crypted_transfer_decode_dictentry(
                 load,
                 dictkey="pillar",
@@ -374,14 +376,7 @@ class RemotePillar(RemotePillarMixin):
         except Exception:  # pylint: disable=broad-except
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
-
-        if not isinstance(ret_pillar, dict):
-            log.error(
-                "Got a bad pillar from master, type %s, expecting dict: %s",
-                type(ret_pillar).__name__,
-                ret_pillar,
-            )
-            return {}
+        self.validate_return(ret_pillar)
         return ret_pillar
 
     def destroy(self):
@@ -474,7 +469,7 @@ class PillarCache:
             self.saltenv,
             ext=self.ext,
             functions=self.functions,
-            pillar_override=self.pillar_override,
+            pillar_override=None,
             pillarenv=self.pillarenv,
             extra_minion_data=self.extra_minion_data,
         )
@@ -562,6 +557,7 @@ class Pillar:
         self.opts = self.__gen_opts(opts, grains, saltenv=saltenv, pillarenv=pillarenv)
         self.saltenv = saltenv
         self.client = salt.fileclient.get_file_client(self.opts, True)
+        self.fileclient = salt.fileclient.get_file_client(self.opts, False)
         self.avail = self.__gather_avail()
 
         if opts.get("file_client", "") == "local" and not opts.get(
@@ -574,11 +570,15 @@ class Pillar:
             utils = salt.loader.utils(opts, file_client=self.client)
             if opts.get("file_client", "") == "local":
                 self.functions = salt.loader.minion_mods(
-                    opts, utils=utils, file_client=self.client
+                    opts,
+                    utils=utils,
+                    file_client=salt.fileclient.ContextlessFileClient(self.fileclient),
                 )
             else:
                 self.functions = salt.loader.minion_mods(
-                    self.opts, utils=utils, file_client=self.client
+                    self.opts,
+                    utils=utils,
+                    file_client=salt.fileclient.ContextlessFileClient(self.fileclient),
                 )
         else:
             self.functions = functions
@@ -610,10 +610,15 @@ class Pillar:
 
     def __valid_on_demand_ext_pillar(self, opts):
         """
-        Check to see if the on demand external pillar is allowed
+        Check to see if the on demand external pillar is allowed.
+
+        If this check fails self.ext is set to None, this is important to
+        prevent an on-demand pillare from being rendered when it should not be
+        allowed.
         """
         if not isinstance(self.ext, dict):
             log.error("On-demand pillar %s is not formatted as a dictionary", self.ext)
+            self.ext = None
             return False
 
         on_demand = opts.get("on_demand_ext_pillar", [])
@@ -625,6 +630,7 @@ class Pillar:
                 "The 'on_demand_ext_pillar' configuration option is "
                 "malformed, it should be a list of ext_pillar module names"
             )
+            self.ext = None
             return False
 
         if invalid_on_demand:
@@ -636,6 +642,7 @@ class Pillar:
                 ", ".join(sorted(invalid_on_demand)),
                 ", ".join(on_demand),
             )
+            self.ext = None
             return False
         return True
 
@@ -1207,7 +1214,9 @@ class Pillar:
             for key, val in run.items():
                 if key not in self.ext_pillars:
                     log.critical(
-                        "Specified ext_pillar interface %s is unavailable", key
+                        "ext_pillar interface named %s is unavailable. Make sure it is placed in the correct "
+                        "directory/location. Check https://docs.saltstack.com/en/latest/ref/configuration/master.html#extension-modules for details.",
+                        key,
                     )
                     continue
                 try:
@@ -1216,7 +1225,7 @@ class Pillar:
                     errors.append(
                         "Failed to load ext_pillar {}: {}".format(
                             key,
-                            exc.__str__(),
+                            exc,
                         )
                     )
                     log.error(
@@ -1367,6 +1376,11 @@ class Pillar:
         if self.client:
             try:
                 self.client.destroy()
+            except AttributeError:
+                pass
+        if self.fileclient:
+            try:
+                self.fileclient.destroy()
             except AttributeError:
                 pass
 

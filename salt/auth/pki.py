@@ -17,6 +17,7 @@ TODO: Add a 'ca_dir' option to configure a directory of CA files, a la Apache.
 import logging
 
 import salt.utils.files
+import salt.utils.versions
 
 # pylint: disable=import-error
 try:
@@ -30,7 +31,7 @@ try:
             from Cryptodome.Util import asn1
         except ImportError:
             from Crypto.Util import asn1  # nosec
-        import OpenSSL
+        import OpenSSL  # pylint: disable=W8410
     HAS_DEPS = True
 except ImportError:
     HAS_DEPS = False
@@ -71,6 +72,10 @@ def auth(username, password, **kwargs):
             your_user:
               - .*
     """
+    salt.utils.versions.warn_until(
+        3008,
+        "This module has been deprecated as it is known to be insecure.",
+    )
     pem = password
     cacert_file = __salt__["config.get"]("external_auth:pki:ca_file")
 
@@ -84,11 +89,10 @@ def auth(username, password, **kwargs):
         if cert.verify(cacert.get_pubkey()):
             log.info("Successfully authenticated certificate: %s", pem)
             return True
-        else:
-            log.info("Failed to authenticate certificate: %s", pem)
-            return False
+        log.info("Failed to authenticate certificate: %s", pem)
+        return False
 
-    c = OpenSSL.crypto
+    c = OpenSSL.crypto  # pylint: disable=used-before-assignment
     cert = c.load_certificate(c.FILETYPE_PEM, pem)
 
     with salt.utils.files.fopen(cacert_file) as f:
@@ -101,7 +105,7 @@ def auth(username, password, **kwargs):
     cert_asn1 = c.dump_certificate(c.FILETYPE_ASN1, cert)
 
     # Decode the certificate
-    der = asn1.DerSequence()
+    der = asn1.DerSequence()  # pylint: disable=used-before-assignment
     der.decode(cert_asn1)
 
     # The certificate has three parts:

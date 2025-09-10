@@ -1,27 +1,44 @@
-  <%- for backend in ("onedir", "src") %>
+<%- set pkg_types = ("onedir", "src") %>
+
+  <%- for backend in pkg_types %>
   <%- set job_name = "build-pkgs-{}".format(backend) %>
   <%- if backend == "src" %>
     <%- do conclusion_needs.append(job_name) %>
   <%- endif %>
 
   <{ job_name }>:
-    name: Build Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    <%- if backend == "src" %>
+    name: Build Source Packages
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
+    <%- else %>
+    name: Build Onedir Packages
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] }}
+    <%- endif %>
     needs:
       - prepare-workflow
+      - build-source-tarball
+      <%- if backend == "onedir" %>
       - build-salt-onedir
+      <%- endif %>
     uses: ./.github/workflows/build-packages.yml
+    <% if gh_environment == 'staging' -%>
+    secrets: inherit
+    <% endif -%>
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
       relenv-version: "<{ relenv_version }>"
       python-version: "<{ python_version }>"
+      ci-python-version: "<{ gh_actions_workflows_python_version }>"
       source: "<{ backend }>"
-    <%- if gh_environment %>
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
+    <%- if gh_environment != "ci" %>
       environment: <{ gh_environment }>
-      sign-macos-packages: true
+      sign-macos-packages: false
+      sign-rpm-packages: <% if gh_environment == 'nightly' -%> false <%- else -%> ${{ inputs.sign-rpm-packages }} <%- endif %>
       sign-windows-packages: <% if gh_environment == 'nightly' -%> false <%- else -%> ${{ inputs.sign-windows-packages }} <%- endif %>
-    secrets: inherit
+
     <%- endif %>
 
   <%- endfor %>

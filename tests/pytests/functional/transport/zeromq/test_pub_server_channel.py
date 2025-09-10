@@ -24,6 +24,10 @@ pytestmark = [
     pytest.mark.skip_on_spawning_platform(
         reason="These tests are currently broken on spawning platforms. Need to be rewritten.",
     ),
+    pytest.mark.skipif(
+        "grains['osfinger'] == 'Rocky Linux-8' and grains['osarch'] == 'aarch64'",
+        reason="Temporarily skip on Rocky Linux 8 Arm64",
+    ),
 ]
 
 
@@ -260,7 +264,7 @@ async def test_pub_channel(master_opts, io_loop):
     io_loop.add_callback(
         server.publisher,
         publish_payload,
-        ioloop=io_loop,
+        io_loop=io_loop,
     )
 
     await asyncio.sleep(3)
@@ -298,7 +302,7 @@ async def test_pub_channel_filtering(master_opts, io_loop):
     io_loop.add_callback(
         server.publisher,
         publish_payload,
-        ioloop=io_loop,
+        io_loop=io_loop,
     )
 
     await asyncio.sleep(3)
@@ -334,7 +338,7 @@ async def test_pub_channel_filtering_topic(master_opts, io_loop):
     io_loop.add_callback(
         server.publisher,
         publish_payload,
-        ioloop=io_loop,
+        io_loop=io_loop,
     )
 
     await asyncio.sleep(3)

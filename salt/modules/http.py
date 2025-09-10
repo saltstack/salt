@@ -5,7 +5,6 @@ like, but also useful for basic http testing.
 .. versionadded:: 2015.5.0
 """
 
-
 import time
 
 import salt.utils.http

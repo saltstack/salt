@@ -15,6 +15,7 @@ from pytestshellutils.utils import ports
 import salt.channel.server
 import salt.exceptions
 import salt.transport.tcp
+import salt.utils.platform
 from tests.support.mock import MagicMock, PropertyMock, patch
 
 pytestmark = [
@@ -96,6 +97,24 @@ class ClientSocket:
 def client_socket():
     with ClientSocket() as _client_socket:
         yield _client_socket
+
+
+def test_get_socket():
+    socket = salt.transport.tcp._get_socket({"ipv6": True})
+
+    if salt.utils.platform.is_windows():
+        assert int(socket.family) == 23
+    else:
+        assert int(socket.family) == 10
+
+    socket = salt.transport.tcp._get_socket({"ipv6": False})
+    assert int(socket.family) == 2
+
+
+def test_get_bind_addr():
+    opts = {"interface": "192.168.0.1", "tcp": 1}
+    res = salt.transport.tcp._get_bind_addr(opts=opts, port_type="tcp")
+    assert res == ("192.168.0.1", 1)
 
 
 @pytest.mark.usefixtures("_squash_exepected_message_client_warning")
@@ -265,7 +284,7 @@ def salt_message_client():
         client.close()
 
 
-# XXX we don't reutnr a future anymore, this needs a different way of testing.
+# XXX we don't return a future anymore, this needs a different way of testing.
 # def test_send_future_set_retry(salt_message_client):
 #    future = salt_message_client.send({"some": "message"}, tries=10, timeout=30)
 #
@@ -417,10 +436,12 @@ async def test_when_async_req_channel_with_syndic_role_should_use_syndic_master_
         "transport": "tcp",
         "acceptance_wait_time": 30,
         "acceptance_wait_time_max": 30,
+        "signing_algorithm": "MOCK",
+        "keys.cache_driver": "localfs_key",
     }
     client = salt.channel.client.ReqChannel.factory(opts, io_loop=mockloop)
     assert client.master_pubkey_path == expected_pubkey_path
-    with patch("salt.crypt.verify_signature") as mock:
+    with patch("salt.crypt.PublicKey.from_file", return_value=MagicMock()) as mock:
         client.verify_signature("mockdata", "mocksig")
         assert mock.call_args_list[0][0][0] == expected_pubkey_path
 
@@ -441,10 +462,15 @@ async def test_mixin_should_use_correct_path_when_syndic():
         "keysize": 4096,
         "sign_pub_messages": True,
         "transport": "tcp",
+        "keys.cache_driver": "localfs_key",
     }
     client = salt.channel.client.AsyncPubChannel.factory(opts, io_loop=mockloop)
     client.master_pubkey_path = expected_pubkey_path
-    payload = {"sig": "abc", "load": {"foo": "bar"}}
+    payload = {
+        "sig": "abc",
+        "load": {"foo": "bar"},
+        "sig_algo": salt.crypt.PKCS1v15_SHA224,
+    }
     with patch("salt.crypt.verify_signature") as mock:
         client._verify_master_signature(payload)
         assert mock.call_args_list[0][0][0] == expected_pubkey_path
@@ -680,3 +706,74 @@ async def test_pub_server_publish_payload_closed_stream(master_opts, io_loop):
     server.clients = {client}
     await server.publish_payload(package, topic_list)
     assert server.clients == set()
+
+
+async def test_pub_server_paths_no_perms(master_opts, io_loop):
+    def publish_payload(payload):
+        return payload
+
+    pubserv = salt.transport.tcp.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=5151,
+        pull_host="127.0.0.1",
+        pull_port=5152,
+    )
+    assert pubserv.pull_path is None
+    assert pubserv.pub_path is None
+    with patch("os.chmod") as p:
+        await pubserv.publisher(publish_payload)
+        assert p.call_count == 0
+
+
+@pytest.mark.skip_on_windows()
+async def test_pub_server_publisher_pull_path_perms(master_opts, io_loop, tmp_path):
+    def publish_payload(payload):
+        return payload
+
+    pull_path = str(tmp_path / "pull.ipc")
+    pull_path_perms = 0o664
+    pubserv = salt.transport.tcp.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=5151,
+        pull_host=None,
+        pull_port=None,
+        pull_path=pull_path,
+        pull_path_perms=pull_path_perms,
+    )
+    assert pubserv.pull_path == pull_path
+    assert pubserv.pull_path_perms == pull_path_perms
+    assert pubserv.pull_host is None
+    assert pubserv.pull_port is None
+    with patch("os.chmod") as p:
+        await pubserv.publisher(publish_payload)
+        assert p.call_count == 1
+        assert p.call_args.args == (pubserv.pull_path, pubserv.pull_path_perms)
+
+
+@pytest.mark.skip_on_windows()
+async def test_pub_server_publisher_pub_path_perms(master_opts, io_loop, tmp_path):
+    def publish_payload(payload):
+        return payload
+
+    pub_path = str(tmp_path / "pub.ipc")
+    pub_path_perms = 0o664
+    pubserv = salt.transport.tcp.PublishServer(
+        master_opts,
+        pub_host=None,
+        pub_port=None,
+        pub_path=pub_path,
+        pub_path_perms=pub_path_perms,
+        pull_host="127.0.0.1",
+        pull_port=5151,
+        pull_path=None,
+    )
+    assert pubserv.pub_path == pub_path
+    assert pubserv.pub_path_perms == pub_path_perms
+    assert pubserv.pub_host is None
+    assert pubserv.pub_port is None
+    with patch("os.chmod") as p:
+        await pubserv.publisher(publish_payload)
+        assert p.call_count == 1
+        assert p.call_args.args == (pubserv.pub_path, pubserv.pub_path_perms)

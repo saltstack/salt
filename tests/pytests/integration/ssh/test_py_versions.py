@@ -1,6 +1,7 @@
 """
 Integration tests for salt-ssh py_versions
 """
+
 import logging
 import socket
 import time
@@ -8,9 +9,11 @@ import time
 import pytest
 from saltfactories.utils import random_string
 
+from salt.utils.versions import Version
+from tests.pytests.integration.ssh import check_system_python_version
 from tests.support.helpers import Keys
 
-pytest.importorskip("docker")
+docker = pytest.importorskip("docker")
 
 
 log = logging.getLogger(__name__)
@@ -18,6 +21,13 @@ log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("dockerd"),
+    pytest.mark.skipif(
+        Version(docker.__version__) < Version("4.0.0"),
+        reason="Test does not work in this version of docker-py",
+    ),
+    pytest.mark.skipif(
+        not check_system_python_version("3.10"), reason="Needs system python >= 3.9"
+    ),
 ]
 
 
@@ -84,22 +94,19 @@ def ssh_port(ssh_docker_container):
 
 
 @pytest.fixture(scope="module")
-def salt_ssh_roster_file(ssh_port, ssh_keys, salt_master):
+def salt_ssh_roster_file(ssh_port, ssh_keys, salt_master, known_hosts_file):
     """
     Temporary roster for ssh docker container
     """
-    roster = """
+    roster = f"""
     pyvertest:
       host: localhost
       user: centos
-      port: {}
-      priv: {}
+      port: {ssh_port}
+      priv: {ssh_keys.priv_path}
       ssh_options:
-        - StrictHostKeyChecking=no
-        - UserKnownHostsFile=/dev/null
-    """.format(
-        ssh_port, ssh_keys.priv_path
-    )
+        - UserKnownHostsFile={known_hosts_file}
+    """
     with pytest.helpers.temp_file(
         "py_versions_roster", roster, salt_master.config_dir
     ) as roster_file:

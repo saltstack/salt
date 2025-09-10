@@ -1,6 +1,7 @@
 """
 :codeauthor: Gareth J. Greenaway (ggreenaway@vmware.com)
 """
+
 import logging
 import random
 
@@ -9,6 +10,7 @@ from pytestshellutils.exceptions import FactoryNotStarted
 from saltfactories.utils import random_string
 
 import salt.defaults.exitcodes
+from tests.conftest import FIPS_TESTRUN
 from tests.support.helpers import PRE_PYTEST_SKIP_REASON
 
 log = logging.getLogger(__name__)
@@ -50,7 +52,15 @@ def test_exit_status_no_proxyid(salt_master, proxy_minion_id):
 
     with pytest.raises(FactoryNotStarted) as exc:
         factory = salt_master.salt_proxy_minion_daemon(
-            proxy_minion_id, include_proxyid_cli_flag=False, defaults=config_defaults
+            proxy_minion_id,
+            include_proxyid_cli_flag=False,
+            defaults=config_defaults,
+            overrides={
+                "fips_mode": FIPS_TESTRUN,
+                "publish_signing_algorithm": (
+                    "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+                ),
+            },
         )
         factory.start(start_timeout=10, max_start_attempts=1)
 
@@ -72,8 +82,15 @@ def test_exit_status_unknown_user(salt_master, proxy_minion_id):
     with pytest.raises(FactoryNotStarted) as exc:
         factory = salt_master.salt_proxy_minion_daemon(
             proxy_minion_id,
-            overrides={"user": "unknown-user"},
             defaults=config_defaults,
+            overrides={
+                "user": "unknown-user",
+                "fips_mode": FIPS_TESTRUN,
+                "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+                "signing_algorithm": (
+                    "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+                ),
+            },
         )
         factory.start(start_timeout=10, max_start_attempts=1)
 
@@ -92,7 +109,15 @@ def test_exit_status_unknown_argument(salt_master, proxy_minion_id):
 
     with pytest.raises(FactoryNotStarted) as exc:
         factory = salt_master.salt_proxy_minion_daemon(
-            proxy_minion_id, defaults=config_defaults
+            proxy_minion_id,
+            defaults=config_defaults,
+            overrides={
+                "fips_mode": FIPS_TESTRUN,
+                "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+                "signing_algorithm": (
+                    "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+                ),
+            },
         )
         factory.start("--unknown-argument", start_timeout=10, max_start_attempts=1)
 
@@ -127,6 +152,11 @@ def test_exit_status_correct_usage(
 
     config_defaults = {
         "metaproxy": "deltaproxy",
+    }
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
     proxy_one = "dummy_proxy_one"
     proxy_two = "dummy_proxy_two"
@@ -177,10 +207,13 @@ def test_exit_status_correct_usage(
         f"{proxy_two}.sls",
         dummy_proxy_two_pillar_file,
     )
-    with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile, dummy_proxy_two_tempfile:
+    with (
+        top_tempfile
+    ), controlproxy_tempfile, dummy_proxy_one_tempfile, dummy_proxy_two_tempfile:
         factory = salt_master.salt_proxy_minion_daemon(
             proxy_minion_id,
             defaults=config_defaults,
+            overrides=config_overrides,
             extra_cli_arguments_after_first_start_failure=["--log-level=info"],
             start_timeout=320,
         )
@@ -243,6 +276,11 @@ def test_missing_pillar_file(
     config_defaults = {
         "metaproxy": "deltaproxy",
     }
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+    }
     proxy_one = "dummy_proxy_one"
     proxy_two = "dummy_proxy_two"
 
@@ -284,6 +322,7 @@ def test_missing_pillar_file(
         factory = salt_master.salt_proxy_minion_daemon(
             proxy_minion_id,
             defaults=config_defaults,
+            overrides=config_overrides,
             extra_cli_arguments_after_first_start_failure=["--log-level=info"],
             start_timeout=320,
         )
@@ -340,6 +379,11 @@ def test_invalid_connection(
 
     config_defaults = {
         "metaproxy": "deltaproxy",
+    }
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
     proxy_one = "dummy_proxy_one"
     broken_proxy_one = "broken_proxy_one"
@@ -404,10 +448,15 @@ def test_invalid_connection(
     broken_proxy_two_tempfile = salt_master.pillar_tree.base.temp_file(
         f"{broken_proxy_two}.sls", broken_proxy_two_pillar_file
     )
-    with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile, broken_proxy_one_tempfile, broken_proxy_two_tempfile:
+    with (
+        top_tempfile
+    ), (
+        controlproxy_tempfile
+    ), dummy_proxy_one_tempfile, broken_proxy_one_tempfile, broken_proxy_two_tempfile:
         factory = salt_master.salt_proxy_minion_daemon(
             proxy_minion_id,
             defaults=config_defaults,
+            overrides=config_overrides,
             extra_cli_arguments_after_first_start_failure=["--log-level=info"],
             start_timeout=320,
         )
@@ -466,6 +515,11 @@ def test_custom_proxy_module(
 
     config_defaults = {
         "metaproxy": "deltaproxy",
+    }
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
     proxy_one = "custom_dummy_proxy_one"
     proxy_two = "custom_dummy_proxy_two"
@@ -533,10 +587,15 @@ def ping():
     custom_proxy_module = salt_master.state_tree.base.temp_file(
         "_proxy/custom_dummy.py", module_contents
     )
-    with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile, dummy_proxy_two_tempfile, custom_proxy_module:
+    with (
+        top_tempfile
+    ), (
+        controlproxy_tempfile
+    ), dummy_proxy_one_tempfile, dummy_proxy_two_tempfile, custom_proxy_module:
         factory = salt_master.salt_proxy_minion_daemon(
             proxy_minion_id,
             defaults=config_defaults,
+            overrides=config_overrides,
             extra_cli_arguments_after_first_start_failure=["--log-level=info"],
             start_timeout=320,
         )
@@ -599,6 +658,11 @@ def test_custom_proxy_module_raise_exception(
 
     config_defaults = {
         "metaproxy": "deltaproxy",
+    }
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
     proxy_one = "custom_dummy_proxy_one"
     proxy_two = "custom_dummy_proxy_two"
@@ -666,10 +730,15 @@ def ping():
     custom_proxy_module = salt_master.state_tree.base.temp_file(
         "_proxy/custom_dummy.py", module_contents
     )
-    with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile, dummy_proxy_two_tempfile, custom_proxy_module:
+    with (
+        top_tempfile
+    ), (
+        controlproxy_tempfile
+    ), dummy_proxy_one_tempfile, dummy_proxy_two_tempfile, custom_proxy_module:
         factory = salt_master.salt_proxy_minion_daemon(
             proxy_minion_id,
             defaults=config_defaults,
+            overrides=config_overrides,
             extra_cli_arguments_after_first_start_failure=["--log-level=info"],
             start_timeout=320,
         )
@@ -734,6 +803,11 @@ def test_exit_status_correct_usage_large_number_of_minions(
 
     config_defaults = {
         "metaproxy": "deltaproxy",
+    }
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
     sub_proxies = [
         "proxy_one",
@@ -811,6 +885,7 @@ def test_exit_status_correct_usage_large_number_of_minions(
         factory = salt_master.salt_proxy_minion_daemon(
             proxy_minion_id,
             defaults=config_defaults,
+            overrides=config_overrides,
             extra_cli_arguments_after_first_start_failure=["--log-level=info"],
             start_timeout=320,
         )

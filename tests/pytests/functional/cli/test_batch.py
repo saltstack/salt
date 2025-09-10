@@ -2,6 +2,7 @@
 tests.pytests.functional.cli.test_batch
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
+
 import salt.cli.batch
 import salt.config
 import salt.utils.jid

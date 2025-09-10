@@ -25,7 +25,7 @@ def mksls(src, dst=None):
                 continue
 
             comps = shlex.split(line)
-            if comps[0] not in ps_opts.keys():
+            if comps[0] not in ps_opts:
                 ps_opts[comps[0]] = {}
             cmds = comps[1].split("/")
 

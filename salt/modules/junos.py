@@ -479,10 +479,10 @@ def set_hostname(hostname=None, **kwargs):
             ret["out"] = True
         except Exception as exception:  # pylint: disable=broad-except
             ret["out"] = False
-            ret[
-                "message"
-            ] = 'Successfully loaded host-name but commit failed with "{}"'.format(
-                exception
+            ret["message"] = (
+                'Successfully loaded host-name but commit failed with "{}"'.format(
+                    exception
+                )
             )
             _restart_connection()
             return ret
@@ -493,10 +493,10 @@ def set_hostname(hostname=None, **kwargs):
             conn.cu.rollback()
         except Exception as exception:  # pylint: disable=broad-except
             ret["out"] = False
-            ret[
-                "message"
-            ] = 'Successfully loaded host-name but rollback before exit failed "{}"'.format(
-                exception
+            ret["message"] = (
+                'Successfully loaded host-name but rollback before exit failed "{}"'.format(
+                    exception
+                )
             )
             _restart_connection()
 
@@ -579,10 +579,10 @@ def commit(**kwargs):
                 ret["out"] = False
         except Exception as exception:  # pylint: disable=broad-except
             ret["out"] = False
-            ret[
-                "message"
-            ] = 'Commit check succeeded but actual commit failed with "{}"'.format(
-                exception
+            ret["message"] = (
+                'Commit check succeeded but actual commit failed with "{}"'.format(
+                    exception
+                )
             )
             _restart_connection()
     else:
@@ -592,10 +592,10 @@ def commit(**kwargs):
             conn.cu.rollback()
         except Exception as exception:  # pylint: disable=broad-except
             ret["out"] = False
-            ret[
-                "message"
-            ] = 'Pre-commit check failed, and exception during rollback "{}"'.format(
-                exception
+            ret["message"] = (
+                'Pre-commit check failed, and exception during rollback "{}"'.format(
+                    exception
+                )
             )
             _restart_connection()
 
@@ -708,10 +708,10 @@ def rollback(**kwargs):
             ret["out"] = True
         except Exception as exception:  # pylint: disable=broad-except
             ret["out"] = False
-            ret[
-                "message"
-            ] = 'Rollback successful but commit failed with error "{}"'.format(
-                exception
+            ret["message"] = (
+                'Rollback successful but commit failed with error "{}"'.format(
+                    exception
+                )
             )
             _restart_connection()
             return ret
@@ -1078,9 +1078,9 @@ def install_config(path=None, **kwargs):
     ret["out"] = True
 
     if path is None:
-        ret[
-            "message"
-        ] = "Please provide the salt path where the configuration is present"
+        ret["message"] = (
+            "Please provide the salt path where the configuration is present"
+        )
         ret["out"] = False
         return ret
 
@@ -1139,9 +1139,9 @@ def install_config(path=None, **kwargs):
 
         db_mode = op.pop("mode", "exclusive")
         if write_diff and db_mode in ["dynamic", "ephemeral"]:
-            ret[
-                "message"
-            ] = "Write diff is not supported with dynamic/ephemeral configuration mode"
+            ret["message"] = (
+                "Write diff is not supported with dynamic/ephemeral configuration mode"
+            )
             ret["out"] = False
             return ret
 
@@ -1153,9 +1153,9 @@ def install_config(path=None, **kwargs):
                 try:
                     cu.load(**op)
                 except Exception as exception:  # pylint: disable=broad-except
-                    ret[
-                        "message"
-                    ] = f'Could not load configuration due to : "{exception}"'
+                    ret["message"] = (
+                        f'Could not load configuration due to : "{exception}"'
+                    )
                     ret["format"] = op["format"]
                     ret["out"] = False
                     _restart_connection()
@@ -1185,10 +1185,10 @@ def install_config(path=None, **kwargs):
                     try:
                         check = cu.commit_check()
                     except Exception as exception:  # pylint: disable=broad-except
-                        ret[
-                            "message"
-                        ] = 'Commit check threw the following exception: "{}"'.format(
-                            exception
+                        ret["message"] = (
+                            'Commit check threw the following exception: "{}"'.format(
+                                exception
+                            )
                         )
                         ret["out"] = False
                         _restart_connection()
@@ -1199,10 +1199,10 @@ def install_config(path=None, **kwargs):
                         cu.commit(**commit_params)
                         ret["message"] = "Successfully loaded and committed!"
                     except Exception as exception:  # pylint: disable=broad-except
-                        ret[
-                            "message"
-                        ] = 'Commit check successful but commit failed with "{}"'.format(
-                            exception
+                        ret["message"] = (
+                            'Commit check successful but commit failed with "{}"'.format(
+                                exception
+                            )
                         )
                         ret["out"] = False
                         _restart_connection()
@@ -1248,9 +1248,9 @@ def install_config(path=None, **kwargs):
                         with salt.utils.files.fopen(write_diff, "w") as fp:
                             fp.write(salt.utils.stringutils.to_str(config_diff))
                 except Exception as exception:  # pylint: disable=broad-except
-                    ret[
-                        "message"
-                    ] = f"Could not write into diffs_file due to: '{exception}'"
+                    ret["message"] = (
+                        f"Could not write into diffs_file due to: '{exception}'"
+                    )
                     ret["out"] = False
 
         except ValueError as ex:
@@ -1396,9 +1396,9 @@ def install_os(path=None, **kwargs):
     no_copy_ = op.get("no_copy", False)
 
     if path is None:
-        ret[
-            "message"
-        ] = "Please provide the salt path where the junos image is present."
+        ret["message"] = (
+            "Please provide the salt path where the junos image is present."
+        )
         ret["out"] = False
         return ret
 
@@ -1467,10 +1467,10 @@ def install_os(path=None, **kwargs):
             conn.sw.reboot(**reboot_kwargs)
         except Exception as exception:  # pylint: disable=broad-except
             __proxy__["junos.reboot_clear"]()
-            ret[
-                "message"
-            ] = 'Installation successful but reboot failed due to : "{}"'.format(
-                exception
+            ret["message"] = (
+                'Installation successful but reboot failed due to : "{}"'.format(
+                    exception
+                )
             )
             ret["out"] = False
             _restart_connection()
@@ -1666,9 +1666,9 @@ def load(path=None, **kwargs):
     ret["out"] = True
 
     if path is None:
-        ret[
-            "message"
-        ] = "Please provide the salt path where the configuration is present"
+        ret["message"] = (
+            "Please provide the salt path where the configuration is present"
+        )
         ret["out"] = False
         return ret
 
@@ -1862,10 +1862,10 @@ def get_table(
                     )
                     globals().update(FactoryLoader().load(ret["table"]))
             except OSError as err:
-                ret[
-                    "message"
-                ] = "Uncaught exception during YAML Load - please report: {}".format(
-                    str(err)
+                ret["message"] = (
+                    "Uncaught exception during YAML Load - please report: {}".format(
+                        str(err)
+                    )
                 )
                 ret["out"] = False
                 return ret
@@ -1873,18 +1873,18 @@ def get_table(
                 data = globals()[table](conn)
                 data.get(**get_kvargs)
             except KeyError as err:
-                ret[
-                    "message"
-                ] = "Uncaught exception during get API call - please report: {}".format(
-                    str(err)
+                ret["message"] = (
+                    "Uncaught exception during get API call - please report: {}".format(
+                        str(err)
+                    )
                 )
                 ret["out"] = False
                 return ret
             except ConnectClosedError:
-                ret[
-                    "message"
-                ] = "Got ConnectClosedError exception. Connection lost with {}".format(
-                    conn
+                ret["message"] = (
+                    "Got ConnectClosedError exception. Connection lost with {}".format(
+                        conn
+                    )
                 )
                 ret["out"] = False
                 _restart_connection()
@@ -1914,10 +1914,10 @@ def get_table(
                     ret["table"][table]["args"] = args
                     ret["table"][table]["command"] = data.GET_CMD
     except ConnectClosedError:
-        ret[
-            "message"
-        ] = "Got ConnectClosedError exception. Connection lost with {}".format(
-            str(conn)
+        ret["message"] = (
+            "Got ConnectClosedError exception. Connection lost with {}".format(
+                str(conn)
+            )
         )
         ret["out"] = False
         _restart_connection()

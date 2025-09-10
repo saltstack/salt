@@ -87,17 +87,17 @@ def set_present(name, set_type, family="ipv4", **kwargs):
     set_check = __salt__["ipset.check_set"](name)
     if set_check is True:
         ret["result"] = True
-        ret["comment"] = "ipset set {} already exists for {}".format(name, family)
+        ret["comment"] = f"ipset set {name} already exists for {family}"
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "ipset set {} would be added for {}".format(name, family)
+        ret["comment"] = f"ipset set {name} would be added for {family}"
         return ret
     command = __salt__["ipset.new_set"](name, set_type, family, **kwargs)
     if command is True:
         ret["changes"] = {"locale": name}
         ret["result"] = True
-        ret["comment"] = "ipset set {} created successfully for {}".format(name, family)
+        ret["comment"] = f"ipset set {name} created successfully for {family}"
         return ret
     else:
         ret["result"] = False
@@ -122,10 +122,10 @@ def set_absent(name, family="ipv4", **kwargs):
     set_check = __salt__["ipset.check_set"](name, family)
     if not set_check:
         ret["result"] = True
-        ret["comment"] = "ipset set {} for {} is already absent".format(name, family)
+        ret["comment"] = f"ipset set {name} for {family} is already absent"
         return ret
     if __opts__["test"]:
-        ret["comment"] = "ipset set {} for {} would be removed".format(name, family)
+        ret["comment"] = f"ipset set {name} for {family} would be removed"
         return ret
     flush_set = __salt__["ipset.flush"](name, family)
     if flush_set:
@@ -212,10 +212,10 @@ def present(name, entry=None, family="ipv4", **kwargs):
                     )
                 else:
                     ret["result"] = False
-                    ret[
-                        "comment"
-                    ] = "Failed to add to entry {1} to set {0} for family {2}.\n{3}".format(
-                        kwargs["set_name"], _entry, family, command
+                    ret["comment"] = (
+                        "Failed to add to entry {1} to set {0} for family {2}.\n{3}".format(
+                            kwargs["set_name"], _entry, family, command
+                        )
                     )
     return ret
 
@@ -310,7 +310,7 @@ def flush(name, family="ipv4", **kwargs):
     set_check = __salt__["ipset.check_set"](name)
     if set_check is False:
         ret["result"] = False
-        ret["comment"] = "ipset set {} does not exist for {}".format(name, family)
+        ret["comment"] = f"ipset set {name} does not exist for {family}"
         return ret
 
     if __opts__["test"]:
@@ -321,7 +321,7 @@ def flush(name, family="ipv4", **kwargs):
     if __salt__["ipset.flush"](name, family):
         ret["changes"] = {"locale": name}
         ret["result"] = True
-        ret["comment"] = "Flushed ipset entries from set {} for {}".format(name, family)
+        ret["comment"] = f"Flushed ipset entries from set {name} for {family}"
         return ret
     else:
         ret["result"] = False

@@ -1,6 +1,7 @@
 """
 Tests for file.comment state function
 """
+
 import re
 
 import pytest

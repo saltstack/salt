@@ -185,12 +185,13 @@ a return like::
 .. |500| replace:: internal server error
 """
 
-import cgi
+import cgi  # pylint: disable=deprecated-module
 import fnmatch
 import logging
 import time
 from collections import defaultdict
 from copy import copy
+from functools import cached_property
 
 import tornado.escape
 import tornado.gen
@@ -332,12 +333,12 @@ class EventListener:
         Get an event (asynchronous of course) return a future that will get it later
         """
         future = Future()
+        _loop = tornado.ioloop.IOLoop.current()
+        assert _loop
         if callback is not None:
 
             def handle_future(future):
-                tornado.ioloop.IOLoop.current().add_callback(
-                    callback, future
-                )  # pylint: disable=E1102
+                _loop.add_callback(callback, future)  # pylint: disable=not-callable
 
             future.add_done_callback(handle_future)
         # add this tag and future to the callbacks
@@ -345,7 +346,7 @@ class EventListener:
         self.request_map[request].append((tag, matcher, future))
 
         if timeout:
-            timeout_future = tornado.ioloop.IOLoop.current().call_later(
+            timeout_future = _loop.call_later(
                 timeout, self._timeout_future, tag, matcher, future
             )
             self.timeout_map[future] = timeout_future
@@ -443,8 +444,9 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
                 "runner_async": None,  # empty, since we use the same client as `runner`
             }
 
-        if not hasattr(self, "ckminions"):
-            self.ckminions = salt.utils.minions.CkMinions(self.application.opts)
+    @cached_property
+    def ckminions(self):
+        return salt.utils.minions.CkMinions(self.application.opts)
 
     @property
     def token(self):

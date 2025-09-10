@@ -1,6 +1,7 @@
 """
 These commands are used to generate Salt's manpages.
 """
+
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
@@ -11,6 +12,7 @@ import shutil
 import sys
 
 from ptscripts import Context, command_group
+from ptscripts.models import VirtualEnvPipConfig
 
 import tools.utils
 
@@ -21,8 +23,8 @@ docs = command_group(
     name="docs",
     help="Manpages tools",
     description=__doc__,
-    venv_config={
-        "requirements_files": [
+    venv_config=VirtualEnvPipConfig(
+        requirements_files=[
             tools.utils.REPO_ROOT / "requirements" / "base.txt",
             tools.utils.REPO_ROOT / "requirements" / "zeromq.txt",
             tools.utils.REPO_ROOT
@@ -32,7 +34,7 @@ docs = command_group(
             / "py{}.{}".format(*sys.version_info)
             / "docs.txt",
         ],
-        "pip_args": [
+        install_args=[
             "--constraint",
             str(
                 tools.utils.REPO_ROOT
@@ -43,7 +45,7 @@ docs = command_group(
                 / "linux.txt"
             ),
         ],
-    },
+    ),
 )
 
 
@@ -140,51 +142,6 @@ def html(
             wfh.write(
                 "has-artifacts=true\n"
                 f"artifact-name={artifact_name}\n"
-                f"artifact-path={artifact.resolve()}\n"
-            )
-
-
-@docs.command(
-    name="epub",
-    arguments={
-        "no_clean": {
-            "help": "Don't cleanup prior to building",
-        },
-        "no_color": {
-            "help": "Disable colored output.",
-        },
-    },
-)
-def epub(ctx: Context, no_clean: bool = False, no_color: bool = False):
-    if no_clean is False:
-        ctx.run("make", "clean", cwd="doc/", check=True)
-    opts = [
-        "-j",
-        "auto",
-        "--keep-going",
-    ]
-    if no_color is False:
-        opts.append("--color")
-    ctx.run(
-        "make",
-        "epub",
-        f"SPHINXOPTS={' '.join(opts)}",
-        cwd="doc/",
-        check=True,
-    )
-
-    artifact = tools.utils.REPO_ROOT / "doc" / "_build" / "epub" / "Salt.epub"
-    if "LATEST_RELEASE" in os.environ:
-        shutil.move(
-            artifact, artifact.parent / f"Salt-{os.environ['LATEST_RELEASE']}.epub"
-        )
-        artifact = artifact.parent / f"Salt-{os.environ['LATEST_RELEASE']}.epub"
-    github_output = os.environ.get("GITHUB_OUTPUT")
-    if github_output is not None:
-        with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(
-                "has-artifacts=true\n"
-                f"artifact-name={artifact.resolve().name}\n"
                 f"artifact-path={artifact.resolve()}\n"
             )
 

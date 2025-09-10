@@ -6,13 +6,14 @@ import pathlib
 import pprint
 import re
 import shutil
+import subprocess
 import textwrap
 import time
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING
 
 import attr
 import distro
-import packaging
+import packaging.version
 import psutil
 import pytest
 import requests
@@ -22,6 +23,7 @@ from pytestshellutils.utils.processes import (
     ProcessResult,
     _get_cmdline,
     terminate_process,
+    terminate_process_list,
 )
 from pytestskipmarkers.utils import platform
 from saltfactories.bases import SystemdSaltDaemonImpl
@@ -49,7 +51,7 @@ class SaltPkgInstall:
     ssm_bin: pathlib.Path = attr.ib(default=None)
     bin_dir: pathlib.Path = attr.ib(default=None)
     install_dir: pathlib.Path = attr.ib(init=False)
-    binary_paths: Dict[str, List[pathlib.Path]] = attr.ib(init=False)
+    binary_paths: dict[str, list[pathlib.Path]] = attr.ib(init=False)
     config_path: str = attr.ib(init=False)
     conf_dir: pathlib.Path = attr.ib()
 
@@ -78,14 +80,14 @@ class SaltPkgInstall:
     pkg_mngr: str = attr.ib(init=False)
     rm_pkg: str = attr.ib(init=False)
     dbg_pkg: str = attr.ib(init=False)
-    salt_pkgs: List[str] = attr.ib(init=False)
-    pkgs: List[str] = attr.ib(factory=list)
+    salt_pkgs: list[str] = attr.ib(init=False)
+    pkgs: list[str] = attr.ib(factory=list)
     file_ext: bool = attr.ib(default=None)
     relenv: bool = attr.ib(default=True)
 
     @proc.default
     def _default_proc(self):
-        return Subprocess()
+        return Subprocess(timeout=240)
 
     @distro_id.default
     def _default_distro_id(self):
@@ -105,13 +107,21 @@ class SaltPkgInstall:
 
     @distro_version.default
     def _default_distro_version(self):
-        if self.distro_name == "photon":
+        if self.distro_name in ("photon", "rocky"):
             return distro.version().split(".")[0]
         return distro.version().lower()
 
     @pkg_mngr.default
     def _default_pkg_mngr(self):
-        if self.distro_id in ("centos", "redhat", "amzn", "fedora", "photon"):
+        if self.distro_id in (
+            "almalinux",
+            "rocky",
+            "centos",
+            "redhat",
+            "amzn",
+            "fedora",
+            "photon",
+        ):
             return "yum"
         elif self.distro_id in ("ubuntu", "debian"):
             ret = self.proc.run("apt-get", "update")
@@ -120,7 +130,15 @@ class SaltPkgInstall:
 
     @rm_pkg.default
     def _default_rm_pkg(self):
-        if self.distro_id in ("centos", "redhat", "amzn", "fedora", "photon"):
+        if self.distro_id in (
+            "almalinux",
+            "rocky",
+            "centos",
+            "redhat",
+            "amzn",
+            "fedora",
+            "photon",
+        ):
             return "remove"
         elif self.distro_id in ("ubuntu", "debian"):
             return "purge"
@@ -128,7 +146,15 @@ class SaltPkgInstall:
     @dbg_pkg.default
     def _default_dbg_pkg(self):
         dbg_pkg = None
-        if self.distro_id in ("centos", "redhat", "amzn", "fedora", "photon"):
+        if self.distro_id in (
+            "almalinux",
+            "rocky",
+            "centos",
+            "redhat",
+            "amzn",
+            "fedora",
+            "photon",
+        ):
             dbg_pkg = "salt-debuginfo"
         elif self.distro_id in ("ubuntu", "debian"):
             dbg_pkg = "salt-dbg"
@@ -144,7 +170,15 @@ class SaltPkgInstall:
             "salt-cloud",
             "salt-minion",
         ]
-        if self.distro_id in ("centos", "redhat", "amzn", "fedora", "photon"):
+        if self.distro_id in (
+            "almalinux",
+            "rocky",
+            "centos",
+            "redhat",
+            "amzn",
+            "fedora",
+            "photon",
+        ):
             salt_pkgs.append("salt")
         elif self.distro_id in ("ubuntu", "debian"):
             salt_pkgs.append("salt-common")
@@ -171,7 +205,7 @@ class SaltPkgInstall:
         Default location for salt configurations
         """
         if platform.is_windows():
-            config_path = pathlib.Path("C://salt", "etc", "salt")
+            config_path = pathlib.Path("C:\\salt", "etc", "salt")
         else:
             config_path = pathlib.Path("/etc", "salt")
         return config_path
@@ -187,6 +221,7 @@ class SaltPkgInstall:
             version = self.prev_version
             parsed = packaging.version.parse(version)
             version = f"{parsed.major}.{parsed.minor}"
+        # ensure services stopped on Debian/Ubuntu (minic install for RedHat - non-starting)
         if self.distro_id in ("ubuntu", "debian"):
             self.stop_services()
         return version
@@ -209,7 +244,7 @@ class SaltPkgInstall:
                 break
         if not version:
             pytest.fail(
-                f"Failed to package artifacts in '{ARTIFACTS_DIR}'. "
+                f"Failed to find package artifacts in '{ARTIFACTS_DIR}'. "
                 f"Directory Contents:\n{pprint.pformat(artifacts)}"
             )
         return version
@@ -256,7 +291,7 @@ class SaltPkgInstall:
                             self.install_dir / "salt-minion.exe"
                         ).exists() and not self.relenv:
                             log.debug(
-                                f"Removing {(self.install_dir / 'salt-minion.exe')}"
+                                "Removing %s", self.install_dir / "salt-minion.exe"
                             )
                             (self.install_dir / "salt-minion.exe").unlink()
 
@@ -267,6 +302,10 @@ class SaltPkgInstall:
                         self.run_root = self.bin_dir / "run"
                     else:
                         log.error("Unexpected file extension: %s", self.file_ext)
+                log.debug("root: %s", self.root)
+                log.debug("bin_dir: %s", self.bin_dir)
+                log.debug("ssm_bin: %s", self.ssm_bin)
+                log.debug("run_root: %s", self.run_root)
 
         if not self.pkgs:
             pytest.fail("Could not find Salt Artifacts")
@@ -372,21 +411,24 @@ class SaltPkgInstall:
                         self.binary_paths["spm"] = [shutil.which("salt-spm")]
                     else:
                         self.binary_paths["pip"] = [shutil.which("salt-pip")]
+        log.debug("python_bin: %s", python_bin)
+        log.debug("binary_paths: %s", self.binary_paths)
+        log.debug("install_dir: %s", self.install_dir)
 
     @staticmethod
     def salt_factories_root_dir(system_service: bool = False) -> pathlib.Path:
         if system_service is False:
             return None
         if platform.is_windows():
-            return pathlib.Path("C:/salt")
+            return pathlib.Path("C:\\salt")
         if platform.is_darwin():
             return pathlib.Path("/opt/salt")
         return pathlib.Path("/")
 
     def _check_retcode(self, ret):
         """
-        helper function ot check subprocess.run
-        returncode equals 0, if not raise assertionerror
+        Helper function to check subprocess.run returncode equals 0
+        If not raise AssertionError
         """
         if ret.returncode != 0:
             log.error(ret)
@@ -397,7 +439,7 @@ class SaltPkgInstall:
         if downgrade:
             self.install_previous(downgrade=downgrade)
             return True
-        pkg = self.pkgs[0]
+        pkg = str(pathlib.Path(self.pkgs[0]).resolve())
         if platform.is_windows():
             if upgrade:
                 self.root = self.install_dir.parent
@@ -405,36 +447,41 @@ class SaltPkgInstall:
                 self.ssm_bin = self.install_dir / "ssm.exe"
             if pkg.endswith("exe"):
                 # Install the package
-                log.debug("Installing: %s", str(pkg))
-                # ret = self.proc.run("start", "/wait", f"\"{str(pkg)} /start-minion=0 /S\"")
-                batch_file = pathlib.Path(pkg).parent / "install_nsis.cmd"
-                batch_content = f"start /wait {str(pkg)} /start-minion=0 /S"
-                with salt.utils.files.fopen(batch_file, "w") as fp:
-                    fp.write(batch_content)
-                # Now run the batch file
-                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
+                log.info("Installing: %s", str(pkg))
+                ret = self.proc.run(str(pkg), "/start-minion=0", "/S")
                 self._check_retcode(ret)
             elif pkg.endswith("msi"):
                 # Install the package
-                log.debug("Installing: %s", str(pkg))
-                # Write a batch file to run the installer. It is impossible to
-                # perform escaping of the START_MINION property that the MSI
-                # expects unless we do it via a batch file
-                batch_file = pathlib.Path(pkg).parent / "install_msi.cmd"
-                batch_content = f'msiexec /qn /i "{str(pkg)}" START_MINION=""\n'
-                with salt.utils.files.fopen(batch_file, "w") as fp:
-                    fp.write(batch_content)
-                # Now run the batch file
-                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
-                self._check_retcode(ret)
+                log.info("Installing: %s", str(pkg))
+                # self.proc.run always makes the command a list even when shell
+                # is true, meaning shell being true will never work correctly.
+                ret = subprocess.run(
+                    f'msiexec.exe /qn /i {pkg} /norestart START_MINION=""',
+                    shell=True,  # nosec
+                    check=False,
+                )
+                assert ret.returncode in [0, 3010]
             else:
                 log.error("Invalid package: %s", pkg)
                 return False
 
+            # XXX This should be temporary. See also a similar thing happening
+            # in tests/pytests/pkg/conftest.py
+            grainsdir = pathlib.Path(
+                r"C:\Program Files\Salt Project\Salt\Lib\site-packages\salt\grains"
+            )
+            shutil.copy(r"salt\grains\disks.py", grainsdir)
+
             # Remove the service installed by the installer
             log.debug("Removing installed salt-minion service")
             self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
+
+            # Add installation to the path
             self.update_process_path()
+
+            # Install the service using our config
+            if self.pkg_system_service:
+                self._install_ssm_service()
 
         elif platform.is_darwin():
             daemons_dir = pathlib.Path("/Library", "LaunchDaemons")
@@ -443,13 +490,29 @@ class SaltPkgInstall:
             log.debug("Installing: %s", str(pkg))
             ret = self.proc.run("installer", "-pkg", str(pkg), "-target", "/")
             self._check_retcode(ret)
+
             # Stop the service installed by the installer
             self.proc.run("launchctl", "disable", f"system/{service_name}")
             self.proc.run("launchctl", "bootout", "system", str(plist_file))
+
         elif upgrade:
             env = os.environ.copy()
             extra_args = []
             if self.distro_id in ("ubuntu", "debian"):
+
+                pref_file = pathlib.Path(
+                    "/etc", "apt", "preferences.d", "salt-pin-1001"
+                )
+                pref_file.parent.mkdir(exist_ok=True)
+                pin = f"{self.artifact_version.rsplit('.', 1)[0]}.*"
+                with salt.utils.files.fopen(pref_file, "w") as fp:
+                    fp.write(
+                        f"Package: salt-*\n"
+                        f"Pin: version {pin}\n"
+                        f"Pin-Priority: 1001"
+                    )
+                log.error("Pin to %s", pin)
+
                 env["DEBIAN_FRONTEND"] = "noninteractive"
                 extra_args = [
                     "-o",
@@ -464,22 +527,85 @@ class SaltPkgInstall:
                 # tdnf does not detect nightly build versions to be higher version
                 # than release versions
                 upgrade_cmd = "install"
+                if "+" in self.pkgs[0]:
+                    # self.pkgs are not signed unless this is a release.
+                    args.append("--nogpgcheck")
             ret = self.proc.run(
                 self.pkg_mngr,
                 upgrade_cmd,
                 "-y",
                 *args,
-                _timeout=120,
                 env=env,
             )
         else:
+            args = ["install", "-y"]
+            if self.distro_id == "photon":
+                ret = self.proc.run(
+                    "rpm",
+                    "--import",
+                    "https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public",
+                )
+                self._check_retcode(ret)
+                if "+" in self.pkgs[0]:
+                    # self.pkgs are not signed unless this is a release.
+                    args.append("--nogpgcheck")
             log.info("Installing packages:\n%s", pprint.pformat(self.pkgs))
-            ret = self.proc.run(self.pkg_mngr, "install", "-y", *self.pkgs)
+            args += self.pkgs
+            ret = self.proc.run(self.pkg_mngr, *args)
+
         if not platform.is_darwin() and not platform.is_windows():
             # Make sure we don't have any trailing references to old package file locations
             assert ret.returncode == 0
             assert "/saltstack/salt/run" not in ret.stdout
-        log.info(ret)
+            log.info(ret)
+            self._check_retcode(ret)
+
+    def _install_ssm_service(self, service="minion"):
+        """
+        This function installs the service on Windows using SSM but does not
+        start it.
+
+        Args:
+
+            service (str):
+                The name of the service. Default is ``minion``
+        """
+        service_name = f"salt-{service}"
+        binary = self.install_dir / f"{service_name}.exe"
+        ret = self.proc.run(
+            str(self.ssm_bin),
+            "install",
+            service_name,
+            binary,
+            "-c",
+            f'"{str(self.conf_dir)}"',
+        )
+        self._check_retcode(ret)
+        ret = self.proc.run(
+            str(self.ssm_bin),
+            "set",
+            service_name,
+            "Description",
+            "Salt Minion for testing",
+        )
+        self._check_retcode(ret)
+        # This doesn't start the service. It will start automatically on reboot
+        # It is set here to make it the same as what the installer does
+        ret = self.proc.run(
+            str(self.ssm_bin), "set", service_name, "Start", "SERVICE_AUTO_START"
+        )
+        self._check_retcode(ret)
+        ret = self.proc.run(
+            str(self.ssm_bin), "set", service_name, "AppStopMethodConsole", "24000"
+        )
+        self._check_retcode(ret)
+        ret = self.proc.run(
+            str(self.ssm_bin), "set", service_name, "AppStopMethodWindow", "2000"
+        )
+        self._check_retcode(ret)
+        ret = self.proc.run(
+            str(self.ssm_bin), "set", service_name, "AppRestartDelay", "60000"
+        )
         self._check_retcode(ret)
 
     def package_python_version(self):
@@ -489,24 +615,23 @@ class SaltPkgInstall:
             "import sys; print('{}.{}'.format(*sys.version_info))",
         ).stdout.strip()
 
-    def install(self, upgrade=False, downgrade=False):
+    def install(self, upgrade=False, downgrade=False, stop_services=True):
         self._install_pkgs(upgrade=upgrade, downgrade=downgrade)
-        if self.distro_id in ("ubuntu", "debian"):
+        if self.distro_id in ("ubuntu", "debian") and stop_services:
             self.stop_services()
 
     def stop_services(self):
         """
-        Debian distros automatically start the services
-        We want to ensure our tests start with the config
-        settings we have set. This will also verify the expected
-        services are up and running.
+        Debian/Ubuntu distros automatically start the services on install
+        We want to ensure our tests start with the config settings we have set.
+        This will also verify the expected services are up and running.
         """
         retval = True
         for service in ["salt-syndic", "salt-master", "salt-minion"]:
             check_run = self.proc.run("systemctl", "status", service)
             if check_run.returncode != 0:
-                # The system was not started automatically and we
-                # are expecting it to be on install
+                # The system was not started automatically and
+                # we are expecting it to be on install on Debian/Ubuntu systems
                 log.debug("The service %s was not started on install.", service)
                 retval = False
             else:
@@ -514,23 +639,39 @@ class SaltPkgInstall:
                 self._check_retcode(stop_service)
         return retval
 
+    def restart_services(self):
+        """
+        Debian/Ubuntu distros automatically start the services
+        We want to ensure our tests start with the config settings we have set,
+        for example: after install the services are stopped (similar to RedHat not starting services on install)
+        This will also verify the expected services are up and running.
+        """
+        for service in ["salt-minion", "salt-master", "salt-syndic"]:
+            check_run = self.proc.run("systemctl", "status", service)
+            log.debug(
+                "The restart_services status, before restart, for service %s is %s.",
+                service,
+                check_run,
+            )
+            restart_service = self.proc.run("systemctl", "restart", service)
+            self._check_retcode(restart_service)
+
     def install_previous(self, downgrade=False):
         """
-        Install previous version. This is used for
-        upgrade tests.
+        Install previous version. This is used for upgrade tests.
         """
         major_ver = packaging.version.parse(self.prev_version).major
         relenv = packaging.version.parse(self.prev_version) >= packaging.version.parse(
             "3006.0"
         )
         distro_name = self.distro_name
-        if distro_name == "centos" or distro_name == "fedora":
+        if distro_name in ("almalinux", "rocky", "centos", "fedora"):
             distro_name = "redhat"
-        root_url = "salt/py3/"
-        if self.classic:
-            root_url = "py3/"
+        root_url = "https://packages.broadcom.com/artifactory"
 
         if self.distro_name in [
+            "almalinux",
+            "rocky",
             "redhat",
             "centos",
             "amazon",
@@ -541,11 +682,6 @@ class SaltPkgInstall:
             # Removing EPEL repo files
             for fp in pathlib.Path("/etc", "yum.repos.d").glob("epel*"):
                 fp.unlink()
-            gpg_key = "SALTSTACK-GPG-KEY.pub"
-            if self.distro_version == "9":
-                gpg_key = "SALTSTACK-GPG-KEY2.pub"
-            if relenv:
-                gpg_key = "SALT-PROJECT-GPG-PUBKEY-2023.pub"
 
             if platform.is_aarch64():
                 arch = "arm64"
@@ -559,21 +695,44 @@ class SaltPkgInstall:
             ret = self.proc.run(
                 "rpm",
                 "--import",
-                f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver}/{gpg_key}",
+                "https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public",
             )
             self._check_retcode(ret)
             download_file(
-                f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver}.repo",
+                "https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.repo",
                 f"/etc/yum.repos.d/salt-{distro_name}.repo",
             )
-            if self.distro_name == "photon":
-                # yum version on photon doesn't support expire-cache
-                ret = self.proc.run(self.pkg_mngr, "clean", "all")
-            else:
-                ret = self.proc.run(self.pkg_mngr, "clean", "expire-cache")
-            self._check_retcode(ret)
+
             cmd_action = "downgrade" if downgrade else "install"
             pkgs_to_install = self.salt_pkgs.copy()
+
+            if self.distro_name == "photon":
+                orig_pkgs = pkgs_to_install[:]
+                pkgs_to_install = []
+                for _ in orig_pkgs:
+                    pkgs_to_install.append(f"{_}-{self.prev_version}")
+                ret = self.proc.run(self.pkg_mngr, "clean", "all")
+                self._check_retcode(ret)
+            else:
+                if "3007" in self.prev_version:
+                    ret = self.proc.run(
+                        self.pkg_mngr,
+                        "config-manager",
+                        "--enable",
+                        "salt-repo-3007-sts",
+                    )
+                    self._check_retcode(ret)
+                else:
+                    ret = self.proc.run(
+                        self.pkg_mngr,
+                        "config-manager",
+                        "--disable",
+                        "salt-repo-3007-sts",
+                    )
+                    self._check_retcode(ret)
+                ret = self.proc.run(self.pkg_mngr, "clean", "expire-cache")
+                self._check_retcode(ret)
+
             if self.distro_version == "8" and self.classic:
                 # centosstream 8 doesn't downgrade properly using the downgrade command for some reason
                 # So we explicitly install the correct version here
@@ -590,12 +749,14 @@ class SaltPkgInstall:
                     if dbg_exists:
                         pkgs_to_install.remove(dbg_exists[0])
                 cmd_action = "install"
+            # pkgs = [f"{_}=={self.prev_version}" for _ in pkgs_to_install]
             ret = self.proc.run(
                 self.pkg_mngr,
                 cmd_action,
                 *pkgs_to_install,
                 "-y",
             )
+            log.error("**WTF %r", ret)
             self._check_retcode(ret)
 
         elif distro_name in ["debian", "ubuntu"]:
@@ -610,45 +771,51 @@ class SaltPkgInstall:
                 arch = "arm64"
             else:
                 arch = "amd64"
-            pathlib.Path("/etc/apt/keyrings").mkdir(parents=True, exist_ok=True)
-            gpg_dest = "salt-archive-keyring.gpg"
-            gpg_key = gpg_dest
-            if relenv:
-                gpg_key = "SALT-PROJECT-GPG-PUBKEY-2023.gpg"
 
+            pathlib.Path("/etc/apt/keyrings").mkdir(parents=True, exist_ok=True)
+            gpg_full_path = "/etc/apt/keyrings/salt-archive-keyring.pgp"
+
+            # download the gpg pub key
             download_file(
-                f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver}/{gpg_key}",
-                f"/etc/apt/keyrings/{gpg_dest}",
+                f"{root_url}/api/security/keypair/SaltProjectKey/public",
+                f"{gpg_full_path}",
             )
             with salt.utils.files.fopen(
                 pathlib.Path("/etc", "apt", "sources.list.d", "salt.list"), "w"
             ) as fp:
                 fp.write(
-                    f"deb [signed-by=/etc/apt/keyrings/{gpg_dest} arch={arch}] "
-                    f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver} {self.distro_codename} main"
+                    f"deb [signed-by={gpg_full_path} arch={arch}] "
+                    f"{root_url}/saltproject-deb/ stable main"
                 )
             self._check_retcode(ret)
-
-            cmd = [
-                self.pkg_mngr,
-                "install",
-                *self.salt_pkgs,
-                "-y",
-            ]
-
+            pref_file = pathlib.Path("/etc", "apt", "preferences.d", "salt-pin-1001")
+            pref_file.parent.mkdir(exist_ok=True)
+            pin = f"{self.prev_version.rsplit('.', 1)[0]}.*"
             if downgrade:
-                pref_file = pathlib.Path("/etc", "apt", "preferences.d", "salt.pref")
-                pref_file.parent.mkdir(exist_ok=True)
-                pref_file.write_text(
-                    textwrap.dedent(
-                        """\
-                Package: salt*
-                Pin: origin "repo.saltproject.io"
-                Pin-Priority: 1001
-                """
-                    )
+                pin = self.prev_version
+            with salt.utils.files.fopen(pref_file, "w") as fp:
+                fp.write(
+                    f"Package: salt-*\n" f"Pin: version {pin}\n" f"Pin-Priority: 1001"
                 )
-                cmd.append("--allow-downgrades")
+
+            cmd = [self.pkg_mngr, "install", *self.salt_pkgs, "-y"]
+
+            # if downgrade:
+            #    pref_file = pathlib.Path("/etc", "apt", "preferences.d", "salt-pin-1001")
+            #    pref_file.parent.mkdir(exist_ok=True)
+            #    # TODO: There's probably something I should put in here to say what version
+            #    # TODO: But maybe that's done elsewhere, hopefully in self.salt_pkgs
+            #    pref_file.write_text(
+            #        textwrap.dedent(
+            #            f"""\
+            #    Package: salt*
+            #    Pin: origin "{root_url}/saltproject-deb"
+            #    Pin-Priority: 1001
+            #    """
+            #        ),
+            #        encoding="utf-8",
+            #    )
+            cmd.append("--allow-downgrades")
             env = os.environ.copy()
             env["DEBIAN_FRONTEND"] = "noninteractive"
             extra_args = [
@@ -657,95 +824,100 @@ class SaltPkgInstall:
                 "-o",
                 "DPkg::Options::=--force-confold",
             ]
-            ret = self.proc.run(self.pkg_mngr, "update", *extra_args, env=env)
+            self.proc.run(self.pkg_mngr, "update", *extra_args, env=env)
 
             cmd.extend(extra_args)
-
+            log.error("Run cmd %s", cmd)
             ret = self.proc.run(*cmd, env=env)
+            log.error("cmd return %r", ret)
             # Pre-relenv packages down get downgraded to cleanly programmatically
             # They work manually, and the install tests after downgrades will catch problems with the install
+            self._check_retcode(ret)
             # Let's not check the returncode if this is the case
-            if not (
-                downgrade
-                and packaging.version.parse(self.prev_version)
-                < packaging.version.parse("3006.0")
-            ):
-                self._check_retcode(ret)
-            if downgrade:
+            # if not (
+            #    downgrade
+            #    and packaging.version.parse(self.prev_version)
+            #    < packaging.version.parse("3006.0")
+            # ):
+            #    self._check_retcode(ret)
+            if downgrade and not self.no_uninstall:
                 pref_file.unlink()
             self.stop_services()
         elif platform.is_windows():
             self.bin_dir = self.install_dir / "bin"
             self.run_root = self.bin_dir / "salt.exe"
-            self.ssm_bin = self.bin_dir / "ssm.exe"
-            if self.file_ext == "msi" or relenv:
-                self.ssm_bin = self.install_dir / "ssm.exe"
+            self.ssm_bin = self.install_dir / "ssm.exe"
+            pkg = str(pathlib.Path(self.pkgs[0]).resolve())
 
-            if not self.classic:
-                if not relenv:
-                    win_pkg = (
-                        f"salt-{self.prev_version}-1-windows-amd64.{self.file_ext}"
-                    )
-                else:
-                    if self.file_ext == "msi":
-                        win_pkg = (
-                            f"Salt-Minion-{self.prev_version}-Py3-AMD64.{self.file_ext}"
-                        )
-                    elif self.file_ext == "exe":
-                        win_pkg = f"Salt-Minion-{self.prev_version}-Py3-AMD64-Setup.{self.file_ext}"
-                win_pkg_url = f"https://repo.saltproject.io/salt/py3/windows/{major_ver}/{win_pkg}"
+            if self.file_ext == "exe":
+                win_pkg = (
+                    f"Salt-Minion-{self.prev_version}-Py3-AMD64-Setup.{self.file_ext}"
+                )
+            elif self.file_ext == "msi":
+                win_pkg = f"Salt-Minion-{self.prev_version}-Py3-AMD64.{self.file_ext}"
             else:
-                if self.file_ext == "msi":
-                    win_pkg = (
-                        f"Salt-Minion-{self.prev_version}-Py3-AMD64.{self.file_ext}"
-                    )
-                elif self.file_ext == "exe":
-                    win_pkg = f"Salt-Minion-{self.prev_version}-Py3-AMD64-Setup.{self.file_ext}"
-                win_pkg_url = f"https://repo.saltproject.io/windows/{win_pkg}"
+                log.debug("Unknown windows file extension: %s", self.file_ext)
+
+            win_pkg_url = (
+                f"{root_url}/saltproject-generic/windows/{self.prev_version}/{win_pkg}"
+            )
             pkg_path = pathlib.Path(r"C:\TEMP", win_pkg)
             pkg_path.parent.mkdir(exist_ok=True)
             download_file(win_pkg_url, pkg_path)
 
             if self.file_ext == "msi":
-                # Write a batch file to run the installer. It is impossible to
-                # perform escaping of the START_MINION property that the MSI
-                # expects unless we do it via a batch file
-                batch_file = pkg_path.parent / "install_msi.cmd"
-                batch_content = f'msiexec /qn /i {str(pkg_path)} START_MINION=""'
-                with salt.utils.files.fopen(batch_file, "w") as fp:
-                    fp.write(batch_content)
-                # Now run the batch file
-                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
-                self._check_retcode(ret)
+
+                if downgrade:
+                    # MSI can not be downgraded, we must remove the newer version
+                    # before installing the old one.
+                    ret = subprocess.run(
+                        f"msiexec.exe /qn /x {pkg} /norestart",
+                        shell=True,  # nosec
+                        check=False,
+                    )
+                    assert ret.returncode == 0
+
+                # self.proc.run always makes the command a list even when shell
+                # is true, meaning shell being true will never work correctly.
+                ret = subprocess.run(
+                    f'msiexec.exe /qn /i {pkg_path} /norestart START_MINION=""',
+                    shell=True,  # nosec
+                    check=False,
+                )
+                assert ret.returncode in [0, 3010]
             else:
-                # ret = self.proc.run("start", "/wait", f"\"{pkg_path} /start-minion=0 /S\"")
-                batch_file = pkg_path.parent / "install_nsis.cmd"
-                batch_content = f"start /wait {str(pkg_path)} /start-minion=0 /S"
-                with salt.utils.files.fopen(batch_file, "w") as fp:
-                    fp.write(batch_content)
-                # Now run the batch file
-                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
+                ret = self.proc.run(str(pkg_path), "/start-minion=0", "/S", timeout=600)
                 self._check_retcode(ret)
+
+            # XXX This should be temporary. See also a similar thing happening
+            # in tests/pytests/pkg/conftest.py
+            grainsdir = pathlib.Path(
+                r"C:\Program Files\Salt Project\Salt\Lib\site-packages\salt\grains"
+            )
+            shutil.copy(r"salt\grains\disks.py", grainsdir)
 
             log.debug("Removing installed salt-minion service")
             ret = self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
             self._check_retcode(ret)
 
+            # Add installation to the path
+            self.update_process_path()
+
             if self.pkg_system_service:
-                self._install_system_service()
+                self._install_ssm_service()
 
         elif platform.is_darwin():
-            if self.classic:
-                mac_pkg = f"salt-{self.prev_version}-py3-x86_64.pkg"
-                mac_pkg_url = f"https://repo.saltproject.io/osx/{mac_pkg}"
+            if relenv and platform.is_aarch64():
+                arch = "arm64"
+            elif platform.is_aarch64() and self.classic:
+                arch = "arm64"
             else:
-                if not relenv:
-                    mac_pkg = f"salt-{self.prev_version}-1-macos-x86_64.pkg"
-                else:
-                    mac_pkg = f"salt-{self.prev_version}-py3-x86_64.pkg"
-                mac_pkg_url = (
-                    f"https://repo.saltproject.io/salt/py3/macos/{major_ver}/{mac_pkg}"
-                )
+                arch = "x86_64"
+
+            mac_pkg = f"salt-{self.prev_version}-py3-{arch}.pkg"
+            mac_pkg_url = (
+                f"{root_url}/saltproject-generic/macos/{self.prev_version}/{mac_pkg}"
+            )
 
             mac_pkg_path = f"/tmp/{mac_pkg}"
             if not os.path.exists(mac_pkg_path):
@@ -918,16 +1090,34 @@ class SaltPkgInstall:
         if platform.is_windows():
             self.update_process_path()
 
-        if not self.no_install:
-            if self.upgrade:
-                self.install_previous()
-            else:
-                self.install()
+        if self.no_install:
+            return self
+
+        if self.upgrade:
+            self.install_previous()
+        else:
+            # assume downgrade, since no_install only used in these two cases
+            self.install()
         return self
 
     def __exit__(self, *_):
         if not self.no_uninstall:
             self.uninstall()
+
+        # Did we left anything running?!
+        procs = []
+        for proc in psutil.process_iter():
+            try:
+                name = proc.name()
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                continue
+            if "salt" in name:
+                cmdl_strg = " ".join(str(element) for element in _get_cmdline(proc))
+                if "/opt/saltstack" in cmdl_strg:
+                    procs.append(proc)
+
+        if procs:
+            terminate_process_list(procs, kill=True, slow_stop=True)
 
 
 class PkgSystemdSaltDaemonImpl(SystemdSaltDaemonImpl):
@@ -1063,8 +1253,8 @@ class PkgLaunchdSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
 
         # Dereference the internal _process attribute
         self._process = None
-        # Lets log and kill any child processes left behind, including the main subprocess
-        # if it failed to properly stop
+        # Let's log and kill any child processes left behind, including the main
+        # subprocess if it failed to properly stop
         terminate_process(
             pid=pid,
             kill_children=True,
@@ -1130,7 +1320,7 @@ class PkgSsmSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
                     "processes",
                     self.get_service_name(),
                 )
-                log.warning(ret)
+                log.debug("process result %s", ret)
                 if not ret.stdout or (ret.stdout and not ret.stdout.strip()):
                     if n >= 120:
                         return False
@@ -1143,7 +1333,11 @@ class PkgSsmSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
                     mainpid = line.strip().split()[0]
                     self._process = psutil.Process(int(mainpid))
                     break
-        return self._process.is_running()
+        ret = self._process.is_running()
+        if not hasattr(self, "logged_running"):
+            log.error("SSM processs is running %s", ret)
+            self.logged_running = True
+        return ret
 
     def _terminate(self):
         """
@@ -1199,8 +1393,8 @@ class PkgSsmSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
 
         # Dereference the internal _process attribute
         self._process = None
-        # Lets log and kill any child processes left behind, including the main subprocess
-        # if it failed to properly stop
+        # Let's log and kill any child processes left behind, including the main
+        # subprocess if it failed to properly stop
         terminate_process(
             pid=pid,
             kill_children=True,
@@ -1345,6 +1539,20 @@ class SaltMasterWindows(SaltMaster):
             code_dir=self.factories_manager.code_dir.parent,
         )
 
+        # XXX: Add install path to cli_scripts.generate_scripts?
+        def patch_script(script):
+            text = script.read_text()
+            newlines = []
+            for line in text.splitlines():
+                newlines.append(line)
+                if line == "sys.path.insert(0, CODE_DIR)":
+                    newlines.append(
+                        'sys.path.insert(0, "C:\\Program Files\\Salt Project\\Salt\\Lib\\site-packages")'
+                    )
+            script.write_text(os.linesep.join(newlines))
+
+        patch_script(self.factories_manager.scripts_dir / "cli_salt_master.py")
+
     def _get_impl_class(self):
         return DaemonImpl
 
@@ -1463,7 +1671,7 @@ class ApiRequest:
     account: TestAccount = attr.ib(repr=False)
     session: requests.Session = attr.ib(init=False, repr=False)
     api_uri: str = attr.ib(init=False)
-    auth_data: Dict[str, str] = attr.ib(init=False)
+    auth_data: dict[str, str] = attr.ib(init=False)
 
     @session.default
     def _default_session(self):

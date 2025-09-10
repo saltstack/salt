@@ -79,8 +79,7 @@ Package: salt-minion
 Architecture: amd64 arm64
 Replaces: salt-common (<= 3006.4)
 Breaks: salt-common (<= 3006.4)
-Depends: bsdmainutils,
-         dctrl-tools,
+Depends: dctrl-tools,
          salt-common (= ${source:Version}),
          ${misc:Depends}
 Recommends: debconf-utils, dmidecode, net-tools
@@ -161,7 +160,7 @@ Description: remote manager to administer servers via Salt SSH
 Package: salt-cloud
 Architecture: amd64 arm64
 Breaks: salt-common (<= 3006.4)
-Depends: salt-common (= ${source:Version}),
+Depends: salt-master (= ${source:Version}),
          ${misc:Depends}
 Description: public cloud VM management system
  provision virtual machines on various public clouds via a cleanly
@@ -170,7 +169,7 @@ Description: public cloud VM management system
 
 Package: salt-api
 Architecture: amd64 arm64
-Depends: salt-master,
+Depends: salt-master (= ${source:Version}),
          ${misc:Depends}
 Description: Generic, modular network access system
  a modular interface on top of Salt that can provide a variety of entry points

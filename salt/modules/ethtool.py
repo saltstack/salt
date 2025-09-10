@@ -312,8 +312,8 @@ def _ethtool_command(devname, *args, **kwargs):
     if not ethtool:
         raise CommandExecutionError("Command 'ethtool' cannot be found")
     switches = " ".join(arg for arg in args)
-    params = " ".join("{} {}".format(key, val) for key, val in kwargs.items())
-    cmd = "{} {} {} {}".format(ethtool, switches, devname, params).strip()
+    params = " ".join(f"{key} {val}" for key, val in kwargs.items())
+    cmd = f"{ethtool} {switches} {devname} {params}".strip()
     ret = __salt__["cmd.run"](cmd, ignore_retcode=True).splitlines()
     if ret and ret[0].startswith("Cannot"):
         raise CommandExecutionError(ret[0])
@@ -336,7 +336,7 @@ def _validate_params(valid_params, kwargs):
             validated[key] = val
     if not validated:
         raise CommandExecutionError(
-            "None of the valid parameters were provided: {}".format(valid_params)
+            f"None of the valid parameters were provided: {valid_params}"
         )
     return validated
 

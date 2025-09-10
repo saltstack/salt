@@ -15,7 +15,6 @@
 
 """
 
-
 import logging
 import xml.dom.minidom
 

@@ -834,7 +834,7 @@ class Schedule:
                 # this function accepts **kwargs, pack in the publish data
                 for key, val in ret.items():
                     if key != "kwargs":
-                        kwargs["__pub_{}".format(key)] = copy.deepcopy(val)
+                        kwargs[f"__pub_{key}"] = copy.deepcopy(val)
 
             # Only include these when running runner modules
             if self.opts["__role"] == "master":
@@ -899,7 +899,7 @@ class Schedule:
                             rets.extend(returner)
                     # simple de-duplication with order retained
                     for returner in OrderedDict.fromkeys(rets):
-                        ret_str = "{}.returner".format(returner)
+                        ret_str = f"{returner}.returner"
                         if ret_str in self.returners:
                             self.returners[ret_str](ret)
                         else:
@@ -1032,10 +1032,6 @@ class Schedule:
                 if interval < self.loop_interval:
                     self.loop_interval = interval
 
-                data["_next_scheduled_fire_time"] = now + datetime.timedelta(
-                    seconds=data["_seconds"]
-                )
-
         def _handle_once(data, loop_interval):
             """
             Handle schedule item with once
@@ -1065,7 +1061,6 @@ class Schedule:
                         log.error(data["_error"])
                         return
                 data["_next_fire_time"] = once
-                data["_next_scheduled_fire_time"] = once
                 # If _next_fire_time is less than now, continue
                 if once < now - loop_interval:
                     data["_continue"] = True
@@ -1108,10 +1103,10 @@ class Schedule:
                     and i in self.opts["grains"]["whens"]
                 ):
                     if not isinstance(self.opts["grains"]["whens"], dict):
-                        data[
-                            "_error"
-                        ] = 'Grain "whens" must be a dict. Ignoring job {}.'.format(
-                            data["name"]
+                        data["_error"] = (
+                            'Grain "whens" must be a dict. Ignoring job {}.'.format(
+                                data["name"]
+                            )
                         )
                         log.error(data["_error"])
                         return
@@ -1123,10 +1118,10 @@ class Schedule:
                     try:
                         when_ = dateutil_parser.parse(when_)
                     except ValueError:
-                        data[
-                            "_error"
-                        ] = "Invalid date string {}. Ignoring job {}.".format(
-                            i, data["name"]
+                        data["_error"] = (
+                            "Invalid date string {}. Ignoring job {}.".format(
+                                i, data["name"]
+                            )
                         )
                         log.error(data["_error"])
                         return
@@ -1169,8 +1164,6 @@ class Schedule:
                 if not data["_next_fire_time"]:
                     data["_next_fire_time"] = when
 
-                data["_next_scheduled_fire_time"] = when
-
                 if data["_next_fire_time"] < when and not run and not data["_run"]:
                     data["_next_fire_time"] = when
                     data["_run"] = True
@@ -1195,9 +1188,6 @@ class Schedule:
                 # executed before or already executed in the past.
                 try:
                     data["_next_fire_time"] = croniter.croniter(
-                        data["cron"], now
-                    ).get_next(datetime.datetime)
-                    data["_next_scheduled_fire_time"] = croniter.croniter(
                         data["cron"], now
                     ).get_next(datetime.datetime)
                 except (ValueError, KeyError):
@@ -1382,10 +1372,10 @@ class Schedule:
                 try:
                     start = dateutil_parser.parse(start)
                 except ValueError:
-                    data[
-                        "_error"
-                    ] = "Invalid date string for start. Ignoring job {}.".format(
-                        data["name"]
+                    data["_error"] = (
+                        "Invalid date string for start. Ignoring job {}.".format(
+                            data["name"]
+                        )
                     )
                     log.error(data["_error"])
                     return
@@ -1394,10 +1384,10 @@ class Schedule:
                 try:
                     end = dateutil_parser.parse(end)
                 except ValueError:
-                    data[
-                        "_error"
-                    ] = "Invalid date string for end. Ignoring job {}.".format(
-                        data["name"]
+                    data["_error"] = (
+                        "Invalid date string for end. Ignoring job {}.".format(
+                            data["name"]
+                        )
                     )
                     log.error(data["_error"])
                     return
@@ -1544,13 +1534,6 @@ class Schedule:
             if "_splay" not in data:
                 data["_splay"] = None
 
-            if (
-                "run_on_start" in data
-                and data["run_on_start"]
-                and "_run_on_start" not in data
-            ):
-                data["_run_on_start"] = True
-
             if not now:
                 now = datetime.datetime.now()
 
@@ -1585,11 +1568,21 @@ class Schedule:
                 )
                 continue
 
+            uses_time_elements = True in [
+                True for item in time_elements if item in data
+            ]
+
+            # _run_on_start is later set to False, on the first run, after
+            # being read. So, only set it when it is not already set.
+            if "_run_on_start" not in data:
+                # default to True for time elements
+                data["_run_on_start"] = data.get("run_on_start", uses_time_elements)
+
             if "run_explicit" in data:
                 _handle_run_explicit(data, loop_interval)
                 run = data["run"]
 
-            if True in [True for item in time_elements if item in data]:
+            if uses_time_elements:
                 _handle_time_elements(data)
             elif "once" in data:
                 _handle_once(data, loop_interval)
@@ -1753,7 +1746,7 @@ class Schedule:
 
             miss_msg = ""
             if seconds < 0:
-                miss_msg = " (runtime missed by {} seconds)".format(abs(seconds))
+                miss_msg = f" (runtime missed by {abs(seconds)} seconds)"
 
             try:
                 if run:
@@ -1883,7 +1876,6 @@ class Schedule:
 
 
 def clean_proc_dir(opts):
-
     """
     Loop through jid files in the minion proc directory (default /var/cache/salt/minion/proc)
     and remove any that refer to processes that no longer exist

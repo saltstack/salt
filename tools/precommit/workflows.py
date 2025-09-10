@@ -1,27 +1,32 @@
 """
 These commands are used for our GitHub Actions workflows.
 """
+
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
-import json
 import logging
 import shutil
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Literal, cast
 
-import yaml
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from ptscripts import Context, command_group
 
 import tools.utils
+from tools.utils import (
+    Linux,
+    LinuxPkg,
+    MacOS,
+    MacOSPkg,
+    PlatformDefinitions,
+    Windows,
+    WindowsPkg,
+)
 
 log = logging.getLogger(__name__)
 
 WORKFLOWS = tools.utils.REPO_ROOT / ".github" / "workflows"
 TEMPLATES = WORKFLOWS / "templates"
-with tools.utils.REPO_ROOT.joinpath("cicd", "golden-images.json").open() as rfh:
-    AMIS = json.load(rfh)
-
 
 # Define the command group
 cgroup = command_group(
@@ -30,6 +35,406 @@ cgroup = command_group(
     description=__doc__,
     parent="pre-commit",
 )
+
+PLATFORMS: list[Literal["linux", "macos", "windows"]] = [
+    "linux",
+    "macos",
+    "windows",
+]
+
+# Testing platforms
+TEST_SALT_LISTING = PlatformDefinitions(
+    {
+        "linux": [
+            Linux(
+                slug="rockylinux-8",
+                display_name="Rocky Linux 8",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-8",
+            ),
+            Linux(
+                slug="rockylinux-8-arm64",
+                display_name="Rocky Linux 8 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-8",
+            ),
+            Linux(
+                slug="rockylinux-9",
+                display_name="Rocky Linux 9",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-9",
+            ),
+            Linux(
+                slug="rockylinux-9-arm64",
+                display_name="Rocky Linux 9 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-9",
+            ),
+            Linux(
+                slug="amazonlinux-2",
+                display_name="Amazon Linux 2",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2",
+            ),
+            Linux(
+                slug="amazonlinux-2-arm64",
+                display_name="Amazon Linux 2 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2",
+            ),
+            Linux(
+                slug="amazonlinux-2023",
+                display_name="Amazon Linux 2023",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2023",
+            ),
+            Linux(
+                slug="amazonlinux-2023-arm64",
+                display_name="Amazon Linux 2023 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2023",
+            ),
+            Linux(
+                slug="debian-11",
+                display_name="Debian 11",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:debian-11",
+            ),
+            Linux(
+                slug="debian-11-arm64",
+                display_name="Debian 11 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:debian-11",
+            ),
+            Linux(
+                slug="debian-12",
+                display_name="Debian 12",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:debian-12",
+            ),
+            Linux(
+                slug="debian-12-arm64",
+                display_name="Debian 12 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:debian-12",
+            ),
+            Linux(
+                slug="fedora-40",
+                display_name="Fedora 40",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:fedora-40",
+            ),
+            # Linux(slug="opensuse-15", display_name="Opensuse 15", arch="x86_64"),
+            Linux(
+                slug="photonos-4",
+                display_name="Photon OS 4",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-4",
+            ),
+            Linux(
+                slug="photonos-4-arm64",
+                display_name="Photon OS 4 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-4",
+            ),
+            Linux(
+                slug="photonos-4",
+                display_name="Photon OS 4",
+                arch="x86_64",
+                fips=True,
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-4",
+            ),
+            Linux(
+                slug="photonos-4-arm64",
+                display_name="Photon OS 4 Arm64",
+                arch="arm64",
+                fips=True,
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-4",
+            ),
+            Linux(
+                slug="photonos-5",
+                display_name="Photon OS 5",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-5",
+            ),
+            Linux(
+                slug="photonos-5-arm64",
+                display_name="Photon OS 5 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-5",
+            ),
+            Linux(
+                slug="photonos-5",
+                display_name="Photon OS 5",
+                arch="x86_64",
+                fips=True,
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-5",
+            ),
+            Linux(
+                slug="photonos-5-arm64",
+                display_name="Photon OS 5 Arm64",
+                arch="arm64",
+                fips=True,
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-5",
+            ),
+            Linux(
+                slug="ubuntu-22.04",
+                display_name="Ubuntu 22.04",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04",
+            ),
+            Linux(
+                slug="ubuntu-22.04-arm64",
+                display_name="Ubuntu 22.04 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04",
+            ),
+            Linux(
+                slug="ubuntu-24.04",
+                display_name="Ubuntu 24.04",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-24.04",
+            ),
+            Linux(
+                slug="ubuntu-24.04-arm64",
+                display_name="Ubuntu 24.04 Arm64",
+                arch="arm64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-24.04",
+            ),
+        ],
+        "macos": [
+            MacOS(slug="macos-13", display_name="macOS 13", arch="x86_64"),
+            MacOS(slug="macos-14", display_name="macOS 14 (M1)", arch="arm64"),
+            MacOS(slug="macos-15", display_name="macOS 15 (M1)", arch="arm64"),
+        ],
+        "windows": [
+            Windows(slug="windows-2022", display_name="Windows 2022", arch="amd64"),
+            Windows(slug="windows-2025", display_name="Windows 2025", arch="amd64"),
+        ],
+    }
+)
+TEST_SALT_PKG_LISTING = PlatformDefinitions(
+    {
+        "linux": [
+            LinuxPkg(
+                slug="rockylinux-8",
+                display_name="Rocky Linux 8",
+                arch="x86_64",
+                pkg_type="rpm",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-8",
+            ),
+            LinuxPkg(
+                slug="rockylinux-8-arm64",
+                display_name="Rocky Linux 8 Arm64",
+                arch="arm64",
+                pkg_type="rpm",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-8",
+            ),
+            LinuxPkg(
+                slug="rockylinux-9",
+                display_name="Rocky Linux 9",
+                arch="x86_64",
+                pkg_type="rpm",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-9",
+            ),
+            LinuxPkg(
+                slug="rockylinux-9-arm64",
+                display_name="Rocky Linux 9 Arm64",
+                arch="arm64",
+                pkg_type="rpm",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-9",
+            ),
+            # Amazon linux 2 containers have degraded systemd so the package
+            # tests will not pass.
+            # LinuxPkg(
+            #     slug="amazonlinux-2",
+            #     display_name="Amazon Linux 2",
+            #     arch="x86_64",
+            #     pkg_type="rpm",
+            #     container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2",
+            # ),
+            # LinuxPkg(
+            #     slug="amazonlinux-2-arm64",
+            #     display_name="Amazon Linux 2 Arm64",
+            #     arch="arm64",
+            #     pkg_type="rpm",
+            #     container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2",
+            # ),
+            LinuxPkg(
+                slug="amazonlinux-2023",
+                display_name="Amazon Linux 2023",
+                arch="x86_64",
+                pkg_type="rpm",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2023",
+            ),
+            LinuxPkg(
+                slug="amazonlinux-2023-arm64",
+                display_name="Amazon Linux 2023 Arm64",
+                arch="arm64",
+                pkg_type="rpm",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2023",
+            ),
+            LinuxPkg(
+                slug="debian-11",
+                display_name="Debian 11",
+                arch="x86_64",
+                pkg_type="deb",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:debian-11",
+            ),
+            LinuxPkg(
+                slug="debian-11-arm64",
+                display_name="Debian 11 Arm64",
+                arch="arm64",
+                pkg_type="deb",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:debian-11",
+            ),
+            LinuxPkg(
+                slug="debian-12",
+                display_name="Debian 12",
+                arch="x86_64",
+                pkg_type="deb",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:debian-12",
+            ),
+            LinuxPkg(
+                slug="debian-12-arm64",
+                display_name="Debian 12 Arm64",
+                arch="arm64",
+                pkg_type="deb",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:debian-12",
+            ),
+            LinuxPkg(
+                slug="photonos-4",
+                display_name="Photon OS 4",
+                arch="x86_64",
+                pkg_type="rpm",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-4",
+            ),
+            LinuxPkg(
+                slug="photonos-4-arm64",
+                display_name="Photon OS 4 Arm64",
+                arch="arm64",
+                pkg_type="rpm",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-4",
+            ),
+            LinuxPkg(
+                slug="photonos-4",
+                display_name="Photon OS 4",
+                arch="x86_64",
+                pkg_type="rpm",
+                fips=True,
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-4",
+            ),
+            LinuxPkg(
+                slug="photonos-4-arm64",
+                display_name="Photon OS 4 Arm64",
+                arch="arm64",
+                pkg_type="rpm",
+                fips=True,
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-4",
+            ),
+            LinuxPkg(
+                slug="photonos-5",
+                display_name="Photon OS 5",
+                arch="x86_64",
+                pkg_type="rpm",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-5",
+            ),
+            LinuxPkg(
+                slug="photonos-5-arm64",
+                display_name="Photon OS 5 Arm64",
+                arch="arm64",
+                pkg_type="rpm",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-5",
+            ),
+            LinuxPkg(
+                slug="photonos-5",
+                display_name="Photon OS 5",
+                arch="x86_64",
+                pkg_type="rpm",
+                fips=True,
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-5",
+            ),
+            LinuxPkg(
+                slug="photonos-5-arm64",
+                display_name="Photon OS 5 Arm64",
+                arch="arm64",
+                pkg_type="rpm",
+                fips=True,
+                container="ghcr.io/saltstack/salt-ci-containers/testing:photon-5",
+            ),
+            LinuxPkg(
+                slug="ubuntu-22.04",
+                display_name="Ubuntu 22.04",
+                arch="x86_64",
+                pkg_type="deb",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04",
+            ),
+            LinuxPkg(
+                slug="ubuntu-22.04-arm64",
+                display_name="Ubuntu 22.04 Arm64",
+                arch="arm64",
+                pkg_type="deb",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04",
+            ),
+            LinuxPkg(
+                slug="ubuntu-24.04",
+                display_name="Ubuntu 24.04",
+                arch="x86_64",
+                pkg_type="deb",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-24.04",
+            ),
+            LinuxPkg(
+                slug="ubuntu-24.04-arm64",
+                display_name="Ubuntu 24.04 Arm64",
+                arch="arm64",
+                pkg_type="deb",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-24.04",
+            ),
+        ],
+        "macos": [
+            MacOSPkg(slug="macos-13", display_name="macOS 13", arch="x86_64"),
+            MacOSPkg(slug="macos-14", display_name="macOS 14 (M1)", arch="arm64"),
+            MacOSPkg(slug="macos-15", display_name="macOS 15 (M1)", arch="arm64"),
+        ],
+        "windows": [
+            WindowsPkg(
+                slug="windows-2022",
+                display_name="Windows 2022",
+                arch="amd64",
+                pkg_type="NSIS",
+            ),
+            WindowsPkg(
+                slug="windows-2022",
+                display_name="Windows 2022",
+                arch="amd64",
+                pkg_type="MSI",
+            ),
+            WindowsPkg(
+                slug="windows-2025",
+                display_name="Windows 2025",
+                arch="amd64",
+                pkg_type="NSIS",
+            ),
+            WindowsPkg(
+                slug="windows-2025",
+                display_name="Windows 2025",
+                arch="amd64",
+                pkg_type="MSI",
+            ),
+        ],
+    }
+)
+
+
+def slugs():
+    """
+    List of supported test slugs
+    """
+    all_slugs = []
+    for platform in TEST_SALT_LISTING:
+        for osdef in TEST_SALT_LISTING[platform]:
+            all_slugs.append(osdef.slug)
+    return all_slugs
 
 
 class NeedsTracker:
@@ -77,180 +482,8 @@ def generate_workflows(ctx: Context):
         "Scheduled": {
             "template": "scheduled.yml",
         },
-        "Release": {
-            "template": "release.yml",
-            "includes": {
-                "pre-commit": False,
-                "lint": False,
-                "pkg-tests": False,
-                "salt-tests": False,
-                "test-pkg-downloads": True,
-            },
-        },
-        "Test Package Downloads": {
-            "template": "test-package-downloads-action.yml",
-        },
-        "Build CI Deps": {
-            "template": "build-deps-ci-action.yml",
-        },
     }
-    test_salt_listing: dict[str, list[tuple[str, ...]]] = {
-        "linux": [
-            ("almalinux-8", "Alma Linux 8", "x86_64", "no-fips"),
-            ("almalinux-9", "Alma Linux 9", "x86_64", "no-fips"),
-            ("amazonlinux-2", "Amazon Linux 2", "x86_64", "no-fips"),
-            ("amazonlinux-2-arm64", "Amazon Linux 2 Arm64", "arm64", "no-fips"),
-            ("amazonlinux-2023", "Amazon Linux 2023", "x86_64", "no-fips"),
-            ("amazonlinux-2023-arm64", "Amazon Linux 2023 Arm64", "arm64", "no-fips"),
-            ("archlinux-lts", "Arch Linux LTS", "x86_64", "no-fips"),
-            ("centos-7", "CentOS 7", "x86_64", "no-fips"),
-            ("centosstream-8", "CentOS Stream 8", "x86_64", "no-fips"),
-            ("centosstream-9", "CentOS Stream 9", "x86_64", "no-fips"),
-            ("debian-10", "Debian 10", "x86_64", "no-fips"),
-            ("debian-11", "Debian 11", "x86_64", "no-fips"),
-            ("debian-11-arm64", "Debian 11 Arm64", "arm64", "no-fips"),
-            ("debian-12", "Debian 12", "x86_64", "no-fips"),
-            ("debian-12-arm64", "Debian 12 Arm64", "arm64", "no-fips"),
-            ("fedora-37", "Fedora 37", "x86_64", "no-fips"),
-            ("fedora-38", "Fedora 38", "x86_64", "no-fips"),
-            ("opensuse-15", "Opensuse 15", "x86_64", "no-fips"),
-            ("photonos-3", "Photon OS 3", "x86_64", "no-fips"),
-            ("photonos-3-arm64", "Photon OS 3 Arm64", "arm64", "no-fips"),
-            ("photonos-4", "Photon OS 4", "x86_64", "fips"),
-            ("photonos-4-arm64", "Photon OS 4 Arm64", "arm64", "fips"),
-            ("photonos-5", "Photon OS 5", "x86_64", "fips"),
-            ("photonos-5-arm64", "Photon OS 5 Arm64", "arm64", "fips"),
-            ("ubuntu-20.04", "Ubuntu 20.04", "x86_64", "no-fips"),
-            ("ubuntu-20.04-arm64", "Ubuntu 20.04 Arm64", "arm64", "no-fips"),
-            ("ubuntu-22.04", "Ubuntu 22.04", "x86_64", "no-fips"),
-            ("ubuntu-22.04-arm64", "Ubuntu 22.04 Arm64", "arm64", "no-fips"),
-        ],
-        "macos": [
-            ("macos-12", "macOS 12", "x86_64"),
-            ("macos-13", "macOS 13", "x86_64"),
-            ("macos-13-xlarge", "macOS 13 Arm64", "arm64"),
-        ],
-        "windows": [
-            ("windows-2016", "Windows 2016", "amd64"),
-            ("windows-2019", "Windows 2019", "amd64"),
-            ("windows-2022", "Windows 2022", "amd64"),
-        ],
-    }
-
-    test_salt_pkg_listing = {
-        "linux": [
-            ("amazonlinux-2", "Amazon Linux 2", "x86_64", "rpm", "no-fips"),
-            (
-                "amazonlinux-2-arm64",
-                "Amazon Linux 2 Arm64",
-                "arm64",
-                "rpm",
-                "no-fips",
-            ),
-            ("amazonlinux-2023", "Amazon Linux 2023", "x86_64", "rpm", "no-fips"),
-            (
-                "amazonlinux-2023-arm64",
-                "Amazon Linux 2023 Arm64",
-                "arm64",
-                "rpm",
-                "no-fips",
-            ),
-            ("centos-7", "CentOS 7", "x86_64", "rpm", "no-fips"),
-            ("centosstream-8", "CentOS Stream 8", "x86_64", "rpm", "no-fips"),
-            ("centosstream-9", "CentOS Stream 9", "x86_64", "rpm", "no-fips"),
-            (
-                "centosstream-9-arm64",
-                "CentOS Stream 9 Arm64",
-                "arm64",
-                "rpm",
-                "no-fips",
-            ),
-            ("debian-10", "Debian 10", "x86_64", "deb", "no-fips"),
-            ("debian-11", "Debian 11", "x86_64", "deb", "no-fips"),
-            ("debian-11-arm64", "Debian 11 Arm64", "arm64", "deb", "no-fips"),
-            ("debian-12", "Debian 12", "x86_64", "deb", "no-fips"),
-            ("debian-12-arm64", "Debian 12 Arm64", "arm64", "deb", "no-fips"),
-            ("photonos-3", "Photon OS 3", "x86_64", "rpm", "no-fips"),
-            ("photonos-3-arm64", "Photon OS 3 Arm64", "arm64", "rpm", "no-fips"),
-            ("photonos-4", "Photon OS 4", "x86_64", "rpm", "fips"),
-            ("photonos-4-arm64", "Photon OS 4 Arm64", "arm64", "rpm", "fips"),
-            ("photonos-5", "Photon OS 5", "x86_64", "rpm", "fips"),
-            ("photonos-5-arm64", "Photon OS 5 Arm64", "arm64", "rpm", "fips"),
-            ("ubuntu-20.04", "Ubuntu 20.04", "x86_64", "deb", "no-fips"),
-            ("ubuntu-20.04-arm64", "Ubuntu 20.04 Arm64", "arm64", "deb", "no-fips"),
-            ("ubuntu-22.04", "Ubuntu 22.04", "x86_64", "deb", "no-fips"),
-            ("ubuntu-22.04-arm64", "Ubuntu 22.04 Arm64", "arm64", "deb", "no-fips"),
-        ],
-        "macos": [
-            ("macos-12", "macOS 12", "x86_64"),
-            ("macos-13", "macOS 13", "x86_64"),
-            ("macos-13-xlarge", "macOS 13 Arm64", "arm64"),
-        ],
-        "windows": [
-            ("windows-2016", "Windows 2016", "amd64"),
-            ("windows-2019", "Windows 2019", "amd64"),
-            ("windows-2022", "Windows 2022", "amd64"),
-        ],
-    }
-
-    build_ci_deps_listing = {
-        "linux": [
-            ("x86_64", "centos-7"),
-            ("arm64", "centos-7-arm64"),
-        ],
-        "macos": [
-            ("x86_64", "macos-12"),
-            ("arm64", "macos-13-xlarge"),
-        ],
-        "windows": [
-            ("amd64", "windows-2022"),
-        ],
-    }
-    test_salt_pkg_downloads_listing: dict[str, list[tuple[str, str, str]]] = {
-        "linux": [],
-        "macos": [],
-        "windows": [],
-    }
-    rpm_slugs = (
-        "almalinux",
-        "amazonlinux",
-        "centos",
-        "centosstream",
-        "fedora",
-        "photon",
-    )
-    linux_skip_pkg_download_tests = (
-        "archlinux-lts",
-        "opensuse-15",
-        "windows",
-    )
-    for slug in sorted(AMIS):
-        if slug.startswith(linux_skip_pkg_download_tests):
-            continue
-        if "arm64" in slug:
-            arch = "arm64"
-        else:
-            arch = "x86_64"
-        if slug.startswith(rpm_slugs) and arch == "arm64":
-            # While we maintain backwards compatible urls
-            test_salt_pkg_downloads_listing["linux"].append(
-                (slug, "aarch64", "package")
-            )
-        test_salt_pkg_downloads_listing["linux"].append((slug, arch, "package"))
-        if slug.startswith("ubuntu-22"):
-            test_salt_pkg_downloads_listing["linux"].append((slug, arch, "onedir"))
-    for slug, display_name, arch in test_salt_listing["macos"]:
-        test_salt_pkg_downloads_listing["macos"].append((slug, arch, "package"))
-    for slug, display_name, arch in test_salt_listing["macos"][-1:]:
-        test_salt_pkg_downloads_listing["macos"].append((slug, arch, "onedir"))
-    for slug, display_name, arch in test_salt_listing["windows"][-1:]:
-        for pkg_type in ("nsis", "msi", "onedir"):
-            test_salt_pkg_downloads_listing["windows"].append((slug, arch, pkg_type))
-
-    test_salt_pkg_downloads_needs_slugs = set()
-    for platform in test_salt_pkg_downloads_listing:
-        for _, arch, _ in test_salt_pkg_downloads_listing[platform]:
-            test_salt_pkg_downloads_needs_slugs.add("build-ci-deps")
+    test_salt_pkg_listing = TEST_SALT_PKG_LISTING
 
     build_rpms_listing = []
     rpm_os_versions: dict[str, list[str]] = {
@@ -259,12 +492,10 @@ def generate_workflows(ctx: Context):
         "photon": [],
         "redhat": [],
     }
-    for slug in sorted(AMIS):
+    for slug in sorted(slugs()):
         if slug.endswith("-arm64"):
             continue
-        if not slug.startswith(
-            ("amazonlinux", "almalinux", "centos", "fedora", "photonos")
-        ):
+        if not slug.startswith(("amazonlinux", "rockylinux", "fedora", "photonos")):
             continue
         os_name, os_version = slug.split("-")
         if os_name == "amazonlinux":
@@ -282,7 +513,7 @@ def generate_workflows(ctx: Context):
                 build_rpms_listing.append((distro, release, arch))
 
     build_debs_listing = []
-    for slug in sorted(AMIS):
+    for slug in sorted(slugs()):
         if not slug.startswith(("debian-", "ubuntu-")):
             continue
         if slug.endswith("-arm64"):
@@ -300,6 +531,7 @@ def generate_workflows(ctx: Context):
             "jinja2.ext.do",
         ],
         loader=FileSystemLoader(str(TEMPLATES)),
+        undefined=StrictUndefined,
     )
     for workflow_name, details in workflows.items():
         if TYPE_CHECKING:
@@ -312,32 +544,27 @@ def generate_workflows(ctx: Context):
             f"Generating '{workflow_path.relative_to(tools.utils.REPO_ROOT)}' from "
             f"template '{template_path.relative_to(tools.utils.REPO_ROOT)}' ..."
         )
+        workflow_slug = details.get("slug") or workflow_name.lower().replace(" ", "-")
         context = {
             "template": template_path.relative_to(tools.utils.REPO_ROOT),
             "workflow_name": workflow_name,
-            "workflow_slug": (
-                details.get("slug") or workflow_name.lower().replace(" ", "-")
-            ),
+            "workflow_slug": workflow_slug,
             "includes": includes,
             "conclusion_needs": NeedsTracker(),
             "test_salt_needs": NeedsTracker(),
+            "test_salt_linux_needs": NeedsTracker(),
+            "test_salt_macos_needs": NeedsTracker(),
+            "test_salt_windows_needs": NeedsTracker(),
             "test_salt_pkg_needs": NeedsTracker(),
             "test_repo_needs": NeedsTracker(),
             "prepare_workflow_needs": NeedsTracker(),
             "build_repo_needs": NeedsTracker(),
-            "test_salt_listing": test_salt_listing,
+            "test_salt_listing": TEST_SALT_LISTING,
             "test_salt_pkg_listing": test_salt_pkg_listing,
-            "build_ci_deps_listing": build_ci_deps_listing,
-            "test_salt_pkg_downloads_listing": test_salt_pkg_downloads_listing,
-            "test_salt_pkg_downloads_needs_slugs": sorted(
-                test_salt_pkg_downloads_needs_slugs
-            ),
             "build_rpms_listing": build_rpms_listing,
             "build_debs_listing": build_debs_listing,
         }
-        shared_context = yaml.safe_load(
-            tools.utils.SHARED_WORKFLOW_CONTEXT_FILEPATH.read_text()
-        )
+        shared_context = tools.utils.get_cicd_shared_context()
         for key, value in shared_context.items():
             context[key.replace("-", "_")] = value
         loaded_template = env.get_template(template_path.name)

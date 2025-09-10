@@ -2,7 +2,6 @@
 Functions for manipulating or otherwise processing strings
 """
 
-
 import base64
 import difflib
 import errno

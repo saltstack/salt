@@ -1,19 +1,20 @@
 """
 These commands are used to build the salt onedir and system packages.
 """
+
 # pylint: disable=resource-leakage,broad-except
 from __future__ import annotations
 
 import json
 import logging
 import os
+import os.path
 import pathlib
 import shutil
 import tarfile
 import zipfile
 from typing import TYPE_CHECKING
 
-import yaml
 from ptscripts import Context, command_group
 
 import tools.utils
@@ -27,10 +28,6 @@ build = command_group(
     description=__doc__,
     parent="pkg",
 )
-
-
-def _get_shared_constants():
-    return yaml.safe_load(tools.utils.SHARED_WORKFLOW_CONTEXT_FILEPATH.read_text())
 
 
 @build.command(
@@ -76,7 +73,7 @@ def debian(
             )
             ctx.exit(1)
         ctx.info("Building the package from the source files")
-        shared_constants = _get_shared_constants()
+        shared_constants = tools.utils.get_cicd_shared_context()
         if not python_version:
             python_version = shared_constants["python_version"]
         if not relenv_version:
@@ -93,6 +90,20 @@ def debian(
         for key, value in new_env.items():
             os.environ[key] = value
             env_args.extend(["-e", key])
+
+        cargo_home = os.environ.get("CARGO_HOME")
+        user_cargo_bin = os.path.expanduser("~/.cargo/bin")
+        if os.path.exists(user_cargo_bin):
+            ctx.info(
+                f"The path '{user_cargo_bin}' exists so adding --prepend-path={user_cargo_bin}"
+            )
+            env_args.append(f"--prepend-path={user_cargo_bin}")
+        elif cargo_home is not None:
+            cargo_home_bin = os.path.join(cargo_home, "bin")
+            ctx.info(
+                f"The 'CARGO_HOME' environment variable is set, so adding --prepend-path={cargo_home_bin}"
+            )
+            env_args.append(f"--prepend-path={cargo_home_bin}")
 
     env = os.environ.copy()
     env["PIP_CONSTRAINT"] = str(
@@ -120,6 +131,10 @@ def debian(
         "arch": {
             "help": "The arch to build for",
         },
+        "key_id": {
+            "help": "Signing key id",
+            "required": False,
+        },
     },
 )
 def rpm(
@@ -128,10 +143,12 @@ def rpm(
     relenv_version: str = None,
     python_version: str = None,
     arch: str = None,
+    key_id: str = None,
 ):
     """
     Build the RPM package.
     """
+    onci = "GITHUB_WORKFLOW" in os.environ
     checkout = pathlib.Path.cwd()
     if onedir:
         onedir_artifact = checkout / "artifacts" / onedir
@@ -141,14 +158,14 @@ def rpm(
         )
         os.environ["SALT_ONEDIR_ARCHIVE"] = str(onedir_artifact)
     else:
-        ctx.info(f"Building the package from the source files")
+        ctx.info("Building the package from the source files")
         if arch is None:
             ctx.error(
                 "Building the package from the source files but the arch to build for has not been given"
             )
             ctx.exit(1)
-        ctx.info(f"Building the package from the source files")
-        shared_constants = _get_shared_constants()
+        ctx.info("Building the package from the source files")
+        shared_constants = tools.utils.get_cicd_shared_context()
         if not python_version:
             python_version = shared_constants["python_version"]
         if not relenv_version:
@@ -173,7 +190,25 @@ def rpm(
     ctx.run(
         "rpmbuild", "-bb", f"--define=_salt_src {checkout}", str(spec_file), env=env
     )
-
+    if key_id:
+        if onci:
+            path = "/github/home/rpmbuild/RPMS/"
+        else:
+            path = "~/rpmbuild/RPMS/"
+        pkgs = list(pathlib.Path(path).glob("**/*.rpm"))
+        if not pkgs:
+            ctx.error("Signing requested but no packages found.")
+            ctx.exit(1)
+        for pkg in pkgs:
+            ctx.info(f"Running 'rpmsign' on {pkg} ...")
+            ctx.run(
+                "rpmsign",
+                "--key-id",
+                key_id,
+                "--addsign",
+                "--digest-algo=sha256",
+                str(pkg),
+            )
     ctx.info("Done")
 
 
@@ -227,13 +262,13 @@ def macos(
         ctx.info(f"Extracting the onedir artifact to {build_root}")
         with tarfile.open(str(onedir_artifact)) as tarball:
             with ctx.chdir(onedir_artifact.parent):
-                tarball.extractall(path=build_root)
+                tarball.extractall(path=build_root)  # nosec
     else:
         ctx.info("Building package without an existing onedir")
 
     if not onedir:
         # Prep the salt onedir if not building from an existing one
-        shared_constants = _get_shared_constants()
+        shared_constants = tools.utils.get_cicd_shared_context()
         if not python_version:
             python_version = shared_constants["python_version"]
         if not relenv_version:
@@ -304,6 +339,9 @@ def macos(
         "python_version": {
             "help": "The version of python to build with using relenv",
         },
+        "debug_signing": {
+            "help": "Enable verbose logging for signtool",
+        },
     },
 )
 def windows(
@@ -314,6 +352,7 @@ def windows(
     sign: bool = False,
     relenv_version: str = None,
     python_version: str = None,
+    debug_signing: bool = True,
 ):
     """
     Build the Windows package.
@@ -322,7 +361,7 @@ def windows(
         assert salt_version is not None
         assert arch is not None
 
-    shared_constants = _get_shared_constants()
+    shared_constants = tools.utils.get_cicd_shared_context()
     if not python_version:
         python_version = shared_constants["python_version"]
     if not relenv_version:
@@ -357,7 +396,7 @@ def windows(
         unzip_dir = checkout / "pkg" / "windows"
         ctx.info(f"Unzipping the onedir artifact to {unzip_dir}")
         with zipfile.ZipFile(onedir_artifact, mode="r") as archive:
-            archive.extractall(unzip_dir)
+            archive.extractall(unzip_dir)  # nosec
 
         move_dir = unzip_dir / "salt"
         build_env = unzip_dir / "buildenv"
@@ -387,14 +426,20 @@ def windows(
             ]
         )
         env["PATH"] = os.pathsep.join(path_parts)
+        command = ["smksp_registrar.exe", "register"]
+        ctx.info(f"Running: '{' '.join(command)}' ...")
+        ctx.run(*command, env=env)
+
         command = ["smksp_registrar.exe", "list"]
         ctx.info(f"Running: '{' '.join(command)}' ...")
         ctx.run(*command, env=env)
+
         command = ["smctl.exe", "keypair", "ls"]
         ctx.info(f"Running: '{' '.join(command)}' ...")
         ret = ctx.run(*command, env=env, check=False)
         if ret.returncode:
             ctx.error(f"Failed to run '{' '.join(command)}'")
+
         command = [
             r"C:\Windows\System32\certutil.exe",
             "-csp",
@@ -407,11 +452,53 @@ def windows(
         if ret.returncode:
             ctx.error(f"Failed to run '{' '.join(command)}'")
 
+        # DIGICERT asked me to add this for troubleshooting
+        command = ["smctl.exe", "healthcheck"]
+        ctx.info("Running Health Check...")
+        ret = ctx.run(*command, env=env, check=False)
+        if ret.returncode:
+            ctx.error(f"Failed to run '{' '.join(command)}'")
+
         command = ["smksp_cert_sync.exe"]
         ctx.info(f"Running: '{' '.join(command)}' ...")
         ret = ctx.run(*command, env=env, check=False)
         if ret.returncode:
             ctx.error(f"Failed to run '{' '.join(command)}'")
+        ctx.info(f"{list(pathlib.Path('~/.signingmanager/logs/').glob('*'))}")
+        ctx.run(
+            "powershell.exe",
+            "-C",
+            'Get-WinEvent -LogName "*Microsoft-Windows-AppxPackaging*" -MaxEvents 150',
+            check=False,
+        )
+        ctx.run("smctl.exe", "windows", "certsync", check=False)
+
+        # sign_cmd = ["signtool.exe", "sign"]
+        # if debug_signing:
+        #    sign_cmd.extend(["/v", "/debug"])
+
+        # sign_cmd.extend(
+        #    [
+        #        "/sha1",
+        #        os.environ["WIN_SIGN_CERT_SHA1_HASH"],
+        #        "/tr",
+        #        "http://timestamp.digicert.com",
+        #        "/td",
+        #        "SHA256",
+        #        "/fd",
+        #        "SHA256",
+        #    ]
+        # )
+        sign_cmd = [
+            "smctl.exe",
+            "sign",
+            "-v",
+            "--fingerprint",
+            os.environ["WIN_SIGN_CERT_SHA1_HASH"],
+            "--config-file",
+            "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\smtools-windows-x64\\pkcs11properties.cfg",
+            "--input",
+        ]
 
         for fname in (
             f"pkg/windows/build/Salt-Minion-{salt_version}-Py3-{arch}-Setup.exe",
@@ -419,18 +506,9 @@ def windows(
         ):
             fpath = str(pathlib.Path(fname).resolve())
             ctx.info(f"Signing {fname} ...")
+            cmd = sign_cmd[:] + [fpath]
             ctx.run(
-                "signtool.exe",
-                "sign",
-                "/sha1",
-                os.environ["WIN_SIGN_CERT_SHA1_HASH"],
-                "/tr",
-                "http://timestamp.digicert.com",
-                "/td",
-                "SHA256",
-                "/fd",
-                "SHA256",
-                fpath,
+                *cmd,
                 env=env,
             )
             ctx.info(f"Verifying {fname} ...")
@@ -489,7 +567,7 @@ def onedir_dependencies(
     if platform != "macos" and arch == "arm64":
         arch = "aarch64"
 
-    shared_constants = _get_shared_constants()
+    shared_constants = tools.utils.get_cicd_shared_context()
     if not python_version:
         python_version = shared_constants["python_version"]
     if not relenv_version:
@@ -547,6 +625,21 @@ def onedir_dependencies(
                 "--no-cache-dir",
                 "--no-binary=:all:",
             ]
+        )
+
+    # Cryptography needs openssl dir set to link to the proper openssl libs.
+    if platform == "macos":
+        env["OPENSSL_DIR"] = f"{dest}"
+
+    if platform == "linux":
+        # This installs the ppbt package. We'll remove it after installing all
+        # of our python packages.
+        ctx.run(
+            str(python_bin),
+            "-m",
+            "pip",
+            "install",
+            "relenv[toolchain]",
         )
 
     version_info = ctx.run(
@@ -628,7 +721,7 @@ def salt_onedir(
     if platform == "darwin":
         platform = "macos"
 
-    shared_constants = _get_shared_constants()
+    shared_constants = tools.utils.get_cicd_shared_context()
     if not relenv_version:
         relenv_version = shared_constants["relenv_version"]
     if TYPE_CHECKING:
@@ -702,6 +795,15 @@ def salt_onedir(
     else:
         env["RELENV_PIP_DIR"] = "1"
         pip_bin = env_scripts_dir / "pip3"
+        if platform == "linux":
+            # This installs the ppbt package. We'll remove it after installing all
+            # of our python packages.
+            ctx.run(
+                str(pip_bin),
+                "install",
+                "relenv[toolchain]",
+            )
+
         ctx.run(
             str(pip_bin),
             "install",
@@ -758,8 +860,23 @@ def salt_onedir(
         ctx.info(f"Copying '{src.relative_to(tools.utils.REPO_ROOT)}' to '{dst}' ...")
         shutil.copyfile(src, dst)
 
+    if platform == "linux":
+        # The ppbt package is very large. It is only needed when installing
+        # python modules that need to be compiled. Do not ship ppbt by default,
+        # it can be installed later if needed.
+        ctx.run(
+            str(python_executable),
+            "-m",
+            "pip",
+            "uninstall",
+            "-y",
+            "ppbt",
+        )
+
     # Add package type file for package grain
-    with open(pathlib.Path(site_packages) / "salt" / "_pkg.txt", "w") as fp:
+    with open(
+        pathlib.Path(site_packages) / "salt" / "_pkg.txt", "w", encoding="utf-8"
+    ) as fp:
         fp.write("onedir")
 
 

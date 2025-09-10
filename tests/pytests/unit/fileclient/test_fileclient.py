@@ -1,6 +1,7 @@
 """
 Tests for the salt fileclient
 """
+
 import errno
 import logging
 import os
@@ -126,6 +127,8 @@ def test_fileclient_timeout(minion_opts, master_opts):
             # Crypticle must return bytes to pass to transport.RequestClient.send
             client.auth._crypticle = Mock()
             client.auth._crypticle.dumps = mock_dumps
+            client.auth._session_crypticle = Mock()
+            client.auth._session_crypticle.dumps = mock_dumps
             msg = r"^File client timed out after \d{1,4} seconds$"
             with pytest.raises(salt.exceptions.SaltClientError, match=msg):
                 client.file_list()
@@ -222,3 +225,29 @@ def test_get_file_client(file_client):
     with patch("salt.fileclient.RemoteClient", MagicMock(return_value="remote_client")):
         ret = fileclient.get_file_client(minion_opts)
         assert "remote_client" == ret
+
+
+def test_getstate(file_client, mocked_opts):
+    assert file_client.__getstate__() == {"opts": mocked_opts}
+
+
+def test_setstate(file_client, mocked_opts):
+    mocked_opts["fake_opt"] = "fake"
+    file_client.__setstate__({"opts": mocked_opts})
+    assert file_client.opts == mocked_opts
+
+
+def test_get_url_with_hash(client_opts):
+    """
+    Test get_url function with a URL containing a hash character.
+    """
+    with patch("os.path.isfile", return_value=True):
+        with patch("os.makedirs", return_value=None):
+            with patch("urllib.request.urlretrieve", return_value=None):
+                client = fileclient.Client(client_opts)
+                url = "file:///path/to/file#with#hash"
+                dest = "/mocked/destination"
+
+                result = client.get_url(url, dest)
+
+                assert result == "/path/to/file#with#hash"

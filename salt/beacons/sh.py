@@ -1,6 +1,7 @@
 """
 Watch the shell commands being executed actively. This beacon requires strace.
 """
+
 import logging
 import time
 
@@ -72,7 +73,7 @@ def beacon(config):
         __context__[pkey] = {}
     for pid in track_pids:
         if pid not in __context__[pkey]:
-            cmd = ["strace", "-f", "-e", "execve", "-p", "{}".format(pid)]
+            cmd = ["strace", "-f", "-e", "execve", "-p", f"{pid}"]
             __context__[pkey][pid] = {}
             __context__[pkey][pid]["vt"] = salt.utils.vt.Terminal(
                 cmd,

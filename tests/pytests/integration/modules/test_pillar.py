@@ -662,7 +662,7 @@ def test_pillar_refresh_pillar_beacons(
             # Give the beacons a chance to start
             time.sleep(5)
 
-            event_tag = f"salt/beacon/*/status/*"
+            event_tag = "salt/beacon/*/status/*"
             start_time = time.time()
 
             event_pattern = (salt_master.id, event_tag)
@@ -686,7 +686,7 @@ def test_pillar_refresh_pillar_beacons(
             # Give the beacons a chance to stop
             time.sleep(5)
 
-            event_tag = f"salt/beacon/*/status/*"
+            event_tag = "salt/beacon/*/status/*"
             start_time = time.time()
 
             event_pattern = (salt_master.id, event_tag)

@@ -1,15 +1,18 @@
 """
 Integration tests for salt-ssh logging
 """
+
 import logging
 import time
 
 import pytest
 from saltfactories.utils import random_string
 
+from salt.utils.versions import Version
+from tests.pytests.integration.ssh import check_system_python_version
 from tests.support.helpers import Keys
 
-pytest.importorskip("docker")
+docker = pytest.importorskip("docker")
 
 
 log = logging.getLogger(__name__)
@@ -17,6 +20,13 @@ log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("dockerd"),
+    pytest.mark.skipif(
+        Version(docker.__version__) < Version("4.0.0"),
+        reason="Test does not work in this version of docker-py",
+    ),
+    pytest.mark.skipif(
+        not check_system_python_version("3.10"), reason="Needs system python >= 3.9"
+    ),
 ]
 
 
@@ -69,26 +79,23 @@ def ssh_port(ssh_docker_container):
 
 
 @pytest.fixture(scope="module")
-def salt_ssh_roster_file(ssh_port, ssh_keys, salt_master, ssh_auth):
+def salt_ssh_roster_file(ssh_port, ssh_keys, salt_master, ssh_auth, known_hosts_file):
     """
     Temporary roster for ssh docker container
     """
     ssh_pass, ssh_user = ssh_auth
-    roster = """
+    roster = f"""
     pyvertest:
       host: localhost
-      user: {}
-      port: {}
-      passwd: {}
+      user: {ssh_user}
+      port: {ssh_port}
+      passwd: {ssh_pass}
       sudo: True
       sudo_user: root
       tty: True
       ssh_options:
-        - StrictHostKeyChecking=no
-        - UserKnownHostsFile=/dev/null
-    """.format(
-        ssh_user, ssh_port, ssh_pass
-    )
+        - UserKnownHostsFile={known_hosts_file}
+    """
     with pytest.helpers.temp_file(
         "py_versions_roster", roster, salt_master.config_dir
     ) as roster_file:
@@ -103,8 +110,8 @@ def salt_ssh_cli(salt_master, salt_ssh_roster_file, ssh_keys, ssh_docker_contain
         timeout=180,
         roster_file=salt_ssh_roster_file,
         target_host="localhost",
-        base_script_args=["--ignore-host-keys"],
         ssh_user="app-admin",
+        base_script_args=["--ignore-host-keys"],
     )
 
 

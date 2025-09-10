@@ -25,7 +25,7 @@ import zlib
 import tornado.httpclient
 import tornado.httputil
 import tornado.simple_httpclient
-from tornado.httpclient import HTTPClient
+from tornado.httpclient import AsyncHTTPClient
 
 import salt.config
 import salt.loader
@@ -43,6 +43,7 @@ import salt.utils.xmlutil as xml
 import salt.utils.yaml
 import salt.version
 from salt.template import compile_template
+from salt.utils.asynchronous import SyncWrapper
 from salt.utils.decorators.jinja import jinja_filter
 
 try:
@@ -355,6 +356,19 @@ def query(
         agent = f"{agent} http.query()"
     header_dict["User-agent"] = agent
 
+    if (
+        proxy_host
+        and proxy_port
+        and method == "POST"
+        and "Content-Type" not in header_dict
+    ):
+        log.debug(
+            "Content-Type not provided for POST request, assuming application/x-www-form-urlencoded"
+        )
+        header_dict["Content-Type"] = "application/x-www-form-urlencoded"
+        if "Content-Length" not in header_dict:
+            header_dict["Content-Length"] = f"{len(data)}"
+
     if backend == "requests":
         sess = requests.Session()
         sess.auth = auth
@@ -487,10 +501,10 @@ def query(
                 try:
                     match_hostname(sockwrap.getpeercert(), hostname)
                 except CertificateError as exc:
-                    ret[
-                        "error"
-                    ] = "The certificate was invalid. Error returned was: {}".format(
-                        pprint.pformat(exc)
+                    ret["error"] = (
+                        "The certificate was invalid. Error returned was: {}".format(
+                            pprint.pformat(exc)
+                        )
                     )
                     return ret
 
@@ -585,7 +599,7 @@ def query(
             salt.config.DEFAULT_MINION_OPTS["http_request_timeout"],
         )
 
-        tornado.httpclient.AsyncHTTPClient.configure(None)
+        AsyncHTTPClient.configure(None)
         client_argspec = salt.utils.args.get_function_argspec(
             tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize
         )
@@ -616,10 +630,10 @@ def query(
         req_kwargs = salt.utils.data.decode(req_kwargs, to_str=True)
 
         try:
-            download_client = (
-                HTTPClient(max_body_size=max_body)
-                if supports_max_body_size
-                else HTTPClient()
+            download_client = SyncWrapper(
+                AsyncHTTPClient,
+                kwargs={"max_body_size": max_body} if supports_max_body_size else {},
+                async_methods=["fetch"],
             )
             result = download_client.fetch(url_full, **req_kwargs)
         except tornado.httpclient.HTTPError as exc:
@@ -632,7 +646,7 @@ def query(
                 decode_body=decode_body,
             )
             return ret
-        except (socket.herror, OSError, socket.timeout, socket.gaierror) as exc:
+        except (socket.herror, OSError, TimeoutError, socket.gaierror) as exc:
             if status is True:
                 ret["status"] = 0
             ret["error"] = str(exc)
@@ -727,10 +741,10 @@ def query(
 
         valid_decodes = ("json", "xml", "yaml", "plain")
         if decode_type not in valid_decodes:
-            ret[
-                "error"
-            ] = "Invalid decode_type specified. Valid decode types are: {}".format(
-                pprint.pformat(valid_decodes)
+            ret["error"] = (
+                "Invalid decode_type specified. Valid decode types are: {}".format(
+                    pprint.pformat(valid_decodes)
+                )
             )
             log.error(ret["error"])
             return ret

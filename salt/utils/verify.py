@@ -10,6 +10,7 @@ import re
 import socket
 import stat
 import sys
+import urllib.parse
 
 import salt.defaults.exitcodes
 import salt.utils.files
@@ -17,7 +18,12 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
 from salt._logging import LOG_LEVELS
-from salt.exceptions import CommandExecutionError, SaltClientError, SaltSystemExit
+from salt.exceptions import (
+    CommandExecutionError,
+    SaltClientError,
+    SaltSystemExit,
+    SaltValidationError,
+)
 
 # Original Author: Jeff Schroeder <jeffschroeder@computer.org>
 
@@ -338,7 +344,7 @@ def check_user(user):
 
     try:
         if hasattr(os, "initgroups"):
-            os.initgroups(user, pwuser.pw_gid)  # pylint: disable=minimum-python-version
+            os.initgroups(user, pwuser.pw_gid)
         else:
             os.setgroups(salt.utils.user.get_gid_list(user, include_default=False))
         os.setgid(pwuser.pw_gid)
@@ -429,7 +435,10 @@ def check_max_open_files(opts):
         # and the python binding http://timgolden.me.uk/pywin32-docs/win32file.html
         mof_s = mof_h = win32file._getmaxstdio()
     else:
-        mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
+
+        mof_s, mof_h = resource.getrlimit(  # pylint: disable=used-before-assignment
+            resource.RLIMIT_NOFILE
+        )
 
     accepted_keys_dir = os.path.join(opts.get("pki_dir"), "minions")
     accepted_count = len(os.listdir(accepted_keys_dir))
@@ -521,26 +530,43 @@ def _realpath(path):
     return os.path.realpath(path)
 
 
-def clean_path(root, path, subdir=False):
+def clean_path(root, path, subdir=False, realpath=True):
     """
     Accepts the root the path needs to be under and verifies that the path is
     under said root. Pass in subdir=True if the path can result in a
-    subdirectory of the root instead of having to reside directly in the root
+    subdirectory of the root instead of having to reside directly in the root.
+    Pass realpath=False if filesystem links should not be resolved.
     """
-    real_root = _realpath(root)
-    if not os.path.isabs(real_root):
-        return ""
+    if not os.path.isabs(root):
+        root = os.path.join(os.getcwd(), root)
+    normroot = os.path.normpath(root)
     if not os.path.isabs(path):
-        path = os.path.join(root, path)
-    path = os.path.normpath(path)
-    real_path = _realpath(path)
+        path = os.path.join(normroot, path)
+    normpath = os.path.normpath(path)
+    if realpath:
+        normroot = _realpath(normroot)
+        normpath = _realpath(normpath)
     if subdir:
-        if real_path.startswith(real_root):
-            return real_path
+        if os.path.commonpath([normpath, normroot]) == normroot:
+            return normpath
     else:
-        if os.path.dirname(real_path) == os.path.normpath(real_root):
-            return real_path
+        if os.path.dirname(normpath) == normroot:
+            return normpath
     return ""
+
+
+def clean_join(root, *paths, subdir=False, realpath=True):
+    """
+    Performa a join and then check the result against the clean_path method. If
+    clean_path fails a SaltValidationError is raised.
+    """
+    parent = root
+    for path in paths:
+        child = os.path.join(parent, path)
+        if not clean_path(parent, child, subdir, realpath):
+            raise SaltValidationError(f"Invalid path: {path!r}")
+        parent = child
+    return child
 
 
 def valid_id(opts, id_):
@@ -771,3 +797,41 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
     if skip_extra is False:
         # Run the extra verification checks
         zmq_version()
+
+
+SCHEMES = (
+    "http",
+    "https",
+    "ssh",
+    "ftp",
+    "sftp",
+    "file",
+)
+
+
+class URLValidator:
+
+    PCHAR = r"^([a-z0-9\-._~!$&'();=:@,]|%\d\d)+$"
+    ALL_VALID = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;="
+
+    @classmethod
+    def pchar_matcher(cls):
+        return re.compile(cls.PCHAR, re.IGNORECASE)
+
+    def __init__(self, schemes=SCHEMES):
+        self.schemes = schemes
+
+    def __call__(self, data):
+        if any([x not in self.ALL_VALID for x in data]):
+            return False
+        parsed = urllib.parse.urlparse(data)
+        if parsed.scheme not in self.schemes:
+            return False
+        matcher = self.pchar_matcher()
+        for part in parsed.path.split("/"):
+            if part and not matcher.match(part):
+                return False
+        return True
+
+
+url = URLValidator()

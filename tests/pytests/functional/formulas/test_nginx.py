@@ -1,32 +1,33 @@
 """
 Tests using nginx formula
 """
+
+import types
+
 import pytest
 
+from tests.pytests.functional.states.test_service import _check_systemctl
+
 pytestmark = [
-    pytest.mark.timeout_unless_on_windows(120),
+    pytest.mark.skip_on_windows,
+    pytest.mark.destructive_test,
+    pytest.mark.timeout_unless_on_windows(240),
+    pytest.mark.skipif(
+        'grains["os_family"] == "Suse"',
+        reason="Zypperpkg module removed as a part of great module migration",
+    ),
 ]
 
 
 @pytest.fixture(scope="module")
-def _formula(saltstack_formula):
-    with saltstack_formula(name="nginx-formula", tag="2.8.1") as formula:
-        yield formula
+def formula():
+    return types.SimpleNamespace(name="nginx-formula", tag="2.8.1")
 
 
-@pytest.fixture(scope="module")
-def modules(loaders, _formula):
-    loaders.opts["file_roots"]["base"].append(
-        str(_formula.state_tree_path / f"{_formula.name}-{_formula.tag}")
-    )
-    return loaders.modules
-
-
-@pytest.mark.skip_on_windows
-@pytest.mark.destructive_test
+@pytest.mark.skipif(_check_systemctl(), reason="systemctl degraded")
 def test_formula(modules):
     ret = modules.state.sls("nginx")
     assert not ret.errors
-    assert not ret.failed
+    assert ret.failed is False
     for staterun in ret:
         assert staterun.result is True

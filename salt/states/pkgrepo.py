@@ -20,9 +20,7 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
-        - humanname: Logstash PPA
         - name: deb http://ppa.launchpad.net/wolfnet/logstash/ubuntu precise main
-        - dist: precise
         - file: /etc/apt/sources.list.d/logstash.list
         - keyid: 28B04E4A
         - keyserver: keyserver.ubuntu.com
@@ -37,7 +35,6 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
-        - humanname: deb-multimedia
         - name: deb http://www.deb-multimedia.org stable main
         - file: /etc/apt/sources.list.d/deb-multimedia.list
         - key_url: salt://deb-multimedia/files/marillat.pub
@@ -46,9 +43,7 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
-        - humanname: Google Chrome
         - name: deb http://dl.google.com/linux/chrome/deb/ stable main
-        - dist: stable
         - file: /etc/apt/sources.list.d/chrome-browser.list
         - require_in:
           - pkg: google-chrome-stable
@@ -99,24 +94,23 @@ Using ``aptkey: False`` with ``key_url`` example:
 
 .. code-block:: yaml
 
-    deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
+    deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://packages.broadcom.com/artifactory/saltproject-deb/ bionic main:
       pkgrepo.managed:
         - file: /etc/apt/sources.list.d/salt.list
-        - key_url: https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest/salt-archive-keyring.gpg
+        - key_url: https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public
         - aptkey: False
 
 Using ``aptkey: False`` with ``keyserver`` and ``keyid``:
 
 .. code-block:: yaml
 
-    deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
+    deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://packages.broadcom.com/artifactory/saltproject-deb/ bionic main:
       pkgrepo.managed:
         - file: /etc/apt/sources.list.d/salt.list
         - keyserver: keyserver.ubuntu.com
         - keyid: 0E08A149DE57BFBE
         - aptkey: False
 """
-
 
 import sys
 
@@ -370,15 +364,15 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
 
     if "key_url" in kwargs and ("keyid" in kwargs or "keyserver" in kwargs):
         ret["result"] = False
-        ret[
-            "comment"
-        ] = 'You may not use both "keyid"/"keyserver" and "key_url" argument.'
+        ret["comment"] = (
+            'You may not use both "keyid"/"keyserver" and "key_url" argument.'
+        )
 
     if "key_text" in kwargs and ("keyid" in kwargs or "keyserver" in kwargs):
         ret["result"] = False
-        ret[
-            "comment"
-        ] = 'You may not use both "keyid"/"keyserver" and "key_text" argument.'
+        ret["comment"] = (
+            'You may not use both "keyid"/"keyserver" and "key_text" argument.'
+        )
     if "key_text" in kwargs and ("key_url" in kwargs):
         ret["result"] = False
         ret["comment"] = 'You may not use both "key_url" and "key_text" argument.'
@@ -414,12 +408,13 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
             )
         else:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Cannot have 'key_url' using http with 'allow_insecure_key' set to True"
+            ret["comment"] = (
+                "Cannot have 'key_url' using http with 'allow_insecure_key' set to True"
+            )
             return ret
 
-    repo = name
+    kwargs["name"] = repo = name
+
     if __grains__["os"] in ("Ubuntu", "Mint"):
         if ppa is not None:
             # overload the name/repo value for PPAs cleanly
@@ -443,9 +438,6 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
 
         if "humanname" in kwargs:
             kwargs["name"] = kwargs.pop("humanname")
-        if "name" not in kwargs:
-            # Fall back to the repo name if humanname not provided
-            kwargs["name"] = repo
 
         kwargs["enabled"] = (
             not salt.utils.data.is_true(disabled)
@@ -504,7 +496,10 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
                     else:
                         break
                 else:
-                    break
+                    if kwarg in ("comps", "key_url"):
+                        break
+                    else:
+                        continue
             elif kwarg in ("comps", "key_url"):
                 if sorted(sanitizedkwargs[kwarg]) != sorted(pre[kwarg]):
                     break

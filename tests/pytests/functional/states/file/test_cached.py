@@ -22,7 +22,7 @@ def test_cached_test_true():
     source_hash = secrets.token_hex(nbytes=32)
     expected = {
         "changes": {},
-        "comment": "File will be cached: {}".format(name),
+        "comment": f"File will be cached: {name}",
         "name": name,
         "result": None,
     }
@@ -41,7 +41,7 @@ def test_cached_present_test_true():
     source_hash = secrets.token_hex(nbytes=32)
     expected = {
         "changes": {},
-        "comment": "File already cached: {}".format(name),
+        "comment": f"File already cached: {name}",
         "name": name,
         "result": None,
     }
@@ -62,7 +62,7 @@ def test_cached_present_different_hash_test_true():
     existing_hash = secrets.token_hex(nbytes=32)
     expected = {
         "changes": {},
-        "comment": "Hashes don't match.\nFile will be cached: {}".format(name),
+        "comment": f"Hashes don't match.\nFile will be cached: {name}",
         "name": name,
         "result": None,
     }
@@ -82,7 +82,7 @@ def test_cached_present_no_source_hash_test_true():
     existing_hash = secrets.token_hex(nbytes=32)
     expected = {
         "changes": {},
-        "comment": "No hash found. File will be cached: {}".format(name),
+        "comment": f"No hash found. File will be cached: {name}",
         "name": name,
         "result": None,
     }

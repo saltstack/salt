@@ -1,6 +1,7 @@
 """
 Unit Tests for the mac_desktop execution module.
 """
+
 from datetime import datetime
 
 import pytest

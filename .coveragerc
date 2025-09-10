@@ -4,6 +4,7 @@ cover_pylib = False
 parallel = True
 concurrency = multiprocessing
 relative_files = True
+dynamic_context = test_function
 omit =
   setup.py
   .nox/*

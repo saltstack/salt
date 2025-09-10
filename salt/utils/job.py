@@ -2,7 +2,6 @@
 Functions for interacting with the job cache
 """
 
-
 import logging
 
 import salt.minion

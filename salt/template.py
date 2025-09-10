@@ -1,6 +1,7 @@
 """
 Manage basic template commands
 """
+
 import codecs
 import io
 import logging
@@ -33,7 +34,7 @@ def compile_template(
     sls="",
     input_data="",
     context=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Take the path to a template and return the high data structure
@@ -208,7 +209,7 @@ for comb in (
 ):
 
     fmt, tmpl = comb.split("_")
-    OLD_STYLE_RENDERERS[comb] = "{}|{}".format(tmpl, fmt)
+    OLD_STYLE_RENDERERS[comb] = f"{tmpl}|{fmt}"
 
 
 def check_render_pipe_str(pipestr, renderers, blacklist, whitelist):

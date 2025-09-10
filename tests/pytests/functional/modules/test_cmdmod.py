@@ -481,7 +481,13 @@ def test_runas(cmdmod, usermod, runas_usr):
     """
     Ensure that the env is the runas user's
     """
-    out = cmdmod.run("env", runas=runas_usr).splitlines()
+    # photon os sets the nobody user's home directory to /dev/null. This causes
+    # runas to fail because the /dev/null is not a directory.
+    cwd = None
+    if os.path.expanduser(f"~{runas_usr}") == "/dev/null":
+        cwd = "/"
+
+    out = cmdmod.run("env", runas=runas_usr, cwd=cwd).splitlines()
     assert f"USER={runas_usr}" in out
 
 
@@ -539,39 +545,30 @@ def test_windows_env_handling(cmdmod):
     Ensure that nt.environ is used properly with cmd.run*
     """
     out = cmdmod.run("cmd /c set", env={"abc": "123", "ABC": "456"}).splitlines()
-    assert "abc=123" in out
+    if sys.version_info.major == 3 and sys.version_info.minor < 11:
+        assert "abc=123" in out
+        assert "ABC=456" in out
+    else:
+        # in 3.11 and greater Python's subprocess module will not allow abc
+        # and ABC environment variables to be set.
+        assert "ABC=456" in out
+    out = cmdmod.run("cmd /c set", env={"xyz": "123", "ABC": "456"}).splitlines()
+    assert "xyz=123" in out
     assert "ABC=456" in out
 
 
 @pytest.mark.slow_test
 @pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
-def test_windows_powershell_script_args(cmdmod, issue_56195_test_ps1):
+@pytest.mark.parametrize("shell", ["powershell", "pwsh"])
+def test_windows_powershell_script_args(cmdmod, issue_56195_test_ps1, shell):
     """
     Ensure that powershell processes inline script in args
     """
     val = "i like cheese"
     args = (
-        '-SecureString (ConvertTo-SecureString -String "{}" -AsPlainText -Force)'
+        '-SecureString (ConvertTo-SecureString -String \\"{}\\" -AsPlainText -Force)'
         " -ErrorAction Stop".format(val)
     )
     script = "salt://issue_56195_test.ps1"
-    ret = cmdmod.script(script, args=args, shell="powershell", saltenv="base")
-    assert ret["stdout"] == val
-
-
-@pytest.mark.slow_test
-@pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
-@pytest.mark.skip_if_binaries_missing("pwsh")
-def test_windows_powershell_script_args_pwsh(cmdmod, issue_56195_test_ps1):
-    """
-    Ensure that powershell processes inline script in args with powershell
-    core
-    """
-    val = "i like cheese"
-    args = (
-        '-SecureString (ConvertTo-SecureString -String "{}" -AsPlainText -Force)'
-        " -ErrorAction Stop".format(val)
-    )
-    script = "salt://issue_56195_test.ps1"
-    ret = cmdmod.script(script, args=args, shell="pwsh", saltenv="base")
+    ret = cmdmod.script(script, args=args, shell=shell, saltenv="base")
     assert ret["stdout"] == val

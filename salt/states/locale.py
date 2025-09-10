@@ -17,7 +17,6 @@ Manage the available locales and the system default:
           - locale: us_locale
 """
 
-
 from salt.exceptions import CommandExecutionError
 
 
@@ -41,23 +40,23 @@ def system(name):
     try:
         if __salt__["locale.get_locale"]() == name:
             ret["result"] = True
-            ret["comment"] = "System locale {} already set".format(name)
+            ret["comment"] = f"System locale {name} already set"
             return ret
         if __opts__["test"]:
-            ret["comment"] = "System locale {} needs to be set".format(name)
+            ret["comment"] = f"System locale {name} needs to be set"
             return ret
         if __salt__["locale.set_locale"](name):
             ret["changes"] = {"locale": name}
             ret["result"] = True
-            ret["comment"] = "Set system locale {}".format(name)
+            ret["comment"] = f"Set system locale {name}"
             return ret
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to set system locale to {}".format(name)
+            ret["comment"] = f"Failed to set system locale to {name}"
             return ret
     except CommandExecutionError as err:
         ret["result"] = False
-        ret["comment"] = "Failed to set system locale: {}".format(err)
+        ret["comment"] = f"Failed to set system locale: {err}"
         return ret
 
 
@@ -74,17 +73,17 @@ def present(name):
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
     if __salt__["locale.avail"](name):
         ret["result"] = True
-        ret["comment"] = "Locale {} is already present".format(name)
+        ret["comment"] = f"Locale {name} is already present"
         return ret
     if __opts__["test"]:
-        ret["comment"] = "Locale {} needs to be generated".format(name)
+        ret["comment"] = f"Locale {name} needs to be generated"
         return ret
     if __salt__["locale.gen_locale"](name):
         ret["changes"] = {"locale": name}
         ret["result"] = True
-        ret["comment"] = "Generated locale {}".format(name)
+        ret["comment"] = f"Generated locale {name}"
         return ret
     else:
         ret["result"] = False
-        ret["comment"] = "Failed to generate locale {}".format(name)
+        ret["comment"] = f"Failed to generate locale {name}"
         return ret

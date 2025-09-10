@@ -5,7 +5,6 @@ This module contains logic to accommodate docker/salt CLI usage, as well as
 input as formatted by states.
 """
 
-
 import copy
 import logging
 
@@ -25,11 +24,11 @@ except ImportError:
 # functions so that we can get argspecs for the container config, host config,
 # and networking config (see the get_client_args() function).
 try:
-    import docker.types
+    import docker.types  # pylint: disable=no-name-in-module
 except ImportError:
     pass
 try:
-    import docker.utils
+    import docker.utils  # pylint: disable=no-name-in-module
 except ImportError:
     pass
 
@@ -241,7 +240,7 @@ def translate_input(
             pass
 
     except Exception as exc:  # pylint: disable=broad-except
-        error_message = exc.__str__()
+        error_message = str(exc)
         log.error("Error translating input: '%s'", error_message, exc_info=True)
     else:
         error_message = None

@@ -4,6 +4,7 @@ import pathlib
 import shutil
 import subprocess
 
+import packaging.version
 import pytest
 from pytestskipmarkers.utils import platform
 
@@ -50,6 +51,7 @@ def pkg_tests_account_environ(pkg_tests_account):
     return environ
 
 
+@pytest.mark.skip("Great module migration")
 def test_pip_install(salt_call_cli, install_salt, shell):
     """
     Test pip.install and ensure module can use installed library
@@ -70,12 +72,32 @@ def test_pip_install(salt_call_cli, install_salt, shell):
         assert "The github execution module cannot be loaded" in use_lib.stderr
 
 
+@pytest.fixture
+def extras_pypath(install_salt):
+    python_bin = os.path.join(*install_salt.binary_paths["python"])
+    ret = subprocess.run([python_bin, "--version"], check=True, capture_output=True)
+    v = packaging.version.Version(ret.stdout.decode().split()[1])
+    extras_dir = f"extras-{v.major}.{v.minor}"
+
+    if platform.is_windows():
+        return pathlib.Path(
+            os.getenv("ProgramFiles"), "Salt Project", "Salt", extras_dir
+        )
+    elif platform.is_darwin():
+        return pathlib.Path("/opt", "salt", extras_dir)
+    else:
+        return pathlib.Path("/opt", "saltstack", "salt", extras_dir)
+
+
+@pytest.fixture
+def extras_pypath_bin(extras_pypath):
+    return extras_pypath / "bin"
+
+
 def test_pip_install_extras(shell, install_salt, extras_pypath_bin):
     """
     Test salt-pip installs into the correct directory
     """
-    if not install_salt.relenv:
-        pytest.skip("The extras directory is only in relenv versions")
     dep = "pep8"
     extras_keyword = "extras-3"
     if platform.is_windows():
@@ -125,11 +147,7 @@ def test_pip_non_root(
     pypath,
     pkg_tests_account_environ,
 ):
-    if install_salt.classic:
-        pytest.skip("We can install non-root for classic packages")
     check_path = extras_pypath_bin / "pep8"
-    if not install_salt.relenv and not install_salt.classic:
-        check_path = pypath / "pep8"
     # We should be able to issue a --help without being root
     ret = subprocess.run(
         install_salt.binary_paths["salt"] + ["--help"],
@@ -179,8 +197,6 @@ def test_pip_install_salt_extension_in_extras(install_salt, extras_pypath, shell
     Test salt-pip installs into the correct directory and the salt extension
     is properly loaded.
     """
-    if not install_salt.relenv:
-        pytest.skip("The extras directory is only in relenv versions")
     dep = "salt-analytics-framework"
     dep_version = "0.1.0"
 

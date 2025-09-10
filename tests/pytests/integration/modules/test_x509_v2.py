@@ -11,7 +11,9 @@ from pathlib import Path
 import pytest
 from saltfactories.utils import random_string
 
-import salt.utils.x509 as x509util
+from tests.conftest import FIPS_TESTRUN
+
+x509util = pytest.importorskip("salt.utils.x509")
 
 try:
     import cryptography
@@ -60,7 +62,14 @@ def x509_data(
 @pytest.fixture(scope="module")
 def x509_salt_master(salt_factories, ca_minion_id, x509_master_config):
     factory = salt_factories.salt_master_daemon(
-        "x509-master", defaults=x509_master_config
+        "x509-master",
+        defaults=x509_master_config,
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "publish_signing_algorithm": (
+                "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+            ),
+        },
     )
     with factory.started():
         yield factory
@@ -160,9 +169,6 @@ def ca_minion_config(x509_minion_id, ca_cert, ca_key, ca_key_enc):
                 "X509v3 Basic Constraints": "critical CA:FALSE",
             },
         },
-        "features": {
-            "x509_v2": True,
-        },
     }
 
 
@@ -172,6 +178,11 @@ def x509ca_salt_minion(x509_salt_master, ca_minion_id, ca_minion_config):
     factory = x509_salt_master.salt_minion_daemon(
         ca_minion_id,
         defaults=ca_minion_config,
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        },
     )
     with factory.started():
         # Sync All
@@ -188,8 +199,12 @@ def x509_salt_minion(x509_salt_master, x509_minion_id):
         x509_minion_id,
         defaults={
             "open_mode": True,
-            "features": {"x509_v2": True},
             "grains": {"testgrain": "foo"},
+        },
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
         },
     )
     with factory.started():

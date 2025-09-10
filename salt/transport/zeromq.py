@@ -1,11 +1,13 @@
 """
 Zeromq transport classes
 """
+
 import asyncio
 import asyncio.exceptions
 import errno
 import hashlib
 import logging
+import multiprocessing
 import os
 import signal
 import sys
@@ -365,7 +367,6 @@ class PublishClient(salt.transport.base.PublishClient):
     #        self.on_recv_task = asyncio.create_task(self.on_recv_handler(callback))
 
     def on_recv(self, callback):
-
         """
         Register a callback for received messages (that we didn't initiate)
 
@@ -566,11 +567,16 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 request = await asyncio.wait_for(self._socket.recv(), 0.3)
                 reply = await self.handle_message(None, request)
                 await self._socket.send(self.encode_payload(reply))
+            except zmq.error.Again:
+                continue
             except asyncio.exceptions.TimeoutError:
                 continue
             except Exception as exc:  # pylint: disable=broad-except
-                log.error("Exception in request handler", exc_info=True)
-                break
+                log.error(
+                    "Exception in request handler",
+                    exc_info_on_loglevel=logging.DEBUG,
+                )
+                continue
 
     async def handle_message(self, stream, payload):
         try:
@@ -776,7 +782,7 @@ class ZeroMQSocketMonitor:
     async def consume(self):
         while self._running.is_set():
             try:
-                if self._monitor_socket.poll():
+                if await self._monitor_socket.poll():
                     msg = await self._monitor_socket.recv_multipart()
                     self.monitor_callback(msg)
                 else:
@@ -852,6 +858,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         pull_host=None,
         pull_port=None,
         pull_path=None,
+        pull_path_perms=0o600,
+        pub_path_perms=0o600,
+        started=None,
     ):
         self.opts = opts
         self.pub_host = pub_host
@@ -864,6 +873,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pull_host = pull_host
         self.pull_port = pull_port
         self.pull_path = pull_path
+        self.pub_path_perms = pub_path_perms
+        self.pull_path_perms = pull_path_perms
         if pull_path:
             self.pull_uri = f"ipc://{pull_path}"
         else:
@@ -874,9 +885,39 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.daemon_pub_sock = None
         self.daemon_pull_sock = None
         self.daemon_monitor = None
+        if started is None:
+            self.started = multiprocessing.Event()
+        else:
+            self.started = started
+
+    @classmethod
+    def support_ssl(cls):
+        # Required from DaemonizedPublishServer
+        return False
+
+    def topic_support(self):
+        # Required from DaemonizedPublishServer
+        return self.opts.get("zmq_filtering", False)
 
     def __repr__(self):
         return f"<PublishServer pub_uri={self.pub_uri} pull_uri={self.pull_uri} at {hex(id(self))}>"
+
+    def __setstate__(self, state):
+        self.__init__(**state)
+
+    def __getstate__(self):
+        return {
+            "opts": self.opts,
+            "pub_host": self.pub_host,
+            "pub_port": self.pub_port,
+            "pub_path": self.pub_path,
+            "pull_host": self.pull_host,
+            "pull_port": self.pull_port,
+            "pull_path": self.pull_path,
+            "pub_path_perms": self.pub_path_perms,
+            "pull_path_perms": self.pull_path_perms,
+            "started": self.started,
+        }
 
     def publish_daemon(
         self,
@@ -888,17 +929,17 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         This method represents the Publish Daemon process. It is intended to be
         run in a thread or process as it creates and runs its own ioloop.
         """
-        ioloop = tornado.ioloop.IOLoop()
-        ioloop.add_callback(self.publisher, publish_payload, ioloop=ioloop)
+        io_loop = tornado.ioloop.IOLoop()
+        io_loop.add_callback(self.publisher, publish_payload, io_loop=io_loop)
         try:
-            ioloop.start()
+            io_loop.start()
         finally:
             self.close()
 
-    def _get_sockets(self, context, ioloop):
+    def _get_sockets(self, context, io_loop):
         pub_sock = context.socket(zmq.PUB)
         monitor = ZeroMQSocketMonitor(pub_sock)
-        monitor.start_io_loop(ioloop)
+        monitor.start_io_loop(io_loop)
         _set_tcp_keepalive(pub_sock, self.opts)
         self.dpub_sock = pub_sock  # = zmq.eventloop.zmqstream.ZMQStream(pub_sock)
         # if 2.1 >= zmq < 3.0, we only have one HWM setting
@@ -930,33 +971,43 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             if self.pub_path:
                 os.chmod(  # nosec
                     self.pub_path,
-                    0o600,
+                    self.pub_path_perms,
                 )
             log.info("Starting the Salt Puller on %s", self.pull_uri)
             pull_sock.bind(self.pull_uri)
             if self.pull_path:
                 os.chmod(  # nosec
                     self.pull_path,
-                    0o600,
+                    self.pull_path_perms,
                 )
         return pull_sock, pub_sock, monitor
 
-    async def publisher(self, publish_payload, ioloop=None):
-        if ioloop is None:
-            ioloop = tornado.ioloop.IOLoop.current()
+    async def publisher(
+        self,
+        publish_payload,
+        presence_callback=None,
+        remove_presence_callback=None,
+        io_loop=None,
+    ):
+        if io_loop is None:
+            io_loop = tornado.ioloop.IOLoop.current()
         self.daemon_context = zmq.asyncio.Context()
         (
             self.daemon_pull_sock,
             self.daemon_pub_sock,
             self.daemon_monitor,
-        ) = self._get_sockets(self.daemon_context, ioloop)
+        ) = self._get_sockets(self.daemon_context, io_loop)
+        self.started.set()
         while True:
             try:
                 package = await self.daemon_pull_sock.recv()
                 await publish_payload(package)
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
-                    "Exception in publisher %s %s", self.pull_uri, exc, exc_info=True
+                    "Exception in publisher %s %s",
+                    self.pull_uri,
+                    exc,
+                    exc_info_on_loglevel=logging.DEBUG,
                 )
 
     async def publish_payload(self, payload, topic_list=None):
@@ -1010,7 +1061,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         log.debug("Connecting to pub server: %s", self.pull_uri)
         self.ctx = zmq.asyncio.Context()
         self.sock = self.ctx.socket(zmq.PUSH)
-        self.sock.setsockopt(zmq.LINGER, 300)
+        self.sock.setsockopt(zmq.LINGER, -1)
         self.sock.connect(self.pull_uri)
         return self.sock
 
@@ -1037,7 +1088,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.daemon_context.destroy(1)
             self.daemon_context.term()
 
-    async def publish(self, payload, **kwargs):
+    async def publish(
+        self, payload, **kwargs
+    ):  # pylint: disable=invalid-overridden-method
         """
         Publish "load" to minions. This send the load to the publisher daemon
         process with does the actual sending to minions.
@@ -1047,10 +1100,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         if not self.sock:
             self.connect()
         await self.sock.send(payload)
-
-    @property
-    def topic_support(self):
-        return self.opts.get("zmq_filtering", False)
 
     def __enter__(self):
         return self
@@ -1081,7 +1130,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self.socket = None
         self.sending = asyncio.Lock()
 
-    async def connect(self):
+    async def connect(self):  # pylint: disable=invalid-overridden-method
         if self.socket is None:
             self._connect_called = True
             self._closing = False

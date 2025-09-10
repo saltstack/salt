@@ -7,13 +7,14 @@
 
     This is where all the black magic happens on all of salt's CLI tools.
 """
+
 # pylint: disable=missing-docstring,protected-access,too-many-ancestors,too-few-public-methods
 # pylint: disable=attribute-defined-outside-init,no-self-use
 
 import copy
 import getpass
 import logging
-import optparse
+import optparse  # pylint: disable=deprecated-module
 import os
 import signal
 import sys
@@ -3093,6 +3094,7 @@ class SaltSSHOptionParser(
     ]
 
     def _mixin_setup(self):
+        # pylint: disable=W0106
         self.add_option(
             "-r",
             "--raw",
@@ -3176,6 +3178,13 @@ class SaltSSHOptionParser(
             ),
         )
         self.add_option(
+            "--thin-exclude-saltexts",
+            default=False,
+            action="store_true",
+            dest="thin_exclude_saltexts",
+            help="Exclude Salt extension modules from generated Thin Salt.",
+        )
+        self.add_option(
             "-v",
             "--verbose",
             default=False,
@@ -3219,6 +3228,16 @@ class SaltSSHOptionParser(
                 "custom grains/modules/states have been added or updated."
             ),
         )
+        self.add_option(
+            "--relenv",
+            dest="relenv",
+            default=False,
+            action="store_true",
+            help=(
+                "Deploy and use a relenv (Salt+Python bundled) environment on the "
+                "SSH target."
+            ),
+        ),
         self.add_option(
             "--python2-bin",
             default="python2",
@@ -3401,6 +3420,9 @@ class SaltSSHOptionParser(
                     if option.dest == "ssh_passwd":
                         option.explicit = True
                         break
+
+        if self.options.regen_thin and self.options.relenv:
+            self.error("--thin and --relenv are mutually exclusive")
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())

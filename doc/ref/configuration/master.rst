@@ -96,6 +96,14 @@ The user to run the Salt processes
 
     user: root
 
+.. note::
+
+    Starting with version `3006.0`, Salt's offical packages ship with a default
+    configuration which runs the Master as a non-priviledged user. The Master's
+    configuration file has the `user` option set to `user: salt`. Unless you
+    are absolutly sure want to run salt as some other user, care should be
+    taken to preserve this setting in your Master configuration file..
+
 .. conf_master:: ret_port
 
 ``enable_ssh_minions``
@@ -210,10 +218,9 @@ When defined, the master will operate in cluster mode. The master will send the
 cluster key and id to minions instead of its own key and id. The master will
 also forward its local event bus to other masters defined by ``cluster_peers``
 
-
 .. code-block:: yaml
 
-    cluster_id: master
+    cluster_id: master_cluster
 
 .. conf_master:: cluster_peers
 
@@ -222,8 +229,8 @@ also forward its local event bus to other masters defined by ``cluster_peers``
 
 .. versionadded:: 3007
 
-When ``cluster_id`` is defined, this setting is a list of other master
-(hostnames or ips) that will be in the cluster.
+When ``cluster_peers`` is defined, this setting is a list of other master
+(hostnames or IPs) that will be in the cluster.
 
 .. code-block:: yaml
 
@@ -238,15 +245,29 @@ When ``cluster_id`` is defined, this setting is a list of other master
 
 .. versionadded:: 3007
 
-When ``cluster_id`` is defined, this sets the location of where this cluster
-will store its cluster public and private key as well as any minion keys. This
-setting will default to the value of ``pki_dir``, but should be changed
-to the filesystem location shared between peers in the cluster.
+When ``cluster_pki_dir`` is defined, this sets the location of where this
+cluster will store its cluster public and private key as well as any minion
+keys. This setting will default to the value of ``pki_dir``, but should be
+changed to the filesystem location shared between peers in the cluster.
 
 .. code-block:: yaml
 
-    cluster_pki: /my/gluster/share/pki
+    cluster_pki_dir: /my/gluster/share/pki
 
+
+.. conf_master:: cluster_port
+
+``cluster_pool_port``
+---------------------
+
+.. versionadded:: 3007.2
+
+When ``cluster_pool_port`` is defined, it sets the TCP port number HAProxy
+listens on for incoming TCP connections. The default is ``4520``
+
+.. code-block:: yaml
+
+    cluster_pool_port: 4520
 
 .. conf_master:: extension_modules
 
@@ -420,6 +441,22 @@ Default: ``5``
 Set the default timeout for the salt command and api.
 
 .. conf_master:: loop_interval
+
+.. conf_minion:: ipc_write_timeout
+
+``ipc_write_timeout``
+---------------------
+
+.. versionadded:: 3006.11
+
+Default: ``15``
+
+How many seconds the event publisher process will wait after a client stops
+responding before the client will be disconnected.
+
+.. code-block:: yaml
+
+    ipc_write_timeout: 15
 
 ``loop_interval``
 -----------------
@@ -1667,6 +1704,8 @@ Pass a list of importable Python modules that are typically located in
 the `site-packages` Python directory so they will be also always included
 into the Salt Thin, once generated.
 
+.. conf_master:: min_extra_mods
+
 ``min_extra_mods``
 ------------------
 
@@ -1674,6 +1713,47 @@ Default: None
 
 Identical as `thin_extra_mods`, only applied to the Salt Minimal.
 
+.. conf_master:: thin_exclude_saltexts
+
+``thin_exclude_saltexts``
+-------------------------
+
+Default: False
+
+By default, Salt-SSH autodiscovers Salt extensions in the current Python environment
+and adds them to the Salt Thin. This disables that behavior.
+
+.. note::
+
+    When the list of modules/extensions to include in the Salt Thin changes
+    for any reason (e.g. Saltext was added/removed, :conf_master:`thin_exclude_saltexts`,
+    :conf_master:`thin_saltext_allowlist` or :conf_master:`thin_saltext_blocklist`
+    was changed), you typically need to regenerate the Salt Thin by passing
+    ``--regen-thin`` to the next Salt-SSH invocation.
+
+.. conf_master:: thin_saltext_allowlist
+
+``thin_saltext_allowlist``
+--------------------------
+
+Default: None
+
+A list of Salt extension **distribution** names which are allowed to be
+included in the Salt Thin (when :conf_master:`thin_exclude_saltexts`
+is inactive) and they are discovered. Any extension not in this list
+will be excluded. If unset, all discovered extensions are added,
+unless present in :conf_master:`thin_saltext_blocklist`.
+
+.. conf_master:: thin_saltext_blocklist
+
+``thin_saltext_blocklist``
+--------------------------
+
+Default: None
+
+A list of Salt extension **distribution** names which should never be
+included in the Salt Thin (when :conf_master:`thin_exclude_saltexts`
+is inactive).
 
 .. _master-security-settings:
 
@@ -2079,6 +2159,20 @@ The number of seconds between AES key rotations on the master.
     publish_session: Default: 86400
 
 .. conf_master:: ssl
+
+
+``publish_signing_algorithm``
+-----------------------------
+
+.. versionadded:: 3006.9
+
+Default: PKCS1v15-SHA1
+
+The RSA signing algorithm used by this minion when connecting to the
+master's request channel. Valid values are ``PKCS1v15-SHA1`` and
+``PKCS1v15-SHA224``. Minions must be at version ``3006.9`` or greater if this
+is changed from the default setting.
+
 
 ``ssl``
 -------

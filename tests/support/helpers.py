@@ -8,6 +8,7 @@
 
     Test support helpers
 """
+
 import asyncio
 import base64
 import builtins
@@ -1610,7 +1611,7 @@ class VirtualEnv:
     venv_bin_dir = attr.ib(init=False, repr=False)
 
     @pip_requirement.default
-    def _default_pip_requiremnt(self):
+    def _default_pip_requirement(self):
         if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
             return "pip>=22.3.1,<23.0"
         return "pip>=20.2.4,<21.2"
@@ -1672,9 +1673,9 @@ class VirtualEnv:
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
         kwargs.setdefault("universal_newlines", True)
-        env = kwargs.pop("env", None)
-        if env:
-            env = self.environ.copy().update(env)
+        if kwenv := kwargs.pop("env", None):
+            env = self.environ.copy()
+            env.update(kwenv)
         else:
             env = self.environ
         proc = subprocess.run(args, check=False, env=env, **kwargs)
@@ -1747,11 +1748,13 @@ class VirtualEnv:
         return data
 
     def _create_virtualenv(self):
-        virtualenv = shutil.which("virtualenv")
-        if not virtualenv:
-            pytest.fail("'virtualenv' binary not found")
+        pyexec = shutil.which("python")
+        if not pyexec:
+            pytest.fail("'python' binary not found for virtualenv")
         cmd = [
-            virtualenv,
+            pyexec,
+            "-m",
+            "virtualenv",
             f"--python={self.get_real_python()}",
         ]
         if self.system_site_packages:
@@ -1776,11 +1779,14 @@ class SaltVirtualEnv(VirtualEnv):
 
     def _create_virtualenv(self):
         super()._create_virtualenv()
+        code_dir = pathlib.Path(RUNTIME_VARS.CODE_DIR)
+        self.install(
+            "-r", code_dir / "requirements" / "static" / "pkg" / "py3.10" / "linux.txt"
+        )
         self.install(RUNTIME_VARS.CODE_DIR)
 
     def install(self, *args, **kwargs):
-        env = self.environ.copy()
-        env.update(kwargs.pop("env", None) or {})
+        env = kwargs.pop("env", None) or {}
         env["USE_STATIC_REQUIREMENTS"] = "1"
         kwargs["env"] = env
         return super().install(*args, **kwargs)

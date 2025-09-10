@@ -1,6 +1,7 @@
 """
 All salt configuration loading and defaults should be in this module
 """
+
 import codecs
 import glob
 import logging
@@ -12,6 +13,8 @@ import types
 import urllib.parse
 from copy import deepcopy
 
+import salt.crypt
+import salt.defaults
 import salt.defaults.exitcodes
 import salt.exceptions
 import salt.features
@@ -40,8 +43,6 @@ from salt._logging import (
 try:
     import psutil
 
-    if not hasattr(psutil, "virtual_memory"):
-        raise ImportError("Version of psutil too old.")
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
@@ -88,7 +89,7 @@ def _gather_buffer_space():
 
     Result is in bytes.
     """
-    if HAS_PSUTIL and psutil.version_info >= (0, 6, 0):
+    if HAS_PSUTIL:
         # Oh good, we have psutil. This will be quick.
         total_mem = psutil.virtual_memory().total
     else:
@@ -162,7 +163,7 @@ VALID_OPTS = immutabletypes.freeze(
         "always_verify_signature": bool,
         # The name of the file in the masters pki-directory that holds the pre-calculated signature of
         # the masters public-key
-        "master_pubkey_signature": str,
+        "master_pubkey_signature": (type(None), str),
         # Instead of computing the signature for each auth-reply, use a pre-calculated signature.
         # The master_pubkey_signature must also be set for this.
         "master_use_pubkey_signature": bool,
@@ -196,6 +197,8 @@ VALID_OPTS = immutabletypes.freeze(
         # to define where minion keys and the cluster private key will be
         # stored.
         "cluster_pki_dir": str,
+        # The port required to be open for a master cluster to properly function
+        "cluster_pool_port": int,
         # Use a module function to determine the unique identifier. If this is
         # set and 'id' is not set, it will allow invocation of a module function
         # to determine the value of 'id'. For simple invocations without function
@@ -908,6 +911,9 @@ VALID_OPTS = immutabletypes.freeze(
         # Thin and minimal Salt extra modules
         "thin_extra_mods": str,
         "min_extra_mods": str,
+        "thin_exclude_saltexts": bool,
+        "thin_saltext_allowlist": (type(None), list),
+        "thin_saltext_blocklist": list,
         # Default returners minion should use. List or comma-delimited string
         "return": (str, list),
         # TLS/SSL connection options. This could be set to a dictionary containing arguments
@@ -1005,6 +1011,17 @@ VALID_OPTS = immutabletypes.freeze(
         "fileserver_interval": int,
         "request_channel_timeout": int,
         "request_channel_tries": int,
+        # RSA encryption for minion
+        "encryption_algorithm": str,
+        # RSA signing for minion
+        "signing_algorithm": str,
+        # Master publish channel signing
+        "publish_signing_algorithm": str,
+        # the cache driver to be used to manage keys for both minion and master
+        "keys.cache_driver": (type(None), str),
+        "request_server_ttl": int,
+        "request_server_aes_session": int,
+        "ipc_write_timeout": int,
     }
 )
 
@@ -1312,6 +1329,9 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "reactor_niceness": None,
         "fips_mode": False,
         "features": {},
+        "encryption_algorithm": "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA1",
+        "keys.cache_driver": "localfs_key",
     }
 )
 
@@ -1613,7 +1633,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "max_minions": 0,
         "master_sign_key_name": "master_sign",
         "master_sign_pubkey": False,
-        "master_pubkey_signature": "master_pubkey_signature",
+        "master_pubkey_signature": None,
         "master_use_pubkey_signature": False,
         "zmq_filtering": False,
         "zmq_monitor": False,
@@ -1631,6 +1651,9 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "memcache_debug": False,
         "thin_extra_mods": "",
         "min_extra_mods": "",
+        "thin_exclude_saltexts": False,
+        "thin_saltext_allowlist": None,
+        "thin_saltext_blocklist": [],
         "ssl": None,
         "extmod_whitelist": {},
         "extmod_blacklist": {},
@@ -1660,7 +1683,13 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_id": None,
         "cluster_peers": [],
         "cluster_pki_dir": None,
+        "cluster_pool_port": 4520,
         "features": {},
+        "publish_signing_algorithm": "PKCS1v15-SHA1",
+        "keys.cache_driver": "localfs_key",
+        "request_server_aes_session": 0,
+        "request_server_ttl": 0,
+        "ipc_write_timeout": salt.defaults.IPC_WRITE_TIMEOUT,
     }
 )
 
@@ -2217,6 +2246,18 @@ def include_config(include, orig_path, verbose, exit_on_config_errors=False):
     return configuration
 
 
+def should_prepend_root_dir(key, opts):
+    """
+    Prepend root dir only when the key exists, has a value, and that value is
+    not a URI.
+    """
+    return (
+        key in opts
+        and opts[key] is not None
+        and urllib.parse.urlparse(os.path.splitdrive(opts[key])[1]).scheme == ""
+    )
+
+
 def prepend_root_dir(opts, path_options):
     """
     Prepends the options that represent filesystem paths with value of the
@@ -2492,7 +2533,7 @@ def syndic_config(
                 ),
             )
         ),
-        "user": opts.get("syndic_user", opts["user"]),
+        "user": opts.get("syndic_user", master_opts["user"]),
         "sock_dir": os.path.join(
             opts["cachedir"], opts.get("syndic_sock_dir", opts["sock_dir"])
         ),
@@ -2500,6 +2541,7 @@ def syndic_config(
         "cachedir": master_opts["cachedir"],
     }
     opts.update(syndic_opts)
+
     # Prepend root_dir to other paths
     prepend_root_dirs = [
         "pki_dir",
@@ -2513,8 +2555,7 @@ def syndic_config(
         "autosign_grains_dir",
     ]
     for config_key in ("log_file", "key_logfile", "syndic_log_file"):
-        # If this is not a URI and instead a local path
-        if urllib.parse.urlparse(opts.get(config_key, "")).scheme == "":
+        if should_prepend_root_dir(config_key, opts):
             prepend_root_dirs.append(config_key)
     prepend_root_dir(opts, prepend_root_dirs)
     salt.features.setup_features(opts)
@@ -2525,12 +2566,12 @@ def apply_sdb(opts, sdb_opts=None):
     """
     Recurse for sdb:// links for opts
     """
-    # Late load of SDB to keep CLI light
-    import salt.utils.sdb
-
     if sdb_opts is None:
         sdb_opts = opts
     if isinstance(sdb_opts, str) and sdb_opts.startswith("sdb://"):
+        # Late load of SDB to keep CLI light
+        import salt.utils.sdb
+
         return salt.utils.sdb.sdb_get(sdb_opts, opts)
     elif isinstance(sdb_opts, dict):
         for key, value in sdb_opts.items():
@@ -2766,8 +2807,8 @@ def cloud_config(
 
     # prepend root_dir
     prepend_root_dirs = ["cachedir"]
-    if "log_file" in opts and urllib.parse.urlparse(opts["log_file"]).scheme == "":
-        prepend_root_dirs.append(opts["log_file"])
+    if should_prepend_root_dir("log_file", opts):
+        prepend_root_dirs.append("log_file")
     prepend_root_dir(opts, prepend_root_dirs)
 
     salt.features.setup_features(opts)
@@ -3841,7 +3882,7 @@ def apply_minion_config(
 
     # These can be set to syslog, so, not actual paths on the system
     for config_key in ("log_file", "key_logfile"):
-        if urllib.parse.urlparse(opts.get(config_key, "")).scheme == "":
+        if should_prepend_root_dir(config_key, opts):
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)
@@ -3861,6 +3902,22 @@ def apply_minion_config(
     # Check and update TLS/SSL configuration
     _update_ssl_config(opts)
     _update_discovery_config(opts)
+
+    if opts["encryption_algorithm"] not in salt.crypt.VALID_ENCRYPTION_ALGORITHMS:
+        raise salt.exceptions.SaltConfigurationError(
+            f"The encryption algorithm '{opts['encryption_algorithm']}' is not valid. "
+            f"Please specify one of {','.join(salt.crypt.VALID_ENCRYPTION_ALGORITHMS)}."
+        )
+    if opts["signing_algorithm"] not in salt.crypt.VALID_SIGNING_ALGORITHMS:
+        raise salt.exceptions.SaltConfigurationError(
+            f"The signging algorithm '{opts['signing_algorithm']}' is not valid. "
+            f"Please specify one of {','.join(salt.crypt.VALID_SIGNING_ALGORITHMS)}."
+        )
+
+    # Store original `cachedir` value, before overriding,
+    # to make overriding more accurate.
+    if "__cachedir" not in opts:
+        opts["__cachedir"] = opts["cachedir"]
 
     return opts
 
@@ -4068,16 +4125,12 @@ def apply_master_config(overrides=None, defaults=None):
 
     # These can be set to syslog, so, not actual paths on the system
     for config_key in ("log_file", "key_logfile", "ssh_log_file"):
-        log_setting = opts.get(config_key, "")
-        if log_setting is None:
-            continue
-
-        if urllib.parse.urlparse(log_setting).scheme == "":
+        if should_prepend_root_dir(config_key, opts):
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)
 
-    # When a cluster id is defined, make sure the other nessicery bits a
+    # When a cluster id is defined, make sure the other necessary bits are
     # defined.
     if "cluster_id" not in opts:
         opts["cluster_id"] = None
@@ -4095,7 +4148,7 @@ def apply_master_config(overrides=None, defaults=None):
             log.warning("Cluster peers defined without a cluster_id, ignoring.")
             opts["cluster_peers"] = []
         if opts.get("cluster_pki_dir", None):
-            log.warning("Cluster pki defined without a cluster_id, ignoring.")
+            log.warning("Cluster pki dir defined without a cluster_id, ignoring.")
             opts["cluster_pki_dir"] = None
 
     # Enabling open mode requires that the value be set to True, and
@@ -4146,6 +4199,12 @@ def apply_master_config(overrides=None, defaults=None):
     # Check and update TLS/SSL configuration
     _update_ssl_config(opts)
     _update_discovery_config(opts)
+
+    if opts["publish_signing_algorithm"] not in salt.crypt.VALID_SIGNING_ALGORITHMS:
+        raise salt.exceptions.SaltConfigurationError(
+            f"The  publish signging algorithm '{opts['publish_signing_algorithm']}' is not valid. "
+            f"Please specify one of {','.join(salt.crypt.VALID_SIGNING_ALGORITHMS)}."
+        )
 
     return opts
 
@@ -4294,11 +4353,7 @@ def apply_spm_config(overrides, defaults):
 
     # These can be set to syslog, so, not actual paths on the system
     for config_key in ("spm_logfile",):
-        log_setting = opts.get(config_key, "")
-        if log_setting is None:
-            continue
-
-        if urllib.parse.urlparse(log_setting).scheme == "":
+        if should_prepend_root_dir(config_key, opts):
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)

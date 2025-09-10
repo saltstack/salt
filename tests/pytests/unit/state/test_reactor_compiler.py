@@ -166,7 +166,7 @@ def test_compiler_pad_funcs_short_sls(minion_opts, tmp_path):
                 }
             },
             [
-                "ID '1234' in SLS '/srv/reactor/start.sls' is not formed as a string, but is a int. It may need to be quoted"
+                "ID '1234' in SLS '/srv/reactor/start.sls' is not formed as a string, but is type int. It may need to be quoted."
             ],
         ),
         (
@@ -177,7 +177,7 @@ def test_compiler_pad_funcs_short_sls(minion_opts, tmp_path):
                 }
             },
             [
-                "ID 'b'test'' in SLS '/srv/reactor/start.sls' is not formed as a string, but is a bytes. It may need to be quoted"
+                "ID 'b'test'' in SLS '/srv/reactor/start.sls' is not formed as a string, but is type bytes. It may need to be quoted."
             ],
         ),
         (
@@ -188,7 +188,7 @@ def test_compiler_pad_funcs_short_sls(minion_opts, tmp_path):
                 }
             },
             [
-                "ID 'True' in SLS '/srv/reactor/start.sls' is not formed as a string, but is a bool. It may need to be quoted"
+                "ID 'True' in SLS '/srv/reactor/start.sls' is not formed as a string, but is type bool. It may need to be quoted."
             ],
         ),
         (
@@ -463,7 +463,7 @@ def test_compiler_verify_high_short_sls(minion_opts, tmp_path, high, exp):
                 ),
             },
             [
-                "Requisite declaration ('local', 'add_test_1') in SLS /srv/reactor/start.sls is not formed as a single key dictionary"
+                "Requisite declaration ('local', 'add_test_1') in state add_test_2 in SLS /srv/reactor/start.sls is not formed as a single key dictionary"
             ],
         ),
         (
@@ -529,69 +529,8 @@ def test_compiler_verify_high_short_sls(minion_opts, tmp_path, high, exp):
                     ]
                 ),
             },
-            ["Illegal requisite \"['add_test_1']\", is SLS /srv/reactor/start.sls\n"],
-        ),
-        (
-            {
-                "add_test_1": OrderedDict(
-                    [
-                        (
-                            "local",
-                            [
-                                OrderedDict([("tgt", "poc-minion")]),
-                                OrderedDict(
-                                    [
-                                        (
-                                            "args",
-                                            [
-                                                OrderedDict(
-                                                    [("cmd", "touch /tmp/test1")]
-                                                )
-                                            ],
-                                        )
-                                    ]
-                                ),
-                                "cmd.run",
-                            ],
-                        ),
-                        ("__sls__", "/srv/reactor/start.sls"),
-                    ]
-                ),
-                "add_test_2": OrderedDict(
-                    [
-                        (
-                            "local",
-                            [
-                                OrderedDict([("tgt", "poc-minion")]),
-                                OrderedDict(
-                                    [
-                                        (
-                                            "args",
-                                            [
-                                                OrderedDict(
-                                                    [("cmd", "touch /tmp/test2")]
-                                                )
-                                            ],
-                                        )
-                                    ]
-                                ),
-                                OrderedDict(
-                                    [
-                                        (
-                                            "require",
-                                            [OrderedDict([("local", "add_test_2")])],
-                                        )
-                                    ]
-                                ),
-                                "cmd.run",
-                            ],
-                        ),
-                        ("__sls__", "/srv/reactor/start.sls"),
-                    ]
-                ),
-            },
             [
-                'A recursive requisite was found, SLS "/srv/reactor/start.sls" ID "add_test_2" ID "add_test_2"'
+                'Illegal requisite "[\'add_test_1\']" in SLS "/srv/reactor/start.sls", please check your syntax.\n'
             ],
         ),
         (

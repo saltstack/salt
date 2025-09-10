@@ -211,7 +211,7 @@ def set_(key, value, setting=None, conf_file=_DEFAULT_CONF):
         "flags": 8,
         "backup": False,
         "path": conf_file,
-        "pattern": "^{}.*".format(key),
+        "pattern": f"^{key}.*",
         "show_changes": False,
     }
 
@@ -232,7 +232,7 @@ def set_(key, value, setting=None, conf_file=_DEFAULT_CONF):
         if value is True:
             new_line = key
         elif value:
-            new_line = "{} {}".format(key, value)
+            new_line = f"{key} {value}"
 
         kwargs.update({"prepend_if_not_found": True})
     else:
@@ -259,7 +259,7 @@ def set_(key, value, setting=None, conf_file=_DEFAULT_CONF):
 
         kwargs.update(
             {
-                "pattern": "^{0}.*?{{.*?}}".format(key),
+                "pattern": f"^{key}.*?{{.*?}}",
                 "flags": 24,
                 "append_if_not_found": True,
             }
@@ -279,5 +279,5 @@ def _dict_to_stanza(key, stanza):
     for skey in stanza:
         if stanza[skey] is True:
             stanza[skey] = ""
-        ret += "    {} {}\n".format(skey, stanza[skey])
-    return "{0} {{\n{1}}}".format(key, ret)
+        ret += f"    {skey} {stanza[skey]}\n"
+    return f"{key} {{\n{ret}}}"

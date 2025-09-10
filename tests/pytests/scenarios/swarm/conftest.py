@@ -4,12 +4,21 @@ from contextlib import ExitStack
 import pytest
 from saltfactories.utils import random_string
 
+from tests.conftest import FIPS_TESTRUN
+
 
 @pytest.fixture(scope="package")
 def salt_master_factory(salt_factories):
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
+    }
     factory = salt_factories.salt_master_daemon(
         random_string("swarm-master-"),
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+        overrides=config_overrides,
     )
     return factory
 
@@ -68,6 +77,15 @@ def minion_swarm(salt_master, _minion_count):
             minion_factory = salt_master.salt_minion_daemon(
                 random_string(f"swarm-minion-{idx}-"),
                 extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+                overrides={
+                    "fips_mode": FIPS_TESTRUN,
+                    "encryption_algorithm": (
+                        "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1"
+                    ),
+                    "signing_algorithm": (
+                        "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+                    ),
+                },
             )
             stack.enter_context(minion_factory.started())
             minions.append(minion_factory)

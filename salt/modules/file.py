@@ -771,6 +771,7 @@ def get_source_sum(
     signed_by_all=None,
     keyring=None,
     gnupghome=None,
+    sig_backend="gpg",
 ):
     """
     .. versionadded:: 2016.11.0
@@ -813,7 +814,7 @@ def get_source_sum(
 
     source_hash_sig
         When ``source`` is a remote file source and ``source_hash`` is a file,
-        ensure a valid GPG signature exists on the source hash file.
+        ensure a valid signature exists on the source hash file.
         Set this to ``true`` for an inline (clearsigned) signature, or to a
         file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
         for a detached one.
@@ -822,15 +823,17 @@ def get_source_sum(
 
     signed_by_any
         When verifying ``source_hash_sig``, require at least one valid signature
-        from one of a list of key fingerprints. This is passed to :py:func:`gpg.verify
-        <salt.modules.gpg.verify>`.
+        from one of a list of keys.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
 
         .. versionadded:: 3007.0
 
     signed_by_all
         When verifying ``source_hash_sig``, require a valid signature from each
-        of the key fingerprints in this list. This is passed to :py:func:`gpg.verify
-        <salt.modules.gpg.verify>`.
+        of the keys in this list.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
 
         .. versionadded:: 3007.0
 
@@ -843,6 +846,13 @@ def get_source_sum(
         When verifying ``source_hash_sig``, use this GnuPG home.
 
         .. versionadded:: 3007.0
+
+    sig_backend
+        When verifying signatures, use this execution module as a backend.
+        It must be compatible with the :py:func:`gpg.verify <salt.modules.gpg.verify>` API.
+        Defaults to ``gpg``. All signature-related parameters are passed through.
+
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -887,13 +897,14 @@ def get_source_sum(
                 if source_hash_sig:
                     _check_sig(
                         hash_fn,
-                        signature=source_hash_sig
-                        if isinstance(source_hash_sig, str)
-                        else None,
+                        signature=(
+                            source_hash_sig if source_hash_sig is not True else None
+                        ),
                         signed_by_any=signed_by_any,
                         signed_by_all=signed_by_all,
                         keyring=keyring,
                         gnupghome=gnupghome,
+                        sig_backend=sig_backend,
                         saltenv=saltenv,
                         verify_ssl=verify_ssl,
                     )
@@ -1026,29 +1037,51 @@ def _check_sig(
     signed_by_all=None,
     keyring=None,
     gnupghome=None,
+    sig_backend="gpg",
     saltenv="base",
     verify_ssl=True,
 ):
     try:
-        verify = __salt__["gpg.verify"]
+        verify = __salt__[f"{sig_backend}.verify"]
     except KeyError:
         raise CommandExecutionError(
-            "Signature verification requires the gpg module, "
+            f"Signature verification requires the {sig_backend} module, "
             "which could not be found. Make sure you have the "
-            "necessary tools and libraries intalled (gpg, python-gnupg)"
+            "necessary tools and libraries intalled"
         )
-    sig = None
+    # The GPG module does not understand URLs as signatures currently.
+    # Also, we want to ensure that, when verification fails, we get rid
+    # of the cached signatures.
+    final_sigs = None
     if signature is not None:
-        # Fetch detached signature
-        sig = __salt__["cp.cache_file"](signature, saltenv, verify_ssl=verify_ssl)
-        if not sig:
-            raise CommandExecutionError(
-                f"Detached signature file {signature} not found"
-            )
+        sigs = [signature] if isinstance(signature, str) else signature
+        sigs_cached = []
+        final_sigs = []
+        for sig in sigs:
+            cached_sig = None
+            try:
+                urllib.parse.urlparse(sig)
+            except (TypeError, ValueError):
+                pass
+            else:
+                cached_sig = __salt__["cp.cache_file"](
+                    sig, saltenv, verify_ssl=verify_ssl
+                )
+            if not cached_sig:
+                # The GPG module expects signatures as a single file path currently
+                if sig_backend == "gpg":
+                    raise CommandExecutionError(
+                        f"Detached signature file {sig} not found"
+                    )
+            else:
+                sigs_cached.append(cached_sig)
+            final_sigs.append(cached_sig or sig)
+        if isinstance(signature, str):
+            final_sigs = final_sigs[0]
 
     res = verify(
         filename=on_file,
-        signature=sig,
+        signature=final_sigs,
         keyring=keyring,
         gnupghome=gnupghome,
         signed_by_any=signed_by_any,
@@ -1059,8 +1092,9 @@ def _check_sig(
         return
     # Ensure detached signature and file are deleted from cache
     # on signature verification failure.
-    if sig:
-        salt.utils.files.safe_rm(sig)
+    if signature is not None:
+        for sig in sigs_cached:
+            salt.utils.files.safe_rm(sig)
     salt.utils.files.safe_rm(on_file)
     raise CommandExecutionError(
         f"The file's signature could not be verified: {res['message']}"
@@ -1081,7 +1115,7 @@ def find(path, *args, **kwargs):
         regex   = path-regex                # case sensitive
         iregex  = path-regex                # case insensitive
         type    = file-types                # match any listed type
-        user    = users                     # match any listed user
+        owner   = users                     # match any listed user
         group   = groups                    # match any listed group
         size    = [+-]number[size-unit]     # default unit = byte
         mtime   = interval                  # modified since date
@@ -1171,7 +1205,7 @@ def find(path, *args, **kwargs):
         path:  file absolute path
         size:  file size in bytes
         type:  file type
-        user:  user name
+        owner: user name
 
     CLI Examples:
 
@@ -2126,7 +2160,7 @@ def line(
             it will be added.
 
             The differences are that multiple (and non-matching) lines are
-            alloweed between ``before`` and ``after``, if they are
+            allowed between ``before`` and ``after``, if they are
             specified. The line will always be inserted right before
             ``before``. ``insert`` also allows the use of ``location`` to
             specify that the line should be added at the beginning or end of
@@ -2639,7 +2673,7 @@ def replace(
                 r_data = mmap.mmap(r_file.fileno(), 0, access=mmap.ACCESS_READ)
             except (ValueError, OSError):
                 # size of file in /proc is 0, but contains data
-                r_data = salt.utils.stringutils.to_bytes("".join(r_file))
+                r_data = b"".join(r_file)
             if search_only:
                 # Just search; bail as early as a match is found
                 if re.search(cpattern, r_data):
@@ -3781,9 +3815,26 @@ def is_hardlink(path):
     return res and res["st_nlink"] > 1
 
 
-def is_link(path):
+def is_link(path, nostat=False):
     """
     Check if the path is a symbolic link
+
+    Args:
+
+        path (str): The path to check if it is a link.
+
+        nostat (bool):
+            Use information from parent directory to determine if entry
+            is a symbolic link. This avoids the stat operation, which
+            may hang under certain circumstances. For example, NFS mounts
+            which have gone offline or are suffering some network issues.
+            This will make the check quite slower on parent directories
+            with a lot of files, but will reduce the chances of hanging.
+
+            .. versionadded:: 3008.0
+
+    Returns:
+        bool: ``True`` if a symbolic link, otherwise returns ``False``.
 
     CLI Example:
 
@@ -3795,6 +3846,14 @@ def is_link(path):
     # therefore a custom function will need to be called. This function
     # therefore helps API consistency by providing a single function to call for
     # both operating systems.
+    if nostat:
+        parent_directory = os.path.dirname(path)
+
+        with os.scandir(path=parent_directory) as directory_contents:
+            for item in directory_contents:
+                if item.path == path:
+                    return item.is_symlink()
+        return False
 
     return os.path.islink(os.path.expanduser(path))
 
@@ -4110,7 +4169,7 @@ def readlink(path, canonicalize=False):
     if not os.path.isabs(path):
         raise SaltInvocationError(f"Path to link must be absolute: {path}")
 
-    if not os.path.islink(path):
+    if not salt.utils.path.islink(path):
         raise SaltInvocationError(f"A valid link was not specified: {path}")
 
     if canonicalize:
@@ -4121,7 +4180,7 @@ def readlink(path, canonicalize=False):
         except OSError as exc:
             if exc.errno == errno.EINVAL:
                 raise CommandExecutionError(f"Not a symbolic link: {path}")
-            raise CommandExecutionError(exc.__str__())
+            raise CommandExecutionError(str(exc))
 
 
 def readdir(path):
@@ -4199,9 +4258,10 @@ def stats(path, hash_type=None, follow_symlinks=True):
         salt '*' file.stats /etc/passwd
     """
     path = os.path.expanduser(path)
+    exists = os.path.exists if follow_symlinks else os.path.lexists
 
     ret = {}
-    if not os.path.exists(path):
+    if not exists(path):
         try:
             # Broken symlinks will return False for os.path.exists(), but still
             # have a uid and gid
@@ -4245,7 +4305,7 @@ def stats(path, hash_type=None, follow_symlinks=True):
         ret["type"] = "pipe"
     if stat.S_ISSOCK(pstat.st_mode):
         ret["type"] = "socket"
-    ret["target"] = os.path.realpath(path)
+    ret["target"] = os.path.realpath(path) if follow_symlinks else os.path.abspath(path)
     return ret
 
 
@@ -4647,7 +4707,7 @@ def apply_template_on_contents(contents, template, context, defaults, saltenv):
         salt '*' file.apply_template_on_contents \\
             contents='This is a {{ template }} string.' \\
             template=jinja \\
-            "context={}" "defaults={'template': 'cool'}" \\
+            context="{}" defaults="{'template': 'cool'}" \\
             saltenv=base
     """
     if template in salt.utils.templates.TEMPLATE_REGISTRY:
@@ -4703,13 +4763,14 @@ def get_managed(
     ignore_ordering=False,
     ignore_whitespace=False,
     ignore_comment_characters=None,
+    sig_backend="gpg",
     **kwargs,
 ):
     """
     Return the managed file data for file.managed
 
     name
-        location where the file lives on the server
+        location where the file lives on the minion
 
     template
         template format
@@ -4771,7 +4832,7 @@ def get_managed(
     source_hash_sig
         When ``source`` is a remote file source, ``source_hash`` is a file,
         ``skip_verify`` is not true and ``use_etag`` is not true, ensure a
-        valid GPG signature exists on the source hash file.
+        valid signature exists on the source hash file.
         Set this to ``true`` for an inline (clearsigned) signature, or to a
         file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
         for a detached one.
@@ -4780,15 +4841,17 @@ def get_managed(
 
     signed_by_any
         When verifying ``source_hash_sig``, require at least one valid signature
-        from one of a list of key fingerprints. This is passed to :py:func:`gpg.verify
-        <salt.modules.gpg.verify>`.
+        from one of a list of keys.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
 
         .. versionadded:: 3007.0
 
     signed_by_all
         When verifying ``source_hash_sig``, require a valid signature from each
-        of the key fingerprints in this list. This is passed to :py:func:`gpg.verify
-        <salt.modules.gpg.verify>`.
+        of the keys in this list.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
 
         .. versionadded:: 3007.0
 
@@ -4834,6 +4897,13 @@ def get_managed(
         Implies ``ignore_ordering=True``
 
         .. versionadded:: 3007.0
+
+    sig_backend
+        When verifying signatures, use this execution module as a backend.
+        It must be compatible with the :py:func:`gpg.verify <salt.modules.gpg.verify>` API.
+        Defaults to ``gpg``. All signature-related parameters are passed through.
+
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -4908,6 +4978,7 @@ def get_managed(
                             signed_by_all=signed_by_all,
                             keyring=keyring,
                             gnupghome=gnupghome,
+                            sig_backend=sig_backend,
                         )
                     except CommandExecutionError as exc:
                         return "", {}, exc.strerror
@@ -5096,9 +5167,11 @@ def extract_hash(
     if basename_searches:
         log.debug(
             "file.extract_hash: %s %s hash for file matching%s: %s",
-            "If no source_hash_name match found, will extract"
-            if source_hash_name
-            else "Extracting",
+            (
+                "If no source_hash_name match found, will extract"
+                if source_hash_name
+                else "Extracting"
+            ),
             "any supported" if not hash_type else hash_type,
             "" if len(basename_searches) == 1 else " either of the following",
             ", ".join(basename_searches),
@@ -5335,7 +5408,7 @@ def check_perms(
                 if err:
                     ret["result"] = False
                     ret["comment"].append(err)
-                else:
+                elif not is_link:
                     # Python os.chown() resets the suid and sgid, hence we
                     # setting the previous mode again. Pending mode changes
                     # will be applied later.
@@ -5386,7 +5459,6 @@ def check_perms(
                 ret["comment"].append(f"Failed to change group to {group}")
         elif "cgroup" in perms:
             ret["changes"]["group"] = group
-
     if mode is not None:
         # File is a symlink, ignore the mode setting
         # if follow_symlinks is False
@@ -6275,7 +6347,7 @@ def get_diff(
                 continue
             paths.append(cached_path)
         except MinionError as exc:
-            errors.append(salt.utils.stringutils.to_unicode(exc.__str__()))
+            errors.append(salt.utils.stringutils.to_unicode(str(exc)))
             continue
 
     if errors:
@@ -6359,6 +6431,7 @@ def manage_file(
     ignore_whitespace=False,
     ignore_comment_characters=None,
     new_file_diff=False,
+    sig_backend="gpg",
     **kwargs,
 ):
     """
@@ -6366,7 +6439,7 @@ def manage_file(
     makes the appropriate modifications (if necessary).
 
     name
-        location to place the file
+        The location of the file to be managed, as an absolute path.
 
     sfn
         location of cached file on the minion
@@ -6385,39 +6458,114 @@ def manage_file(
         default structure.
 
     source
-        file reference on the master
+        The source file to download to the minion, this source file can be
+        hosted on either the salt master server (``salt://``), the salt minion
+        local file system (``/``), or on an HTTP or FTP server (``http(s)://``,
+        ``ftp://``).
+
+        Both HTTPS and HTTP are supported as well as downloading directly
+        from Amazon S3 compatible URLs with both pre-configured and automatic
+        IAM credentials. (see s3.get state documentation)
+        File retrieval from Openstack Swift object storage is supported via
+        swift://container/object_path URLs, see swift.get documentation.
+        For files hosted on the salt file server, if the file is located on
+        the master in the directory named spam, and is called eggs, the source
+        string is salt://spam/eggs. If source is left blank or None
+        (use ~ in YAML), the file will be created as an empty file and
+        the content will not be managed. This is also the case when a file
+        already exists and the source is undefined; the contents of the file
+        will not be changed or managed. If source is left blank or None, please
+        also set replaced to False to make your intention explicit.
+
+
+        If the file is hosted on a HTTP or FTP server then the source_hash
+        argument is also required.
 
     source_sum
         sum hash for source
 
     user
-        user owner
+        The user to own the file, this defaults to the user salt is running as
+        on the minion
 
     group
-        group owner
+        The group ownership set for the file, this defaults to the group salt
+        is running as on the minion. On Windows, this is ignored
 
-    backup
-        backup_mode
+    mode
+        The permissions to set on this file, e.g. ``644``, ``0775``, or
+        ``4664``.
+
+        The default mode for new files and directories corresponds to the
+        umask of the salt process. The mode of existing files and directories
+        will only be changed if ``mode`` is specified.
+
+        .. note::
+            This option is **not** supported on Windows.
 
     attrs
-        attributes to be set on file: '' means remove all of them
+        The attributes to have on this file, e.g. ``a``, ``i``. The attributes
+        can be any or a combination of the following characters:
+        ``aAcCdDeijPsStTu``.
+
+        .. note::
+            This option is **not** supported on Windows.
 
         .. versionadded:: 2018.3.0
 
+    saltenv
+        Specify the environment from which to retrieve the file indicated
+        by the ``source`` parameter. If not provided, this defaults to the
+        environment from which the state is being executed.
+
+        .. note::
+            Ignored when the source file is from a non-``salt://`` source..
+
+    backup
+        Overrides the default backup mode for this specific file. See
+        :ref:`backup_mode documentation <file-state-backups>` for more details.
+
     makedirs
-        make directories if they do not exist
+        If set to ``True``, then the parent directories will be created to
+        facilitate the creation of the named file. If ``False``, and the parent
+        directory of the destination file doesn't exist, the state will fail.
 
     template
-        format of templating
+        If this setting is applied, the named templating engine will be used to
+        render the downloaded file. The following templates are supported:
+
+        - :mod:`cheetah<salt.renderers.cheetah>`
+        - :mod:`genshi<salt.renderers.genshi>`
+        - :mod:`jinja<salt.renderers.jinja>`
+        - :mod:`mako<salt.renderers.mako>`
+        - :mod:`py<salt.renderers.py>`
+        - :mod:`wempy<salt.renderers.wempy>`
+
+        .. note::
+
+            The template option is required when recursively applying templates.
 
     show_changes
-        Include diff in state return
+        Output a unified diff of the old file and the new file.
+        If ``False`` return a boolean if any changes were made.
+        Default is ``True``
+
+        .. note::
+            Using this option will store two copies of the file in-memory
+            (the original version and the edited version) in order to generate the diff.
 
     contents:
-        contents to be placed in the file
+        Specify the contents of the file. Cannot be used in combination with
+        ``source``. Ignores hashes and does not use a templating engine.
 
     dir_mode
-        mode for directories created with makedirs
+        If directories are to be created, passing this option specifies the
+        permissions for those directories. If this is not set, directories
+        will be assigned permissions by adding the execute bit to the mode of
+        the files.
+
+        The default mode for new files and directories corresponds umask of salt
+        process. For existing files and directories it's not enforced.
 
     skip_verify: False
         If ``True``, hash verification of remote file sources (``http://``,
@@ -6489,7 +6637,7 @@ def manage_file(
         .. versionadded:: 3005
 
     signature
-        Ensure a valid GPG signature exists on the selected ``source`` file.
+        Ensure a valid signature exists on the selected ``source`` file.
         Set this to true for inline signatures, or to a file URI retrievable
         by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
         for a detached one.
@@ -6511,7 +6659,7 @@ def manage_file(
     source_hash_sig
         When ``source`` is a remote file source, ``source_hash`` is a file,
         ``skip_verify`` is not true and ``use_etag`` is not true, ensure a
-        valid GPG signature exists on the source hash file.
+        valid signature exists on the source hash file.
         Set this to ``true`` for an inline (clearsigned) signature, or to a
         file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
         for a detached one.
@@ -6528,15 +6676,17 @@ def manage_file(
 
     signed_by_any
         When verifying signatures either on the managed file or its source hash file,
-        require at least one valid signature from one of a list of key fingerprints.
-        This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
+        require at least one valid signature from one of a list of keys.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
 
         .. versionadded:: 3007.0
 
     signed_by_all
         When verifying signatures either on the managed file or its source hash file,
-        require a valid signature from each of the key fingerprints in this list.
-        This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
+        require a valid signature from each of the keys in this list.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
 
         .. versionadded:: 3007.0
 
@@ -6586,6 +6736,13 @@ def manage_file(
     new_file_diff
         If ``True``, creation of new files will still show a diff in the
         changes return.
+
+        .. versionadded:: 3008.0
+
+    sig_backend
+        When verifying signatures, use this execution module as a backend.
+        It must be compatible with the :py:func:`gpg.verify <salt.modules.gpg.verify>` API.
+        Defaults to ``gpg``. All signature-related parameters are passed through.
 
         .. versionadded:: 3008.0
 
@@ -6679,11 +6836,12 @@ def manage_file(
                 try:
                     _check_sig(
                         sfn,
-                        signature=signature if isinstance(signature, str) else None,
+                        signature=signature if signature is not True else None,
                         signed_by_any=signed_by_any,
                         signed_by_all=signed_by_all,
                         keyring=keyring,
                         gnupghome=gnupghome,
+                        sig_backend=sig_backend,
                         saltenv=saltenv,
                         verify_ssl=verify_ssl,
                     )
@@ -6814,11 +6972,12 @@ def manage_file(
                 try:
                     _check_sig(
                         sfn,
-                        signature=signature if isinstance(signature, str) else None,
+                        signature=signature if signature is not True else None,
                         signed_by_any=signed_by_any,
                         signed_by_all=signed_by_all,
                         keyring=keyring,
                         gnupghome=gnupghome,
+                        sig_backend=sig_backend,
                         saltenv=saltenv,
                         verify_ssl=verify_ssl,
                     )
@@ -6945,11 +7104,12 @@ def manage_file(
                 try:
                     _check_sig(
                         sfn,
-                        signature=signature if isinstance(signature, str) else None,
+                        signature=signature if signature is not True else None,
                         signed_by_any=signed_by_any,
                         signed_by_all=signed_by_all,
                         keyring=keyring,
                         gnupghome=gnupghome,
+                        sig_backend=sig_backend,
                         saltenv=saltenv,
                         verify_ssl=verify_ssl,
                     )

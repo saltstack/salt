@@ -67,14 +67,6 @@ def _mine_send(load, opts):
 
 
 def _mine_get(load, opts):
-    if opts.get("transport", "") in salt.transport.TRANSPORTS:
-        try:
-            load["tok"] = _auth().gen_token(b"salt")
-        except AttributeError:
-            log.error(
-                "Mine could not authenticate with master. Mine could not be retrieved."
-            )
-            return False
     with salt.channel.client.ReqChannel.factory(opts) as channel:
         return channel.send(load)
 
@@ -186,7 +178,7 @@ def update(clear=False, mine_functions=None):
             res = salt.utils.functools.call_function(
                 __salt__[function_name or function_alias],
                 *function_args,
-                **function_kwargs
+                **function_kwargs,
             )
         except Exception:  # pylint: disable=broad-except
             trace = traceback.format_exc()
@@ -301,7 +293,7 @@ def get(tgt, fun, tgt_type="glob", exclude_minion=False):
 
         .. code-block:: jinja
 
-            {% set minion_ips = salt.saltutil.runner('mine.get',
+            {% set minion_ips = salt['saltutil.runner']('mine.get',
                 tgt='*',
                 fun='network.ip_addrs',
                 tgt_type='glob') %}
@@ -309,7 +301,7 @@ def get(tgt, fun, tgt_type="glob", exclude_minion=False):
     # Load from local minion's cache
     if __opts__["file_client"] == "local":
         ret = {}
-        is_target = {
+        _targets = {
             "glob": __salt__["match.glob"],
             "pcre": __salt__["match.pcre"],
             "list": __salt__["match.list"],
@@ -319,8 +311,8 @@ def get(tgt, fun, tgt_type="glob", exclude_minion=False):
             "compound": __salt__["match.compound"],
             "pillar": __salt__["match.pillar"],
             "pillar_pcre": __salt__["match.pillar_pcre"],
-        }[tgt_type](tgt)
-        if not is_target:
+        }
+        if not _targets[tgt_type](tgt):
             return ret
 
         data = __salt__["data.get"]("mine_cache")

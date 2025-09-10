@@ -1,6 +1,7 @@
 """
 Classes that manage file clients
 """
+
 import contextlib
 import errno
 import ftplib  # nosec
@@ -303,19 +304,19 @@ class Client:
         """
         This function must be overwritten
         """
-        return []
+        return []  # pragma: no cover
 
     def dir_list(self, saltenv="base", prefix=""):
         """
         This function must be overwritten
         """
-        return []
+        return []  # pragma: no cover
 
     def symlink_list(self, saltenv="base", prefix=""):
         """
         This function must be overwritten
         """
-        return {}
+        return {}  # pragma: no cover
 
     def is_cached(self, path, saltenv="base", cachedir=None):
         """
@@ -477,7 +478,7 @@ class Client:
         """
         Get a single file from a URL.
         """
-        url_data = urllib.parse.urlparse(url)
+        url_data = urllib.parse.urlparse(url, allow_fragments=False)
         url_scheme = url_data.scheme
         url_path = os.path.join(url_data.netloc, url_data.path).rstrip(os.sep)
 
@@ -1179,10 +1180,7 @@ class RemoteClient(Client):
         if senv:
             saltenv = senv
 
-        if not salt.utils.platform.is_windows():
-            hash_server, stat_server = self.hash_and_stat_file(path, saltenv)
-        else:
-            hash_server = self.hash_file(path, saltenv)
+        hash_server = self.hash_file(path, saltenv)
 
         # Check if file exists on server, before creating files and
         # directories
@@ -1223,10 +1221,7 @@ class RemoteClient(Client):
         )
 
         if dest2check and os.path.isfile(dest2check):
-            if not salt.utils.platform.is_windows():
-                hash_local, stat_local = self.hash_and_stat_file(dest2check, saltenv)
-            else:
-                hash_local = self.hash_file(dest2check, saltenv)
+            hash_local = self.hash_file(dest2check, saltenv)
 
             if hash_local == hash_server:
                 return dest2check
@@ -1483,8 +1478,6 @@ class RemoteClient(Client):
         Return the metadata derived from the master_tops system
         """
         load = {"cmd": "_master_tops", "id": self.opts["id"], "opts": self.opts}
-        if self.auth:
-            load["tok"] = self.auth.gen_token(b"salt")
         return self._channel_send(
             load,
         )

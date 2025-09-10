@@ -3,7 +3,6 @@ Functions for querying and modifying a user account and the groups to which it
 belongs.
 """
 
-
 import ctypes
 import getpass
 import logging

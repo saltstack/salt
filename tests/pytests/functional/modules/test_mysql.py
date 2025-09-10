@@ -1,6 +1,7 @@
 """
 Test Salt MySQL module across various MySQL variants
 """
+
 import logging
 import time
 

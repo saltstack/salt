@@ -45,8 +45,8 @@ class _Constant:
 
     def __repr__(self):
         if self.value:
-            return "<Constant.{} value={}>".format(self.name, self.value)
-        return "<Constant.{}>".format(self.name)
+            return f"<Constant.{self.name} value={self.value}>"
+        return f"<Constant.{self.name}>"
 
 
 # Default delimiter for multi-level traversal in targeting
@@ -60,3 +60,5 @@ It's used to differentiate from `None`, `True`, `False` which, in some
 cases are proper defaults and are also proper values to pass.
 """
 NOT_SET = _Constant("NOT_SET")
+
+IPC_WRITE_TIMEOUT = 15

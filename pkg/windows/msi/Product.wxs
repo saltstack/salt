@@ -148,10 +148,13 @@ IMCAC - Immediate Custom Action - It's immediate
     Another application has exclusive access to the file \salt\var\log\salt\minion
     Please shut down the application
     -->
-    <CustomAction Id="stopSalt" Script="vbscript">
-      On error resume next
-      Set objShell = CreateObject("WScript.Shell")
-      objShell.Run "net stop salt-minion", 0, true
+    <CustomAction Id="stopSalt" Script="jscript">
+      try {
+        var objShell = new ActiveXObject("WScript.Shell");
+        objShell.Run("net stop salt-minion", 0, true);
+      } catch (e) {
+        // Handle error if needed
+      }
     </CustomAction>
 
     <!-- This is the import statement for the Custom Actions:
@@ -250,11 +253,9 @@ IMCAC - Immediate Custom Action - It's immediate
     <DirectoryRef Id="TARGETDIR">
     <!-- Visual C++ runtimes depend on the target platform -->
     <?if $(var.WIN64)=yes ?>
-      <Merge Id="MSM_VC120_CRT" SourceFile="$(var.WEBCACHE_DIR)\Microsoft_VC120_CRT_x64.msm" DiskId="1" Language="0" />
-      <Merge Id="MSM_VC140_CRT" SourceFile="$(var.WEBCACHE_DIR)\Microsoft_VC140_CRT_x64.msm" DiskId="1" Language="0" />
+      <Merge Id="MSM_VC143_CRT" SourceFile="$(var.WEBCACHE_DIR)\Microsoft_VC143_CRT_x64.msm" DiskId="1" Language="0" />
     <?else ?>
-      <Merge Id="MSM_VC120_CRT" SourceFile="$(var.WEBCACHE_DIR)\Microsoft_VC120_CRT_x86.msm" DiskId="1" Language="0" />
-      <Merge Id="MSM_VC140_CRT" SourceFile="$(var.WEBCACHE_DIR)\Microsoft_VC140_CRT_x86.msm" DiskId="1" Language="0" />
+      <Merge Id="MSM_VC143_CRT" SourceFile="$(var.WEBCACHE_DIR)\Microsoft_VC143_CRT_x86.msm" DiskId="1" Language="0" />
     <?endif ?>
     </DirectoryRef>
     <!-- Add INSTALLDIR to the system Path -->
@@ -269,8 +270,7 @@ IMCAC - Immediate Custom Action - It's immediate
     <!-- Leaving registry keys would mean the product is still installed -->
     <Feature Id="ProductFeature" Title="Minion" Level="1">
       <ComponentGroupRef Id="ProductComponents" />
-      <Feature Id="VC120" Title="VC++ 2013" AllowAdvertise="no" Display="hidden"><MergeRef Id="MSM_VC120_CRT" /></Feature>
-      <Feature Id="VC140" Title="VC++ 2015" AllowAdvertise="no" Display="hidden"><MergeRef Id="MSM_VC140_CRT" /></Feature>
+      <Feature Id="VC143" Title="VC++ 2022" AllowAdvertise="no" Display="hidden"><MergeRef Id="MSM_VC143_CRT" /></Feature>
     </Feature>
 
     <!-- Get the config file template from the msi store only if no config is present -->

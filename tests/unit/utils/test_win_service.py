@@ -14,9 +14,7 @@ class WinServiceImportTestCase(TestCase):
         Simply importing should not raise an error, especially on Linux
         """
         if isinstance(win_service, Exception):
-            raise Exception(
-                "Importing win_system caused traceback: {}".format(win_service)
-            )
+            raise Exception(f"Importing win_system caused traceback: {win_service}")
 
 
 @pytest.mark.skip_unless_on_windows

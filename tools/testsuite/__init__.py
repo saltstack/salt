@@ -1,25 +1,19 @@
 """
 These commands are related to the test suite.
 """
+
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
-import contextlib
-import json
 import logging
-import shutil
-import sys
-import zipfile
 from typing import TYPE_CHECKING
 
 from ptscripts import Context, command_group
 
+import tools.precommit.workflows
 import tools.utils
 import tools.utils.gh
 from tools.utils import ExitCode
-
-with tools.utils.REPO_ROOT.joinpath("cicd", "golden-images.json").open() as rfh:
-    OS_SLUGS = sorted(json.load(rfh))
 
 log = logging.getLogger(__name__)
 
@@ -53,12 +47,12 @@ ts = command_group(name="ts", help="Test Suite Related Commands", description=__
         },
         "arch": {
             "help": "The onedir artifact architecture",
-            "choices": ("x86_64", "aarch64", "amd64", "x86"),
+            "choices": ("x86_64", "arm64", "amd64", "x86"),
         },
         "slug": {
             "help": "The OS slug",
             "required": True,
-            "choices": OS_SLUGS,
+            "choices": sorted(tools.precommit.workflows.slugs()),
         },
         "pkg": {
             "help": "Also download package test artifacts",
@@ -93,7 +87,7 @@ def setup_testsuite(
      * Setup the local checkout for running the tests in Windows 2019, from the
        artifacts in the latest nightly build from branch 3006.x
 
-         tools ts setup --platform linux --slug windows-2019 --nightly 3006.x
+         tools ts setup --platform linux --slug windows-2025 --nightly 3006.x
     """
     if TYPE_CHECKING:
         assert platform is not None
@@ -113,7 +107,7 @@ def setup_testsuite(
         ctx.exit(1)
 
     if "arm64" in slug:
-        arch = "aarch64"
+        arch = "arm64"
 
     ctx.warn(
         "Consider this in preliminary support. There are most likely things to iron out still."

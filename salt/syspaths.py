@@ -13,7 +13,6 @@
     paths that are set in the master/minion config files.
 """
 
-
 import logging
 import os
 import os.path

@@ -11,6 +11,11 @@ import salt.utils.msgpack
 
 log = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
+]
+
 
 @pytest.fixture
 def config():
@@ -26,7 +31,9 @@ def server(config):
         send = []
         disconnect = False
 
-        async def handle_stream(self, stream, address):
+        async def handle_stream(  # pylint: disable=invalid-overridden-method
+            self, stream, address
+        ):
             try:
                 log.info("Got stream %r", self.disconnect)
                 while self.disconnect is False:

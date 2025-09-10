@@ -4,6 +4,7 @@ import pytest
 from saltfactories.utils import random_string
 
 import salt.utils.files
+from tests.conftest import FIPS_TESTRUN
 
 
 @pytest.fixture(scope="function")
@@ -13,6 +14,9 @@ def salt_minion_retry(salt_master, salt_minion_id):
         "return_retry_timer_max": 0,
         "return_retry_timer": 5,
         "return_retry_tries": 30,
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
     factory = salt_master.salt_minion_daemon(
         random_string("retry-minion-"),
@@ -71,11 +75,18 @@ def test_pillar_timeout(salt_master_factory, tmp_path):
         "worker_threads": 2,
         "peer": True,
         "minion_data_cache": False,
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
     minion_overrides = {
         "auth_timeout": 20,
         "request_channel_timeout": 5,
         "request_channel_tries": 1,
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
     sls_name = "issue-50221"
     sls_contents = """
@@ -108,11 +119,13 @@ def test_pillar_timeout(salt_master_factory, tmp_path):
     )
     cli = master.salt_cli()
     sls_tempfile = master.state_tree.base.temp_file(f"{sls_name}.sls", sls_contents)
-    with master.started(), minion1.started(), minion2.started(), minion3.started(), minion4.started(), sls_tempfile:
+    with master.started(), minion1.started(), minion2.started(), minion3.started(), minion4.started(), (
+        sls_tempfile
+    ):
         cmd = 'import time; time.sleep(6); print(\'{"foo": "bang"}\');\n'
         with salt.utils.files.fopen(tmp_path / "script.py", "w") as fp:
             fp.write(cmd)
-        proc = cli.run("state.sls", sls_name, minion_tgt="*")
+        proc = cli.run("state.sls", sls_name, minion_tgt="*", _timeout=60)
         # At least one minion should have a Pillar timeout
         assert proc.returncode == 1
         minion_timed_out = False

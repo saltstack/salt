@@ -181,21 +181,7 @@ rst_prolog = """\
 .. _`salt-users`: https://groups.google.com/forum/#!forum/salt-users
 .. _`salt-announce`: https://groups.google.com/forum/#!forum/salt-announce
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
-.. _`salt-slack`: https://via.vmw.com/salt-slack
-.. |windownload| raw:: html
-
-     <p>Python3 x86: <a
-     href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
-      | <a href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-x86-Setup.exe.md5"><strong>md5</strong></a></p>
-
-     <p>Python3 AMD64: <a
-     href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
-      | <a href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
-
-.. |osxdownloadpy3| raw:: html
-
-     <p>x86_64: <a href="https://repo.saltproject.io/osx/salt-{release}-py3-x86_64.pkg"><strong>salt-{release}-py3-x86_64.pkg</strong></a>
-      | <a href="https://repo.saltproject.io/osx/salt-{release}-py3-x86_64.pkg.md5"><strong>md5</strong></a></p>
+.. _`salt-discord`: https://discord.com/invite/J7b7EscrAs
 
 """.format(
     release=stripped_release
@@ -366,7 +352,6 @@ authors = [
 ]
 
 man_pages = [
-    ("contents", "salt", "Salt Documentation", authors, 7),
     ("ref/cli/salt", "salt", "salt", authors, 1),
     ("ref/cli/salt-master", "salt-master", "salt-master Documentation", authors, 1),
     ("ref/cli/salt-minion", "salt-minion", "salt-minion Documentation", authors, 1),
@@ -381,19 +366,6 @@ man_pages = [
     ("ref/cli/salt-api", "salt-api", "salt-api Command", authors, 1),
     ("ref/cli/spm", "spm", "Salt Package Manager Command", authors, 1),
 ]
-
-
-### epub options
-epub_title = "Salt Documentation"
-epub_author = "VMware, Inc."
-epub_publisher = epub_author
-epub_copyright = copyright
-
-epub_scheme = "URL"
-epub_identifier = "http://saltproject.io/"
-
-epub_tocdup = False
-# epub_tocdepth = 3
 
 
 def skip_mod_init_member(app, what, name, obj, skip, options):

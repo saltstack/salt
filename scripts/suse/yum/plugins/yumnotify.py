@@ -52,6 +52,4 @@ def posttrans_hook(conduit):
     # Integrate Yum with Salt
     if "SALT_RUNNING" not in os.environ:
         with open(CK_PATH, "w") as ck_fh:
-            ck_fh.write(
-                "{chksum} {mtime}\n".format(chksum=_get_checksum(), mtime=_get_mtime())
-            )
+            ck_fh.write(f"{_get_checksum()} {_get_mtime()}\n")

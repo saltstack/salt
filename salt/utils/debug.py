@@ -34,7 +34,7 @@ def _handle_sigusr1(sig, stack):
         output = sys.stderr
         _makepretty(output, stack)
     else:
-        filename = "salt-debug-{}.log".format(int(time.time()))
+        filename = f"salt-debug-{int(time.time())}.log"
         destfile = os.path.join(tempfile.gettempdir(), filename)
         with salt.utils.files.fopen(destfile, "w") as output:
             _makepretty(output, stack)
@@ -50,11 +50,11 @@ def _handle_sigusr2(sig, stack):
         return
     if yappi.is_running():
         yappi.stop()
-        filename = "callgrind.salt-{}-{}".format(int(time.time()), os.getpid())
+        filename = f"callgrind.salt-{int(time.time())}-{os.getpid()}"
         destfile = os.path.join(tempfile.gettempdir(), filename)
         yappi.get_func_stats().save(destfile, type="CALLGRIND")
         if sys.stderr.isatty():
-            sys.stderr.write("Saved profiling data to: {}\n".format(destfile))
+            sys.stderr.write(f"Saved profiling data to: {destfile}\n")
         yappi.clear_stats()
     else:
         if sys.stderr.isatty():
@@ -135,5 +135,5 @@ def caller_name(skip=2, include_lineno=False):
     del parentframe
     fullname = ".".join(name)
     if include_lineno and lineno:
-        fullname += ":{}".format(lineno)
+        fullname += f":{lineno}"
     return fullname

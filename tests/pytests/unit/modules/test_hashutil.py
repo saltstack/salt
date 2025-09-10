@@ -2,7 +2,6 @@
      Test cases for salt.modules.hashutil
 """
 
-
 import pytest
 
 import salt.modules.hashutil as hashutil

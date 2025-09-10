@@ -78,6 +78,7 @@ from salt.utils.gitfs import (
     PYGIT2_VERSION,
     FileserverConfigError,
 )
+from salt.utils.versions import Version
 from tests.support.gitfs import (  # pylint: disable=unused-import
     PASSWORD,
     USERNAME,
@@ -100,9 +101,15 @@ try:
 except Exception:  # pylint: disable=broad-except
     HAS_PYGIT2 = False
 
+docker = pytest.importorskip("docker")
+
 pytestmark = [
     SKIP_INITIAL_PHOTONOS_FAILURES,
     pytest.mark.skip_on_platforms(windows=True, darwin=True),
+    pytest.mark.skipif(
+        Version(docker.__version__) < Version("4.0.0"),
+        reason="Test does not work in this version of docker-py",
+    ),
 ]
 
 
@@ -113,9 +120,9 @@ def _rand_key_name(length):
 
 
 def _check_skip(grains):
-    if grains["os"] == "CentOS Stream" and grains["osmajorrelease"] == 9:
-        return True
-    if grains["os"] == "AlmaLinux" and grains["osmajorrelease"] == 9:
+    if (grains["os"] in ("CentOS Stream", "AlmaLinux", "Rocky")) and grains[
+        "osmajorrelease"
+    ] == 9:
         return True
     return False
 
@@ -686,7 +693,7 @@ class GitPythonMixin:
 
 
 @pytest.mark.skipif(
-    not HAS_GITPYTHON, reason="GitPython >= {} required".format(GITPYTHON_MINVER)
+    not HAS_GITPYTHON, reason=f"GitPython >= {GITPYTHON_MINVER} required"
 )
 @pytest.mark.usefixtures("ssh_pillar_tests_prep")
 @pytest.mark.destructive_test
@@ -704,7 +711,7 @@ class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
 
 
 @pytest.mark.skipif(
-    not HAS_GITPYTHON, reason="GitPython >= {} required".format(GITPYTHON_MINVER)
+    not HAS_GITPYTHON, reason=f"GitPython >= {GITPYTHON_MINVER} required"
 )
 @pytest.mark.usefixtures("webserver_pillar_tests_prep")
 class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
@@ -714,7 +721,7 @@ class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
 
 
 @pytest.mark.skipif(
-    not HAS_GITPYTHON, reason="GitPython >= {} required".format(GITPYTHON_MINVER)
+    not HAS_GITPYTHON, reason=f"GitPython >= {GITPYTHON_MINVER} required"
 )
 @pytest.mark.usefixtures("webserver_pillar_tests_prep_authenticated")
 class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):

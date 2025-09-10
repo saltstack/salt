@@ -184,7 +184,7 @@ def version(*names, **kwargs):
     for name in names:
         # AIX packaging includes info on filesets and rpms
         version_found = ""
-        cmd = "lslpp -Lq {}".format(name)
+        cmd = f"lslpp -Lq {name}"
         aix_info = __salt__["cmd.run_all"](cmd, python_shell=False)
         if 0 == aix_info["retcode"]:
             aix_info_list = aix_info["stdout"].split("\n")
@@ -280,6 +280,12 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
         Install a specific version of a fileset/rpm package.
         (Unused at present).
 
+        .. note::
+            Remember that versions that contain a single `.` will be interpreted
+            as numbers and must be double-quoted. For example, version
+            ``3006.10`` will be rendered as ``3006.1``. To pass ``3006.10``
+            you'll need to use double-quotes. ``version="'3006.10'"``
+
     test
         Verify that command functions correctly.
 
@@ -344,7 +350,7 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
                 if refresh:
                     cmdflags += "--refresh "
 
-                cmd = "{} {} {}".format(cmdexe, cmdflags, target)
+                cmd = f"{cmdexe} {cmdflags} {target}"
                 out = __salt__["cmd.run_all"](
                     cmd,
                     python_shell=False,
@@ -360,7 +366,7 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
                 else:
                     cmdflags += "--assumeyes "
 
-                cmd = "{} {} {}".format(cmdexe, cmdflags, target)
+                cmd = f"{cmdexe} {cmdflags} {target}"
                 out = __salt__["cmd.run_all"](
                     cmd,
                     python_shell=False,
@@ -378,7 +384,7 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
                 if refresh:
                     cmdflags += "--refresh "
 
-                cmd = "{} {} {}".format(cmdexe, cmdflags, target)
+                cmd = f"{cmdexe} {cmdflags} {target}"
                 out = __salt__["cmd.run_all"](
                     cmd,
                     python_shell=False,
@@ -392,7 +398,7 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
                 if test:
                     cmdflags += "--test"
 
-                cmd = "{} {} {}".format(cmdexe, cmdflags, target)
+                cmd = f"{cmdexe} {cmdflags} {target}"
                 out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
         if "retcode" in out and not (0 == out["retcode"] or 100 == out["retcode"]):
@@ -510,7 +516,7 @@ def remove(name=None, pkgs=None, **kwargs):
             libpathenv = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
             if pathlib.Path("/opt/freeware/bin/dnf").is_file():
                 cmdexe = "/opt/freeware/bin/dnf"
-                cmd = "{} {} {}".format(cmdexe, cmdflags, target)
+                cmd = f"{cmdexe} {cmdflags} {target}"
                 out = __salt__["cmd.run_all"](
                     cmd,
                     python_shell=False,
@@ -519,7 +525,7 @@ def remove(name=None, pkgs=None, **kwargs):
                 )
             elif pathlib.Path("/opt/freeware/bin/yum").is_file():
                 cmdexe = "/opt/freeware/bin/yum"
-                cmd = "{} {} {}".format(cmdexe, cmdflags, target)
+                cmd = f"{cmdexe} {cmdflags} {target}"
                 out = __salt__["cmd.run_all"](
                     cmd,
                     python_shell=False,
@@ -528,7 +534,7 @@ def remove(name=None, pkgs=None, **kwargs):
                 )
             elif pathlib.Path("/usr/bin/yum").is_file():
                 cmdexe = "/usr/bin/yum"
-                cmd = "{} {} {}".format(cmdexe, cmdflags, target)
+                cmd = f"{cmdexe} {cmdflags} {target}"
                 out = __salt__["cmd.run_all"](
                     cmd,
                     python_shell=False,
@@ -538,7 +544,7 @@ def remove(name=None, pkgs=None, **kwargs):
             else:
                 cmdexe = "/usr/bin/rpm"
                 cmdflags = "-e"
-                cmd = "{} {} {}".format(cmdexe, cmdflags, target)
+                cmd = f"{cmdexe} {cmdflags} {target}"
                 out = __salt__["cmd.run_all"](cmd, python_shell=False)
         else:
             cmd = ["/usr/sbin/installp", "-u", named]
@@ -594,19 +600,19 @@ def latest_version(*names, **kwargs):
         libpathenv = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
         if pathlib.Path("/opt/freeware/bin/dnf").is_file():
             cmdexe = "/opt/freeware/bin/dnf"
-            cmd = "{} check-update {}".format(cmdexe, name)
+            cmd = f"{cmdexe} check-update {name}"
             available_info = __salt__["cmd.run_all"](
                 cmd, python_shell=False, env=libpathenv, ignore_retcode=True
             )
         elif pathlib.Path("/opt/freeware/bin/yum").is_file():
             cmdexe = "/opt/freeware/bin/yum"
-            cmd = "{} check-update {}".format(cmdexe, name)
+            cmd = f"{cmdexe} check-update {name}"
             available_info = __salt__["cmd.run_all"](
                 cmd, python_shell=False, env=libpathenv, ignore_retcode=True
             )
         elif pathlib.Path("/usr/bin/yum").is_file():
             cmdexe = "/usr/bin/yum"
-            cmd = "{} check-update {}".format(cmdexe, name)
+            cmd = f"{cmdexe} check-update {name}"
             available_info = __salt__["cmd.run_all"](
                 cmd, python_shell=False, env=libpathenv, ignore_retcode=True
             )
@@ -683,19 +689,19 @@ def upgrade_available(name, **kwargs):
     libpathenv = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
     if pathlib.Path("/opt/freeware/bin/dnf").is_file():
         cmdexe = "/opt/freeware/bin/dnf"
-        cmd = "{} check-update {}".format(cmdexe, name)
+        cmd = f"{cmdexe} check-update {name}"
         available_info = __salt__["cmd.run_all"](
             cmd, python_shell=False, env=libpathenv, ignore_retcode=True
         )
     elif pathlib.Path("/opt/freeware/bin/yum").is_file():
         cmdexe = "/opt/freeware/bin/yum"
-        cmd = "{} check-update {}".format(cmdexe, name)
+        cmd = f"{cmdexe} check-update {name}"
         available_info = __salt__["cmd.run_all"](
             cmd, python_shell=False, env=libpathenv, ignore_retcode=True
         )
     elif pathlib.Path("/usr/bin/yum").is_file():
         cmdexe = "/usr/bin/yum"
-        cmd = "{} check-update {}".format(cmdexe, name)
+        cmd = f"{cmdexe} check-update {name}"
         available_info = __salt__["cmd.run_all"](
             cmd, python_shell=False, env=libpathenv, ignore_retcode=True
         )

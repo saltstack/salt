@@ -3,7 +3,6 @@ Platform independent versions of some os/os.path functions. Gets around PY2's
 lack of support for reading NTFS links.
 """
 
-
 import logging
 import os
 import posixpath
@@ -17,6 +16,7 @@ from salt.exceptions import CommandNotFoundError
 from salt.utils.decorators.jinja import jinja_filter
 
 try:
+    import win32con
     import win32file
 
     HAS_WIN32FILE = True
@@ -28,8 +28,17 @@ log = logging.getLogger(__name__)
 
 def islink(path):
     """
-    Equivalent to os.path.islink()
+    Equivalent to os.path.islink().
+
+    Returns True for Symlinks and Junctions on Windows. Junctions are symlinks
+    that only apply to directories. They are specific to Windows. Junctions are
+    not handled by `os.path.islink` until Python 3.12.
     """
+    # On Windows we want to detect reparse points to detect both symlinks and
+    # junctions as links until os.path.islink handles junctions.
+    if salt.utils.platform.is_windows():
+        return _is_reparse_point(path)
+
     return os.path.islink(path)
 
 
@@ -49,14 +58,17 @@ def readlink(path):
 
 def _is_reparse_point(path):
     """
+    A Symbolic Link and a Junction are both reparse points on Windows.
     Returns True if path is a reparse point; False otherwise.
     """
     result = win32file.GetFileAttributesW(path)
 
+    # An error has occurred, so this is not a symlink
     if result == -1:
         return False
 
-    return True if result & 0x400 else False
+    # If the Reparse Point bit is set, then it is a reparse point
+    return True if result & win32con.FILE_ATTRIBUTE_REPARSE_POINT else False
 
 
 def _get_reparse_data(path):
@@ -182,9 +194,11 @@ def which(exe=None):
         # The specified extension isn't valid, so we just assume it's part of the
         # filename and proceed to walk the pathext list
         else:
-            is_executable = lambda path, membership=res: is_executable_common(
-                path
-            ) and has_executable_ext(path, membership)
+
+            def is_executable(path, membership=res):
+                return is_executable_common(path) and has_executable_ext(
+                    path, membership
+                )
 
     else:
         # in posix, there's no such thing as file extensions..only zuul
@@ -202,7 +216,7 @@ def which(exe=None):
 
     # now to search through our system_path
     for path in system_path:
-        p = join(path, exe)
+        p = join(os.path.expandvars(path), exe)
 
         # iterate through all extensions to see which one is executable
         for ext in pathext:

@@ -1,6 +1,7 @@
 """
 These commands are used to build Salt packages.
 """
+
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
@@ -18,6 +19,7 @@ import tempfile
 
 import yaml
 from ptscripts import Context, command_group
+from ptscripts.models import VirtualEnvPipConfig
 
 import tools.utils
 
@@ -61,7 +63,7 @@ class Recompress:
         d_targz = tempd.joinpath(targz.name)
         with tarfile.open(d_tar, "w|") as wfile:
             with tarfile.open(targz, "r:gz") as rfile:
-                rfile.extractall(d_src)
+                rfile.extractall(d_src)  # nosec
                 extracted_dir = next(pathlib.Path(d_src).iterdir())
                 for name in sorted(extracted_dir.rglob("*")):
                     wfile.add(
@@ -137,7 +139,11 @@ def set_salt_version(
         ctx.info(f"Validating and normalizing the salt version {salt_version!r}...")
         with ctx.virtualenv(
             name="set-salt-version",
-            requirements_files=[tools.utils.REPO_ROOT / "requirements" / "base.txt"],
+            config=VirtualEnvPipConfig(
+                requirements_files=[
+                    tools.utils.REPO_ROOT / "requirements" / "base.txt",
+                ]
+            ),
         ) as venv:
             code = f"""
             import sys
@@ -164,7 +170,9 @@ def set_salt_version(
         ctx.exit(1)
 
     try:
-        tools.utils.REPO_ROOT.joinpath("salt/_version.txt").write_text(salt_version)
+        tools.utils.REPO_ROOT.joinpath("salt/_version.txt").write_text(
+            salt_version, encoding="utf-8"
+        )
     except Exception as exc:
         ctx.error(f"Unable to write 'salt/_version.txt': {exc}")
         ctx.exit(1)
@@ -173,7 +181,9 @@ def set_salt_version(
 
     version_instance = tools.utils.Version(salt_version)
     if release and not version_instance.is_prerelease:
-        with open(tools.utils.REPO_ROOT / "salt" / "version.py", "r+") as rwfh:
+        with open(
+            tools.utils.REPO_ROOT / "salt" / "version.py", "r+", encoding="utf-8"
+        ) as rwfh:
             contents = rwfh.read()
             match = f"info=({version_instance.major}, {version_instance.minor}))"
             if match in contents:
@@ -234,7 +244,8 @@ def pre_archive_cleanup(ctx: Context, cleanup_path: str, pkg: bool = False):
     When running on Windows and macOS, some additional cleanup is also done.
     """
     with open(
-        str(tools.utils.REPO_ROOT / "pkg" / "common" / "env-cleanup-rules.yml")
+        str(tools.utils.REPO_ROOT / "pkg" / "common" / "env-cleanup-rules.yml"),
+        encoding="utf-8",
     ) as rfh:
         patterns = yaml.safe_load(rfh.read())
 
@@ -363,11 +374,11 @@ def generate_hashes(ctx: Context, files: list[pathlib.Path]):
 
 @pkg.command(
     name="source-tarball",
-    venv_config={
-        "requirements_files": [
+    venv_config=VirtualEnvPipConfig(
+        requirements_files=[
             tools.utils.REPO_ROOT / "requirements" / "build.txt",
-        ]
-    },
+        ],
+    ),
 )
 def source_tarball(ctx: Context):
     shutil.rmtree("dist/", ignore_errors=True)
@@ -411,11 +422,11 @@ def source_tarball(ctx: Context):
 
 @pkg.command(
     name="pypi-upload",
-    venv_config={
-        "requirements_files": [
+    venv_config=VirtualEnvPipConfig(
+        requirements_files=[
             tools.utils.REPO_ROOT / "requirements" / "build.txt",
-        ]
-    },
+        ],
+    ),
     arguments={
         "files": {
             "help": "Files to upload to PyPi",

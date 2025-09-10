@@ -1,6 +1,7 @@
 """
 Testing Jinja filters availablilty via state system
 """
+
 import logging
 import os
 
@@ -384,8 +385,10 @@ def _filter_id(value):
             sls=r"""
             {% if grains['os'] == 'Windows' %}
               {% set result = 'c:\Windows\System32\cmd.exe' | is_bin_file() %}
+            {% elif grains['os_family'] == 'Debian' %}
+              {% set result = '/usr/bin/file' | is_bin_file() %}
             {% else %}
-              {% set result = '/bin/ls' | is_bin_file() %}
+              {% set result = '/bin/file' | is_bin_file() %}
             {% endif %}
             test:
               module.run:
@@ -610,6 +613,17 @@ def _filter_id(value):
             """,
         ),
         Filter(
+            name="regex_match_ungrouped",
+            expected={"ret": "('1.abc',)"},
+            sls="""
+            {% set result = '1.abc' | regex_match('^1.abc$') %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
+        Filter(
             name="regex_match_no_match",
             expected={"ret": "None"},
             sls="""
@@ -691,6 +705,17 @@ def _filter_id(value):
             expected={"ret": "('a', 'd')"},
             sls="""
             {% set result = 'abcd' | regex_search('^(.*)bc(.*)$') %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
+        Filter(
+            name="regex_search_ungrouped",
+            expected={"ret": "('1.abc',)"},
+            sls="""
+            {% set result = '1.abc' | regex_search('^1.abc$') %}
             test:
               module.run:
                 - name: test.echo
@@ -986,9 +1011,9 @@ def _filter_id(value):
         ),
         Filter(
             name="which",
-            expected={"ret": salt.utils.path.which("which")},
+            expected={"ret": salt.utils.path.which("ls")},
             sls="""
-            {% set result = 'which' | which() %}
+            {% set result = 'ls' | which() %}
             test:
               module.run:
                 - name: test.echo

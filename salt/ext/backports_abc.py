@@ -87,7 +87,7 @@ def mk_gen():
                 return True
             return NotImplemented
 
-    generator = type((lambda: (yield))())
+    generator = type((lambda: (yield))())  # pylint: disable=unnecessary-direct-lambda-call
     Generator.register(generator)
     return Generator
 

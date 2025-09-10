@@ -4,19 +4,21 @@ Salt package
 
 import asyncio
 import importlib
-import locale
 import os
+import re
 import sys
 import warnings
 
+# Aweful hack to keep salt-ssh tests passing with tornado >=6.4.2. Salt ssh
+# needs to be transitioned to use a relenv environemnt by default. This should
+# be removed when salt-ssh uses relenv or we no longer want salt-ssh to support
+# older system python versions <3.8
+if not hasattr(re, "Match"):
+    re.Match = object()
+
+
 if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
-if sys.version_info < (3,):  # pragma: no cover
-    sys.stderr.write(
-        "\n\nAfter the Sodium release, 3001, Salt no longer supports Python 2. Exiting.\n\n"
-    )
-    sys.stderr.flush()
 
 
 class NaclImporter:

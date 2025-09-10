@@ -1,6 +1,7 @@
 """
 Module for managing timezone on Windows systems.
 """
+
 import logging
 from datetime import datetime
 
@@ -133,6 +134,7 @@ mapper = TzMapper(
         "Pacific Standard Time (Mexico)": "America/Tijuana",
         "Pakistan Standard Time": "Asia/Karachi",
         "Paraguay Standard Time": "America/Asuncion",
+        "Qyzylorda Standard Time": "Asia/Qyzylorda",
         "Romance Standard Time": "Europe/Paris",
         "Russia Time Zone 10": "Asia/Srednekolymsk",
         "Russia Time Zone 11": "Asia/Kamchatka",
@@ -293,14 +295,14 @@ def set_zone(timezone):
 
     else:
         # Raise error because it's neither key nor value
-        raise CommandExecutionError("Invalid timezone passed: {}".format(timezone))
+        raise CommandExecutionError(f"Invalid timezone passed: {timezone}")
 
     # Set the value
     cmd = ["tzutil", "/s", win_zone]
     res = __salt__["cmd.run_all"](cmd, python_shell=False)
     if res["retcode"]:
         raise CommandExecutionError(
-            "tzutil encountered an error setting timezone: {}".format(timezone),
+            f"tzutil encountered an error setting timezone: {timezone}",
             info=res,
         )
     return zone_compare(timezone)
@@ -335,7 +337,7 @@ def zone_compare(timezone):
 
     else:
         # Raise error because it's neither key nor value
-        raise CommandExecutionError("Invalid timezone passed: {}".format(timezone))
+        raise CommandExecutionError(f"Invalid timezone passed: {timezone}")
 
     return get_zone() == mapper.get_unix(check_zone, "Unknown")
 

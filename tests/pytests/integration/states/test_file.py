@@ -1,10 +1,13 @@
 """
 Tests for the file state
 """
+
 import logging
 import os
 import pathlib
 import re
+import stat
+import subprocess
 import textwrap
 
 import pytest
@@ -14,6 +17,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 from salt.utils.versions import Version
+from tests.conftest import FIPS_TESTRUN
 
 log = logging.getLogger(__name__)
 
@@ -233,6 +237,10 @@ def salt_secondary_master(request, salt_factories):
         "fileserver_followsymlinks": False,
         "publish_port": publish_port,
         "ret_port": ret_port,
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
 
     factory = salt_factories.salt_master_daemon(
@@ -255,6 +263,9 @@ def salt_secondary_minion(salt_secondary_master):
     config_overrides = {
         "master": salt_secondary_master.config["interface"],
         "master_port": salt_secondary_master.config["ret_port"],
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
 
     factory = salt_secondary_master.salt_minion_daemon(
@@ -389,7 +400,7 @@ def _check_min_patch_version(shell):
     min_patch_ver = "2.6"
     ret = shell.run("patch", "--version")
     assert ret.returncode == 0
-    version = ret.stdout.strip().split()[2]
+    version = ret.stdout.splitlines()[0].split()[-1]
     if Version(version) < Version(min_patch_ver):
         pytest.xfail(
             "Minimum version of patch not found, expecting {}, found {}".format(
@@ -656,7 +667,9 @@ def test_patch_single_file_failure(
     math_tempfile = pytest.helpers.temp_file(math_file, content[1], tmp_path)
     reject_tempfile = pytest.helpers.temp_file("reject.txt", "", tmp_path)
 
-    with sls_tempfile, sls_reject_tempfile, numbers_tempfile, math_tempfile, reject_tempfile:
+    with (
+        sls_tempfile
+    ), sls_reject_tempfile, numbers_tempfile, math_tempfile, reject_tempfile:
         # Empty the file to ensure that the patch doesn't apply cleanly
         with salt.utils.files.fopen(numbers_file, "w"):
             pass
@@ -729,7 +742,9 @@ def test_patch_directory_failure(
     math_tempfile = pytest.helpers.temp_file(math_file, content[1], tmp_path)
     reject_tempfile = pytest.helpers.temp_file("reject.txt", "", tmp_path)
 
-    with sls_tempfile, sls_reject_tempfile, numbers_tempfile, math_tempfile, reject_tempfile:
+    with (
+        sls_tempfile
+    ), sls_reject_tempfile, numbers_tempfile, math_tempfile, reject_tempfile:
         # Empty the file to ensure that the patch doesn't apply cleanly
         with salt.utils.files.fopen(math_file, "w"):
             pass
@@ -1111,12 +1126,16 @@ def test_issue_62117(
 
     jinja_contents = '{%- import_yaml "./issue-62117.yaml" as grains %}'
 
-    sls_contents = """
-    {%- from "./issue-62117.jinja" import grains with context %}
+    if salt.utils.platform.is_windows():
+        cmd = "cd"
+    else:
+        cmd = "pwd"
+    sls_contents = f"""
+    {{%- from "./issue-62117.jinja" import grains with context %}}
 
     test_jinja/issue-62117/cmd.run:
       cmd.run:
-        - name: pwd
+        - name: {cmd}
     """
 
     yaml_tempfile = salt_master.state_tree.base.temp_file(f"{name}.yaml", yaml_contents)
@@ -1262,3 +1281,51 @@ def test_contents_file(salt_master, salt_call_cli, tmp_path):
             assert state_run["result"] is True
             # Check to make sure the file was created
             assert target_path.is_file()
+
+
+@pytest.mark.skip_on_windows
+def test_directory_recurse(salt_master, salt_call_cli, tmp_path, grains):
+    """
+    Test modifying ownership of symlink without affecting the link target's
+    permissions.
+    """
+    target_dir = tmp_path / "test-dir"
+    target_dir.mkdir()
+
+    target_file = target_dir / "test-file"
+    target_file.write_text("this is a test file")
+    file_perms = target_file.stat().st_mode
+
+    target_link = target_dir / "test-link"
+    target_link.symlink_to(target_file)
+
+    # Change the ownership of the sybolic link to 'nobody'
+    ret = subprocess.run(["chown", "-h", "nobody", str(target_link)], check=False)
+    assert ret.returncode == 0
+
+    if grains["os"] != "VMware Photon OS":
+        file_perms |= stat.S_IROTH
+
+    # The permissions of the file should be 644.
+    assert target_file.stat().st_mode == file_perms
+
+    sls_name = "test"
+    sls_contents = f"""
+    {target_dir}:
+      file.directory:
+        - user: root
+        - recurse:
+          - user
+    """
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        f"{sls_name}.sls", sls_contents
+    )
+    with sls_tempfile:
+        ret = salt_call_cli.run("state.sls", sls_name)
+        key = f"file_|-{target_dir}_|-{target_dir}_|-directory"
+        assert key in ret.json
+        result = ret.json[key]
+        assert "changes" in result and result["changes"]
+
+    # Permissions of file should not have changed.
+    assert target_file.stat().st_mode == file_perms

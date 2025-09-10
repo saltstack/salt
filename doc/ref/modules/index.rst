@@ -329,6 +329,7 @@ the case when the dependency is unavailable.
     """
     Cheese execution (or returner/beacon/etc.) module
     """
+
     try:
         import enzymes
 
@@ -538,8 +539,6 @@ the module using the following field lists:
 
 .. code-block:: text
 
-    :maintainer:    Thomas Hatch <thatch@saltstack.com, Seth House <shouse@saltstack.com>
-    :maturity:      new
     :depends:       python-mysqldb
     :platform:      all
 

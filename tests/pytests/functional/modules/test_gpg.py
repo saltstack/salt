@@ -4,18 +4,43 @@ import subprocess
 import psutil
 import pytest
 
-try:
-    import gnupg as gnupglib
-
-    HAS_GNUPG = True
-except ImportError:
-    HAS_GNUPG = False
-
+gnupglib = pytest.importorskip("gnupg", reason="Needs python-gnupg library")
+PYGNUPG_VERSION = tuple(int(x) for x in gnupglib.__version__.split("."))
 
 pytestmark = [
-    pytest.mark.skipif(HAS_GNUPG is False, reason="Needs python-gnupg library"),
     pytest.mark.skip_if_binaries_missing("gpg", reason="Needs gpg binary"),
 ]
+
+
+def _kill_gpg_agent(root):
+    gpg_connect_agent = shutil.which("gpg-connect-agent")
+    if gpg_connect_agent:
+        gnupghome = root / ".gnupg"
+        if not gnupghome.is_dir():
+            gnupghome = root
+        try:
+            subprocess.run(
+                [gpg_connect_agent, "killagent", "/bye"],
+                env={"GNUPGHOME": str(gnupghome)},
+                shell=False,
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except subprocess.CalledProcessError:
+            # This is likely CentOS 7 or Amazon Linux 2
+            pass
+
+    # If the above errored or was not enough, as a last resort, let's check
+    # the running processes.
+    for proc in psutil.process_iter():
+        try:
+            if "gpg-agent" in proc.name():
+                for arg in proc.cmdline():
+                    if str(root) in arg:
+                        proc.terminate()
+        except Exception:  # pylint: disable=broad-except
+            pass
 
 
 @pytest.fixture
@@ -26,34 +51,7 @@ def gpghome(tmp_path):
         yield root
     finally:
         # Make sure we don't leave any gpg-agents running behind
-        gpg_connect_agent = shutil.which("gpg-connect-agent")
-        if gpg_connect_agent:
-            gnupghome = root / ".gnupg"
-            if not gnupghome.is_dir():
-                gnupghome = root
-            try:
-                subprocess.run(
-                    [gpg_connect_agent, "killagent", "/bye"],
-                    env={"GNUPGHOME": str(gnupghome)},
-                    shell=False,
-                    check=True,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-            except subprocess.CalledProcessError:
-                # This is likely CentOS 7 or Amazon Linux 2
-                pass
-
-        # If the above errored or was not enough, as a last resort, let's check
-        # the running processes.
-        for proc in psutil.process_iter():
-            try:
-                if "gpg-agent" in proc.name():
-                    for arg in proc.cmdline():
-                        if str(root) in arg:
-                            proc.terminate()
-            except Exception:  # pylint: disable=broad-except
-                pass
+        _kill_gpg_agent(root)
 
 
 @pytest.fixture
@@ -576,6 +574,23 @@ def test_import_key_to_keyring(
     assert gnupg_keyring.list_keys(keys=key_d_fp)
 
 
+@pytest.mark.parametrize("select", (False, True))
+def test_import_key_select(
+    gpghome, gnupg, gpg, key_a_pub, key_a_fp, key_b_pub, key_b_fp, select
+):
+    select = key_a_fp if select else None
+    assert not gnupg.list_keys(keys=key_a_fp)
+    assert not gnupg.list_keys(keys=key_b_fp)
+    res = gpg.import_key(
+        text=key_a_pub + "\n" + key_b_pub, select=select, gnupghome=str(gpghome)
+    )
+    assert res
+    assert res["res"]
+    assert "Successfully imported" in res["message"]
+    assert gnupg.list_keys(keys=key_a_fp)
+    assert bool(gnupg.list_keys(keys=key_b_fp)) is not bool(select)
+
+
 @pytest.mark.usefixtures("_pubkeys_present")
 def test_export_key(gpghome, gpg, key_a_fp):
     res = gpg.export_key(keyids=key_a_fp, gnupghome=str(gpghome))
@@ -795,6 +810,29 @@ def test_verify_with_keyring(gpghome, gnupg, gpg, keyring, sig, signed_data, key
 
 
 @pytest.mark.usefixtures("_pubkeys_present")
+# Can't easily test the other signature validity levels since
+# we would need to sign the pubkey ourselves, which is not
+# exposed by python-gnupg as of release 0.5.2.
+@pytest.mark.parametrize(
+    "ownertrust,text", (("TRUST_NEVER", "Undefined"), ("TRUST_ULTIMATE", "Ultimate"))
+)
+def test_verify_trust_levels(
+    gpghome, gpg, gnupg, key_a_fp, sig, signed_data, ownertrust, text
+):
+    gnupg.trust_keys(key_a_fp, ownertrust)
+    res = gpg.verify(
+        filename=str(signed_data),
+        signature=sig,
+        gnupghome=str(gpghome),
+    )
+    assert res["res"] is True
+    assert "is verified" in res["message"]
+    assert "key_id" in res
+    assert res["key_id"] == key_a_fp[-16:]
+    assert res["trust_level"] == text
+
+
+@pytest.mark.usefixtures("_pubkeys_present")
 @pytest.mark.requires_random_entropy
 def test_encrypt(gpghome, gpg, gnupg, key_b_fp):
     assert gnupg.list_keys(keys=key_b_fp)
@@ -849,3 +887,88 @@ def test_decrypt_with_keyring(
     assert res["res"]
     assert res["comment"]
     assert res["comment"] == b"I like turtles"
+
+
+@pytest.mark.parametrize(
+    "text",
+    (
+        False,
+        pytest.param(
+            True,
+            marks=pytest.mark.skipif(
+                PYGNUPG_VERSION < (0, 5, 1), reason="Text requires python-gnupg >=0.5.1"
+            ),
+        ),
+    ),
+)
+def test_read_key(gpg, gpghome, key_a_pub, key_a_fp, text):
+    if text:
+        res = gpg.read_key(text=key_a_pub, gnupghome=str(gpghome))
+    else:
+        with pytest.helpers.temp_file("key", contents=key_a_pub) as keyfile:
+            res = gpg.read_key(path=str(keyfile), gnupghome=str(gpghome))
+    assert res
+    assert len(res) == 1
+    assert res[0]["fingerprint"] == key_a_fp
+
+
+@pytest.mark.parametrize(
+    "text",
+    (
+        False,
+        pytest.param(
+            True,
+            marks=pytest.mark.skipif(
+                PYGNUPG_VERSION < (0, 5, 1), reason="Text requires python-gnupg >=0.5.1"
+            ),
+        ),
+    ),
+)
+@pytest.mark.parametrize("fingerprint", (False, True))
+@pytest.mark.parametrize("keyid", (False, True))
+def test_read_key_multiple(
+    gpg,
+    gnupg,
+    gpghome,
+    key_a_pub,
+    key_a_fp,
+    key_b_pub,
+    key_b_fp,
+    text,
+    fingerprint,
+    keyid,
+):
+    params = {
+        "gnupghome": str(gpghome),
+    }
+    if fingerprint:
+        params["fingerprint"] = key_a_fp
+    if keyid:
+        params["keyid"] = key_a_fp[-8:]
+    concat = key_a_pub + "\n" + key_b_pub
+    if text:
+        res = gpg.read_key(text=concat, **params)
+    else:
+        with pytest.helpers.temp_file("key", contents=concat) as keyfile:
+            res = gpg.read_key(path=str(keyfile), **params)
+    assert res
+    if not (fingerprint or keyid):
+        assert len(res) == 2
+        assert any(key["fingerprint"] == key_b_fp for key in res)
+    else:
+        assert len(res) == 1
+    assert any(key["fingerprint"] == key_a_fp for key in res)
+
+
+def test_missing_gnupghome(gpg, tmp_path):
+    """
+    Ensure the directory passed as `gnupghome` is created before
+    python-gnupg is invoked. Issue #66312.
+    """
+    gnupghome = tmp_path / "gnupghome"
+    try:
+        res = gpg.list_keys(gnupghome=tmp_path / "gnupghome")
+        assert res == []
+    finally:
+        # Make sure we don't leave any gpg-agents running behind
+        _kill_gpg_agent(gnupghome)

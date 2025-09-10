@@ -159,7 +159,7 @@ def test_call_fails_salt_thin():
                 salt_mock["cmd.run_chroot"].assert_called_with(
                     "/chroot",
                     [
-                        "python{}".format(sys.version_info[0]),
+                        f"python{sys.version_info[0]}",
                         "/tmp01/salt-call",
                         "--metadata",
                         "--local",
@@ -207,7 +207,7 @@ def test_call_success():
                 salt_mock["cmd.run_chroot"].assert_called_with(
                     "/chroot",
                     [
-                        "python{}".format(sys.version_info[0]),
+                        f"python{sys.version_info[0]}",
                         "/tmp01/salt-call",
                         "--metadata",
                         "--local",
@@ -257,7 +257,7 @@ def test_call_success_parameters():
                 salt_mock["cmd.run_chroot"].assert_called_with(
                     "/chroot",
                     [
-                        "python{}".format(sys.version_info[0]),
+                        f"python{sys.version_info[0]}",
                         "/tmp01/salt-call",
                         "--metadata",
                         "--local",
@@ -289,6 +289,7 @@ def test_sls():
                 ) as _create_and_execute_salt_state:
                     SSHHighState.return_value = SSHHighState
                     SSHHighState.render_highstate.return_value = (None, [])
+                    SSHHighState.state.compile_high_data.return_value = ([], [])
                     SSHHighState.state.reconcile_extend.return_value = (None, [])
                     SSHHighState.state.requisite_in.return_value = (None, [])
                     SSHHighState.state.verify_high.return_value = []

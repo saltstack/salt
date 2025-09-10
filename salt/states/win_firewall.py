@@ -52,12 +52,12 @@ def disabled(name="allprofiles"):
 
     # Make sure the profile name is valid
     if name not in profile_map:
-        raise SaltInvocationError("Invalid profile name: {}".format(name))
+        raise SaltInvocationError(f"Invalid profile name: {name}")
 
     current_config = __salt__["firewall.get_config"]()
     if name != "allprofiles" and profile_map[name] not in current_config:
         ret["result"] = False
-        ret["comment"] = "Profile {} does not exist in firewall.get_config".format(name)
+        ret["comment"] = f"Profile {name} does not exist in firewall.get_config"
         return ret
 
     for key in current_config:
@@ -83,7 +83,7 @@ def disabled(name="allprofiles"):
         if name == "allprofiles":
             msg = "All the firewall profiles are disabled"
         else:
-            msg = "Firewall profile {} is disabled".format(name)
+            msg = f"Firewall profile {name} is disabled"
         ret["comment"] = msg
 
     return ret
@@ -211,12 +211,12 @@ def enabled(name="allprofiles"):
 
     # Make sure the profile name is valid
     if name not in profile_map:
-        raise SaltInvocationError("Invalid profile name: {}".format(name))
+        raise SaltInvocationError(f"Invalid profile name: {name}")
 
     current_config = __salt__["firewall.get_config"]()
     if name != "allprofiles" and profile_map[name] not in current_config:
         ret["result"] = False
-        ret["comment"] = "Profile {} does not exist in firewall.get_config".format(name)
+        ret["comment"] = f"Profile {name} does not exist in firewall.get_config"
         return ret
 
     for key in current_config:
@@ -242,7 +242,7 @@ def enabled(name="allprofiles"):
         if name == "allprofiles":
             msg = "All the firewall profiles are enabled"
         else:
-            msg = "Firewall profile {} is enabled".format(name)
+            msg = f"Firewall profile {name} is enabled"
         ret["comment"] = msg
 
     return ret

@@ -1,6 +1,7 @@
 """
 Unit tests for salt.utils.templates.py
 """
+
 import logging
 from pathlib import PurePath, PurePosixPath
 

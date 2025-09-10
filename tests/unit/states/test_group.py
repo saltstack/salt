@@ -2,7 +2,6 @@
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-
 import salt.states.group as group
 from salt.utils.odict import OrderedDict
 from tests.support.mixins import LoaderModuleMockMixin

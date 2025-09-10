@@ -124,17 +124,19 @@ def present(
         return ret
     elif name in dbs and any(
         (
-            db_params.get("Encoding").lower() != encoding.lower()
-            if encoding
-            else False,
+            (
+                db_params.get("Encoding").lower() != encoding.lower()
+                if encoding
+                else False
+            ),
             db_params.get("Collate") != lc_collate if lc_collate else False,
             db_params.get("Ctype") != lc_ctype if lc_ctype else False,
         )
     ):
-        ret[
-            "comment"
-        ] = "Database {} has wrong parameters which couldn't be changed on fly.".format(
-            name
+        ret["comment"] = (
+            "Database {} has wrong parameters which couldn't be changed on fly.".format(
+                name
+            )
         )
         ret["result"] = False
         return ret
@@ -145,9 +147,9 @@ def present(
         if name not in dbs:
             ret["comment"] = f"Database {name} is set to be created"
         else:
-            ret[
-                "comment"
-            ] = f"Database {name} exists, but parameters need to be changed"
+            ret["comment"] = (
+                f"Database {name} exists, but parameters need to be changed"
+            )
         return ret
     if name not in dbs and __salt__["postgres.db_create"](
         name,

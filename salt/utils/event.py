@@ -59,7 +59,7 @@ import hashlib
 import logging
 import os
 import time
-from collections.abc import MutableMapping
+from collections.abc import Iterable, MutableMapping
 
 import tornado.ioloop
 import tornado.iostream
@@ -76,7 +76,7 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.zeromq
-from salt.exceptions import SaltDeserializationError
+from salt.exceptions import SaltDeserializationError, SaltInvocationError
 from salt.utils.versions import warn_until
 
 log = logging.getLogger(__name__)
@@ -186,17 +186,23 @@ def tagify(suffix="", prefix="", base=SALT):
 
     """
     parts = [base, TAGS.get(prefix, prefix)]
-    if hasattr(suffix, "append"):  # list so extend parts
+    if isinstance(suffix, Iterable) and not isinstance(
+        suffix, str
+    ):  # list so extend parts
         parts.extend(suffix)
     else:  # string so append
         parts.append(suffix)
 
-    for index, _ in enumerate(parts):
+    str_parts = []
+    for part in parts:
+        part_str = None
         try:
-            parts[index] = salt.utils.stringutils.to_str(parts[index])
+            part_str = salt.utils.stringutils.to_str(part)
         except TypeError:
-            parts[index] = str(parts[index])
-    return TAGPARTER.join([part for part in parts if part])
+            part_str = str(part)
+        if part_str:
+            str_parts.append(part_str)
+    return TAGPARTER.join(str_parts)
 
 
 class SaltEvent:
@@ -557,6 +563,9 @@ class SaltEvent:
             try:
                 if not self.cpub and not self.connect_pub(timeout=wait):
                     break
+                if not self._run_io_loop_sync:
+                    log.error("Trying to get event with async subscriber")
+                    raise SaltInvocationError("get_event needs synchronous subscriber")
                 raw = self.subscriber.recv(timeout=wait)
                 if raw is None:
                     break
@@ -1439,11 +1448,9 @@ class StateFire:
 
         load.update(
             {
-                "id": self.opts["id"],
                 "tag": tag,
                 "data": data,
                 "cmd": "_minion_event",
-                "tok": self.auth.gen_token(b"salt"),
             }
         )
 

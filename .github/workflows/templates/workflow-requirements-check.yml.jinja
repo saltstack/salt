@@ -4,7 +4,7 @@
   <{ job_name }>:
   <%- do prepare_workflow_needs.append(job_name) %>
     name: Check Workflow Requirements
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       requirements-met: ${{ steps.check-requirements.outputs.requirements-met }}
     steps:
@@ -18,6 +18,11 @@
             echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
           elif [ "${{ github.event.repository.fork }}" = "true" ]; then
             MSG="Not running workflow because ${{ github.repository }} is a fork"
+            echo "${MSG}"
+            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+            echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
+          elif [ "${{ github.event.repository.private }}" = "true" ]; then
+            MSG="Not running workflow because ${{ github.repository }} is a private repository"
             echo "${MSG}"
             echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
             echo "requirements-met=false" >> "${GITHUB_OUTPUT}"

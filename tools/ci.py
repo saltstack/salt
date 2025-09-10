@@ -1,6 +1,7 @@
 """
 These commands are used in the CI pipeline.
 """
+
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
@@ -8,33 +9,24 @@ import json
 import logging
 import os
 import pathlib
+import pprint
 import random
 import shutil
 import sys
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import yaml
 from ptscripts import Context, command_group
 
 import tools.utils
 import tools.utils.gh
+from tools.precommit.workflows import TEST_SALT_LISTING, TEST_SALT_PKG_LISTING
 
 if sys.version_info < (3, 11):
     from typing_extensions import NotRequired, TypedDict
 else:
     from typing import NotRequired, TypedDict  # pylint: disable=no-name-in-module
-
-try:
-    import boto3
-except ImportError:
-    print(
-        "\nPlease run 'python -m pip install -r "
-        "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
-        file=sys.stderr,
-        flush=True,
-    )
-    raise
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +50,7 @@ def print_gh_event(ctx: Context):
         assert gh_event_path is not None
 
     try:
-        gh_event = json.loads(open(gh_event_path).read())
+        gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
     except Exception as exc:
         ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)  # type: ignore[arg-type]
         ctx.exit(1)
@@ -151,284 +143,6 @@ def process_changed_files(ctx: Context, event_name: str, changed_files: pathlib.
     ctx.exit(0)
 
 
-@ci.command(
-    name="runner-types",
-    arguments={
-        "event_name": {
-            "help": "The name of the GitHub event being processed.",
-        },
-    },
-)
-def runner_types(ctx: Context, event_name: str):
-    """
-    Set GH Actions 'runners' output to know what can run where.
-    """
-    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
-    if gh_event_path is None:
-        ctx.warn("The 'GITHUB_EVENT_PATH' variable is not set.")
-        ctx.exit(1)
-
-    if TYPE_CHECKING:
-        assert gh_event_path is not None
-
-    github_output = os.environ.get("GITHUB_OUTPUT")
-    if github_output is None:
-        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
-        ctx.exit(1)
-
-    if TYPE_CHECKING:
-        assert github_output is not None
-
-    try:
-        gh_event = json.loads(open(gh_event_path).read())
-    except Exception as exc:
-        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)  # type: ignore[arg-type]
-        ctx.exit(1)
-
-    ctx.info("GH Event Payload:")
-    ctx.print(gh_event, soft_wrap=True)
-    # Let's it print until the end
-    time.sleep(1)
-
-    ctx.info("Selecting which type of runners(self hosted runners or not) to run")
-    runners = {"github-hosted": False, "self-hosted": False}
-    if event_name == "pull_request":
-        ctx.info("Running from a pull request event")
-        pr_event_data = gh_event["pull_request"]
-        if (
-            pr_event_data["head"]["repo"]["full_name"]
-            == pr_event_data["base"]["repo"]["full_name"]
-        ):
-            # If this is a pull request coming from the same repository, don't run anything
-            ctx.info("Pull request is coming from the same repository.")
-            ctx.info("Not running any jobs since they will run against the branch")
-            ctx.info("Writing 'runners' to the github outputs file")
-            with open(github_output, "a", encoding="utf-8") as wfh:
-                wfh.write(f"runners={json.dumps(runners)}\n")
-            ctx.exit(0)
-
-        # This is a PR from a forked repository
-        ctx.info("Pull request is not comming from the same repository")
-        runners["github-hosted"] = runners["self-hosted"] = True
-        ctx.info("Writing 'runners' to the github outputs file")
-        with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"runners={json.dumps(runners)}\n")
-        ctx.exit(0)
-
-    # This is a push or a scheduled event
-    ctx.info(f"Running from a {event_name!r} event")
-    if (
-        gh_event["repository"]["fork"] is True
-        and os.environ.get("FORK_HAS_SELF_HOSTED_RUNNERS", "0") == "1"
-    ):
-        # This is running on a forked repository, don't run tests
-        ctx.info("The push event is on a forked repository")
-        runners["github-hosted"] = True
-        ctx.info("Writing 'runners' to the github outputs file")
-        with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"runners={json.dumps(runners)}\n")
-        ctx.exit(0)
-
-    # Not running on a fork, or the fork has self hosted runners, run everything
-    ctx.info(f"The {event_name!r} event is from the main repository")
-    runners["github-hosted"] = runners["self-hosted"] = True
-    ctx.info("Writing 'runners' to the github outputs file")
-    with open(github_output, "a", encoding="utf-8") as wfh:
-        wfh.write(f"runners={json.dumps(runners)}")
-    ctx.exit(0)
-
-
-@ci.command(
-    name="define-jobs",
-    arguments={
-        "event_name": {
-            "help": "The name of the GitHub event being processed.",
-        },
-        "skip_tests": {
-            "help": "Skip running the Salt tests",
-        },
-        "skip_pkg_tests": {
-            "help": "Skip running the Salt Package tests",
-        },
-        "skip_pkg_download_tests": {
-            "help": "Skip running the Salt Package download tests",
-        },
-        "changed_files": {
-            "help": (
-                "Path to '.json' file containing the payload of changed files "
-                "from the 'dorny/paths-filter' GitHub action."
-            ),
-        },
-    },
-)
-def define_jobs(
-    ctx: Context,
-    event_name: str,
-    changed_files: pathlib.Path,
-    skip_tests: bool = False,
-    skip_pkg_tests: bool = False,
-    skip_pkg_download_tests: bool = False,
-):
-    """
-    Set GH Actions 'jobs' output to know which jobs should run.
-    """
-    github_output = os.environ.get("GITHUB_OUTPUT")
-    if github_output is None:
-        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
-        ctx.exit(1)
-
-    if TYPE_CHECKING:
-        assert github_output is not None
-
-    github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
-    if github_step_summary is None:
-        ctx.warn("The 'GITHUB_STEP_SUMMARY' variable is not set.")
-        ctx.exit(1)
-
-    if TYPE_CHECKING:
-        assert github_step_summary is not None
-
-    jobs = {
-        "lint": True,
-        "test": True,
-        "test-pkg": True,
-        "test-pkg-download": True,
-        "prepare-release": True,
-        "build-docs": True,
-        "build-source-tarball": True,
-        "build-deps-onedir": True,
-        "build-salt-onedir": True,
-        "build-pkgs": True,
-        "build-deps-ci": True,
-    }
-
-    if skip_tests:
-        jobs["test"] = False
-    if skip_pkg_tests:
-        jobs["test-pkg"] = False
-    if skip_pkg_download_tests:
-        jobs["test-pkg-download"] = False
-
-    if event_name != "pull_request":
-        # In this case, all defined jobs should run
-        ctx.info("Writing 'jobs' to the github outputs file")
-        with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"jobs={json.dumps(jobs)}\n")
-
-        with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write(
-                f"All defined jobs will run due to event type of `{event_name}`.\n"
-            )
-        return
-
-    # This is a pull-request
-
-    labels: list[str] = []
-    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
-    if gh_event_path is not None:
-        try:
-            gh_event = json.loads(open(gh_event_path).read())
-        except Exception as exc:
-            ctx.error(
-                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc  # type: ignore[arg-type]
-            )
-            ctx.exit(1)
-
-        labels.extend(
-            label[0] for label in _get_pr_test_labels_from_event_payload(gh_event)
-        )
-
-    if not changed_files.exists():
-        ctx.error(f"The '{changed_files}' file does not exist.")
-        ctx.error(
-            "FYI, the command 'tools process-changed-files <changed-files-path>' "
-            "needs to run prior to this one."
-        )
-        ctx.exit(1)
-    try:
-        changed_files_contents = json.loads(changed_files.read_text())
-    except Exception as exc:
-        ctx.error(f"Could not load the changed files from '{changed_files}': {exc}")
-        ctx.exit(1)
-
-    # So, it's a pull request...
-    # Based on which files changed, we can decide what jobs to run.
-    required_lint_changes: set[str] = {
-        changed_files_contents["salt"],
-        changed_files_contents["tests"],
-        changed_files_contents["lint"],
-    }
-    if required_lint_changes == {"false"}:
-        with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write("De-selecting the 'lint' job.\n")
-        jobs["lint"] = False
-
-    required_docs_changes: set[str] = {
-        changed_files_contents["salt"],
-        changed_files_contents["docs"],
-    }
-    if required_docs_changes == {"false"}:
-        with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write("De-selecting the 'build-docs' job.\n")
-        jobs["build-docs"] = False
-
-    required_test_changes: set[str] = {
-        changed_files_contents["testrun"],
-        changed_files_contents["workflows"],
-        changed_files_contents["golden_images"],
-    }
-    if jobs["test"] and required_test_changes == {"false"}:
-        with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write("De-selecting the 'test' job.\n")
-        jobs["test"] = False
-
-    required_pkg_test_changes: set[str] = {
-        changed_files_contents["pkg_tests"],
-        changed_files_contents["workflows"],
-        changed_files_contents["golden_images"],
-    }
-    if jobs["test-pkg"] and required_pkg_test_changes == {"false"}:
-        if "test:pkg" in labels:
-            with open(github_step_summary, "a", encoding="utf-8") as wfh:
-                wfh.write(
-                    "The 'test-pkg' job is forcefully selected by the use of the 'test:pkg' label.\n"
-                )
-            jobs["test-pkg"] = True
-        else:
-            with open(github_step_summary, "a", encoding="utf-8") as wfh:
-                wfh.write("De-selecting the 'test-pkg' job.\n")
-            jobs["test-pkg"] = False
-
-    if jobs["test-pkg-download"] and required_pkg_test_changes == {"false"}:
-        with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write("De-selecting the 'test-pkg-download' job.\n")
-        jobs["test-pkg-download"] = False
-
-    if not jobs["test"] and not jobs["test-pkg"] and not jobs["test-pkg-download"]:
-        with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            for job in (
-                "build-deps-ci",
-                "build-deps-onedir",
-                "build-salt-onedir",
-                "build-pkgs",
-            ):
-                wfh.write(f"De-selecting the '{job}' job.\n")
-                jobs[job] = False
-            if not jobs["build-docs"]:
-                with open(github_step_summary, "a", encoding="utf-8") as wfh:
-                    wfh.write("De-selecting the 'build-source-tarball' job.\n")
-                jobs["build-source-tarball"] = False
-
-    with open(github_step_summary, "a", encoding="utf-8") as wfh:
-        wfh.write("Selected Jobs:\n")
-        for name, value in sorted(jobs.items()):
-            wfh.write(f" - {name}: {value}\n")
-
-    ctx.info("Writing 'jobs' to the github outputs file")
-    with open(github_output, "a", encoding="utf-8") as wfh:
-        wfh.write(f"jobs={json.dumps(jobs)}\n")
-
-
 class TestRun(TypedDict):
     type: str
     skip_code_coverage: bool
@@ -436,448 +150,21 @@ class TestRun(TypedDict):
     selected_tests: NotRequired[dict[str, bool]]
 
 
-@ci.command(
-    name="define-testrun",
-    arguments={
-        "event_name": {
-            "help": "The name of the GitHub event being processed.",
-        },
-        "changed_files": {
-            "help": (
-                "Path to '.json' file containing the payload of changed files "
-                "from the 'dorny/paths-filter' GitHub action."
-            ),
-        },
-    },
-)
-def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
+def _build_matrix(os_kind, linux_arm_runner):
     """
-    Set GH Actions outputs for what and how Salt should be tested.
+    Generate matrix for build ci/cd steps.
     """
-    github_output = os.environ.get("GITHUB_OUTPUT")
-    if github_output is None:
-        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
-        ctx.exit(1)
-
-    if TYPE_CHECKING:
-        assert github_output is not None
-
-    github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
-    if github_step_summary is None:
-        ctx.warn("The 'GITHUB_STEP_SUMMARY' variable is not set.")
-        ctx.exit(1)
-
-    if TYPE_CHECKING:
-        assert github_step_summary is not None
-
-    labels: list[str] = []
-    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
-    if gh_event_path is not None:
-        try:
-            gh_event = json.loads(open(gh_event_path).read())
-        except Exception as exc:
-            ctx.error(
-                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc  # type: ignore[arg-type]
-            )
-            ctx.exit(1)
-
-        labels.extend(
-            label[0] for label in _get_pr_test_labels_from_event_payload(gh_event)
-        )
-
-    if "test:coverage" in labels:
-        ctx.info("Writing 'testrun' to the github outputs file")
-        testrun = TestRun(type="full", skip_code_coverage=False)
-        with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"testrun={json.dumps(testrun)}\n")
-        with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write(
-                "Full test run chosen because the label `test:coverage` is set.\n"
-            )
-        return
-    elif event_name != "pull_request":
-        # In this case, a full test run is in order
-        ctx.info("Writing 'testrun' to the github outputs file")
-        testrun = TestRun(type="full", skip_code_coverage=False)
-        with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"testrun={json.dumps(testrun)}\n")
-
-        with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write(f"Full test run chosen due to event type of `{event_name}`.\n")
-        return
-
-    # So, it's a pull request...
-
-    if not changed_files.exists():
-        ctx.error(f"The '{changed_files}' file does not exist.")
-        ctx.error(
-            "FYI, the command 'tools process-changed-files <changed-files-path>' "
-            "needs to run prior to this one."
-        )
-        ctx.exit(1)
-    try:
-        changed_files_contents = json.loads(changed_files.read_text())
-    except Exception as exc:
-        ctx.error(f"Could not load the changed files from '{changed_files}': {exc}")
-        ctx.exit(1)
-
-    # Based on which files changed, or other things like PR labels we can
-    # decide what to run, or even if the full test run should be running on the
-    # pull request, etc...
-    changed_pkg_requirements_files = json.loads(
-        changed_files_contents["pkg_requirements_files"]
-    )
-    changed_test_requirements_files = json.loads(
-        changed_files_contents["test_requirements_files"]
-    )
-    if changed_files_contents["golden_images"] == "true":
-        with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write(
-                "Full test run chosen because there was a change made "
-                "to `cicd/golden-images.json`.\n"
-            )
-        testrun = TestRun(type="full", skip_code_coverage=True)
-    elif changed_pkg_requirements_files or changed_test_requirements_files:
-        with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write(
-                "Full test run chosen because there was a change made "
-                "to the requirements files.\n"
-            )
-            wfh.write(
-                "<details>\n<summary>Changed Requirements Files (click me)</summary>\n<pre>\n"
-            )
-            for path in sorted(
-                changed_pkg_requirements_files + changed_test_requirements_files
-            ):
-                wfh.write(f"{path}\n")
-            wfh.write("</pre>\n</details>\n")
-        testrun = TestRun(type="full", skip_code_coverage=True)
-    elif "test:full" in labels:
-        with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write("Full test run chosen because the label `test:full` is set.\n")
-        testrun = TestRun(type="full", skip_code_coverage=True)
-    else:
-        testrun_changed_files_path = tools.utils.REPO_ROOT / "testrun-changed-files.txt"
-        testrun = TestRun(
-            type="changed",
-            skip_code_coverage=True,
-            from_filenames=str(
-                testrun_changed_files_path.relative_to(tools.utils.REPO_ROOT)
-            ),
-        )
-        ctx.info(f"Writing {testrun_changed_files_path.name} ...")
-        selected_changed_files = []
-        for fpath in json.loads(changed_files_contents["testrun_files"]):
-            if fpath.startswith(("tools/", "tasks/")):
-                continue
-            if fpath in ("noxfile.py",):
-                continue
-            if fpath == "tests/conftest.py":
-                # In this particular case, just run the full test suite
-                testrun["type"] = "full"
-                with open(github_step_summary, "a", encoding="utf-8") as wfh:
-                    wfh.write(
-                        f"Full test run chosen because there was a change to `{fpath}`.\n"
-                    )
-            selected_changed_files.append(fpath)
-        testrun_changed_files_path.write_text("\n".join(sorted(selected_changed_files)))
-        if testrun["type"] == "changed":
-            with open(github_step_summary, "a", encoding="utf-8") as wfh:
-                wfh.write("Partial test run chosen.\n")
-            testrun["selected_tests"] = {
-                "core": False,
-                "slow": False,
-                "fast": True,
-                "flaky": False,
-            }
-            if "test:slow" in labels:
-                with open(github_step_summary, "a", encoding="utf-8") as wfh:
-                    wfh.write("Slow tests chosen by `test:slow` label.\n")
-                testrun["selected_tests"]["slow"] = True
-            if "test:core" in labels:
-                with open(github_step_summary, "a", encoding="utf-8") as wfh:
-                    wfh.write("Core tests chosen by `test:core` label.\n")
-                testrun["selected_tests"]["core"] = True
-            if "test:no-fast" in labels:
-                with open(github_step_summary, "a", encoding="utf-8") as wfh:
-                    wfh.write("Fast tests deselected by `test:no-fast` label.\n")
-                testrun["selected_tests"]["fast"] = False
-            if "test:flaky-jail" in labels:
-                with open(github_step_summary, "a", encoding="utf-8") as wfh:
-                    wfh.write("Flaky jailed tests chosen by `test:flaky-jail` label.\n")
-                testrun["selected_tests"]["flaky"] = True
-        if selected_changed_files:
-            with open(github_step_summary, "a", encoding="utf-8") as wfh:
-                wfh.write(
-                    "<details>\n<summary>Selected Changed Files (click me)</summary>\n<pre>\n"
-                )
-                for path in sorted(selected_changed_files):
-                    wfh.write(f"{path}\n")
-                wfh.write("</pre>\n</details>\n")
-
-    with open(github_step_summary, "a", encoding="utf-8") as wfh:
-        wfh.write("<details>\n<summary>All Changed Files (click me)</summary>\n<pre>\n")
-        for path in sorted(json.loads(changed_files_contents["repo_files"])):
-            wfh.write(f"{path}\n")
-        wfh.write("</pre>\n</details>\n")
-
-    ctx.info("Writing 'testrun' to the github outputs file")
-    with open(github_output, "a", encoding="utf-8") as wfh:
-        wfh.write(f"testrun={json.dumps(testrun)}\n")
-
-
-@ci.command(
-    arguments={
-        "distro_slug": {
-            "help": "The distribution slug to generate the matrix for",
-        },
-        "full": {
-            "help": "Full test run",
-        },
-        "workflow": {
-            "help": "Which workflow is running",
-        },
-        "fips": {
-            "help": "Include FIPS entries in the matrix",
-        },
-    },
-)
-def matrix(
-    ctx: Context,
-    distro_slug: str,
-    full: bool = False,
-    workflow: str = "ci",
-    fips: bool = False,
-):
-    """
-    Generate the test matrix.
-    """
-    _matrix = []
-    _splits = {
-        "functional": 3,
-        "integration": 6,
-        "scenarios": 1,
-        "unit": 4,
-    }
-    # On nightly and scheduled builds we don't want splits at all
-    if workflow.lower() in ("nightly", "scheduled"):
-        ctx.info(f"Reducing splits definition since workflow is '{workflow}'")
-        for key in _splits:
-            new_value = _splits[key] - 1
-            if new_value < 1:
-                new_value = 1
-            _splits[key] = new_value
-
-    for transport in ("zeromq", "tcp"):
-        if transport == "tcp":
-            if distro_slug not in (
-                "centosstream-9",
-                "centosstream-9-arm64",
-                "photonos-5",
-                "photonos-5-arm64",
-                "ubuntu-22.04",
-                "ubuntu-22.04-arm64",
-            ):
-                # Only run TCP transport tests on these distributions
-                continue
-        for chunk in ("unit", "functional", "integration", "scenarios"):
-            if transport == "tcp" and chunk in ("unit", "functional"):
-                # Only integration and scenarios shall be tested under TCP,
-                # the rest would be repeating tests
-                continue
-            if "macos" in distro_slug and chunk == "scenarios":
-                continue
-            splits = _splits.get(chunk) or 1
-            if full and splits > 1:
-                for split in range(1, splits + 1):
-                    _matrix.append(
-                        {
-                            "transport": transport,
-                            "tests-chunk": chunk,
-                            "test-group": split,
-                            "test-group-count": splits,
-                        }
-                    )
-                    if fips is True and distro_slug.startswith(
-                        ("photonos-4", "photonos-5")
-                    ):
-                        # Repeat the last one, but with fips
-                        _matrix.append({"fips": "fips", **_matrix[-1]})
-            else:
-                _matrix.append({"transport": transport, "tests-chunk": chunk})
-                if fips is True and distro_slug.startswith(
-                    ("photonos-4", "photonos-5")
-                ):
-                    # Repeat the last one, but with fips
-                    _matrix.append({"fips": "fips", **_matrix[-1]})
-
-    ctx.info("Generated matrix:")
-    ctx.print(_matrix, soft_wrap=True)
-
-    github_output = os.environ.get("GITHUB_OUTPUT")
-    if github_output is not None:
-        with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"matrix={json.dumps(_matrix)}\n")
-    ctx.exit(0)
-
-
-@ci.command(
-    name="pkg-matrix",
-    arguments={
-        "distro_slug": {
-            "help": "The distribution slug to generate the matrix for",
-        },
-        "pkg_type": {
-            "help": "The type of package we are testing against",
-        },
-        "testing_releases": {
-            "help": "The salt releases to test upgrades against",
-            "nargs": "+",
-            "required": True,
-        },
-        "fips": {
-            "help": "Include FIPS entries in the matrix",
-        },
-    },
-)
-def pkg_matrix(
-    ctx: Context,
-    distro_slug: str,
-    pkg_type: str,
-    testing_releases: list[tools.utils.Version] = None,
-    fips: bool = False,
-):
-    """
-    Generate the test matrix.
-    """
-    github_output = os.environ.get("GITHUB_OUTPUT")
-    if github_output is None:
-        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
-    if TYPE_CHECKING:
-        assert testing_releases
-
-    still_testing_3005 = False
-    for release_version in testing_releases:
-        if still_testing_3005:
-            break
-        if release_version < tools.utils.Version("3006.0"):
-            still_testing_3005 = True
-
-    if still_testing_3005 is False:
-        ctx.error(
-            f"No longer testing 3005.x releases please update {__file__} "
-            "and remove this error and the logic above the error. There may "
-            "be other places that need code removed as well."
-        )
-        ctx.exit(1)
-
-    adjusted_versions = []
-    for ver in testing_releases:
-        if ver < tools.utils.Version("3006.0"):
-            adjusted_versions.append((ver, "classic"))
-            adjusted_versions.append((ver, "tiamat"))
-        else:
-            adjusted_versions.append((ver, "relenv"))
-    ctx.info(f"Will look for the following versions: {adjusted_versions}")
-
-    # Filter out the prefixes to look under
-    if "macos-" in distro_slug:
-        # We don't have golden images for macos, handle these separately
-        prefixes = {
-            "classic": "osx/",
-            "tiamat": "salt/py3/macos/minor/",
-            "relenv": "salt/py3/macos/minor/",
-        }
-    else:
-        parts = distro_slug.split("-")
-        name = parts[0]
-        version = parts[1]
-        if name in ("debian", "ubuntu"):
-            arch = "amd64"
-        elif name in ("centos", "centosstream", "amazonlinux", "photonos"):
-            arch = "x86_64"
-        if len(parts) > 2:
-            arch = parts[2]
-        if name == "amazonlinux":
-            name = "amazon"
-        if "centos" in name:
-            name = "redhat"
-        if "photon" in name:
-            name = "photon"
-        if name == "windows":
-            prefixes = {
-                "classic": "windows/",
-                "tiamat": "salt/py3/windows/minor",
-                "relenv": "salt/py3/windows/minor",
-            }
-        else:
-            prefixes = {
-                "classic": f"py3/{name}/{version}/{arch}/",
-                "tiamat": f"salt/py3/{name}/{version}/{arch}/minor/",
-                "relenv": f"salt/py3/{name}/{version}/{arch}/minor/",
-            }
-
-    s3 = boto3.client("s3")
-    paginator = s3.get_paginator("list_objects_v2")
-    _matrix = [
-        {
-            "test-chunk": "install",
-            "version": None,
-        }
-    ]
-
-    for version, backend in adjusted_versions:
-        prefix = prefixes[backend]
-        # TODO: Remove this after 3009.0
-        if backend == "relenv" and version >= tools.utils.Version("3006.5"):
-            prefix.replace("/arm64/", "/aarch64/")
-        # Using a paginator allows us to list recursively and avoid the item limit
-        page_iterator = paginator.paginate(
-            Bucket=f"salt-project-{tools.utils.SPB_ENVIRONMENT}-salt-artifacts-release",
-            Prefix=prefix,
-        )
-        # Uses a jmespath expression to test if the wanted version is in any of the filenames
-        key_filter = f"Contents[?contains(Key, '{version}')][]"
-        if pkg_type == "MSI":
-            # TODO: Add this back when we add MSI upgrade and downgrade tests
-            # key_filter = f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.msi')]"
-            continue
-        elif pkg_type == "NSIS":
-            key_filter = (
-                f"Contents[?contains(Key, '{version}')] | [?ends_with(Key, '.exe')]"
-            )
-        objects = list(page_iterator.search(key_filter))
-        # Testing using `any` because sometimes the paginator returns `[None]`
-        if any(objects):
-            ctx.info(
-                f"Found {version} ({backend}) for {distro_slug}: {objects[0]['Key']}"
-            )
-            for session in ("upgrade", "downgrade"):
-                if backend == "classic":
-                    session += "-classic"
-                _matrix.append(
-                    {
-                        "test-chunk": session,
-                        "version": str(version),
-                    }
-                )
-                if (
-                    backend == "relenv"
-                    and fips is True
-                    and distro_slug.startswith(("photonos-4", "photonos-5"))
-                ):
-                    # Repeat the last one, but with fips
-                    _matrix.append({"fips": "fips", **_matrix[-1]})
-        else:
-            ctx.info(f"No {version} ({backend}) for {distro_slug} at {prefix}")
-
-    ctx.info("Generated matrix:")
-    ctx.print(_matrix, soft_wrap=True)
-
-    if github_output is not None:
-        with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"matrix={json.dumps(_matrix)}\n")
-    ctx.exit(0)
+    _matrix = [{"arch": "x86_64"}]
+    if os_kind == "windows":
+        _matrix = [
+            {"arch": "amd64"},
+            {"arch": "x86"},
+        ]
+    elif os_kind == "macos":
+        _matrix.append({"arch": "arm64"})
+    elif os_kind == "linux" and linux_arm_runner:
+        _matrix.append({"arch": "arm64"})
+    return _matrix
 
 
 @ci.command(
@@ -928,7 +215,7 @@ def get_release_changelog_target(ctx: Context, event_name: str):
         assert gh_event_path is not None
 
     try:
-        gh_event = json.loads(open(gh_event_path).read())
+        gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
     except Exception as exc:
         ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)  # type: ignore[arg-type]
         ctx.exit(1)
@@ -961,65 +248,6 @@ def get_release_changelog_target(ctx: Context, event_name: str):
                 break
     with open(github_output, "a", encoding="utf-8") as wfh:
         wfh.write(f"release-changelog-target={release_changelog_target}\n")
-    ctx.exit(0)
-
-
-@ci.command(
-    name="get-pr-test-labels",
-    arguments={
-        "pr": {
-            "help": "Pull request number",
-        },
-        "repository": {
-            "help": "Github repository.",
-        },
-    },
-)
-def get_pr_test_labels(
-    ctx: Context, repository: str = "saltstack/salt", pr: int = None
-):
-    """
-    Set the pull-request labels.
-    """
-    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
-    if gh_event_path is None:
-        labels = _get_pr_test_labels_from_api(ctx, repository, pr=pr)
-    else:
-        if TYPE_CHECKING:
-            assert gh_event_path is not None
-
-        try:
-            gh_event = json.loads(open(gh_event_path).read())
-        except Exception as exc:
-            ctx.error(
-                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc  # type: ignore[arg-type]
-            )
-            ctx.exit(1)
-
-        if "pull_request" not in gh_event:
-            ctx.warn("The 'pull_request' key was not found on the event payload.")
-            ctx.exit(1)
-
-        pr = gh_event["pull_request"]["number"]
-        labels = _get_pr_test_labels_from_event_payload(gh_event)
-
-    if labels:
-        ctx.info(f"Test labels for pull-request #{pr} on {repository}:")
-        for name, description in labels:
-            ctx.info(f" * [yellow]{name}[/yellow]: {description}")
-    else:
-        ctx.info(f"No test labels for pull-request #{pr} on {repository}")
-
-    github_output = os.environ.get("GITHUB_OUTPUT")
-    if github_output is None:
-        ctx.exit(0)
-
-    if TYPE_CHECKING:
-        assert github_output is not None
-
-    ctx.info("Writing 'labels' to the github outputs file")
-    with open(github_output, "a", encoding="utf-8") as wfh:
-        wfh.write(f"labels={json.dumps([label[0] for label in labels])}\n")
     ctx.exit(0)
 
 
@@ -1065,6 +293,10 @@ def _get_pr_test_labels_from_event_payload(
 
 
 def _filter_test_labels(labels: list[dict[str, Any]]) -> list[tuple[str, str]]:
+    """
+    Filter labels that can affect the workflow configuration. Return a tuple of
+    their name and description.
+    """
     return [
         (label["name"], label["description"])
         for label in labels
@@ -1093,8 +325,6 @@ def get_testing_releases(
     """
     Get a list of releases to use for the upgrade and downgrade tests.
     """
-    # We aren't testing upgrades from anything before 3006.0 except the latest 3005.x
-    threshold_major = 3005
     parsed_salt_version = tools.utils.Version(salt_version)
     # We want the latest 4 major versions, removing the oldest if this version is a new major
     num_major_versions = 4
@@ -1102,7 +332,13 @@ def get_testing_releases(
         num_major_versions = 3
     majors = sorted(
         list(
-            {version.major for version in releases if version.major >= threshold_major}
+            {
+                # We aren't testing upgrades from anything before 3006.0
+                # and we don't want to test 3007.? on the 3006.x branch
+                version.major
+                for version in releases
+                if version.major > 3005 and version.major <= parsed_salt_version.major
+            }
         )
     )[-num_major_versions:]
     testing_releases = []
@@ -1158,7 +394,7 @@ def define_cache_seed(ctx: Context, static_cache_seed: str, randomize: bool = Fa
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     if gh_event_path is not None:
         try:
-            gh_event = json.loads(open(gh_event_path).read())
+            gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
         except Exception as exc:
             ctx.error(
                 f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc  # type: ignore[arg-type]
@@ -1222,12 +458,15 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
         commit_sha,
     ]
 
+    from_pull_request = False
+
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     if gh_event_path is not None:
         try:
-            gh_event = json.loads(open(gh_event_path).read())
+            gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
             pr_event_data = gh_event.get("pull_request")
             if pr_event_data:
+                from_pull_request = True
                 codecov_args.extend(["--parent", pr_event_data["base"]["sha"]])
         except Exception as exc:
             ctx.error(
@@ -1240,14 +479,19 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
             flags = fpath.stem
         else:
             try:
-                section, distro_slug, nox_session = fpath.stem.split("..")
+                section, distro_slug, _, _ = fpath.stem.split("..")
+                fips = ",fips"
             except ValueError:
-                ctx.error(
-                    f"The file {fpath} does not respect the expected naming convention "
-                    "'{salt|tests}..<distro-slug>..<nox-session>.xml'. Skipping..."
-                )
-                continue
-            flags = f"{section},{distro_slug}"
+                fips = ""
+                try:
+                    section, distro_slug, _ = fpath.stem.split("..")
+                except ValueError:
+                    ctx.error(
+                        f"The file {fpath} does not respect the expected naming convention "
+                        "'{salt|tests}..<distro-slug>..<nox-session>.xml'. Skipping..."
+                    )
+                    continue
+            flags = f"{section},{distro_slug}{fips}"
 
         max_attempts = 3
         current_attempt = 0
@@ -1288,9 +532,574 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
                 ctx.error(f"Failed to upload {fpath} to codecov:")
                 ctx.console_stdout.print(stdout)
                 ctx.console.print(stderr)
+                if from_pull_request is True:
+                    # Codecov is having some issues with tokenless uploads
+                    # Don't let PR's fail, but do fail otherwise so we know
+                    # we should fix it.
+                    github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+                    if github_step_summary is not None:
+                        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+                            wfh.write(f"Failed to upload `{fpath}` to codecov\n")
+                    ctx.exit(0)
                 ctx.exit(1)
 
             ctx.warn(f"Waiting {sleep_time} seconds until next retry...")
             time.sleep(sleep_time)
 
+    ctx.exit(0)
+
+
+def _os_test_filter(osdef, transport, chunk, arm_runner, requested_slugs):
+    """
+    Filter out some test runs based on os, tranport and chunk to be run.
+    """
+    if osdef.slug not in requested_slugs:
+        return False
+    if transport == "tcp" and chunk in ("unit", "functional"):
+        return False
+    if "macos" in osdef.slug and chunk == "scenarios":
+        return False
+    if osdef.platform == "linux" and osdef.arch == "arm64" and not arm_runner:
+        return False
+    if transport == "tcp" and osdef.slug not in (
+        "rockylinux-9",
+        "rockylinux-9-arm64",
+        "photonos-5",
+        "photonos-5-arm64",
+        "ubuntu-22.04",
+        "ubuntu-22.04-arm64",
+    ):
+        return False
+    return True
+
+
+def _define_testrun(ctx, changed_files, labels, full):
+    if not changed_files.exists():
+        ctx.error(f"The '{changed_files}' file does not exist.")
+        ctx.error(
+            "FYI, the command 'tools process-changed-files <changed-files-path>' "
+            "needs to run prior to this one."
+        )
+        ctx.exit(1)
+    try:
+        changed_files_contents = json.loads(changed_files.read_text())
+    except Exception as exc:
+        ctx.error(f"Could not load the changed files from '{changed_files}': {exc}")
+        ctx.exit(1)
+
+    # Based on which files changed, or other things like PR labels we can
+    # decide what to run, or even if the full test run should be running on the
+    # pull request, etc...
+    changed_pkg_requirements_files: list[str] = []
+    changed_test_requirements_files: list[str] = []
+    if "pkg_requirements_files" in changed_files_contents:
+        changed_pkg_requirements_files = json.loads(
+            changed_files_contents["pkg_requirements_files"]
+        )
+    if "test_requirements_files" in changed_files_contents:
+        changed_test_requirements_files = json.loads(
+            changed_files_contents["test_requirements_files"]
+        )
+    if full:
+        ctx.info("Full test run chosen")
+        testrun = TestRun(type="full", skip_code_coverage=True)
+    elif changed_pkg_requirements_files or changed_test_requirements_files:
+        ctx.info(
+            "Full test run chosen because there was a change made "
+            "to the requirements files."
+        )
+        testrun = TestRun(type="full", skip_code_coverage=True)
+    elif "test:full" in labels:
+        ctx.info("Full test run chosen because the label `test:full` is set.\n")
+        testrun = TestRun(type="full", skip_code_coverage=True)
+    else:
+        testrun_changed_files_path = tools.utils.REPO_ROOT / "testrun-changed-files.txt"
+        testrun = TestRun(
+            type="changed",
+            skip_code_coverage=True,
+            from_filenames=str(
+                testrun_changed_files_path.relative_to(tools.utils.REPO_ROOT)
+            ),
+        )
+        ctx.info(f"Writing {testrun_changed_files_path.name} ...")
+        selected_changed_files = []
+        for fpath in json.loads(changed_files_contents["testrun_files"]):
+            if fpath.startswith(("tools/", "tasks/")):
+                continue
+            if fpath in ("noxfile.py",):
+                continue
+            if fpath == "tests/conftest.py":
+                # In this particular case, just run the full test suite
+                testrun["type"] = "full"
+                ctx.info(
+                    f"Full test run chosen because there was a change to `{fpath}`."
+                )
+            selected_changed_files.append(fpath)
+        testrun_changed_files_path.write_text("\n".join(sorted(selected_changed_files)))
+        if testrun["type"] == "changed":
+            testrun["selected_tests"] = {
+                "core": False,
+                "slow": False,
+                "fast": True,
+                "flaky": False,
+            }
+            if "test:slow" in labels:
+                ctx.info("Slow tests chosen by `test:slow` label.")
+                testrun["selected_tests"]["slow"] = True
+            if "test:core" in labels:
+                ctx.info("Core tests chosen by `test:core` label.")
+                testrun["selected_tests"]["core"] = True
+            if "test:no-fast" in labels:
+                ctx.info("Fast tests deselected by `test:no-fast` label.")
+                testrun["selected_tests"]["fast"] = False
+            if "test:flaky-jail" in labels:
+                ctx.info("Flaky jailed tests chosen by `test:flaky-jail` label.")
+                testrun["selected_tests"]["flaky"] = True
+    return testrun
+
+
+def _environment_slugs(ctx, slugdef, labels):
+    """
+    Based a slugs defenition from our environment and labels for a pr, return
+    the requeted slugs for a testrun.
+
+    Environment slug defenitions can be a comma separated list. An "all" item
+    in the list will include all os and package slugs.
+    """
+    if isinstance(slugdef, list):
+        requests = slugdef
+    else:
+        requests = [_.strip().lower() for _ in slugdef.split(",") if _.strip()]
+    label_requests = [
+        _[0].rsplit(":", 1)[1] for _ in labels if _[0].startswith("test:os:")
+    ]
+    all_slugs = []
+    slugs = set()
+    for platform in TEST_SALT_LISTING:
+        for osdef in TEST_SALT_LISTING[platform]:
+            all_slugs.append(osdef.slug)
+    for platform in TEST_SALT_LISTING:
+        for osdef in TEST_SALT_LISTING[platform]:
+            all_slugs.append(osdef.slug)
+    if "all" in requests:
+        slugs = all_slugs[:]
+        requests.remove("all")
+    if "all" in label_requests:
+        slugs = all_slugs[:]
+        label_requests.remove("all")
+    for request in requests[:]:
+        if request.startswith("+"):
+            request = request.strip("+")
+            if request not in all_slugs:
+                ctx.warn(f"invalid slug name from environment {request}")
+                continue
+            if request in slugs:
+                ctx.info("slug already requested from environment {request}")
+                continue
+            slugs.add(request)
+        elif request.startswith("-"):
+            request = request.strip("-")
+            if request not in all_slugs:
+                ctx.warn(f"invalid slug name from environment {request}")
+                continue
+            if request in slugs:
+                slugs.remove(request)
+            else:
+                ctx.info("slug from environment was never requested {request}")
+        else:
+            if request not in all_slugs:
+                ctx.warn(f"invalid slug name from environment {request}")
+                continue
+            if request in slugs:
+                ctx.info("slug from environment already requested {request}")
+                continue
+            slugs.add(request)
+
+    for label in label_requests:
+        if label not in all_slugs:
+            ctx.warn(f"invalid slug name from label {label}")
+            continue
+        if label in slugs:
+            ctx.info(f"slug from labels already requested {label}")
+            continue
+        slugs.add(label)
+
+    return list(slugs)
+
+
+@ci.command(
+    name="workflow-config",
+    arguments={
+        "salt_version": {
+            "help": "The version of salt being tested against",
+        },
+        "event_name": {
+            "help": "The name of the GitHub event being processed.",
+        },
+        "skip_tests": {
+            "help": "Skip running the Salt tests",
+        },
+        "skip_pkg_tests": {
+            "help": "Skip running the Salt Package tests",
+        },
+        "skip_pkg_download_tests": {
+            "help": "Skip running the Salt Package download tests",
+        },
+        "changed_files": {
+            "help": (
+                "Path to '.json' file containing the payload of changed files "
+                "from the 'dorny/paths-filter' GitHub action."
+            ),
+        },
+    },
+)
+def workflow_config(
+    ctx: Context,
+    salt_version: str,
+    event_name: str,
+    changed_files: pathlib.Path,
+    skip_tests: bool = False,
+    skip_pkg_tests: bool = False,
+    skip_pkg_download_tests: bool = False,
+):
+    full = False
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    gh_event: dict[str, Any] = {}
+    config: dict[str, Any] = {}
+    labels: list[tuple[str, str]] = []
+    slugs: str | list[str] = []
+
+    ctx.info(f"{'==== environment ====':^80s}")
+    ctx.info(f"{pprint.pformat(dict(os.environ))}")
+    ctx.info(f"{'==== end environment ====':^80s}")
+    ctx.info(f"Github event path is {gh_event_path}")
+
+    if gh_event_path is None:
+        config["linux_arm_runner"] = ""
+    else:
+        try:
+            gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
+        except Exception as exc:
+            ctx.error(
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
+            )
+            ctx.exit(1)
+
+        if "pull_request" in gh_event:
+            pr = gh_event["pull_request"]["number"]
+            labels = _get_pr_test_labels_from_event_payload(gh_event)
+        else:
+            ctx.warn("The 'pull_request' key was not found on the event payload.")
+
+        if gh_event["repository"]["private"]:
+            # Private repositories need arm runner configuration environment
+            # variable.
+            if os.environ.get("LINUX_ARM_RUNNER", "0") in ("0", ""):
+                config["linux_arm_runner"] = ""
+            else:
+                config["linux_arm_runner"] = os.environ["LINUX_ARM_RUNNER"]
+        else:
+            # Public repositories can use github's arm64 runners.
+            config["linux_arm_runner"] = "ubuntu-24.04-arm"
+
+    if event_name != "pull_request" or "test:full" in [_[0] for _ in labels]:
+        full = True
+        slugs = os.environ.get("FULL_TESTRUN_SLUGS", "")
+        if not slugs:
+            slugs = tools.utils.get_cicd_shared_context()["full-testrun-slugs"]
+    else:
+        slugs = os.environ.get("PR_TESTRUN_SLUGS", "")
+        if not slugs:
+            slugs = tools.utils.get_cicd_shared_context()["pr-testrun-slugs"]
+
+    requested_slugs = _environment_slugs(
+        ctx,
+        slugs,
+        labels,
+    )
+
+    ctx.info(f"{'==== requested slugs ====':^80s}")
+    ctx.info(f"{pprint.pformat(requested_slugs)}")
+    ctx.info(f"{'==== end requested slugs ====':^80s}")
+
+    ctx.info(f"{'==== labels ====':^80s}")
+    ctx.info(f"{pprint.pformat(labels)}")
+    ctx.info(f"{'==== end labels ====':^80s}")
+
+    config["skip_code_coverage"] = True
+    if "test:coverage" in labels:
+        config["skip_code_coverage"] = False
+    else:
+        ctx.info("Skipping code coverage.")
+
+    ctx.info(f"{'==== github event ====':^80s}")
+    ctx.info(f"{pprint.pformat(gh_event)}")
+    ctx.info(f"{'==== end github event ====':^80s}")
+
+    config["testrun"] = _define_testrun(ctx, changed_files, labels, full)
+
+    ctx.info(f"{'==== testrun ====':^80s}")
+    ctx.info(f"{pprint.pformat(config['testrun'])}")
+    ctx.info(f"{'==== testrun ====':^80s}")
+
+    jobs = {
+        "lint": True,
+        "test": True,
+        "test-pkg": True,
+        "test-pkg-download": True,
+        "prepare-release": True,
+        "build-docs": True,
+        "build-source-tarball": True,
+        "build-deps-onedir": True,
+        "build-salt-onedir": True,
+        "build-pkgs": True,
+        "build-deps-ci": True if requested_slugs else False,
+    }
+
+    platforms: list[Literal["linux", "macos", "windows"]] = [
+        "linux",
+        "macos",
+        "windows",
+    ]
+
+    if skip_pkg_download_tests:
+        jobs["test-pkg-download"] = False
+
+    config["jobs"] = jobs
+    config["build-matrix"] = {
+        platform: _build_matrix(platform, config["linux_arm_runner"])
+        for platform in platforms
+    }
+    ctx.info(f"{'==== build matrix ====':^80s}")
+    ctx.info(f"{pprint.pformat(config['build-matrix'])}")
+    ctx.info(f"{'==== end build matrix ====':^80s}")
+    config["artifact-matrix"] = []
+    for platform in platforms:
+        config["artifact-matrix"] += [
+            dict({"platform": platform}, **_) for _ in config["build-matrix"][platform]
+        ]
+    ctx.info(f"{'==== artifact matrix ====':^80s}")
+    ctx.info(f"{pprint.pformat(config['artifact-matrix'])}")
+    ctx.info(f"{'==== end artifact matrix ====':^80s}")
+
+    # Get salt releases.
+    releases = tools.utils.get_salt_releases(ctx)
+    str_releases = [str(version) for version in releases]
+    latest = str_releases[-1]
+
+    # Get testing releases.
+    parsed_salt_version = tools.utils.Version(salt_version)
+    # We want the latest 4 major versions, removing the oldest if this version is a new major
+    num_major_versions = 4
+    if parsed_salt_version.minor == 0:
+        num_major_versions = 3
+    majors = sorted(
+        list(
+            {
+                # We aren't testing upgrades from anything before 3006.0
+                # and we don't want to test 3007.? on the 3006.x branch
+                version.major
+                for version in releases
+                if version.major > 3005 and version.major <= parsed_salt_version.major
+            }
+        )
+    )[-num_major_versions:]
+    testing_releases = []
+    # Append the latest minor for each major
+    for major in majors:
+        minors_of_major = [version for version in releases if version.major == major]
+        testing_releases.append(minors_of_major[-1])
+    str_releases = [str(version) for version in testing_releases]
+    ctx.info(f"str_releases {str_releases}")
+
+    pkg_test_matrix: dict[str, list] = {_: [] for _ in platforms}
+
+    if not config["linux_arm_runner"]:
+        # Filter out linux arm tests because we are on a private repository and
+        # no arm64 runner is defined.
+        TEST_SALT_LISTING["linux"] = list(
+            filter(lambda x: x.arch != "arm64", TEST_SALT_LISTING["linux"])
+        )
+        TEST_SALT_PKG_LISTING["linux"] = list(
+            filter(lambda x: x.arch != "arm64", TEST_SALT_PKG_LISTING["linux"])
+        )
+    if not skip_pkg_tests:
+        for platform in platforms:
+            pkg_test_matrix[platform] = [
+                dict(
+                    {
+                        "tests-chunk": "install",
+                        "version": None,
+                    },
+                    **_.as_dict(),
+                )
+                for _ in TEST_SALT_PKG_LISTING[platform]
+                if _.slug in requested_slugs
+            ]
+        for version in str_releases:
+            for platform in platforms:
+
+                if platform == "windows" and "3006" in version:
+                    # The salt_master_cli.py script used by the windows pakcage
+                    # tests doesn't play nice with trying to go from 3006.x to
+                    # >=3007.x.
+                    ctx.info("3006.x upgrade/downgrade tests do not work on windows")
+                    continue
+
+                pkg_test_matrix[platform] += [
+                    dict(
+                        {
+                            "tests-chunk": "upgrade",
+                            "version": version,
+                        },
+                        **_.as_dict(),
+                    )
+                    for _ in TEST_SALT_PKG_LISTING[platform]
+                    if _.slug in requested_slugs
+                ]
+                pkg_test_matrix[platform] += [
+                    dict(
+                        {
+                            "tests-chunk": "downgrade",
+                            "version": version,
+                        },
+                        **_.as_dict(),
+                    )
+                    for _ in TEST_SALT_PKG_LISTING[platform]
+                    if _.slug in requested_slugs and "photon" not in _.slug
+                ]
+    ctx.info(f"{'==== pkg test matrix ====':^80s}")
+    ctx.info(f"{pprint.pformat(pkg_test_matrix)}")
+    ctx.info(f"{'==== end pkg test matrix ====':^80s}")
+
+    # We need to be careful about how many chunks we make. We are limitied to
+    # 256 items in a matrix.
+    _splits = {
+        "functional": 4,
+        "integration": 7,
+        "scenarios": 1,
+        "unit": 4,
+    }
+
+    test_matrix: dict[str, list] = {
+        "linux-x86_64": [],
+        "linux-arm64": [],
+        "macos": [],
+        "windows": [],
+    }
+    if not skip_tests:
+        for platform in platforms:
+            for transport in ("zeromq", "tcp"):
+                for chunk in ("unit", "functional", "integration", "scenarios"):
+                    splits = _splits.get(chunk) or 1
+                    if full and splits > 1:
+                        for split in range(1, splits + 1):
+                            if platform != "linux":
+                                if platform not in test_matrix:
+                                    test_matrix[platform] = []
+                                test_matrix[platform] += [
+                                    dict(
+                                        {
+                                            "transport": transport,
+                                            "tests-chunk": chunk,
+                                            "test-group": split,
+                                            "test-group-count": splits,
+                                        },
+                                        **_.as_dict(),
+                                    )
+                                    for _ in TEST_SALT_LISTING[platform]
+                                    if _os_test_filter(
+                                        _,
+                                        transport,
+                                        chunk,
+                                        config["linux_arm_runner"],
+                                        requested_slugs,
+                                    )
+                                ]
+                            else:
+                                for arch in ["x86_64", "arm64"]:
+                                    if f"{platform}-{arch}" not in test_matrix:
+                                        test_matrix[f"{platform}-{arch}"] = []
+                                    test_matrix[f"{platform}-{arch}"] += [
+                                        dict(
+                                            {
+                                                "transport": transport,
+                                                "tests-chunk": chunk,
+                                                "test-group": split,
+                                                "test-group-count": splits,
+                                            },
+                                            **_.as_dict(),
+                                        )
+                                        for _ in TEST_SALT_LISTING[platform]
+                                        if _os_test_filter(
+                                            _,
+                                            transport,
+                                            chunk,
+                                            config["linux_arm_runner"],
+                                            requested_slugs,
+                                        )
+                                        and _.arch == arch
+                                    ]
+                    else:
+                        if platform != "linux":
+                            if platform not in test_matrix:
+                                test_matrix[platform] = []
+                            test_matrix[platform] += [
+                                dict(
+                                    {"transport": transport, "tests-chunk": chunk},
+                                    **_.as_dict(),
+                                )
+                                for _ in TEST_SALT_LISTING[platform]
+                                if _os_test_filter(
+                                    _,
+                                    transport,
+                                    chunk,
+                                    config["linux_arm_runner"],
+                                    requested_slugs,
+                                )
+                            ]
+                        else:
+                            for arch in ["x86_64", "arm64"]:
+                                if f"{platform}-{arch}" not in test_matrix:
+                                    test_matrix[f"{platform}-{arch}"] = []
+                                test_matrix[f"{platform}-{arch}"] += [
+                                    dict(
+                                        {"transport": transport, "tests-chunk": chunk},
+                                        **_.as_dict(),
+                                    )
+                                    for _ in TEST_SALT_LISTING[platform]
+                                    if _os_test_filter(
+                                        _,
+                                        transport,
+                                        chunk,
+                                        config["linux_arm_runner"],
+                                        requested_slugs,
+                                    )
+                                    and _.arch == arch
+                                ]
+
+    for key in test_matrix:
+        if len(test_matrix[key]) > 256:
+            ctx.warn(
+                f"Number of jobs in {platform} test matrix exceeds 256 ({len(test_matrix[key])}), jobs may not run."
+            )
+
+    ctx.info(f"{'==== test matrix ====':^80s}")
+    ctx.info(f"{pprint.pformat(test_matrix)}")
+    ctx.info(f"{'==== end test matrix ====':^80s}")
+    config["pkg-test-matrix"] = pkg_test_matrix
+    config["test-matrix"] = test_matrix
+    ctx.info("Jobs selected are")
+    for x, y in jobs.items():
+        ctx.info(f"{x} = {y}")
+    github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if github_step_summary is not None:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("Selected Jobs:\n")
+            for name, value in sorted(jobs.items()):
+                wfh.write(f" - `{name}`: {value}\n")
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"config={json.dumps(config)}\n")
     ctx.exit(0)

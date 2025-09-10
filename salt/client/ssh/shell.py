@@ -13,12 +13,13 @@ import time
 import salt.defaults.exitcodes
 import salt.utils.json
 import salt.utils.nb_popen
+import salt.utils.path
 import salt.utils.vt
 
 log = logging.getLogger(__name__)
 
 SSH_PASSWORD_PROMPT_RE = re.compile(r"(?:.*)[Pp]assword(?: for .*)?:\s*$", re.M)
-KEY_VALID_RE = re.compile(r".*\(yes\/no\).*")
+KEY_VALID_RE = re.compile(r".*\(yes\/no(/\[fingerprint\])?\).*")
 SSH_PRIVATE_KEY_PASSWORD_PROMPT_RE = re.compile(r"Enter passphrase for key", re.M)
 
 # sudo prompt is used to recognize sudo prompting for a password and should
@@ -33,12 +34,16 @@ SUDO_PROMPT_RE = re.compile(
 RSTR = "_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878"
 RSTR_RE = re.compile(r"(?:^|\r?\n)" + RSTR + r"(?:\r?\n|$)")
 
+SSH_KEYGEN_PATH = salt.utils.path.which("ssh-keygen") or "ssh-keygen"
+SSH_PATH = salt.utils.path.which("ssh") or "ssh"
+SCP_PATH = salt.utils.path.which("scp") or "scp"
+
 
 def gen_key(path):
     """
     Generate a key for use with salt-ssh
     """
-    cmd = ["ssh-keygen", "-P", "", "-f", path, "-t", "rsa", "-q"]
+    cmd = [SSH_KEYGEN_PATH, "-P", "", "-f", path, "-t", "rsa", "-q"]
     dirname = os.path.dirname(path)
     if dirname and not os.path.isdir(dirname):
         os.makedirs(os.path.dirname(path))
@@ -243,7 +248,7 @@ class Shell:
             stdout, stderr, retcode = self._run_cmd(self._copy_id_str_new())
         return stdout, stderr, retcode
 
-    def _cmd_str(self, cmd, ssh="ssh"):
+    def _cmd_str(self, cmd, ssh=SSH_PATH):
         """
         Return the cmd string to execute
         """
@@ -252,13 +257,13 @@ class Shell:
         # need to deliver the SHIM to the remote host and execute it there
 
         command = [ssh]
-        if ssh != "scp":
+        if ssh != SCP_PATH:
             command.append(self.host)
-        if self.tty and ssh == "ssh":
+        if self.tty and ssh == SSH_PATH:
             command.append("-t -t")
         if self.passwd or self.priv:
             command.append(self.priv and self._key_opts() or self._passwd_opts())
-        if ssh != "scp" and self.remote_port_forwards:
+        if ssh != SCP_PATH and self.remote_port_forwards:
             command.append(
                 " ".join(
                     [f"-R {item}" for item in self.remote_port_forwards.split(",")]
@@ -342,7 +347,7 @@ class Shell:
             pardir = os.path.dirname(remote)
             if not pardir:
                 log.warning(
-                    f"Makedirs called on relative filename: '{remote}'. Skipping."
+                    "Makedirs called on relative filename: '%s'. Skipping.", remote
                 )
             else:
                 ret = self.exec_cmd("mkdir -p " + shlex.quote(pardir))
@@ -355,7 +360,7 @@ class Shell:
             host = f"[{host}]"
 
         cmd = f"{local} {host}:{remote}"
-        cmd = self._cmd_str(cmd, ssh="scp")
+        cmd = self._cmd_str(cmd, ssh=SCP_PATH)
 
         logmsg = f"Executing command: {cmd}"
         if self.passwd:
@@ -378,6 +383,13 @@ class Shell:
             cmd_lst = shlex.split(ssh_part)
             cmd_lst.append(f"/bin/sh {cmd_part}")
         return cmd_lst
+
+    def _sanitize_str(self, text, sanitize_text):
+        """Remove all occurrences of sanitize_text from text"""
+        if not sanitize_text:
+            return text
+        replace_str = "*" * 6
+        return re.sub(r"\b" + re.escape(sanitize_text) + r"\b", replace_str, text)
 
     def _run_cmd(self, cmd, key_accept=False, passwd_retries=3):
         """
@@ -410,15 +422,11 @@ class Shell:
             while term.has_unread_data:
                 stdout, stderr = term.recv()
                 if stdout:
-                    if self.passwd:
-                        stdout = stdout.replace(self.passwd, ("*" * 6))
                     ret_stdout += stdout
                     buff = old_stdout + stdout
                 else:
                     buff = stdout
                 if stderr:
-                    if self.passwd:
-                        stderr = stderr.replace(self.passwd, ("*" * 6))
                     ret_stderr += stderr
                 if buff and RSTR_RE.search(buff):
                     # We're getting results back, don't try to send passwords
@@ -451,7 +459,7 @@ class Shell:
                         ret_stdout = (
                             "The host key needs to be accepted, to "
                             "auto accept run salt-ssh with the -i "
-                            "flag:\n{}".format(stdout)
+                            f"flag:\n{self._sanitize_str(stdout, self.passwd)}"
                         )
                         return ret_stdout, "", 254
                 elif buff and SUDO_PROMPT_RE.search(buff):
@@ -484,4 +492,6 @@ class Shell:
                     "VT reported both exitstatus and signalstatus as None. "
                     "This is likely a bug."
                 )
+        ret_stdout = self._sanitize_str(ret_stdout, self.passwd)
+        ret_stderr = self._sanitize_str(ret_stderr, self.passwd)
         return ret_stdout, ret_stderr, ret_status
