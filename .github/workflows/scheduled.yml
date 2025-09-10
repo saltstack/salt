@@ -451,7 +451,7 @@ jobs:
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.20.5"
+      relenv-version: "0.20.6"
       python-version: "3.10.18"
       ci-python-version: "3.11"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
@@ -468,7 +468,7 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.20.5"
+      relenv-version: "0.20.6"
       python-version: "3.10.18"
       ci-python-version: "3.11"
       source: "onedir"
@@ -485,7 +485,7 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.20.5"
+      relenv-version: "0.20.6"
       python-version: "3.10.18"
       ci-python-version: "3.11"
       source: "src"
