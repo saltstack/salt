@@ -66,7 +66,7 @@ def test_exitcode(cmd, shell, exitcode_script):
     "command, expected",
     [
         (["foo", "bar"], "a: foo, b: bar"),
-        (["foo foo", "bar bar"], "a: foo foo, b: bar bar"),
+        (['"foo foo"', '"bar bar"'], "a: foo foo, b: bar bar"),
     ],
 )
 def test_echo(cmd, shell, echo_script, command, expected):
@@ -84,7 +84,7 @@ def test_echo(cmd, shell, echo_script, command, expected):
     "command, expected",
     [
         (["foo", "bar"], "a: foo, b: bar"),
-        (["foo foo", "bar bar"], "a: foo foo, b: bar bar"),
+        (['"foo foo"', '"bar bar"'], "a: foo foo, b: bar bar"),
     ],
 )
 def test_echo_runas(cmd, shell, account, echo_script, command, expected):

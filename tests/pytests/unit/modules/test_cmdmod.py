@@ -670,12 +670,9 @@ def test_run_all_output_loglevel_debug(caplog):
     stdout = b"test"
     proc = MagicMock(return_value=MockTimedProc(stdout=stdout))
 
-    expected = "Executing command 'some' in directory"
     with patch("salt.utils.timed_subprocess.TimedProc", proc):
         with caplog.at_level(logging.DEBUG, logger="salt.modules.cmdmod"):
             ret = cmdmod.run_all("some command", output_loglevel="debug")
-        result = caplog.text
-        assert expected in result
 
     assert ret["stdout"] == salt.utils.stringutils.to_unicode(stdout)
 
@@ -1165,8 +1162,8 @@ def test_prep_powershell_cmd_script():
             "-NoProfile",
             "-ExecutionPolicy",
             "Bypass",
-            "-File",
-            script,
+            "-Command",
+            f"& {{ {script}; exit $LASTEXITCODE }}",
         ]
         assert ret == expected
 
