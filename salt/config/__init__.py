@@ -78,7 +78,7 @@ elif salt.utils.platform.is_darwin():
 else:
     _DFLT_IPC_MODE = "ipc"
     _DFLT_FQDNS_GRAINS = False
-    _MASTER_TRIES = 1
+    _MASTER_TRIES = -1
     _MASTER_USER = salt.utils.user.get_user()
 
 
@@ -1297,7 +1297,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "username": None,
         "password": None,
         "zmq_filtering": False,
-        "zmq_monitor": False,
+        "zmq_monitor": True,
         "cache_sreqs": True,
         "cmd_safe": True,
         "sudo_user": "",
