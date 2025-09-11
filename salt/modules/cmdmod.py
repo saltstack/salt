@@ -308,7 +308,7 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
         # We need to append $LASTEXITCODE here to return the actual exit code
         # from the script. Otherwise, it will always return 1 on any non-zero
         # exit code failure. Issue: #60884
-        new_cmd.append(f'& {{ {cmd.strip()}; exit $LASTEXITCODE }}')
+        new_cmd.append(f"& {{ {cmd.strip()}; exit $LASTEXITCODE }}")
     elif encoded_cmd:
         new_cmd.extend(["-EncodedCommand", cmd])
     else:
@@ -450,8 +450,7 @@ def _run(
         # Prepare the command to be executed
         win_shell_lower = win_shell.lower()
         if any(
-            win_shell_lower.endswith(word)
-            for word in ["powershell.exe", "pwsh.exe"]
+            win_shell_lower.endswith(word) for word in ["powershell.exe", "pwsh.exe"]
         ):
             cmd = _prep_powershell_cmd(win_shell, cmd, encoded_cmd)
         elif any(win_shell_lower.endswith(word) for word in ["cmd.exe"]):

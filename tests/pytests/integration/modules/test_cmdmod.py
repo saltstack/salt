@@ -49,12 +49,16 @@ def test_avoid_injecting_shell_code_as_root(
     """
     cmd = "echo $(id -u)"
 
-    ret = salt_call_cli.run("cmd.run_stdout", cmd)
+    ret = salt_call_cli.run("cmd.run_stdout", cmd, python_shell=True)
     root_id = ret.json
-    ret = salt_call_cli.run("cmd.run_stdout", cmd, runas=running_username)
+    ret = salt_call_cli.run(
+        "cmd.run_stdout", cmd, runas=running_username, python_shell=True
+    )
     runas_root_id = ret.json
 
-    ret = salt_call_cli.run("cmd.run_stdout", cmd, runas=non_root_account.username)
+    ret = salt_call_cli.run(
+        "cmd.run_stdout", cmd, runas=non_root_account.username, python_shell=True
+    )
     user_id = ret.json
 
     assert user_id != root_id
@@ -113,6 +117,8 @@ def test_hide_output(salt_call_cli):
     assert ret.data["stderr"] == ""
 
     # cmd.run_all (command should have produced stderr)
-    ret = salt_call_cli.run("cmd.run_all", error_command, hide_output=True)
+    ret = salt_call_cli.run(
+        "cmd.run_all", error_command, hide_output=True, python_shell=True
+    )
     assert ret.data["stdout"] == ""
     assert ret.data["stderr"] == ""

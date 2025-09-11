@@ -7,6 +7,7 @@ Much of what is here was adapted from the following:
 
     https://stackoverflow.com/a/43233332
     http://stackoverflow.com/questions/29566330
+
 """
 
 import collections
@@ -1361,6 +1362,6 @@ def prepend_cmd(win_shell, cmd):
         args = subprocess.list2cmdline(cmd)
     else:
         args = cmd
-    new_cmd = f'{win_shell} /c {args}'
+    new_cmd = f"{win_shell} /c {args}"
 
     return new_cmd
