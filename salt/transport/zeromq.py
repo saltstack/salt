@@ -626,9 +626,13 @@ class AsyncReqMessageClient:
                 )
             except _TimeoutError:
                 try:
-                    ready = yield socket.poll(
-                        datetime.timedelta(milliseconds=1), zmq.POLLOUT
-                    )
+                    # For some reason yeilding here doesn't work becaues the
+                    # future always has a result?
+                    poll_future = socket.poll(0, zmq.POLLOUT)
+                    poll_future.result()
+                except _TimeoutError:
+                    # This is what we expect if the socket is still alive
+                    pass
                 except zmq.eventloop.future.CancelledError:
                     log.trace("Loop closed while polling send socket.")
                     # The ioloop was closed before polling finished.
@@ -662,11 +666,11 @@ class AsyncReqMessageClient:
                     send_recv_running = False
                     continue
 
+            received = False
             while True:
                 try:
-                    ready = yield socket.poll(
-                        datetime.timedelta(milliseconds=300), zmq.POLLIN
-                    )
+                    # Time is in milliseconds.
+                    ready = yield socket.poll(300, zmq.POLLIN)
                 except zmq.eventloop.future.CancelledError:
                     log.trace("loop closed while polling recv.")
                     # The ioloop was closed before polling finished.
@@ -675,15 +679,16 @@ class AsyncReqMessageClient:
                 except zmq.ZMQError:
                     log.trace("Recieve socket closed while polling")
                     send_recv_running = False
+                    break
 
                 if ready:
                     try:
                         recv = yield socket.recv()
+                        received = True
                     except zmq.eventloop.future.CancelledError:
                         log.trace("Loop closed while receiving.")
                         # The ioloop was closed before polling finished.
                         send_recv_running = False
-                        break
                     break
                 elif future.done():
                     break
@@ -695,7 +700,7 @@ class AsyncReqMessageClient:
                 self.close()
                 self.connect()
                 send_recv_running = False
-            elif recv:
+            elif received:
                 data = salt.payload.loads(recv)
                 future.set_result(data)
 
