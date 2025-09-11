@@ -615,7 +615,7 @@ class AsyncReqMessageClient:
         request timedout and we give up.
         """
         send_recv_running = True
-        # Hold on to the socket so we'll still have a referance to it after the
+        # Hold on to the socket so we'll still have a reference to it after the
         # close method is called. This allows us to fail gracefully once it's
         # been closed.
         socket = self.socket
@@ -626,7 +626,7 @@ class AsyncReqMessageClient:
                 )
             except _TimeoutError:
                 try:
-                    # For some reason yeilding here doesn't work becaues the
+                    # For some reason yielding here doesn't work becaues the
                     # future always has a result?
                     poll_future = socket.poll(0, zmq.POLLOUT)
                     poll_future.result()
