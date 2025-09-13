@@ -24,6 +24,17 @@ booleans can be set.
     execution module is available.
 """
 
+from __future__ import annotations
+
+from collections.abc import Iterable
+from typing import Any
+
+import salt.utils.data
+import salt.utils.state
+from salt.modules.selinux import SeBool
+
+LowChunk = dict[str, Any]
+
 
 def __virtual__():
     """
@@ -121,56 +132,152 @@ def mode(name):
     return ret
 
 
-def boolean(name, value, persist=False):
+def boolean(
+    name: str,
+    value: SeBool | None = None,
+    booleans: Iterable[str | dict[str, SeBool]] | dict[str, SeBool] | None = None,
+    persist=False,
+):
     """
     Set up an SELinux boolean
 
     name
-        The name of the boolean to set
+        The name of the boolean to set.
+        Note that this parameter is ignored if either "booleans" is passed.
 
     value
         The value to set on the boolean
+        You can install a different value for each boolean with the ``booleans``
+        argument by including the version after the boolean name:
+
+        .. code-block:: yaml
+
+            "my selinux booleans":
+              selinux.boolean:
+                - value: true
+                - booleans:
+                  - foo
+                  - bar
+                  - baz: false
+
+    booleans
+        A list of boolean to set. All booleans
+        listed under ``booleans`` will be installed via a single command.
+
+        .. code-block:: yaml
+
+            mybooleans:
+              selinux.boolean:
+                - value: true
+                - booleans:
+                  - foo
+                  - bar
+                  - baz
+
+        value can be specified
+        in the ``booleans`` argument. For example:
+
+        .. code-block:: yaml
+
+            mybooleans:
+              selinux.boolean:
+                - value: true
+                - booleans:
+                  - foo
+                  - bar: false
+                  - baz
+
+        .. code-block:: yaml
+
+            mybooleans:
+              selinux.boolean:
+                - booleans:
+                    foo: true
+                    bar: true
+                    baz: false
 
     persist
         Defaults to False, set persist to true to make the boolean apply on a
         reboot
     """
-    ret = {"name": name, "result": True, "comment": "", "changes": {}}
-    bools = __salt__["selinux.list_sebool"]()
-    if name not in bools:
-        ret["comment"] = f"Boolean {name} is not available"
-        ret["result"] = False
-        return ret
-    rvalue = _refine_value(value)
-    if rvalue is None:
-        ret["comment"] = f"{value} is not a valid value for the boolean"
-        ret["result"] = False
-        return ret
-    state = bools[name]["State"] == rvalue
-    default = bools[name]["Default"] == rvalue
-    if persist:
-        if state and default:
-            ret["comment"] = "Boolean is in the correct state"
-            return ret
+    desired_bools = {}
+    if not booleans:
+        desired_bools[name] = value
+    elif isinstance(booleans, dict):
+        desired_bools.update(booleans)
     else:
-        if state:
-            ret["comment"] = "Boolean is in the correct state"
+        for sebool in booleans:
+            if isinstance(sebool, dict):
+                desired_bools.update(sebool)
+            else:
+                desired_bools[sebool] = value
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
+    existing_bools = __salt__["selinux.list_sebool"]()
+    to_change = {}
+    correct = []
+    old = {}
+    for sebool_name, sebool_value in desired_bools.items():
+        if sebool_name not in existing_bools:
+            ret["comment"] = f"Boolean {sebool_name} is not available"
             return ret
-    if __opts__["test"]:
-        ret["result"] = None
-        ret["comment"] = f"Boolean {name} is set to be changed to {rvalue}"
+        rvalue = _refine_value(sebool_value)
+        if rvalue is None:
+            ret["comment"] = (
+                f"{sebool_value} is not a valid value for the boolean {sebool_name}"
+            )
+            return ret
+        state_same = existing_bools[sebool_name]["State"] == rvalue
+        default_same = existing_bools[sebool_name]["Default"] == rvalue
+        if state_same and (default_same or not persist):
+            correct.append(sebool_name)
+        else:
+            old[sebool_name] = (
+                (
+                    existing_bools[sebool_name]["State"],
+                    existing_bools[sebool_name]["Default"],
+                )
+                if persist
+                else existing_bools[sebool_name]["State"]
+            )
+            to_change[sebool_name] = rvalue
+
+    comments = []
+    if correct:
+        comments.append(
+            "The following booleans were in the correct state: "
+            + ", ".join(sorted(correct))
+        )
+    if not to_change:
+        ret["comment"] = "\n".join(comments)
+        ret["result"] = True
         return ret
 
-    ret["result"] = __salt__["selinux.setsebool"](name, rvalue, persist)
-    if ret["result"]:
-        ret["comment"] = f"Boolean {name} has been set to {rvalue}"
-        ret["changes"].update({"State": {"old": bools[name]["State"], "new": rvalue}})
-        if persist and not default:
-            ret["changes"].update(
-                {"Default": {"old": bools[name]["Default"], "new": rvalue}}
-            )
+    if persist:
+        new = {key: (value, value) for key, value in to_change.items()}
+    else:
+        new = to_change
+    diffs = salt.utils.data.compare_dicts(old, new)
+    if __opts__.get("test"):
+        comments.append(
+            "The following booleans would be changed: "
+            + ", ".join(sorted(to_change.keys()))
+        )
+        ret["comment"] = "\n".join(comments)
+        ret["changes"] = diffs
+        ret["result"] = None
         return ret
-    ret["comment"] = f"Failed to set the boolean {name} to {rvalue}"
+
+    mod_ret = __salt__["selinux.setsebools"](to_change, persist)
+    if mod_ret:
+        comments.append(
+            "The following booleans have been changed: "
+            + ", ".join(sorted(to_change.keys()))
+        )
+        ret["comment"] = "\n".join(comments)
+        ret["changes"] = diffs
+        ret["result"] = True
+        return ret
+    ret["comment"] = f"Failed to set the following booleans: {desired_bools}"
     return ret
 
 
@@ -227,9 +334,9 @@ def module(name, module_state="Enabled", version="any", **opts):
         installed_version = modules[name]["Version"]
         if not installed_version == version:
             ret["comment"] = (
-                "Module version is {} and does not match "
-                "the desired version of {} or you are "
-                "using semodule >= 2.4".format(installed_version, version)
+                f"Module version is {installed_version} and does not match "
+                f"the desired version of {version} or you are "
+                "using semodule >= 2.4"
             )
             ret["result"] = False
             return ret
@@ -607,3 +714,61 @@ def port_policy_absent(name, sel_type=None, protocol=None, port=None):
             )
             ret["changes"].update({"old": old_state, "new": new_state})
     return ret
+
+
+def mod_aggregate(low: LowChunk, chunks: Iterable[LowChunk], running: dict):
+    """
+    The mod_aggregate function which looks up all selinux boolean in the available
+    low chunks and merges them into a single boolean ref in the present low data
+    """
+    agg_enabled = [
+        "boolean",
+    ]
+    if low.get("fun") not in agg_enabled:
+        return low
+
+    booleans = {}
+    for chunk in chunks:
+        tag = salt.utils.state.gen_tag(chunk)
+        if tag in running:
+            # Already ran the boolean state, skip aggregation
+            continue
+        if chunk.get("state") == "selinux":
+            if "__agg__" in chunk:
+                continue
+            # Check for the same function
+            if chunk.get("fun") != low.get("fun"):
+                continue
+            # Check for the persist value
+            if chunk.get("persist") != low.get("persist"):
+                continue
+            if "booleans" in chunk:
+                _combine_booleans(chunk.get("value"), booleans, chunk["booleans"])
+                chunk["__agg__"] = True
+            elif "name" in chunk:
+                booleans[chunk["name"]] = chunk.get("value")
+                chunk["__agg__"] = True
+    if booleans:
+        low_booleans = {}
+        if "booleans" in low:
+            _combine_booleans(low.get("value"), low_booleans, low["booleans"])
+        else:
+            low_booleans[low["name"]] = low.get("value")
+        low_booleans.update(booleans)
+        low["booleans"] = low_booleans
+    return low
+
+
+def _combine_booleans(
+    value: SeBool | None,
+    bools_dict: dict[str, SeBool],
+    additional_bools: dict[str, SeBool] | list[str | dict[str, SeBool]],
+):
+    if isinstance(additional_bools, dict):
+        bools_dict.update(additional_bools)
+        return
+    for item in additional_bools:
+        if isinstance(item, dict):
+            bools_dict.update(item)
+        elif value is not None:
+            bools_dict[item] = value
