@@ -3660,7 +3660,7 @@ def mod_aggregate(low, chunks, running):
         # the URI for sources
         low_pkgs_list = [
             name if value is None else {name: value}
-            for name, values in pkgs.items()
+            for name, values in low_pkgs.items()
             for value in values
         ]
         low[pkg_type] = low_pkgs_list
