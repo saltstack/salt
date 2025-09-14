@@ -237,12 +237,16 @@ def is_aarch64():
 
 def spawning_platform():
     """
-    Returns True if multiprocessing.get_start_method(allow_none=False) returns "spawn"
+    Returns True if multiprocessing.get_start_method(allow_none=False) != "fork"
+    ("spawn" or "forkserver")
 
     This is the default for Windows Python >= 3.4 and macOS on Python >= 3.8.
     Salt, however, will force macOS to spawning by default on all python versions
+    Starting with Python 3.14, Linux also defaults to not "fork", but it uses
+    (new) "forkserver" instead of "spawn". Functionally, it's very similar as
+    far as Salt is concerned (process state is not inherited).
     """
-    return multiprocessing.get_start_method(allow_none=False) == "spawn"
+    return multiprocessing.get_start_method(allow_none=False) != "fork"
 
 
 def get_machine_identifier():
