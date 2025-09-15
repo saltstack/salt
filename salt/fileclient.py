@@ -744,7 +744,7 @@ class Client:
                 # Check the status line of the HTTP request
                 if write_body[0] is None:
                     try:
-                        hdr = parse_response_start_line(hdr)
+                        hdr = parse_response_start_line(hdr.strip())
                     except HTTPInputError:
                         # Not the first line, do nothing
                         return
