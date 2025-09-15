@@ -357,3 +357,45 @@ async def test_request_client_recv_loop_closed(
             finally:
                 request_client.close()
                 serve_socket.close()
+                ctx.term()
+
+
+async def test_request_client_recv_socket_closed(
+    io_loop, request_client, minion_opts, port, caplog
+):
+    minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
+    ctx = zmq.Context()
+    serve_socket = ctx.socket(zmq.REP)
+    serve_socket.bind(minion_opts["master_uri"])
+    stream = zmq.eventloop.zmqstream.ZMQStream(serve_socket, io_loop=io_loop)
+
+    @salt.ext.tornado.gen.coroutine
+    def req_handler(stream, msg):
+        stream.send(msg[0])
+
+    stream.on_recv_stream(req_handler)
+
+    request_client.connect()
+
+    socket = request_client.message_client.socket
+
+    @salt.ext.tornado.gen.coroutine
+    def recv(*args, **kwargs):
+        """
+        Mock this error because it is incredibly hard to time this.
+        """
+        raise zmq.ZMQError()
+
+    socket.recv = recv
+
+    with caplog.at_level(logging.TRACE):
+        with pytest.raises(zmq.ZMQError):
+            try:
+                await request_client.send("meh")
+                await salt.ext.tornado.gen.sleep(0.3)
+                assert "Receive socket closed while receiving." in caplog.messages
+                assert f"Send and receive coroutine ending {socket}" in caplog.messages
+            finally:
+                request_client.close()
+                serve_socket.close()
+                ctx.term()
