@@ -657,20 +657,17 @@ class AsyncReqMessageClient:
                     zmq.ENOTSOCK,
                     zmq.ETERM,
                     zmq.error.EINTR,
-                ]:  # Socket closed.
+                ]:
                     log.trace("Send socket closed while sending.")
                     send_recv_running = False
                     future.set_exception(exc)
-                    # continue
                 elif exc.errno == zmq.EFSM:
                     log.error("Socket was found in invalid state.")
                     send_recv_running = False
                     future.set_exception(exc)
-                    # break
                 else:
                     log.error("Unhandled Zeromq error durring send/receive: %s", exc)
                     future.set_exception(exc)
-                    # break
 
             if future.done():
                 if isinstance(future.exception, SaltReqTimeoutError):
@@ -694,12 +691,10 @@ class AsyncReqMessageClient:
                     log.trace("Loop closed while polling receive socket.")
                     send_recv_running = False
                     future.set_exception(exc)
-                    # break
                 except zmq.ZMQError as exc:
                     log.trace("Recieve socket closed while polling.")
                     send_recv_running = False
                     future.set_exception(exc)
-                    # break
 
                 if ready:
                     try:
@@ -707,6 +702,10 @@ class AsyncReqMessageClient:
                         received = True
                     except zmq.eventloop.future.CancelledError as exc:
                         log.trace("Loop closed while receiving.")
+                        send_recv_running = False
+                        future.set_exception(exc)
+                    except zmq.ZMQError as exc:
+                        log.trace("Receive socket closed while receiving.")
                         send_recv_running = False
                         future.set_exception(exc)
                     break
