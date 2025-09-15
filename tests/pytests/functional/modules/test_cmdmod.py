@@ -603,8 +603,8 @@ def test_windows_env_handling(cmdmod):
 @pytest.mark.parametrize(
     "args",
     [
-        f'-SecureString (ConvertTo-SecureString -String "i like cheese" -AsPlainText -Force) -ErrorAction Stop',
-        f"-SecureString (ConvertTo-SecureString -String 'i like cheese' -AsPlainText -Force) -ErrorAction Stop",
+        '-SecureString (ConvertTo-SecureString -String "i like cheese" -AsPlainText -Force) -ErrorAction Stop',
+        "-SecureString (ConvertTo-SecureString -String 'i like cheese' -AsPlainText -Force) -ErrorAction Stop",
     ],
 )
 def test_windows_powershell_script_args(cmdmod, issue_56195_test_ps1, powershell, args):

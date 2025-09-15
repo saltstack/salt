@@ -14,9 +14,9 @@ pytestmark = [
 @pytest.mark.parametrize(
     "command, expected",
     [
-        ("whoami", 'cmd.exe /c whoami'),
-        ("cmd /c hostname", 'cmd.exe /c cmd /c hostname'),
-        ("echo foo", 'cmd.exe /c echo foo'),
+        ("whoami", "cmd.exe /c whoami"),
+        ("cmd /c hostname", "cmd.exe /c cmd /c hostname"),
+        ("echo foo", "cmd.exe /c echo foo"),
         ('cmd /c "echo foo"', 'cmd.exe /c cmd /c "echo foo"'),
         ("icacls 'C:\\Program Files'", "cmd.exe /c icacls 'C:\\Program Files'"),
         (
