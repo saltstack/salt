@@ -109,8 +109,13 @@ def test_run(cmdmod, grains):
 
     if salt.utils.platform.is_windows():
         assert cmdmod.run("echo %ComSpec%")
-        assert cmdmod.run("echo %ComSpec%", shell=shell, python_shell=True).rstrip() == shell
-        assert cmdmod.run("dir | findstr Windows", cwd="\\", python_shell=True).endswith("Windows")
+        assert (
+            cmdmod.run("echo %ComSpec%", shell=shell, python_shell=True).rstrip()
+            == shell
+        )
+        assert cmdmod.run(
+            "dir | findstr Windows", cwd="\\", python_shell=True
+        ).endswith("Windows")
         assert (
             cmdmod.run(
                 'for /f "tokens=1" %a in ("{{grains.id}}") do @echo %a',
@@ -119,11 +124,21 @@ def test_run(cmdmod, grains):
             )
             == "func-tests-minion-opts"
         )
-        assert cmdmod.run("findstr f", stdin="one\ntwo\nthree\nfour\nfive\n") == "four\nfive"
-        assert cmdmod.run("powershell -Command \"'a=b' -replace '=', ':'\"", python_shell=True) == "a:b"
+        assert (
+            cmdmod.run("findstr f", stdin="one\ntwo\nthree\nfour\nfive\n")
+            == "four\nfive"
+        )
+        assert (
+            cmdmod.run(
+                "powershell -Command \"'a=b' -replace '=', ':'\"", python_shell=True
+            )
+            == "a:b"
+        )
     else:
         assert cmdmod.run("echo $SHELL")
-        assert cmdmod.run("echo $SHELL", shell=shell, python_shell=True).rstrip() == shell
+        assert (
+            cmdmod.run("echo $SHELL", shell=shell, python_shell=True).rstrip() == shell
+        )
         assert cmdmod.run("ls / | grep etc", python_shell=True) == "etc"
         assert (
             cmdmod.run(
@@ -133,7 +148,9 @@ def test_run(cmdmod, grains):
             )
             == "func-tests-minion-opts"
         )
-        assert cmdmod.run("grep f", stdin="one\ntwo\nthree\nfour\nfive\n") == "four\nfive"
+        assert (
+            cmdmod.run("grep f", stdin="one\ntwo\nthree\nfour\nfive\n") == "four\nfive"
+        )
         assert cmdmod.run('echo "a=b" | sed -e s/=/:/g', python_shell=True) == "a:b"
 
 
@@ -142,7 +159,7 @@ def test_stdout(cmdmod):
     """
     cmd.run_stdout
     """
-    assert cmdmod.run_stdout('echo "cheese"').rstrip().strip("\"") == "cheese"
+    assert cmdmod.run_stdout('echo "cheese"').rstrip().strip('"') == "cheese"
 
 
 @pytest.mark.slow_test
@@ -162,7 +179,10 @@ def test_stderr(cmdmod):
             'echo "cheese" 1>&2',
             shell=shell,
             python_shell=True,
-        ).rstrip().strip("\"") == "cheese"
+        )
+        .rstrip()
+        .strip('"')
+        == "cheese"
     )
 
 
@@ -191,7 +211,7 @@ def test_run_all(cmdmod):
     assert isinstance(ret.get("retcode"), int)
     assert isinstance(ret.get("stdout"), str)
     assert isinstance(ret.get("stderr"), str)
-    assert ret.get("stderr").rstrip().strip("\"") == "cheese"
+    assert ret.get("stderr").rstrip().strip('"') == "cheese"
 
 
 @pytest.mark.slow_test
@@ -580,15 +600,18 @@ def test_windows_env_handling(cmdmod):
 
 @pytest.mark.slow_test
 @pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
-def test_windows_powershell_script_args(cmdmod, issue_56195_test_ps1, powershell):
+@pytest.mark.parametrize(
+    "args",
+    [
+        f'-SecureString (ConvertTo-SecureString -String "i like cheese" -AsPlainText -Force) -ErrorAction Stop',
+        f"-SecureString (ConvertTo-SecureString -String 'i like cheese' -AsPlainText -Force) -ErrorAction Stop",
+    ],
+)
+def test_windows_powershell_script_args(cmdmod, issue_56195_test_ps1, powershell, args):
     """
     Ensure that powershell processes inline script in args
     """
-    val = "i like cheese"
-    args = (
-        f'-SecureString (ConvertTo-SecureString -String "{val}" -AsPlainText -Force)'
-        " -ErrorAction Stop"
-    )
+    expected = "i like cheese"
     script = "salt://issue_56195_test.ps1"
     ret = cmdmod.script(script, args=args, shell=powershell, saltenv="base")
-    assert ret["stdout"] == val
+    assert ret["stdout"] == expected

@@ -304,11 +304,23 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
         # See GitHub issue #56195
         new_cmd.append("-Command")
         if isinstance(cmd, list):
-            cmd = " ".join(cmd)
+            quoted_cmd = []
+            for item in cmd:
+                if item.startswith('"') and item.endswith('"'):
+                    item = item.strip('"')
+                if "'" in item:
+                    item = item.replace("'", "\\'")
+                if " " in item:
+                    item = f"'{item}'"
+                quoted_cmd.append(item)
+
+            cmd = " ".join(quoted_cmd)
+
         # We need to append $LASTEXITCODE here to return the actual exit code
         # from the script. Otherwise, it will always return 1 on any non-zero
         # exit code failure. Issue: #60884
-        new_cmd.append(f'& {{ {cmd.strip()}; exit $LASTEXITCODE }}')
+        new_cmd.append(f'"& {{ {cmd.strip()} }}; exit $LASTEXITCODE"')
+        new_cmd = " ".join(new_cmd)
     elif encoded_cmd:
         new_cmd.extend(["-EncodedCommand", cmd])
     else:
@@ -450,8 +462,7 @@ def _run(
         # Prepare the command to be executed
         win_shell_lower = win_shell.lower()
         if any(
-            win_shell_lower.endswith(word)
-            for word in ["powershell.exe", "pwsh.exe"]
+            win_shell_lower.endswith(word) for word in ["powershell.exe", "pwsh.exe"]
         ):
             cmd = _prep_powershell_cmd(win_shell, cmd, encoded_cmd)
         elif any(win_shell_lower.endswith(word) for word in ["cmd.exe"]):
@@ -3120,7 +3131,16 @@ def script(
     if isinstance(args, (list, tuple)):
         new_cmd = [path, *args] if args else [path]
     else:
-        new_cmd = [path, *(str(args).split())] if args else [path]
+        new_cmd = (
+            [
+                path,
+                *salt.utils.args.shlex_split(
+                    args, posix=salt.utils.platform.is_windows()
+                ),
+            ]
+            if args
+            else [path]
+        )
 
     ret = {}
     try:
