@@ -1163,9 +1163,9 @@ def test_prep_powershell_cmd_script():
             "-ExecutionPolicy",
             "Bypass",
             "-Command",
-            f"& {{ {script}; exit $LASTEXITCODE }}",
+            f'"& {{ {script}; exit $LASTEXITCODE }}"',
         ]
-        assert ret == expected
+        assert ret == " ".join(expected)
 
 
 @pytest.mark.parametrize(
