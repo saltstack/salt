@@ -22,7 +22,7 @@ def pkg(modules):
 
 @pytest.fixture
 def pkg_1_name(pkg):
-    pkg_name = "algol68g"
+    pkg_name = "htop"
     try:
         yield pkg_name
     finally:

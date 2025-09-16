@@ -32,6 +32,8 @@ log = logging.getLogger(__name__)
 def ansible_inventory_directory(tmp_path_factory, grains):
     if grains["os_family"] != "RedHat" or grains["os"] == "VMware Photon OS":
         pytest.skip("Currently, the test targets the RedHat OS familly only.")
+    if grains["os"] == "Rocky" and grains["osmajorrelease"] == 8:
+        pytest.skip("ansible-core doesn't support dnf on Rocky Linux 8")
     tmp_dir = tmp_path_factory.mktemp("ansible")
     try:
         yield tmp_dir
@@ -73,12 +75,26 @@ def test_ansible_playbook(salt_call_cli, ansible_inventory, tmp_path):
     ---
     - hosts: all
       tasks:
-      - name: remove postfix
-        yum:
+      - name: remove postfix dnf
+        ansible.builtin.dnf:
           name: postfix
           state: absent
         become: true
-        become_user: root
+        when: ansible_pkg_mgr == 'dnf'
+
+      - name: remove postfix yum
+        ansible.builtin.yum:
+          name: postfix
+          state: absent
+        become: true
+        when: ansible_pkg_mgr == 'yum'
+
+      - name: remove postfix apt
+        ansible.builtin.apt:
+          name: postfix
+          state: absent
+        become: true
+        when: ansible_pkg_mgr == 'apt'
     """
     )
     remove_playbook = rundir / "remove.yml"
@@ -88,12 +104,26 @@ def test_ansible_playbook(salt_call_cli, ansible_inventory, tmp_path):
     ---
     - hosts: all
       tasks:
-      - name: install postfix
-        yum:
+      - name: install postfix dnf
+        ansible.builtin.dnf:
           name: postfix
           state: present
         become: true
-        become_user: root
+        when: ansible_pkg_mgr == 'dnf'
+
+      - name: install postfix yum
+        ansible.builtin.yum:
+          name: postfix
+          state: present
+        become: true
+        when: ansible_pkg_mgr == 'yum'
+
+      - name: install postfix apt
+        ansible.builtin.apt:
+          name: postfix
+          state: present
+        become: true
+        when: ansible_pkg_mgr == 'apt'
     """
     )
     install_playbook = rundir / "install.yml"

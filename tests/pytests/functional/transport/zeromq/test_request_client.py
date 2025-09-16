@@ -3,6 +3,7 @@ import logging
 
 import pytest
 import pytestshellutils.utils.ports
+import tornado.ioloop
 import zmq
 import zmq.eventloop.zmqstream
 
@@ -113,3 +114,287 @@ async def test_request_channel_issue_65265(io_loop, request_client, minion_opts,
     finally:
         stream.close()
         ctx.term()
+
+
+@pytest.mark.xfail
+async def test_request_client_send_recv_socket_closed(
+    io_loop, request_client, minion_opts, port, caplog
+):
+    minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
+    ctx = zmq.Context()
+    socket = ctx.socket(zmq.REP)
+    socket.bind(minion_opts["master_uri"])
+    stream = zmq.eventloop.zmqstream.ZMQStream(socket, io_loop=io_loop)
+
+    request_client.connect()
+    socket = request_client.message_client.socket
+    with caplog.at_level(logging.TRACE):
+        request_client.close()
+        await asyncio.sleep(0.5)
+        assert "Send socket closed while polling." in caplog.messages
+        assert f"Send and receive coroutine ending {socket}" in caplog.messages
+
+
+@pytest.mark.xfail
+def test_request_client_send_recv_loop_closed(minion_opts, port, caplog):
+    io_loop = tornado.ioloop.IOLoop()
+    minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
+    ctx = zmq.Context()
+    serve_socket = ctx.socket(zmq.REP)
+    serve_socket.bind(minion_opts["master_uri"])
+    minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
+    request_client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
+
+    request_client.connect()
+
+    def poll(*args, **kwargs):
+        """
+        Mock this error because it is incredibly hard to time this.
+        """
+        raise zmq.eventloop.future.CancelledError()
+
+    socket = request_client.message_client.socket
+    socket.poll = poll
+
+    with caplog.at_level(logging.TRACE):
+
+        async def testit():
+            await asyncio.sleep(0.5)
+            io_loop.stop()
+
+        io_loop.add_callback(testit)
+        io_loop.start()
+
+        try:
+            assert "Loop closed while polling send socket." in caplog.messages
+            assert f"Send and receive coroutine ending {socket}" in caplog.messages
+        finally:
+            request_client.close()
+            serve_socket.close()
+
+
+@pytest.mark.xfail
+@pytest.mark.parametrize(
+    "errno", [zmq.ETERM, zmq.ENOTSOCK, zmq.error.EINTR, zmq.EFSM, 321]
+)
+async def test_request_client_send_msg_socket_closed(
+    io_loop, request_client, minion_opts, port, caplog, errno
+):
+    minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
+    ctx = zmq.Context()
+    serve_socket = ctx.socket(zmq.REP)
+    serve_socket.bind(minion_opts["master_uri"])
+
+    request_client.connect()
+
+    async def send(*args, **kwargs):
+        """
+        Mock this error because it is incredibly hard to time this.
+        """
+        raise zmq.ZMQError(errno=errno)
+
+    socket = request_client.message_client.socket
+    socket.send = send
+    with caplog.at_level(logging.TRACE):
+        with pytest.raises(zmq.ZMQError):
+            try:
+                await request_client.send("meh")
+                await asyncio.sleep(0.3)
+                if errno == zmq.EFSM:
+                    assert "Socket was found in invalid state." in caplog.messages
+                elif errno != 321:
+                    assert "Recieve socket closed while polling." in caplog.messages
+                else:
+                    assert (
+                        "Unhandled Zeromq error durring send/receive: Unknown error 321"
+                        in caplog.messages
+                    )
+                assert (
+                    "The request timed out or ended with an error before sending completed. reconnecting."
+                    in caplog.messages
+                )
+                assert f"Send and receive coroutine ending {socket}" in caplog.messages
+            finally:
+                request_client.close()
+                serve_socket.close()
+
+
+@pytest.mark.xfail
+async def test_request_client_send_msg_loop_closed(
+    io_loop, request_client, minion_opts, port, caplog
+):
+    minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
+    ctx = zmq.Context()
+    serve_socket = ctx.socket(zmq.REP)
+    serve_socket.bind(minion_opts["master_uri"])
+
+    request_client.connect()
+
+    async def send(*args, **kwargs):
+        """
+        Mock this error because it is incredibly hard to time this.
+        """
+        raise zmq.eventloop.future.CancelledError()
+
+    socket = request_client.message_client.socket
+    socket.send = send
+    with caplog.at_level(logging.TRACE):
+        with pytest.raises(zmq.eventloop.future.CancelledError):
+            try:
+                await request_client.send("meh")
+                await asyncio.sleep(0.3)
+                assert "Loop closed while sending." in caplog.messages
+                assert f"Send and receive coroutine ending {socket}" in caplog.messages
+            finally:
+                request_client.close()
+                serve_socket.close()
+
+
+@pytest.mark.xfail
+async def test_request_client_recv_poll_loop_closed(
+    io_loop, request_client, minion_opts, port, caplog
+):
+    minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
+    ctx = zmq.Context()
+    serve_socket = ctx.socket(zmq.REP)
+    serve_socket.bind(minion_opts["master_uri"])
+
+    request_client.connect()
+
+    socket = request_client.message_client.socket
+
+    def poll(*args, **kwargs):
+        """
+        Mock this error because it is incredibly hard to time this.
+        """
+        if args[1] == zmq.POLLIN:
+            raise zmq.eventloop.future.CancelledError()
+        else:
+            return socket.poll(*args, **kwargs)
+
+    socket.poll = poll
+    with caplog.at_level(logging.TRACE):
+        with pytest.raises(zmq.eventloop.future.CancelledError):
+            try:
+                await request_client.send("meh")
+                await asyncio.sleep(0.3)
+                assert "Loop closed while polling receive socket." in caplog.messages
+                assert f"Send and receive coroutine ending {socket}" in caplog.messages
+            finally:
+                request_client.close()
+                serve_socket.close()
+
+
+@pytest.mark.xfail
+async def test_request_client_recv_poll_socket_closed(
+    io_loop, request_client, minion_opts, port, caplog
+):
+    minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
+    ctx = zmq.Context()
+    serve_socket = ctx.socket(zmq.REP)
+    serve_socket.bind(minion_opts["master_uri"])
+
+    request_client.connect()
+
+    socket = request_client.message_client.socket
+
+    def poll(*args, **kwargs):
+        """
+        Mock this error because it is incredibly hard to time this.
+        """
+        if args[1] == zmq.POLLIN:
+            raise zmq.ZMQError()
+        else:
+            return socket.poll(*args, **kwargs)
+
+    socket.poll = poll
+    with caplog.at_level(logging.TRACE):
+        with pytest.raises(zmq.ZMQError):
+            try:
+                await request_client.send("meh")
+                await asyncio.sleep(0.3)
+                assert "Recieve socket closed while polling." in caplog.messages
+                assert f"Send and receive coroutine ending {socket}" in caplog.messages
+            finally:
+                request_client.close()
+                serve_socket.close()
+
+
+@pytest.mark.xfail
+async def test_request_client_recv_loop_closed(
+    io_loop, request_client, minion_opts, port, caplog
+):
+    minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
+    ctx = zmq.Context()
+    serve_socket = ctx.socket(zmq.REP)
+    serve_socket.bind(minion_opts["master_uri"])
+    stream = zmq.eventloop.zmqstream.ZMQStream(serve_socket, io_loop=io_loop)
+
+    async def req_handler(stream, msg):
+        stream.send(msg[0])
+
+    stream.on_recv_stream(req_handler)
+
+    request_client.connect()
+
+    socket = request_client.message_client.socket
+
+    async def recv(*args, **kwargs):
+        """
+        Mock this error because it is incredibly hard to time this.
+        """
+        raise zmq.eventloop.future.CancelledError()
+
+    socket.recv = recv
+
+    with caplog.at_level(logging.TRACE):
+        with pytest.raises(zmq.eventloop.future.CancelledError):
+            try:
+                await request_client.send("meh")
+                await asyncio.sleep(0.3)
+                assert "Loop closed while receiving." in caplog.messages
+                assert f"Send and receive coroutine ending {socket}" in caplog.messages
+            finally:
+                request_client.close()
+                serve_socket.close()
+                ctx.term()
+
+
+@pytest.mark.xfail
+async def test_request_client_recv_socket_closed(
+    io_loop, request_client, minion_opts, port, caplog
+):
+    minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
+    ctx = zmq.Context()
+    serve_socket = ctx.socket(zmq.REP)
+    serve_socket.bind(minion_opts["master_uri"])
+    stream = zmq.eventloop.zmqstream.ZMQStream(serve_socket, io_loop=io_loop)
+
+    async def req_handler(stream, msg):
+        stream.send(msg[0])
+
+    stream.on_recv_stream(req_handler)
+
+    request_client.connect()
+
+    socket = request_client.message_client.socket
+
+    async def recv(*args, **kwargs):
+        """
+        Mock this error because it is incredibly hard to time this.
+        """
+        raise zmq.ZMQError()
+
+    socket.recv = recv
+
+    with caplog.at_level(logging.TRACE):
+        with pytest.raises(zmq.ZMQError):
+            try:
+                await request_client.send("meh")
+                await asyncio.sleep(0.3)
+                assert "Receive socket closed while receiving." in caplog.messages
+                assert f"Send and receive coroutine ending {socket}" in caplog.messages
+            finally:
+                request_client.close()
+                serve_socket.close()
+                ctx.term()
