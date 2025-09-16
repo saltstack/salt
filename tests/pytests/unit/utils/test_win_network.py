@@ -48,6 +48,9 @@ def mock_ip_base():
             "dns_enabled": False,
             "dns_suffix": "",
             "dynamic_dns_enabled": False,
+            "dhcp_enabled": False,
+            "forwarding_enabled": False,
+            "wins_enabled": False,
         }
     )
 
@@ -148,9 +151,11 @@ def test_get_interface_info_dot_net(
         "Ethernet": {
             "alias": "Ethernet",
             "description": "Dell GigabitEthernet",
+            "dhcp_enabled": False,
             "dns_enabled": False,
             "dns_suffix": "",
             "dynamic_dns_enabled": False,
+            "forwarding_enabled": False,
             "id": "{C5F468C0-DD5F-4C2B-939F-A411DCB5DE16}",
             "ip_addresses": [
                 {
@@ -200,6 +205,7 @@ def test_get_interface_info_dot_net(
             "receive_only": False,
             "status": "Up",
             "type": "Ethernet",
+            "wins_enabled": False,
         }
     }
 
@@ -233,14 +239,16 @@ def test_get_network_info(
     mock_wins,
 ):
     expected = {
-        "Dell GigabitEthernet": {
+        "Ethernet": {
+            "description": "Dell GigabitEthernet",
+            "dhcp_enabled": False,
             "hwaddr": "02:D5:F1:DD:31:E0",
             "inet": [
                 {
                     "address": "172.18.87.49",
                     "broadcast": "172.18.87.63",
                     "gateway": "192.168.0.1",
-                    "label": "Dell GigabitEthernet",
+                    "label": "Ethernet",
                     "netmask": "255.255.255.240",
                 }
             ],
