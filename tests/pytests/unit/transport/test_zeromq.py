@@ -10,6 +10,7 @@ import uuid
 import msgpack
 import pytest
 import tornado.gen
+import tornado.ioloop
 import zmq.eventloop.future
 
 import salt.config
@@ -512,7 +513,7 @@ async def test_zeromq_async_pub_channel_publish_port(temp_salt_master):
 
 
 def test_zeromq_async_pub_channel_filtering_decode_message_no_match(
-    temp_salt_master,
+    temp_salt_master, io_loop
 ):
     """
     test zeromq PublishClient _decode_messages when
@@ -542,18 +543,14 @@ def test_zeromq_async_pub_channel_filtering_decode_message_no_match(
         sign_pub_messages=False,
     )
     opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
-    ioloop = salt.ext.tornado.ioloop.IOLoop()
-    channel = salt.transport.zeromq.PublishClient(opts, ioloop)
-    try:
-        with channel:
-            with patch(
-                "salt.crypt.AsyncAuth.crypticle",
-                MagicMock(return_value={"tgt_type": "glob", "tgt": "*", "jid": 1}),
-            ):
-                res = channel._decode_messages(message)
-        assert res.result() is None
-    finally:
-        ioloop.close()
+    channel = salt.transport.zeromq.PublishClient(opts, io_loop, host="127.0.0.1")
+    with channel:
+        with patch(
+            "salt.crypt.AsyncAuth.crypticle",
+            MagicMock(return_value={"tgt_type": "glob", "tgt": "*", "jid": 1}),
+        ):
+            res = channel._decode_messages(message)
+    assert res is None
 
 
 def test_zeromq_async_pub_channel_filtering_decode_message(
