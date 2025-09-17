@@ -116,7 +116,6 @@ async def test_request_channel_issue_65265(io_loop, request_client, minion_opts,
         ctx.term()
 
 
-@pytest.mark.xfail
 async def test_request_client_send_recv_socket_closed(
     io_loop, request_client, minion_opts, port, caplog
 ):
@@ -126,8 +125,9 @@ async def test_request_client_send_recv_socket_closed(
     socket.bind(minion_opts["master_uri"])
     stream = zmq.eventloop.zmqstream.ZMQStream(socket, io_loop=io_loop)
 
-    request_client.connect()
-    socket = request_client.message_client.socket
+    await request_client.connect()
+
+    socket = request_client.socket
     with caplog.at_level(logging.TRACE):
         request_client.close()
         await asyncio.sleep(0.5)
@@ -145,20 +145,19 @@ def test_request_client_send_recv_loop_closed(minion_opts, port, caplog):
     minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
     request_client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
 
-    request_client.connect()
-
     def poll(*args, **kwargs):
         """
         Mock this error because it is incredibly hard to time this.
         """
         raise zmq.eventloop.future.CancelledError()
 
-    socket = request_client.message_client.socket
+    socket = request_client.socket
     socket.poll = poll
 
     with caplog.at_level(logging.TRACE):
 
         async def testit():
+            await request_client.connect()
             await asyncio.sleep(0.5)
             io_loop.stop()
 
@@ -173,7 +172,6 @@ def test_request_client_send_recv_loop_closed(minion_opts, port, caplog):
             serve_socket.close()
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize(
     "errno", [zmq.ETERM, zmq.ENOTSOCK, zmq.error.EINTR, zmq.EFSM, 321]
 )
@@ -185,7 +183,7 @@ async def test_request_client_send_msg_socket_closed(
     serve_socket = ctx.socket(zmq.REP)
     serve_socket.bind(minion_opts["master_uri"])
 
-    request_client.connect()
+    await request_client.connect()
 
     async def send(*args, **kwargs):
         """
@@ -193,7 +191,7 @@ async def test_request_client_send_msg_socket_closed(
         """
         raise zmq.ZMQError(errno=errno)
 
-    socket = request_client.message_client.socket
+    socket = request_client.socket
     socket.send = send
     with caplog.at_level(logging.TRACE):
         with pytest.raises(zmq.ZMQError):
@@ -219,7 +217,6 @@ async def test_request_client_send_msg_socket_closed(
                 serve_socket.close()
 
 
-@pytest.mark.xfail
 async def test_request_client_send_msg_loop_closed(
     io_loop, request_client, minion_opts, port, caplog
 ):
@@ -228,7 +225,7 @@ async def test_request_client_send_msg_loop_closed(
     serve_socket = ctx.socket(zmq.REP)
     serve_socket.bind(minion_opts["master_uri"])
 
-    request_client.connect()
+    await request_client.connect()
 
     async def send(*args, **kwargs):
         """
@@ -236,7 +233,7 @@ async def test_request_client_send_msg_loop_closed(
         """
         raise zmq.eventloop.future.CancelledError()
 
-    socket = request_client.message_client.socket
+    socket = request_client.socket
     socket.send = send
     with caplog.at_level(logging.TRACE):
         with pytest.raises(zmq.eventloop.future.CancelledError):
@@ -250,7 +247,6 @@ async def test_request_client_send_msg_loop_closed(
                 serve_socket.close()
 
 
-@pytest.mark.xfail
 async def test_request_client_recv_poll_loop_closed(
     io_loop, request_client, minion_opts, port, caplog
 ):
@@ -259,9 +255,9 @@ async def test_request_client_recv_poll_loop_closed(
     serve_socket = ctx.socket(zmq.REP)
     serve_socket.bind(minion_opts["master_uri"])
 
-    request_client.connect()
+    await request_client.connect()
 
-    socket = request_client.message_client.socket
+    socket = request_client.socket
 
     def poll(*args, **kwargs):
         """
@@ -285,7 +281,6 @@ async def test_request_client_recv_poll_loop_closed(
                 serve_socket.close()
 
 
-@pytest.mark.xfail
 async def test_request_client_recv_poll_socket_closed(
     io_loop, request_client, minion_opts, port, caplog
 ):
@@ -294,9 +289,9 @@ async def test_request_client_recv_poll_socket_closed(
     serve_socket = ctx.socket(zmq.REP)
     serve_socket.bind(minion_opts["master_uri"])
 
-    request_client.connect()
+    await request_client.connect()
 
-    socket = request_client.message_client.socket
+    socket = request_client.socket
 
     def poll(*args, **kwargs):
         """
@@ -320,7 +315,6 @@ async def test_request_client_recv_poll_socket_closed(
                 serve_socket.close()
 
 
-@pytest.mark.xfail
 async def test_request_client_recv_loop_closed(
     io_loop, request_client, minion_opts, port, caplog
 ):
@@ -335,9 +329,9 @@ async def test_request_client_recv_loop_closed(
 
     stream.on_recv_stream(req_handler)
 
-    request_client.connect()
+    await request_client.connect()
 
-    socket = request_client.message_client.socket
+    socket = request_client.socket
 
     async def recv(*args, **kwargs):
         """
@@ -360,7 +354,6 @@ async def test_request_client_recv_loop_closed(
                 ctx.term()
 
 
-@pytest.mark.xfail
 async def test_request_client_recv_socket_closed(
     io_loop, request_client, minion_opts, port, caplog
 ):
@@ -375,9 +368,9 @@ async def test_request_client_recv_socket_closed(
 
     stream.on_recv_stream(req_handler)
 
-    request_client.connect()
+    await request_client.connect()
 
-    socket = request_client.message_client.socket
+    socket = request_client.socket
 
     async def recv(*args, **kwargs):
         """
