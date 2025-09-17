@@ -544,21 +544,21 @@ def _define_testrun(ctx, changed_files, labels, full):
         )
     if full:
         ctx.info("Full test run chosen")
-        testrun = TestRun(type="full", skip_code_coverage=True)
+        testrun = TestRun(type="full", skip_code_coverage=False)
     elif changed_pkg_requirements_files or changed_test_requirements_files:
         ctx.info(
             "Full test run chosen because there was a change made "
             "to the requirements files."
         )
-        testrun = TestRun(type="full", skip_code_coverage=True)
+        testrun = TestRun(type="full", skip_code_coverage=False)
     elif "test:full" in labels:
         ctx.info("Full test run chosen because the label `test:full` is set.\n")
-        testrun = TestRun(type="full", skip_code_coverage=True)
+        testrun = TestRun(type="full", skip_code_coverage=False)
     else:
         testrun_changed_files_path = tools.utils.REPO_ROOT / "testrun-changed-files.txt"
         testrun = TestRun(
             type="changed",
-            skip_code_coverage=True,
+            skip_code_coverage=False,
             from_filenames=str(
                 testrun_changed_files_path.relative_to(tools.utils.REPO_ROOT)
             ),
