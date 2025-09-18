@@ -659,9 +659,9 @@ jobs:
           # from it showing in the tree command below
           sudo rm -rf artifacts/salt*
           tree -a artifacts
-          if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
-            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
-          fi
+       #   if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
+       #     mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
+       #   fi
 
       - name: Upload Code Coverage Test Run Artifacts
         if: ${{ !cancelled() && inputs.skip-code-coverage == 'false' }}
@@ -938,9 +938,9 @@ jobs:
           # from it showing in the tree command below
           rm -rf artifacts/salt*
           tree -a artifacts
-          if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
-            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
-          fi
+      #    if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
+      #      mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
+      #    fi
 
       - name: Upload Code Coverage Test Run Artifacts
         if: ${{ !cancelled() && inputs.skip-code-coverage == 'false' }}
@@ -1239,9 +1239,9 @@ jobs:
           # Delete the salt onedir, we won't need it anymore and it will prevent
           # from it showing in the tree command below
           rm -rf artifacts/salt*
-          if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
-            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
-          fi
+      #    if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
+      #      mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
+      #    fi
 
       - name: Upload Code Coverage Test Run Artifacts
         if: ${{ !cancelled() && inputs.skip-code-coverage == 'false' }}
