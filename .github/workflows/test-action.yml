@@ -352,7 +352,7 @@ jobs:
       #    fi
 
       - name: Upload Code Coverage Test Run Artifacts
-        if: ${{ !cancelled() && inputs.skip-code-coverage == 'false' }}
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         uses: actions/upload-artifact@v4
         with:
           name: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
@@ -664,7 +664,7 @@ jobs:
        #   fi
 
       - name: Upload Code Coverage Test Run Artifacts
-        if: ${{ !cancelled() && inputs.skip-code-coverage == 'false' }}
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         uses: actions/upload-artifact@v4
         with:
           name: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
@@ -943,7 +943,7 @@ jobs:
       #    fi
 
       - name: Upload Code Coverage Test Run Artifacts
-        if: ${{ !cancelled() && inputs.skip-code-coverage == 'false' }}
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         uses: actions/upload-artifact@v4
         with:
           name: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}
@@ -1244,7 +1244,7 @@ jobs:
       #    fi
 
       - name: Upload Code Coverage Test Run Artifacts
-        if: ${{ !cancelled() && inputs.skip-code-coverage == 'false' }}
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         uses: actions/upload-artifact@v4
         with:
           name: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}
