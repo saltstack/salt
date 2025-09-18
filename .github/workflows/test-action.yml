@@ -347,9 +347,9 @@ jobs:
           # from it showing in the tree command below
           sudo rm -rf artifacts/salt*
           tree -a artifacts
-          if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
-            mv artifacts/coverage/.coverage* artifacts/coverage/
-          fi
+      #    if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
+      #      mv artifacts/coverage/.coverage* artifacts/coverage/
+      #    fi
 
       - name: Upload Code Coverage Test Run Artifacts
         if: ${{ !cancelled() && inputs.skip-code-coverage == 'false' }}
