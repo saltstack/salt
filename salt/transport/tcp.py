@@ -11,7 +11,7 @@ import errno
 import logging
 import multiprocessing
 import queue
-import select
+import selectors
 import socket
 import threading
 import time
@@ -382,10 +382,13 @@ class PublishClient(salt.transport.base.PublishClient):
         if timeout == 0:
             for msg in self.unpacker:
                 return msg[b"body"]
-            try:
-                events, _, _ = select.select([self._stream.socket], [], [], 0)
-            except TimeoutError:
-                events = []
+
+            with selectors.DefaultSelector() as sel:
+                sel.register(self._stream.socket, selectors.EVENT_READ)
+                ready = sel.select(timeout=0)
+                events = [key.fileobj for key, _ in ready]
+                sel.unregister(self._stream.socket)
+
             if events:
                 while not self._closing:
                     async with self._read_in_progress:

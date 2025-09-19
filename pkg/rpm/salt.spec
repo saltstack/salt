@@ -40,7 +40,7 @@
 %define fish_dir %{_datadir}/fish/vendor_functions.d
 
 Name:    salt
-Version: 3007.7
+Version: 3007.8
 Release: 0
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
@@ -735,6 +735,25 @@ if [ $1 -ge 1 ] ; then
 fi
 
 %changelog
+* Thu Sep 18 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3007.8
+
+# Fixed
+
+- Fixed an issue with the win_network salt.util to select interfaces
+  by name instead of description. [#58138](https://github.com/saltstack/salt/issues/58138)
+- Fixes debug logging for master AES and session keys to be consistent across crypt.AsyncAuth._authenticate() and crypt.SAuth.authenticate(). Now differentiates between master key rotation and session key rotation. [#68113](https://github.com/saltstack/salt/issues/68113)
+- Fix filedescriptor out of range problem in tcp.py by replacing select.sect() with the higher-level selectors API [#68136](https://github.com/saltstack/salt/issues/68136)
+- Fixed loader handling of already loaded modules, thereby fixed an interaction between the `x509_v2` state module and any following state having a `prereq` on a `file` state [#68281](https://github.com/saltstack/salt/issues/68281)
+- Fix potential race conditions an memory usage in zeromq request client
+  tranport. [#68297](https://github.com/saltstack/salt/issues/68297)
+- Revert change to store cargo home as a temporary directory [#68311](https://github.com/saltstack/salt/issues/68311)
+- Update openssl FIPS provider to 3.1.2 (certified until 2030) [#68317](https://github.com/saltstack/salt/issues/68317)
+
+# Added
+
+- Added the ability to pass the context to pyobjects renderer [#68224](https://github.com/saltstack/salt/issues/68224)
+
+
 * Thu Aug 28 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3007.7
 
 # Changed

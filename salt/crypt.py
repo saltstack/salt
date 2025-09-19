@@ -928,17 +928,18 @@ class AsyncAuth:
                 self._authenticate_future.set_exception(error)
             else:
                 key = self.__key(self.opts)
+                new_aes, changed_aes, changed_session = False, False, False
                 if key not in AsyncAuth.creds_map:
+                    new_aes = True
                     log.debug("%s Got new master aes key.", self)
-                    AsyncAuth.creds_map[key] = creds
-                    self._creds = creds
-                    self._crypticle = Crypticle(self.opts, creds["aes"])
-                    self._session_crypticle = Crypticle(self.opts, creds["session"])
-                elif (
-                    self._creds["aes"] != creds["aes"]
-                    or self._creds["session"] != creds["session"]
-                ):
-                    log.debug("%s The master's aes key has changed.", self)
+                else:
+                    if self._creds["aes"] != creds["aes"]:
+                        changed_aes = True
+                        log.debug("%s The master's aes key has changed.", self)
+                    if self._creds["session"] != creds["session"]:
+                        changed_session = True
+                        log.debug("%s The master's session key has changed.", self)
+                if new_aes or changed_aes or changed_session:
                     AsyncAuth.creds_map[key] = creds
                     self._creds = creds
                     self._crypticle = Crypticle(self.opts, creds["aes"])
@@ -1604,16 +1605,18 @@ class SAuth(AsyncAuth):
                         )
                     continue
                 break
+            new_aes, changed_aes, changed_session = False, False, False
             if self._creds is None:
+                new_aes = True
                 log.error("%s Got new master aes key.", self)
-                self._creds = creds
-                self._crypticle = Crypticle(self.opts, creds["aes"])
-                self._session_crypticle = Crypticle(self.opts, creds["session"])
-            elif (
-                self._creds["aes"] != creds["aes"]
-                or self._creds["session"] != creds["session"]
-            ):
-                log.error("%s The master's aes key has changed.", self)
+            else:
+                if self._creds["aes"] != creds["aes"]:
+                    changed_aes = True
+                    log.debug("%s The master's aes key has changed.", self)
+                if self._creds["session"] != creds["session"]:
+                    changed_session = True
+                    log.debug("%s The master's session key has changed.", self)
+            if new_aes or changed_aes or changed_session:
                 self._creds = creds
                 self._crypticle = Crypticle(self.opts, creds["aes"])
                 self._session_crypticle = Crypticle(self.opts, creds["session"])
