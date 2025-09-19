@@ -92,7 +92,7 @@ def test_publish_to_pubserv_ipc(salt_master, salt_minion, transport):
 @pytest.mark.slow_test
 def test_issue_36469_tcp(salt_master, salt_minion, transport):
     """
-    Test sending both large and small messags to publisher using TCP
+    Test sending both large and small messages to publisher using TCP
 
     https://github.com/saltstack/salt/issues/36469
     """
