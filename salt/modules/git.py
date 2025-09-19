@@ -312,6 +312,9 @@ def _git_run(
             log.info("Attempting git authentication using identity file %s", id_file)
 
             try:
+                shell = None
+                if salt.utils.platform.is_windows():
+                    shell = "powershell.exe"
                 result = __salt__["cmd.run_all"](
                     command,
                     cwd=cwd,
@@ -319,6 +322,7 @@ def _git_run(
                     password=password,
                     env=env,
                     python_shell=False,
+                    shell=shell,
                     log_callback=salt.utils.url.redact_http_basic_auth,
                     ignore_retcode=ignore_retcode,
                     redirect_stderr=redirect_stderr,
