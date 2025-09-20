@@ -326,16 +326,6 @@
             send-notifications --git-service github --sha ${{ github.sha }}
 
 #}
-
-      - name: Merge All Code Coverage Test Run Artifacts
-        continue-on-error: true
-        uses: actions/upload-artifact/merge@v4
-        with:
-          name: all-testrun-coverage-artifacts
-          pattern: all-testrun-coverage-artifacts-*
-          separate-directories: false
-          delete-merged: true
-
       - name: Get coverage reports
         id: get-coverage-reports
         uses: actions/download-artifact@v4
