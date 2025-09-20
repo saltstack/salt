@@ -547,7 +547,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts/coverage/
-          pattern: *testrun-coverage-artifacts*
+          pattern: '*testrun-coverage-artifacts*'
           merge-multiple: true
 
       - name: Display structure of downloaded files
