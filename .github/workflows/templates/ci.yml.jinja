@@ -292,6 +292,7 @@
       PIP_INDEX_URL: https://pypi.org/simple
     needs:
       - prepare-workflow
+      - test
       <%- for need in test_salt_needs.iter(consume=False) %>
       - <{ need }>
       <%- endfor %>
