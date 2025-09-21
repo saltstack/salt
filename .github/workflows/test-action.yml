@@ -355,7 +355,7 @@ jobs:
         if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         uses: actions/upload-artifact@v4
         with:
-          name: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
+          name: coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
           path: |
             artifacts/coverage/
           include-hidden-files: true
