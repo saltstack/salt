@@ -521,6 +521,7 @@ jobs:
       PIP_INDEX_URL: https://pypi.org/simple
     needs:
       - prepare-workflow
+      - test
       - build-ci-deps
     steps:
       - uses: actions/checkout@v4
