@@ -114,7 +114,7 @@ def test_run(cmdmod, grains):
             == shell
         )
         assert cmdmod.run(
-            "dir | findstr Windows", cwd="\\", python_shell=True
+            "dir | findstr Windows", cwd=os.getenv("SystemDrive", "C:") + "\\", python_shell=True
         ).endswith("Windows")
         assert (
             cmdmod.run(
