@@ -8,6 +8,10 @@ on:
         required: true
         type: string
         description: JSON string containing information about changed files
+      ci-python-version:
+        required: true
+        type: string
+        description: The python version to run tests with
       pre-commit-version:
         required: true
         type: string
@@ -23,13 +27,15 @@ jobs:
 
     runs-on: ubuntu-22.04
 
-    container:
-      image: ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04
-
     env:
       PRE_COMMIT_COLOR: always
 
     steps:
+
+      - name: Setup Python ${{ inputs.ci-python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ inputs.ci-python-version }}"
 
       - name: Add Git Safe Directory
         run: |
@@ -42,6 +48,7 @@ jobs:
       - uses: ./.github/actions/setup-shellcheck
         with:
           cache-seed: ${{ inputs.cache-seed }}
+
       - uses: ./.github/actions/setup-pre-commit
         with:
           version: ${{ inputs.pre-commit-version }}
@@ -60,6 +67,8 @@ jobs:
           SKIP: lint-salt,lint-tests
           GH_ACTIONS_ANNOTATE: "1"
         run: |
+          which pre-commit
+          pre-commit --version
           pre-commit run --show-diff-on-failure --color=always --files ${{ join(fromJSON(inputs.changed-files)['repo_files'], ' ') }}
 
       - name: Check Docs On Deleted Files
