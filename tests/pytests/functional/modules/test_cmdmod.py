@@ -91,6 +91,7 @@ def powershell(request):
     """
     if request.param == "pwsh" and salt.utils.path.which("pwsh") is None:
         pytest.skip("Powershell 7 Not Present")
+
     return request.param
 
 
@@ -114,7 +115,9 @@ def test_run(cmdmod, grains):
             == shell
         )
         assert cmdmod.run(
-            "dir | findstr Windows", cwd=os.getenv("SystemDrive", "C:") + "\\", python_shell=True
+            "dir | findstr Windows",
+            cwd=os.getenv("SystemDrive", "C:") + "\\",
+            python_shell=True,
         ).endswith("Windows")
         assert (
             cmdmod.run(

@@ -22,7 +22,6 @@ tornado>=6.4.1
 aiohttp>=3.10.2
 urllib3>=1.26.20,<2.0.0; python_version < '3.10'
 urllib3>=2.5.0; python_version >= '3.10'
-
 jaraco.text>=4.0.0
 jaraco.functools>=4.1.0
 
