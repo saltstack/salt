@@ -111,7 +111,7 @@ def test_run(cmdmod, grains):
     if salt.utils.platform.is_windows():
         assert cmdmod.run("echo %ComSpec%")
         assert (
-            cmdmod.run("echo %ComSpec%", shell=shell, python_shell=True).rstrip()
+            cmdmod.run("echo %ComSpec%", shell=shell, python_shell=False).rstrip()
             == shell
         )
         assert cmdmod.run(
@@ -133,16 +133,16 @@ def test_run(cmdmod, grains):
         )
         assert (
             cmdmod.run(
-                "powershell -Command \"'a=b' -replace '=', ':'\"", python_shell=True
+                "powershell -Command \"'a=b' -replace '=', ':'\"", python_shell=False
             )
             == "a:b"
         )
     else:
         assert cmdmod.run("echo $SHELL")
         assert (
-            cmdmod.run("echo $SHELL", shell=shell, python_shell=True).rstrip() == shell
+            cmdmod.run("echo $SHELL", shell=shell, python_shell=False).rstrip() == shell
         )
-        assert cmdmod.run("ls / | grep etc", python_shell=True) == "etc"
+        assert cmdmod.run("ls / | grep etc", python_shell=False) == "etc"
         assert (
             cmdmod.run(
                 'echo {{grains.id}} | awk "{print $1}"',
@@ -154,7 +154,7 @@ def test_run(cmdmod, grains):
         assert (
             cmdmod.run("grep f", stdin="one\ntwo\nthree\nfour\nfive\n") == "four\nfive"
         )
-        assert cmdmod.run('echo "a=b" | sed -e s/=/:/g', python_shell=True) == "a:b"
+        assert cmdmod.run('echo "a=b" | sed -e s/=/:/g', python_shell=False) == "a:b"
 
 
 @pytest.mark.slow_test
