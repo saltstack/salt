@@ -20,6 +20,10 @@ on:
         required: true
         type: string
         description: Seed used to invalidate caches
+      full:
+        required: true
+        type: boolean
+        description: When this is true lint will run against all files
 
 jobs:
   Pre-Commit:
@@ -55,14 +59,14 @@ jobs:
           cache-seed: ${{ inputs.cache-seed }}
 
       - name: Check ALL Files On Branch
-        if:  ${{ !cancelled() && github.event_name != 'pull_request' }}
+        if:  ${{ !cancelled() && github.event_name != 'pull_request' || inputs.full }}
         env:
           SKIP: lint-salt,lint-tests,remove-import-headers,rstcheck
         run: |
           pre-commit run --show-diff-on-failure --color=always --all-files
 
       - name: Check Changed Files On PR
-        if: ${{ !cancelled() &&  github.event_name == 'pull_request' && fromJSON(inputs.changed-files)['repo'] }}
+        if: ${{ !cancelled() &&  !inputs.full && github.event_name == 'pull_request' && fromJSON(inputs.changed-files)['repo'] }}
         env:
           SKIP: lint-salt,lint-tests
           GH_ACTIONS_ANNOTATE: "1"

@@ -235,6 +235,7 @@ jobs:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
       pre-commit-version: "4.3.0"
       ci-python-version: "3.11"
+      full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
 
   lint:
     name: Lint
