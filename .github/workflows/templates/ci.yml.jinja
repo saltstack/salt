@@ -20,6 +20,7 @@
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
       pre-commit-version: "<{ pre_commit_version }>"
       ci-python-version: "<{ gh_actions_workflows_python_version }>"
+      full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
 
   <%- endif %>
 
