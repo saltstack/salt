@@ -1040,7 +1040,7 @@ def _check_directory(
 
         def _check_changes(fname):
             path = os.path.join(root, fname)
-            if path in keep:
+            if any(path in s for s in keep):
                 return {}
             else:
                 if not salt.utils.stringutils.check_include_exclude(

@@ -308,7 +308,7 @@ pyfakefs==5.3.1
     # via -r requirements/pytest.txt
 pygit2==1.13.1
     # via -r requirements/static/ci/windows.in
-pymssql==2.3.1 ; sys_platform == "win32"
+pymssql==2.3.1 ; sys_platform == "win32" and python_version < "3.13"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -r requirements/base.txt
