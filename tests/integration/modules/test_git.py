@@ -467,7 +467,7 @@ class GitModuleTest(ModuleCase):
             )
             regex_arg = "foo.(single|multi)"
             if salt.utils.platform.is_windows():
-                regex_arg = "'foo.(single|multi)'"
+                regex_arg = "foo.^(single^|multi^)"
             log.debug("Get all local keys/values using regex")
             self.assertEqual(
                 self.run_function("git.config_get_regexp", [regex_arg], cwd=self.repo),
