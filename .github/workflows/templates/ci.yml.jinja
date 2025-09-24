@@ -1,7 +1,7 @@
 <%- set gh_environment = gh_environment|default("ci") %>
 
 <%- extends 'layout.yml.jinja' %>
-<%- set pre_commit_version = "3.0.4" %>
+<%- set pre_commit_version = "4.3.0" %>
 
 
 <%- block jobs %>
@@ -19,6 +19,7 @@
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
       pre-commit-version: "<{ pre_commit_version }>"
+      ci-python-version: "<{ gh_actions_workflows_python_version }>"
 
   <%- endif %>
 
