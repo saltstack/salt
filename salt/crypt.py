@@ -235,7 +235,12 @@ class PrivateKey(BaseKey):
             password = passphrase.encode()
         else:
             password = None
-        self.key = serialization.load_pem_private_key(key_bytes, password=password)
+        try:
+            self.key = serialization.load_pem_private_key(key_bytes, password=password)
+        except ValueError:
+            raise InvalidKeyError("Encountered bad RSA private key")
+        except cryptography.exceptions.UnsupportedAlgorithm:
+            raise InvalidKeyError("Unsupported key algorithm")
 
     def encrypt(self, data):
         pem = self.key.private_bytes(
@@ -681,6 +686,19 @@ class MasterKeys(dict):
             return key
 
 
+def _auth_singleton_key(opts):
+    keypath = os.path.join(opts["pki_dir"], "minion.pem")
+    keytime = "0"
+    if os.path.exists(keypath):
+        keytime = str(os.path.getmtime(keypath))
+    return (
+        opts["pki_dir"],  # where the keys are stored
+        opts["id"],  # minion ID
+        opts["master_uri"],  # master ID
+        keytime,
+    )
+
+
 class AsyncAuth:
     """
     Set up an Async object to maintain authentication with the salt master
@@ -719,11 +737,7 @@ class AsyncAuth:
 
     @classmethod
     def __key(cls, opts, io_loop=None):
-        return (
-            opts["pki_dir"],  # where the keys are stored
-            opts["id"],  # minion ID
-            opts["master_uri"],  # master ID
-        )
+        return _auth_singleton_key(opts)
 
     # has to remain empty for singletons, since __init__ will *always* be called
     def __init__(self, opts, io_loop=None):
@@ -740,9 +754,10 @@ class AsyncAuth:
         """
         self.opts = opts
         self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
-        self.cache = salt.cache.Cache(opts, driver=self.opts["keys.cache_driver"])
+        self.cache = salt.cache.Cache(opts, driver=opts["keys.cache_driver"])
         self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
         self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
+        self._private_key = None
         if self.opts["__role"] == "syndic":
             self.mpub = "syndic_master.pub"
         else:
@@ -913,17 +928,18 @@ class AsyncAuth:
                 self._authenticate_future.set_exception(error)
             else:
                 key = self.__key(self.opts)
+                new_aes, changed_aes, changed_session = False, False, False
                 if key not in AsyncAuth.creds_map:
+                    new_aes = True
                     log.debug("%s Got new master aes key.", self)
-                    AsyncAuth.creds_map[key] = creds
-                    self._creds = creds
-                    self._crypticle = Crypticle(self.opts, creds["aes"])
-                    self._session_crypticle = Crypticle(self.opts, creds["session"])
-                elif (
-                    self._creds["aes"] != creds["aes"]
-                    or self._creds["session"] != creds["session"]
-                ):
-                    log.debug("%s The master's aes key has changed.", self)
+                else:
+                    if self._creds["aes"] != creds["aes"]:
+                        changed_aes = True
+                        log.debug("%s The master's aes key has changed.", self)
+                    if self._creds["session"] != creds["session"]:
+                        changed_session = True
+                        log.debug("%s The master's session key has changed.", self)
+                if new_aes or changed_aes or changed_session:
                     AsyncAuth.creds_map[key] = creds
                     self._creds = creds
                     self._crypticle = Crypticle(self.opts, creds["aes"])
@@ -959,7 +975,6 @@ class AsyncAuth:
         with the publication port and the shared AES key.
 
         """
-
         auth_timeout = self.opts.get("auth_timeout", None)
         if auth_timeout is not None:
             timeout = auth_timeout
@@ -1118,24 +1133,30 @@ class AsyncAuth:
         Return keypair object for the minion.
 
         :rtype: Crypto.PublicKey.RSA._RSAobj
-        :return: The RSA keypair
+        :return: PrivateKey of the RSA Private Key Pair
         """
-        # Make sure all key parent directories are accessible
-        user = self.opts.get("user", "root")
-        salt.utils.verify.check_path_traversal(self.opts["pki_dir"], user)
+        if self._private_key is None:
+            # Make sure all key parent directories are accessible
+            user = self.opts.get("user", "root")
+            salt.utils.verify.check_path_traversal(self.opts["pki_dir"], user)
 
-        if not os.path.exists(self.rsa_path):
-            log.info("Generating keys: %s", self.opts["pki_dir"])
-            (priv, pub) = gen_keys(self.opts["keysize"])
+            if not os.path.exists(self.rsa_path):
+                log.info("Generating keys: %s", self.opts["pki_dir"])
+                (priv, pub) = gen_keys(self.opts["keysize"])
 
-            # the cache bank is called master keys but the codepath is shared
-            # on master/minion for interacting with pki
-            self.cache.store("master_keys", "minion.pem", priv)
-            self.cache.store("master_keys", "minion.pub", pub)
+                # the cache bank is called master keys but the codepath is shared
+                # on master/minion for interacting with pki
+                self.cache.store("master_keys", "minion.pem", priv)
+                self.cache.store("master_keys", "minion.pub", pub)
+            else:
+                priv = self.cache.fetch("master_keys", "minion.pem")
 
-        key = PrivateKey.from_file(self.rsa_path, None)
-        log.debug("Loaded minion key: %s", self.rsa_path)
-        return key
+            self._private_key = PrivateKey.from_str(priv, None)
+        return self._private_key
+
+    @salt.utils.decorators.memoize
+    def _gen_token(self, key, token):
+        return key.encrypt(token)
 
     def gen_token(self, clear_tok):
         """
@@ -1146,7 +1167,7 @@ class AsyncAuth:
         :return: Encrypted token
         :rtype: str
         """
-        return self.get_keys().encrypt(clear_tok)
+        return self._gen_token(self.get_keys(), clear_tok)
 
     def minion_sign_in_payload(self):
         """
@@ -1493,11 +1514,7 @@ class SAuth(AsyncAuth):
 
     @classmethod
     def __key(cls, opts, io_loop=None):
-        return (
-            opts["pki_dir"],  # where the keys are stored
-            opts["id"],  # minion ID
-            opts["master_uri"],  # master ID
-        )
+        return _auth_singleton_key(opts)
 
     # has to remain empty for singletons, since __init__ will *always* be called
     def __init__(self, opts, io_loop=None):
@@ -1513,9 +1530,11 @@ class SAuth(AsyncAuth):
         :rtype: Auth
         """
         self.opts = opts
+        self.cache = salt.cache.Cache(opts, driver=opts["keys.cache_driver"])
         self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
         self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
         self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
+        self._private_key = None
         self._creds = None
         if "syndic_master" in self.opts:
             self.mpub = "syndic_master.pub"
@@ -1586,16 +1605,18 @@ class SAuth(AsyncAuth):
                         )
                     continue
                 break
+            new_aes, changed_aes, changed_session = False, False, False
             if self._creds is None:
+                new_aes = True
                 log.error("%s Got new master aes key.", self)
-                self._creds = creds
-                self._crypticle = Crypticle(self.opts, creds["aes"])
-                self._session_crypticle = Crypticle(self.opts, creds["session"])
-            elif (
-                self._creds["aes"] != creds["aes"]
-                or self._creds["session"] != creds["session"]
-            ):
-                log.error("%s The master's aes key has changed.", self)
+            else:
+                if self._creds["aes"] != creds["aes"]:
+                    changed_aes = True
+                    log.debug("%s The master's aes key has changed.", self)
+                if self._creds["session"] != creds["session"]:
+                    changed_session = True
+                    log.debug("%s The master's session key has changed.", self)
+            if new_aes or changed_aes or changed_session:
                 self._creds = creds
                 self._crypticle = Crypticle(self.opts, creds["aes"])
                 self._session_crypticle = Crypticle(self.opts, creds["session"])

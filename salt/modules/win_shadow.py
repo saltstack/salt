@@ -25,10 +25,14 @@ def __virtual__():
 
 def info(name):
     """
-    Return information for the specified user
-    This is just returns dummy data so that salt states can work.
+    Return information for the specified user.
 
-    :param str name: The name of the user account to show.
+    .. note::
+        This just returns dummy data so that salt states can work.
+
+    Args:
+
+        name (str): The name of the user account to show.
 
     CLI Example:
 
@@ -68,12 +72,14 @@ def set_expire(name, expire):
     """
     Set the expiration date for a user account.
 
-    :param name: The name of the user account to edit.
+    Args:
 
-    :param expire: The date the account will expire.
+        name (str): The name of the user account to edit.
 
-    :return: True if successful. False if unsuccessful.
-    :rtype: bool
+        expire (str): The date the account will expire.
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -88,10 +94,12 @@ def require_password_change(name):
     """
     Require the user to change their password the next time they log in.
 
-    :param name: The name of the user account to require a password change.
+    Args:
 
-    :return: True if successful. False if unsuccessful.
-    :rtype: bool
+        name (str): The name of the user account to require a password change.
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -106,10 +114,12 @@ def unlock_account(name):
     """
     Unlocks a user account.
 
-    :param name: The name of the user account to unlock.
+    Args:
 
-    :return: True if successful. False if unsuccessful.
-    :rtype: bool
+        name (str): The name of the user account to unlock.
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -124,12 +134,14 @@ def set_password(name, password):
     """
     Set the password for a named user.
 
-    :param str name: The name of the user account
+    Args:
 
-    :param str password: The new password
+        name (str): The name of the user account.
 
-    :return: True if successful. False if unsuccessful.
-    :rtype: bool
+        password (str): The new password.
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 

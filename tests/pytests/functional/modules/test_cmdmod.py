@@ -51,7 +51,7 @@ def running_username():
 
 @pytest.fixture
 def script(state_tree):
-    if sys.platform == "win32":
+    if salt.utils.platform.is_windows():
         _name = "script.bat"
         _contents = """
         @echo off
@@ -83,30 +83,80 @@ def issue_56195_test_ps1(state_tree):
         yield
 
 
+@pytest.fixture(params=["powershell", "pwsh"])
+def powershell(request):
+    """
+    This will run the test on powershell and powershell core (pwsh). If
+    powershell core is not installed that test run will be skipped
+    """
+    if request.param == "pwsh" and salt.utils.path.which("pwsh") is None:
+        pytest.skip("Powershell 7 Not Present")
+
+    return request.param
+
+
 @pytest.mark.slow_test
-@pytest.mark.skip_on_windows(reason="Windows does not have grep and sed")
 def test_run(cmdmod, grains):
     """
     cmd.run
     """
-    shell = os.environ.get("SHELL")
+    if salt.utils.platform.is_windows():
+        shell = os.environ.get("ComSpec")
+    else:
+        shell = os.environ.get("SHELL")
     if shell is None:
         # Failed to get the SHELL var, don't run
         pytest.skip("Unable to get the SHELL environment variable")
 
-    assert cmdmod.run("echo $SHELL")
-    assert cmdmod.run("echo $SHELL", shell=shell, python_shell=True).rstrip() == shell
-    assert cmdmod.run("ls / | grep etc", python_shell=True) == "etc"
-    assert (
-        cmdmod.run(
-            'echo {{grains.id}} | awk "{print $1}"',
-            template="jinja",
+    if salt.utils.platform.is_windows():
+        assert cmdmod.run("echo %ComSpec%")
+        assert (
+            cmdmod.run("echo %ComSpec%", shell=shell, python_shell=True).rstrip()
+            == shell
+        )
+
+        out = cmdmod.run(
+            "dir | findstr Windows",
+            cwd=os.getenv("SystemDrive", "C:") + "\\",
             python_shell=True,
         )
-        == "func-tests-minion-opts"
-    )
-    assert cmdmod.run("grep f", stdin="one\ntwo\nthree\nfour\nfive\n") == "four\nfive"
-    assert cmdmod.run('echo "a=b" | sed -e s/=/:/g', python_shell=True) == "a:b"
+        assert out.endswith("Windows") or out.endswith("WindowsAzure")
+        assert (
+            cmdmod.run(
+                'for /f "tokens=1" %a in ("{{grains.id}}") do @echo %a',
+                template="jinja",
+                python_shell=True,
+            )
+            == "func-tests-minion-opts"
+        )
+        assert (
+            cmdmod.run("findstr f", stdin="one\ntwo\nthree\nfour\nfive\n")
+            == "four\nfive"
+        )
+        assert (
+            cmdmod.run(
+                "powershell -Command \"'a=b' -replace '=', ':'\"", python_shell=True
+            )
+            == "a:b"
+        )
+    else:
+        assert cmdmod.run("echo $SHELL")
+        assert (
+            cmdmod.run("echo $SHELL", shell=shell, python_shell=True).rstrip() == shell
+        )
+        assert cmdmod.run("ls / | grep etc", python_shell=True) == "etc"
+        assert (
+            cmdmod.run(
+                'echo {{grains.id}} | awk "{print $1}"',
+                template="jinja",
+                python_shell=True,
+            )
+            == "func-tests-minion-opts"
+        )
+        assert (
+            cmdmod.run("grep f", stdin="one\ntwo\nthree\nfour\nfive\n") == "four\nfive"
+        )
+        assert cmdmod.run('echo "a=b" | sed -e s/=/:/g', python_shell=True) == "a:b"
 
 
 @pytest.mark.slow_test
@@ -114,11 +164,7 @@ def test_stdout(cmdmod):
     """
     cmd.run_stdout
     """
-    assert (
-        cmdmod.run_stdout('echo "cheese"').rstrip() == "cheese"
-        if not salt.utils.platform.is_windows()
-        else '"cheese"'
-    )
+    assert cmdmod.run_stdout('echo "cheese"').rstrip().strip('"') == "cheese"
 
 
 @pytest.mark.slow_test
@@ -128,6 +174,8 @@ def test_stderr(cmdmod):
     """
     if sys.platform.startswith(("freebsd", "openbsd")):
         shell = "/bin/sh"
+    if salt.utils.platform.is_windows():
+        shell = "cmd.exe"
     else:
         shell = "/bin/bash"
 
@@ -136,10 +184,10 @@ def test_stderr(cmdmod):
             'echo "cheese" 1>&2',
             shell=shell,
             python_shell=True,
-        ).rstrip()
+        )
+        .rstrip()
+        .strip('"')
         == "cheese"
-        if not salt.utils.platform.is_windows()
-        else '"cheese"'
     )
 
 
@@ -150,6 +198,8 @@ def test_run_all(cmdmod):
     """
     if sys.platform.startswith(("freebsd", "openbsd")):
         shell = "/bin/sh"
+    elif salt.utils.platform.is_windows():
+        shell = "cmd.exe"
     else:
         shell = "/bin/bash"
 
@@ -166,11 +216,7 @@ def test_run_all(cmdmod):
     assert isinstance(ret.get("retcode"), int)
     assert isinstance(ret.get("stdout"), str)
     assert isinstance(ret.get("stderr"), str)
-    assert (
-        ret.get("stderr").rstrip() == "cheese"
-        if not salt.utils.platform.is_windows()
-        else '"cheese"'
-    )
+    assert ret.get("stderr").rstrip().strip('"') == "cheese"
 
 
 @pytest.mark.slow_test
@@ -299,7 +345,7 @@ def test_which(cmdmod):
     """
     cmd.which
     """
-    if sys.platform == "win32":
+    if salt.utils.platform.is_windows():
         search = "cmd"
         cmd = f"cmd /c where {search}"
     else:
@@ -384,7 +430,7 @@ def test_quotes(cmdmod):
     """
     cmd.run with quoted command
     """
-    if sys.platform == "win32":
+    if salt.utils.platform.is_windows():
         # Some shell commands are not available through subprocess
         # So you need to start a shell first
         # There's also some different quoting in Windows
@@ -495,7 +541,7 @@ def test_timeout(cmdmod):
     """
     cmd.run trigger timeout
     """
-    if sys.platform == "win32":
+    if salt.utils.platform.is_windows():
         cmd = 'Start-Sleep 2; Write-Host "hello"'
         out = cmdmod.run(cmd, timeout=1, python_shell=True, shell="powershell")
     else:
@@ -511,7 +557,7 @@ def test_timeout_success(cmdmod):
     """
     cmd.run sufficient timeout to succeed
     """
-    if sys.platform == "win32":
+    if salt.utils.platform.is_windows():
         cmd = 'Start-Sleep 1; Write-Host "hello"'
         out = cmdmod.run(cmd, timeout=5, python_shell=True, shell="powershell")
     else:
@@ -559,16 +605,18 @@ def test_windows_env_handling(cmdmod):
 
 @pytest.mark.slow_test
 @pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
-@pytest.mark.parametrize("shell", ["powershell", "pwsh"])
-def test_windows_powershell_script_args(cmdmod, issue_56195_test_ps1, shell):
+@pytest.mark.parametrize(
+    "args",
+    [
+        '-SecureString (ConvertTo-SecureString -String "i like cheese" -AsPlainText -Force) -ErrorAction Stop',
+        "-SecureString (ConvertTo-SecureString -String 'i like cheese' -AsPlainText -Force) -ErrorAction Stop",
+    ],
+)
+def test_windows_powershell_script_args(cmdmod, issue_56195_test_ps1, powershell, args):
     """
     Ensure that powershell processes inline script in args
     """
-    val = "i like cheese"
-    args = (
-        '-SecureString (ConvertTo-SecureString -String \\"{}\\" -AsPlainText -Force)'
-        " -ErrorAction Stop".format(val)
-    )
+    expected = "i like cheese"
     script = "salt://issue_56195_test.ps1"
-    ret = cmdmod.script(script, args=args, shell=shell, saltenv="base")
-    assert ret["stdout"] == val
+    ret = cmdmod.script(script, args=args, shell=powershell, saltenv="base")
+    assert ret["stdout"] == expected

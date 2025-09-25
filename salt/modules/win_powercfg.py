@@ -40,7 +40,7 @@ def _get_current_scheme():
 
 def _get_powercfg_minute_values(scheme, guid, subguid, safe_name):
     """
-    Returns the AC/DC values in an dict for a guid and subguid for a the given
+    Returns the AC/DC values in an dict for a guid and subguid for the given
     scheme
     """
     if scheme is None:
@@ -83,24 +83,29 @@ def set_monitor_timeout(timeout, power="ac", scheme=None):
     Set the monitor timeout in minutes for the given power scheme
 
     Args:
+
         timeout (int):
             The amount of time in minutes before the monitor will timeout
 
-        power (str):
+        power (:obj:`str`, optional):
             Set the value for AC or DC power. Default is ``ac``. Valid options
             are:
 
-                - ``ac`` (AC Power)
-                - ``dc`` (Battery)
+            - ``ac`` (AC Power)
+            - ``dc`` (Battery)
 
-        scheme (str):
+            Default is "ac".
+
+        scheme (:obj:`str`, optional):
             The scheme to use, leave as ``None`` to use the current. Default is
             ``None``. This can be the GUID or the Alias for the Scheme. Known
             Aliases are:
 
-                - ``SCHEME_BALANCED`` - Balanced
-                - ``SCHEME_MAX`` - Power saver
-                - ``SCHEME_MIN`` - High performance
+            - ``SCHEME_BALANCED`` - Balanced
+            - ``SCHEME_MAX`` - Power saver
+            - ``SCHEME_MIN`` - High performance
+
+            Default is ``None``.
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -126,14 +131,17 @@ def get_monitor_timeout(scheme=None):
     Get the current monitor timeout of the given scheme
 
     Args:
-        scheme (str):
+
+        scheme (:obj:`str`, optional):
             The scheme to use, leave as ``None`` to use the current. Default is
             ``None``. This can be the GUID or the Alias for the Scheme. Known
             Aliases are:
 
-                - ``SCHEME_BALANCED`` - Balanced
-                - ``SCHEME_MAX`` - Power saver
-                - ``SCHEME_MIN`` - High performance
+            - ``SCHEME_BALANCED`` - Balanced
+            - ``SCHEME_MAX`` - Power saver
+            - ``SCHEME_MIN`` - High performance
+
+            Default is ``None``.
 
     Returns:
         dict: A dictionary of both the AC and DC settings
@@ -157,24 +165,29 @@ def set_disk_timeout(timeout, power="ac", scheme=None):
     Set the disk timeout in minutes for the given power scheme
 
     Args:
+
         timeout (int):
             The amount of time in minutes before the disk will timeout
 
-        power (str):
+        power (:obj:`str`, optional):
             Set the value for AC or DC power. Default is ``ac``. Valid options
             are:
 
-                - ``ac`` (AC Power)
-                - ``dc`` (Battery)
+            - ``ac`` (AC Power)
+            - ``dc`` (Battery)
 
-        scheme (str):
+            Default is "ac"
+
+        scheme (:obj:`str`, optional):
             The scheme to use, leave as ``None`` to use the current. Default is
             ``None``. This can be the GUID or the Alias for the Scheme. Known
             Aliases are:
 
-                - ``SCHEME_BALANCED`` - Balanced
-                - ``SCHEME_MAX`` - Power saver
-                - ``SCHEME_MIN`` - High performance
+            - ``SCHEME_BALANCED`` - Balanced
+            - ``SCHEME_MAX`` - Power saver
+            - ``SCHEME_MIN`` - High performance
+
+            Default is ``None``.
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -200,14 +213,17 @@ def get_disk_timeout(scheme=None):
     Get the current disk timeout of the given scheme
 
     Args:
-        scheme (str):
+
+        scheme (:obj:`str`, optional):
             The scheme to use, leave as ``None`` to use the current. Default is
             ``None``. This can be the GUID or the Alias for the Scheme. Known
             Aliases are:
 
-                - ``SCHEME_BALANCED`` - Balanced
-                - ``SCHEME_MAX`` - Power saver
-                - ``SCHEME_MIN`` - High performance
+            - ``SCHEME_BALANCED`` - Balanced
+            - ``SCHEME_MAX`` - Power saver
+            - ``SCHEME_MIN`` - High performance
+
+            Default is ``None``.
 
     Returns:
         dict: A dictionary of both the AC and DC settings
@@ -231,24 +247,29 @@ def set_standby_timeout(timeout, power="ac", scheme=None):
     Set the standby timeout in minutes for the given power scheme
 
     Args:
+
         timeout (int):
             The amount of time in minutes before the computer sleeps
 
-        power (str):
+        power (:obj:`str`, optional):
             Set the value for AC or DC power. Default is ``ac``. Valid options
             are:
 
-                - ``ac`` (AC Power)
-                - ``dc`` (Battery)
+            - ``ac`` (AC Power)
+            - ``dc`` (Battery)
 
-        scheme (str):
+            Default is "ac".
+
+        scheme (:obj:`str`, optional):
             The scheme to use, leave as ``None`` to use the current. Default is
             ``None``. This can be the GUID or the Alias for the Scheme. Known
             Aliases are:
 
-                - ``SCHEME_BALANCED`` - Balanced
-                - ``SCHEME_MAX`` - Power saver
-                - ``SCHEME_MIN`` - High performance
+            - ``SCHEME_BALANCED`` - Balanced
+            - ``SCHEME_MAX`` - Power saver
+            - ``SCHEME_MIN`` - High performance
+
+            Default is ``None``.
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -273,14 +294,18 @@ def get_standby_timeout(scheme=None):
     """
     Get the current standby timeout of the given scheme
 
-        scheme (str):
+    Args:
+
+        scheme (:obj:`str`, optional):
             The scheme to use, leave as ``None`` to use the current. Default is
             ``None``. This can be the GUID or the Alias for the Scheme. Known
             Aliases are:
 
-                - ``SCHEME_BALANCED`` - Balanced
-                - ``SCHEME_MAX`` - Power saver
-                - ``SCHEME_MIN`` - High performance
+            - ``SCHEME_BALANCED`` - Balanced
+            - ``SCHEME_MAX`` - Power saver
+            - ``SCHEME_MIN`` - High performance
+
+            Default is ``None``.
 
     Returns:
         dict: A dictionary of both the AC and DC settings
@@ -301,24 +326,29 @@ def set_hibernate_timeout(timeout, power="ac", scheme=None):
     Set the hibernate timeout in minutes for the given power scheme
 
     Args:
+
         timeout (int):
             The amount of time in minutes before the computer hibernates
 
-        power (str):
+        power (:obj:`str`, optional):
             Set the value for AC or DC power. Default is ``ac``. Valid options
             are:
 
-                - ``ac`` (AC Power)
-                - ``dc`` (Battery)
+            - ``ac`` (AC Power)
+            - ``dc`` (Battery)
 
-        scheme (str):
+            Default is "ac".
+
+        scheme (:obj:`str`, optional):
             The scheme to use, leave as ``None`` to use the current. Default is
             ``None``. This can be the GUID or the Alias for the Scheme. Known
             Aliases are:
 
-                - ``SCHEME_BALANCED`` - Balanced
-                - ``SCHEME_MAX`` - Power saver
-                - ``SCHEME_MIN`` - High performance
+            - ``SCHEME_BALANCED`` - Balanced
+            - ``SCHEME_MAX`` - Power saver
+            - ``SCHEME_MIN`` - High performance
+
+            Default is ``None``.
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -343,14 +373,18 @@ def get_hibernate_timeout(scheme=None):
     """
     Get the current hibernate timeout of the given scheme
 
-        scheme (str):
+    Args
+
+        scheme (:obj:`str`, optional):
             The scheme to use, leave as ``None`` to use the current. Default is
             ``None``. This can be the GUID or the Alias for the Scheme. Known
             Aliases are:
 
-                - ``SCHEME_BALANCED`` - Balanced
-                - ``SCHEME_MAX`` - Power saver
-                - ``SCHEME_MIN`` - High performance
+            - ``SCHEME_BALANCED`` - Balanced
+            - ``SCHEME_MAX`` - Power saver
+            - ``SCHEME_MIN`` - High performance
+
+            Default is ``None``.
 
     Returns:
         dict: A dictionary of both the AC and DC settings

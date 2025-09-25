@@ -589,7 +589,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-crypto-3.13-requirements
         name: Linux CI Py3.13 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.12/linux-crypto\.txt))$
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.13/linux-crypto\.txt))$
         pass_filenames: false
         args:
           - -v
