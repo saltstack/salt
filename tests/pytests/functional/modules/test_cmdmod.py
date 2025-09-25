@@ -114,11 +114,13 @@ def test_run(cmdmod, grains):
             cmdmod.run("echo %ComSpec%", shell=shell, python_shell=True).rstrip()
             == shell
         )
-        assert cmdmod.run(
+
+        out = cmdmod.run(
             "dir | findstr Windows",
             cwd=os.getenv("SystemDrive", "C:") + "\\",
             python_shell=True,
-        ).endswith("Windows")
+        )
+        assert out.endswith("Windows") or out.endswith("WindowsAzure")
         assert (
             cmdmod.run(
                 'for /f "tokens=1" %a in ("{{grains.id}}") do @echo %a',
