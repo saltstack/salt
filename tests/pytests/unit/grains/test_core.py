@@ -17,6 +17,7 @@ import sys
 import tempfile
 import textwrap
 import uuid
+import warnings
 from collections import namedtuple
 
 import pytest
@@ -2426,7 +2427,8 @@ def _run_fqdn_tests(
         salt.utils.network, "ip_addrs6", MagicMock(return_value=net_ip6_mock)
     ), patch.object(
         core.socket, "getaddrinfo", side_effect=_getaddrinfo
-    ):
+    ), warnings.catch_warnings():
+        warnings.simplefilter("error")
         get_fqdn = core.ip_fqdn()
         ret_keys = ["fqdn_ip4", "fqdn_ip6", "ipv4", "ipv6"]
         for key in ret_keys:
