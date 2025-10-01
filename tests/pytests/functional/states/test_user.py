@@ -14,6 +14,7 @@ import pytest
 from saltfactories.utils import random_string
 
 import salt.utils.files
+import salt.utils.path
 import salt.utils.platform
 
 try:
@@ -143,7 +144,9 @@ def test_user_present_nondefault(grains, modules, states, username, user_home):
     if not salt.utils.platform.is_darwin() and not salt.utils.platform.is_windows():
         assert user_home.is_dir()
 
-    if grains["os_family"] in ("Suse",):
+    if grains["os_family"] == "Suse" and not (
+        grains.get("transactional", False) or grains.get("osmajorrelease", 0) >= 16
+    ):
         expected_group_name = "users"
     elif grains["os_family"] == "MacOS":
         expected_group_name = "staff"
@@ -386,7 +389,15 @@ def test_user_present_existing(states, username):
 
 
 @pytest.mark.skip_unless_on_linux(reason="underlying functionality only runs on Linux")
-def test_user_present_change_groups(modules, states, username, group_1, group_2):
+def test_user_present_change_groups(
+    grains, modules, states, username, group_1, group_2
+):
+    expected_groups = [group_2.name, group_1.name]
+    if grains["os_family"] == "Suse" and (
+        grains.get("transactional", False) or grains.get("osmajorrelease", 0) >= 16
+    ):
+        expected_groups.append(username)
+
     ret = states.user.present(
         name=username,
         groups=[group_1.name, group_2.name],
@@ -395,7 +406,9 @@ def test_user_present_change_groups(modules, states, username, group_1, group_2)
 
     user_info = modules.user.info(username)
     assert user_info
-    assert user_info["groups"] == [group_2.name, group_1.name]
+    assert sorted(user_info["groups"]) == sorted(expected_groups)
+
+    expected_groups.remove(group_2.name)
 
     # run again and remove group_2
     ret = states.user.present(
@@ -406,13 +419,19 @@ def test_user_present_change_groups(modules, states, username, group_1, group_2)
 
     user_info = modules.user.info(username)
     assert user_info
-    assert user_info["groups"] == [group_1.name]
+    assert sorted(user_info["groups"]) == sorted(expected_groups)
 
 
 @pytest.mark.skip_unless_on_linux(reason="underlying functionality only runs on Linux")
 def test_user_present_change_optional_groups(
-    modules, states, username, group_1, group_2
+    grains, modules, states, username, group_1, group_2
 ):
+    expected_groups = [group_2.name, group_1.name]
+    if grains["os_family"] == "Suse" and (
+        grains.get("transactional", False) or grains.get("osmajorrelease", 0) >= 16
+    ):
+        expected_groups.append(username)
+
     ret = states.user.present(
         name=username,
         optional_groups=[group_1.name, group_2.name],
@@ -421,7 +440,9 @@ def test_user_present_change_optional_groups(
 
     user_info = modules.user.info(username)
     assert user_info
-    assert user_info["groups"] == [group_2.name, group_1.name]
+    assert sorted(user_info["groups"]) == sorted(expected_groups)
+
+    expected_groups.remove(group_2.name)
 
     # run again and remove group_2
     ret = states.user.present(
@@ -432,7 +453,7 @@ def test_user_present_change_optional_groups(
 
     user_info = modules.user.info(username)
     assert user_info
-    assert user_info["groups"] == [group_1.name]
+    assert sorted(user_info["groups"]) == sorted(expected_groups)
 
 
 @pytest.fixture
