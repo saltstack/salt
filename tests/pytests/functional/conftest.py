@@ -139,7 +139,10 @@ def master_opts(
 
 @pytest.fixture(scope="module")
 def loaders(minion_opts):
-    return Loaders(minion_opts, loaded_base_name=f"{__name__}.loaded")
+    result = Loaders(minion_opts, loaded_base_name=f"{__name__}.loaded")
+    # Convert the file roots to a static dict before appending any roots
+    result.opts["file_roots"] = result.opts["file_roots"].static_dict()
+    return result
 
 
 @pytest.fixture(autouse=True)
