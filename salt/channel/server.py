@@ -185,9 +185,11 @@ class ReqServerChannel:
         # intercept the "_auth" commands, since the main daemon shouldn't know
         # anything about our key auth
         if payload["enc"] == "clear" and payload.get("load", {}).get("cmd") == "_auth":
-            raise tornado.gen.Return(
-                self._auth(payload["load"], sign_messages, version)
-            )
+            start = time.time()
+            ret = self._auth(payload["load"], sign_messages, version)
+            if self.opts.get("master_stats", False):
+                yield self.payload_handler({"cmd": "_auth", "_start": start})
+            raise tornado.gen.Return(ret)
 
         if payload["enc"] == "aes":
             nonce = None
