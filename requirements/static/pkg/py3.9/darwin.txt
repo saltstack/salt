@@ -46,7 +46,7 @@ immutables==0.21
     # via
     #   -r requirements/base.txt
     #   contextvars
-importlib-metadata==6.0.0
+importlib-metadata==8.7.0
     # via -r requirements/darwin.txt
 jaraco.classes==3.2.1
     # via jaraco.collections

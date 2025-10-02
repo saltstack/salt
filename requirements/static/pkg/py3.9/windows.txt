@@ -45,7 +45,7 @@ immutables==0.21
     # via
     #   -r requirements/base.txt
     #   contextvars
-importlib-metadata==6.0.0
+importlib-metadata==8.7.0
     # via -r requirements/windows.txt
 ioloop==0.1a0
     # via -r requirements/windows.txt
@@ -156,7 +156,7 @@ xmltodict==0.13.0
     # via -r requirements/windows.txt
 zc.lockfile==2.0
     # via cherrypy
-zipp==3.5.0
+zipp==3.23.0
     # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
