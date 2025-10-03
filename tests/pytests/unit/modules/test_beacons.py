@@ -13,6 +13,10 @@ from tests.support.mock import MagicMock, call, mock_open, patch
 
 log = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.usefixtures("mocked_tcp_pub_client"),
+]
+
 
 @pytest.fixture
 def configure_loader_modules(minion_opts):

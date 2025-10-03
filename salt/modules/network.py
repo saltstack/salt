@@ -1333,6 +1333,60 @@ def ip_addrs6(interface=None, include_loopback=False, cidr=None):
 ipaddrs6 = salt.utils.functools.alias_function(ip_addrs6, "ipaddrs6")
 
 
+def ip_neighs():
+    """
+    Return the ip neighbour (arp) table from the minion for IPv4 addresses
+
+    .. versionadded:: 3007.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.ip_neighs
+    """
+    ret = {}
+    out = __salt__["cmd.run"]("ip neigh show")
+    for line in out.splitlines():
+        comps = line.split()
+        if len(comps) < 5:
+            continue
+        if "." in comps[0]:
+            ret[comps[4]] = comps[0]
+
+    return ret
+
+
+ipneighs = salt.utils.functools.alias_function(ip_neighs, "ipneighs")
+
+
+def ip_neighs6():
+    """
+    Return the ip neighbour (arp) table from the minion for IPv6 addresses
+
+    .. versionadded:: 3007.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.ip_neighs6
+    """
+    ret = {}
+    out = __salt__["cmd.run"]("ip neigh show")
+    for line in out.splitlines():
+        comps = line.split()
+        if len(comps) < 5:
+            continue
+        if ":" in comps[0]:
+            ret[comps[4]] = comps[0]
+
+    return ret
+
+
+ipneighs6 = salt.utils.functools.alias_function(ip_neighs6, "ipneighs6")
+
+
 def get_hostname():
     """
     Get hostname

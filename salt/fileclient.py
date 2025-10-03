@@ -14,6 +14,8 @@ import time
 import urllib.error
 import urllib.parse
 
+from tornado.httputil import HTTPHeaders, HTTPInputError, parse_response_start_line
+
 import salt.channel.client
 import salt.client
 import salt.crypt
@@ -35,11 +37,6 @@ import salt.utils.verify
 import salt.utils.versions
 from salt.config import DEFAULT_HASH_TYPE
 from salt.exceptions import CommandExecutionError, MinionError, SaltClientError
-from salt.ext.tornado.httputil import (
-    HTTPHeaders,
-    HTTPInputError,
-    parse_response_start_line,
-)
 from salt.utils.openstack.swift import SaltSwift
 
 log = logging.getLogger(__name__)

@@ -190,7 +190,7 @@ def warn_until(
         sys.stderr.write(f"\n{deprecated_message}\n")
         sys.stderr.flush()
 
-    if _dont_call_warnings is False:
+    if _dont_call_warnings is False and os.environ.get("PYTHONWARNINGS") != "ignore":
         warnings.warn(
             message.format(version=version.formatted_version),
             category,
@@ -266,7 +266,7 @@ def warn_until_date(
         sys.stderr.write(f"\n{deprecated_message}\n")
         sys.stderr.flush()
 
-    if _dont_call_warnings is False:
+    if _dont_call_warnings is False and os.environ.get("PYTHONWARNINGS") != "ignore":
         warnings.warn(
             message.format(date=date.isoformat(), today=today.isoformat()),
             category,

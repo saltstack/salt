@@ -94,6 +94,9 @@ def prev_master(
         container_run_kwargs={
             "network": docker_network_name,
             "hostname": prev_master_id,
+            "volumes": {
+                str(CODE_DIR): {"bind": "/salt", "mode": "z"},
+            },
         },
         start_timeout=120,
         max_start_attempts=3,
@@ -101,6 +104,7 @@ def prev_master(
         skip_on_pull_failure=True,
         skip_if_docker_client_not_connectable=True,
     )
+    factory.before_start(_install_salt_in_container, factory)
     with factory.started():
         yield factory
 
@@ -156,6 +160,9 @@ def prev_minion(
         container_run_kwargs={
             "network": docker_network_name,
             "hostname": prev_minion_id,
+            "volumes": {
+                str(CODE_DIR): {"bind": "/salt", "mode": "z"},
+            },
         },
         start_timeout=120,
         max_start_attempts=3,
@@ -167,6 +174,7 @@ def prev_minion(
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, prev_master, factory.id
     )
+    factory.before_start(_install_salt_in_container, factory)
     with factory.started():
         yield factory
 
@@ -199,11 +207,21 @@ def _install_salt_in_container(container):
         "-m",
         "pip",
         "install",
+        "-r",
+        f"/salt/requirements/static/pkg/py{requirements_py_version}/linux.txt",
+    )
+    log.debug("Install Salt package requirements in the container: %s", ret)
+    assert ret.returncode == 0, ret.stderr
+    ret = container.run(
+        "python3",
+        "-m",
+        "pip",
+        "install",
         f"--constraint=/salt/requirements/static/ci/py{requirements_py_version}/linux.txt",
         "/salt",
     )
     log.debug("Install Salt in the container: %s", ret)
-    assert ret.returncode == 0
+    assert ret.returncode == 0, ret.stderr
 
 
 @pytest.fixture

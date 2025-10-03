@@ -85,7 +85,6 @@ except ImportError:
     HAS_XML_LIBS = False
 
 
-# Get Logging Started
 log = logging.getLogger(__name__)
 
 __virtualname__ = "opennebula"

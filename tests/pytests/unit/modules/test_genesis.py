@@ -17,7 +17,6 @@ def test_bootstrap():
     """
     Test for Create an image for a specific platform.
     """
-    # Changed in 3.7.0 pformat no longer includes the comma
     exception_string = "Exception({})".format(repr("foo"))
     mock = MagicMock(return_value=False)
     with patch.dict(genesis.__salt__, {"file.directory_exists": mock}):

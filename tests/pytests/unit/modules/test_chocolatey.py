@@ -7,14 +7,10 @@ import os
 import pytest
 
 import salt.modules.chocolatey as chocolatey
-import salt.utils
-import salt.utils.platform
 from tests.support.mock import MagicMock, patch
 
 pytestmark = [
-    pytest.mark.skipif(
-        not salt.utils.platform.is_windows(), reason="Not a Windows system"
-    )
+    pytest.mark.skip_unless_on_windows,
 ]
 
 
@@ -68,7 +64,7 @@ def test__clear_context(choco_path):
     }
     with patch.dict(chocolatey.__context__, context):
         chocolatey._clear_context()
-        # Did it clear all chocolatey items from __context__P?
+        # Did it clear all chocolatey items from __context__?
         assert chocolatey.__context__ == {}
 
 
@@ -347,3 +343,25 @@ def test_list_windowsfeatures_post_2_0_0():
         chocolatey.list_windowsfeatures()
         expected_call = [choco_path, "search", "--source", "windowsfeatures"]
         mock_run.assert_called_with(expected_call, python_shell=False)
+
+
+def test_chocolatey_version():
+    context = {
+        "chocolatey._version": "0.9.9",
+    }
+    with patch.dict(chocolatey.__context__, context):
+        result = chocolatey.chocolatey_version()
+        expected = "0.9.9"
+        assert result == expected
+
+
+def test_chocolatey_version_refresh():
+    context = {"chocolatey._version": "0.9.9"}
+    mock_find = MagicMock(return_value="some_path")
+    mock_run = MagicMock(return_value="2.2.0")
+    with patch.dict(chocolatey.__context__, context), patch.object(
+        chocolatey, "_find_chocolatey", mock_find
+    ), patch.dict(chocolatey.__salt__, {"cmd.run": mock_run}):
+        result = chocolatey.chocolatey_version(refresh=True)
+        expected = "2.2.0"
+        assert result == expected

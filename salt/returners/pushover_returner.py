@@ -91,6 +91,12 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = "pushover"
 
+__deprecated__ = (
+    3009,
+    "pushover",
+    "https://github.com/salt-extensions/saltext-pushover",
+)
+
 
 def _get_options(ret=None):
     """

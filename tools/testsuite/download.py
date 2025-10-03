@@ -61,7 +61,7 @@ def default_arch():
         "platform": {
             "help": "The onedir platform artifact to download",
             "choices": ("linux", "macos", "windows"),
-            "required": True,
+            "default": default_platform(),
         },
         "arch": {
             "help": "The onedir artifact architecture",
@@ -244,6 +244,8 @@ def download_artifact(
         repository=repository,
         artifact_name=str(artifact_name),
     )
+    if TYPE_CHECKING:
+        assert succeeded is not None
     ctx.info(succeeded)
     if succeeded:
         ctx.info(f"Downloaded {artifact_name} to {dest}")

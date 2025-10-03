@@ -14,6 +14,12 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = "apache"
 
+__deprecated__ = (
+    3009,
+    "apache",
+    "https://github.com/salt-extensions/saltext-apache",
+)
+
 
 def __virtual__():
     """

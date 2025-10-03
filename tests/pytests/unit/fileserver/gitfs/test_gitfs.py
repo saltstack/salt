@@ -24,8 +24,8 @@ import os
 import pathlib
 
 import pytest
+import tornado.ioloop
 
-import salt.ext.tornado.ioloop
 import salt.fileserver.gitfs as gitfs
 import salt.utils.files
 import salt.utils.gitfs
@@ -126,9 +126,7 @@ def testfile(tmp_path):
 @pytest.fixture
 def repo_dir(tmp_path, unicode_dirname, tag_name, unicode_filename):
     try:
-        del salt.utils.gitfs.GitFS.instance_map[
-            salt.ext.tornado.ioloop.IOLoop.current()
-        ]
+        del salt.utils.gitfs.GitFS.instance_map[tornado.ioloop.IOLoop.current()]
     except KeyError:
         pass
 

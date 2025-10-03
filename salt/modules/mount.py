@@ -16,10 +16,8 @@ import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 from salt.utils.odict import OrderedDict
 
-# Set up logger
 log = logging.getLogger(__name__)
 
-# Define the module's virtual name
 __virtualname__ = "mount"
 
 
@@ -1388,7 +1386,7 @@ def remount(name, device, mkmnt=False, fstype="", opts="defaults", user=None):
     return mount(name, device, mkmnt, fstype, opts, user=user)
 
 
-def umount(name, device=None, user=None, util="mount"):
+def umount(name, device=None, user=None, util="mount", lazy=False):
     """
     Attempt to unmount a device by specifying the directory it is mounted on
 
@@ -1418,10 +1416,14 @@ def umount(name, device=None, user=None, util="mount"):
     if name not in mnts:
         return f"{name} does not have anything mounted"
 
+    cmd = "umount"
+    if lazy:
+        cmd = f"{cmd} -l"
     if not device:
-        cmd = f"umount '{name}'"
+        cmd = f"{cmd} '{name}'"
     else:
-        cmd = f"umount '{device}'"
+        cmd = f"{cmd} '{device}'"
+
     out = __salt__["cmd.run_all"](cmd, runas=user, python_shell=False)
     if out["retcode"]:
         return out["stderr"]
@@ -1928,7 +1930,7 @@ def set_filesystems(
         except OSError:
             raise CommandExecutionError(f"File not writable {config}")
         except Exception as exc:
-            raise CommandExecutionError("set_filesystems error exception {exc}")
+            raise CommandExecutionError(f"set_filesystems error exception {exc}")
 
     return ret
 
@@ -1977,7 +1979,7 @@ def rm_filesystems(name, device, config="/etc/filesystems"):
         except OSError as exc:
             raise CommandExecutionError(f"Couldn't write to {config}: {exc}")
         except Exception as exc:
-            raise CommandExecutionError("rm_filesystems error exception {exc}")
+            raise CommandExecutionError(f"rm_filesystems error exception {exc}")
 
     return modified
 

@@ -27,7 +27,6 @@ def test__render_filenames_undefined_template():
     dest = "/srv/salt/cheese"
     saltenv = "base"
     template = "biscuits"
-    ret = (path, dest)
     pytest.raises(
         CommandExecutionError, cp._render_filenames, path, dest, saltenv, template
     )
@@ -99,7 +98,6 @@ def test_get_file_str_success():
     path = "salt://saltines"
     dest = "/srv/salt/cheese/saltines"
     file_data = "Remember to keep your files well salted."
-    saltenv = "base"
     ret = file_data
     with patch("salt.utils.files.fopen", mock_open(read_data=file_data)):
         with patch("salt.modules.cp.cache_file", MagicMock(return_value=dest)):

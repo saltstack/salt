@@ -504,11 +504,34 @@ def mounted(
                                 )
                                 ret["result"] = mount_result
                             else:
-                                ret["result"] = False
-                                ret["comment"] = "Unable to unmount {}: {}.".format(
-                                    real_name, unmount_result
+                                # If the first attempt at unmounting fails,
+                                # run again as a lazy umount.
+                                ret["changes"]["umount"] = (
+                                    "Forced a lazy unmount and mount "
+                                    + "because the previous unmount failed "
+                                    + "and because the "
+                                    + "options ({}) changed".format(
+                                        ",".join(sorted(trigger_remount))
+                                    )
                                 )
-                                return ret
+                                unmount_result = __salt__["mount.umount"](
+                                    real_name, lazy=True
+                                )
+                                if unmount_result is True:
+                                    mount_result = __salt__["mount.mount"](
+                                        real_name,
+                                        device,
+                                        mkmnt=mkmnt,
+                                        fstype=fstype,
+                                        opts=opts,
+                                    )
+                                    ret["result"] = mount_result
+                                else:
+                                    ret["result"] = False
+                                    ret["comment"] = "Unable to unmount {}: {}.".format(
+                                        real_name, unmount_result
+                                    )
+                                    return ret
                         else:
                             ret["changes"]["umount"] = (
                                 "Forced remount because "
@@ -564,11 +587,28 @@ def mounted(
                                     )
                                     ret["result"] = mount_result
                                 else:
-                                    ret["result"] = False
-                                    ret["comment"] = "Unable to unmount {}: {}.".format(
-                                        real_name, unmount_result
+                                    # If the first attempt at unmounting fails,
+                                    # run again as a lazy umount.
+                                    unmount_result = __salt__["mount.umount"](
+                                        real_name, lazy=True
                                     )
-                                    return ret
+                                    if unmount_result is True:
+                                        mount_result = __salt__["mount.mount"](
+                                            real_name,
+                                            device,
+                                            mkmnt=mkmnt,
+                                            fstype=fstype,
+                                            opts=opts,
+                                        )
+                                        ret["result"] = mount_result
+                                    else:
+                                        ret["result"] = False
+                                        ret["comment"] = (
+                                            "Unable to unmount {}: {}.".format(
+                                                real_name, unmount_result
+                                            )
+                                        )
+                                        return ret
                             else:
                                 ret["changes"]["umount"] = (
                                     "Forced remount because "
@@ -626,7 +666,7 @@ def mounted(
                     active = __salt__["mount.active"](extended=True)
                     if comp_real_name in active:
                         ret["comment"] = "Unable to unmount"
-                        ret["result"] = None
+                        ret["result"] = False
                         return ret
                     update_mount_cache = True
             else:

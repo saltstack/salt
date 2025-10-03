@@ -307,10 +307,10 @@ def test_check_mine_cache_is_refreshed_on_container_change_event(command_name, a
         try:
             mine_send.assert_called_with("docker.ps", verbose=True, all=True, host=True)
         except AssertionError as exc:
-            raise AssertionError(
+            raise Exception(
                 "command '{}' did not call docker.ps with expected "
                 "arguments: {}".format(command_name, exc)
-            ) from exc
+            )
 
 
 def test_update_mine():
@@ -319,14 +319,26 @@ def test_update_mine():
     """
 
     def config_get_disabled(val, default):
-        if val == "docker.update_mine":
-            return False
-        return docker_mod.NOTSET
+        ret = {
+            "base_url": docker_mod.NOTSET,
+            "version": docker_mod.NOTSET,
+            "docker.url": docker_mod.NOTSET,
+            "docker.version": docker_mod.NOTSET,
+            "docker.machine": docker_mod.NOTSET,
+            "docker.update_mine": False,
+        }
+        return ret[val]
 
     def config_get_enabled(val, default):
-        if val == "docker.update_mine":
-            return True
-        return docker_mod.NOTSET
+        ret = {
+            "base_url": docker_mod.NOTSET,
+            "version": docker_mod.NOTSET,
+            "docker.url": docker_mod.NOTSET,
+            "docker.version": docker_mod.NOTSET,
+            "docker.machine": docker_mod.NOTSET,
+            "docker.update_mine": True,
+        }
+        return ret[val]
 
     mine_mock = Mock()
     dunder_salt = {
@@ -927,19 +939,21 @@ def test_compare_container_image_id_resolution():
     """
 
     def _inspect_container_effect(id_):
-        if id_ == "container1":
-            return {
+        ret = {
+            "container1": {
                 "Config": {"Image": "realimage:latest"},
                 "HostConfig": {},
-            }
-        if id_ == "container2":
-            return {"Config": {"Image": "image_id"}, "HostConfig": {}}
+            },
+            "container2": {"Config": {"Image": "image_id"}, "HostConfig": {}},
+        }
+        return ret[id_]
 
     def _inspect_image_effect(id_):
-        if id_ == "realimage:latest":
-            return {"Id": "image_id"}
-        if id_ == "image_id":
-            return {"Id": "image_id"}
+        ret = {
+            "realimage:latest": {"Id": "image_id"},
+            "image_id": {"Id": "image_id"},
+        }
+        return ret[id_]
 
     inspect_container_mock = MagicMock(side_effect=_inspect_container_effect)
     inspect_image_mock = MagicMock(side_effect=_inspect_image_effect)
@@ -957,8 +971,8 @@ def test_compare_container_ulimits_order():
     """
 
     def _inspect_container_effect(id_):
-        if id_ == "container1":
-            return {
+        ret = {
+            "container1": {
                 "Config": {},
                 "HostConfig": {
                     "Ulimits": [
@@ -966,9 +980,8 @@ def test_compare_container_ulimits_order():
                         {"Hard": 65536, "Soft": 65536, "Name": "nofile"},
                     ]
                 },
-            }
-        if id_ == "container2":
-            return {
+            },
+            "container2": {
                 "Config": {},
                 "HostConfig": {
                     "Ulimits": [
@@ -976,7 +989,9 @@ def test_compare_container_ulimits_order():
                         {"Hard": -1, "Soft": -1, "Name": "core"},
                     ]
                 },
-            }
+            },
+        }
+        return ret[id_]
 
     inspect_container_mock = MagicMock(side_effect=_inspect_container_effect)
 
@@ -994,16 +1009,17 @@ def test_compare_container_env_order():
     """
 
     def _inspect_container_effect(id_):
-        if id_ == "container1":
-            return {
+        ret = {
+            "container1": {
                 "Config": {},
                 "HostConfig": {"Env": ["FOO=bar", "HELLO=world"]},
-            }
-        if id_ == "container2":
-            return {
+            },
+            "container2": {
                 "Config": {},
                 "HostConfig": {"Env": ["HELLO=world", "FOO=bar"]},
-            }
+            },
+        }
+        return ret[id_]
 
     inspect_container_mock = MagicMock(side_effect=_inspect_container_effect)
 

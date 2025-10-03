@@ -68,7 +68,7 @@ class SaltVirtMinionContainerFactory(SaltMinion):
         self.container_start_check(self._check_script_path_exists)
         for port in (self.sshd_port, self.libvirt_tcp_port, self.libvirt_tls_port):
             self.check_ports[port] = port
-        self.before_start(self._install_salt_in_container)
+        self.before_start(self._install_salt_in_container, on_container=False)
 
     def _check_script_path_exists(self, timeout_at):
         while time.time() <= timeout_at:

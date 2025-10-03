@@ -267,7 +267,7 @@ class LoadAuth:
 
     def list_tokens(self):
         """
-        List all tokens in eauth_tokn storage.
+        List all tokens in eauth_tokens storage.
         """
         return self.tokens["{}.list_tokens".format(self.opts["eauth_tokens"])](
             self.opts
@@ -301,7 +301,6 @@ class LoadAuth:
         if "eauth" not in load:
             log.warning('Authentication failure of type "eauth" occurred.')
             return False
-
         if load["eauth"] not in self.opts["external_auth"]:
             log.warning('The eauth system "%s" is not enabled', load["eauth"])
             log.warning('Authentication failure of type "eauth" occurred.')
@@ -615,7 +614,7 @@ class AuthUser:
         """
         Instantiate an AuthUser object.
 
-        Takes a user to reprsent, as a string.
+        Takes a user to represent, as a string.
         """
         self.user = user
 

@@ -34,14 +34,14 @@ def salt_minion_retry(salt_master, salt_minion_id):
 @pytest.mark.slow_test
 def test_publish_retry(salt_master, salt_minion_retry, salt_cli, salt_run_cli):
     # run job that takes some time for warmup
-    rtn = salt_cli.run("test.sleep", "3.5", "--async", minion_tgt=salt_minion_retry.id)
+    rtn = salt_cli.run("test.sleep", "10", "--async", minion_tgt=salt_minion_retry.id)
     # obtain JID
     jid = rtn.stdout.strip().split(" ")[-1]
-
+    time.sleep(1)
     # stop the salt master for some time
     with salt_master.stopped():
         # verify we don't yet have the result and sleep
-        assert salt_run_cli.run("jobs.lookup_jid", jid, _timeout=60).data == {}
+        assert salt_run_cli.run("jobs.lookup_jid", jid, _timeout=10).data == {}
 
         # the 5s sleep (and 60s timeout value) is to reduce flakiness due to slower test runs
         # and should be addresses when number of tries is configurable through minion opts

@@ -83,6 +83,9 @@ def create(ctx: Context, image: str, name: str = "", platform: str = ""):
     ]:
         if var in os.environ:
             env[var] = os.environ[var]
+
+    pathlib.Path("/tmp/docker-var").mkdir(exist_ok=True)
+
     cmd = [
         "/usr/bin/docker",
         "create",

@@ -1,3 +1,4 @@
+import asyncio
 import multiprocessing
 import socket
 import threading
@@ -25,10 +26,10 @@ def test_tcp_load_balancer_server(master_opts, io_loop):
     worker = salt.transport.tcp.LoadBalancerWorker(queue, handler, io_loop=io_loop)
 
     def run_loop():
-        io_loop.start()
-
-    loop_thread = threading.Thread(target=run_loop)
-    loop_thread.start()
+        try:
+            io_loop.start()
+        except Exception as exc:  # pylint: disable=broad-except
+            print(f"Caught exeption {exc}")
 
     thread = threading.Thread(target=server.run)
     thread.start()
@@ -42,15 +43,22 @@ def test_tcp_load_balancer_server(master_opts, io_loop):
     sock.connect(("127.0.0.1", master_opts["ret_port"]))
     sock.send(payload)
 
-    try:
-        start = time.monotonic()
+    start = time.monotonic()
+
+    async def check_test():
         while not messages:
-            time.sleep(0.3)
+            await asyncio.sleep(0.3)
             if time.monotonic() - start > 30:
-                assert False, "Took longer than 30 seconds to receive message"
+                break
+
+    io_loop.run_sync(lambda: check_test())  # pylint: disable=unnecessary-lambda
+
+    try:
+        if time.monotonic() - start > 30:
+            assert False, "Took longer than 30 seconds to receive message"
+
         assert [package] == messages
     finally:
         server.close()
         thread.join()
-        io_loop.stop()
         worker.close()

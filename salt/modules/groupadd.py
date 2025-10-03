@@ -52,7 +52,7 @@ def _which(cmd):
     return _cmd
 
 
-def add(name, gid=None, system=False, root=None, non_unique=False):
+def add(name, gid=None, system=False, root=None, non_unique=False, local=False):
     """
     .. versionchanged:: 3006.0
 
@@ -75,21 +75,26 @@ def add(name, gid=None, system=False, root=None, non_unique=False):
 
         .. versionadded:: 3006.0
 
+    local
+        Specifically add the group locally rather than through remote providers (e.g. LDAP)
+
+        .. versionadded:: 3007.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' group.add foo 3456
     """
-    cmd = [_which("groupadd")]
+    cmd = [_which("lgroupadd" if local else "groupadd")]
     if gid:
         cmd.append(f"-g {gid}")
-        if non_unique:
+        if non_unique and not local:
             cmd.append("-o")
     if system and __grains__["kernel"] != "OpenBSD":
         cmd.append("-r")
 
-    if root is not None:
+    if root is not None and not local:
         cmd.extend(("-R", root))
 
     cmd.append(name)
@@ -99,7 +104,7 @@ def add(name, gid=None, system=False, root=None, non_unique=False):
     return not ret["retcode"]
 
 
-def delete(name, root=None):
+def delete(name, root=None, local=False):
     """
     Remove the named group
 
@@ -109,15 +114,21 @@ def delete(name, root=None):
     root
         Directory to chroot into
 
+    local (Only on systems with lgroupdel available):
+        Ensure the group account is removed locally ignoring global
+        account management (default is False).
+
+        .. versionadded:: 3007.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' group.delete foo
     """
-    cmd = [_which("groupdel")]
+    cmd = [_which("lgroupdel" if local else "groupdel")]
 
-    if root is not None:
+    if root is not None and not local:
         cmd.extend(("-R", root))
 
     cmd.append(name)
@@ -275,19 +286,13 @@ def adduser(name, username, root=None):
     Verifies if a valid username 'bar' as a member of an existing group 'foo',
     if not then adds it.
     """
-    on_redhat_5 = (
-        __grains__.get("os_family") == "RedHat"
-        and __grains__.get("osmajorrelease") == "5"
-    )
     on_suse_11 = (
         __grains__.get("os_family") == "Suse"
         and __grains__.get("osmajorrelease") == "11"
     )
 
     if __grains__["kernel"] == "Linux":
-        if on_redhat_5:
-            cmd = [_which("gpasswd"), "-a", username, name]
-        elif on_suse_11:
+        if on_suse_11:
             cmd = [_which("usermod"), "-A", name, username]
         else:
             cmd = [_which("gpasswd"), "--add", username, name]
@@ -325,10 +330,6 @@ def deluser(name, username, root=None):
     Removes a member user 'bar' from a group 'foo'. If group is not present
     then returns True.
     """
-    on_redhat_5 = (
-        __grains__.get("os_family") == "RedHat"
-        and __grains__.get("osmajorrelease") == "5"
-    )
     on_suse_11 = (
         __grains__.get("os_family") == "Suse"
         and __grains__.get("osmajorrelease") == "11"
@@ -338,9 +339,7 @@ def deluser(name, username, root=None):
     try:
         if username in grp_info["members"]:
             if __grains__["kernel"] == "Linux":
-                if on_redhat_5:
-                    cmd = [_which("gpasswd"), "-d", username, name]
-                elif on_suse_11:
+                if on_suse_11:
                     cmd = [_which("usermod"), "-R", name, username]
                 else:
                     cmd = [_which("gpasswd"), "--del", username, name]
@@ -389,19 +388,13 @@ def members(name, members_list, root=None):
     Replaces a membership list for a local group 'foo'.
         foo:x:1234:user1,user2,user3,...
     """
-    on_redhat_5 = (
-        __grains__.get("os_family") == "RedHat"
-        and __grains__.get("osmajorrelease") == "5"
-    )
     on_suse_11 = (
         __grains__.get("os_family") == "Suse"
         and __grains__.get("osmajorrelease") == "11"
     )
 
     if __grains__["kernel"] == "Linux":
-        if on_redhat_5:
-            cmd = [_which("gpasswd"), "-M", members_list, name]
-        elif on_suse_11:
+        if on_suse_11:
             for old_member in __salt__["group.info"](name).get("members"):
                 __salt__["cmd.run"](
                     "{} -R {} {}".format(_which("groupmod"), old_member, name),

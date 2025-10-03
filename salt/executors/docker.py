@@ -14,6 +14,12 @@ DOCKER_MOD_MAP = {
     "state.highstate": "docker.highstate",
 }
 
+__deprecated__ = (
+    3009,
+    "docker",
+    "https://github.com/saltstack/saltext-docker",
+)
+
 
 def __virtual__():
     if "proxy" not in __opts__:

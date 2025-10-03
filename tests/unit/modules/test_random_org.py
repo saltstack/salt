@@ -3,9 +3,9 @@
 """
 
 import pytest
+from tornado.httpclient import HTTPClient
 
 import salt.modules.random_org as random_org
-from salt.ext.tornado.httpclient import HTTPClient
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 

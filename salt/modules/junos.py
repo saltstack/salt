@@ -362,7 +362,7 @@ def rpc(cmd=None, dest=None, **kwargs):
             try:
                 filter_reply = etree.XML(op["filter"])
             except etree.XMLSyntaxError as ex:
-                ret["message"] = f"Invalid filter: {str(ex)}"
+                ret["message"] = f"Invalid filter: {ex}"
                 ret["out"] = False
                 return ret
 
@@ -1254,7 +1254,7 @@ def install_config(path=None, **kwargs):
                     ret["out"] = False
 
         except ValueError as ex:
-            message = f"install_config failed due to: {str(ex)}"
+            message = f"install_config failed due to: {ex}"
             log.error(message)
             ret["message"] = message
             ret["out"] = False
@@ -1263,7 +1263,7 @@ def install_config(path=None, **kwargs):
             ret["message"] = ex.message
             ret["out"] = False
         except RpcTimeoutError as ex:
-            message = f"install_config failed due to timeout error : {str(ex)}"
+            message = f"install_config failed due to timeout error : {ex}"
             log.error(message)
             ret["message"] = message
             ret["out"] = False

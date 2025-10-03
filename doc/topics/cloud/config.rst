@@ -301,8 +301,8 @@ be set:
 .. code-block:: yaml
 
     my-linode-config:
-      apikey: asldkgfakl;sdfjsjaslfjaklsdjf;askldjfaaklsjdfhasldsadfghdkf
-      password: F00barbaz
+      apikey: asldkgfaklsdfjsjaslfjaklsdjf;askldjfaaklsjdfhasldsadfghdkf
+      password: F00barbazlonglongp@ssword
       ssh_pubkey: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKHEOLLbeXgaqRQT9NBAopVz366SdYc0KKX33vAnq+2R user@host
       ssh_key_file: ~/.ssh/id_ed25519
       driver: linode

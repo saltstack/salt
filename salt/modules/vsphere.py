@@ -307,7 +307,7 @@ def _deprecation_message(function):
     @wraps(function)
     def wrapped(*args, **kwargs):
         salt.utils.versions.warn_until(
-            "Argon",
+            3008,
             "The 'vsphere' functionality in Salt has been deprecated and its "
             "functionality will be removed in version 3008 in favor of the "
             "saltext.vmware Salt Extension. "

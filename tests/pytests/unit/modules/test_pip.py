@@ -1126,7 +1126,6 @@ def test_install_extra_args_arguments_recursion_error():
     pkg = "pep8"
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
-
         pytest.raises(
             TypeError,
             lambda: pip.install(
@@ -1763,28 +1762,44 @@ def test_when_version_is_called_with_a_user_it_should_be_passed_to_undelying_run
         )
 
 
-def test_install_target_from_VENV_PIP_TARGET_in_resulting_command(python_binary):
+@pytest.mark.parametrize(
+    "bin_env,target,target_env,expected_target",
+    [
+        (None, None, None, None),
+        (None, "/tmp/foo", None, "/tmp/foo"),
+        (None, None, "/tmp/bar", "/tmp/bar"),
+        (None, "/tmp/foo", "/tmp/bar", "/tmp/foo"),
+        ("/tmp/venv", "/tmp/foo", None, "/tmp/foo"),
+        ("/tmp/venv", None, "/tmp/bar", None),
+        ("/tmp/venv", "/tmp/foo", "/tmp/bar", "/tmp/foo"),
+    ],
+)
+def test_install_target_from_VENV_PIP_TARGET_in_resulting_command(
+    python_binary, bin_env, target, target_env, expected_target
+):
     pkg = "pep8"
-    target = "/tmp/foo"
-    target_env = "/tmp/bar"
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     environment = os.environ.copy()
-    environment["VENV_PIP_TARGET"] = target_env
+    real_get_pip_bin = pip._get_pip_bin
+
+    def mock_get_pip_bin(bin_env):
+        if not bin_env:
+            return real_get_pip_bin(bin_env)
+        return [f"{bin_env}/bin/pip"]
+
+    if target_env is not None:
+        environment["VENV_PIP_TARGET"] = target_env
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}), patch.object(
         os, "environ", environment
-    ):
-        pip.install(pkg)
-        expected = [*python_binary, "install", "--target", target_env, pkg]
-        mock.assert_called_with(
-            expected,
-            saltenv="base",
-            runas=None,
-            use_vt=False,
-            python_shell=False,
-        )
-        mock.reset_mock()
-        pip.install(pkg, target=target)
-        expected = [*python_binary, "install", "--target", target, pkg]
+    ), patch.object(pip, "_get_pip_bin", mock_get_pip_bin):
+        pip.install(pkg, bin_env=bin_env, target=target)
+        expected_binary = python_binary
+        if bin_env is not None:
+            expected_binary = [f"{bin_env}/bin/pip"]
+        if expected_target is not None:
+            expected = [*expected_binary, "install", "--target", expected_target, pkg]
+        else:
+            expected = [*expected_binary, "install", pkg]
         mock.assert_called_with(
             expected,
             saltenv="base",

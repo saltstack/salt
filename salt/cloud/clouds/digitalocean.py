@@ -351,27 +351,40 @@ def create(vm_):
             " or 'private'."
         )
 
-    private_networking = config.get_cloud_config_value(
-        "private_networking",
+    vpc_name = config.get_cloud_config_value(
+        "vpc_name",
         vm_,
         __opts__,
         search_global=False,
         default=None,
     )
 
-    if private_networking is not None:
-        if not isinstance(private_networking, bool):
-            raise SaltCloudConfigError(
-                "'private_networking' should be a boolean value."
-            )
-        kwargs["private_networking"] = private_networking
-
-    if not private_networking and ssh_interface == "private":
-        raise SaltCloudConfigError(
-            "The DigitalOcean driver requires ssh_interface if defined as 'private' "
-            "then private_networking should be set as 'True'."
+    if vpc_name is not None:
+        vpc = _get_vpc_by_name(vpc_name)
+        if vpc is None:
+            raise SaltCloudConfigError("Invalid VPC name provided")
+        else:
+            kwargs["vpc_uuid"] = vpc[vpc_name]["id"]
+    else:
+        private_networking = config.get_cloud_config_value(
+            "private_networking",
+            vm_,
+            __opts__,
+            search_global=False,
+            default=None,
         )
+        if private_networking is not None:
+            if not isinstance(private_networking, bool):
+                raise SaltCloudConfigError(
+                    "'private_networking' should be a boolean value."
+                )
+            kwargs["private_networking"] = private_networking
 
+        if not private_networking and ssh_interface == "private":
+            raise SaltCloudConfigError(
+                "The DigitalOcean driver requires ssh_interface if defined as 'private' "
+                "then private_networking should be set as 'True'."
+            )
     backups_enabled = config.get_cloud_config_value(
         "backups_enabled",
         vm_,
@@ -611,8 +624,11 @@ def query(
             default="https://api.digitalocean.com/v2",
         )
     )
-
-    path = f"{base_path}/{method}/"
+    # vpcs method doesn't like the / at the end.
+    if method == "vpcs":
+        path = f"{base_path}/{method}"
+    else:
+        path = f"{base_path}/{method}/"
 
     if droplet_id:
         path += f"{droplet_id}/"
@@ -975,7 +991,7 @@ def destroy_dns_records(fqdn):
     records = response["domain_records"]
 
     if records:
-        record_ids = [r["id"] for r in records if r["name"].decode() == hostname]
+        record_ids = [r["id"] for r in records if r["name"] == hostname]
         log.debug("deleting DNS record IDs: %s", record_ids)
         for id_ in record_ids:
             try:
@@ -1254,6 +1270,41 @@ def unassign_floating_ip(kwargs=None, call=None):
     return result
 
 
+def _get_vpc_by_name(name):
+    """
+    Helper function to format and parse vpc data. It's pretty expensive as it
+    retrieves a list of vpcs and iterates through them till it finds the correct
+    vpc by name.
+    """
+    fetch = True
+    page = 1
+    ret = {}
+
+    log.debug("Matching vpc name with: %s", name)
+    while fetch:
+        items = query(method="vpcs", command=f"?page={str(page)}&per_page=200")
+        for node in items["vpcs"]:
+            log.debug("Node returned : %s", node["name"])
+            if name == node["name"]:
+                log.debug("Matched VPC node")
+                ret[name] = {
+                    "id": node["id"],
+                    "urn": node["urn"],
+                    "name": name,
+                    "description": node["description"],
+                    "region": node["region"],
+                    "ip_range": node["ip_range"],
+                    "default": node["default"],
+                }
+                return ret
+        page += 1
+        try:
+            fetch = "next" in items["links"]["pages"]
+        except KeyError:
+            fetch = False
+    return None
+
+
 def _list_nodes(full=False, for_output=False):
     """
     Helper function to format and parse node data.
@@ -1263,7 +1314,7 @@ def _list_nodes(full=False, for_output=False):
     ret = {}
 
     while fetch:
-        items = query(method="droplets", command="?page=" + str(page) + "&per_page=200")
+        items = query(method="droplets", command=f"?page={str(page)}&per_page=200")
         for node in items["droplets"]:
             name = node["name"]
             ret[name] = {}

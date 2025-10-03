@@ -41,6 +41,12 @@ log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 __virtualname__ = "docker_volume"
 __virtual_aliases__ = ("moby_volume",)
 
+__deprecated__ = (
+    3009,
+    "docker",
+    "https://github.com/saltstack/saltext-docker",
+)
+
 
 def __virtual__():
     """

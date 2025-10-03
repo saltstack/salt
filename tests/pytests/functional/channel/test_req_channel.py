@@ -6,6 +6,7 @@ import shutil
 import time
 
 import pytest
+import tornado.gen
 from pytestshellutils.utils.processes import terminate_process
 
 import salt.channel.client
@@ -13,7 +14,6 @@ import salt.channel.server
 import salt.config
 import salt.crypt
 import salt.exceptions
-import salt.ext.tornado.gen
 import salt.master
 import salt.utils.platform
 import salt.utils.process
@@ -64,14 +64,16 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
             ),
         }
 
-        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
+        self.io_loop = tornado.ioloop.IOLoop()
         self.io_loop.make_current()
         self.req_server_channel.post_fork(self._handle_payload, io_loop=self.io_loop)
         self.io_loop.add_callback(self.running.set)
         try:
             self.io_loop.start()
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, SystemExit):
             pass
+        finally:
+            self.req_server_channel.close()
 
     def _handle_signals(self, signum, sigframe):
         self.close()
@@ -100,11 +102,17 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
                 terminate_process(pid=pid, kill_children=True, slow_stop=False)
             self.process_manager = None
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _handle_payload(self, payload):
         if self.req_channel_crypt == "clear":
-            raise salt.ext.tornado.gen.Return((payload, {"fun": "send_clear"}))
-        raise salt.ext.tornado.gen.Return((payload, {"fun": "send"}))
+            raise tornado.gen.Return((payload, {"fun": "send_clear"}))
+        for key in (
+            "id",
+            "ts",
+            "tok",
+        ):
+            payload["load"].pop(key, None)
+        raise tornado.gen.Return((payload, {"fun": "send"}))
 
 
 @pytest.fixture
@@ -220,7 +228,6 @@ def test_basic(push_channel):
         {"bar": "baz"},
         {"baz": "qux", "list": [1, 2, 3]},
     ]
-
     for msg in msgs:
         ret = push_channel.send(dict(msg), timeout=5, tries=1)
         assert ret["load"] == msg

@@ -3,6 +3,7 @@ Common functions for managing package refreshes during states
 """
 
 import errno
+import fnmatch
 import logging
 import os
 import re
@@ -102,3 +103,33 @@ def check_bundled():
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         return True
     return False
+
+
+def match_wildcard(current_pkgs, pkg_params):
+    """
+    Loop through pkg_params looking for any which contains a wildcard and get
+    the real package names from the packages which are currently installed.
+
+    current_pkgs
+        List of currently installed packages as output by ``list_pkgs``
+
+    pkg_params
+        List of packages as processed by ``pkg_resource.parse_targets``
+    """
+    pkg_matches = {}
+
+    for pkg_param in list(pkg_params):
+        if "*" in pkg_param:
+            pkg_matches = {
+                pkg: pkg_params[pkg_param]
+                for pkg in current_pkgs
+                if fnmatch.fnmatch(pkg, pkg_param)
+            }
+
+            # Remove previous pkg_param
+            pkg_params.pop(pkg_param)
+
+    # Update pkg_params with the matches
+    pkg_params.update(pkg_matches)
+
+    return pkg_params

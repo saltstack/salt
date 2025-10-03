@@ -25,12 +25,25 @@ docs = command_group(
     description=__doc__,
     venv_config=VirtualEnvPipConfig(
         requirements_files=[
+            tools.utils.REPO_ROOT / "requirements" / "base.txt",
+            tools.utils.REPO_ROOT / "requirements" / "zeromq.txt",
             tools.utils.REPO_ROOT
             / "requirements"
             / "static"
             / "ci"
             / "py{}.{}".format(*sys.version_info)
             / "docs.txt",
+        ],
+        install_args=[
+            "--constraint",
+            str(
+                tools.utils.REPO_ROOT
+                / "requirements"
+                / "static"
+                / "pkg"
+                / "py{}.{}".format(*sys.version_info)
+                / "linux.txt"
+            ),
         ],
     ),
 )

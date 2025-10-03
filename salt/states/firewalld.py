@@ -189,7 +189,7 @@ def present(
     block_icmp=None,
     prune_block_icmp=False,
     default=None,
-    masquerade=False,
+    masquerade=None,
     ports=None,
     prune_ports=False,
     port_fwd=None,
@@ -212,8 +212,8 @@ def present(
     default : None
         Set this zone as the default zone if ``True``.
 
-    masquerade : False
-        Enable or disable masquerade for a zone.
+    masquerade : None
+        Enable or disable masquerade for a zone. By default it will not change it.
 
     block_icmp : None
         List of ICMP types to block in the zone.
@@ -381,7 +381,7 @@ def _present(
     block_icmp=None,
     prune_block_icmp=False,
     default=None,
-    masquerade=False,
+    masquerade=None,
     ports=None,
     prune_ports=False,
     port_fwd=None,
@@ -500,27 +500,37 @@ def _present(
     except CommandExecutionError as err:
         ret["comment"] = f"Error: {err}"
         return ret
-
-    if masquerade and not masquerade_ret:
-        if not __opts__["test"]:
-            try:
-                __salt__["firewalld.add_masquerade"](name, permanent=True)
-            except CommandExecutionError as err:
-                ret["comment"] = f"Error: {err}"
-                return ret
-        ret["changes"].update(
-            {"masquerade": {"old": "", "new": "Masquerading successfully set."}}
-        )
-    elif not masquerade and masquerade_ret:
-        if not __opts__["test"]:
-            try:
-                __salt__["firewalld.remove_masquerade"](name, permanent=True)
-            except CommandExecutionError as err:
-                ret["comment"] = f"Error: {err}"
-                return ret
-        ret["changes"].update(
-            {"masquerade": {"old": "", "new": "Masquerading successfully disabled."}}
-        )
+    if masquerade is not None:
+        if masquerade and not masquerade_ret:
+            if not __opts__["test"]:
+                try:
+                    __salt__["firewalld.add_masquerade"](name, permanent=True)
+                except CommandExecutionError as err:
+                    ret["comment"] = f"Error: {err}"
+                    return ret
+            ret["changes"].update(
+                {
+                    "masquerade": {
+                        "old": masquerade_ret,
+                        "new": "Masquerading successfully set.",
+                    }
+                }
+            )
+        elif not masquerade and masquerade_ret:
+            if not __opts__["test"]:
+                try:
+                    __salt__["firewalld.remove_masquerade"](name, permanent=True)
+                except CommandExecutionError as err:
+                    ret["comment"] = f"Error: {err}"
+                    return ret
+            ret["changes"].update(
+                {
+                    "masquerade": {
+                        "old": masquerade_ret,
+                        "new": "Masquerading successfully disabled.",
+                    }
+                }
+            )
 
     if ports or prune_ports:
         ports = ports or []

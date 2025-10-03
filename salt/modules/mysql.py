@@ -121,6 +121,7 @@ __grants__ = [
     "SELECT",
     "SET USER",  # MariaDB since 10.5.2
     "SET_USER_ID",
+    "SERVICE_CONNECTION_ADMIN",  # MySQL since 8.0.14
     "SHOW DATABASES",
     "SHOW VIEW",
     "SHUTDOWN",

@@ -49,10 +49,12 @@ def test_init(opts):
             host="junos",
             hostkey_verify=False,
             key_filename=None,
+            look_for_keys=True,
             password=None,
             port="960",
             sock_fd=None,
             ssh_config=ANY,
+            timeout=30,
             username="xxxx",
         )
 

@@ -23,6 +23,12 @@ import salt.utils.files
 import salt.utils.http as http
 import salt.utils.json
 
+__deprecated__ = (
+    3009,
+    "kubernetes",
+    "https://github.com/salt-extensions/saltext-kubernetes",
+)
+
 __virtualname__ = "k8s"
 
 # Setup the logger

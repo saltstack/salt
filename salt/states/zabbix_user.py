@@ -6,6 +6,13 @@ Management of Zabbix users.
 
 """
 
+__deprecated__ = (
+    3009,
+    "zabbix",
+    "https://github.com/salt-extensions/saltext-zabbix",
+)
+
+
 import logging
 from copy import deepcopy
 

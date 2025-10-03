@@ -6,6 +6,12 @@ Management of Zabbix host groups.
 
 """
 
+__deprecated__ = (
+    3009,
+    "zabbix",
+    "https://github.com/salt-extensions/saltext-zabbix",
+)
+
 
 def __virtual__():
     """

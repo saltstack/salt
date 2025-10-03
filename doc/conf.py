@@ -159,6 +159,7 @@ extensions = [
     "saltrepo",
     "myst_parser",
     "sphinxcontrib.spelling",
+    "vaultpolicylexer",
     #'saltautodoc', # Must be AFTER autodoc
 ]
 
@@ -313,7 +314,6 @@ linkcheck_ignore = [
     r"https://salt-cloud.readthedocs.io",
     r"https://salt.readthedocs.io",
     r"http://www.pip-installer.org/",
-    r"http://www.windowsazure.com/",
     r"https://github.com/watching",
     r"dash-feed://",
     r"https://github.com/saltstack/salt/",

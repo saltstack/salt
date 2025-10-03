@@ -16,6 +16,12 @@ Enable and disable apache sites.
         - name: default
 """
 
+__deprecated__ = (
+    3009,
+    "apache",
+    "https://github.com/salt-extensions/saltext-apache",
+)
+
 
 def __virtual__():
     """

@@ -3,16 +3,15 @@ import ssl
 import tarfile
 
 import pytest
-
-try:
-    import trustme
-except ImportError:
-    pass
-
 from pytestshellutils.utils import ports
 from saltfactories.utils import random_string
 
 import salt.utils.http
+
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.skip_if_binaries_missing("docker", "dockerd", check_all=False),
+]
 
 
 @pytest.mark.parametrize("backend", ["requests", "urllib2", "tornado"])
@@ -24,12 +23,6 @@ def test_decode_body(webserver, integration_files_dir, backend):
         webserver.url("test.tar.gz"), backend=backend, decode_body=False
     )
     assert isinstance(ret["body"], bytes)
-
-
-pytestmark = [
-    pytest.mark.slow_test,
-    pytest.mark.skip_if_binaries_missing("docker", "dockerd", check_all=False),
-]
 
 
 @pytest.fixture(scope="module")
@@ -49,6 +42,7 @@ def tinyproxy_pass():
 
 @pytest.fixture(scope="session")
 def ca():
+    trustme = pytest.importorskip("trustme")
     return trustme.CA()
 
 

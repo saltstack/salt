@@ -17,6 +17,12 @@ ADMIN_CFG = "/etc/kubernetes/admin.conf"
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "kubernetes",
+    "https://github.com/salt-extensions/saltext-kubernetes",
+)
+
 __virtualname__ = "kubeadm"
 
 # Define not exported variables from Salt, so this can be imported as

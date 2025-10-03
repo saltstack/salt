@@ -47,6 +47,7 @@ def test_compare_keys_newline_tgt(key_data, linesep):
 def root_dir(tmp_path):
     (tmp_path / "var").mkdir()
     (tmp_path / "var" / "cache").mkdir()
+    (tmp_path / "var" / "run").mkdir()
     (tmp_path / "etc").mkdir()
     (tmp_path / "etc" / "salt").mkdir()
     (tmp_path / "etc" / "salt" / "pki").mkdir()
@@ -59,6 +60,10 @@ def test_req_server_validate_token_removes_token(root_dir):
         "master_uri": "tcp://127.0.0.1:4505",
         "cachedir": str(root_dir / "var" / "cache"),
         "pki_dir": str(root_dir / "etc" / "salt" / "pki"),
+        "sock_dir": str(root_dir / "var" / "run"),
+        "key_pass": "",
+        "keysize": 2048,
+        "master_sign_pubkey": False,
     }
     reqsrv = server.ReqServerChannel.factory(opts)
     payload = {
@@ -76,6 +81,10 @@ def test_req_server_validate_token_removes_token_id_traversal(root_dir):
         "master_uri": "tcp://127.0.0.1:4505",
         "cachedir": str(root_dir / "var" / "cache"),
         "pki_dir": str(root_dir / "etc" / "salt" / "pki"),
+        "sock_dir": str(root_dir / "var" / "run"),
+        "key_pass": "",
+        "keysize": 2048,
+        "master_sign_pubkey": False,
     }
     reqsrv = server.ReqServerChannel.factory(opts)
     payload = {

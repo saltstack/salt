@@ -2,10 +2,10 @@ import pathlib
 
 import attr
 import pytest
+from tornado import locks
 
 import salt.transport.ipc
 import salt.utils.platform
-from salt.ext.tornado import locks
 
 pytestmark = [
     # Windows does not support POSIX IPC

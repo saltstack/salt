@@ -5,7 +5,7 @@ Unit test for the daemons starter classes.
 import logging
 import multiprocessing
 
-import salt.cli.daemons as daemons
+import salt.cli.daemons
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
@@ -74,7 +74,7 @@ def _master_exec_test(child_pipe):
         Create master instance
         :return:
         """
-        obj = daemons.Master()
+        obj = salt.cli.daemons.Master()
         obj.config = {"user": "dummy", "hash_type": alg}
         for attr in ["start_log_info", "prepare", "shutdown", "master"]:
             setattr(obj, attr, MagicMock())
@@ -114,7 +114,7 @@ def _minion_exec_test(child_pipe):
         Create minion instance
         :return:
         """
-        obj = daemons.Minion()
+        obj = salt.cli.daemons.Minion()
         obj.config = {"user": "dummy", "hash_type": alg}
         for attr in ["start_log_info", "prepare", "shutdown"]:
             setattr(obj, attr, MagicMock())
@@ -154,7 +154,7 @@ def _proxy_exec_test(child_pipe):
         Create proxy minion instance
         :return:
         """
-        obj = daemons.ProxyMinion()
+        obj = salt.cli.daemons.ProxyMinion()
         obj.config = {"user": "dummy", "hash_type": alg}
         for attr in ["minion", "start_log_info", "prepare", "shutdown", "tune_in"]:
             setattr(obj, attr, MagicMock())
@@ -195,7 +195,7 @@ def _syndic_exec_test(child_pipe):
         Create syndic instance
         :return:
         """
-        obj = daemons.Syndic()
+        obj = salt.cli.daemons.Syndic()
         obj.config = {"user": "dummy", "hash_type": alg}
         for attr in ["syndic", "start_log_info", "prepare", "shutdown"]:
             setattr(obj, attr, MagicMock())
@@ -263,3 +263,149 @@ def test_syndic_daemon_hash_type_verified():
     Verify if Syndic is verifying hash_type config option.
     """
     _multiproc_exec_test(_syndic_exec_test)
+
+
+def test_master_skip_prepare(tmp_path):
+    root_dir = tmp_path / "root"
+    pki_dir = tmp_path / "pki"
+    sock_dir = tmp_path / "socket"
+    cache_dir = tmp_path / "cache"
+    token_dir = tmp_path / "token"
+    syndic_dir = tmp_path / "syndic"
+    sqlite_dir = tmp_path / "sqlite_queue_dir"
+
+    assert not pki_dir.exists()
+    assert not sock_dir.exists()
+    assert not cache_dir.exists()
+    assert not token_dir.exists()
+    assert not syndic_dir.exists()
+    assert not sqlite_dir.exists()
+
+    master = salt.cli.daemons.Master()
+    master.config = {
+        "verify_env": True,
+        "pki_dir": str(pki_dir),
+        "cachedir": str(cache_dir),
+        "sock_dir": str(sock_dir),
+        "token_dir": str(token_dir),
+        "syndic_dir": str(syndic_dir),
+        "sqlite_queue_dir": str(sqlite_dir),
+        "cluster_id": None,
+        "user": "root",
+        "permissive_pki_access": False,
+        "root_dir": str(root_dir),
+    }
+
+    assert not pki_dir.exists()
+    assert not sock_dir.exists()
+    assert not cache_dir.exists()
+    assert not token_dir.exists()
+    assert not syndic_dir.exists()
+    assert not sqlite_dir.exists()
+
+
+def test_master_prepare(tmp_path):
+    root_dir = tmp_path / "root"
+    pki_dir = tmp_path / "pki"
+    sock_dir = tmp_path / "socket"
+    cache_dir = tmp_path / "cache"
+    token_dir = tmp_path / "token"
+    syndic_dir = tmp_path / "syndic"
+    sqlite_dir = tmp_path / "sqlite_queue_dir"
+
+    assert not pki_dir.exists()
+    assert not sock_dir.exists()
+    assert not cache_dir.exists()
+    assert not token_dir.exists()
+    assert not syndic_dir.exists()
+    assert not sqlite_dir.exists()
+
+    master = salt.cli.daemons.Master()
+    master.config = {
+        "verify_env": True,
+        "pki_dir": str(pki_dir),
+        "cachedir": str(cache_dir),
+        "sock_dir": str(sock_dir),
+        "token_dir": str(token_dir),
+        "syndic_dir": str(syndic_dir),
+        "sqlite_queue_dir": str(sqlite_dir),
+        "cluster_id": None,
+        "user": "root",
+        "permissive_pki_access": False,
+        "root_dir": str(root_dir),
+    }
+
+    master.verify_environment()
+
+    assert pki_dir.exists()
+    assert (pki_dir / "minions").exists()
+    assert (pki_dir / "minions_pre").exists()
+    assert (pki_dir / "minions_denied").exists()
+    assert (pki_dir / "minions_autosign").exists()
+    assert (pki_dir / "minions_rejected").exists()
+    assert sock_dir.exists()
+    assert cache_dir.exists()
+    assert (cache_dir / "jobs").exists()
+    assert (cache_dir / "proc").exists()
+    assert token_dir.exists()
+    assert syndic_dir.exists()
+    assert sqlite_dir.exists()
+
+
+def test_master_prepare_cluster(tmp_path):
+    root_dir = tmp_path / "root"
+    pki_dir = tmp_path / "pki"
+    sock_dir = tmp_path / "socket"
+    cache_dir = tmp_path / "cache"
+    token_dir = tmp_path / "token"
+    syndic_dir = tmp_path / "syndic"
+    sqlite_dir = tmp_path / "sqlite_queue_dir"
+    cluster_dir = tmp_path / "cluster"
+
+    assert not pki_dir.exists()
+    assert not sock_dir.exists()
+    assert not cache_dir.exists()
+    assert not token_dir.exists()
+    assert not syndic_dir.exists()
+    assert not sqlite_dir.exists()
+    assert not cluster_dir.exists()
+
+    master = salt.cli.daemons.Master()
+    master.config = {
+        "verify_env": True,
+        "cluster_id": "cluster-test",
+        "cluster_pki_dir": str(cluster_dir),
+        "pki_dir": str(pki_dir),
+        "cachedir": str(cache_dir),
+        "sock_dir": str(sock_dir),
+        "token_dir": str(token_dir),
+        "syndic_dir": str(syndic_dir),
+        "sqlite_queue_dir": str(sqlite_dir),
+        "user": "root",
+        "permissive_pki_access": False,
+        "root_dir": str(root_dir),
+    }
+
+    master.verify_environment()
+
+    assert pki_dir.exists()
+    assert (pki_dir / "minions").exists()
+    assert (pki_dir / "minions_pre").exists()
+    assert (pki_dir / "minions_denied").exists()
+    assert (pki_dir / "minions_autosign").exists()
+    assert (pki_dir / "minions_rejected").exists()
+    assert sock_dir.exists()
+    assert cache_dir.exists()
+    assert (cache_dir / "jobs").exists()
+    assert (cache_dir / "proc").exists()
+    assert token_dir.exists()
+    assert syndic_dir.exists()
+    assert sqlite_dir.exists()
+
+    assert cluster_dir.exists()
+    assert (cluster_dir / "peers").exists()
+    assert (cluster_dir / "minions").exists()
+    assert (cluster_dir / "minions_pre").exists()
+    assert (cluster_dir / "minions_denied").exists()
+    assert (cluster_dir / "minions_autosign").exists()
+    assert (cluster_dir / "minions_rejected").exists()

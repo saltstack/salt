@@ -702,7 +702,6 @@ MISSING_EXAMPLES = {
     "salt/modules/ssh_service.py": ["enabled", "running"],
     "salt/modules/state.py": ["test", "get_pauses", "apply_"],
     "salt/modules/swift.py": ["put", "get", "delete"],
-    "salt/modules/system.py": ["set_reboot_required_witnessed"],
     "salt/modules/test.py": ["rand_str", "try_"],
     "salt/modules/tls.py": ["validate"],
     "salt/modules/tomcat.py": ["extract_war_version"],
@@ -729,7 +728,6 @@ MISSING_EXAMPLES = {
         "match_metric",
     ],
     "salt/modules/vagrant.py": ["get_machine_id", "get_vm_info"],
-    "salt/modules/vault.py": ["read_secret"],
     "salt/modules/virt.py": [
         "nesthash",
         "pool_update",

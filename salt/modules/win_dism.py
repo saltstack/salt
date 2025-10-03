@@ -19,7 +19,7 @@ __virtualname__ = "dism"
 # host machine. On 32bit boxes that will always be System32. On 64bit boxes that
 # are running 64bit salt that will always be System32. On 64bit boxes that are
 # running 32bit salt the 64bit dism will be found in SysNative
-# Sysnative is a virtual folder, a special alias, that can be used to access the
+# SysNative is a virtual folder, a special alias, that can be used to access the
 # 64-bit System32 folder from a 32-bit application
 try:
     # This does not apply to Non-Windows platforms
@@ -55,7 +55,10 @@ def _get_components(type_regex, plural_type, install_value, image=None):
         f"/Get-{plural_type}",
     ]
     out = __salt__["cmd.run"](cmd)
-    pattern = rf"{type_regex} : (.*)\r\n.*State : {install_value}\r\n"
+    if install_value:
+        pattern = rf"{type_regex} : (.*)\r\n.*State : {install_value}\r\n"
+    else:
+        pattern = rf"{type_regex} : (.*)\r\n.*"
     capabilities = re.findall(pattern, out, re.MULTILINE)
     capabilities.sort()
     return capabilities
@@ -105,7 +108,7 @@ def add_capability(
     if salt.utils.versions.version_cmp(__grains__["osversion"], "10") == -1:
         raise NotImplementedError(
             "`install_capability` is not available on this version of Windows: "
-            "{}".format(__grains__["osversion"])
+            f'{__grains__["osversion"]}'
         )
 
     cmd = [
@@ -159,7 +162,7 @@ def remove_capability(capability, image=None, restart=False):
     if salt.utils.versions.version_cmp(__grains__["osversion"], "10") == -1:
         raise NotImplementedError(
             "`uninstall_capability` is not available on this version of "
-            "Windows: {}".format(__grains__["osversion"])
+            f'Windows: {__grains__["osversion"]}'
         )
 
     cmd = [
@@ -203,7 +206,7 @@ def get_capabilities(image=None):
     if salt.utils.versions.version_cmp(__grains__["osversion"], "10") == -1:
         raise NotImplementedError(
             "`installed_capabilities` is not available on this version of "
-            "Windows: {}".format(__grains__["osversion"])
+            f'Windows: {__grains__["osversion"]}'
         )
 
     cmd = [
@@ -248,7 +251,7 @@ def installed_capabilities(image=None):
     if salt.utils.versions.version_cmp(__grains__["osversion"], "10") == -1:
         raise NotImplementedError(
             "`installed_capabilities` is not available on this version of "
-            "Windows: {}".format(__grains__["osversion"])
+            f'Windows: {__grains__["osversion"]}'
         )
     return _get_components(
         type_regex="Capability Identity",
@@ -285,7 +288,7 @@ def available_capabilities(image=None):
     if salt.utils.versions.version_cmp(__grains__["osversion"], "10") == -1:
         raise NotImplementedError(
             "`installed_capabilities` is not available on this version of "
-            "Windows: {}".format(__grains__["osversion"])
+            f'Windows: {__grains__["osversion"]}'
         )
     return _get_components(
         type_regex="Capability Identity",
@@ -592,6 +595,60 @@ def add_package(
     return __salt__["cmd.run_all"](cmd)
 
 
+def add_provisioned_package(package, image=None, restart=False):
+    """
+    Provision a package using DISM. A provisioned package will install for new
+    users on the system. It will also be reinstalled on each user if the system
+    is updated.
+
+    .. versionadded:: 3007.0
+
+    Args:
+
+        package (str):
+            The package to install. Can be one of the following:
+
+            - ``.appx`` or ``.appxbundle``
+            - ``.msix`` or ``.msixbundle``
+            - ``.ppkg``
+
+        image (Optional[str]):
+            The path to the root directory of an offline Windows image. If
+            ``None`` is passed, the running operating system is targeted.
+            Default is ``None``.
+
+        restart (Optional[bool]):
+            Reboot the machine if required by the installation. Default is
+            ``False``
+
+    Returns:
+        dict: A dictionary containing the results of the command
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dism.add_provisioned_package C:\\Packages\\package.appx
+        salt '*' dism.add_provisioned_package C:\\Packages\\package.appxbundle
+        salt '*' dism.add_provisioned_package C:\\Packages\\package.msix
+        salt '*' dism.add_provisioned_package C:\\Packages\\package.msixbundle
+        salt '*' dism.add_provisioned_package C:\\Packages\\package.ppkg
+    """
+    cmd = [
+        bin_dism,
+        "/Quiet",
+        f"/Image:{image}" if image else "/Online",
+        "/Add-ProvisionedAppxPackage",
+        f"/PackagePath:{package}",
+        "/SkipLicense",
+    ]
+
+    if not restart:
+        cmd.append("/NoRestart")
+
+    return __salt__["cmd.run_all"](cmd)
+
+
 def remove_package(package, image=None, restart=False):
     """
     Uninstall a package
@@ -747,6 +804,34 @@ def installed_packages(image=None):
         type_regex="Package Identity",
         plural_type="Packages",
         install_value="Installed",
+        image=image,
+    )
+
+
+def provisioned_packages(image=None):
+    """
+    List the packages installed on the system
+
+    .. versionadded:: 3007.0
+
+    Args:
+        image (Optional[str]): The path to the root directory of an offline
+            Windows image. If `None` is passed, the running operating system is
+            targeted. Default is None.
+
+    Returns:
+        list: A list of installed packages
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dism.installed_packages
+    """
+    return _get_components(
+        type_regex="PackageName",
+        plural_type="ProvisionedAppxPackages",
+        install_value="",
         image=image,
     )
 

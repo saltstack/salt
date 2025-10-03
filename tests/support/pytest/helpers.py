@@ -829,6 +829,20 @@ def change_cwd(path):
         os.chdir(old_cwd)
 
 
+@pytest.helpers.register
+def download_file(url, dest, auth=None):
+    # NOTE the stream=True parameter below
+    with requests.get(
+        url, allow_redirects=True, stream=True, auth=auth, timeout=60
+    ) as r:
+        r.raise_for_status()
+        with salt.utils.files.fopen(dest, "wb") as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+    return dest
+
+
 @contextmanager
 def reap_stray_processes(pid: int = os.getpid()):
 
@@ -882,18 +896,6 @@ def reap_stray_processes(pid: int = os.getpid()):
                     child,
                     pprint.pformat(child.as_dict()),
                 )
-
-
-@pytest.helpers.register
-def download_file(url, dest, auth=None):
-    # NOTE the stream=True parameter below
-    with requests.get(url, stream=True, auth=auth, timeout=60) as r:
-        r.raise_for_status()
-        with salt.utils.files.fopen(dest, "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-    return dest
 
 
 # Only allow star importing the functions defined in this module

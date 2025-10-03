@@ -1301,12 +1301,12 @@ class Cloud:
         :param dict main: The main cloud config
         :param dict provider: The provider config
         :param dict profile: The profile config
-        :param dict overrides: The vm's config overrides
+        :param dict overrides: a special dict that carries per-node options overrides (see CloudConfig:profile() documentation)
         """
         vm = main.copy()
         vm = salt.utils.dictupdate.update(vm, provider)
         vm = salt.utils.dictupdate.update(vm, profile)
-        vm.update(overrides)
+        vm = salt.utils.dictupdate.update(vm, overrides.get(name, {}))
         vm["name"] = name
         return vm
 

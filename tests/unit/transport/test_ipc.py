@@ -8,15 +8,15 @@ import os
 import threading
 
 import pytest
+import tornado.gen
+import tornado.ioloop
+import tornado.testing
+from tornado.iostream import StreamClosedError
 
 import salt.config
 import salt.exceptions
-import salt.ext.tornado.gen
-import salt.ext.tornado.ioloop
-import salt.ext.tornado.testing
 import salt.transport.ipc
 import salt.utils.platform
-from salt.ext.tornado.iostream import StreamClosedError
 from tests.support.runtests import RUNTIME_VARS
 
 pytestmark = [
@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 
 
 @pytest.mark.skip_on_windows(reason="Windows does not support Posix IPC")
-class IPCMessagePubSubCase(salt.ext.tornado.testing.AsyncTestCase):
+class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
     """
     Test all of the clear msg stuff
     """
@@ -64,12 +64,16 @@ class IPCMessagePubSubCase(salt.ext.tornado.testing.AsyncTestCase):
         super().tearDown()
         try:
             self.pub_channel.close()
+        except RuntimeError as exc:
+            pass
         except OSError as exc:
             if exc.errno != errno.EBADF:
                 # If its not a bad file descriptor error, raise
                 raise
         try:
             self.sub_channel.close()
+        except RuntimeError as exc:
+            pass
         except OSError as exc:
             if exc.errno != errno.EBADF:
                 # If its not a bad file descriptor error, raise
@@ -125,7 +129,7 @@ class IPCMessagePubSubCase(salt.ext.tornado.testing.AsyncTestCase):
         self.assertEqual(ret1, "TEST")
         self.assertEqual(ret2, "TEST")
 
-    @salt.ext.tornado.testing.gen_test
+    @tornado.testing.gen_test
     def test_async_reading_streamclosederror(self):
         client1 = self.sub_channel
         call_cnt = []

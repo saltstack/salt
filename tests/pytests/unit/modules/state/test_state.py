@@ -235,26 +235,6 @@ class MockState:
             pass
 
 
-class MockSerial:
-    """
-    Mock Class
-    """
-
-    @staticmethod
-    def load(data):
-        """
-        Mock load method
-        """
-        return {"A": "B"}
-
-    @staticmethod
-    def dump(data, data1):
-        """
-        Mock dump method
-        """
-        return True
-
-
 class MockTarFile:
     """
     Mock tarfile class
@@ -796,36 +776,33 @@ def test_highstate():
                         mock = MagicMock(return_value=True)
                         with patch.object(state, "_filter_running", mock):
                             mock = MagicMock(return_value=True)
-                            with patch.object(salt.payload, "Serial", mock):
-                                with patch.object(os.path, "join", mock):
-                                    with patch.object(state, "_set_retcode", mock):
-                                        assert state.highstate(arg)
+                            with patch.object(os.path, "join", mock):
+                                with patch.object(state, "_set_retcode", mock):
+                                    assert state.highstate(arg)
 
 
 def test_clear_request():
     """
     Test to clear out the state execution request without executing it
     """
-    mock = MagicMock(return_value=True)
-    with patch.object(salt.payload, "Serial", mock):
-        mock = MagicMock(side_effect=[False, True, True])
-        with patch.object(os.path, "isfile", mock):
-            assert state.clear_request("A")
+    mock = MagicMock(side_effect=[False, True, True])
+    with patch.object(os.path, "isfile", mock):
+        assert state.clear_request("A")
 
-            mock = MagicMock(return_value=True)
-            with patch.object(os, "remove", mock):
-                assert state.clear_request()
+        mock = MagicMock(return_value=True)
+        with patch.object(os, "remove", mock):
+            assert state.clear_request()
 
-            mock = MagicMock(return_value={})
-            with patch.object(state, "check_request", mock):
-                assert not state.clear_request("A")
+        mock = MagicMock(return_value={})
+        with patch.object(state, "check_request", mock):
+            assert not state.clear_request("A")
 
 
 def test_check_request():
     """
     Test to return the state request information
     """
-    with patch("salt.modules.state.salt.payload", MockSerial):
+    with patch("salt.payload.load", MagicMock(return_value={"A": "B"})):
         mock = MagicMock(side_effect=[True, True, False])
         with patch.object(os.path, "isfile", mock):
             with patch("salt.utils.files.fopen", mock_open(b"")):
@@ -1233,6 +1210,7 @@ def test_get_pillar_errors(pillar: PillarPair, expected_errors):
         )
 
 
+@pytest.mark.usefixtures("mocked_tcp_pub_client")
 def test_event():
     """
     test state.event runner
@@ -1247,14 +1225,15 @@ def test_event():
 
     _expected = '"body": "{\\"text\\": \\"Hello World\\"}"'
     with patch.object(SaltEvent, "get_event", return_value=event_returns):
-        print_cli_mock = MagicMock()
-        with patch.object(salt.utils.stringutils, "print_cli", print_cli_mock):
-            found = False
-            state.event(count=1)
-            for x in print_cli_mock.mock_calls:
-                if _expected in x.args[0]:
-                    found = True
-            assert found is True
+        with patch.object(SaltEvent, "connect_pub", return_value=True):
+            print_cli_mock = MagicMock()
+            with patch.object(salt.utils.stringutils, "print_cli", print_cli_mock):
+                found = False
+                state.event(count=1)
+                for x in print_cli_mock.mock_calls:
+                    if _expected in x.args[0]:
+                        found = True
+                assert found is True
 
     now = datetime.datetime.now().isoformat()
     event_returns = {
@@ -1264,14 +1243,15 @@ def test_event():
 
     _expected = f'"date": "{now}"'
     with patch.object(SaltEvent, "get_event", return_value=event_returns):
-        print_cli_mock = MagicMock()
-        with patch.object(salt.utils.stringutils, "print_cli", print_cli_mock):
-            found = False
-            state.event(count=1)
-            for x in print_cli_mock.mock_calls:
-                if _expected in x.args[0]:
-                    found = True
-            assert found is True
+        with patch.object(SaltEvent, "connect_pub", return_value=True):
+            print_cli_mock = MagicMock()
+            with patch.object(salt.utils.stringutils, "print_cli", print_cli_mock):
+                found = False
+                state.event(count=1)
+                for x in print_cli_mock.mock_calls:
+                    if _expected in x.args[0]:
+                        found = True
+                assert found is True
 
 
 @pytest.mark.parametrize(

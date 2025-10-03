@@ -109,7 +109,7 @@ vault:
     token: testsecret
     uses: 0
   policies:
-  - testpolicy
+  - salt_minion
 peer_run:
   .*:
   - vault.generate_token

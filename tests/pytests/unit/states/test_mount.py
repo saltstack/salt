@@ -74,7 +74,7 @@ def test_mounted():
 
             with patch.dict(mount.__opts__, {"test": False}):
                 comt = f"Unable to unmount {name}: False."
-                umount = "Forced unmount and mount because options (noowners) changed"
+                umount = "Forced a lazy unmount and mount because the previous unmount failed and because the options (noowners) changed"
                 ret.update(
                     {
                         "comment": comt,
@@ -94,7 +94,7 @@ def test_mounted():
                 ret.update(
                     {
                         "comment": comt,
-                        "result": None,
+                        "result": False,
                         "changes": {"umount": umount1},
                     }
                 )
@@ -115,7 +115,7 @@ def test_mounted():
                     "os.path.exists", MagicMock(return_value=False)
                 ):
                     comt = f"{name} does not exist and would not be created"
-                    ret.update({"comment": comt, "changes": {}})
+                    ret.update({"comment": comt, "changes": {}, "result": None})
                     assert mount.mounted(name, device, fstype) == ret
 
                 with patch.dict(mount.__opts__, {"test": False}):
@@ -1426,6 +1426,105 @@ def test_bind_mount_copy_active_opts(mount_name):
                     "relatime",
                     "rw",
                 ],
+                0,
+                0,
+                "/etc/fstab",
+                match_on="auto",
+            )
+
+
+def test_mount_opts_change_lazy_umount():
+    name = "/mnt/nfs"
+    device = name
+    active_name = name
+    fstype = "nfs"
+    opts = [
+        "nodev",
+        "noexec",
+        "nosuid",
+        "rw",
+    ]
+
+    ret = {"name": name, "result": None, "comment": "", "changes": {}}
+
+    mock_active = MagicMock(
+        return_value={
+            active_name: {
+                "alt_device": "192.168.0.1:/volume2/nfs",
+                "device": "192.168.0.1:/volume2/nfs",
+                "fstype": "nfs4",
+                "opts": [
+                    "rw",
+                    "noexec",
+                    "nodev",
+                    "relatime",
+                    "vers=4.1",
+                    "rsize=131072",
+                    "wsize=131072",
+                ],
+            },
+        }
+    )
+    mock_read_mount_cache = MagicMock(
+        return_value={
+            "device": "192.168.0.1:/volume2/nfs",
+            "fstype": "nfs",
+            "mkmnt": True,
+            "opts": ["noexec", "nodev"],
+        }
+    )
+    mock_set_fstab = MagicMock(return_value="new")
+
+    with patch.dict(mount.__grains__, {"os": "CentOS"}), patch.dict(
+        mount.__salt__,
+        {
+            "mount.active": mock_active,
+            "mount.read_mount_cache": mock_read_mount_cache,
+            "mount.umount": MagicMock(side_effect=[False, True]),
+            "mount.mount": MagicMock(return_value=True),
+            "mount.set_fstab": mock_set_fstab,
+            "mount.write_mount_cache": MagicMock(return_value=True),
+        },
+    ), patch.object(
+        os.path,
+        "realpath",
+        MagicMock(return_value=name),
+    ):
+        with patch.dict(mount.__opts__, {"test": True}):
+            ret["comment"] = "Remount would be forced because options (nosuid) changed"
+            result = mount.mounted(
+                name=name,
+                device=device,
+                fstype=fstype,
+                opts=opts,
+                persist=True,
+                bind_mount_copy_active_opts=False,
+            )
+            assert result == ret
+
+        with patch.dict(mount.__opts__, {"test": False}):
+            ret["comment"] = "Target was already mounted. Added new entry to the fstab."
+            ret["changes"] = {
+                "persist": "new",
+                "umount": "Forced a lazy unmount and mount because the previous unmount failed and because the options (nosuid) changed",
+            }
+            ret["result"] = True
+
+            # bind_mount_copy_active_opts is off
+            result = mount.mounted(
+                name=name,
+                device=device,
+                fstype=fstype,
+                opts=opts,
+                persist=True,
+            )
+            assert result == ret
+
+            mock_set_fstab.assert_called_with(
+                name,
+                device,
+                fstype,
+                ["nodev", "noexec", "nosuid", "rw"],
                 0,
                 0,
                 "/etc/fstab",

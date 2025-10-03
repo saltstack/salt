@@ -62,20 +62,24 @@ if ( $BuildDir ) {
 } else {
     $BUILD_DIR = "$SCRIPT_DIR\buildenv"
 }
+$PREREQ_DIR     = "$SCRIPT_DIR\prereqs"
 $SCRIPTS_DIR    = "$BUILD_DIR\Scripts"
 $BUILD_CONF_DIR = "$BUILD_DIR\configs"
 $SITE_PKGS_DIR  = "$BUILD_DIR\Lib\site-packages"
 $PYTHON_BIN     = "$SCRIPTS_DIR\python.exe"
 $PY_VERSION     = [Version]((Get-Command $PYTHON_BIN).FileVersionInfo.ProductVersion)
 $PY_VERSION     = "$($PY_VERSION.Major).$($PY_VERSION.Minor)"
-$ARCH           = $(. $PYTHON_BIN -c "import platform; print(platform.architecture()[0])")
+$PY_ARCH        = $(. $PYTHON_BIN -c "import platform; print(platform.architecture()[0])")
+$DEPS_URL       = "https://github.com/saltstack/salt-windows-deps/raw/refs/heads/main"
 
-if ( $ARCH -eq "64bit" ) {
-    $ARCH         = "AMD64"
-    $SALT_DEP_URL = "https://github.com/saltstack/salt-windows-deps/raw/refs/heads/main/ssm/64"
+if ( $PY_ARCH -eq "64bit" ) {
+    $ARCH         = "x64"
+    $SSM_URL      = "$DEPS_URL/ssm/64/ssm-2.24-103-gdee49fc.exe"
+    $VCREDIST_URL = "$DEPS_URL/vcredist"
 } else {
     $ARCH         = "x86"
-    $SALT_DEP_URL = "https://github.com/saltstack/salt-windows-deps/raw/refs/heads/main/ssm/32"
+    $SSM_URL      = "$DEPS_URL/ssm/32/ssm-2.24-103-gdee49fc.exe"
+    $VCREDIST_URL = "$DEPS_URL/vcredist"
 }
 
 #-------------------------------------------------------------------------------
@@ -122,6 +126,17 @@ if ( Test-Path -Path $BUILD_CONF_DIR) {
     }
 }
 
+if ( Test-Path -Path $PREREQ_DIR ) {
+    Write-Host "Removing PreReq Directory: " -NoNewline
+    Remove-Item -Path $PREREQ_DIR -Recurse -Force
+    if ( ! (Test-Path -Path $PREREQ_DIR) ) {
+        Write-Result "Success" -ForegroundColor Green
+    } else {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
+    }
+}
+
 #-------------------------------------------------------------------------------
 # Staging the Build Environment
 #-------------------------------------------------------------------------------
@@ -140,8 +155,8 @@ if ( $PKG ) {
 
 # Make sure ssm.exe is present. This is needed for VMtools
 if ( ! (Test-Path -Path "$BUILD_DIR\ssm.exe") ) {
-    Write-Host "Copying SSM to Root: " -NoNewline
-    Invoke-WebRequest -Uri "$SALT_DEP_URL/ssm-2.24-103-gdee49fc.exe" -OutFile "$BUILD_DIR\ssm.exe"
+    Write-Host "Copying SSM $ARCH to Root: " -NoNewline
+    Invoke-WebRequest -Uri "$SSM_URL" -OutFile "$BUILD_DIR\ssm.exe"
     if ( Test-Path -Path "$BUILD_DIR\ssm.exe" ) {
         Write-Result "Success" -ForegroundColor Green
     } else {
@@ -166,6 +181,18 @@ $scripts | ForEach-Object {
             exit 1
         }
     }
+}
+
+# Copy VCRedist 2022 to the prereqs directory
+New-Item -Path $PREREQ_DIR -ItemType Directory | Out-Null
+Write-Host "Copying VCRedist 2022 $ARCH to prereqs: " -NoNewline
+$file = "vcredist_$ARCH`_2022.exe"
+Invoke-WebRequest -Uri "$VCREDIST_URL\$file" -OutFile "$PREREQ_DIR\$file"
+if ( Test-Path -Path "$PREREQ_DIR\$file" ) {
+    Write-Result "Success" -ForegroundColor Green
+} else {
+    Write-Result "Failed" -ForegroundColor Red
+    exit 1
 }
 
 #-------------------------------------------------------------------------------

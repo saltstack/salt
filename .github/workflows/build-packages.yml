@@ -81,6 +81,19 @@ jobs:
       # Checkout here so we can easily use custom actions
       - uses: actions/checkout@v4
 
+      # We need a more recent rustc
+      - name: Install a more recent `rustc`
+        if: ${{ inputs.source == 'src' }}
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Set rust environment variables
+        if: ${{ inputs.source == 'src' }}
+        run: |
+          CARGO_HOME=${CARGO_HOME:-${HOME}/.cargo}
+          export CARGO_HOME
+          echo "CARGO_HOME=${CARGO_HOME}" | tee -a "${GITHUB_ENV}"
+          echo "${CARGO_HOME}/bin" | tee -a "${GITHUB_PATH}"
+
       # Checkout here for the build process
       - name: Checkout in build directory
         uses: actions/checkout@v4
@@ -432,6 +445,7 @@ jobs:
       SM_CLIENT_CERT_PASSWORD: "${{ secrets.WIN_SIGN_CERT_PASSWORD }}"
       SM_CLIENT_CERT_FILE_B64: "${{ secrets.WIN_SIGN_CERT_FILE_B64 }}"
       WIN_SIGN_CERT_SHA1_HASH: "${{ secrets.WIN_SIGN_CERT_SHA1_HASH }}"
+      SM_CODE_SIGNING_CERT_SHA1_HASH: "${{ secrets.WIN_SIGN_CERT_SHA1_HASH }}"
       PIP_INDEX_URL: https://pypi.org/simple
 
     steps:

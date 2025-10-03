@@ -2,10 +2,10 @@
 Routines to set up a minion
 """
 
+import asyncio
 import binascii
 import contextlib
 import copy
-import functools
 import logging
 import multiprocessing
 import os
@@ -19,6 +19,10 @@ import traceback
 import types
 import uuid
 
+import tornado
+import tornado.gen
+import tornado.ioloop
+
 import salt
 import salt.beacons
 import salt.channel.client
@@ -28,9 +32,6 @@ import salt.crypt
 import salt.defaults.events
 import salt.defaults.exitcodes
 import salt.engines
-import salt.ext.tornado
-import salt.ext.tornado.gen
-import salt.ext.tornado.ioloop
 import salt.loader
 import salt.loader.lazy
 import salt.payload
@@ -40,6 +41,7 @@ import salt.syspaths
 import salt.transport
 import salt.utils.args
 import salt.utils.context
+import salt.utils.ctx
 import salt.utils.data
 import salt.utils.dictdiffer
 import salt.utils.dictupdate
@@ -72,7 +74,6 @@ from salt.exceptions import (
     SaltSystemExit,
 )
 from salt.template import SLS_ENCODING
-from salt.utils.ctx import RequestContext
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 from salt.utils.network import parse_host_port
@@ -289,9 +290,8 @@ def get_proc_dir(cachedir, **kwargs):
     else:
         mode = {"mode": mode}
 
-    if not os.path.isdir(fn_):
-        # proc_dir is not present, create it with mode settings
-        os.makedirs(fn_, **mode)
+    # proc_dir is not present, create it with mode settings
+    os.makedirs(fn_, **mode, exist_ok=True)
 
     d_stat = os.stat(fn_)
 
@@ -518,7 +518,7 @@ class MinionBase:
                 )  # pylint: disable=no-member
         return []
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def eval_master(self, opts, timeout=60, safe=True, failed=False, failback=False):
         """
         Evaluates and returns a tuple of the current master address and the pub_channel.
@@ -539,7 +539,7 @@ class MinionBase:
         if opts["master_type"] == "disable":
             log.warning("Master is set to disable, skipping connection")
             self.connected = False
-            raise salt.ext.tornado.gen.Return((None, None))
+            raise tornado.gen.Return((None, None))
 
         # Run masters discovery over SSDP. This may modify the whole configuration,
         # depending of the networking and sets of masters.
@@ -709,7 +709,7 @@ class MinionBase:
                 if attempts != 0:
                     # Give up a little time between connection attempts
                     # to allow the IOLoop to run any other scheduled tasks.
-                    yield salt.ext.tornado.gen.sleep(opts["acceptance_wait_time"])
+                    yield tornado.gen.sleep(opts["acceptance_wait_time"])
                 attempts += 1
                 if tries > 0:
                     log.debug("Connecting to master. Attempt %s of %s", attempts, tries)
@@ -778,7 +778,7 @@ class MinionBase:
                 else:
                     self.tok = pub_channel.auth.gen_token(b"salt")
                     self.connected = True
-                    raise salt.ext.tornado.gen.Return((opts["master"], pub_channel))
+                    raise tornado.gen.Return((opts["master"], pub_channel))
 
         # single master sign in
         else:
@@ -792,7 +792,7 @@ class MinionBase:
                 if attempts != 0:
                     # Give up a little time between connection attempts
                     # to allow the IOLoop to run any other scheduled tasks.
-                    yield salt.ext.tornado.gen.sleep(opts["acceptance_wait_time"])
+                    yield tornado.gen.sleep(opts["acceptance_wait_time"])
                 attempts += 1
                 if tries > 0:
                     log.debug("Connecting to master. Attempt %s of %s", attempts, tries)
@@ -824,7 +824,7 @@ class MinionBase:
                         yield pub_channel.connect()
                     self.tok = pub_channel.auth.gen_token(b"salt")
                     self.connected = True
-                    raise salt.ext.tornado.gen.Return((opts["master"], pub_channel))
+                    raise tornado.gen.Return((opts["master"], pub_channel))
                 except SaltClientError:
                     if pub_channel:
                         pub_channel.close()
@@ -932,9 +932,9 @@ class SMinion(MinionBase):
         if self.opts.get("file_client", "remote") == "remote" or self.opts.get(
             "use_master_when_local", False
         ):
-            io_loop = salt.ext.tornado.ioloop.IOLoop.current()
+            io_loop = tornado.ioloop.IOLoop.current()
 
-            @salt.ext.tornado.gen.coroutine
+            @tornado.gen.coroutine
             def eval_master():
                 """
                 Wrap eval master in order to close the returned publish channel.
@@ -945,6 +945,7 @@ class SMinion(MinionBase):
             io_loop.run_sync(
                 lambda: eval_master()  # pylint: disable=unnecessary-lambda
             )
+
         self.gen_modules(initial_load=True, context=context)
 
         # If configured, cache pillar data on the minion
@@ -954,8 +955,7 @@ class SMinion(MinionBase):
             import salt.utils.yaml
 
             pdir = os.path.join(self.opts["cachedir"], "pillar")
-            if not os.path.isdir(pdir):
-                os.makedirs(pdir, 0o700)
+            os.makedirs(pdir, 0o700, exist_ok=True)
             ptop = os.path.join(pdir, "top.sls")
             if self.opts["saltenv"] is not None:
                 penv = self.opts["saltenv"]
@@ -1045,8 +1045,7 @@ class MinionManager(MinionBase):
         self.max_auth_wait = self.opts["acceptance_wait_time_max"]
         self.minions = []
         self.jid_queue = []
-
-        self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
+        self.io_loop = tornado.ioloop.IOLoop.current()
         self.process_manager = ProcessManager(name="MultiMinionProcessManager")
         self.io_loop.spawn_callback(
             self.process_manager.run, **{"asynchronous": True}
@@ -1062,9 +1061,11 @@ class MinionManager(MinionBase):
 
     def _bind(self):
         # start up the event publisher, so we can see events during startup
-        self.event_publisher = salt.utils.event.AsyncEventPublisher(
-            self.opts,
-            io_loop=self.io_loop,
+        self.event_publisher = salt.transport.ipc_publish_server("minion", self.opts)
+        self.io_loop.spawn_callback(
+            self.event_publisher.publisher,
+            self.event_publisher.publish_payload,
+            self.io_loop,
         )
         self.event = salt.utils.event.get_event(
             "minion", opts=self.opts, io_loop=self.io_loop
@@ -1072,10 +1073,9 @@ class MinionManager(MinionBase):
         self.event.subscribe("")
         self.event.set_event_handler(self.handle_event)
 
-    @salt.ext.tornado.gen.coroutine
-    def handle_event(self, package):
+    async def handle_event(self, package):
         try:
-            yield [_.handle_event(package) for _ in self.minions]
+            await asyncio.gather(*[_.handle_event(package) for _ in self.minions])
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Error dispatching event. %s", exc)
 
@@ -1138,11 +1138,8 @@ class MinionManager(MinionBase):
             self.io_loop.spawn_callback(self._connect_minion, minion)
         self.io_loop.call_later(timeout, self._check_minions)
 
-    @salt.ext.tornado.gen.coroutine
-    def _connect_minion(self, minion):
-        """
-        Create a minion, and asynchronously connect it to a master
-        """
+    async def _connect_minion(self, minion):
+        """Create a minion, and asynchronously connect it to a master"""
         last = 0  # never have we signed in
         auth_wait = minion.opts["acceptance_wait_time"]
         failed = False
@@ -1153,7 +1150,7 @@ class MinionManager(MinionBase):
                 if minion.opts.get("scheduler_before_connect", False):
                     minion.setup_scheduler(before_connect=True)
                 if minion.opts.get("master_type", "str") != "disable":
-                    yield minion.connect_master(failed=failed)
+                    await minion.connect_master(failed=failed)
                 minion.tune_in(start=False)
                 self.minions.append(minion)
                 break
@@ -1165,11 +1162,12 @@ class MinionManager(MinionBase):
                     "master at %s responding? The error message was %s",
                     minion.opts["master"],
                     exc,
+                    exc_info=True,
                 )
                 last = time.time()
                 if auth_wait < self.max_auth_wait:
                     auth_wait += self.auth_wait
-                yield salt.ext.tornado.gen.sleep(auth_wait)  # TODO: log?
+                await asyncio.sleep(auth_wait)
             except SaltMasterUnresolvableError:
                 minion.destroy()
                 err = (
@@ -1188,6 +1186,7 @@ class MinionManager(MinionBase):
                     minion.opts["master"],
                     exc_info=True,
                 )
+                break
 
     # Multi Master Tune In
     def tune_in(self):
@@ -1224,7 +1223,7 @@ class MinionManager(MinionBase):
             self.stop_async, signum, parent_sig_handler
         )
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def stop_async(self, signum, parent_sig_handler):
         """
         Stop minions managed by the MinionManager allowing the io_loop to run
@@ -1232,7 +1231,7 @@ class MinionManager(MinionBase):
         """
 
         # Sleep to allow any remaining events to be processed
-        yield salt.ext.tornado.gen.sleep(5)
+        yield tornado.gen.sleep(5)
 
         # Continue to stop the minions
         for minion in self.minions:
@@ -1299,7 +1298,7 @@ class Minion(MinionBase):
         self.req_channel = None
 
         if io_loop is None:
-            self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
+            self.io_loop = tornado.ioloop.IOLoop.current()
         else:
             self.io_loop = io_loop
 
@@ -1402,7 +1401,7 @@ class Minion(MinionBase):
         if timeout and self._sync_connect_master_success is False:
             raise SaltDaemonNotRunning("Failed to connect to the salt-master")
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def connect_master(self, failed=False):
         """
         Return a future which will complete when you are connected to a master
@@ -1430,14 +1429,14 @@ class Minion(MinionBase):
         yield self.req_channel.connect()
         yield self._post_master_init(master)
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def handle_payload(self, payload, reply_func):
         self.payloads.append(payload)
         yield reply_func(payload)
         self.payload_ack.notify()
 
     # TODO: better name...
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _post_master_init(self, master):
         """
         Function to finish init after connecting to a master
@@ -1675,7 +1674,7 @@ class Minion(MinionBase):
                 return ret["ret"]
             raise TimeoutError("Request timed out")
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _send_req_async(self, load, timeout):
         # XXX: Signing should happen in RequestChannel to be fixed in 3008
         # XXX: This is only used by syndic
@@ -1701,13 +1700,13 @@ class Minion(MinionBase):
                 )
                 if ret:
                     break
-                yield salt.ext.tornado.gen.sleep(0.3)
+                yield tornado.gen.sleep(0.3)
             else:
                 raise TimeoutError("Did not recieve return event")
             log.trace("Reply from main %s", request_id)
-            raise salt.ext.tornado.gen.Return(ret["ret"])
+            raise tornado.gen.Return(ret["ret"])
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _send_req_async_main(self, load, timeout):
         """
         Send a request to the master's request server. To be called from the
@@ -1724,7 +1723,7 @@ class Minion(MinionBase):
         ret = yield self.req_channel.send(
             load, timeout=timeout, tries=self.opts["return_retry_tries"]
         )
-        raise salt.ext.tornado.gen.Return(ret)
+        raise tornado.gen.Return(ret)
 
     def _fire_master_prepare(
         self, data, tag, events, pretag, include_startup_grains=False
@@ -1755,7 +1754,7 @@ class Minion(MinionBase):
             load["grains"] = grains_to_add
         return load
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _fire_master_main(
         self,
         data=None,
@@ -1811,8 +1810,7 @@ class Minion(MinionBase):
             return False
         return True
 
-    @salt.ext.tornado.gen.coroutine
-    def _handle_decoded_payload(self, data):
+    async def _handle_decoded_payload(self, data):
         """
         Override this method if you wish to handle the decoded data
         differently.
@@ -1869,7 +1867,7 @@ class Minion(MinionBase):
                     " waiting...",
                     data["jid"],
                 )
-                yield salt.ext.tornado.gen.sleep(10)
+                await asyncio.sleep(10)
                 process_count = len(salt.utils.minion.running(self.opts))
 
         # We stash an instance references to allow for the socket
@@ -1946,11 +1944,8 @@ class Minion(MinionBase):
             else:
                 return Minion._thread_return(minion_instance, opts, data)
 
-        with salt.ext.tornado.stack_context.StackContext(
-            functools.partial(RequestContext, {"data": data, "opts": opts})
-        ):
-            with salt.ext.tornado.stack_context.StackContext(minion_instance.ctx):
-                run_func(minion_instance, opts, data)
+        with salt.utils.ctx.request_context({"data": data, "opts": opts}):
+            run_func(minion_instance, opts, data)
 
     def _execute_job_function(
         self, function_name, function_args, executors, opts, data
@@ -2020,6 +2015,9 @@ class Minion(MinionBase):
         This method should be used as a threading target, start the actual
         minion side execution.
         """
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
         minion_instance.gen_modules()
         fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
@@ -2225,6 +2223,9 @@ class Minion(MinionBase):
         This method should be used as a threading target, start the actual
         minion side execution.
         """
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
         minion_instance.gen_modules()
         fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
@@ -2367,7 +2368,7 @@ class Minion(MinionBase):
             salt.utils.minion.cache_jobs(self.opts, ret["jid"], ret)
         return load
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _return_pub_main(self, ret, ret_cmd="_return", timeout=60):
         jid = ret.get("jid", ret.get("__jid__"))
         load = self._prepare_return_pub(ret, ret_cmd)
@@ -2390,7 +2391,7 @@ class Minion(MinionBase):
             timeout_handler()
             ret_val = ""
         log.trace("ret_val = %s", ret_val)  # pylint: disable=no-member
-        raise salt.ext.tornado.gen.Return(ret_val)
+        raise tornado.gen.Return(ret_val)
 
     def _return_pub(self, ret, ret_cmd="_return", timeout=60):
         """
@@ -2503,12 +2504,12 @@ class Minion(MinionBase):
                 timeout_handler()
                 return ""
         else:
-            with salt.ext.tornado.stack_context.ExceptionStackContext(timeout_handler):
-                # pylint: disable=unexpected-keyword-arg
-                ret_val = self._send_req_async(
-                    load, timeout=timeout, callback=lambda f: None
-                )
-                # pylint: enable=unexpected-keyword-arg
+            # pylint: disable=unexpected-keyword-arg
+            ret_val = self._send_req_async(
+                load,
+                timeout=timeout,
+            )
+            # pylint: enable=unexpected-keyword-arg
 
         log.trace("ret_val = %s", ret_val)  # pylint: disable=no-member
         return ret_val
@@ -2559,7 +2560,7 @@ class Minion(MinionBase):
                 }
             )
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _fire_master_minion_start(self):
         include_grains = False
         if self.opts["start_event_grains"]:
@@ -2644,7 +2645,7 @@ class Minion(MinionBase):
         return pillar_schedule
 
     # TODO: only allow one future in flight at a time?
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def pillar_refresh(self, force_refresh=False, clean_cache=False):
         """
         Refresh the pillar
@@ -2676,6 +2677,7 @@ class Minion(MinionBase):
                     current_schedule, new_schedule
                 )
                 self.opts["pillar"] = new_pillar
+                self.functions.pack["__pillar__"] = self.opts["pillar"]
             finally:
                 async_pillar.destroy()
         self.matchers_refresh()
@@ -2832,19 +2834,19 @@ class Minion(MinionBase):
                 log.warning("Unable to send mine data to master.")
                 return None
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def handle_event(self, package):
         """
         Handle an event from the epull_sock (all local minion events)
         """
         if not self.ready:
-            raise salt.ext.tornado.gen.Return()
+            raise tornado.gen.Return()
         tag, data = salt.utils.event.SaltEvent.unpack(package)
 
         if "proxy_target" in data and self.opts.get("metaproxy") == "deltaproxy":
             proxy_target = data["proxy_target"]
             if proxy_target not in self.deltaproxy_objs:
-                raise salt.ext.tornado.gen.Return()
+                raise tornado.gen.Return()
             _minion = self.deltaproxy_objs[proxy_target]
         else:
             _minion = self
@@ -2871,7 +2873,7 @@ class Minion(MinionBase):
                         data,
                         request_id,
                     )
-                    raise salt.ext.tornado.gen.Return()
+                    raise tornado.gen.Return()
                 with salt.utils.event.get_event(
                     "minion", opts=self.opts, listen=False
                 ) as event:
@@ -2880,7 +2882,7 @@ class Minion(MinionBase):
                         f"__master_req_channel_return/{request_id}",
                     )
             else:
-                log.debug(
+                log.error(
                     "Skipping req for other master: cmd=%s master=%s id=%s",
                     data["cmd"],
                     job_master,
@@ -2923,6 +2925,9 @@ class Minion(MinionBase):
                     data["events"],
                     data["pretag"],
                 )
+                log.debug(
+                    "Event sent to master %s %s", data["tag"], self.opts["master"]
+                )
             else:
                 log.debug(
                     "Master %s is not connected, dropping event %s",
@@ -2938,7 +2943,7 @@ class Minion(MinionBase):
                 and data["master"] != self.opts["master"]
             ):
                 # not mine master, ignore
-                raise salt.ext.tornado.gen.Return()
+                raise tornado.gen.Return()
             if tag.startswith(master_event(type="failback")):
                 # if the master failback event is not for the top master, raise an exception
                 if data["master"] != self.opts["master_list"][0]:
@@ -3222,7 +3227,7 @@ class Minion(MinionBase):
         """
         if name in self.periodic_callbacks:
             return False
-        self.periodic_callbacks[name] = salt.ext.tornado.ioloop.PeriodicCallback(
+        self.periodic_callbacks[name] = tornado.ioloop.PeriodicCallback(
             method,
             interval * 1000,
         )
@@ -3331,10 +3336,10 @@ class Minion(MinionBase):
             ):  # A RuntimeError can be re-raised by Tornado on shutdown
                 self.destroy()
 
-    def _handle_payload(self, payload):
+    async def _handle_payload(self, payload):
         if payload is not None and payload["enc"] == "aes":
             if self._target_load(payload["load"]):
-                self._handle_decoded_payload(payload["load"])
+                await self._handle_decoded_payload(payload["load"])
             elif self.opts["zmq_filtering"]:
                 # In the filtering enabled case, we'd like to know when minion sees something it shouldn't
                 log.trace(
@@ -3423,8 +3428,9 @@ class Syndic(Minion):
         self.jids = {}
         self.raw_events = []
         self.pub_future = None
+        self.async_req_channel = None
 
-    def _handle_decoded_payload(self, data):
+    async def _handle_decoded_payload(self, data):
         """
         Override this method if you wish to handle the decoded data
         differently.
@@ -3457,19 +3463,18 @@ class Syndic(Minion):
             log.warning("Unable to forward pub data: %s", args[1])
             return True
 
-        with salt.ext.tornado.stack_context.ExceptionStackContext(timeout_handler):
-            self.local.pub_async(
-                data["tgt"],
-                data["fun"],
-                data["arg"],
-                data["tgt_type"],
-                data["ret"],
-                data["jid"],
-                data["to"],
-                io_loop=self.io_loop,
-                callback=lambda _: None,
-                **kwargs,
-            )
+        self.local.pub_async(
+            data["tgt"],
+            data["fun"],
+            data["arg"],
+            data["tgt_type"],
+            data["ret"],
+            data["jid"],
+            data["to"],
+            io_loop=self.io_loop,
+            listen=False,
+            **kwargs,
+        )
 
     def _send_req_sync(self, load, timeout):
         if self.opts["minion_sign_messages"]:
@@ -3483,7 +3488,7 @@ class Syndic(Minion):
             load, timeout=timeout, tries=self.opts["return_retry_tries"]
         )
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _send_req_async(self, load, timeout):
         if self.opts["minion_sign_messages"]:
             log.trace("Signing event to be published onto the bus.")
@@ -3517,6 +3522,11 @@ class Syndic(Minion):
         management of the event bus assuming that these are handled outside
         the tune_in sequence
         """
+        if self.req_channel:
+            self.req_channel.close()
+        if self.async_req_channel:
+            self.async_req_channel.close()
+
         # Instantiate the local client
         self.local = salt.client.get_local_client(
             self.opts["_minion_conf_file"], io_loop=self.io_loop
@@ -3527,15 +3537,15 @@ class Syndic(Minion):
         self.req_channel = salt.channel.client.ReqChannel.factory(self.opts)
         self.async_req_channel = salt.channel.client.AsyncReqChannel.factory(self.opts)
 
-    def _process_cmd_socket(self, payload):
+    async def _process_cmd_socket(self, payload):
         if payload is not None and payload["enc"] == "aes":
             log.trace("Handling payload")
-            self._handle_decoded_payload(payload["load"])
+            await self._handle_decoded_payload(payload["load"])
         # If it's not AES, and thus has not been verified, we do nothing.
         # In the future, we could add support for some clearfuncs, but
         # the syndic currently has no need.
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def reconnect(self):
         if hasattr(self, "pub_channel"):
             self.pub_channel.on_recv(None)
@@ -3552,7 +3562,7 @@ class Syndic(Minion):
             self.pub_channel.on_recv(self._process_cmd_socket)
             log.info("Minion is ready to receive requests!")
 
-        raise salt.ext.tornado.gen.Return(self)
+        raise tornado.gen.Return(self)
 
     def destroy(self):
         """
@@ -3611,7 +3621,7 @@ class SyndicManager(MinionBase):
         self.jid_forward_cache = set()
 
         if io_loop is None:
-            self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
+            self.io_loop = tornado.ioloop.IOLoop.current()
         else:
             self.io_loop = io_loop
 
@@ -3638,7 +3648,7 @@ class SyndicManager(MinionBase):
             s_opts["master"] = master
             self._syndics[master] = self._connect_syndic(s_opts)
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _connect_syndic(self, opts):
         """
         Create a syndic, and asynchronously connect it to a master
@@ -3674,7 +3684,7 @@ class SyndicManager(MinionBase):
                 last = time.time()
                 if auth_wait < self.max_auth_wait:
                     auth_wait += self.auth_wait
-                yield salt.ext.tornado.gen.sleep(auth_wait)  # TODO: log?
+                yield tornado.gen.sleep(auth_wait)  # TODO: log?
             except (KeyboardInterrupt, SystemExit):  # pylint: disable=try-except-raise
                 raise
             except Exception:  # pylint: disable=broad-except
@@ -3685,7 +3695,7 @@ class SyndicManager(MinionBase):
                     exc_info=True,
                 )
 
-        raise salt.ext.tornado.gen.Return(syndic)
+        raise tornado.gen.Return(syndic)
 
     def _mark_master_dead(self, master):
         """
@@ -3792,8 +3802,7 @@ class SyndicManager(MinionBase):
         self.raw_events = []
 
     def reconnect_event_bus(self, something):
-        future = self.local.event.set_event_handler(self._process_event)
-        self.io_loop.add_future(future, self.reconnect_event_bus)
+        self.local.event.set_event_handler(self._process_event)
 
     # Syndic Tune In
     def tune_in(self):
@@ -3813,11 +3822,11 @@ class SyndicManager(MinionBase):
         self.job_rets = {}
         self.raw_events = []
         self._reset_event_aggregation()
-        future = self.local.event.set_event_handler(self._process_event)
-        self.io_loop.add_future(future, self.reconnect_event_bus)
+
+        self.local.event.set_event_handler(self._process_event)
 
         # forward events every syndic_event_forward_timeout
-        self.forward_events = salt.ext.tornado.ioloop.PeriodicCallback(
+        self.forward_events = tornado.ioloop.PeriodicCallback(
             self._forward_events,
             self.opts["syndic_event_forward_timeout"] * 1000,
         )
@@ -3828,7 +3837,7 @@ class SyndicManager(MinionBase):
 
         self.io_loop.start()
 
-    def _process_event(self, raw):
+    async def _process_event(self, raw):
         # TODO: cleanup: Move down into event class
         mtag, data = self.local.event.unpack(raw)
         log.trace("Got event %s", mtag)  # pylint: disable=no-member
@@ -3971,7 +3980,7 @@ class ProxyMinion(Minion):
     """
 
     # TODO: better name...
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _post_master_init(self, master):
         """
         Function to finish init after connecting to a master
@@ -3987,9 +3996,9 @@ class ProxyMinion(Minion):
         functions.
         """
         mp_call = _metaproxy_call(self.opts, "post_master_init")
-        return mp_call(self, master)
+        yield mp_call(self, master)
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def subproxy_post_master_init(self, minion_id, uid):
         """
         Function to finish init for the sub proxies
@@ -3997,7 +4006,7 @@ class ProxyMinion(Minion):
         :rtype : None
         """
         mp_call = _metaproxy_call(self.opts, "subproxy_post_master_init")
-        return mp_call(self, minion_id, uid)
+        yield mp_call(self, minion_id, uid)
 
     def tune_in(self, start=True):
         """
@@ -4014,14 +4023,14 @@ class ProxyMinion(Minion):
         mp_call = _metaproxy_call(self.opts, "target_load")
         return mp_call(self, load)
 
-    def _handle_payload(self, payload):
+    # @tornado.gen.coroutine
+    async def _handle_payload(self, payload):
         mp_call = _metaproxy_call(self.opts, "handle_payload")
-        return mp_call(self, payload)
+        return await mp_call(self, payload)
 
-    @salt.ext.tornado.gen.coroutine
-    def _handle_decoded_payload(self, data):
+    async def _handle_decoded_payload(self, data):
         mp_call = _metaproxy_call(self.opts, "handle_decoded_payload")
-        return mp_call(self, data)
+        return await mp_call(self, data)
 
     @classmethod
     def _target(cls, minion_instance, opts, data, connected, creds_map):

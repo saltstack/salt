@@ -512,7 +512,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-freebsd-3.9-zmq-requirements
         name: FreeBSD CI Py3.9 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.in|py3\.9/freebsd\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/((freebsd|common)\.in|py3\.9/freebsd\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -530,7 +530,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-freebsd-3.10-zmq-requirements
         name: FreeBSD CI Py3.10 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.in|py3\.10/freebsd\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/((freebsd|common)\.in|py3\.10/freebsd\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -548,7 +548,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-freebsd-3.11-zmq-requirements
         name: FreeBSD CI Py3.11 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.in|py3\.11/freebsd\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/((freebsd|common)\.in|py3\.11/freebsd\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -590,6 +590,7 @@ repos:
         args:
           - -v
           - --build-isolation
+          - --build-isolation
           - --py-version=3.9
           - --platform=freebsd
           - --out-prefix=freebsd
@@ -599,7 +600,6 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-freebsd-crypto-3.10-requirements
         name: FreeBSD CI Py3.10 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.10/freebsd-crypto\.txt))$
         pass_filenames: false
         args:
@@ -642,7 +642,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-darwin-3.9-zmq-requirements
         name: Darwin CI Py3.9 ZeroMQ Requirements
-        files: ^(requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.in|py3\.9/darwin\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/((darwin|common)\.in|py3\.9/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -659,7 +659,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-darwin-3.10-zmq-requirements
         name: Darwin CI Py3.10 ZeroMQ Requirements
-        files: ^(requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.in|py3\.10/darwin\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/((darwin|common)\.in|py3\.10/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -676,7 +676,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-darwin-3.11-zmq-requirements
         name: Darwin CI Py3.11 ZeroMQ Requirements
-        files: ^(requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.in|py3\.11/darwin\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/((darwin|common)\.in|py3\.11/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -766,7 +766,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-windows-3.9-zmq-requirements
         name: Windows CI Py3.9 ZeroMQ Requirements
-        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|py3\.9/windows\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/((windows|common)\.in|py3\.9/windows\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -783,7 +783,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-windows-3.10-zmq-requirements
         name: Windows CI Py3.10 ZeroMQ Requirements
-        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|py3\.10/windows\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/((windows|common)\.in|py3\.10/windows\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -800,7 +800,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-windows-3.11-zmq-requirements
         name: Windows CI Py3.11 ZeroMQ Requirements
-        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|py3\.11/windows\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/((windows|common)\.in|py3\.11/windows\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -889,8 +889,8 @@ repos:
 
   # <---- CI Requirements --------------------------------------------------------------------------------------------
 
-
   # ----- Cloud CI Requirements ------------------------------------------------------------------------------------->
+
       - id: pip-tools-compile
         alias: compile-ci-cloud-3.9-requirements
         name: Cloud CI Py3.9 Requirements
@@ -900,11 +900,6 @@ repos:
           - -v
           - --build-isolation
           - --py-version=3.9
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
-          - --include=requirements/pytest.txt
-          - --include=requirements/static/pkg/linux.in
-          - --include=requirements/static/ci/common.in
           - --no-emit-index-url
           - requirements/static/ci/cloud.in
 
@@ -917,11 +912,6 @@ repos:
           - -v
           - --build-isolation
           - --py-version=3.10
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
-          - --include=requirements/pytest.txt
-          - --include=requirements/static/pkg/linux.in
-          - --include=requirements/static/ci/common.in
           - --no-emit-index-url
           - requirements/static/ci/cloud.in
 
@@ -934,11 +924,6 @@ repos:
           - -v
           - --build-isolation
           - --py-version=3.11
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
-          - --include=requirements/pytest.txt
-          - --include=requirements/static/pkg/linux.in
-          - --include=requirements/static/ci/common.in
           - --no-emit-index-url
           - requirements/static/ci/cloud.in
 
@@ -961,6 +946,7 @@ repos:
   # <---- Cloud CI Requirements --------------------------------------------------------------------------------------
 
   # ----- Doc CI Requirements --------------------------------------------------------------------------------------->
+
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.9 Requirements
@@ -971,8 +957,6 @@ repos:
           - --build-isolation
           - --py-version=3.9
           - --platform=linux
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
           - --no-emit-index-url
           - requirements/static/ci/docs.in
 
@@ -986,8 +970,6 @@ repos:
           - --build-isolation
           - --py-version=3.10
           - --platform=linux
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
           - --no-emit-index-url
           - requirements/static/ci/docs.in
 
@@ -1000,10 +982,8 @@ repos:
           - -v
           - --build-isolation
           - --py-version=3.11
-          - --platform=linux
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
           - --no-emit-index-url
+          - --platform=linux
           - requirements/static/ci/docs.in
 
       - id: pip-tools-compile
@@ -1035,11 +1015,6 @@ repos:
           - --build-isolation
           - --py-version=3.9
           - --platform=linux
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
-          - --include=requirements/static/pkg/linux.in
-          - --include=requirements/static/ci/linux.in
-          - --include=requirements/static/ci/common.in
           - --no-emit-index-url
           - requirements/static/ci/lint.in
 
@@ -1053,29 +1028,19 @@ repos:
           - --build-isolation
           - --py-version=3.10
           - --platform=linux
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
-          - --include=requirements/static/pkg/linux.in
-          - --include=requirements/static/ci/linux.in
-          - --include=requirements/static/ci/common.in
           - --no-emit-index-url
           - requirements/static/ci/lint.in
 
       - id: pip-tools-compile
         alias: compile-ci-lint-3.11-requirements
         name: Lint CI Py3.11 Requirements
-        files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(linux\.in|common\.in|lint\.in|py3\.11/linux\.txt)))$
+        files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(linux\.in|common\.in|lint\.in|py3\.10/linux\.txt)))$
         pass_filenames: false
         args:
           - -v
           - --build-isolation
           - --py-version=3.11
           - --platform=linux
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
-          - --include=requirements/static/pkg/linux.in
-          - --include=requirements/static/ci/linux.in
-          - --include=requirements/static/ci/common.in
           - --no-emit-index-url
           - requirements/static/ci/lint.in
 
@@ -1100,6 +1065,7 @@ repos:
   # <---- Lint CI Requirements ---------------------------------------------------------------------------------------
 
   # ----- Changelog ------------------------------------------------------------------------------------------------->
+
       - id: pip-tools-compile
         alias: compile-ci-changelog-3.9-requirements
         name: Changelog CI Py3.9 Requirements
@@ -1269,10 +1235,10 @@ repos:
     rev: 2.5.2
     hooks:
       - id: salt-rewrite
-        alias: rewrite-docstrings
-        name: Salt docstrings auto-fixes
+        alias: rewrite-salt
+        name: Salt code auto-fixes
         files: ^salt/.*\.py$
-        args: [--silent, -F, fix_docstrings]
+        args: [--silent, -F, fix_docstrings, -F, fix_warn_until]
         exclude: >
             (?x)^(
                 salt/ext/.*
@@ -1282,7 +1248,7 @@ repos:
         alias: rewrite-tests
         name: Rewrite Salt's Test Suite
         files: ^tests/.*\.py$
-        args: [--silent, -E, fix_asserts, -E, fix_docstrings]
+        args: [--silent, -E, fix_asserts, -E, fix_docstrings, -E, fix_tornado_imports]
 
   - repo: https://github.com/timothycrosley/isort
     rev: 5.13.2
@@ -1315,7 +1281,12 @@ repos:
     hooks:
       - id: blacken-docs
         args: [--skip-errors]
-        files: ^doc/.*\.rst
+        files: ^(doc/)?.*\.(rst|md)
+        exclude: >
+            (?x)^(
+                rfcs/.*|
+                salt/ext/.*|
+            )$
         additional_dependencies:
           - black==24.2.0
 

@@ -157,6 +157,7 @@ def add(
     nologinit=False,
     root=None,
     usergroup=None,
+    local=False,
 ):
     """
     Add a user to the minion
@@ -215,13 +216,18 @@ def add(
     usergroup
         Create and add the user to a new primary group of the same name
 
+    local (Only on systems with luseradd available)
+        Specifically add the user locally rather than possibly through remote providers (e.g. LDAP)
+
+        .. versionadded:: 3007.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     """
-    cmd = [_which("useradd")]
+    cmd = [_which("luseradd" if local else "useradd")]
 
     if shell:
         cmd.extend(["-s", shell])
@@ -230,9 +236,10 @@ def add(
     if gid not in (None, ""):
         cmd.extend(["-g", gid])
     elif usergroup:
-        cmd.append("-U")
-        if __grains__["kernel"] != "Linux":
-            log.warning("'usergroup' is only supported on GNU/Linux hosts.")
+        if not local:
+            cmd.append("-U")
+            if __grains__["kernel"] != "Linux":
+                log.warning("'usergroup' is only supported on GNU/Linux hosts.")
     elif groups is not None and name in groups:
         defs_file = "/etc/login.defs"
         if __grains__["kernel"] != "OpenBSD":
@@ -269,14 +276,15 @@ def add(
                 # /etc/usermgmt.conf not present: defaults will be used
                 pass
 
-    # Setting usergroup to False adds the -N command argument. If
+    # Setting usergroup to False adds a command argument. If
     # usergroup is None, no arguments are added to allow useradd to go
     # with the defaults defined for the OS.
     if usergroup is False:
-        cmd.append("-N")
+        cmd.append("-n" if local else "-N")
 
     if createhome:
-        cmd.append("-m")
+        if not local:
+            cmd.append("-m")
     elif __grains__["kernel"] != "NetBSD" and __grains__["kernel"] != "OpenBSD":
         cmd.append("-M")
 
@@ -302,7 +310,7 @@ def add(
 
     cmd.append(name)
 
-    if root is not None and __grains__["kernel"] != "AIX":
+    if root is not None and not local and __grains__["kernel"] != "AIX":
         cmd.extend(("-R", root))
 
     ret = __salt__["cmd.run_all"](cmd, python_shell=False)
@@ -333,7 +341,7 @@ def add(
     return True
 
 
-def delete(name, remove=False, force=False, root=None):
+def delete(name, remove=False, force=False, root=None, local=False):
     """
     Remove a user from the minion
 
@@ -349,23 +357,34 @@ def delete(name, remove=False, force=False, root=None):
     root
         Directory to chroot into
 
+    local (Only on systems with luserdel available):
+        Ensure the user account is removed locally ignoring global
+        account management (default is False).
+
+        .. versionadded:: 3007.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' user.delete name remove=True force=True
     """
-    cmd = [_which("userdel")]
+    cmd = [_which("luserdel" if local else "userdel")]
 
     if remove:
         cmd.append("-r")
 
-    if force and __grains__["kernel"] != "OpenBSD" and __grains__["kernel"] != "AIX":
+    if (
+        force
+        and __grains__["kernel"] != "OpenBSD"
+        and __grains__["kernel"] != "AIX"
+        and not local
+    ):
         cmd.append("-f")
 
     cmd.append(name)
 
-    if root is not None and __grains__["kernel"] != "AIX":
+    if root is not None and __grains__["kernel"] != "AIX" and not local:
         cmd.extend(("-R", root))
 
     ret = __salt__["cmd.run_all"](cmd, python_shell=False)

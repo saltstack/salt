@@ -15,6 +15,8 @@ shadow = pytest.importorskip("salt.modules.bsd_shadow")
 
 # Although bsd_shadow runs on NetBSD and OpenBSD as well, the mocks are
 # currently only designed for FreeBSD.
+
+
 @pytest.mark.skip_unless_on_freebsd
 class BSDShadowTest(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):

@@ -156,6 +156,10 @@ def build_rule(
         rule += "icmp type {{ {0} }} ".format(kwargs["icmp-type"])
         del kwargs["icmp-type"]
 
+    if "icmpv6-type" in kwargs:
+        rule += "icmpv6 type {{ {0} }} ".format(kwargs["icmpv6-type"])
+        del kwargs["icmpv6-type"]
+
     if "pkttype" in kwargs:
         rule += "meta pkttype {{ {0} }} ".format(kwargs["pkttype"])
         del kwargs["pkttype"]

@@ -2,6 +2,7 @@
 # Proxy minion metaproxy modules
 #
 
+import asyncio
 import copy
 import logging
 import os
@@ -10,6 +11,9 @@ import threading
 import traceback
 import types
 
+import tornado.gen
+import tornado.ioloop
+
 import salt
 import salt.beacons
 import salt.cli.daemons
@@ -17,8 +21,6 @@ import salt.client
 import salt.crypt
 import salt.defaults.exitcodes
 import salt.engines
-import salt.ext.tornado.gen  # pylint: disable=F0401
-import salt.ext.tornado.ioloop  # pylint: disable=F0401
 import salt.loader
 import salt.minion
 import salt.payload
@@ -56,6 +58,7 @@ from salt.utils.process import SignalHandlingProcess, default_signals
 log = logging.getLogger(__name__)
 
 
+@tornado.gen.coroutine
 def post_master_init(self, master):
     """
     Function to finish init after a proxy
@@ -386,11 +389,10 @@ def target(cls, minion_instance, opts, data, connected, creds_map):
                 opts["cachedir"], uid=uid
             )
 
-    with salt.ext.tornado.stack_context.StackContext(minion_instance.ctx):
-        if isinstance(data["fun"], tuple) or isinstance(data["fun"], list):
-            ProxyMinion._thread_multi_return(minion_instance, opts, data)
-        else:
-            ProxyMinion._thread_return(minion_instance, opts, data)
+    if isinstance(data["fun"], tuple) or isinstance(data["fun"], list):
+        ProxyMinion._thread_multi_return(minion_instance, opts, data)
+    else:
+        ProxyMinion._thread_return(minion_instance, opts, data)
 
 
 def thread_return(cls, minion_instance, opts, data):
@@ -740,7 +742,7 @@ def thread_multi_return(cls, minion_instance, opts, data):
                 log.error("The return failed for job %s: %s", data["jid"], exc)
 
 
-def handle_payload(self, payload):
+async def handle_payload(self, payload):
     """
     Verify the publication and then pass
     the payload along to _handle_decoded_payload.
@@ -748,7 +750,7 @@ def handle_payload(self, payload):
     if payload is not None and payload["enc"] == "aes":
         if self._target_load(payload["load"]):
 
-            self._handle_decoded_payload(payload["load"])
+            await self._handle_decoded_payload(payload["load"])
         elif self.opts["zmq_filtering"]:
             # In the filtering enabled case, we'd like to know when minion sees something it shouldnt
             log.trace(
@@ -760,7 +762,7 @@ def handle_payload(self, payload):
     # the minion currently has no need.
 
 
-def handle_decoded_payload(self, data):
+async def handle_decoded_payload(self, data):
     """
     Override this method if you wish to handle the decoded data
     differently.
@@ -806,7 +808,7 @@ def handle_decoded_payload(self, data):
                 "Maximum number of processes reached while executing jid %s, waiting...",
                 data["jid"],
             )
-            yield salt.ext.tornado.gen.sleep(10)
+            await asyncio.sleep(10)
             process_count = len(salt.utils.minion.running(self.opts))
 
     # We stash an instance references to allow for the socket

@@ -16,6 +16,12 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = "apache"
 
+__deprecated__ = (
+    3009,
+    "apache",
+    "https://github.com/salt-extensions/saltext-apache",
+)
+
 SITE_ENABLED_DIR = "/etc/apache2/sites-enabled"
 
 

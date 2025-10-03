@@ -139,6 +139,12 @@ debug = False
 __virtualname__ = "dockercompose"
 DEFAULT_DC_FILENAMES = ("docker-compose.yml", "docker-compose.yaml")
 
+__deprecated__ = (
+    3009,
+    "docker",
+    "https://github.com/saltstack/saltext-docker",
+)
+
 
 def __virtual__():
     if HAS_DOCKERCOMPOSE:

@@ -45,6 +45,12 @@ log = logging.getLogger(__name__)
 __virtualname__ = "docker_network"
 __virtual_aliases__ = ("moby_network",)
 
+__deprecated__ = (
+    3009,
+    "docker",
+    "https://github.com/saltstack/saltext-docker",
+)
+
 
 def __virtual__():
     """

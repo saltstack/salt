@@ -1694,3 +1694,59 @@ def shuffle(value, seed=None):
         Any value which will be hashed as a seed for random.
     """
     return sample(value, len(value), seed=seed)
+
+
+@jinja_filter("to_entries")
+def to_entries(data):
+    """
+    Convert a dictionary or list into a list of key-value pairs (entries).
+
+    Args:
+        data (dict, list): The input dictionary or list.
+
+    Returns:
+        list: A list of dictionaries representing the key-value pairs.
+              Each dictionary has 'key' and 'value' keys.
+
+    Example:
+        data = {'a': 1, 'b': 2}
+        entries = to_entries(data)
+        print(entries)
+        # Output: [{'key': 'a', 'value': 1}, {'key': 'b', 'value': 2}]
+    """
+    if isinstance(data, dict):
+        ret = [{"key": key, "value": value} for key, value in data.items()]
+    elif isinstance(data, list):
+        ret = [{"key": idx, "value": value} for idx, value in enumerate(data)]
+    else:
+        raise SaltException("Input data must be a dict or list")
+    return ret
+
+
+@jinja_filter("from_entries")
+def from_entries(entries):
+    """
+    Convert a list of key-value pairs (entries) into a dictionary.
+
+    Args:
+        entries (list): A list of dictionaries representing the key-value pairs.
+                        Each dictionary must have 'key' and 'value' keys.
+
+    Returns:
+        dict: A dictionary constructed from the key-value pairs.
+
+    Example:
+        entries = [{'key': 'a', 'value': 1}, {'key': 'b', 'value': 2}]
+        dictionary = from_entries(entries)
+        print(dictionary)
+        # Output: {'a': 1, 'b': 2}
+    """
+    ret = {}
+    for entry in entries:
+        entry = CaseInsensitiveDict(entry)
+        for key in ("key", "name"):
+            keyval = entry.get(key)
+            if keyval:
+                ret[keyval] = entry.get("value")
+                break
+    return ret

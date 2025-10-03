@@ -430,20 +430,39 @@ def installed(
     name
         The name of the python package to install. You can also specify version
         numbers here using the standard operators ``==, >=, <=``. If
-        ``requirements`` is given, this parameter will be ignored.
+        ``requirements`` or ``pkgs`` is given, this parameter will be ignored.
 
-    Example:
+        Example:
 
-    .. code-block:: yaml
+        .. code-block:: yaml
 
-        django:
-          pip.installed:
-            - name: django >= 1.6, <= 1.7
-            - require:
-              - pkg: python-pip
+            django:
+              pip.installed:
+                - name: django >= 1.6, <= 1.7
+                - require:
+                  - pkg: python-pip
 
-    This will install the latest Django version greater than 1.6 but less
-    than 1.7.
+        Installs the latest Django version greater than 1.6 but less
+        than 1.7.
+
+    pkgs
+        A list of python packages to install. This let you install multiple
+        packages at the same time.
+
+        Example:
+
+        .. code-block:: yaml
+
+            django-and-psycopg2:
+              pip.installed:
+                - pkgs:
+                  - django >= 1.6, <= 1.7
+                  - psycopg2 >= 2.8.4
+                - require:
+                  - pkg: python-pip
+
+        Installs the latest Django version greater than 1.6 but less than 1.7
+        and the latest psycopg2 greater than 2.8.4 at the same time.
 
     requirements
         Path to a pip requirements file. If the path begins with salt://
@@ -872,7 +891,6 @@ def installed(
             pip_list = False
 
         for prefix, state_pkg_name, version_spec in pkgs_details:
-
             if prefix:
                 out = _check_if_installed(
                     prefix,
@@ -1035,7 +1053,6 @@ def installed(
                 ret["changes"]["editable"] = True
             ret["comment"] = " ".join(comments)
         else:
-
             # Check that the packages set to be installed were installed.
             # Create comments reporting success and failures
             pkg_404_comms = []
@@ -1049,7 +1066,6 @@ def installed(
                     already_installed_packages.add(package.lower())
 
             for prefix, state_name in target_pkgs:
-
                 # Case for packages that are not an URL
                 if prefix:
                     pipsearch = salt.utils.data.CaseInsensitiveDict(

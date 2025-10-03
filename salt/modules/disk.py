@@ -66,6 +66,7 @@ def _clean_flags(args, caller):
     flags = ""
     if args is None:
         return flags
+    # TODO: most of these cause the result parsing to fail
     allowed = ("a", "B", "h", "H", "i", "k", "l", "P", "t", "T", "x", "v")
     for flag in args:
         if flag in allowed:
@@ -78,6 +79,9 @@ def _clean_flags(args, caller):
 def usage(args=None):
     """
     Return usage information for volumes mounted on this minion
+
+    args
+        Sequence of flags to pass to the ``df`` command.
 
     .. versionchanged:: 2019.2.0
 
@@ -160,6 +164,9 @@ def inodeusage(args=None):
     """
     Return inode usage information for volumes mounted on this minion
 
+    args
+        Sequence of flags to pass to the ``df`` command.
+
     CLI Example:
 
     .. code-block:: bash
@@ -217,6 +224,9 @@ def inodeusage(args=None):
 def percent(args=None):
     """
     Return partition information for volumes mounted on this minion
+
+    args
+        Specify a single partition for which to return data.
 
     CLI Example:
 
@@ -378,6 +388,12 @@ def wipe(device):
 def dump(device, args=None):
     """
     Return all contents of dumpe2fs for a specified device
+
+    device
+        The device path to dump.
+
+    args
+        A list of attributes to return. Returns all by default.
 
     CLI Example:
 
@@ -568,13 +584,17 @@ def _hdparm(args, failhard=True):
 
 
 @salt.utils.decorators.path.which("hdparm")
-def hdparms(disks, args=None):
+def hdparms(disks, args="aAbBcCdgHiJkMmNnQrRuW"):
     """
-    Retrieve all info's for all disks
-    parse 'em into a nice dict
-    (which, considering hdparms output, is quite a hassle)
+    Retrieve disk parameters.
 
     .. versionadded:: 2016.3.0
+
+    disks
+        Single disk or list of disks to query.
+
+    args
+        Sequence of ``hdparm`` flags to fetch.
 
     CLI Example:
 
@@ -582,10 +602,7 @@ def hdparms(disks, args=None):
 
         salt '*' disk.hdparms /dev/sda
     """
-    all_parms = "aAbBcCdgHiJkMmNnQrRuW"
-    if args is None:
-        args = all_parms
-    elif isinstance(args, (list, tuple)):
+    if isinstance(args, (list, tuple)):
         args = "".join(args)
 
     if not isinstance(disks, (list, tuple)):

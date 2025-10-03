@@ -21,6 +21,12 @@ import os
 # Define the module's virtual name
 __virtualname__ = "zabbix"
 
+__deprecated__ = (
+    3009,
+    "zabbix",
+    "https://github.com/salt-extensions/saltext-zabbix",
+)
+
 
 def __virtual__():
     if zbx():

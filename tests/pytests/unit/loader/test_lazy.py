@@ -28,7 +28,13 @@ def loader_dir(tmp_path):
     def get_context(key):
         return __context__[key]
 
+    async def myasync(foo):
+        return foo
+
     def get_opts(key):
+        return __opts__.get(key, None)
+
+    async def get_opts_async(key):
         return __opts__.get(key, None)
     """
     with pytest.helpers.temp_file(
@@ -145,6 +151,14 @@ def test_loader_pack_opts_not_overwritten(loader_dir):
     assert loader.pack["__opts__"]["baz"] == "bif"
 
 
+async def test_loader_async(loader_dir):
+    opts = {"optimization_order": [0, 1, 2]}
+    loader = salt.loader.lazy.LazyLoader([loader_dir], opts)
+    myasync = loader["mod_a.myasync"]
+    ret = await myasync("foo")
+    assert ret == "foo"
+
+
 @pytest.mark.parametrize(
     "test_value, expected",
     [
@@ -162,4 +176,24 @@ def test_loaded_func_ensures_test_boolean(loader_dir, test_value, expected):
     loader = salt.loader.lazy.LazyLoader([loader_dir], opts)
     loaded_fun = loader["mod_a.get_opts"]
     ret = loaded_fun("test")
+    assert ret is expected
+
+
+@pytest.mark.parametrize(
+    "test_value, expected",
+    [
+        (True, True),
+        (False, False),
+        ("abc", True),
+        (123, True),
+    ],
+)
+async def test_loaded_coro_ensures_test_boolean(loader_dir, test_value, expected):
+    """
+    Coroutines loaded from LazyLoader's item lookups are LoadedCoro objects
+    """
+    opts = {"optimization_order": [0, 1, 2], "test": test_value}
+    loader = salt.loader.lazy.LazyLoader([loader_dir], opts)
+    loaded_coro = loader["mod_a.get_opts_async"]
+    ret = await loaded_coro("test")
     assert ret is expected

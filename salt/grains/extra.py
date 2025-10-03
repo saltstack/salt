@@ -95,12 +95,19 @@ def get_secure_boot_path():
 
 def uefi():
     """Populate UEFI grains."""
-    efivars_dir = get_secure_boot_path()
-    grains = {
-        "efi": bool(efivars_dir),
-        "efi-secure-boot": __secure_boot(efivars_dir) if efivars_dir else False,
-    }
-
+    if salt.utils.platform.is_freebsd():
+        grains = {
+            "efi": os.path.exists("/dev/efi"),
+            # Needs a contributor with a secure boot system to implement this
+            # part.
+            "efi-secure-boot": False,
+        }
+    else:
+        efivars_dir = get_secure_boot_path()
+        grains = {
+            "efi": bool(efivars_dir),
+            "efi-secure-boot": __secure_boot(efivars_dir) if efivars_dir else False,
+        }
     return grains
 
 

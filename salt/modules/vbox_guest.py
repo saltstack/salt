@@ -90,14 +90,12 @@ def _return_mount_error(f):
 
 
 def _additions_install_program_path(mount_point):
-    kernel = __grains__.get("kernel", "")
-    if kernel == "Linux":
-        exe = "VBoxLinuxAdditions.run"
-    elif kernel == "Solaris":
-        exe = "VBoxSolarisAdditions.pkg"
-    elif kernel == "Windows":
-        exe = "VBoxWindowsAdditions.exe"
-    return os.path.join(mount_point, exe)
+    mount_points = {
+        "Linux": "VBoxLinuxAdditions.run",
+        "Solaris": "VBoxSolarisAdditions.pkg",
+        "Windows": "VBoxWindowsAdditions.exe",
+    }
+    return os.path.join(mount_point, mount_points[__grains__.get("kernel", "")])
 
 
 def _additions_install_opensuse(**kwargs):

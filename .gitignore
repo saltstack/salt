@@ -16,6 +16,7 @@ MANIFEST
 .pytest_cache
 Pipfile.lock
 .mypy_cache/*
+.tools-venvs/
 
 # virtualenv
 # - ignores directories of a virtualenv when you create it right on
@@ -23,6 +24,7 @@ Pipfile.lock
 # - /some/path$ git clone https://github.com/thatch45/salt.git
 # - /some/path$ virtualenv --python=/usr/bin/python2.6 salt
 /env/
+/.env/
 /bin/
 /etc/
 /include/

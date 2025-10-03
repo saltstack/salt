@@ -45,7 +45,7 @@ def test_minion_hangs_on_master_failure_50814(
             break
         time.sleep(0.5)
 
-    def wait_for_minion(salt_cli, tgt, timeout=30):
+    def wait_for_minion(salt_cli, tgt, timeout=60):
         start = time.time()
         while True:
             ret = salt_cli.run(

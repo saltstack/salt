@@ -48,14 +48,13 @@ class Network:
 
     @staticmethod
     def arg_map(arg_name):
-        if arg_name == "ipv4_address":
-            return "IPv4Address"
-        if arg_name == "ipv6_address":
-            return "IPv6Address"
-        if arg_name == "links":
-            return "Links"
-        if arg_name == "aliases":
-            return "Aliases"
+        ret = {
+            "ipv4_address": "IPv4Address",
+            "ipv6_address": "IPv6Address",
+            "links": "Links",
+            "aliases": "Aliases",
+        }
+        return ret[arg_name]
 
     @property
     def subnet(self):

@@ -210,7 +210,7 @@ winrepo_dir_ng
 :conf_master:`winrepo_dir_ng` (str)
 
 The location in the ``file_roots`` where the winrepo files are kept. The default
-is ``/srv/salt/win/repo-ng``.
+is ``/srv/salt/win/repo-ng``\.
 
 .. warning::
     You can change the location of the winrepo directory. However, it must
@@ -271,7 +271,7 @@ winrepo_provider
 
 :conf_master:`winrepo_provider` (str)
 
-The provider to be used for winrepo. Default is ``pygit2``. Falls back to
+The provider to be used for winrepo. Default is ``pygit2``\. Falls back to
 ``gitpython`` when ``pygit2`` is not available
 
 winrepo_ssl_verify
@@ -288,7 +288,7 @@ Master Configuration (pygit2)
 =============================
 
 The following configuration options only apply when the
-:conf_master:`winrepo_provider` option is set to ``pygit2``.
+:conf_master:`winrepo_provider` option is set to ``pygit2``\.
 
 - :conf_master:`winrepo_insecure_auth`
 - :conf_master:`winrepo_passphrase`
@@ -390,7 +390,7 @@ winrepo_cachefile
 :conf_minion:`winrepo_cachefile` (str)
 
 The file name of the winrepo cache file. The file is placed at the root of
-``winrepo_dir_ng``. Default is ``winrepo.p``.
+``winrepo_dir_ng``\. Default is ``winrepo.p``\.
 
 winrepo_source_dir
 ------------------
@@ -406,6 +406,7 @@ different environments. Default is ``salt://win/repo-ng/``.
     ``/srv/salt/win/repo-ng``. If that were changed to
     ``/srv/salt/new/repo-ng``, then the ``winrepo_source_dir`` would need to be
     changed to ``salt://new/repo-ng``
+
 
 .. _masterless-minion-config:
 
@@ -448,7 +449,7 @@ is ``C:\salt\srv\salt\win\repo-ng``.
 .. important::
     A common mistake is to change the ``file_roots`` setting and fail to update
     the ``winrepo_dir_ng`` and ``winrepo_dir`` settings so that they are inside
-    the ``file_roots``. You might also want to verify ``winrepo_source_dir`` on
+    the ``file_roots``\. You might also want to verify ``winrepo_source_dir`` on
     the minion as well.
 
 winrepo_remotes
@@ -1326,12 +1327,15 @@ allusers (bool)
 ---------------
 
 This parameter is specific to ``.msi`` installations. It tells ``msiexec`` to
-install the software for all users. The default is ``True``.
+install the software for all users. The default is ``True``\.
 
 cache_dir (bool)
 ----------------
 
 This setting requires the software to be stored on the ``file_roots`` and only
+<<<<<<< HEAD
+applies to URLs that begin with ``salt://``\. If set to ``True``\, then the
+=======
 applies to URLs that begin with ``salt://``. If set to ``True``, then the
 entire directory where the installer resides is recursively cached. This is
 useful for installers that depend on other files in the same directory for

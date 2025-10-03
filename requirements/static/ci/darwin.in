@@ -1,9 +1,5 @@
-# XXX: Temporarily do not install pylxd.
-# pylxd(or likely ws4py) will cause the test suite to hang at the finish line under runtests.py
-# pylxd>=2.2.5
 --constraint=../pkg/py{py_version}/{platform}.txt
 
-yamlordereddictloader
 pygit2>=1.10.1
 yamllint
 mercurial

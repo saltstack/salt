@@ -27,6 +27,12 @@ The api key can be specified in the master or minion configuration like below:
 
 """
 
+__deprecated__ = (
+    3009,
+    "pushover",
+    "https://github.com/salt-extensions/saltext-pushover",
+)
+
 
 def __virtual__():
     """

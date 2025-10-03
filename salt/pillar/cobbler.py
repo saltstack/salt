@@ -34,7 +34,6 @@ __opts__ = {
 }
 
 
-# Set up logging
 log = logging.getLogger(__name__)
 
 

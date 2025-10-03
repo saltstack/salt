@@ -14,6 +14,7 @@ from functools import total_ordering
 MAX_SIZE = sys.maxsize
 VERSION_LIMIT = MAX_SIZE - 200
 
+
 # ----- ATTENTION --------------------------------------------------------------------------------------------------->
 #
 # ALL major version bumps, new release codenames, MUST be defined in the SaltStackVersion.NAMES dictionary, i.e.:
@@ -80,7 +81,7 @@ class SaltVersionsInfo(type):
     SILICON       = SaltVersion("Silicon"      , info=3004,       released=True)
     PHOSPHORUS    = SaltVersion("Phosphorus"   , info=3005,       released=True)
     SULFUR        = SaltVersion("Sulfur"       , info=3006,       released=True)
-    CHLORINE      = SaltVersion("Chlorine"     , info=3007)
+    CHLORINE      = SaltVersion("Chlorine"     , info=3007,       released=True)
     ARGON         = SaltVersion("Argon"        , info=3008)
     POTASSIUM     = SaltVersion("Potassium"    , info=3009)
     CALCIUM       = SaltVersion("Calcium"      , info=3010)
@@ -615,6 +616,7 @@ def __discover_version(saltstack_version):
                 "--match",
                 "v[0-9]*",
                 "--always",
+                "--candidates=150",
             ],
             **kwargs,
         )
@@ -684,6 +686,15 @@ def salt_information():
     Report version of salt.
     """
     yield "Salt", __version__
+
+
+def package_information():
+    """
+    Report package type
+    """
+    import salt.utils.package
+
+    yield "Package Type", salt.utils.package.pkg_type()
 
 
 def dependency_information(include_salt_cloud=False):
@@ -869,12 +880,14 @@ def versions_information(include_salt_cloud=False, include_extensions=True):
     salt_info = list(salt_information())
     lib_info = list(dependency_information(include_salt_cloud))
     sys_info = list(system_information())
+    package_info = list(package_information())
 
     info = {
         "Salt Version": dict(salt_info),
         "Python Version": dict(py_info),
         "Dependency Versions": dict(lib_info),
         "System Versions": dict(sys_info),
+        "Salt Package Information": dict(package_info),
     }
     if include_extensions:
         extensions_info = extensions_information()
@@ -907,6 +920,7 @@ def versions_report(include_salt_cloud=False, include_extensions=True):
         "Python Version",
         "Dependency Versions",
         "Salt Extensions",
+        "Salt Package Information",
         "System Versions",
     ):
         if ver_type == "Salt Extensions" and ver_type not in ver_info:

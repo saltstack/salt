@@ -12,6 +12,12 @@ from copy import deepcopy
 import salt.utils.dictdiffer
 import salt.utils.json
 
+__deprecated__ = (
+    3009,
+    "zabbix",
+    "https://github.com/salt-extensions/saltext-zabbix",
+)
+
 
 def __virtual__():
     """

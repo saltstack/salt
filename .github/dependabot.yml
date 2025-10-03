@@ -1,0 +1,34 @@
+version: 2
+updates:
+  # master branch
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    target-branch: master
+    labels:
+      - "test:full"
+    # Don't open PRs for regular version updates
+    open-pull-requests-limit: 0
+
+  # 3006.x release branch
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    target-branch: 3006.x
+    labels:
+      - "test:full"
+    # Don't open PRs for regular version updates
+    open-pull-requests-limit: 0
+
+  # freeze release branch
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    target-branch: freeze
+    labels:
+      - "test:full"
+    # Don't open PRs for regular version updates
+    open-pull-requests-limit: 0

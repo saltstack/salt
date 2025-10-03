@@ -40,10 +40,6 @@ def _system_up_to_date(
             log.error("Salt gpg key is %s", fp.read())
     else:
         log.error("Salt gpg not present")
-    # download_file(
-    #    "https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public",
-    #    gpg_dest,
-    # )
     if grains["os_family"] == "Debian":
         ret = shell.run("apt", "update")
         assert ret.returncode == 0
@@ -263,8 +259,8 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
     Start up a master
     """
     if platform.is_windows():
-        state_tree = "C:/salt/srv/salt"
-        pillar_tree = "C:/salt/srv/pillar"
+        state_tree = r"C:\salt\srv\salt"
+        pillar_tree = r"C:\salt\srv\pillar"
     elif platform.is_darwin():
         state_tree = "/opt/srv/salt"
         pillar_tree = "/opt/srv/pillar"

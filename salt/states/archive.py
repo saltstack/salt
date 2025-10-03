@@ -165,6 +165,52 @@ def _cleanup_destdir(name):
         pass
 
 
+def _check_sig(
+    on_file,
+    signature,
+    signed_by_any=None,
+    signed_by_all=None,
+    keyring=None,
+    gnupghome=None,
+):
+    try:
+        verify = __salt__["gpg.verify"]
+    except KeyError:
+        raise CommandExecutionError(
+            "Signature verification requires the gpg module, "
+            "which could not be found. Make sure you have the "
+            "necessary tools and libraries intalled (gpg, python-gnupg)"
+        )
+    sig = None
+    if signature is not None:
+        # fetch detached signature
+        sig = __salt__["cp.cache_file"](signature, __env__)
+        if not sig:
+            raise CommandExecutionError(
+                f"Detached signature file {signature} not found"
+            )
+
+    res = verify(
+        filename=on_file,
+        signature=sig,
+        keyring=keyring,
+        gnupghome=gnupghome,
+        signed_by_any=signed_by_any,
+        signed_by_all=signed_by_all,
+    )
+
+    if res["res"] is True:
+        return
+    # Ensure detached signature and file are deleted from cache
+    # on signature verification failure.
+    if sig:
+        salt.utils.files.safe_rm(sig)
+    salt.utils.files.safe_rm(on_file)
+    raise CommandExecutionError(
+        f"The file's signature could not be verified: {res['message']}"
+    )
+
+
 def extracted(
     name,
     source,
@@ -190,6 +236,12 @@ def extracted(
     enforce_ownership_on=None,
     archive_format=None,
     use_etag=False,
+    signature=None,
+    source_hash_sig=None,
+    signed_by_any=None,
+    signed_by_all=None,
+    keyring=None,
+    gnupghome=None,
     **kwargs,
 ):
     """
@@ -671,6 +723,64 @@ def extracted(
 
         .. versionadded:: 3005
 
+    signature
+        Ensure a valid GPG signature exists on the selected ``source`` file.
+        This needs to be a file URI retrievable by
+        `:py:func:`cp.cache_file <salt.modules.cp.cache_file>` which
+        identifies a detached signature.
+
+        .. note::
+
+            A signature is only enforced directly after caching the file,
+            before it is extracted to its final destination. Existing files
+            at the target will never be modified.
+
+            It will be enforced regardless of source type.
+
+        .. versionadded:: 3007.0
+
+    source_hash_sig
+        When ``source`` is a remote file source, ``source_hash`` is a file,
+        ``skip_verify`` is not true and ``use_etag`` is not true, ensure a
+        valid GPG signature exists on the source hash file.
+        Set this to ``true`` for an inline (clearsigned) signature, or to a
+        file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
+        for a detached one.
+
+        .. note::
+
+            A signature on the ``source_hash`` file is enforced regardless of
+            changes since its contents are used to check if an existing file
+            is in the correct state - but only for remote sources!
+            As for ``signature``, existing target files will not be modified,
+            only the cached source_hash and source_hash_sig files will be removed.
+
+        .. versionadded:: 3007.0
+
+    signed_by_any
+        When verifying signatures either on the managed file or its source hash file,
+        require at least one valid signature from one of a list of key fingerprints.
+        This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
+
+        .. versionadded:: 3007.0
+
+    signed_by_all
+        When verifying signatures either on the managed file or its source hash file,
+        require a valid signature from each of the key fingerprints in this list.
+        This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
+
+        .. versionadded:: 3007.0
+
+    keyring
+        When verifying signatures, use this keyring.
+
+        .. versionadded:: 3007.0
+
+    gnupghome
+        When verifying signatures, use this GnuPG home.
+
+        .. versionadded:: 3007.0
+
     **Examples**
 
     1. tar with lmza (i.e. xz) compression:
@@ -823,6 +933,16 @@ def extracted(
             "The 'source_hash_update' argument is ignored when "
             "'source_hash' is not also specified."
         )
+
+    if signature or source_hash_sig:
+        # Fail early in case the gpg module is not present
+        try:
+            __salt__["gpg.verify"]
+        except KeyError:
+            ret["comment"] = (
+                "Cannot verify signatures because the gpg module was not loaded"
+            )
+            return ret
 
     try:
         source_match = __salt__["file.source_list"](source, source_hash, __env__)[0]
@@ -983,6 +1103,11 @@ def extracted(
                 source_hash=source_hash,
                 source_hash_name=source_hash_name,
                 saltenv=__env__,
+                source_hash_sig=source_hash_sig,
+                signed_by_any=signed_by_any,
+                signed_by_all=signed_by_all,
+                keyring=keyring,
+                gnupghome=gnupghome,
             )
         except CommandExecutionError as exc:
             ret["comment"] = exc.strerror
@@ -1063,6 +1188,11 @@ def extracted(
                 skip_verify=skip_verify,
                 saltenv=__env__,
                 use_etag=use_etag,
+                source_hash_sig=source_hash_sig,
+                signed_by_any=signed_by_any,
+                signed_by_all=signed_by_all,
+                keyring=keyring,
+                gnupghome=gnupghome,
             )
         except Exception as exc:  # pylint: disable=broad-except
             msg = "Failed to cache {}: {}".format(
@@ -1083,6 +1213,20 @@ def extracted(
                 salt.utils.url.redact_http_basic_auth(source_match),
             )
             return result
+
+    if signature:
+        try:
+            _check_sig(
+                cached,
+                signature,
+                signed_by_any=signed_by_any,
+                signed_by_all=signed_by_all,
+                keyring=keyring,
+                gnupghome=gnupghome,
+            )
+        except CommandExecutionError as err:
+            ret["comment"] = f"Failed verifying the source file's signature: {err}"
+            return ret
 
     existing_cached_source_sum = _read_cached_checksum(cached)
 

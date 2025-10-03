@@ -5,8 +5,9 @@ common:
     - "**/site-packages/ansible/plugins/test/**"
   dir_patterns: &common_dir_patterns
     - "**/__pycache__"
-    - "**/lib/python3.*/test"
+    - "**/lib/python3.*/ensurepip"
     - "**/lib/python3.*/idlelib"
+    - "**/lib/python3.*/test"
     - "**/lib/python3.*/tkinter"
     - "**/lib/python3.*/turtledemo"
     - "**/site-packages/test"
@@ -46,6 +47,7 @@ ci:
     dir_patterns: &ci_windows_dir_patterns
       - *common_dir_patterns
       - "**/artifacts/salt/configs"
+      - "**/lib/ensurepip"
       - "**/site-packages/adodbapi"
       - "**/site-packages/isapi"
       - "**/site-packages/pythonwin"

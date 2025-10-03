@@ -25,11 +25,6 @@ from tools.utils import (
 
 log = logging.getLogger(__name__)
 
-PLATFORMS: list[Literal["linux", "macos", "windows"]] = [
-    "linux",
-    "macos",
-    "windows",
-]
 WORKFLOWS = tools.utils.REPO_ROOT / ".github" / "workflows"
 TEMPLATES = WORKFLOWS / "templates"
 
@@ -40,6 +35,12 @@ cgroup = command_group(
     description=__doc__,
     parent="pre-commit",
 )
+
+PLATFORMS: list[Literal["linux", "macos", "windows"]] = [
+    "linux",
+    "macos",
+    "windows",
+]
 
 # Testing platforms
 TEST_SALT_LISTING = PlatformDefinitions(
@@ -565,7 +566,7 @@ def generate_workflows(ctx: Context):
         }
         shared_context = tools.utils.get_cicd_shared_context()
         for key, value in shared_context.items():
-            context[key] = value
+            context[key.replace("-", "_")] = value
         loaded_template = env.get_template(template_path.name)
         rendered_template = loaded_template.render(**context)
         workflow_path.write_text(rendered_template.rstrip() + "\n")

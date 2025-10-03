@@ -7,10 +7,10 @@ import importlib.machinery
 import importlib.util
 import logging
 import os
+import pathlib
 import sys
 import tempfile
 import traceback
-from pathlib import Path
 
 import jinja2
 import jinja2.ext
@@ -30,7 +30,6 @@ import salt.utils.yamlencoding
 from salt import __path__ as saltpath
 from salt.exceptions import CommandExecutionError, SaltInvocationError, SaltRenderError
 from salt.loader.context import NamedLoaderContext
-from salt.loader.dunder import __file_client__
 from salt.utils.decorators.jinja import JinjaFilter, JinjaGlobal, JinjaTest
 from salt.utils.odict import OrderedDict
 from salt.utils.versions import Version
@@ -111,7 +110,7 @@ def generate_sls_context(tmplpath, sls):
 
     if tmplpath:
         # Normalize template path
-        template = str(Path(tmplpath).as_posix())
+        template = str(pathlib.Path(tmplpath).as_posix())
 
         # Determine proper template name without root
         if not sls:
@@ -359,6 +358,8 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             if tmplpath:
                 loader = jinja2.FileSystemLoader(os.path.dirname(tmplpath))
         else:
+            from salt.loader.dunder import __file_client__
+
             loader = salt.utils.jinja.SaltCacheLoader(
                 opts,
                 saltenv,

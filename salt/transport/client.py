@@ -26,7 +26,7 @@ class ReqChannel:
         import salt.channel.client
 
         warn_until(
-            "Argon",
+            3008,
             "This module is deprecated. Please use salt.channel.client instead.",
         )
         return salt.channel.client.ReqChannel.factory(opts, **kwargs)
@@ -42,7 +42,7 @@ class PushChannel:
         import salt.channel.client
 
         warn_until(
-            "Argon",
+            3008,
             "This module is deprecated. Please use salt.channel.client instead.",
         )
         return salt.channel.client.PushChannel.factory(opts, **kwargs)
@@ -58,7 +58,7 @@ class PullChannel:
         import salt.channel.client
 
         warn_until(
-            "Argon",
+            3008,
             "This module is deprecated. Please use salt.channel.client instead.",
         )
         return salt.channel.client.PullChannel.factory(opts, **kwargs)
@@ -76,7 +76,7 @@ class AsyncReqChannel:
         import salt.channel.client
 
         warn_until(
-            "Argon",
+            3008,
             "This module is deprecated. Please use salt.channel.client instead.",
         )
         return salt.channel.client.AsyncReqChannel.factory(opts, **kwargs)
@@ -92,7 +92,7 @@ class AsyncPubChannel:
         import salt.channel.client
 
         warn_until(
-            "Argon",
+            3008,
             "This module is deprecated. Please use salt.channel.client instead.",
         )
         return salt.channel.client.AsyncPubChannel.factory(opts, **kwargs)
@@ -111,7 +111,7 @@ class AsyncPushChannel:
         import salt.channel.client
 
         warn_until(
-            "Argon",
+            3008,
             "This module is deprecated. Please use salt.channel.client instead.",
         )
         return salt.channel.client.AsyncPushChannel.factory(opts, **kwargs)
@@ -130,7 +130,7 @@ class AsyncPullChannel:
         import salt.channel.client
 
         warn_until(
-            "Argon",
+            3008,
             "This module is deprecated. Please use salt.channel.client instead.",
         )
         return salt.channel.client.AsyncPullChannel.factory(opts, **kwargs)

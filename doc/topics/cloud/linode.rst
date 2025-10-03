@@ -24,9 +24,6 @@ Configuration Options
     ``password``
         **(Required)** The default password to set on new VMs. Must be 8 characters with at least one lowercase, uppercase, and numeric.
 
-    ``api_version``
-        The version of the Linode API to interact with. Defaults to ``v3``.
-
     ``poll_interval``
         The rate of time in milliseconds to poll the Linode API for changes. Defaults to ``500``.
 
@@ -44,18 +41,8 @@ Set up the provider cloud configuration file at ``/etc/salt/cloud.providers`` or
 
     my-linode-provider:
         driver: linode
-        api_version: v4
         apikey: f4ZsmwtB1c7f85Jdu43RgXVDFlNjuJaeIYV8QMftTqKScEB2vSosFSr...
-        password: F00barbaz
-
-For use with APIv3 (deprecated):
-
-.. code-block:: yaml
-
-    my-linode-provider-v3:
-        driver: linode
-        apikey: f4ZsmwtB1c7f85Jdu43RgXVDFlNjuJaeIYV8QMftTqKScEB2vSosFSr...
-        password: F00barbaz
+        password: F00barbazverylongp@ssword
 
 Profile Configuration
 =====================
@@ -67,20 +54,19 @@ Configuration Options
 
     ``image``
         **(Required)** The image to deploy the boot disk from. This should be an image ID
-        (e.g. ``linode/ubuntu16.04``); official images start with ``linode/``. For APIv3,
-        this would be an image label (i.e. Ubuntu 16.04). See `listing images <#listing-images>`_
-        for more options.
+        (e.g. ``linode/ubuntu22.04``); official images start with ``linode/``.
 
     ``location``
         **(Required)** The location of the VM. This should be a Linode region
-        (e.g. ``us-east``). For APIv3, this would be a datacenter location
-        (e.g. ``Newark, NJ, USA``). See `listing locations <#listing-locations>`_ for
-        more options.
+        (e.g. ``us-east``). See `the list of locations <https://api.linode.com/v4/regions>`_ and
+        `the guide to choose a location <https://www.linode.com/docs/products/platform/get-started/guides/choose-a-data-center/>`_
+        for more options.
 
     ``size``
         **(Required)** The size of the VM. This should be a Linode instance type ID
-        (e.g. ``g6-standard-2``). For APIv3, this would be a plan ID (e.g. ``Linode 2GB``).
-        See `listing sizes <#listing-sizes>`_ for more options.
+        (e.g. ``g6-standard-2``). See `the list of sizes <https://api.linode.com/v4/linode/types>`_ and
+        `the guide to choose a size <https://www.linode.com/docs/products/compute/compute-instances/plans/choosing-a-plan/>`_
+        for more options.
 
     ``password`` (overrides provider)
         **(*Required)** The default password for the VM. Must be provided at the profile
@@ -89,20 +75,19 @@ Configuration Options
     ``assign_private_ip``
         .. versionadded:: 2016.3.0
 
-        Whether or not to assign a private key to the VM. Defaults to ``False``.
+        **(optional)** Whether or not to assign a private IP to the VM. Defaults to ``False``.
+
+    ``backups_enabled``
+        **(optional)** Whether or not to enable the backup for this VM. Backup can be
+        configured in your Linode account Defaults to ``False``.
 
     ``cloneform``
-        The name of the Linode to clone from.
-
-    ``disk_size``
-        **(Deprecated)** The amount of disk space to allocate for the OS disk. This has no
-        effect with APIv4; the size of the boot disk will be the remainder of disk space
-        after the swap partition is allocated.
+        **(optional)** The name of the Linode to clone from.
 
     ``ssh_interface``
         .. versionadded:: 2016.3.0
 
-        The interface with which to connect over SSH. Valid options are ``private_ips`` or
+        **(optional)** The interface with which to connect over SSH. Valid options are ``private_ips`` or
         ``public_ips``. Defaults to ``public_ips``.
 
         If specifying ``private_ips``, the Linodes must be hosted within the same data center
@@ -115,24 +100,24 @@ Configuration Options
         documentation.
 
     ``ssh_pubkey``
-        The public key to authorize for SSH with the VM.
+        **(optional)** The public key to authorize for SSH with the VM.
 
     ``swap``
-        The amount of disk space to allocate for the swap partition. Defaults to ``256``.
+        **(optional)** The amount of disk space to allocate for the swap partition. Defaults to ``256``.
 
 .. _Linode's Network Helper: https://www.linode.com/docs/platform/network-helper/#what-is-network-helper
 
 Example Configuration
 ---------------------
 
-Set up a profile configuration in ``/etc/salt/cloud.profiles.d/``:
+Set up a profile configuration at ``/etc/salt/cloud.profiles`` or ``/etc/salt/cloud.profiles.d/*.conf``:
 
 .. code-block:: yaml
 
     my-linode-profile:
         provider: my-linode-provider
         size: g6-standard-1
-        image: linode/alpine3.12
+        image: linode/ubuntu22.04
         location: us-east
 
 The ``my-linode-profile`` can be realized now with a salt command:
@@ -157,33 +142,22 @@ A more advanced configuration utlizing all of the configuration options might lo
 
     my-linode-profile-advanced:
         provider: my-linode-provider
-        size: g6-standard-3
-        image: linode/alpine3.10
-        location: eu-west
-        password: bogus123X
+        size: g6-standard-1
+        image: linode/ubuntu22.04
+        location: us-central
+        password: iamaverylongp@ssword
         assign_private_ip: true
         ssh_interface: private_ips
         ssh_pubkey: ssh-rsa AAAAB3NzaC1yc2EAAAADAQAB...
         swap_size: 512
 
-A legacy configuration for use with APIv3 might look like:
-
-.. code-block:: yaml
-
-    my-linode-profile-v3:
-        provider: my-linode-provider-v3
-        size: Nanode 1GB
-        image: Alpine 3.12
-        location: Fremont, CA, USA
-
 Migrating to APIv4
 ==================
 
-Linode APIv3 has been deprecated and will be shutdown in the coming months. You can opt-in to using
-APIv4 by setting the ``api_version`` provider configuration option to ``v4``.
+Linode APIv3 has been removed, and APIv4 is the only available version.
 
 When switching to APIv4, you will also need to generate a new token. See
-`here <https://www.linode.com/docs/platform/api/getting-started-with-the-linode-api/#create-an-api-token>`_
+`here <https://www.linode.com/docs/products/tools/api/get-started/#create-an-api-token>`_
 for more information.
 
 Notable Changes
@@ -193,18 +167,18 @@ Notable Changes
 ``size``, and ``image`` have moved from accepting label based references to IDs. See the
 `profile configuration <#profile-configuration>`_ section for more details.
 
-**The ``disk_size`` profile configuration parameter has been deprecated.** The parameter will not be taken into
+**The ``disk_size`` profile configuration parameter has been removed.** The parameter will not be taken into
 account when creating new VMs while targeting APIv4. See the ``disk_size`` description under the
 `profile configuration <#profile-configuration>`_ section for more details.
 
 **The ``boot`` function no longer requires a ``config_id``.** A config can be inferred by the API instead when booting.
 
-**The ``clone`` function has renamed parameters to match convention.** The old version of these parameters will not
-be supported when targeting APIv4.
-* ``datacenter_id`` has been deprecated in favor of ``location``.
-* ``plan_id`` has been deprecated in favor of ``size``.
+**The ``clone`` function has renamed parameters to match convention.** The old version of these parameters are no longer
+supported.
+* ``datacenter_id`` has been removed and replaced by ``location``.
+* ``plan_id`` has been removed and replaced by ``size``.
 
-**The ``get_plan_id`` function has been deprecated and will not be supported by APIv4.** IDs are now the only way
+**The ``get_plan_id`` function has been removed and is not supported by APIv4.** IDs are now the only way
 of referring to a "plan" (or type/size).
 
 Query Utilities
@@ -285,7 +259,7 @@ Official images are available under the ``linode`` namespace.
         ----------
         linode:
             ----------
-            linode/alpine3.10:
+            linode/ubuntu22.04:
                 ----------
                 created:
                     2019-06-20T17:17:11
@@ -300,7 +274,7 @@ Official images are available under the ``linode`` namespace.
                 expiry:
                     None
                 id:
-                    linode/alpine3.10
+                    linode/ubuntu22.04
                 is_public:
                     True
                 label:
