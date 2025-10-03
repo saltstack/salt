@@ -9,6 +9,7 @@ import pytest
 def salt_minion_id():
     return "test-mine"
 
+
 @pytest.fixture(scope="session")
 def master_id():
     master_id = "test-mine"
