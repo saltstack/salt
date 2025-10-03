@@ -4,19 +4,15 @@ integration tests for the mine runner
 
 import pytest
 
-import salt.config
-import salt.runners.mine as mine_runner
-from tests.support.mock import patch
 
+@pytest.fixture(scope="session")
+def salt_minion_id():
+    return "test-mine"
 
-@pytest.fixture(scope="module")
-def mine(runners):
-    return runners.mine
-
-
-@pytest.fixture(scope="module")
-def minion_opts():
-    return salt.config.minion_config(None)
+@pytest.fixture(scope="session")
+def master_id():
+    master_id = "test-mine"
+    yield master_id
 
 
 @pytest.fixture(scope="module")
@@ -30,6 +26,8 @@ def pillar_tree(salt_master, salt_call_cli, salt_run_cli, salt_minion):
     mine_file = """
     mine_functions:
       test_fun:
+        allow_tgt: '*'
+        allow_tgt_type: 'glob'
         mine_function: cmd.run
         cmd: 'echo hello test'
       test_no_allow:
@@ -57,12 +55,10 @@ def pillar_tree(salt_master, salt_call_cli, salt_run_cli, salt_minion):
         assert ret.returncode == 0
 
 
-@pytest.mark.usefixtures("pillar_tree")
-def test_allow_tgt(salt_run_cli, salt_minion, minion_opts):
+@pytest.mark.usefixtures("pillar_tree", "master_id", "salt_minion_id")
+def test_allow_tgt(salt_run_cli, salt_minion):
     tgt = salt_minion.id
     fun = "test_fun"
-    with patch("salt.runners.mine.__opts__", minion_opts, create=True):
-        ret = mine_runner.get(tgt, fun)
 
     ret = salt_run_cli.run("mine.get", tgt, fun)
     assert ret.data == {salt_minion.id: "hello test"}
