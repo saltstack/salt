@@ -73,16 +73,6 @@ def test_exists_found():
         assert ret["comment"] == "Grain exists"
         assert ret["changes"] == {}
 
-    # 'make_hashable' function tests: 1
-
-
-def test_make_hashable():
-    with set_grains({"cmplx_lst_grain": [{"a": "aval"}, {"foo": "bar"}]}):
-        hashable_list = {"cmplx_lst_grain": [{"a": "aval"}, {"foo": "bar"}]}
-        assert grains.make_hashable(grains.__grains__).issubset(
-            grains.make_hashable(hashable_list)
-        )
-
     # 'present' function tests: 12
 
 
@@ -643,7 +633,7 @@ def test_append_convert_to_list_empty():
         assert_grain_file_content("foo:\n- baz\n")
 
 
-# 'list_present' function tests: 7
+# 'list_present' function tests: 14
 
 
 def test_list_present():
@@ -719,6 +709,109 @@ def test_list_present_already():
         assert ret["changes"] == {}
         assert grains.__grains__ == {"a": "aval", "foo": ["bar"]}
         assert_grain_file_content("a: aval\nfoo:\n- bar\n")
+
+
+def test_list_present_complex_present():
+    with set_grains({"a": [{"foo": "bar"}]}):
+        ret = grains.list_present(name="a", value=[{"foo": "bar"}, {"foo": "baz"}])
+        assert grains.__grains__ == {"a": [{"foo": "bar"}, {"foo": "baz"}]}
+        assert ret["result"] is True
+        assert ret["comment"] == (
+            "Removed value [{'foo': 'bar'}] from update due to value found in \"a\".\n"
+            "Append value [{'foo': 'baz'}] to grain a"
+        )
+        assert ret["changes"] == {"new": {"a": [{"foo": "bar"}, {"foo": "baz"}]}}
+        assert_grain_file_content("a:\n- foo: bar\n- foo: baz\n")
+
+
+def test_list_present_racecar_present():
+    with set_grains({"foo": ["racecar"]}):
+        ret = grains.list_present(name="foo", value=["racer"])
+        assert grains.__grains__ == {"foo": ["racecar", "racer"]}
+        assert ret["result"] is True
+        assert ret["comment"] == "Append value ['racer'] to grain foo"
+        assert ret["changes"] == {"new": {"foo": ["racecar", "racer"]}}
+        assert_grain_file_content("foo:\n- racecar\n- racer\n")
+
+
+def test_list_present_multiple_calls_empty_as_str():
+    with set_grains({}):
+        # First Entry
+        ret = grains.list_present(name="foo", value="racecar")
+        assert grains.__grains__ == {"foo": ["racecar"]}
+        assert ret["result"] is True
+        assert ret["comment"] == "Append value racecar to grain foo"
+        assert ret["changes"] == {"new": {"foo": ["racecar"]}}
+
+        # Second Entry
+        ret = grains.list_present(name="foo", value=["racecar", "taxi"])
+        assert grains.__grains__ == {"foo": ["racecar", "taxi"]}
+        assert ret["result"] is True
+        assert ret["comment"] == (
+            "Removed value ['racecar'] from update due to value found in \"foo\".\n"
+            "Append value ['taxi'] to grain foo"
+        )
+        assert ret["changes"] == {"new": {"foo": ["racecar", "taxi"]}}
+
+
+def test_list_present_multiple_calls_empty_as_list():
+    with set_grains({}):
+        # First Entry
+        ret = grains.list_present(name="foo", value=["racecar"])
+        assert grains.__grains__ == {"foo": ["racecar"]}
+        assert ret["result"] is True
+        assert ret["comment"] == "Append value ['racecar'] to grain foo"
+        assert ret["changes"] == {"new": {"foo": ["racecar"]}}
+
+        # Second Entry
+        ret = grains.list_present(name="foo", value=["racecar", "taxi"])
+        assert grains.__grains__ == {"foo": ["racecar", "taxi"]}
+        assert ret["result"] is True
+        assert ret["comment"] == (
+            "Removed value ['racecar'] from update due to value found in \"foo\".\n"
+            "Append value ['taxi'] to grain foo"
+        )
+        assert ret["changes"] == {"new": {"foo": ["racecar", "taxi"]}}
+
+
+def test_list_present_multiple_calls_present_as_str():
+    with set_grains({"foo": ["nascar"]}):
+        # First Entry
+        ret = grains.list_present(name="foo", value="racecar")
+        assert grains.__grains__ == {"foo": ["nascar", "racecar"]}
+        assert ret["result"] is True
+        assert ret["comment"] == "Append value racecar to grain foo"
+        assert ret["changes"] == {"new": {"foo": ["nascar", "racecar"]}}
+
+        # Second Entry
+        ret = grains.list_present(name="foo", value=["racecar", "taxi"])
+        assert grains.__grains__ == {"foo": ["nascar", "racecar", "taxi"]}
+        assert ret["result"] is True
+        assert ret["comment"] == (
+            "Removed value ['racecar'] from update due to value found in \"foo\".\n"
+            "Append value ['taxi'] to grain foo"
+        )
+        assert ret["changes"] == {"new": {"foo": ["nascar", "racecar", "taxi"]}}
+
+
+def test_list_present_multiple_calls_present_as_list():
+    with set_grains({"foo": ["nascar"]}):
+        # First Entry
+        ret = grains.list_present(name="foo", value=["racecar"])
+        assert grains.__grains__ == {"foo": ["nascar", "racecar"]}
+        assert ret["result"] is True
+        assert ret["comment"] == "Append value ['racecar'] to grain foo"
+        assert ret["changes"] == {"new": {"foo": ["nascar", "racecar"]}}
+
+        # Second Entry
+        ret = grains.list_present(name="foo", value=["racecar", "taxi"])
+        assert grains.__grains__ == {"foo": ["nascar", "racecar", "taxi"]}
+        assert ret["result"] is True
+        assert ret["comment"] == (
+            "Removed value ['racecar'] from update due to value found in \"foo\".\n"
+            "Append value ['taxi'] to grain foo"
+        )
+        assert ret["changes"] == {"new": {"foo": ["nascar", "racecar", "taxi"]}}
 
 
 def test_list_present_unknown_failure():
