@@ -9,6 +9,7 @@ import pytest
 from saltfactories.utils.tempfiles import temp_file
 
 from tests.support.case import SSHCase
+from tests.support.helpers import system_python_version
 from tests.support.runtests import RUNTIME_VARS
 
 pytestmark = [
@@ -21,6 +22,10 @@ pytestmark = [
         # and it imports `ssl` and checks if the `match_hostname` function is defined, which
         # has been deprecated since Python 3.7, so, the logic goes into trying to import
         # backports.ssl-match-hostname which is not installed on the system.
+    ),
+    pytest.mark.skipif(
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
     ),
 ]
 
