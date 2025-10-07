@@ -70,7 +70,7 @@ immutables==0.21
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
     #   contextvars
-importlib-metadata==6.0.0
+importlib-metadata==8.7.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   sphinx
@@ -242,7 +242,7 @@ zc.lockfile==1.4
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   cherrypy
-zipp==3.5.0
+zipp==3.23.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   importlib-metadata
