@@ -17,24 +17,10 @@ runs:
 
   steps:
 
-#    - uses: ./.github/actions/cached-virtualenv
-#      id: pre-commit-virtualenv
-#      with:
-#        name: pre-commit
-#        cache-seed: ${{ inputs.cache-seed }}
-
     - name: Install Pre-Commit
-#      if: ${{ steps.pre-commit-virtualenv.outputs.cache-hit != 'true' }}
       shell: bash
       run: |
         pip install pre-commit==${{ inputs.version }}
-
-#    - name: Cache Pre-Commit Hooks
-#      uses: ./.github/actions/cache
-#      id: pre-commit-hooks-cache
-#      with:
-#        key: ${{ steps.pre-commit-virtualenv.outputs.cache-key }}|${{ inputs.version }}|${{ hashFiles('.pre-commit-config.yaml') }}
-#        path: ~/.cache/pre-commit
 
     - name: Install Pre-Commit Hooks
       shell: bash
