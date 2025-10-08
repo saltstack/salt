@@ -37,7 +37,7 @@ on:
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-0  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-1  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
@@ -259,7 +259,9 @@ jobs:
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
-      pre-commit-version: "3.0.4"
+      pre-commit-version: "4.3.0"
+      ci-python-version: "3.11"
+      full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
 
   lint:
     name: Lint
@@ -362,7 +364,7 @@ jobs:
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         uses: ./.github/actions/setup-pre-commit
         with:
-          version: "3.0.4"
+          version: "4.3.0"
           cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Commit Changes
