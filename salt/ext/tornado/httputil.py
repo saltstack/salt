@@ -69,6 +69,9 @@ except ImportError:
     pass
 
 
+# To be used with str.strip() and related methods.
+HTTP_WHITESPACE = " \t"
+
 # RFC 7230 section 3.5: a recipient MAY recognize a single LF as a line
 # terminator and ignore any preceding CR.
 _CRLF_RE = re.compile(r"\r?\n")
@@ -189,12 +192,12 @@ class HTTPHeaders(MutableMapping):
         """
         if line[0].isspace():
             # continuation of a multi-line header
-            new_part = " " + line.lstrip()
+            new_part = " " + line.lstrip(HTTP_WHITESPACE)
             self._as_list[self._last_key][-1] += new_part
             self._dict[self._last_key] += new_part
         else:
             name, value = line.split(":", 1)
-            self.add(name, value.strip())
+            self.add(name, value.strip(HTTP_WHITESPACE))
 
     @classmethod
     def parse(cls, headers):
