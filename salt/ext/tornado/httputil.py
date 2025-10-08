@@ -34,7 +34,6 @@ import time
 from collections.abc import MutableMapping
 
 from salt.ext.tornado.escape import native_str, parse_qs_bytes, utf8
-from salt.ext.tornado.log import gen_log
 from salt.ext.tornado.util import PY3, ObjectDict
 
 if PY3:
@@ -753,14 +752,13 @@ def parse_body_arguments(content_type, body, arguments, files, headers=None):
     with the parsed contents.
     """
     if headers and "Content-Encoding" in headers:
-        gen_log.warning("Unsupported Content-Encoding: %s", headers["Content-Encoding"])
+        raise HTTPInputError("Unsupported Content-Encoding: %s" % headers["Content-Encoding"])
         return
     if content_type.startswith("application/x-www-form-urlencoded"):
         try:
             uri_arguments = parse_qs_bytes(native_str(body), keep_blank_values=True)
         except Exception as e:
-            gen_log.warning("Invalid x-www-form-urlencoded body: %s", e)
-            uri_arguments = {}
+            raise HTTPInputError("Invalid x-www-form-urlencoded body: %s" % e) from e
         for name, values in uri_arguments.items():
             if values:
                 arguments.setdefault(name, []).extend(values)
@@ -773,9 +771,9 @@ def parse_body_arguments(content_type, body, arguments, files, headers=None):
                     parse_multipart_form_data(utf8(v), body, arguments, files)
                     break
             else:
-                raise ValueError("multipart boundary not found")
+                raise HTTPInputError("multipart boundary not found")
         except Exception as e:
-            gen_log.warning("Invalid multipart/form-data: %s", e)
+            raise HTTPInputError("Invalid multipart/form-data: %s" % e) from e
 
 
 def parse_multipart_form_data(boundary, data, arguments, files):
@@ -794,26 +792,22 @@ def parse_multipart_form_data(boundary, data, arguments, files):
         boundary = boundary[1:-1]
     final_boundary_index = data.rfind(b"--" + boundary + b"--")
     if final_boundary_index == -1:
-        gen_log.warning("Invalid multipart/form-data: no final boundary")
-        return
+        raise HTTPInputError("Invalid multipart/form-data: no final boundary")
     parts = data[:final_boundary_index].split(b"--" + boundary + b"\r\n")
     for part in parts:
         if not part:
             continue
         eoh = part.find(b"\r\n\r\n")
         if eoh == -1:
-            gen_log.warning("multipart/form-data missing headers")
-            continue
+            raise HTTPInputError("multipart/form-data missing headers")
         headers = HTTPHeaders.parse(part[:eoh].decode("utf-8"))
         disp_header = headers.get("Content-Disposition", "")
         disposition, disp_params = _parse_header(disp_header)
         if disposition != "form-data" or not part.endswith(b"\r\n"):
-            gen_log.warning("Invalid multipart/form-data")
-            continue
+            raise HTTPInputError("Invalid multipart/form-data")
         value = part[eoh + 4 : -2]
         if not disp_params.get("name"):
-            gen_log.warning("multipart/form-data value missing name")
-            continue
+            raise HTTPInputError("multipart/form-data value missing name")
         name = disp_params["name"]
         if disp_params.get("filename"):
             ctype = headers.get("Content-Type", "application/unknown")
