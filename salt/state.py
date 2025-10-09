@@ -1226,31 +1226,41 @@ class State:
         Alter the way a successful state run is determined
         """
         ret = {"result": False}
+        ret = {"result": False}
         for key in ("__sls__", "__id__", "name"):
+            ret[key] = low_data.get(key)
             ret[key] = low_data.get(key)
         cmd_opts = {}
         if "shell" in self.opts["grains"]:
             cmd_opts["shell"] = self.opts["grains"].get("shell")
-        for entry in low_data["check_cmd"]:
+        if isinstance(low_data["check_cmd"], list):
+            for entry in low_data["check_cmd"]:
+                cmd = self.functions["cmd.retcode"](
+                    entry, ignore_retcode=True, python_shell=True, **cmd_opts
+                )
+        else:
             cmd = self.functions["cmd.retcode"](
-                entry, ignore_retcode=True, python_shell=True, **cmd_opts
+                low_data["check_cmd"],
+                ignore_retcode=True,
+                python_shell=True,
+                **cmd_opts,
             )
-            log.debug("Last command return code: %s", cmd)
-            if cmd == 0 and ret["result"] is False:
-                ret.update(
-                    {
-                        "comment": "check_cmd determined the state succeeded",
-                        "result": True,
-                    }
-                )
-            elif cmd != 0:
-                ret.update(
-                    {
-                        "comment": "check_cmd determined the state failed",
-                        "result": False,
-                    }
-                )
-                return ret
+        log.debug("Last command return code: %s", cmd)
+        if cmd == 0 and ret["result"] is False:
+            ret.update(
+                {
+                    "comment": "check_cmd determined the state succeeded",
+                    "result": True,
+                }
+            )
+        elif cmd != 0:
+            ret.update(
+                {
+                    "comment": "check_cmd determined the state failed",
+                    "result": False,
+                }
+            )
+            return ret
         return ret
 
     def _run_check_creates(self, low_data):

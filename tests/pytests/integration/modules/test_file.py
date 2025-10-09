@@ -3,8 +3,11 @@ Tests for the file state
 """
 
 import os
+from pathlib import Path
 
 import pytest
+
+import salt.utils.win_dacl
 
 
 @pytest.mark.parametrize("verify_ssl", [True, False])
@@ -197,3 +200,92 @@ def test_check_file_meta_verify_ssl(
         )
     else:
         assert "SSL: CERTIFICATE_VERIFY_FAILED" in ret.stderr
+
+
+@pytest.mark.slow_test
+def test_create_symlink_with_check_cmd(salt_call_cli, salt_master, tmp_path):
+    """
+    file.symlink test to make sure chk_command runs before
+    creating the symlink
+    """
+    name = tmp_path / "test-symlink"
+    name.mkdir()
+    if salt.utils.platform.is_windows():
+        principal = salt.utils.win_functions.get_current_user()
+        salt.utils.win_dacl.set_owner(obj_name=str(name), principal=principal)
+        salt.utils.win_dacl.set_inheritance(obj_name=str(name), enabled=True)
+    symlink_file = name / "symlink"
+    symlink_file.write_text("jaguar", encoding="utf-8")
+
+    assert symlink_file.exists()
+    assert symlink_file.is_file()
+
+    assert name.exists()
+    assert name.is_dir()
+
+    sls_contents = f"""
+    {name}/testing:
+      file.symlink:
+        - target: {symlink_file}
+        - user: cbert
+        - group: staff
+        - makedirs: true
+        - check_cmd: grep 'jaguar' {symlink_file}
+    """
+
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        "test_symlink.sls", sls_contents
+    )
+
+    with sls_tempfile:
+        ret = salt_call_cli.run("state.apply", "test_symlink")
+        symlink_path = Path(f"{name}/testing")
+        assert symlink_path.exists()
+        assert symlink_path.read_text(encoding="utf-8") == "jaguar"
+        assert symlink_path.is_symlink()
+        expected_comment = "check_cmd determined the state succeeded"
+        assert expected_comment in ret.stdout
+
+
+@pytest.mark.slow_test
+def test_create_symlink_with_check_cmd_list(salt_call_cli, salt_master, tmp_path):
+    """
+    file.symlink test to make sure chk_command runs before
+    creating the symlink and can run a list of commands
+    """
+    name = tmp_path / "test-symlink"
+    name.mkdir()
+    if salt.utils.platform.is_windows():
+        principal = salt.utils.win_functions.get_current_user()
+        salt.utils.win_dacl.set_owner(obj_name=str(name), principal=principal)
+        salt.utils.win_dacl.set_inheritance(obj_name=str(name), enabled=True)
+    symlink_file = name / "symlink"
+    symlink_file.write_text("jaguar", encoding="utf-8")
+    assert symlink_file.exists()
+    assert symlink_file.is_file()
+
+    assert name.exists()
+    assert name.is_dir()
+
+    sls_contents = f"""
+    {name}/testing:
+      file.symlink:
+        - target: {symlink_file}
+        - user: cbert
+        - group: staff
+        - makedirs: true
+        - check_cmd: ["grep 'jaguar' {symlink_file}", grep "j" {symlink_file}]
+    """
+
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        "test_symlink.sls",
+        sls_contents,
+    )
+    with sls_tempfile:
+        ret = salt_call_cli.run("state.apply", "test_symlink")
+        symlink_path = Path(f"{name}/testing")
+        assert symlink_path.exists()
+        assert symlink_path.read_text(encoding="utf-8") == "jaguar"
+        assert symlink_path.is_symlink()
+        expected_comment = "check_cmd determined the state succeeded"
+        assert expected_comment in ret.stdout
