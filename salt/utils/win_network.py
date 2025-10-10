@@ -180,7 +180,9 @@ def _get_ip_base_properties(i_face):
         "dynamic_dns_enabled": ip_properties.IsDynamicDnsEnabled,
     }
     # IPv4 Properties
-    if i_face.Supports(NetworkInterfaceComponent.IPv4):
+    if i_face.Supports(
+        NetworkInterfaceComponent.IPv4  # pylint: disable=used-before-assignment
+    ):
         ipv4_properties = ip_properties.GetIPv4Properties()
         if ipv4_properties:
             ip_base_properties.update(
