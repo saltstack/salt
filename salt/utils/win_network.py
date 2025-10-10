@@ -63,6 +63,7 @@ if IS_WINDOWS:
 
             # pylint: enable=unused-import
             from System.Net import NetworkInformation
+            from System.Net.NetworkInformation import NetworkInterfaceComponent
         except RuntimeError:
             # In some environments, using the Relenv OneDir package, we can't
             # load pythonnet. Uninstalling and reinstalling pythonnet fixes the
@@ -171,18 +172,60 @@ def _get_base_properties(i_face):
 
 
 def _get_ip_base_properties(i_face):
-    ip_properties = i_face.GetIPProperties()  # DNS Properties
-    ipv4_properties = ip_properties.GetIPv4Properties()  # DHCP Properties
-    return {
-        # DNS
+    # DNS Properties
+    ip_properties = i_face.GetIPProperties()
+    ip_base_properties = {
         "dns_suffix": ip_properties.DnsSuffix,
         "dns_enabled": ip_properties.IsDnsEnabled,
         "dynamic_dns_enabled": ip_properties.IsDynamicDnsEnabled,
-        # DHCP
-        "dhcp_enabled": ipv4_properties.IsDhcpEnabled,
-        "forwarding_enabled": ipv4_properties.IsForwardingEnabled,
-        "wins_enabled": ipv4_properties.UsesWins,
     }
+    # IPv4 Properties
+    if i_face.Supports(NetworkInterfaceComponent.IPv4):
+        ipv4_properties = ip_properties.GetIPv4Properties()
+        if ipv4_properties:
+            ip_base_properties.update(
+                {
+                    "ipv4_apipa_active": ipv4_properties.IsAutomaticPrivateAddressingActive,
+                    "ipv4_apipa_enabled": ipv4_properties.IsAutomaticPrivateAddressingEnabled,
+                    "ipv4_dhcp_enabled": ipv4_properties.IsDhcpEnabled,
+                    "ipv4_forwarding_enabled": ipv4_properties.IsForwardingEnabled,
+                    "ipv4_index": ipv4_properties.Index,
+                    "ipv4_mtu": ipv4_properties.Mtu,
+                    "ipv4_wins_enabled": ipv4_properties.UsesWins,
+                }
+            )
+        else:
+            ip_base_properties.update(
+                {
+                    "ipv4_apipa_active": None,
+                    "ipv4_apipa_enabled": None,
+                    "ipv4_dhcp_enabled": None,
+                    "ipv4_forwarding_enabled": None,
+                    "ipv4_index": None,
+                    "ipv4_mtu": None,
+                    "ipv4_wins_enabled": None,
+                }
+            )
+    # IPv6 Properties
+    if i_face.Supports(NetworkInterfaceComponent.IPv6):
+        ipv6_properties = ip_properties.GetIPv6Properties()
+        if ipv6_properties:
+            ip_base_properties.update(
+                {
+                    "ipv6_index": ipv6_properties.Index,
+                    "ipv6_mtu": ipv6_properties.Mtu,
+                }
+            )
+        else:
+            log.debug("No IPv6 properties found for %s", i_face.Name)
+            ip_base_properties.update(
+                {
+                    "ipv6_index": None,
+                    "ipv6_mtu": None,
+                }
+            )
+
+    return ip_base_properties
 
 
 def _get_ip_unicast_info(i_face):
@@ -360,17 +403,24 @@ def get_interface_info_dot_net_formatted():
                     "description": interfaces[i_face]["description"],
                     "hwaddr": interfaces[i_face]["physical_address"],
                     "up": True,
-                    "dhcp_enabled": interfaces[i_face]["dhcp_enabled"],
                 }
             )
             for ip in interfaces[i_face].get("ip_addresses", []):
                 i_faces[name].setdefault("inet", []).append(
                     {
                         "address": ip["address"],
+                        "apipa_active": interfaces[i_face].get("ipv4_apipa_active"),
+                        "apipa_enabled": interfaces[i_face].get("ipv4_apipa_enabled"),
                         "broadcast": ip["broadcast"],
-                        "netmask": ip["netmask"],
+                        "dhcp_enabled": interfaces[i_face].get("ipv4_dhcp_enabled"),
+                        "index": interfaces[i_face].get("ipv4_index"),
                         "gateway": interfaces[i_face].get("ip_gateways", [""])[0],
-                        "label": name,
+                        "mtu": interfaces[i_face].get("ipv4_mtu"),
+                        "netmask": ip["netmask"],
+                        "forwarding_enabled": interfaces[i_face].get(
+                            "ipv4_forwarding_enabled"
+                        ),
+                        "wins_enabled": interfaces[i_face].get("ipv4_wins_enabled"),
                     }
                 )
             for ip in interfaces[i_face].get("ipv6_addresses", []):
@@ -379,6 +429,8 @@ def get_interface_info_dot_net_formatted():
                         "address": ip["address"],
                         "gateway": interfaces[i_face].get("ipv6_gateways", [""])[0],
                         "prefixlen": ip["prefix_length"],
+                        "index": interfaces[i_face].get("ipv6_index"),
+                        "mtu": interfaces[i_face].get("ipv6_mtu"),
                     }
                 )
 
