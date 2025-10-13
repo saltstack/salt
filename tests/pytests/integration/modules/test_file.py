@@ -275,7 +275,7 @@ def test_create_symlink_with_check_cmd_list(salt_call_cli, salt_master, tmp_path
         - makedirs: true
         - check_cmd: 
           - grep 'jaguar' {symlink_file}
-          - grep 'j' {synlink_file}
+          - grep 'j' {symlink_file}
     """
 
     sls_tempfile = salt_master.state_tree.base.temp_file(
