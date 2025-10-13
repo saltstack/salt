@@ -240,7 +240,7 @@ def test_create_symlink_with_check_cmd(salt_call_cli, salt_master, tmp_path):
         ret = salt_call_cli.run("state.apply", "test_symlink")
         symlink_path = Path(f"{name}/testing")
         assert symlink_path.exists()
-        assert symlink_path.read_text() == "jaguar"
+        assert symlink_path.read_text(encoding="utf-8") == "jaguar"
         assert symlink_path.is_symlink()
         expected_comment = "check_cmd determined the state succeeded"
         assert expected_comment in ret.stdout
