@@ -63,17 +63,19 @@ def test_exitcode(cmd, shell, exitcode_script):
 
 
 @pytest.mark.parametrize(
-    "command, expected",
+    "args, expected",
     [
+        ("foo bar", "a: foo, b: bar"),
+        ('foo "bar bar"', "a: foo, b: bar bar"),
         (["foo", "bar"], "a: foo, b: bar"),
         (["foo foo", "bar bar"], "a: foo foo, b: bar bar"),
     ],
 )
-def test_echo(cmd, shell, echo_script, command, expected):
+def test_echo(cmd, shell, echo_script, args, expected):
     """
     Test argument processing with a powershell script
     """
-    ret = cmd.script("salt://echo.ps1", args=command, shell=shell, saltenv="base")
+    ret = cmd.script("salt://echo.ps1", args=args, shell=shell, saltenv="base")
     assert isinstance(ret["pid"], int)
     assert ret["retcode"] == 0
     assert ret["stderr"] == ""
@@ -81,19 +83,21 @@ def test_echo(cmd, shell, echo_script, command, expected):
 
 
 @pytest.mark.parametrize(
-    "command, expected",
+    "args, expected",
     [
+        ("foo bar", "a: foo, b: bar"),
+        ('foo "bar bar"', "a: foo, b: bar bar"),
         (["foo", "bar"], "a: foo, b: bar"),
         (["foo foo", "bar bar"], "a: foo foo, b: bar bar"),
     ],
 )
-def test_echo_runas(cmd, shell, account, echo_script, command, expected):
+def test_echo_runas(cmd, shell, account, echo_script, args, expected):
     """
     Test argument processing with a powershell script and runas
     """
     ret = cmd.script(
         "salt://echo.ps1",
-        args=command,
+        args=args,
         shell=shell,
         runas=account.username,
         password=account.password,
