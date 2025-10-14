@@ -6,6 +6,7 @@ missing functions in other modules.
 import ctypes
 import platform
 import re
+import sys
 
 from salt.exceptions import CommandExecutionError
 
@@ -421,3 +422,41 @@ def squid_to_guid(squid):
             guid += squid_match.group(index)[::-1]
         guid += "}"
     return guid
+
+
+def shlex_split(string):
+    """
+    Windows version of shlex.split()
+
+    Based on winshlex: https://github.com/jdjebi/winshlex/blob/master/winshlex/lex.py
+    """
+    re_cmd_lex = r""""((?:""|\\["\\]|[^"])*)"?()|(\\\\(?=\\*")|\\")|(&&?|\|\|?|\d?>|[<])|([^\s"&|<>]+)|(\s+)|(.)"""
+    args = []
+    accu = None  # collects pieces of one arg
+    for qs, qss, esc, pipe, word, white, fail in re.findall(re_cmd_lex, string):
+        if word:
+            pass  # most frequent
+        elif esc:
+            word = esc[1]
+        elif white or pipe:
+            if accu is not None:
+                args.append(accu)
+            if pipe:
+                args.append(pipe)
+            accu = None
+            continue
+        elif fail:
+            raise ValueError("invalid or incomplete shell string")
+        elif qs:
+            word = qs.replace('\\"', '"').replace("\\\\", "\\")
+            if platform == 0:
+                word = word.replace('""', '"')
+        else:
+            word = qss  # may be even empty; must be last
+
+        accu = (accu or "") + word
+
+    if accu is not None:
+        args.append(accu)
+
+    return args

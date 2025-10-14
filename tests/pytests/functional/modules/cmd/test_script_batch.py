@@ -27,36 +27,40 @@ echo a: %a%, b: %b%
 
 
 @pytest.mark.parametrize(
-    "command, expected",
+    "args, expected",
     [
+        ("foo bar", "a: foo, b: bar"),
+        ('foo "bar bar"', "a: foo, b: bar bar"),
         (["foo", "bar"], "a: foo, b: bar"),
         (["foo foo", "bar bar"], "a: foo foo, b: bar bar"),
     ],
 )
-def test_echo(modules, echo_script, command, expected):
+def test_echo(modules, echo_script, args, expected):
     """
     Test argument processing with a batch script
     """
     script = "salt://echo-script/test.bat"
-    result = modules.cmd.script(script, args=command, shell="cmd")
+    result = modules.cmd.script(script, args=args, shell="cmd")
     assert result["stdout"] == expected
 
 
 @pytest.mark.parametrize(
-    "command, expected",
+    "args, expected",
     [
+        ("foo bar", "a: foo, b: bar"),
+        ('foo "bar bar"', "a: foo, b: bar bar"),
         (["foo", "bar"], "a: foo, b: bar"),
         (["foo foo", "bar bar"], "a: foo foo, b: bar bar"),
     ],
 )
-def test_echo_runas(modules, account, echo_script, command, expected):
+def test_echo_runas(modules, account, echo_script, args, expected):
     """
     Test argument processing with a batch script and runas
     """
     script = "salt://echo-script/test.bat"
     result = modules.cmd.script(
         script,
-        args=command,
+        args=args,
         shell="cmd",
         runas=account.username,
         password=account.password,

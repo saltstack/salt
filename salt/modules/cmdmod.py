@@ -55,6 +55,7 @@ except ImportError:
 if salt.utils.platform.is_windows():
     import salt.platform.win
     from salt.utils.win_functions import escape_argument as _cmd_quote
+    from salt.utils.win_functions import shlex_split
     from salt.utils.win_runas import runas as win_runas
 
     HAS_WIN_RUNAS = True
@@ -100,25 +101,20 @@ def _check_cb(cb_):
     return lambda x: x
 
 
-def _python_shell_default(python_shell, shell=False):
+def _python_shell_default(python_shell, __pub_jid):
     """
     Set python_shell default based on the shell parameter and __opts__['cmd_safe']
     """
-    if shell:
-        if salt.utils.platform.is_windows():
-            # On Windows python_shell / subprocess 'shell' parameter must always be
-            # False as we prepend the shell manually
-            return False
-        else:
-            # Non-Windows requires python_shell to be enabled
-            return True if python_shell is None else python_shell
-    else:
-        try:
-            if __opts__.get("cmd_safe", True) is False and python_shell is None:
-                # Override-switch for python_shell
-                return True
-        except NameError:
-            pass
+    try:
+        # Default to python_shell=True when run directly from remote execution
+        # system. Cross-module calls won't have a jid.
+        if __pub_jid and python_shell is None:
+            return True
+        elif __opts__.get("cmd_safe", True) is False and python_shell is None:
+            # Override-switch for python_shell
+            return True
+    except NameError:
+        pass
     return python_shell
 
 
@@ -305,7 +301,7 @@ def _run(
     log_callback=None,
     runas=None,
     group=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=False,
     env=None,
     clean_env=False,
@@ -973,7 +969,7 @@ def _run_quiet(
     stdin=None,
     output_encoding=None,
     runas=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=False,
     env=None,
     template=None,
@@ -1022,7 +1018,7 @@ def _run_all_quiet(
     cwd=None,
     stdin=None,
     runas=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=False,
     env=None,
     template=None,
@@ -1078,7 +1074,7 @@ def run(
     stdin=None,
     runas=None,
     group=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -1346,7 +1342,7 @@ def run(
 
         salt '*' cmd.run cmd='sed -e s/=/:/g'
     """
-    python_shell = _python_shell_default(python_shell, shell)
+    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
     stderr = subprocess.STDOUT if redirect_stderr else subprocess.PIPE
     ret = _run(
         cmd,
@@ -1671,7 +1667,7 @@ def run_stdout(
     stdin=None,
     runas=None,
     group=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -1866,7 +1862,7 @@ def run_stdout(
 
         salt '*' cmd.run_stdout "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     """
-    python_shell = _python_shell_default(python_shell, shell)
+    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
     ret = _run(
         cmd,
         runas=runas,
@@ -1905,7 +1901,7 @@ def run_stderr(
     stdin=None,
     runas=None,
     group=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -2100,7 +2096,7 @@ def run_stderr(
 
         salt '*' cmd.run_stderr "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     """
-    python_shell = _python_shell_default(python_shell, shell)
+    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
     ret = _run(
         cmd,
         runas=runas,
@@ -2139,7 +2135,7 @@ def run_all(
     stdin=None,
     runas=None,
     group=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -2377,7 +2373,7 @@ def run_all(
 
         salt '*' cmd.run_all "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     """
-    python_shell = _python_shell_default(python_shell, shell)
+    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
     stderr = subprocess.STDOUT if redirect_stderr else subprocess.PIPE
     ret = _run(
         cmd,
@@ -2421,7 +2417,7 @@ def retcode(
     stdin=None,
     runas=None,
     group=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -2602,7 +2598,7 @@ def retcode(
 
         salt '*' cmd.retcode "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     """
-    python_shell = _python_shell_default(python_shell, shell)
+    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
     ret = _run(
         cmd,
         runas=runas,
@@ -2639,7 +2635,7 @@ def _retcode_quiet(
     stdin=None,
     runas=None,
     group=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=False,
     env=None,
     clean_env=False,
@@ -2697,7 +2693,7 @@ def script(
     stdin=None,
     runas=None,
     group=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=None,
     env=None,
     template=None,
@@ -2903,7 +2899,8 @@ def script(
             saltenv = __opts__.get("saltenv", "base")
         except NameError:
             saltenv = "base"
-    python_shell = _python_shell_default(python_shell, shell)
+
+    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
 
     def _cleanup_tempfile(path):
         try:
@@ -2995,10 +2992,13 @@ def script(
         os.chmod(path, 320)
         os.chown(path, __salt__["file.user_to_uid"](runas), -1)
 
-    if isinstance(args, (list, tuple)):
-        new_cmd = [path, *args] if args else [path]
-    else:
-        new_cmd = [path, str(args)] if args else [path]
+    if isinstance(args, str):
+        if salt.utils.platform.is_windows():
+            args = shlex_split(args)
+        else:
+            args = shlex.split(args)
+
+    new_cmd = [path, *args] if args else [path]
 
     ret = {}
     try:
@@ -3050,7 +3050,7 @@ def script_retcode(
     stdin=None,
     runas=None,
     group=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=None,
     env=None,
     template="jinja",
@@ -3395,7 +3395,7 @@ def run_chroot(
     stdin=None,
     runas=None,
     group=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=True,
     binds=None,
     env=None,
@@ -4627,7 +4627,7 @@ def run_bg(
     cwd=None,
     runas=None,
     group=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -4832,7 +4832,7 @@ def run_bg(
 
         salt '*' cmd.run_bg cmd='ls -lR / | sed -e s/=/:/g > /tmp/dontwait'
     """
-    python_shell = _python_shell_default(python_shell, shell)
+    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
     res = _run(
         cmd,
         stdin=None,

@@ -293,6 +293,7 @@ class CMDModuleTest(ModuleCase):
         )
         self.assertEqual(ret["stdout"], " ".join(args))
 
+    @pytest.mark.skip_if_not_root
     @pytest.mark.destructive_test
     def test_tty(self):
         """
