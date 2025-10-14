@@ -375,10 +375,6 @@
         run: |
           nox --force-color -e create-html-coverage-report -- salt
 
-      - name: Create Salt Code Coverage HTML Report
-        run: |
-          nox --force-color -e create-html-coverage-report -- salt
-
       - name: Upload Salt Code Coverage HTML Report
         uses: actions/upload-artifact@v4
         with:
