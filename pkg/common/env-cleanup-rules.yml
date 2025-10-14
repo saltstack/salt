@@ -74,6 +74,7 @@ pkg:
       - "**/artifacts/salt/Lib"
     file_patterns:
       - *ci_darwin_file_patterns
+      - "**/lib/python3.*/_vendor/distlib/*.exe"
   linux:
     exclude_patterns:
       - *ci_linux_exclude_patterns
@@ -81,6 +82,7 @@ pkg:
       - *ci_linux_dir_patterns
     file_patterns:
       - *ci_linux_file_patterns
+      - "**/lib/python3.*/_vendor/distlib/*.exe"
   windows:
     exclude_patterns:
       - *ci_windows_exclude_patterns

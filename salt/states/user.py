@@ -304,6 +304,7 @@ def present(
     remove_groups=True,
     home=None,
     createhome=True,
+    persist_home=False,
     password=None,
     hash_password=False,
     enforce_password=True,
@@ -403,6 +404,10 @@ def present(
 
             Additionally, parent directories will *not* be created. The parent
             directory for ``home`` must already exist.
+
+    persist_home : False
+        If set to ``True`` and not on Windows or Darwin, move contents of the
+        home directory to the new location
 
     nologinit : False
         If set to ``True``, it will not add the user to lastlog and faillog
@@ -734,7 +739,7 @@ def present(
             if __grains__["kernel"] in ("Darwin", "Windows"):
                 __salt__["user.chhome"](name, val)
             else:
-                __salt__["user.chhome"](name, val, persist=False)
+                __salt__["user.chhome"](name, val, persist=persist_home)
 
         _homedir_changed = False
         if "home" in changes:

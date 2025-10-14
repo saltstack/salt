@@ -6,10 +6,12 @@ msgpack>=1.0.0
 PyYAML
 MarkupSafe
 requests<2.32.0 ; python_version < '3.10'
-requests>=2.32.3 ; python_version >= '3.10'
+requests>=2.32.5 ; python_version >= '3.10'
 certifi==2023.07.22; python_version < '3.10'
 certifi>=2024.7.4; python_version >= '3.10'
 distro>=1.0.1
+
+
 psutil<6.0.0; python_version <= '3.9'
 psutil>=5.0.0; python_version >= '3.10'
 # Packaging 24.1 imports annotations from __future__ which breaks salt ssh
@@ -27,7 +29,7 @@ pyopenssl>=24.0.0
 python-dateutil>=2.8.1
 python-gnupg>=0.4.7
 cherrypy>=18.6.1
-importlib-metadata>=3.3.0
+importlib-metadata>=8.7.0
 zipp>=3.19.1
 cryptography>=42.0.0
 

@@ -167,7 +167,7 @@ immutables==0.21 ; sys_platform != "linux"
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/base.txt
     #   contextvars
-importlib-metadata==6.6.0
+importlib-metadata==8.7.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/base.txt

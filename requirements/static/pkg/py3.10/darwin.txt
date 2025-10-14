@@ -51,7 +51,7 @@ immutables==0.21 ; sys_platform != "linux"
     # via
     #   -r requirements/base.txt
     #   contextvars
-importlib-metadata==6.6.0
+importlib-metadata==8.7.0
     # via -r requirements/base.txt
 jaraco.collections==4.1.0
     # via cherrypy
@@ -119,7 +119,7 @@ pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==25.1.2
     # via -r requirements/zeromq.txt
-requests==2.32.3 ; python_version >= "3.10"
+requests==2.32.5 ; python_version >= "3.10"
     # via -r requirements/base.txt
 setproctitle==1.3.2
     # via -r requirements/base.txt

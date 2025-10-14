@@ -36,7 +36,7 @@ idna==3.7
     #   requests
 imagesize==1.4.1
     # via sphinx
-importlib-metadata==6.6.0
+importlib-metadata==8.7.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   sphinx
