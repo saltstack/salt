@@ -637,6 +637,7 @@ class SaltMessageServer(tornado.tcpserver.TCPServer):
         self.io_loop = io_loop
         self.clients = []
         self.message_handler = message_handler
+        self.unpacker = salt.utils.msgpack.Unpacker()
 
     async def handle_stream(  # pylint: disable=arguments-differ,invalid-overridden-method
         self,
@@ -649,21 +650,22 @@ class SaltMessageServer(tornado.tcpserver.TCPServer):
         """
         log.trace("Req client %s connected", address)
         self.clients.append((stream, address))
-        unpacker = salt.utils.msgpack.Unpacker()
         try:
             while True:
                 wire_bytes = await stream.read_bytes(4096, partial=True)
-                unpacker.feed(wire_bytes)
-                for framed_msg in unpacker:
+                self.unpacker.feed(wire_bytes)
+                for framed_msg in self.unpacker:
                     framed_msg = salt.transport.frame.decode_embedded_strs(framed_msg)
                     header = framed_msg["head"]
                     self.io_loop.spawn_callback(
                         self.message_handler, stream, framed_msg["body"], header
                     )
         except _StreamClosedError:
+            self.unpacker = salt.utils.msgpack.Unpacker()
             log.trace("req client disconnected %s", address)
             self.remove_client((stream, address))
         except Exception as e:  # pylint: disable=broad-except
+            self.unpacker = salt.utils.msgpack.Unpacker()
             log.trace("other master-side exception: %s", e, exc_info=True)
             self.remove_client((stream, address))
             stream.close()
