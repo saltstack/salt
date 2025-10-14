@@ -5,7 +5,7 @@ import pytest
 from saltfactories.utils import random_string
 
 import salt.config
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import patch
 
 
 @pytest.mark.slow_test
