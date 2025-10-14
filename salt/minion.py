@@ -2408,7 +2408,7 @@ class Minion(MinionBase):
         log.trace("ret_val = %s", ret_val)  # pylint: disable=no-member
         return ret_val
 
-    def _return_pub_multi(self, rets, ret_cmd="_return", timeout=60, sync=True):
+    def _return_pub_multi(self, rets, ret_cmd="_return", timeout=60, sync=False):
         """
         Return the data from the executed command to the master server
         """
@@ -2487,20 +2487,27 @@ class Minion(MinionBase):
 
         if sync:
             try:
-                ret_val = self._send_req_sync(load, timeout=timeout)
+                return self._send_req_sync(load, timeout=timeout)
             except SaltReqTimeoutError:
                 timeout_handler()
                 return ""
         else:
             # pylint: disable=unexpected-keyword-arg
-            ret_val = self._send_req_async(
-                load,
-                timeout=timeout,
-            )
-            # pylint: enable=unexpected-keyword-arg
+            future = asyncio.Future()
 
-        log.trace("ret_val = %s", ret_val)  # pylint: disable=no-member
-        return ret_val
+            async def callback(future, load, timeout):
+                try:
+                    ret_val = await self._send_req_async(
+                        load,
+                        timeout=timeout,
+                    )
+                    log.trace("ret_val = %s", ret_val)  # pylint: disable=no-member
+                    future.set_result(ret_val)
+                except Exception as exc:  # pylint: disable=broad-except
+                    future.set_exception(exc)
+
+            # pylint: enable=unexpected-keyword-arg
+            return future
 
     def _state_run(self):
         """
@@ -3425,9 +3432,9 @@ class Syndic(Minion):
         data["to"] = int(data.get("to", self.opts["timeout"])) - 1
         # Only forward the command if it didn't originate from ourselves
         if data.get("master_id", 0) != self.opts.get("master_id", 1):
-            self.syndic_cmd(data)
+            await self.syndic_cmd(data)
 
-    def syndic_cmd(self, data):
+    async def syndic_cmd(self, data):
         """
         Take the now clear load and forward it on to the client cmd
         """
@@ -3449,7 +3456,7 @@ class Syndic(Minion):
             log.warning("Unable to forward pub data: %s", args[1])
             return True
 
-        self.local.pub_async(
+        await self.local.pub_async(
             data["tgt"],
             data["fun"],
             data["arg"],
@@ -3631,7 +3638,17 @@ class SyndicManager(MinionBase):
         for master in masters:
             s_opts = copy.copy(self.opts)
             s_opts["master"] = master
-            self._syndics[master] = self._connect_syndic(s_opts)
+
+            future = asyncio.Future()
+            self._syndics[master] = future
+
+            async def connect(future, s_opts):
+                try:
+                    future.set_result(await self._connect_syndic(s_opts))
+                except Exception as exc:  # pylint: disable=broad-except
+                    future.set_exception(exc)
+
+            self.io_loop.spawn_callback(connect, future, s_opts)
 
     async def _connect_syndic(self, opts):
         """
@@ -3762,9 +3779,10 @@ class SyndicManager(MinionBase):
                     continue
                 else:
                     self.tries = collections.defaultdict(int)
-
+            # XXX This does not make sense
+            future = asyncio.Future()
             future = getattr(syndic_future.result(), func)(
-                values, "_syndic_return", timeout=self._return_retry_timer(), sync=False
+                values, "_syndic_return", timeout=self._return_retry_timer(), sync=True
             )
             self.pub_futures[master] = (future, values)
             return True
