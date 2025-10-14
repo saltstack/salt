@@ -1699,11 +1699,9 @@ async def test_req_chan_bad_payload_to_decode(pki_dir, io_loop, caplog):
         server.close()
 
 
-async def test_client_timeout_msg(minion_opts):
-    client = salt.transport.zeromq.AsyncReqMessageClient(
-        minion_opts, "tcp://127.0.0.1:4506"
-    )
-    client.connect()
+async def test_client_timeout_msg(minion_opts, io_loop):
+    client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
+    await client.connect()
     try:
         with pytest.raises(salt.exceptions.SaltReqTimeoutError):
             await client.send({"meh": "bah"}, 1)
@@ -1711,10 +1709,8 @@ async def test_client_timeout_msg(minion_opts):
         client.close()
 
 
-async def test_client_send_recv_on_cancelled_error(minion_opts):
-    client = salt.transport.zeromq.AsyncReqMessageClient(
-        minion_opts, "tcp://127.0.0.1:4506"
-    )
+async def test_client_send_recv_on_cancelled_error(minion_opts, io_loop):
+    client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
 
     mock_future = MagicMock(**{"done.return_value": True})
 

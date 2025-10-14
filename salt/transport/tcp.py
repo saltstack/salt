@@ -21,7 +21,6 @@ import warnings
 
 import tornado
 import tornado.concurrent
-import tornado.gen
 import tornado.iostream
 import tornado.netutil
 import tornado.tcpclient
@@ -343,7 +342,7 @@ class PublishClient(salt.transport.base.PublishClient):
             self._stream = await self.getstream(timeout=timeout)
             if self._stream:
                 if self.connect_callback:
-                    self.connect_callback(True)
+                    await self.connect_callback(True)
             self.connected = True
 
     async def connect(
@@ -809,8 +808,7 @@ class MessageClient:
         self._closing = True
         self.io_loop.add_timeout(1, self.check_close)
 
-    @tornado.gen.coroutine
-    def check_close(self):
+    async def check_close(self):
         if not self.send_future_map:
             self._tcp_client.close()
             if self._stream:
@@ -827,8 +825,7 @@ class MessageClient:
 
     # pylint: enable=W1701
 
-    @tornado.gen.coroutine
-    def getstream(self, **kwargs):
+    async def getstream(self, **kwargs):
         if self.source_ip or self.source_port:
             kwargs = {
                 "source_ip": self.source_ip,
@@ -837,7 +834,7 @@ class MessageClient:
         stream = None
         while stream is None and (not self._closed and not self._closing):
             try:
-                stream = yield self._tcp_client.connect(
+                stream = await self._tcp_client.connect(
                     ip_bracket(self.host, strip=True),
                     self.port,
                     ssl_options=self.opts.get("ssl"),
@@ -852,13 +849,13 @@ class MessageClient:
                     exc,
                     self.backoff,
                 )
-                yield tornado.gen.sleep(self.backoff)
-        raise tornado.gen.Return(stream)
+                await asyncio.sleep(self.backoff)
 
-    @tornado.gen.coroutine
-    def connect(self):
+        return stream
+
+    async def connect(self):
         if self._stream is None:
-            self._stream = yield self.getstream()
+            self._stream = await self.getstream()
             if self._stream:
                 self._closing = False
                 self._closed = False
@@ -867,13 +864,12 @@ class MessageClient:
                 if self.connect_callback:
                     self.connect_callback(True)
 
-    @tornado.gen.coroutine
-    def _stream_return(self):
+    async def _stream_return(self):
         self._stream_return_running = True
         unpacker = salt.utils.msgpack.Unpacker()
         while not self._closed and not self._closing:
             try:
-                wire_bytes = yield self._stream.read_bytes(4096, partial=True)
+                wire_bytes = await self._stream.read_bytes(4096, partial=True)
                 unpacker.feed(wire_bytes)
                 for framed_msg in unpacker:
                     framed_msg = salt.transport.frame.decode_embedded_strs(framed_msg)
@@ -911,7 +907,7 @@ class MessageClient:
                 if stream:
                     stream.close()
                 unpacker = salt.utils.msgpack.Unpacker()
-                yield self.connect()
+                await self.connect()
             except TypeError:
                 # This is an invalid transport
                 if "detect_mode" in self.opts:
@@ -935,7 +931,7 @@ class MessageClient:
                 if stream:
                     stream.close()
                 unpacker = salt.utils.msgpack.Unpacker()
-                yield self.connect()
+                await self.connect()
         self._stream_return_running = False
 
     def _message_id(self):
@@ -968,8 +964,7 @@ class MessageClient:
         if future is not None:
             future.set_exception(SaltReqTimeoutError("Message timed out"))
 
-    @tornado.gen.coroutine
-    def send(self, msg, timeout=None, callback=None, raw=False):
+    async def send(self, msg, timeout=None, callback=None, raw=False):
         if self._closing:
             raise ClosingError()
         message_id = self._message_id()
@@ -995,18 +990,16 @@ class MessageClient:
 
         item = salt.transport.frame.frame_msg(msg, header=header)
 
-        @tornado.gen.coroutine
-        def _do_send():
-            yield self.connect()
+        async def _do_send():
+            await self.connect()
             # If the _stream is None, we failed to connect.
             if self._stream:
-                yield self._stream.write(item)
+                await self._stream.write(item)
 
         # Run send in a callback so we can wait on the future, in case we time
         # out before we are able to connect.
         self.io_loop.add_callback(_do_send)
-        recv = yield future
-        raise tornado.gen.Return(recv)
+        return await future
 
 
 class Subscriber:
