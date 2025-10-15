@@ -1233,34 +1233,28 @@ class State:
         cmd_opts = {}
         if "shell" in self.opts["grains"]:
             cmd_opts["shell"] = self.opts["grains"].get("shell")
-        if isinstance(low_data["check_cmd"], list):
-            for entry in low_data["check_cmd"]:
-                cmd = self.functions["cmd.retcode"](
-                    entry, ignore_retcode=True, python_shell=True, **cmd_opts
-                )
-        else:
+        if isinstance(low_data["check_cmd"], str):
+            low_data["check_cmd"] = [low_data["check_cmd"]]
+        for entry in low_data["check_cmd"]:
             cmd = self.functions["cmd.retcode"](
-                low_data["check_cmd"],
-                ignore_retcode=True,
-                python_shell=True,
-                **cmd_opts,
+                entry, ignore_retcode=True, python_shell=True, **cmd_opts
             )
-        log.debug("Last command return code: %s", cmd)
-        if cmd == 0 and ret["result"] is False:
-            ret.update(
-                {
-                    "comment": "check_cmd determined the state succeeded",
-                    "result": True,
-                }
-            )
-        elif cmd != 0:
-            ret.update(
-                {
-                    "comment": "check_cmd determined the state failed",
-                    "result": False,
-                }
-            )
-            return ret
+            log.debug("Last command return code: %s", cmd)
+            if cmd == 0 and ret["result"] is False:
+                ret.update(
+                    {
+                        "comment": "check_cmd determined the state succeeded",
+                        "result": True,
+                    }
+                )
+            elif cmd != 0:
+                ret.update(
+                    {
+                        "comment": "check_cmd determined the state failed",
+                        "result": False,
+                    }
+                )
+                return ret
         return ret
 
     def _run_check_creates(self, low_data):
