@@ -428,7 +428,6 @@ class SaltMessageServer(salt.ext.tornado.tcpserver.TCPServer):
         """
         log.trace("Req client %s connected", address)
         self.clients.append((stream, address))
-        unpacker = salt.utils.msgpack.Unpacker()
         try:
             while True:
                 wire_bytes = yield stream.read_bytes(4096, partial=True)
