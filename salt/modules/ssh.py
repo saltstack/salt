@@ -625,6 +625,7 @@ def set_auth_key_from_file(
     config=".ssh/authorized_keys",
     saltenv="base",
     fingerprint_hash_type=None,
+    **kwargs,
 ):
     """
     Add a key to the authorized_keys file, using a file as the source.
@@ -648,13 +649,14 @@ def set_auth_key_from_file(
         return "fail"
     else:
         rval = ""
+        options = kwargs.get("options", None)
         for key in s_keys:
             rval += set_auth_key(
                 user,
                 key,
                 enc=s_keys[key]["enc"],
                 comment=s_keys[key]["comment"],
-                options=s_keys[key]["options"],
+                options=options or s_keys[key]["options"],
                 config=config,
                 cache_keys=list(s_keys.keys()),
                 fingerprint_hash_type=fingerprint_hash_type,
