@@ -78,12 +78,10 @@ WINRM_MIN_VER = "0.3.0"
 
 try:
     # Verify WinRM 0.3.0 or greater
-    import pkg_resources  # pylint: disable=3rd-party-module-not-gated
     import winrm
     from winrm.exceptions import WinRMTransportError
 
-    winrm_pkg = pkg_resources.get_distribution("pywinrm")
-    if not salt.utils.versions.compare(winrm_pkg.version, ">=", WINRM_MIN_VER):
+    if not salt.utils.versions.compare(winrm.__version__, ">=", WINRM_MIN_VER):
         HAS_WINRM = False
     else:
         HAS_WINRM = True
