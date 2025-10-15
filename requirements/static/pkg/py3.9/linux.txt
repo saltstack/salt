@@ -51,7 +51,7 @@ immutables==0.15 ; sys_platform == "linux"
     # via
     #   -r requirements/base.txt
     #   contextvars
-importlib-metadata==6.6.0
+importlib-metadata==8.7.0
     # via -r requirements/base.txt
 jaraco.collections==4.1.0
     # via cherrypy

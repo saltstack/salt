@@ -167,7 +167,7 @@ immutables==0.21 ; sys_platform != "linux"
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -r requirements/base.txt
     #   contextvars
-importlib-metadata==6.6.0
+importlib-metadata==8.7.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -r requirements/base.txt
@@ -409,7 +409,7 @@ pyzmq==25.1.2
     #   pytest-salt-factories
 requests-ntlm==1.2.0
     # via pywinrm
-requests==2.32.3 ; python_version >= "3.10"
+requests==2.32.5 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -r requirements/base.txt

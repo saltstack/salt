@@ -173,8 +173,8 @@ def test_pip_install_salt_extension_in_extras(install_salt, extras_pypath, shell
     Test salt-pip installs into the correct directory and the salt extension
     is properly loaded.
     """
-    dep = "salt-analytics-framework"
-    dep_version = "0.1.0"
+    dep = "saltext.vault"
+    dep_version = "1.3.2"
 
     install_ret = shell.run(
         *(install_salt.binary_paths["pip"] + ["install", f"{dep}=={dep_version}"]),
@@ -199,7 +199,7 @@ def test_pip_install_salt_extension_in_extras(install_salt, extras_pypath, shell
     )
     assert show_ret.returncode == 0
 
-    assert extras_pypath.joinpath("saf").is_dir()
+    assert extras_pypath.joinpath("saltext").is_dir()
 
     ret = shell.run(
         *(install_salt.binary_paths["minion"] + ["--versions-report"]),
