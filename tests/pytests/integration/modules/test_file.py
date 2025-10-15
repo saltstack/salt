@@ -5,7 +5,6 @@ Tests for the file state
 import os
 
 import pytest
-
 import salt.utils.win_dacl
 
 
