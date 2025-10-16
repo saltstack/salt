@@ -5,6 +5,7 @@ Tests for the file state
 import os
 
 import pytest
+
 import salt.utils.win_dacl
 
 
@@ -231,10 +232,11 @@ def test_create_symlink_with_check_cmd(salt_call_cli, salt_master, tmp_path):
         - check_cmd: grep 'jaguar' {symlink_file}
     """.format(
         name=name, symlink_file=symlink_file
-        )
+    )
 
     sls_tempfile = salt_master.state_tree.base.temp_file(
-        "test_symlink.sls", sls_contents
+        "test_symlink.sls", 
+        sls_contents
     )
 
     with sls_tempfile:
@@ -278,10 +280,11 @@ def test_create_symlink_with_check_cmd_list(salt_call_cli, salt_master, tmp_path
           - grep "j" {symlink_file}
     """.format(
         name=name, symlink_file=symlink_file
-        )
+    )
 
     sls_tempfile = salt_master.state_tree.base.temp_file(
-        "test_symlink.sls", sls_contents,
+        "test_symlink.sls", 
+        sls_contents,
     )
     with sls_tempfile:
         ret = salt_call_cli.run("state.apply", "test_symlink")
