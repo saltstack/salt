@@ -233,13 +233,7 @@ def test_create_symlink_with_check_cmd(salt_call_cli, salt_master, tmp_path):
     """.format(
         name=name, symlink_file=symlink_file
     )
-
-    sls_tempfile = salt_master.state_tree.base.temp_file(
-        "test_symlink.sls", 
-        sls_contents
-    )
-
-    with sls_tempfile:
+    with salt_master.state_tree.base.temp_file("test_symlink.sls", sls_contents):
         ret = salt_call_cli.run("state.apply", "test_symlink")
         symlink_path = f"{name}/testing"
         assert os.path.exists(symlink_path)
@@ -281,12 +275,7 @@ def test_create_symlink_with_check_cmd_list(salt_call_cli, salt_master, tmp_path
     """.format(
         name=name, symlink_file=symlink_file
     )
-
-    sls_tempfile = salt_master.state_tree.base.temp_file(
-        "test_symlink.sls", 
-        sls_contents,
-    )
-    with sls_tempfile:
+    with salt_master.state_tree.base.temp_file("test_symlink.sls", sls_contents):
         ret = salt_call_cli.run("state.apply", "test_symlink")
         symlink_path = f"{name}/testing"
         assert os.path.exists(symlink_path)
