@@ -221,7 +221,7 @@ def test_create_symlink_with_check_cmd(salt_call_cli, salt_master, tmp_path):
     assert name.exists()
     assert name.is_dir()
 
-    sls_contents = f"""
+    sls_contents = """
     {name}/testing:
       file.symlink:
         - target: {symlink_file}
@@ -229,7 +229,9 @@ def test_create_symlink_with_check_cmd(salt_call_cli, salt_master, tmp_path):
         - group: staff
         - makedirs: true
         - check_cmd: grep 'jaguar' {symlink_file}
-    """
+    """.format(
+        name=name, symlink_file=symlink_file
+        )
 
     sls_tempfile = salt_master.state_tree.base.temp_file(
         "test_symlink.sls", sls_contents
@@ -264,7 +266,7 @@ def test_create_symlink_with_check_cmd_list(salt_call_cli, salt_master, tmp_path
     assert name.exists()
     assert name.is_dir()
 
-    sls_contents = f"""
+    sls_contents = """
     {name}/testing:
       file.symlink:
         - target: {symlink_file}
@@ -273,12 +275,13 @@ def test_create_symlink_with_check_cmd_list(salt_call_cli, salt_master, tmp_path
         - makedirs: true
         - check_cmd:
           - grep 'jaguar' {symlink_file}
-          - grep 'j' {symlink_file}
-    """
+          - grep "j" {symlink_file}
+    """.format(
+        name=name, symlink_file=symlink_file
+        )
 
     sls_tempfile = salt_master.state_tree.base.temp_file(
-        "test_symlink.sls",
-        sls_contents,
+        "test_symlink.sls", sls_contents,
     )
     with sls_tempfile:
         ret = salt_call_cli.run("state.apply", "test_symlink")
