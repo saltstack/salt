@@ -77,14 +77,19 @@ WINRM_MIN_VER = "0.3.0"
 
 
 try:
-    # Verify WinRM 0.3.0 or greater
-    import winrm
-    from winrm.exceptions import WinRMTransportError
+    import importlib
+    import importlib.metadata
 
-    if not salt.utils.versions.compare(winrm.__version__, ">=", WINRM_MIN_VER):
+    # Verify WinRM 0.3.0 or greater
+
+    version = importlib.metadata.version("winerm")
+    if not salt.utils.versions.compare(version, ">=", WINRM_MIN_VER):
         HAS_WINRM = False
     else:
         HAS_WINRM = True
+
+    import winrm
+    from winrm.exceptions import WinRMTransportError
 
 except ImportError:
     HAS_WINRM = False
