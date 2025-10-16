@@ -1,10 +1,16 @@
 import contextlib
+import logging
 import shutil
 import subprocess
 from pathlib import Path
 
 import psutil
 import pytest
+
+import salt.utils.platform
+from salt.modules.gpg import _homedir_fix
+
+log = logging.getLogger(__name__)
 
 gnupglib = pytest.importorskip("gnupg", reason="Needs python-gnupg library")
 PYGNUPG_VERSION = tuple(int(x) for x in gnupglib.__version__.split("."))
@@ -15,9 +21,30 @@ pytestmark = [
 
 
 @pytest.fixture
-def gpghome(tmp_path):
+def gpghome(tmp_path, modules):
+    user = modules.config.option("user")
+    if salt.utils.platform.is_windows() and "\\" in user:
+        # At least in the test suite, this config option is set
+        # including the hostname, so split it off
+        user = user.split("\\", maxsplit=1)[1]
+    user_info = modules.user.info(user)
     root = tmp_path / "gpghome"
-    root.mkdir(mode=0o0700)
+    if salt.utils.platform.is_windows():
+        modules["file.mkdir"](
+            str(root),
+            owner=user_info["uid"],
+            grant_perms={
+                user_info["uid"]: {
+                    "perms": "full_control",
+                    "applies_to": "this_folder_subfolders_files",
+                }
+            },
+        )
+    else:
+        modules["file.mkdir"](
+            str(root), user=user_info["uid"], group=user_info["gid"], mode="0700"
+        )
+
     try:
         yield root
     finally:
@@ -174,19 +201,37 @@ G5lpc2BZ/RGsECq/HcbpFIM=
 
 @pytest.fixture
 def gnupg(gpghome):
-    return gnupglib.GPG(gnupghome=str(gpghome))
+    _gnupg = gnupglib.GPG(gnupghome=str(gpghome), verbose=True)
+    _gnupg.gnupghome = _homedir_fix(gpghome)
+    # Force initialization
+    _gnupg.list_keys()
+    # log gpg binary path, maybe that gives us some hints
+    log.error(_gnupg.gpgbinary)
+    return _gnupg
 
 
 @pytest.fixture
 def gnupg_keyring(gpghome, keyring):
-    return gnupglib.GPG(gnupghome=str(gpghome), keyring=keyring)
+    _gnupg = gnupglib.GPG(gnupghome=str(gpghome), keyring=keyring)
+    _gnupg.gnupghome = _homedir_fix(gpghome)
+    return _gnupg
 
 
 @pytest.fixture(params=["a"])
-def _pubkeys_present(gnupg, request):
+def _pubkeys_present(gnupg, request, gpghome):
     pubkeys = [request.getfixturevalue(f"key_{x}_pub") for x in request.param]
     fingerprints = [request.getfixturevalue(f"key_{x}_fp") for x in request.param]
-    gnupg.import_keys("\n".join(pubkeys))
+    dir_gnupg = dir(gnupg)
+    gnupg_version = gnupg.version
+    import_result = gnupg.import_keys("\n".join(pubkeys))
+    log.error("import result: %r", import_result.__dict__)
+    log.error("gpghome stat: %r", gpghome.stat())
+    home_contents = list(gpghome.glob("**/*"))
+    log.error("gpghome list: %r", home_contents)
+    if home_contents:
+        log.error("gpg dir file stat: %r", home_contents[1].stat())
+    import_count = import_result.count
+    import_fingerprints = import_result.fingerprints
     present_keys = gnupg.list_keys()
     for fp in fingerprints:
         assert any(x["fingerprint"] == fp for x in present_keys)
@@ -195,9 +240,11 @@ def _pubkeys_present(gnupg, request):
 
 
 @pytest.fixture(params=["a"])
-def keyring(gpghome, tmp_path, request):
+def keyring(gpghome, tmp_path, request, gpg):
     keyring = tmp_path / "keys.gpg"
     _gnupg_keyring = gnupglib.GPG(gnupghome=str(gpghome), keyring=str(keyring))
+    _gnupg_keyring.gnupghome = _homedir_fix(gpghome)
+
     pubkeys = [request.getfixturevalue(f"key_{x}_pub") for x in request.param]
     fingerprints = [request.getfixturevalue(f"key_{x}_fp") for x in request.param]
     _gnupg_keyring.import_keys("\n".join(pubkeys))

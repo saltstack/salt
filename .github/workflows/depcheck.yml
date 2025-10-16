@@ -237,6 +237,8 @@ jobs:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
       pre-commit-version: "3.0.4"
+      ci-python-version: "3.11"
+      full: true
 
   lint:
     name: Lint

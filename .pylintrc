@@ -765,3 +765,5 @@ allowed-3rd-party-modules=msgpack,
                           networkx,
                           urllib3,
                           idna
+                          salt,
+                          tests

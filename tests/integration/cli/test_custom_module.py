@@ -31,8 +31,8 @@
 
 import pytest
 
-from tests.pytests.integration.ssh.test_slsutil import check_system_python_version
 from tests.support.case import SSHCase
+from tests.support.helpers import system_python_version
 
 pytestmark = [
     pytest.mark.skip_on_windows,
@@ -45,7 +45,8 @@ pytestmark = [
         # backports.ssl-match-hostname which is not installed on the system.
     ),
     pytest.mark.skipif(
-        not check_system_python_version(), reason="Needs system python >= 3.9"
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
     ),
 ]
 
