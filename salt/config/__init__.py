@@ -36,8 +36,8 @@ from salt._logging import (
     DFLT_LOG_DATEFMT_LOGFILE,
     DFLT_LOG_FMT_CONSOLE,
     DFLT_LOG_FMT_JID,
-    DFLT_LOG_FMT_MINION_ID,
     DFLT_LOG_FMT_LOGFILE,
+    DFLT_LOG_FMT_MINION_ID,
 )
 
 try:
@@ -353,7 +353,7 @@ VALID_OPTS = immutabletypes.freeze(
         "log_fmt_logfile": (tuple, str),
         # The format for JIDs prior to formatting into log lines as %(jid)s
         "log_fmt_jid": str,
-        # The format for minion_ids prior to formatting into log lines as %(jid)s
+        # The format for minion_ids prior to formatting into log lines as %(minion_id)s
         "log_fmt_minion_id": str,
         # A dictionary of logging levels
         "log_granular_levels": dict,

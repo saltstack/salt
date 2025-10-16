@@ -1,8 +1,8 @@
 """
-    salt._logging.impl
-    ~~~~~~~~~~~~~~~~~~
+salt._logging.impl
+~~~~~~~~~~~~~~~~~~
 
-    Salt's logging implementation classes/functionality
+Salt's logging implementation classes/functionality
 """
 
 import atexit
@@ -103,8 +103,8 @@ DFLT_LOG_FMT_JID = "[JID: %(jid)s]"
 DFLT_LOG_FMT_MINION_ID = "[%(minion_id)s]"
 DFLT_LOG_DATEFMT = "%H:%M:%S"
 DFLT_LOG_DATEFMT_LOGFILE = "%Y-%m-%d %H:%M:%S"
-DFLT_LOG_FMT_CONSOLE = "[%(levelname)-8s]%(jid)s%(minion_id)s %(message)s"
-DFLT_LOG_FMT_LOGFILE = "%(asctime)s,%(msecs)03d [%(name)-17s:%(lineno)-4d][%(levelname)-8s][%(process)d]%(jid)s%(minion_id)s %(message)s"
+DFLT_LOG_FMT_CONSOLE = "[%(levelname)-8s] %(message)s"
+DFLT_LOG_FMT_LOGFILE = "%(asctime)s,%(msecs)03d [%(name)-17s:%(lineno)-4d][%(levelname)-8s][%(process)d] %(message)s"
 
 
 class SaltLogRecord(logging.LogRecord):
@@ -257,14 +257,21 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
             .get("log_fmt_jid", None)
         )
 
+        current_minion_id = (
+            salt.utils.ctx.get_request_context().get("data", {}).get("id", None)
+        )
+
+        log_fmt_minion_id = (
+            salt.utils.ctx.get_request_context()
+            .get("opts", {})
+            .get("log_fmt_minion_id", None)
+        )
+
         if current_jid is not None:
             extra["jid"] = current_jid
 
         if log_fmt_jid is not None:
             extra["log_fmt_jid"] = log_fmt_jid
-
-        current_minion_id = data.get("id", None)
-        log_fmt_minion_id = opts.get("log_fmt_minion_id", None)
 
         if current_minion_id is not None:
             extra["minion_id"] = current_minion_id
