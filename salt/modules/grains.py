@@ -319,6 +319,8 @@ def setval(key, val, destructive=False, refresh_pillar=True):
         salt '*' grains.setval key val
         salt '*' grains.setval key "{'sub-key': 'val', 'sub-key2': 'val2'}"
     """
+    if isinstance(val, list):
+        val = list(dict.fromkeys(val))
     return setvals({key: val}, destructive, refresh_pillar=refresh_pillar)
 
 
