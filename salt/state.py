@@ -1229,7 +1229,6 @@ class State:
         ret = {"result": False}
         for key in ("__sls__", "__id__", "name"):
             ret[key] = low_data.get(key)
-            ret[key] = low_data.get(key)
         cmd_opts = {}
         if "shell" in self.opts["grains"]:
             cmd_opts["shell"] = self.opts["grains"].get("shell")
