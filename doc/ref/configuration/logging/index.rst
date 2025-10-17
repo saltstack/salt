@@ -184,6 +184,8 @@ formatting matches those used in :py:func:`time.strftime`.
 
 Default: ``[%(levelname)-8s] %(message)s``
 
+Recommended: ``[%(levelname)-8s]%(jid)s%(minion_id)s %(message)s``
+
 The format of the console logging messages. All standard python logging
 :py:class:`~logging.LogRecord` attributes can be used. Salt also provides these
 custom LogRecord attributes to colorize console log output:
@@ -205,12 +207,19 @@ custom LogRecord attributes to colorize console log output:
 
     log_fmt_console: '[%(levelname)-8s] %(message)s'
 
+.. note::
+
+    It is recommended to include ``%(jid)s`` and ``%(minion_id)s`` in the log
+    format to identify messages that relate to specific jobs and minions.
+
 .. conf_log:: log_fmt_logfile
 
 ``log_fmt_logfile``
 -------------------
 
 Default: ``%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s``
+
+Recommended: ``%(asctime)s,%(msecs)03d [%(name)-17s:%(lineno)-4d][%(levelname)-8s][%(process)d]%(jid)s%(minion_id)s %(message)s``
 
 The format of the log file logging messages. All standard python logging
 :py:class:`~logging.LogRecord` attributes can be used.  Salt also provides
@@ -226,6 +235,11 @@ these custom LogRecord attributes that include padding and enclosing brackets
 .. code-block:: yaml
 
     log_fmt_logfile: '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s'
+
+.. note::
+
+    It is recommended to include ``%(jid)s`` and ``%(minion_id)s`` in the log
+    format to identify messages that relate to specific jobs and minions.
 
 .. conf_log:: log_granular_levels
 
@@ -245,12 +259,11 @@ at the ``debug`` level, and sets a custom module to the ``all`` level:
     'salt.modules': 'debug'
     'salt.loader.saltmaster.ext.module.custom_module': 'all'
 
-.. conf_log:: log_fmt_jid
-
 You can determine what log call name to use here by adding ``%(module)s`` to the
 log format. Typically, it is the path of the file which generates the log
 without the trailing ``.py`` and with path separators replaced with ``.``
 
+.. conf_log:: log_fmt_jid
 
 ``log_fmt_jid``
 -------------------
@@ -262,6 +275,20 @@ The format of the JID when added to logging messages.
 .. code-block:: yaml
 
     log_fmt_jid: '[JID: %(jid)s]'
+
+.. conf_log:: log_fmt_minion_id
+
+``log_fmt_minion_id``
+----------------------
+
+Default: ``[%(minion_id)s]``
+
+The format of the minion ID when added to logging messages.
+
+.. code-block:: yaml
+
+    log_fmt_minion_id: '[%(minion_id)s]'
+
 
 External Logging Handlers
 -------------------------
