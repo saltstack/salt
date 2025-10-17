@@ -53,7 +53,7 @@ class ClosingError(Exception):
     """ """
 
 
-def _null_callback(*args, **kwargs):
+async def _null_callback(*args, **kwargs):
     pass
 
 
