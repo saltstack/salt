@@ -9,7 +9,7 @@ import pytest
 from saltfactories.utils import random_string
 
 from salt.utils.versions import Version
-from tests.support.helpers import keys, system_python_version
+from tests.support.helpers import Keys, system_python_version
 
 docker = pytest.importorskip("docker")
 
