@@ -226,8 +226,6 @@ def test_create_symlink_with_check_cmd(salt_call_cli, salt_master, tmp_path):
     {name}/testing:
       file.symlink:
         - target: {symlink_file}
-        - user: cbert
-        - group: staff
         - makedirs: true
         - check_cmd: grep 'jaguar' {symlink_file}
     """.format(
@@ -266,8 +264,6 @@ def test_create_symlink_with_check_cmd_list(salt_call_cli, salt_master, tmp_path
     {name}/testing:
       file.symlink:
         - target: {symlink_file}
-        - user: cbert
-        - group: staff
         - makedirs: true
         - check_cmd:
           - grep 'jaguar' {symlink_file}
