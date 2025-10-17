@@ -5,7 +5,9 @@ Tests for the file state
 import os
 
 import pytest
+
 import salt.utils.win_dacl
+
 
 @pytest.fixture
 def setup_symlink(tmp_path):
@@ -23,6 +25,7 @@ def setup_symlink(tmp_path):
     assert name.is_dir()
     return str(name), str(source_file)
 
+
 @pytest.fixture(params=["str", "list"])
 def sls_content(setup_symlink, request):
     name, symlink_file = setup_symlink
@@ -34,7 +37,7 @@ def sls_content(setup_symlink, request):
         - check_cmd: grep 'jaguar' {symlink_file}
     """.format(
         name=name, symlink_file=symlink_file
-        )
+    )
     list_contents = """
     {name}/testing:
       file.symlink:
@@ -45,7 +48,7 @@ def sls_content(setup_symlink, request):
           - grep "j" {symlink_file}
     """.format(
         name=name, symlink_file=symlink_file
-        )
+    )
     if request.param == str:
         return string_contents, name, symlink_file
     else:
