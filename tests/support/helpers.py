@@ -1907,3 +1907,15 @@ class Keys:
 
     def __exit__(self, *_):
         shutil.rmtree(str(self.priv_path.parent), ignore_errors=True)
+
+
+@functools.cache
+def system_python_version():
+    if salt.utils.platform.is_windows():
+        binary = "python3.exe"
+    else:
+        binary = "/usr/bin/python3"
+    proc = subprocess.run([binary, "--version"], capture_output=True, check=True)
+    return tuple(
+        int(_) for _ in proc.stdout.decode().split(" ", 1)[1].strip().split(".")
+    )

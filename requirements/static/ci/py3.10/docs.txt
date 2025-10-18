@@ -103,7 +103,7 @@ pyyaml==6.0.1
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   myst-docutils
-requests==2.32.3 ; python_version >= "3.10"
+requests==2.32.5 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   sphinx
