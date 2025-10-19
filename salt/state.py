@@ -2002,15 +2002,12 @@ class State:
                                         )
                                     )
                                     _state = _state.split(".")[0]
-                                found = self._add_to_extend(
+                                self._add_to_extend(
                                     extend, name, _state, rkey, id_, state
                                 )
                                 extend[name]["__env__"] = body["__env__"]
                                 extend[name]["__sls__"] = body["__sls__"]
-                                if found:
-                                    continue
-
-                        if isinstance(items, list):
+                        elif isinstance(items, list):
                             # Formed as a list of requisite additions
                             hinges = []
                             for ind in items:
@@ -2146,15 +2143,13 @@ class State:
                                                     continue
                                                 extend[id_][state].append(arg)
                                         continue
-                                    found = self._add_to_extend(
+                                    self._add_to_extend(
                                         extend, name, _state, rkey, id_, state
                                     )
 
                                     extend[name]["__env__"] = body["__env__"]
                                     extend[name]["__sls__"] = body["__sls__"]
 
-                                    if found:
-                                        continue
         high["__extend__"] = []
         for key, val in extend.items():
             high["__extend__"].append({key: val})
