@@ -301,23 +301,24 @@ def present(
         )
         return ret
 
-    # Get only the path to the file without env referrences to check if exists
     if source != "":
+        # Get only the path to the file without env references to check if exists
         source_path = __salt__["cp.get_url"](source, None, saltenv=__env__)
 
-    if source != "" and not source_path:
-        data = "no key"
-    elif source != "" and source_path:
-        # ssh.set_auth_key_from_file already reads and add/replace all keys
-        # from source file.
-        data = __salt__["ssh.set_auth_key_from_file"](
-            user,
-            source,
-            config=config,
-            saltenv=__env__,
-            fingerprint_hash_type=fingerprint_hash_type,
-            options=options,
-        )
+        # Extract Key from file if source is present
+        if not source_path:
+            data = "no key"
+        else:
+            # ssh.set_auth_key_from_file already reads and add/replace all keys
+            # from source file.
+            data = __salt__["ssh.set_auth_key_from_file"](
+                user,
+                source,
+                config=config,
+                saltenv=__env__,
+                fingerprint_hash_type=fingerprint_hash_type,
+                options=options,
+            )
     else:
         data = __salt__["ssh.set_auth_key"](
             user,
@@ -435,23 +436,23 @@ def absent(
         )
         return ret
 
-    # Get only the path to the file without env referrences to check if exists
     if source != "":
+        # Get only the path to the file without env references to check if exists
         source_path = __salt__["cp.get_url"](source, None, saltenv=__env__)
 
-    # Extract Key from file if source is present
-    if source != "" and not source_path:
-        data = "no key"
-    elif source != "" and source_path:
-        # ssh.rm_auth_key_from_file already reads and delete all keys
-        # from source file.
-        ret["comment"] = __salt__["ssh.rm_auth_key_from_file"](
-            user,
-            source,
-            config,
-            saltenv=__env__,
-            fingerprint_hash_type=fingerprint_hash_type,
-        )
+        # Extract Key from file if source is present
+        if not source_path:
+            data = "no key"
+        else:
+            # ssh.rm_auth_key_from_file already reads and delete all keys
+            # from source file.
+            ret["comment"] = __salt__["ssh.rm_auth_key_from_file"](
+                user,
+                source,
+                config,
+                saltenv=__env__,
+                fingerprint_hash_type=fingerprint_hash_type,
+            )
     else:
         # Get just the key
         sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w@.-]+\s.+)$")
