@@ -473,14 +473,20 @@ class ReqServerChannel:
                         self.opts["max_minions"],
                         load["id"],
                     )
-                    eload = {
-                        "result": False,
-                        "act": "full",
-                        "id": load["id"],
-                        "pub": load["pub"],
-                    }
 
                     if self.opts.get("auth_events") is True:
+                        eload = {
+                            "result": False,
+                            "act": "full",
+                            "id": load["id"],
+                            "pub": load["pub"],
+                        }
+                        autosign_grains = load.get("autosign_grains", None)
+                        if (
+                            "full" in self.opts.get("auth_events_autosign_grains", [])
+                            and autosign_grains
+                        ):
+                            eload["autosign_grains"] = autosign_grains
                         self.event.fire_event(
                             eload, salt.utils.event.tagify(prefix="auth")
                         )
@@ -519,8 +525,19 @@ class ReqServerChannel:
                 "Public key rejected for %s. Key is present in rejection key dir.",
                 load["id"],
             )
-            eload = {"result": False, "id": load["id"], "pub": load["pub"]}
             if self.opts.get("auth_events") is True:
+                eload = {
+                    "result": False,
+                    "act": "reject",
+                    "id": load["id"],
+                    "pub": load["pub"],
+                }
+                autosign_grains = load.get("autosign_grains", None)
+                if (
+                    "reject" in self.opts.get("auth_events_autosign_grains", [])
+                    and autosign_grains
+                ):
+                    eload["autosign_grains"] = autosign_grains
                 self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
             if sign_messages:
                 return self._clear_signed(
@@ -542,13 +559,19 @@ class ReqServerChannel:
                     denied.append(load["pub"])
                     self.cache.store("denied_keys", load["id"], denied)
 
-                eload = {
-                    "result": False,
-                    "id": load["id"],
-                    "act": "denied",
-                    "pub": load["pub"],
-                }
                 if self.opts.get("auth_events") is True:
+                    eload = {
+                        "result": False,
+                        "id": load["id"],
+                        "act": "denied",
+                        "pub": load["pub"],
+                    }
+                    autosign_grains = load.get("autosign_grains", None)
+                    if (
+                        "denied" in self.opts.get("auth_events_autosign_grains", [])
+                        and autosign_grains
+                    ):
+                        eload["autosign_grains"] = autosign_grains
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
                 if sign_messages:
                     return self._clear_signed(
@@ -579,13 +602,19 @@ class ReqServerChannel:
                 key_result = None
 
             if key_result is not None:
-                eload = {
-                    "result": key_result,
-                    "act": key_act,
-                    "id": load["id"],
-                    "pub": load["pub"],
-                }
                 if self.opts.get("auth_events") is True:
+                    eload = {
+                        "result": key_result,
+                        "act": key_act,
+                        "id": load["id"],
+                        "pub": load["pub"],
+                    }
+                    autosign_grains = load.get("autosign_grains", None)
+                    if (
+                        key_act in self.opts.get("auth_events_autosign_grains", [])
+                        and autosign_grains
+                    ):
+                        eload["autosign_grains"] = autosign_grains
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
                 if sign_messages:
                     return self._clear_signed(
@@ -607,13 +636,19 @@ class ReqServerChannel:
                     "Pending public key for %s rejected via autoreject_file",
                     load["id"],
                 )
-                eload = {
-                    "result": False,
-                    "act": "reject",
-                    "id": load["id"],
-                    "pub": load["pub"],
-                }
                 if self.opts.get("auth_events") is True:
+                    eload = {
+                        "result": False,
+                        "act": "reject",
+                        "id": load["id"],
+                        "pub": load["pub"],
+                    }
+                    autosign_grains = load.get("autosign_grains", None)
+                    if (
+                        "reject" in self.opts.get("auth_events_autosign_grains", [])
+                        and autosign_grains
+                    ):
+                        eload["autosign_grains"] = autosign_grains
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
                 if sign_messages:
                     return self._clear_signed(
@@ -638,13 +673,20 @@ class ReqServerChannel:
                     if load["pub"] not in denied:
                         denied.append(load["pub"])
                         self.cache.store("denied_keys", load["id"], denied)
-                    eload = {
-                        "result": False,
-                        "id": load["id"],
-                        "act": "denied",
-                        "pub": load["pub"],
-                    }
                     if self.opts.get("auth_events") is True:
+                        eload = {
+                            "result": False,
+                            "id": load["id"],
+                            "act": "denied",
+                            "pub": load["pub"],
+                        }
+                        autosign_grains = load.get("autosign_grains", None)
+                        if (
+                            "denied"
+                            in self.opts.get("auth_events_autosign_grains", [])
+                            and autosign_grains
+                        ):
+                            eload["autosign_grains"] = autosign_grains
                         self.event.fire_event(
                             eload, salt.utils.event.tagify(prefix="auth")
                         )
@@ -662,13 +704,20 @@ class ReqServerChannel:
                         load["id"],
                         load["id"],
                     )
-                    eload = {
-                        "result": True,
-                        "act": "pend",
-                        "id": load["id"],
-                        "pub": load["pub"],
-                    }
                     if self.opts.get("auth_events") is True:
+                        eload = {
+                            "result": True,
+                            "act": "pend",
+                            "id": load["id"],
+                            "pub": load["pub"],
+                        }
+                        autosign_grains = load.get("autosign_grains", None)
+                        if (
+                            "pend"
+                            in self.opts.get("auth_events_autosign_grains", [])
+                            and autosign_grains
+                        ):
+                            eload["autosign_grains"] = autosign_grains
                         self.event.fire_event(
                             eload, salt.utils.event.tagify(prefix="auth")
                         )
@@ -694,8 +743,20 @@ class ReqServerChannel:
                     if load["pub"] not in denied:
                         denied.append(load["pub"])
                         self.cache.store("denied_keys", load["id"], denied)
-                    eload = {"result": False, "id": load["id"], "pub": load["pub"]}
                     if self.opts.get("auth_events") is True:
+                        eload = {
+                            "result": False,
+                            "act": "denied",
+                            "id": load["id"],
+                            "pub": load["pub"],
+                        }
+                        autosign_grains = load.get("autosign_grains", None)
+                        if (
+                            "denied"
+                            in self.opts.get("auth_events_autosign_grains", [])
+                            and autosign_grains
+                        ):
+                            eload["autosign_grains"] = autosign_grains
                         self.event.fire_event(
                             eload, salt.utils.event.tagify(prefix="auth")
                         )
@@ -708,8 +769,19 @@ class ReqServerChannel:
         else:
             # Something happened that I have not accounted for, FAIL!
             log.warning("Unaccounted for authentication failure")
-            eload = {"result": False, "id": load["id"], "pub": load["pub"]}
             if self.opts.get("auth_events") is True:
+                eload = {
+                    "result": False,
+                    "act": "error",
+                    "id": load["id"],
+                    "pub": load["pub"],
+                }
+                autosign_grains = load.get("autosign_grains", None)
+                if (
+                    "error" in self.opts.get("auth_events_autosign_grains", [])
+                    and autosign_grains
+                ):
+                    eload["autosign_grains"] = autosign_grains
                 self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
             if sign_messages:
                 return self._clear_signed(
@@ -838,8 +910,19 @@ class ReqServerChannel:
         # Be aggressive about the signature
         digest = salt.utils.stringutils.to_bytes(hashlib.sha256(aes).hexdigest())
         ret["sig"] = self.master_key.encrypt(digest)
-        eload = {"result": True, "act": "accept", "id": load["id"], "pub": load["pub"]}
         if self.opts.get("auth_events") is True:
+            eload = {
+                "result": True,
+                "act": "accept",
+                "id": load["id"],
+                "pub": load["pub"],
+            }
+            autosign_grains = load.get("autosign_grains", None)
+            if (
+                "accept" in self.opts.get("auth_events_autosign_grains", [])
+                and autosign_grains
+            ):
+                eload["autosign_grains"] = autosign_grains
             self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
         if sign_messages:
             ret["nonce"] = load["nonce"]
