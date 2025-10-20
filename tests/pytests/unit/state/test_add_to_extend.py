@@ -1,43 +1,24 @@
-import logging
 from copy import deepcopy
 
 import pytest
 
-import salt.config
 import salt.state
 from salt.utils.odict import HashableOrderedDict
-
-log = logging.getLogger(__name__)
-
 
 pytestmark = [
     pytest.mark.core_test,
 ]
 
 
-@pytest.fixture
-def minion_config(minion_opts):
-    minion_opts["file_client"] = "local"
-    minion_opts["id"] = "foo01"
-    return minion_opts
-
-
-single_extend_test_cases = [
-    (
-        {},  # extend
-        "bar",  # id_to_extend
-        "file",  # state_mod_name
-        "require",  # req_type
-        "foo",  # req_id
-        "file",  # req_state_mod_name
-        {
-            "bar": HashableOrderedDict({"file": [{"require": [{"file": "foo"}]}]})
-        },  # expected
-    )
-]
-
 simple_extend_test_cases = [
     (
+        # Simple addition
+        #
+        # add_to_extend:
+        # foo:
+        #   file.managed:
+        #     - required_in:
+        #       - file: bar
         {},  # extend
         "bar",  # id_to_extend
         "file",  # state_mod_name
@@ -47,6 +28,22 @@ simple_extend_test_cases = [
         {"bar": {"file": [{"require": [{"file": "foo"}]}]}},  # expected
     ),
     (
+        # Requisite already exists
+        #
+        # bar:
+        #   file.managed:
+        #     require:
+        #       - file: foo
+        # baz:
+        #   file.managed:
+        #     - require:
+        #       - file: foo
+        #
+        # add_to_extend:
+        # foo:
+        #   file.managed:
+        #     - required_in:
+        #       - file: baz
         {  # extend
             "bar": {
                 "file": [{"require": [{"file": "foo"}]}],
@@ -78,163 +75,89 @@ simple_extend_test_cases = [
         },
     ),
     (
+        # Append requisite
+        #
+        # bar:
+        #   file.managed:
+        #     require:
+        #       - file: foo
+        # baz:
+        #   file.managed:
+        #     - require:
+        #       - file: foo
+        #
+        # add_to_extend:
+        # bar:
+        #  file.managed:
+        #    - require_in:
+        #       - file: baz
         {  # extend
-            "/tmp/bar": HashableOrderedDict(
+            "bar": HashableOrderedDict(
                 [
                     ("file", [{"require": [{"file": "foo"}]}]),
-                    ("__env__", "base"),
-                    ("__sls__", "test.foo"),
                 ]
             ),
             "baz": HashableOrderedDict(
                 [
                     ("file", [{"require": [{"file": "foo"}]}]),
-                    ("__env__", "base"),
-                    ("__sls__", "test.foo"),
-                ]
-            ),
-            "foo": HashableOrderedDict(
-                [("file", [{"prerequired": [{"pkg": "quux-pkg"}]}])]
-            ),
-            "quux-pkg": HashableOrderedDict(
-                [
-                    ("file", [{"prereq": [{"pkg": "foo"}]}]),
-                    ("__env__", "base"),
-                    ("__sls__", "test.foo"),
                 ]
             ),
         },
-        "/tmp/baz",  # id_to_extend
+        "baz",  # id_to_extend
         "file",  # state_mod_name
         "require",  # req_type
         "bar",  # req_id
         "file",  # req_state_mod_name
         {  # expected
-            "/tmp/bar": HashableOrderedDict(
-                [
-                    ("file", [{"require": [{"file": "foo"}]}]),
-                    ("__env__", "base"),
-                    ("__sls__", "test.foo"),
-                ]
-            ),
-            "baz": HashableOrderedDict(
-                [
-                    ("file", [{"require": [{"file": "foo"}]}]),
-                    ("__env__", "base"),
-                    ("__sls__", "test.foo"),
-                ]
-            ),
-            "foo": HashableOrderedDict(
-                [("file", [{"prerequired": [{"pkg": "quux-pkg"}]}])]
-            ),
-            "quux-pkg": HashableOrderedDict(
-                [
-                    ("file", [{"prereq": [{"pkg": "foo"}]}]),
-                    ("__env__", "base"),
-                    ("__sls__", "test.foo"),
-                ]
-            ),
-            "/tmp/baz": HashableOrderedDict(
-                [("file", [{"require": [{"file": "bar"}]}])]
-            ),
-        },
-    ),
-    (
-        {
             "bar": HashableOrderedDict(
                 [
                     ("file", [{"require": [{"file": "foo"}]}]),
-                    ("__env__", "base"),
-                    ("__sls__", "test.foo"),
-                ]
-            ),
-            "baz": HashableOrderedDict(
-                [
-                    ("file", [{"require": [{"file": "foo"}]}]),
-                    ("__env__", "base"),
-                    ("__sls__", "test.foo"),
-                ]
-            ),
-            "foo": HashableOrderedDict(
-                [("file", [{"prerequired": [{"pkg": "quux"}]}])]
-            ),
-            "quux": HashableOrderedDict(
-                [
-                    ("file", [{"prereq": [{"pkg": "foo"}]}]),
-                    ("__env__", "base"),
-                    ("__sls__", "test.foo"),
-                ]
-            ),
-        },
-        "baz",
-        "file",
-        "require",
-        "bar",
-        "file",
-        {
-            "bar": HashableOrderedDict(
-                [
-                    ("file", [{"require": [{"file": "foo"}]}]),
-                    ("__env__", "base"),
-                    ("__sls__", "test.foo"),
                 ]
             ),
             "baz": HashableOrderedDict(
                 [
                     ("file", [{"require": [{"file": "foo"}, {"file": "bar"}]}]),
-                    ("__env__", "base"),
-                    ("__sls__", "test.foo"),
-                ]
-            ),
-            "foo": HashableOrderedDict(
-                [("file", [{"prerequired": [{"pkg": "quux"}]}])]
-            ),
-            "quux": HashableOrderedDict(
-                [
-                    ("file", [{"prereq": [{"pkg": "foo"}]}]),
-                    ("__env__", "base"),
-                    ("__sls__", "test.foo"),
                 ]
             ),
         },
     ),
     (
-        {
-            "bar": HashableOrderedDict(
-                [
-                    ("file", [{"require": [{"file": "foo"}]}]),
-                    ("__env__", "base"),
-                    ("__sls__", "test.foo"),
-                ]
-            ),
-            "baz": HashableOrderedDict(
-                [
-                    ("file", [{"require": [{"file": "foo"}]}]),
-                    ("__env__", "base"),
-                    ("__sls__", "test.foo"),
-                ]
-            ),
+        # Append with different requisite type
+        #
+        # bar:
+        #   file.managed:
+        #     require:
+        #       - file: foo
+        # baz:
+        #   file.managed:
+        #     - require:
+        #       - file: foo
+        #
+        # add_to_extend:
+        # bar:
+        #   file.managed:
+        #     - prereq_in:
+        #       - file: baz
+        {  # extend
+            "bar": {
+                "file": [{"require": [{"file": "foo"}]}],
+            },
+            "baz": {
+                "file": [{"require": [{"file": "foo"}]}],
+            },
         },
-        "baz",
-        "file",
-        "require",
-        "bar",
-        "file",
-        {
-            "bar": HashableOrderedDict(
-                [
-                    ("file", [{"require": [{"file": "foo"}]}]),
-                    ("__env__", "base"),
-                    ("__sls__", "test.foo"),
-                ]
-            ),
-            "baz": HashableOrderedDict(
-                [
-                    ("file", [{"require": [{"file": "foo"}, {"file": "bar"}]}]),
-                    ("__env__", "base"),
-                    ("__sls__", "test.foo"),
-                ]
-            ),
+        "baz",  # id_to_extend
+        "file",  # state_mod_name
+        "prereq",  # req_type
+        "bar",  # req_id
+        "file",  # req_state_mod_name
+        {  # expected
+            "bar": {
+                "file": [{"require": [{"file": "foo"}]}],
+            },
+            "baz": {
+                "file": [{"require": [{"file": "foo"}], "prereq": [{"file": "bar"}]}],
+            },
         },
     ),
 ]

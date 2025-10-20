@@ -1913,30 +1913,33 @@ class State:
         req_state_mod_name,
     ):
         """
-        Add requisiste `req_id` as a requisite for `id_to_extend`
+        Add req_id as a requisite for id_to_extend
         """
 
         if id_to_extend not in extend:
             # The state does not exist yet: create it
             extend[id_to_extend] = HashableOrderedDict()
 
-        if (req_states := extend[id_to_extend].get(req_state_mod_name)) is None:
-            # The requisited state is not present yet, create it and initialize it
+        if (_req_module := extend[id_to_extend].get(req_state_mod_name)) is None:
+            # The requisited state module is not present yet, create it and initialize it
             extend[id_to_extend][req_state_mod_name] = [
                 {req_type: [{state_mod_name: req_id}]}
             ]
             return
 
-        # Lookup req_type if req_states
-        for state_arg in req_states:
-            if (req_items := state_arg.get(req_type)) is not None:
+        # Lookup req_type in _req_module
+        for _mod_req in _req_module:
+            if (req_items := _mod_req.get(req_type)) is not None:
                 for req_item in req_items:
-                    # (state_mode_name, req_id) is already defined as a requisiste
                     if req_item.get(state_mod_name) == req_id:
+                        # (state_mode_name, req_id) is already defined as a requisiste
                         break
                 else:
                     # Extending again
-                    state_arg[req_type].append({state_mod_name: req_id})
+                    _mod_req[req_type].append({state_mod_name: req_id})
+            else:
+                # req_type does not exist already for this module
+                _mod_req[req_type] = [{state_mod_name: req_id}]
 
     def requisite_in(self, high):
         """
