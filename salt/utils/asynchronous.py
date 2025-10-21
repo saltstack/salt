@@ -14,6 +14,19 @@ import tornado.ioloop
 log = logging.getLogger(__name__)
 
 
+def aioloop(io_loop, warn=False):
+    """
+    Ensure the ioloop is an asyncio loop not a tornado ioloop.
+    """
+    if isinstance(io_loop, tornado.ioloop.IOLoop):
+        if warn:
+            import traceback
+
+            log.warning("Passed tornado loop %s", "".join(traceback.format_stack()))
+        return io_loop.asyncio_loop
+    return io_loop
+
+
 @contextlib.contextmanager
 def current_ioloop(io_loop):
     """
