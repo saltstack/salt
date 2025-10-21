@@ -352,9 +352,9 @@ VALID_OPTS = immutabletypes.freeze(
         # The format for a given log file
         "log_fmt_logfile": (tuple, str),
         # The format for JIDs prior to formatting into log lines as %(jid)s
-        "log_fmt_jid": str,
+        "log_fmt_jid": (type(None), str),
         # The format for minion_ids prior to formatting into log lines as %(minion_id)s
-        "log_fmt_minion_id": str,
+        "log_fmt_minion_id": (type(None), str),
         # A dictionary of logging levels
         "log_granular_levels": dict,
         # The maximum number of bytes a single log file may contain before
