@@ -27,6 +27,7 @@ import zmq.eventloop.zmqstream
 
 import salt.payload
 import salt.transport.base
+import salt.utils.asynchronous
 import salt.utils.files
 import salt.utils.process
 import salt.utils.stringutils
@@ -206,7 +207,7 @@ class PublishClient(salt.transport.base.PublishClient):
     def __init__(self, opts, io_loop, **kwargs):
         super().__init__(opts, io_loop, **kwargs)
         self.opts = opts
-        self.io_loop = io_loop
+        self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
         self._legacy_setup(
             _id=opts.get("id", ""),
             role=opts.get("__role", ""),
@@ -402,7 +403,7 @@ class PublishClient(salt.transport.base.PublishClient):
                     "Exception while consuming%s %s", self.uri, exc, exc_info=True
                 )
 
-        task = self.io_loop.spawn_callback(consume, running)
+        task = self.io_loop.create_task(consume(running))
         self.callbacks[callback] = running, task
 
 
@@ -560,7 +561,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             task.add_done_callback(self.tasks.discard)
             self.tasks.add(task)
 
-        io_loop.add_callback(callback)
+        callback_task = salt.utils.asynchronous.aioloop(io_loop).create_task(callback())
 
     async def request_handler(self):
         while not self._event.is_set():
@@ -880,7 +881,9 @@ class ZeroMQSocketMonitor:
     def start_io_loop(self, io_loop):
         log.trace("Event monitor start!")
         self._running.set()
-        io_loop.spawn_callback(self.consume)
+        self._running_task = salt.utils.asynchronous.aioloop(io_loop).create_task(
+            self.consume()
+        )
 
     async def consume(self):
         while self._running.is_set():
@@ -1032,10 +1035,13 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         This method represents the Publish Daemon process. It is intended to be
         run in a thread or process as it creates and runs its own ioloop.
         """
-        io_loop = tornado.ioloop.IOLoop()
-        io_loop.add_callback(self.publisher, publish_payload, io_loop=io_loop)
+        io_loop = salt.utils.asynchronous.aioloop(tornado.ioloop.IOLoop())
+
+        publisher_task = io_loop.create_task(
+            self.publisher(publish_payload, io_loop=io_loop)
+        )
         try:
-            io_loop.start()
+            io_loop.run_forever()
         finally:
             self.close()
 
@@ -1222,9 +1228,11 @@ class RequestClient(salt.transport.base.RequestClient):
         self.master_uri = self.get_master_uri(opts)
         self.linger = linger
         if io_loop is None:
-            self.io_loop = tornado.ioloop.IOLoop.current()
+            self.io_loop = salt.utils.asynchronous.aioloop(
+                tornado.ioloop.IOLoop.current()
+            )
         else:
-            self.io_loop = io_loop
+            self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
         self.context = None
         self.send_queue = []
         # mapping of message -> future
@@ -1263,7 +1271,7 @@ class RequestClient(salt.transport.base.RequestClient):
                 self.socket.setsockopt(zmq.IPV4ONLY, 0)
         self.socket.linger = self.linger
         self.socket.connect(self.master_uri)
-        self.io_loop.spawn_callback(self._send_recv, self.socket)
+        self.send_recv_task = self.io_loop.create_task(self._send_recv(self.socket))
 
     # TODO: timeout all in-flight sessions, or error
     def close(self):
@@ -1277,6 +1285,7 @@ class RequestClient(salt.transport.base.RequestClient):
             # This hangs if closing the stream causes an import error
             self.context.term()
             self.context = None
+        self.send_recv_task.cancel()
 
     async def send(self, load, timeout=60):
         """
