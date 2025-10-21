@@ -706,7 +706,6 @@ class AsyncReqMessageClient:
         self.socket.connect(self.addr)
         self.io_loop.spawn_callback(self._send_recv, self.socket)
 
-    @tornado.gen.coroutine
     def send(self, message, timeout=None, callback=None):
         """
         Return a future which will be completed when the message has a response

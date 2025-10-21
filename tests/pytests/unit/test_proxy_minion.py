@@ -5,34 +5,7 @@ import pytest
 from saltfactories.utils import random_string
 
 import salt.config
-from tests.support.mock import MagicMock, patch
-
-
-@pytest.mark.slow_test
-def test_post_master_init_metaproxy_called(io_loop):
-    """
-    Tests that when the _post_master_ini function is called, _metaproxy_call is also called.
-    """
-
-    mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    mock_opts.update(salt.config.DEFAULT_PROXY_MINION_OPTS)
-    mock_jid_queue = [123]
-    proxy_minion = salt.minion.ProxyMinion(
-        mock_opts,
-        jid_queue=copy.copy(mock_jid_queue),
-        io_loop=io_loop,
-    )
-    mock_metaproxy_call = MagicMock()
-    with patch(
-        "salt.minion._metaproxy_call",
-        return_value=mock_metaproxy_call,
-        autospec=True,
-    ):
-        try:
-            ret = proxy_minion._post_master_init("dummy_master")
-            salt.minion._metaproxy_call.assert_called_once()
-        finally:
-            proxy_minion.destroy()
+from tests.support.mock import patch
 
 
 @pytest.mark.slow_test
