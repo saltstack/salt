@@ -248,9 +248,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
         if extra is None:
             extra = {}
 
-        current_jid = (
-            salt.utils.ctx.get_request_context().get("data", {}).get("jid", None)
-        )
+        current_jid = salt.utils.ctx.get_request_context().get("data", {}).get("jid")
         log_fmt_jid = (
             salt.utils.ctx.get_request_context()
             .get("opts", {})
@@ -258,13 +256,13 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
         )
 
         current_minion_id = (
-            salt.utils.ctx.get_request_context().get("data", {}).get("id", None)
+            salt.utils.ctx.get_request_context().get("data", {}).get("id")
         )
 
         log_fmt_minion_id = (
             salt.utils.ctx.get_request_context()
             .get("opts", {})
-            .get("log_fmt_minion_id", None)
+            .get("log_fmt_minion_id")
         )
 
         if current_jid is not None:
