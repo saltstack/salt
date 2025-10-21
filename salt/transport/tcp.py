@@ -229,7 +229,8 @@ class PublishClient(salt.transport.base.PublishClient):
     def __init__(self, opts, io_loop, **kwargs):  # pylint: disable=W0231
         super().__init__(opts, io_loop, **kwargs)
         self.opts = opts
-        self.io_loop = io_loop
+        # XXX self.io_loop is never used. :(
+        self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
         self.unpacker = salt.utils.msgpack.Unpacker()
         self.connected = False
         self._closing = False
@@ -633,7 +634,7 @@ class SaltMessageServer(tornado.tcpserver.TCPServer):
         io_loop = kwargs.pop("io_loop", None) or tornado.ioloop.IOLoop.current()
         self._closing = False
         super().__init__(*args, **kwargs)
-        self.io_loop = io_loop
+        self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
         self.clients = []
         self.message_handler = message_handler
 
@@ -656,8 +657,8 @@ class SaltMessageServer(tornado.tcpserver.TCPServer):
                 for framed_msg in unpacker:
                     framed_msg = salt.transport.frame.decode_embedded_strs(framed_msg)
                     header = framed_msg["head"]
-                    self.io_loop.spawn_callback(
-                        self.message_handler, stream, framed_msg["body"], header
+                    handler_task = self.io_loop.create_task(
+                        self.message_handler(stream, framed_msg["body"], header)
                     )
         except _StreamClosedError:
             log.trace("req client disconnected %s", address)
@@ -787,9 +788,10 @@ class MessageClient:
         self.source_port = source_port
         self.connect_callback = connect_callback
         self.disconnect_callback = disconnect_callback
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
-        with salt.utils.asynchronous.current_ioloop(self.io_loop):
-            self._tcp_client = TCPClientKeepAlive(opts, resolver=resolver)
+        self.io_loop = salt.utils.asynchronous.aioloop(
+            io_loop or tornado.ioloop.IOLoop.current()
+        )
+        self._tcp_client = TCPClientKeepAlive(opts, resolver=resolver)
         # TODO: max queue size
         self.send_future_map = {}  # mapping of request_id -> Future
 
@@ -808,9 +810,9 @@ class MessageClient:
         if self._closing or self._closed:
             return
         self._closing = True
-        self.io_loop.add_timeout(1, self.check_close)
+        self.io_loop.call_later(1, self.check_close)
 
-    async def check_close(self):
+    def check_close(self):
         if not self.send_future_map:
             self._tcp_client.close()
             if self._stream:
@@ -862,7 +864,7 @@ class MessageClient:
                 self._closing = False
                 self._closed = False
                 if not self._stream_return_running:
-                    self.io_loop.spawn_callback(self._stream_return)
+                    return_task = self.io_loop.create_task(self._stream_return())
                 if self.connect_callback:
                     self.connect_callback(True)
 
@@ -884,7 +886,7 @@ class MessageClient:
                         # self.remove_message_timeout(message_id)
                     else:
                         if self._on_recv is not None:
-                            self.io_loop.spawn_callback(self._on_recv, header, body)
+                            self.io_loop.call_soon(self._on_recv, header, body)
                         else:
                             log.error(
                                 "Got response for message_id %s that we are not"
@@ -1000,7 +1002,7 @@ class MessageClient:
 
         # Run send in a callback so we can wait on the future, in case we time
         # out before we are able to connect.
-        self.io_loop.add_callback(_do_send)
+        send_task = self.io_loop.create_task(_do_send())
         return await future
 
 
