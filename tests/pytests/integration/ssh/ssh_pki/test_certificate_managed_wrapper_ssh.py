@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.pytests.integration.ssh import check_system_python_version
+from tests.support.helpers import system_python_version
 
 try:
     from cryptography.hazmat.primitives import serialization
@@ -22,7 +22,8 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skipif(HAS_LIBS is False, reason="Needs cryptography library"),
     pytest.mark.skipif(
-        not check_system_python_version(), reason="Needs system python >= 3.9"
+        system_python_version() < (3, 10),
+        reason="System Python too old for these tests",
     ),
 ]
 
