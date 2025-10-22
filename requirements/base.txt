@@ -28,6 +28,7 @@ jaraco.text>=4.0.0
 jaraco.functools>=4.1.0
 
 croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'
+passlib
 
 setproctitle>=1.2.3
 timelib>=0.2.5; python_version < '3.11'

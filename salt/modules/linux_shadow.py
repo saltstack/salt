@@ -8,6 +8,7 @@ Manage the shadow file on Linux systems
     <module-provider-override>`.
 """
 
+import collections
 import datetime
 import functools
 import logging
@@ -16,11 +17,6 @@ import os
 import salt.utils.data
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
-
-try:
-    import spwd
-except ImportError:
-    pass
 
 
 try:
@@ -33,6 +29,21 @@ except ImportError:
 __virtualname__ = "shadow"
 
 log = logging.getLogger(__name__)
+
+struct_spwd = collections.namedtuple(
+    "struct_spwd",
+    [
+        "sp_namp",
+        "sp_pwdp",
+        "sp_lstchg",
+        "sp_min",
+        "sp_max",
+        "sp_warn",
+        "sp_inact",
+        "sp_expire",
+        "sp_flag",
+    ]
+)
 
 
 def __virtual__():
@@ -71,7 +82,7 @@ def info(name, root=None):
     if root is not None:
         getspnam = functools.partial(_getspnam, root=root)
     else:
-        getspnam = functools.partial(spwd.getspnam)
+        getspnam = functools.partial(_getspnam, root="/")
 
     try:
         data = getspnam(name)
@@ -509,7 +520,7 @@ def list_users(root=None):
     if root is not None:
         getspall = functools.partial(_getspall, root=root)
     else:
-        getspall = functools.partial(spwd.getspall)
+        getspall = functools.partial(_getspall, root="/")
 
     return sorted(
         user.sp_namp if hasattr(user, "sp_namp") else user.sp_nam for user in getspall()
@@ -529,7 +540,7 @@ def _getspnam(name, root=None):
                 # Generate a getspnam compatible output
                 for i in range(2, 9):
                     comps[i] = int(comps[i]) if comps[i] else -1
-                return spwd.struct_spwd(comps)
+                return struct_spwd(*comps)
     raise KeyError
 
 
@@ -545,4 +556,4 @@ def _getspall(root=None):
             # Generate a getspall compatible output
             for i in range(2, 9):
                 comps[i] = int(comps[i]) if comps[i] else -1
-            yield spwd.struct_spwd(comps)
+            yield struct_spwd(*comps)
