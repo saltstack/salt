@@ -1168,6 +1168,28 @@ def show_low_sls(mods, saltenv="base", test=None, **kwargs):
         return ret
 
 
+def sls_exists(mods, test=None, queue=None, **kwargs):
+    """
+    Tests for the existence of a specific SLS or list of SLS files on the
+    master. Similar to :py:func:`state.show_sls <salt.modules.state.show_sls>`,
+    rather than returning state details, returns True or False. The default
+    environment is ``base``, use ``saltenv`` to specify a different environment.
+
+    .. versionadded:: 3008.0
+
+    saltenv
+        Specify a salt fileserver environment from which to look for the SLS files
+        specified in the ``mods`` argument
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.sls_exists core,edit.vim saltenv=dev
+    """
+    return isinstance(show_sls(mods, test=test, queue=queue, **kwargs), dict)
+
+
 def show_top(**kwargs):
     """
     Return the top data that the minion will use for a highstate
