@@ -1920,26 +1920,25 @@ class State:
             # The state does not exist yet: create it
             extend[id_to_extend] = HashableOrderedDict()
 
-        if (_state_args := extend[id_to_extend].get(state_mod_name)) is None:
+        if (state_args := extend[id_to_extend].get(state_mod_name)) is None:
             # The state module is not present yet, create it and initialize it
             extend[id_to_extend][state_mod_name] = [
                 {req_type: [{req_state_mod_name: req_id}]}
             ]
             return
 
-        # Lookup req_type in _state_args
-        for _mod_req in _state_args:
-            if (req_items := _mod_req.get(req_type)) is not None:
+        # Lookup req_type in state_args
+        for state_arg in state_args:
+            if (req_items := state_arg.get(req_type)) is not None:
                 for req_item in req_items:
                     if req_item.get(req_state_mod_name) == req_id:
                         # (req_state_mode_name, req_id) is already defined as a requisiste
                         return
-                else:
-                    # Extending again
-                    _mod_req[req_type].append({req_state_mod_name: req_id})
-                    return
+                # Extending again
+                state_arg[req_type].append({req_state_mod_name: req_id})
+                return
         # req_type does not exist already for this state module
-        _state_args.append({req_type: [{req_state_mod_name: req_id}]})
+        state_args.append({req_type: [{req_state_mod_name: req_id}]})
 
     def requisite_in(self, high):
         """
