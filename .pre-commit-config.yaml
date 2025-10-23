@@ -1629,9 +1629,6 @@ repos:
           - -e
           - lint-salt-pre-commit
           - --
-        additional_dependencies:
-          - setuptools<58.0
-          - pip>=20.2.4,<21.2
 
   - repo: https://github.com/saltstack/mirrors-nox
     rev: v2022.11.21

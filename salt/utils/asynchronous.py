@@ -1,64 +1,213 @@
 """
-Helpers/utils for working with tornado asynchronous stuff
+Async utilities and compatibility helpers for Salt.
+
+This module historically wrapped Tornado's ``IOLoop`` so synchronous code could
+interact with async transports. As Salt moves toward ``asyncio`` we provide a
+small adapter which mirrors the Tornado APIs still referenced in the codebase
+while delegating work to an ``asyncio`` event loop.
 """
+
+from __future__ import annotations
 
 import asyncio
 import contextlib
 import logging
 import sys
 import threading
+from collections.abc import Awaitable, Callable
+from functools import partial
+from typing import Any
 
-import tornado.concurrent
-import tornado.ioloop
+try:  # Optional dependency during the transition away from tornado.
+    import tornado.ioloop  # type: ignore
+except ImportError:  # pragma: no cover - tornado optional
+    tornado = None  # type: ignore
 
 log = logging.getLogger(__name__)
 
 
-def aioloop(io_loop, warn=False):
+def _ensure_task(loop: asyncio.AbstractEventLoop, result: Any) -> Any:
     """
-    Ensure the ioloop is an asyncio loop not a tornado ioloop.
+    Schedule ``result`` on ``loop`` when it is a coroutine/future, otherwise
+    return it unchanged.
     """
-    if isinstance(io_loop, tornado.ioloop.IOLoop):
-        if warn:
-            import traceback
 
-            log.warning("Passed tornado loop %s", "".join(traceback.format_stack()))
-        return io_loop.asyncio_loop
-    return io_loop
+    if asyncio.iscoroutine(result) or isinstance(result, asyncio.Future):
+        return loop.create_task(result)
+    return result
+
+
+class AsyncLoopAdapter:
+    """
+    A light-weight adapter exposing the subset of Tornado's ``IOLoop`` API that
+    Salt still depends on, backed by an ``asyncio`` event loop.
+    """
+
+    def __init__(self, loop: asyncio.AbstractEventLoop | None = None):
+        self._loop = loop or asyncio.new_event_loop()
+
+    # ------------------------------------------------------------------
+    # Compatibility helpers
+    # ------------------------------------------------------------------
+    @property
+    def asyncio_loop(self) -> asyncio.AbstractEventLoop:
+        return self._loop
+
+    def time(self) -> float:
+        return self._loop.time()
+
+    # ------------------------------------------------------------------
+    # Scheduling primitives
+    # ------------------------------------------------------------------
+    def spawn_callback(self, callback: Callable[..., Any], *args, **kwargs):
+        if asyncio.iscoroutinefunction(callback):
+
+            def run_async():
+                self._loop.create_task(callback(*args, **kwargs))
+
+            self._loop.call_soon(run_async)
+            return
+
+        def run_sync():
+            try:
+                result = callback(*args, **kwargs)
+            except Exception:  # pylint: disable=broad-except
+                log.exception("Exception in spawn_callback")
+                return
+            _ensure_task(self._loop, result)
+
+        self._loop.call_soon(run_sync)
+
+    def add_callback(self, callback: Callable[..., Any], *args, **kwargs):
+        if asyncio.iscoroutinefunction(callback):
+            self._loop.call_soon(
+                lambda: self._loop.create_task(callback(*args, **kwargs))
+            )
+        else:
+            self._loop.call_soon(callback, *args, **kwargs)
+
+    def call_later(self, delay: float, callback: Callable[..., Any], *args, **kwargs):
+        if asyncio.iscoroutinefunction(callback):
+
+            def runner():
+                self._loop.create_task(callback(*args, **kwargs))
+
+            return self._loop.call_later(delay, runner)
+        return self._loop.call_later(delay, callback, *args, **kwargs)
+
+    def add_timeout(self, when: float, callback: Callable[..., Any], *args, **kwargs):
+        delay = max(0.0, when - self._loop.time())
+        return self.call_later(delay, callback, *args, **kwargs)
+
+    def remove_timeout(self, handle: asyncio.TimerHandle):
+        handle.cancel()
+
+    def add_future(self, future: Awaitable, callback: Callable[[asyncio.Future], Any]):
+        fut = asyncio.ensure_future(future, loop=self._loop)
+        fut.add_done_callback(lambda done: self._loop.call_soon(callback, done))
+        return fut
+
+    def create_task(self, coro: Awaitable):
+        return self._loop.create_task(coro)
+
+    # ------------------------------------------------------------------
+    # Loop control
+    # ------------------------------------------------------------------
+    def run_sync(
+        self,
+        func: Callable[..., Awaitable],
+        *args,
+        **kwargs,
+    ):
+        result = func(*args, **kwargs)
+        if asyncio.iscoroutine(result) or isinstance(result, asyncio.Future):
+            if self._loop.is_running():
+                raise RuntimeError("Cannot run_sync on a running event loop")
+            policy = asyncio.get_event_loop_policy()
+            try:
+                policy.set_event_loop(self._loop)
+                return self._loop.run_until_complete(result)
+            finally:
+                policy.set_event_loop(None)
+        return result
+
+    def start(self):
+        policy = asyncio.get_event_loop_policy()
+        try:
+            policy.set_event_loop(self._loop)
+            self._loop.run_forever()
+        finally:
+            policy.set_event_loop(None)
+
+    def stop(self):
+        self._loop.stop()
+
+    def close(self, all_fds: bool = False):  # pylint: disable=unused-argument
+        self._loop.close()
+
+
+def get_io_loop(io_loop: Any | None = None) -> AsyncLoopAdapter:
+    """
+    Normalize ``io_loop`` into an :class:`AsyncLoopAdapter`.
+
+    Accepts an existing adapter, a raw ``asyncio`` loop, an object exposing an
+    ``asyncio_loop`` attribute (e.g. Tornado's ``IOLoop``), or ``None`` in which
+    case a running loop is wrapped or a new loop is created.
+    """
+
+    if isinstance(io_loop, AsyncLoopAdapter):
+        return io_loop
+
+    if isinstance(io_loop, asyncio.AbstractEventLoop):
+        return AsyncLoopAdapter(io_loop)
+
+    if io_loop is not None and hasattr(io_loop, "asyncio_loop"):
+        return AsyncLoopAdapter(io_loop.asyncio_loop)
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+    return AsyncLoopAdapter(loop)
+
+
+def aioloop(io_loop: Any | None = None, warn: bool = False):
+    """
+    Compatibility helper returning the underlying ``asyncio`` loop.
+    """
+
+    if warn and tornado is not None and isinstance(io_loop, tornado.ioloop.IOLoop):
+        log.warning("Tornado IOLoop provided; returning underlying asyncio loop")
+    return get_io_loop(io_loop).asyncio_loop
 
 
 @contextlib.contextmanager
-def current_ioloop(io_loop):
+def current_ioloop(io_loop: Any):
     """
-    A context manager that will set the current ioloop to io_loop for the context
+    Temporarily install ``io_loop`` (adapter or compatible object) as the
+    current asyncio loop.
     """
+
+    adapter = get_io_loop(io_loop)
+    policy = asyncio.get_event_loop_policy()
     try:
-        orig_loop = tornado.ioloop.IOLoop.current()
+        previous = policy.get_event_loop()
     except RuntimeError:
-        orig_loop = None
-    asyncio.set_event_loop(io_loop.asyncio_loop)
+        previous = None
+
+    policy.set_event_loop(adapter.asyncio_loop)
     try:
         yield
     finally:
-        if orig_loop:
-            asyncio.set_event_loop(orig_loop.asyncio_loop)
+        if previous is None:
+            policy.set_event_loop(None)
         else:
-            asyncio.set_event_loop(None)
+            policy.set_event_loop(previous)
 
 
 class SyncWrapper:
     """
-    A wrapper to make Async classes synchronous
-
-    This is uses as a simple wrapper, for example:
-
-    asynchronous = AsyncClass()
-    # this method would regularly return a future
-    future = asynchronous.async_method()
-
-    sync = SyncWrapper(async_factory_method, (arg1, arg2), {'kwarg1': 'val'})
-    # the sync wrapper will automatically wait on the future
-    ret = sync.async_method()
+    Wrap asynchronous classes behind a synchronous facade.
     """
 
     def __init__(
@@ -71,9 +220,7 @@ class SyncWrapper:
         loop_kwarg=None,
     ):
         self.asyncio_loop = asyncio.new_event_loop()
-        self.io_loop = tornado.ioloop.IOLoop(
-            asyncio_loop=self.asyncio_loop, make_current=False
-        )
+        self.io_loop = AsyncLoopAdapter(self.asyncio_loop)
         if args is None:
             args = []
         if kwargs is None:
@@ -96,11 +243,6 @@ class SyncWrapper:
         )
 
     def _populate_async_methods(self):
-        """
-        We need the '_coroutines' attribute on classes until we can depricate
-        tornado<4.5. After that 'is_coroutine_fuction' will always be
-        available.
-        """
         if hasattr(self.obj, "_coroutines"):
             self._async_methods += self.obj._coroutines
 
@@ -118,7 +260,9 @@ class SyncWrapper:
                     log.error("No sync method %s on object %r", method, self.obj)
                     continue
             try:
-                method()
+                result = method()
+                if asyncio.iscoroutine(result) or isinstance(result, asyncio.Future):
+                    self.io_loop.run_sync(lambda res=result: res)
             except AttributeError:
                 log.error("No async method %s on object %r", method, self.obj)
             except Exception:  # pylint: disable=broad-except
@@ -126,7 +270,7 @@ class SyncWrapper:
         io_loop = self.io_loop
         io_loop.stop()
         try:
-            io_loop.close(all_fds=True)
+            io_loop.close()
         except KeyError:
             pass
         self.asyncio_loop.close()
@@ -141,13 +285,8 @@ class SyncWrapper:
             try:
                 asyncio.get_running_loop()
             except RuntimeError:
-                # asyncio.get_running_loop() raises RuntimeError
-                # if there is no running loop, so we can run the method
-                # directly with no detaching it to the distinct thread.
-                # It will make SyncWrapper way faster for the cases
-                # when there are no nested SyncWrapper objects used.
                 return self.io_loop.run_sync(
-                    lambda: getattr(self.obj, key)(*args, **kwargs)
+                    partial(getattr(self.obj, key), *args, **kwargs)
                 )
             results = []
             thread = threading.Thread(
@@ -158,36 +297,36 @@ class SyncWrapper:
             thread.join()
             if results[0]:
                 return results[1]
-            else:
-                exc_info = results[1]
-                raise exc_info[1].with_traceback(exc_info[2])
+            exc_info = results[1]
+            raise exc_info[1].with_traceback(exc_info[2])
 
         return wrap
 
     def _target(self, key, args, kwargs, results, asyncio_loop):
-        asyncio.set_event_loop(asyncio_loop)
-        io_loop = tornado.ioloop.IOLoop.current()
+        policy = asyncio.get_event_loop_policy()
+        policy.set_event_loop(asyncio_loop)
+        adapter = AsyncLoopAdapter(asyncio_loop)
         try:
-            result = io_loop.run_sync(lambda: getattr(self.obj, key)(*args, **kwargs))
+            result = adapter.run_sync(partial(getattr(self.obj, key), *args, **kwargs))
             results.append(True)
             results.append(result)
         except Exception:  # pylint: disable=broad-except
             results.append(False)
             results.append(sys.exc_info())
+        finally:
+            policy.set_event_loop(None)
 
     def __enter__(self):
         if hasattr(self.obj, "__aenter__"):
             ret = self._wrap("__aenter__")()
             if ret == self.obj:
                 return self
-            else:
-                return ret
-        elif hasattr(self.obj, "__enter__"):
+            return ret
+        if hasattr(self.obj, "__enter__"):
             ret = self.obj.__enter__()
             if ret == self.obj:
                 return self
-            else:
-                return ret
+            return ret
         return self
 
     def __exit__(self, exc_type, exc_val, tb):

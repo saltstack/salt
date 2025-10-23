@@ -20,9 +20,6 @@ import traceback
 import types
 import uuid
 
-import tornado
-import tornado.ioloop
-
 import salt
 import salt.beacons
 import salt.channel.client
@@ -74,6 +71,7 @@ from salt.exceptions import (
     SaltSystemExit,
 )
 from salt.template import SLS_ENCODING
+from salt.utils.asynchronous import get_io_loop
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 from salt.utils.network import parse_host_port
@@ -933,7 +931,7 @@ class SMinion(MinionBase):
         if self.opts.get("file_client", "remote") == "remote" or self.opts.get(
             "use_master_when_local", False
         ):
-            io_loop = tornado.ioloop.IOLoop.current()
+            loop_adapter = get_io_loop()
 
             async def eval_master():
                 """
@@ -942,9 +940,7 @@ class SMinion(MinionBase):
                 master, pub_channel = await self.eval_master(self.opts, failed=True)
                 pub_channel.close()
 
-            io_loop.run_sync(
-                lambda: eval_master()  # pylint: disable=unnecessary-lambda
-            )
+            loop_adapter.run_sync(eval_master)
 
         self.gen_modules(initial_load=True, context=context)
 
@@ -1045,11 +1041,12 @@ class MinionManager(MinionBase):
         self.max_auth_wait = self.opts["acceptance_wait_time_max"]
         self.minions = []
         self.jid_queue = []
-        self.io_loop = tornado.ioloop.IOLoop.current()
+        self.loop_adapter = get_io_loop()
+        self.io_loop = self.loop_adapter
         self.process_manager = ProcessManager(name="MultiMinionProcessManager")
-        self.io_loop.spawn_callback(
+        self.loop_adapter.spawn_callback(
             self.process_manager.run, **{"asynchronous": True}
-        )  # Tornado backward compat
+        )
         self.event_publisher = None
         self.event = None
 
@@ -1062,13 +1059,15 @@ class MinionManager(MinionBase):
     def _bind(self):
         # start up the event publisher, so we can see events during startup
         self.event_publisher = salt.transport.ipc_publish_server("minion", self.opts)
-        self.io_loop.spawn_callback(
+        self.loop_adapter.spawn_callback(
             self.event_publisher.publisher,
             self.event_publisher.publish_payload,
-            self.io_loop,
+            self.loop_adapter.asyncio_loop,
         )
         self.event = salt.utils.event.get_event(
-            "minion", opts=self.opts, io_loop=self.io_loop
+            "minion",
+            opts=self.opts,
+            io_loop=self.loop_adapter.asyncio_loop,
         )
         self.event.subscribe("")
         self.event.set_event_handler(self.handle_event)
@@ -1135,8 +1134,8 @@ class MinionManager(MinionBase):
                 loaded_base_name="salt.loader.{}".format(s_opts["master"]),
                 jid_queue=self.jid_queue,
             )
-            self.io_loop.spawn_callback(self._connect_minion, minion)
-        self.io_loop.call_later(timeout, self._check_minions)
+            self.loop_adapter.spawn_callback(self._connect_minion, minion)
+        self.loop_adapter.call_later(timeout, self._check_minions)
 
     async def _connect_minion(self, minion):
         """Create a minion, and asynchronously connect it to a master"""
@@ -1203,7 +1202,7 @@ class MinionManager(MinionBase):
         self._spawn_minions()
 
         # serve forever!
-        self.io_loop.start()
+        self.loop_adapter.start()
 
     @property
     def restart(self):
@@ -1219,9 +1218,7 @@ class MinionManager(MinionBase):
         Called from cli.daemons.Minion._handle_signals().
         Adds stop_async as callback to the io_loop to prevent blocking.
         """
-        self.io_loop.add_callback(  # pylint: disable=not-callable
-            self.stop_async, signum, parent_sig_handler
-        )
+        self.loop_adapter.add_callback(self.stop_async, signum, parent_sig_handler)
 
     async def stop_async(self, signum, parent_sig_handler):
         """
@@ -1246,6 +1243,9 @@ class MinionManager(MinionBase):
             self.event.destroy()
             self.event = None
 
+        # Stop the loop last to allow callbacks to finish
+        self.loop_adapter.stop()
+
         # Call the parent signal handler
         parent_sig_handler(signum, None)
 
@@ -1258,6 +1258,8 @@ class MinionManager(MinionBase):
         if self.event is not None:
             self.event.destroy()
             self.event = None
+        if getattr(self, "loop_adapter", None) is not None:
+            self.loop_adapter.stop()
 
 
 class Minion(MinionBase):
@@ -1297,9 +1299,10 @@ class Minion(MinionBase):
         self.req_channel = None
 
         if io_loop is None:
-            self.io_loop = tornado.ioloop.IOLoop.current()
+            self.loop_adapter = get_io_loop()
         else:
-            self.io_loop = io_loop
+            self.loop_adapter = get_io_loop(io_loop)
+        self.io_loop = self.loop_adapter
 
         # Warn if ZMQ < 3.2
         if zmq:
@@ -1344,11 +1347,13 @@ class Minion(MinionBase):
             time.sleep(sleep_time)
 
         self.process_manager = ProcessManager(name="MinionProcessManager")
-        self.io_loop.spawn_callback(self.process_manager.run, **{"asynchronous": True})
+        self.loop_adapter.spawn_callback(
+            self.process_manager.run, **{"asynchronous": True}
+        )
         # We don't have the proxy setup yet, so we can't start engines
         # Engines need to be able to access __proxy__
         if not salt.utils.platform.is_proxy():
-            self.io_loop.spawn_callback(
+            self.loop_adapter.spawn_callback(
                 salt.engines.start_engines, self.opts, self.process_manager
             )
 
@@ -1383,9 +1388,9 @@ class Minion(MinionBase):
         # finish connecting to master
         self._connect_master_future.add_done_callback(on_connect_master_future_done)
         if timeout:
-            self.io_loop.call_later(timeout, self.io_loop.stop)
+            self.loop_adapter.call_later(timeout, self.io_loop.stop)
         try:
-            self.io_loop.start()
+            self.loop_adapter.start()
         except KeyboardInterrupt:
             self.destroy()
         # I made the following 3 line oddity to preserve traceback.
@@ -3220,11 +3225,19 @@ class Minion(MinionBase):
         """
         if name in self.periodic_callbacks:
             return False
-        self.periodic_callbacks[name] = tornado.ioloop.PeriodicCallback(
-            method,
-            interval * 1000,
-        )
-        self.periodic_callbacks[name].start()
+
+        async def _periodic_runner():
+            while name in self.periodic_callbacks:
+                try:
+                    result = method()
+                    if asyncio.iscoroutine(result):
+                        await result
+                except Exception:  # pylint: disable=broad-except
+                    log.exception("Error in periodic callback '%s'", name)
+                await asyncio.sleep(interval)
+
+        task = self.loop_adapter.create_task(_periodic_runner())
+        self.periodic_callbacks[name] = task
         return True
 
     def remove_periodic_callback(self, name):
@@ -3232,10 +3245,10 @@ class Minion(MinionBase):
         Remove a periodic callback.
         If a callback by the given name does not exist this method returns False
         """
-        callback = self.periodic_callbacks.pop(name, None)
-        if callback is None:
+        task = self.periodic_callbacks.pop(name, None)
+        if task is None:
             return False
-        callback.stop()
+        task.cancel()
         return True
 
     # Main Minion Tune In
@@ -3611,9 +3624,10 @@ class SyndicManager(MinionBase):
         self.jid_forward_cache = set()
 
         if io_loop is None:
-            self.io_loop = tornado.ioloop.IOLoop.current()
+            self.loop_adapter = get_io_loop()
         else:
-            self.io_loop = io_loop
+            self.loop_adapter = get_io_loop(io_loop)
+        self.io_loop = self.loop_adapter
 
         # List of events
         self.raw_events = []
@@ -3639,7 +3653,7 @@ class SyndicManager(MinionBase):
             s_opts = copy.copy(self.opts)
             s_opts["master"] = master
 
-            future = asyncio.Future()
+            future = self.loop_adapter.asyncio_loop.create_future()
             self._syndics[master] = future
 
             async def connect(future, s_opts):
@@ -3648,7 +3662,7 @@ class SyndicManager(MinionBase):
                 except Exception as exc:  # pylint: disable=broad-except
                     future.set_exception(exc)
 
-            self.io_loop.spawn_callback(connect, future, s_opts)
+            self.loop_adapter.spawn_callback(connect, future, s_opts)
 
     async def _connect_syndic(self, opts):
         """
@@ -3836,11 +3850,16 @@ class SyndicManager(MinionBase):
         self.local.event.set_event_handler(self._process_event)
 
         # forward events every syndic_event_forward_timeout
-        self.forward_events = tornado.ioloop.PeriodicCallback(
-            self._forward_events,
-            self.opts["syndic_event_forward_timeout"] * 1000,
-        )
-        self.forward_events.start()
+        async def forward_loop():
+            interval = self.opts["syndic_event_forward_timeout"]
+            while True:
+                try:
+                    await self._forward_events()
+                except Exception:  # pylint: disable=broad-except
+                    log.exception("Error forwarding syndic events")
+                await asyncio.sleep(interval)
+
+        self.forward_events = self.loop_adapter.create_task(forward_loop())
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
