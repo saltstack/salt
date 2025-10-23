@@ -22,9 +22,6 @@ import traceback
 import uuid
 import weakref
 
-import tornado.concurrent
-import tornado.ioloop
-
 import salt.cache
 import salt.channel.client
 import salt.defaults.exitcodes
@@ -48,6 +45,7 @@ from salt.exceptions import (
     SaltReqTimeoutError,
     UnsupportedAlgorithm,
 )
+from salt.utils.asynchronous import AsyncLoopAdapter, get_io_loop
 
 try:
     import cryptography.exceptions
@@ -706,33 +704,28 @@ class AsyncAuth:
     Set up an Async object to maintain authentication with the salt master
     """
 
-    # This class is only a singleton per minion/master pair
-    # mapping of io_loop -> {key -> auth}
-    instance_map = weakref.WeakKeyDictionary()
+    # mapping of (loop, key) -> auth instances (weakly referenced)
+    instance_map = weakref.WeakValueDictionary()
 
     # mapping of key -> creds
     creds_map = {}
 
     def __new__(cls, opts, io_loop=None):
-        """
-        Only create one instance of AsyncAuth per __key()
-        """
-        # do we have any mapping for this io_loop
-        io_loop = io_loop or tornado.ioloop.IOLoop.current()
-        if io_loop not in AsyncAuth.instance_map:
-            AsyncAuth.instance_map[io_loop] = weakref.WeakValueDictionary()
-        loop_instance_map = AsyncAuth.instance_map[io_loop]
+        """Only create one instance of AsyncAuth per loop/key pair."""
 
+        loop_obj = io_loop
+        loop_adapter = get_io_loop(loop_obj)
+        loop_obj = loop_adapter.asyncio_loop
+        loop_key = loop_obj
         key = cls.__key(opts)
-        auth = loop_instance_map.get(key)
+        inst_key = (loop_key, key)
+
+        auth = AsyncAuth.instance_map.get(inst_key)
         if auth is None:
             log.debug("Initializing new AsyncAuth for %s", key)
-            # we need to make a local variable for this, as we are going to store
-            # it in a WeakValueDictionary-- which will remove the item if no one
-            # references it-- this forces a reference while we return to the caller
             auth = object.__new__(cls)
-            auth.__singleton_init__(opts, io_loop=io_loop)
-            loop_instance_map[key] = auth
+            auth.__singleton_init__(opts, loop_obj=loop_obj, adapter=loop_adapter)
+            AsyncAuth.instance_map[inst_key] = auth
         else:
             log.debug("Re-using AsyncAuth for %s", key)
         return auth
@@ -746,7 +739,7 @@ class AsyncAuth:
         pass
 
     # an init for the singleton instance to call
-    def __singleton_init__(self, opts, io_loop=None):
+    def __singleton_init__(self, opts, loop_obj=None, adapter=None):
         """
         Init an Auth instance
 
@@ -766,7 +759,11 @@ class AsyncAuth:
             self.mpub = "minion_master.pub"
         if not os.path.isfile(self.pub_path):
             self.get_keys()
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        adapter = adapter or get_io_loop(loop_obj)
+        loop_obj = adapter.asyncio_loop
+        self._loop_adapter: AsyncLoopAdapter = adapter
+        self.io_loop = adapter  # backwards compatibility for existing call sites
+        self._loop_raw = loop_obj
         key = self.__key(self.opts)
         # TODO: if we already have creds for this key, lets just re-use
         if key in AsyncAuth.creds_map:
@@ -774,7 +771,7 @@ class AsyncAuth:
             self._creds = creds
             self._crypticle = Crypticle(self.opts, creds["aes"])
             self._session_crypticle = Crypticle(self.opts, creds["session"])
-            self._authenticate_future = tornado.concurrent.Future()
+            self._authenticate_future = self._loop_adapter.asyncio_loop.create_future()
             self._authenticate_future.set_result(True)
 
     def __deepcopy__(self, memo):
@@ -782,7 +779,7 @@ class AsyncAuth:
         result = cls.__new__(cls, copy.deepcopy(self.opts, memo))
         memo[id(self)] = result
         for key in self.__dict__:
-            if key in ("io_loop",):
+            if key in ("io_loop", "_loop_adapter", "_loop_raw"):
                 # The io_loop has a thread Lock which will fail to be deep
                 # copied. Skip it because it will just be recreated on the
                 # new copy.
@@ -831,19 +828,23 @@ class AsyncAuth:
         ):
             future = self._authenticate_future
         else:
-            future = tornado.concurrent.Future()
+            future = self._loop_adapter.asyncio_loop.create_future()
             self._authenticate_future = future
-            self.io_loop.add_callback(self._authenticate)
+            self._loop_adapter.add_callback(self._authenticate)
 
         if callback is not None:
 
             def handle_future(future):
                 response = future.result()
-                self.io_loop.add_callback(callback, response)
+                self._loop_adapter.add_callback(callback, response)
 
             future.add_done_callback(handle_future)
 
         return future
+
+    @property
+    def asyncio_loop(self):
+        return self._loop_adapter.asyncio_loop
 
     async def _authenticate(self):
         """
@@ -862,7 +863,7 @@ class AsyncAuth:
         creds = None
 
         with salt.channel.client.AsyncReqChannel.factory(
-            self.opts, crypt="clear", io_loop=self.io_loop
+            self.opts, crypt="clear", io_loop=self._loop_raw
         ) as channel:
             error = None
             while True:
@@ -1520,7 +1521,7 @@ class SAuth(AsyncAuth):
         super().__init__(opts, io_loop=io_loop)
 
     # an init for the singleton instance to call
-    def __singleton_init__(self, opts, io_loop=None):
+    def __singleton_init__(self, opts, loop_obj=None, adapter=None):
         """
         Init an Auth instance
 
@@ -1528,6 +1529,7 @@ class SAuth(AsyncAuth):
         :return: Auth instance
         :rtype: Auth
         """
+        super().__singleton_init__(opts, loop_obj=loop_obj, adapter=adapter)
         self.opts = opts
         self.cache = salt.cache.Cache(opts, driver=opts["keys.cache_driver"])
         self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())

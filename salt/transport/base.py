@@ -13,6 +13,7 @@ log = logging.getLogger(__name__)
 TRANSPORTS = (
     "zeromq",
     "tcp",
+    "tcp_async",
     "ws",
 )
 
@@ -35,6 +36,10 @@ def request_server(opts, **kwargs):
         import salt.transport.tcp
 
         return salt.transport.tcp.RequestServer(opts)
+    elif ttype == "tcp_async":
+        import salt.transport.tcp_async
+
+        return salt.transport.tcp_async.RequestServer(opts)
     elif ttype == "ws":
         import salt.transport.ws
 
@@ -65,6 +70,10 @@ def request_client(opts, io_loop):
         return salt.transport.tcp.RequestClient(
             opts, resolver=resolver, io_loop=io_loop
         )
+    elif ttype == "tcp_async":
+        import salt.transport.tcp_async
+
+        return salt.transport.tcp_async.RequestClient(opts, io_loop=io_loop)
     elif ttype == "ws":
         import salt.transport.ws
 
@@ -100,25 +109,31 @@ def publish_server(opts, **kwargs):
         kwargs["ssl"] = opts["ssl"]
 
     # switch on available ttypes
+    factory_map = {}
     if ttype == "zeromq":
         import salt.transport.zeromq
 
-        transcls = salt.transport.zeromq.PublishServer
+        factory_map["publish_server"] = salt.transport.zeromq.PublishServer
     elif ttype == "tcp":
         import salt.transport.tcp
 
-        transcls = salt.transport.tcp.PublishServer
+        factory_map["publish_server"] = salt.transport.tcp.PublishServer
     elif ttype == "ws":
         import salt.transport.ws
 
-        transcls = salt.transport.ws.PublishServer
+        factory_map["publish_server"] = salt.transport.ws.PublishServer
+    elif ttype == "tcp_async":
+        import salt.transport.tcp_async
+
+        factory_map["publish_server"] = salt.transport.tcp_async.PublishServer
     elif ttype == "local":  # TODO:
         import salt.transport.local
 
-        transcls = salt.transport.local.LocalPubServerChannel
+        factory_map["publish_server"] = salt.transport.local.LocalPubServerChannel
     else:
         raise Exception(f"Transport type not found: {ttype}")
 
+    transcls = factory_map["publish_server"]
     if not transcls.support_ssl():
         if "ssl" in kwargs:
             log.warning("SSL is not supported for transport: %s", ttype)
@@ -164,6 +179,18 @@ def publish_client(
             port=port,
             path=path,
             ssl=ssl_opts,
+        )
+    elif ttype == "tcp_async":
+        import salt.transport.tcp_async
+
+        return salt.transport.tcp_async.PublishClient(
+            opts,
+            io_loop,
+            host=host,
+            port=port,
+            path=path,
+            ssl=ssl_opts,
+            **kwargs,
         )
     elif ttype == "ws":
         import salt.transport.ws
