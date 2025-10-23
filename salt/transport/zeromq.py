@@ -4,6 +4,7 @@ Zeromq transport classes
 
 import asyncio
 import asyncio.exceptions
+import contextlib
 import errno
 import hashlib
 import logging
@@ -575,7 +576,8 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 continue
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
-                    "Exception in request handler",
+                    "Exception in request handler: %r",
+                    exc,
                     exc_info_on_loglevel=logging.DEBUG,
                 )
                 continue
@@ -1036,8 +1038,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self.socket.connect(self.master_uri)
         self.send_recv_task = self.io_loop.create_task(self._send_recv(self.socket))
 
-    # TODO: timeout all in-flight sessions, or error
-    def close(self):
+    async def close_async(self):
         if self._closing:
             return
         self._closing = True
@@ -1049,8 +1050,40 @@ class RequestClient(salt.transport.base.RequestClient):
             self.context.term()
             self.context = None
         if self.send_recv_task is not None:
-            self.send_recv_task.cancel()
+            task = self.send_recv_task
             self.send_recv_task = None
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+
+        # Drain any pending futures in the queue
+        while not self._queue.empty():
+            try:
+                future, _ = self._queue.get_nowait()
+            except asyncio.QueueEmpty:  # pragma: no cover
+                break
+            if future is not None and not future.done():
+                future.set_exception(
+                    SaltReqTimeoutError("Request client closed before response")
+                )
+
+    # TODO: timeout all in-flight sessions, or error
+    def close(self):
+        loop = self.io_loop.asyncio_loop
+        try:
+            running_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            running_loop = None
+
+        if running_loop is loop and loop.is_running():
+            loop.create_task(self.close_async())
+            return
+
+        future = asyncio.run_coroutine_threadsafe(self.close_async(), loop)
+        try:
+            future.result()
+        except (asyncio.CancelledError, RuntimeError):  # pragma: no cover
+            pass
 
     async def send(self, load, timeout=60):
         """
@@ -1117,6 +1150,10 @@ class RequestClient(salt.transport.base.RequestClient):
             message = None
             try:
                 future, message = await asyncio.wait_for(self._queue.get(), 0.3)
+                if future is None and message is None:
+                    log.trace("Send/receive coroutine received close signal")
+                    send_recv_running = False
+                    break
             except asyncio.TimeoutError:
                 try:
                     await socket.poll(0, zmq.POLLOUT)

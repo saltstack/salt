@@ -19,9 +19,16 @@ from functools import partial
 from typing import Any
 
 try:  # Optional dependency during the transition away from tornado.
+    import tornado  # type: ignore
+    import tornado.concurrent  # type: ignore
     import tornado.ioloop  # type: ignore
+    from tornado.platform.asyncio import to_asyncio_future  # type: ignore
 except ImportError:  # pragma: no cover - tornado optional
     tornado = None  # type: ignore
+    to_asyncio_future = None  # type: ignore
+    _TORNADO_FUTURE_TYPES: tuple[type[Any], ...] = ()
+else:
+    _TORNADO_FUTURE_TYPES = (tornado.concurrent.Future,)  # type: ignore[attr-defined]
 
 log = logging.getLogger(__name__)
 
@@ -32,8 +39,94 @@ def _ensure_task(loop: asyncio.AbstractEventLoop, result: Any) -> Any:
     return it unchanged.
     """
 
-    if asyncio.iscoroutine(result) or isinstance(result, asyncio.Future):
-        return loop.create_task(result)
+    if asyncio.iscoroutine(result):
+        return asyncio.ensure_future(result, loop=loop)
+
+    if isinstance(result, asyncio.Future):
+        try:
+            future_loop = result.get_loop()
+        except AttributeError:
+            future_loop = loop
+        if future_loop is loop:
+            return asyncio.ensure_future(result, loop=loop)
+
+        proxy = loop.create_future()
+
+        def _relay(src_future: asyncio.Future):
+            if proxy.done():
+                return
+            if src_future.cancelled():
+                loop.call_soon_threadsafe(proxy.cancel)
+                return
+            exc = src_future.exception()
+            if exc is not None:
+                loop.call_soon_threadsafe(proxy.set_exception, exc)
+                return
+            loop.call_soon_threadsafe(proxy.set_result, src_future.result())
+
+        result.add_done_callback(_relay)
+        return proxy
+
+    if _TORNADO_FUTURE_TYPES and isinstance(
+        result, _TORNADO_FUTURE_TYPES  # type: ignore[arg-type]
+    ):
+        converted = None
+        if to_asyncio_future is not None:
+            try:
+                converted = to_asyncio_future(result)
+            except TypeError:
+                converted = None
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "Failed to convert future %r to asyncio future using tornado helper",
+                    result,
+                )
+        if converted is not None:
+            try:
+                return asyncio.ensure_future(converted, loop=loop)
+            except TypeError:
+                converted = None
+        if converted is None:
+            converted = loop.create_future()
+
+            def _relay(src_future):
+                if converted.done():
+                    return
+                if src_future.cancelled():
+                    loop.call_soon_threadsafe(converted.cancel)
+                    return
+                exc = src_future.exception()
+                if exc is not None:
+                    loop.call_soon_threadsafe(converted.set_exception, exc)
+                    return
+                loop.call_soon_threadsafe(converted.set_result, src_future.result())
+
+            result.add_done_callback(_relay)
+        return asyncio.ensure_future(converted, loop=loop)
+
+    if hasattr(result, "add_done_callback"):
+        try:
+            wrapped = asyncio.wrap_future(result, loop=loop)
+            return asyncio.ensure_future(wrapped, loop=loop)
+        except TypeError:
+            bridge = loop.create_future()
+
+            def _relay(src_future):
+                if bridge.done():
+                    return
+                if getattr(src_future, "cancelled", lambda: False)():
+                    loop.call_soon_threadsafe(bridge.cancel)
+                    return
+                exc = getattr(src_future, "exception", lambda: None)()
+                if exc is not None:
+                    loop.call_soon_threadsafe(bridge.set_exception, exc)
+                    return
+                result_value = getattr(src_future, "result", lambda: None)()
+                loop.call_soon_threadsafe(bridge.set_result, result_value)
+
+            result.add_done_callback(_relay)
+            return bridge
+
     return result
 
 
@@ -103,9 +196,23 @@ class AsyncLoopAdapter:
         handle.cancel()
 
     def add_future(self, future: Awaitable, callback: Callable[[asyncio.Future], Any]):
-        fut = asyncio.ensure_future(future, loop=self._loop)
-        fut.add_done_callback(lambda done: self._loop.call_soon(callback, done))
-        return fut
+        scheduled = _ensure_task(self._loop, future)
+        if isinstance(scheduled, asyncio.Future):
+            scheduled.add_done_callback(
+                lambda done: self._loop.call_soon(callback, done)
+            )
+            return scheduled
+        if hasattr(scheduled, "add_done_callback"):
+
+            def _relay(done):
+                try:
+                    loop = self._loop
+                    loop.call_soon_threadsafe(callback, done)
+                except RuntimeError:
+                    loop.call_soon(callback, done)
+
+            scheduled.add_done_callback(_relay)
+        return scheduled
 
     def create_task(self, coro: Awaitable):
         return self._loop.create_task(coro)
@@ -120,16 +227,17 @@ class AsyncLoopAdapter:
         **kwargs,
     ):
         result = func(*args, **kwargs)
-        if asyncio.iscoroutine(result) or isinstance(result, asyncio.Future):
+        scheduled = _ensure_task(self._loop, result)
+        if asyncio.iscoroutine(scheduled) or isinstance(scheduled, asyncio.Future):
             if self._loop.is_running():
                 raise RuntimeError("Cannot run_sync on a running event loop")
             policy = asyncio.get_event_loop_policy()
             try:
                 policy.set_event_loop(self._loop)
-                return self._loop.run_until_complete(result)
+                return self._loop.run_until_complete(scheduled)
             finally:
                 policy.set_event_loop(None)
-        return result
+        return scheduled
 
     def start(self):
         policy = asyncio.get_event_loop_policy()

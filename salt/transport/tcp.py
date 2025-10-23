@@ -1513,7 +1513,12 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         """
         if not self.pub_sock:
             self.connect()
-        self.pub_sock.send(payload)
+        log.debug("TCP PublishServer publishing payload (%d bytes)", len(payload))
+        result = self.pub_sock.send(payload)
+        if asyncio.iscoroutine(result) or isinstance(result, asyncio.Future):
+            await result
+        else:
+            log.debug("TCP PublishServer publish returned %r", result)
 
     def close(self):
         self._closing = True
@@ -1607,15 +1612,23 @@ class _TCPPubServerPublisher:
         self.stream = None
         self.unpacker = salt.utils.msgpack.Unpacker(raw=False)
         self._connecting_future = None
+        self._asyncio_loop = None
+        if hasattr(self.io_loop, "asyncio_loop"):
+            self._asyncio_loop = self.io_loop.asyncio_loop
 
     def connected(self):
         return self.stream is not None and not self.stream.closed()
 
-    def connect(self, callback=None, timeout=None):
+    def _legacy_connect(self, callback=None, timeout=None):
         """
         Connect to the IPC socket
         """
         if self._connecting_future is not None and not self._connecting_future.done():
+            log.debug(
+                "%s connect reuse pending future (closing=%s)",
+                self.__class__.__name__,
+                self._closing,
+            )
             future = self._connecting_future
         else:
             if self._connecting_future is not None:
@@ -1624,6 +1637,12 @@ class _TCPPubServerPublisher:
             future = tornado.concurrent.Future()
             self._connecting_future = future
             # self._connect(timeout)
+            log.debug(
+                "%s connect spawning _connect (closing=%s, timeout=%s)",
+                self.__class__.__name__,
+                self._closing,
+                timeout,
+            )
             self.io_loop.spawn_callback(self._connect, timeout)
 
         if callback is not None:
@@ -1635,6 +1654,34 @@ class _TCPPubServerPublisher:
             future.add_done_callback(handle_future)
 
         return future
+
+    async def connect(self, callback=None, timeout=None):
+        if self._asyncio_loop is None:
+            # Fall back to the legacy tornado.Future based implementation
+            future = self._legacy_connect(callback=callback, timeout=timeout)
+            loop = asyncio.get_running_loop()
+            await salt.utils.asynchronous._ensure_task(loop, future)
+            return True
+
+        if self._connecting_future is None or self._connecting_future.done():
+            self._connecting_future = self._asyncio_loop.create_future()
+
+            async def runner():
+                try:
+                    await self._connect(timeout=timeout)
+                except Exception as exc:  # pylint: disable=broad-except
+                    if not self._connecting_future.done():
+                        self._connecting_future.set_exception(exc)
+                else:
+                    if not self._connecting_future.done():
+                        self._connecting_future.set_result(True)
+
+            asyncio.ensure_future(runner(), loop=self._asyncio_loop)
+
+        result = await self._connecting_future
+        if callback is not None:
+            self.io_loop.spawn_callback(callback, result)
+        return result
 
     async def _connect(self, timeout=None):
         """
@@ -1652,9 +1699,19 @@ class _TCPPubServerPublisher:
         self.stream = None
         if timeout is not None:
             timeout_at = time.monotonic() + timeout
+            log.debug(
+                "%s will timeout connection at %.3f (in %.3fs)",
+                self.__class__.__name__,
+                timeout_at,
+                timeout,
+            )
 
         while True:
             if self._closing:
+                log.debug(
+                    "%s connect aborting due to closing flag",
+                    self.__class__.__name__,
+                )
                 break
 
             if self.stream is None:
@@ -1664,6 +1721,12 @@ class _TCPPubServerPublisher:
                 )
             try:
                 await self.stream.connect(sock_addr)
+                log.debug(
+                    "%s connected to %s (closing=%s)",
+                    self.__class__.__name__,
+                    sock_addr,
+                    self._closing,
+                )
                 self._connecting_future.set_result(True)
                 break
             except Exception as e:  # pylint: disable=broad-except
@@ -1674,6 +1737,12 @@ class _TCPPubServerPublisher:
                     if self.stream is not None:
                         self.stream.close()
                         self.stream = None
+                    log.debug(
+                        "%s connection to %s failed: %s",
+                        self.__class__.__name__,
+                        sock_addr,
+                        e,
+                    )
                     self._connecting_future.set_exception(e)
                     break
 
@@ -1728,7 +1797,14 @@ class _TCPPubServerPublisher:
         if not self.connected():
             await self.connect()
         pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
+        log.debug(
+            "%s sending %d bytes (closing=%s)",
+            self.__class__.__name__,
+            len(pack),
+            self._closing,
+        )
         await self.stream.write(pack)
+        log.debug("%s send complete", self.__class__.__name__)
 
 
 class RequestClient(salt.transport.base.RequestClient):

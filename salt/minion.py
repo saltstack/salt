@@ -3114,8 +3114,9 @@ class Minion(MinionBase):
         # Add an extra fallback in case a forked process leaks through
         multiprocessing.active_children()
         self.subprocess_list.cleanup()
-        if self.schedule:
-            self.schedule.cleanup_subprocesses()
+        schedule = getattr(self, "schedule", None)
+        if schedule:
+            schedule.cleanup_subprocesses()
 
     def _setup_core(self):
         """
@@ -3405,7 +3406,11 @@ class Minion(MinionBase):
             self.req_channel.close()
         if hasattr(self, "periodic_callbacks"):
             for cb in self.periodic_callbacks.values():
-                cb.stop()
+                if hasattr(cb, "stop"):
+                    cb.stop()
+                elif asyncio.isfuture(cb) or isinstance(cb, asyncio.Task):
+                    cb.cancel()
+            self.periodic_callbacks.clear()
 
     # pylint: disable=W1701
     def __del__(self):
