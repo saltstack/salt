@@ -1226,11 +1226,14 @@ class State:
         Alter the way a successful state run is determined
         """
         ret = {"result": False}
+        ret = {"result": False}
         for key in ("__sls__", "__id__", "name"):
             ret[key] = low_data.get(key)
         cmd_opts = {}
         if "shell" in self.opts["grains"]:
             cmd_opts["shell"] = self.opts["grains"].get("shell")
+        if isinstance(low_data["check_cmd"], str):
+            low_data["check_cmd"] = [low_data["check_cmd"]]
         for entry in low_data["check_cmd"]:
             cmd = self.functions["cmd.retcode"](
                 entry, ignore_retcode=True, python_shell=True, **cmd_opts
