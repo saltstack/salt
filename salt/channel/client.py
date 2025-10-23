@@ -4,6 +4,7 @@ Encapsulate the different transports available to Salt.
 This includes client side transport, for the ReqServer and the Publisher
 """
 
+import asyncio
 import logging
 import os
 import time
@@ -359,7 +360,23 @@ class AsyncReqChannel:
             return
         log.debug("Closing %s instance", self.__class__.__name__)
         self._closing = True
-        self.transport.close()
+        close_async = getattr(self.transport, "close_async", None)
+        if close_async is None:
+            self.transport.close()
+            return
+
+        adapter = getattr(self.transport, "io_loop", None)
+        loop = getattr(adapter, "asyncio_loop", None)
+
+        if loop is not None and loop.is_running():
+            loop.call_soon_threadsafe(lambda: loop.create_task(close_async()))
+            return
+
+        if adapter is not None:
+            adapter.run_sync(close_async)
+            return
+
+        asyncio.run(close_async())
 
     def __enter__(self):
         return self
@@ -372,7 +389,11 @@ class AsyncReqChannel:
         return self
 
     async def __aexit__(self, *_):
-        self.close()
+        close_async = getattr(self.transport, "close_async", None)
+        if close_async is not None:
+            await close_async()
+        else:
+            self.close()
 
 
 class AsyncPubChannel:

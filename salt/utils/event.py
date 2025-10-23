@@ -758,7 +758,7 @@ class SaltEvent:
         data["_stamp"] = datetime.datetime.utcnow().isoformat()
         event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
-        self.pusher.publish(msg)
+        self._schedule_async_result(self.pusher.publish(msg))
         if cb is not None:
             warn_until(
                 3008,
@@ -804,7 +804,7 @@ class SaltEvent:
                 )
                 raise
         else:
-            asyncio.create_task(self.pusher.publish(msg))
+            self._schedule_async_result(self.pusher.publish(msg))
         return True
 
     def fire_master(self, data, tag, timeout=1000):
@@ -822,6 +822,25 @@ class SaltEvent:
             self.close_pub()
         if self.pusher is not None:
             self.close_pull()
+
+    @staticmethod
+    def _schedule_async_result(result):
+        if result is None:
+            return
+        if asyncio.iscoroutine(result):
+            asyncio.create_task(result)
+            return
+        if isinstance(result, asyncio.Future):
+            try:
+                current_loop = asyncio.get_running_loop()
+            except RuntimeError:
+                return
+            try:
+                result_loop = result.get_loop()
+            except AttributeError:
+                result_loop = current_loop
+            if result_loop is current_loop:
+                asyncio.ensure_future(result)
 
     def _fire_ret_load_specific_fun(self, load, fun_index=0):
         """
@@ -923,9 +942,9 @@ class SaltEvent:
         if not self.cpub:
             self.connect_pub()
         # This will handle reconnects
-        loop_adapter = self._loop_adapter or salt.utils.asynchronous.get_io_loop(
-            tornado.ioloop.IOLoop.current()
-        )
+        loop_adapter = self._loop_adapter
+        if loop_adapter is None:
+            loop_adapter = salt.utils.asynchronous.get_io_loop()
         loop_adapter.spawn_callback(self.subscriber.on_recv, event_handler)
 
     # pylint: disable=W1701
