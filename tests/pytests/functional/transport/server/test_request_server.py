@@ -44,10 +44,16 @@ async def test_request_server(
     try:
 
         ret = await req_client.send({"req": "test"})
+        if transport == "tcp":
+            assert req_client.task is not None
         assert [reqmsg] == requests
         assert repmsg == ret
     finally:
         req_client.close()
+        if transport == "tcp":
+            # Ensure that issue 68277 is fixed
+            assert req_client.task is None or req_client.task.done()
+            assert req_client._closing
         req_server.close()
 
     # Yield to loop in order to allow background close methods to finish.
