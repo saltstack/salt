@@ -343,6 +343,11 @@ jobs:
           sudo rm -rf artifacts/salt*
           tree -a artifacts
 
+      - name: Combine Code Coverage
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
+        run: |
+          nox --force-color -e combine-coverage
+
       - name: Upload Code Coverage Test Run Artifacts
         if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         uses: actions/upload-artifact@v4
@@ -652,6 +657,11 @@ jobs:
           sudo rm -rf artifacts/salt*
           tree -a artifacts
 
+      - name: Combine Code Coverage
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
+        run: |
+          nox --force-color -e combine-coverage
+
       - name: Upload Code Coverage Test Run Artifacts
         if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         uses: actions/upload-artifact@v4
@@ -922,6 +932,11 @@ jobs:
           # from it showing in the tree command below
           rm -rf artifacts/salt*
           tree -a artifacts
+
+      - name: Combine Code Coverage
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
+        run: |
+          nox --force-color -e combine-coverage
 
       - name: Upload Code Coverage Test Run Artifacts
         if: ${{ !cancelled() && !inputs.skip-code-coverage }}
@@ -1215,6 +1230,11 @@ jobs:
           # Delete the salt onedir, we won't need it anymore and it will prevent
           # from it showing in the tree command below
           rm -rf artifacts/salt*
+
+      - name: Combine Code Coverage
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
+        run: |
+          nox --force-color -e combine-coverage
 
       - name: Upload Code Coverage Test Run Artifacts
         if: ${{ !cancelled() && !inputs.skip-code-coverage }}
