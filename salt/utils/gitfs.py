@@ -23,8 +23,6 @@ import time
 import weakref
 from datetime import datetime
 
-import tornado.ioloop
-
 import salt.fileserver
 import salt.utils.cache
 import salt.utils.configparser
@@ -43,6 +41,7 @@ import salt.utils.versions
 from salt.config import DEFAULT_HASH_TYPE
 from salt.config import DEFAULT_MASTER_OPTS as _DEFAULT_MASTER_OPTS
 from salt.exceptions import FileserverConfigError, GitLockError, get_error_message
+from salt.utils.asynchronous import get_io_loop
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
 from salt.utils.platform import get_machine_identifier as _get_machine_identifier
@@ -3241,8 +3240,9 @@ class GitFS(GitBase):
         used to ensure that we garbage collect instances for threads which have
         exited.
         """
-        # No need to get the ioloop reference if we're not initializing remotes
-        io_loop = tornado.ioloop.IOLoop.current() if init_remotes else None
+        # No need to obtain the loop reference if we're not initializing remotes
+        adapter = get_io_loop() if init_remotes else None
+        io_loop = adapter.asyncio_loop if adapter is not None else None
         if not init_remotes or io_loop not in cls.instance_map:
             # We only evaluate the second condition in this if statement if
             # we're initializing remotes, so we won't get here unless io_loop

@@ -5,6 +5,7 @@ and the like, but also useful for basic HTTP testing.
 .. versionadded:: 2015.5.0
 """
 
+import asyncio
 import email.message
 import gzip
 import http.client
@@ -43,7 +44,6 @@ import salt.utils.xmlutil as xml
 import salt.utils.yaml
 import salt.version
 from salt.template import compile_template
-from salt.utils.asynchronous import SyncWrapper
 from salt.utils.decorators.jinja import jinja_filter
 
 try:
@@ -600,11 +600,14 @@ def query(
         )
 
         AsyncHTTPClient.configure(None)
-        client_argspec = salt.utils.args.get_function_argspec(
+        simple_client_argspec = salt.utils.args.get_function_argspec(
             tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize
         )
+        client_init_argspec = salt.utils.args.get_function_argspec(
+            AsyncHTTPClient.__init__
+        )
 
-        supports_max_body_size = "max_body_size" in client_argspec.args
+        supports_max_body_size = "max_body_size" in simple_client_argspec.args
 
         req_kwargs.update(
             {
@@ -629,13 +632,19 @@ def query(
         # contain strings are str types.
         req_kwargs = salt.utils.data.decode(req_kwargs, to_str=True)
 
+        client_kwargs = {}
+        if supports_max_body_size:
+            client_kwargs["max_body_size"] = max_body
+
+        async def _run_fetch():
+            client = AsyncHTTPClient(**client_kwargs)
+            try:
+                return await client.fetch(url_full, **req_kwargs)
+            finally:
+                client.close()
+
         try:
-            download_client = SyncWrapper(
-                AsyncHTTPClient,
-                kwargs={"max_body_size": max_body} if supports_max_body_size else {},
-                async_methods=["fetch"],
-            )
-            result = download_client.fetch(url_full, **req_kwargs)
+            result = asyncio.run(_run_fetch())
         except tornado.httpclient.HTTPError as exc:
             ret["status"] = exc.code
             ret["error"] = str(exc)

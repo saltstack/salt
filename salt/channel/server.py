@@ -13,8 +13,6 @@ import os
 import pathlib
 import time
 
-import tornado.ioloop
-
 import salt.cache
 import salt.crypt
 import salt.master
@@ -26,6 +24,7 @@ import salt.utils.minions
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import SaltDeserializationError, UnsupportedAlgorithm
+from salt.utils.asynchronous import get_io_loop
 from salt.utils.cache import CacheCli
 
 log = logging.getLogger(__name__)
@@ -115,6 +114,7 @@ class ReqServerChannel:
                 self.opts["pub_server_niceness"],
             )
             os.nice(self.opts["pub_server_niceness"])
+        io_loop = get_io_loop(io_loop)
         self.io_loop = io_loop
         self.crypticle = salt.crypt.Crypticle(self.opts, self.aes_key)
         # other things needed for _auth
@@ -1069,7 +1069,7 @@ class MasterPubServerChannel:
     def __init__(self, opts, transport, presence_events=False):
         self.opts = opts
         self.transport = transport
-        self.io_loop = tornado.ioloop.IOLoop.current()
+        self.io_loop = get_io_loop()
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.peer_keys = {}
 
@@ -1136,7 +1136,7 @@ class MasterPubServerChannel:
                 self.opts["event_publisher_niceness"],
             )
             os.nice(self.opts["event_publisher_niceness"])
-        self.io_loop = tornado.ioloop.IOLoop.current()
+        self.io_loop = get_io_loop()
         tcp_master_pool_port = self.opts["cluster_pool_port"]
         self.pushers = []
         self.auth_errors = {}
@@ -1287,7 +1287,7 @@ class MasterPubServerChannel:
             try:
                 task.result()
             # XXX This error is transport specific and should be something else
-            except tornado.iostream.StreamClosedError:
+            except (ConnectionError, OSError):
                 if task.get_name() == self.opts["id"]:
                     log.error("Unable to forward event to local ipc bus")
                 else:

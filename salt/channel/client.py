@@ -4,13 +4,11 @@ Encapsulate the different transports available to Salt.
 This includes client side transport, for the ReqServer and the Publisher
 """
 
+import asyncio
 import logging
 import os
 import time
 import uuid
-
-import tornado.gen
-import tornado.ioloop
 
 import salt.crypt
 import salt.exceptions
@@ -21,7 +19,7 @@ import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.verify
 import salt.utils.versions
-from salt.utils.asynchronous import SyncWrapper
+from salt.utils.asynchronous import SyncWrapper, get_io_loop
 
 log = logging.getLogger(__name__)
 
@@ -105,9 +103,9 @@ class AsyncReqChannel:
 
         if "master_uri" not in opts and "master_uri" in kwargs:
             opts["master_uri"] = kwargs["master_uri"]
-        io_loop = kwargs.get("io_loop")
-        if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
+        adapter = get_io_loop(kwargs.get("io_loop"))
+        io_loop = adapter
+        raw_loop = adapter.asyncio_loop
 
         timeout = opts.get("request_channel_timeout", REQUEST_CHANNEL_TIMEOUT)
         tries = opts.get("request_channel_tries", REQUEST_CHANNEL_TRIES)
@@ -115,7 +113,7 @@ class AsyncReqChannel:
         crypt = kwargs.get("crypt", "aes")
         if crypt != "clear":
             # we don't need to worry about auth as a kwarg, since its a singleton
-            auth = salt.crypt.AsyncAuth(opts, io_loop=io_loop)
+            auth = salt.crypt.AsyncAuth(opts, io_loop=raw_loop)
         else:
             auth = None
 
@@ -362,7 +360,23 @@ class AsyncReqChannel:
             return
         log.debug("Closing %s instance", self.__class__.__name__)
         self._closing = True
-        self.transport.close()
+        close_async = getattr(self.transport, "close_async", None)
+        if close_async is None:
+            self.transport.close()
+            return
+
+        adapter = getattr(self.transport, "io_loop", None)
+        loop = getattr(adapter, "asyncio_loop", None)
+
+        if loop is not None and loop.is_running():
+            loop.create_task(close_async())
+            return
+
+        if adapter is not None:
+            adapter.run_sync(close_async)
+            return
+
+        asyncio.run(close_async())
 
     def __enter__(self):
         return self
@@ -375,7 +389,11 @@ class AsyncReqChannel:
         return self
 
     async def __aexit__(self, *_):
-        self.close()
+        close_async = getattr(self.transport, "close_async", None)
+        if close_async is not None:
+            await close_async()
+        else:
+            self.close()
 
 
 class AsyncPubChannel:
@@ -410,19 +428,18 @@ class AsyncPubChannel:
             opts["detect_mode"] = True
             log.info("Transport is set to detect; using %s", ttype)
 
-        io_loop = kwargs.get("io_loop")
-        if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
-
-        auth = salt.crypt.AsyncAuth(opts, io_loop=io_loop)
+        adapter = get_io_loop(kwargs.get("io_loop"))
+        io_loop = adapter
+        raw_loop = adapter.asyncio_loop
+        auth = salt.crypt.AsyncAuth(opts, io_loop=raw_loop)
         host = opts.get("master_ip", "127.0.0.1")
         port = int(opts.get("publish_port", 4506))
-        transport = salt.transport.publish_client(opts, io_loop, host=host, port=port)
+        transport = salt.transport.publish_client(opts, raw_loop, host=host, port=port)
         return cls(opts, transport, auth, io_loop)
 
     def __init__(self, opts, transport, auth, io_loop=None):
         self.opts = opts
-        self.io_loop = io_loop
+        self.io_loop = get_io_loop(io_loop)
         self.auth = auth
         try:
             # This loads or generates the minion's public key.
@@ -629,7 +646,7 @@ class AsyncPubChannel:
         return self
 
     def __exit__(self, *args):
-        self.io_loop.spawn_callback(self.close)
+        self.io_loop.add_callback(self.close)
 
     async def __aenter__(self):
         return self
