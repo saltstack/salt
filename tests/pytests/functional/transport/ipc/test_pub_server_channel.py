@@ -129,6 +129,29 @@ def test_issue_36469_tcp(salt_master, salt_minion, transport):
             executor.submit(_send_large, opts, 2)
             executor.submit(_send_small, opts, 3)
             executor.submit(_send_large, opts, 4)
+        # Allow the collector to drain all publishes before the context exits.
+        # On slower TCP builders the publish queue can take a while to flush,
+        # and exiting early drops in-flight results once the stop marker is processed.
+        deadline = time.time() + 60
+        previous = -1
+        while time.time() < deadline:
+            current = len(server_channel.collector.results)
+            if current == send_num:
+                break
+            if current != previous:
+                log.debug(
+                    "Collector waiting for publishes: received=%s expected=%s",
+                    current,
+                    send_num,
+                )
+                previous = current
+            time.sleep(0.5)
+        else:
+            log.warning(
+                "Collector timed out waiting for publishes: received=%s expected=%s",
+                len(server_channel.collector.results),
+                send_num,
+            )
         expect.extend([f"{a}-s{b}" for a in range(10) for b in (1, 3)])
         expect.extend([f"{a}-l{b}" for a in range(10) for b in (2, 4)])
     results = server_channel.collector.results
