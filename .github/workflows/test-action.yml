@@ -352,7 +352,7 @@ jobs:
         if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
+          name: coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
           path: |
             artifacts/coverage/
           include-hidden-files: true
@@ -666,7 +666,7 @@ jobs:
         if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         uses: actions/upload-artifact@v4
         with:
-          name: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
+          name: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
           path: |
             artifacts/coverage/
           include-hidden-files: true
@@ -942,7 +942,7 @@ jobs:
         if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         uses: actions/upload-artifact@v4
         with:
-          name: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}
+          name: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
           path: |
             artifacts/coverage/
           include-hidden-files: true
@@ -1240,7 +1240,7 @@ jobs:
         if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         uses: actions/upload-artifact@v4
         with:
-          name: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}
+          name: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
           path: |
             artifacts/coverage/
           include-hidden-files: true
