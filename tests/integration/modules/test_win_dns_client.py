@@ -1,3 +1,5 @@
+import time
+
 import pytest
 
 from tests.support.case import ModuleCase
@@ -28,13 +30,34 @@ class WinDNSTest(ModuleCase):
             self.run_function("win_dns_client.add_dns", [dns, interface], index=42)
         )
 
-        srvs = self.run_function("win_dns_client.get_dns_servers", interface=interface)
-        self.assertIn(dns, srvs)
+        self._wait_for_dns_state(interface, dns, present=True)
 
         # remove dns server
         self.assertTrue(
             self.run_function("win_dns_client.rm_dns", [dns], interface=interface)
         )
 
-        srvs = self.run_function("win_dns_client.get_dns_servers", interface=interface)
-        self.assertNotIn(dns, srvs)
+        self._wait_for_dns_state(interface, dns, present=False)
+
+    def _wait_for_dns_state(self, interface, dns, *, present, timeout=30, interval=1):
+        """
+        Poll the DNS servers list until the expected state is observed.
+        """
+        end_time = time.time() + timeout
+        last_servers = None
+        while time.time() < end_time:
+            servers = self.run_function(
+                "win_dns_client.get_dns_servers", interface=interface
+            )
+            last_servers = servers
+            if present and dns in servers:
+                return
+            if not present and dns not in servers:
+                return
+            time.sleep(interval)
+
+        expectation = "present" if present else "absent"
+        self.fail(
+            f"DNS server {dns} expected to be {expectation} in {interface}. "
+            f"Last observed servers: {last_servers}"
+        )
