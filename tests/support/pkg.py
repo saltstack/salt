@@ -84,7 +84,7 @@ class SaltPkgInstall:
     pkgs: list[str] = attr.ib(factory=list)
     file_ext: bool = attr.ib(default=None)
     relenv: bool = attr.ib(default=True)
-    installer_timeout: int = attr.ib(default=None)
+    installer_timeout: int = attr.ib(default=attr.NOTHING)
 
     @proc.default
     def _default_proc(self):
