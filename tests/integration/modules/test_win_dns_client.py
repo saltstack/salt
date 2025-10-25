@@ -19,15 +19,27 @@ class WinDNSTest(ModuleCase):
         Test add and removing a dns server
         """
         # Get a list of interfaces on the system
-        interfaces = self.run_function("network.interfaces_names")
-        if not interfaces.count:
+        interfaces = self.run_function("network.interfaces")
+        candidates = [
+            name
+            for name, data in interfaces.items()
+            if data
+            and data.get("up", True)
+            and not name.lower().startswith("Loopback".lower())
+        ]
+        if not candidates:
             pytest.skip("This test requires a network interface")
 
-        interface = interfaces[0]
+        interface = candidates[0]
         dns = "8.8.8.8"
+
+        original_servers = self.run_function(
+            "win_dns_client.get_dns_servers", interface=interface
+        )
+        index = len(original_servers) + 1 if original_servers else 1
         # add dns server
         self.assertTrue(
-            self.run_function("win_dns_client.add_dns", [dns, interface], index=42)
+            self.run_function("win_dns_client.add_dns", [dns, interface], index=index)
         )
 
         self._wait_for_dns_state(interface, dns, present=True)
