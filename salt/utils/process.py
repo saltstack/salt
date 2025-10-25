@@ -1064,6 +1064,8 @@ class SignalHandlingProcess(Process):
         return instance
 
     def _setup_signals(self):
+        if threading.current_thread() is not threading.main_thread():
+            return
         signal.signal(signal.SIGINT, self._handle_signals)
         signal.signal(signal.SIGTERM, self._handle_signals)
 

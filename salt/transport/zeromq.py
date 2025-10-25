@@ -1038,52 +1038,95 @@ class RequestClient(salt.transport.base.RequestClient):
         self.socket.connect(self.master_uri)
         self.send_recv_task = self.io_loop.create_task(self._send_recv(self.socket))
 
-    async def close_async(self):
+    async def close_async(self, socket=None, context=None, task=None):
         if self._closing:
             return
         self._closing = True
-        if self.socket:
-            self.socket.close()
+
+        if socket is None:
+            socket = self.socket
             self.socket = None
-        if self.context and self.context.closed is False:
-            # This hangs if closing the stream causes an import error
-            self.context.term()
+        else:
+            self.socket = None
+
+        if context is None:
+            context = self.context
             self.context = None
-        if self.send_recv_task is not None:
+        else:
+            self.context = None
+
+        if task is None:
             task = self.send_recv_task
             self.send_recv_task = None
-            task.cancel()
+        else:
+            self.send_recv_task = None
+
+        if socket is not None:
+            socket.close()
+
+        if context is not None and getattr(context, "closed", False) is False:
+            context.term()
+
+        if task is not None:
+            try:
+                self._queue.put_nowait((None, None))
+            except asyncio.QueueFull:
+                pass
             with contextlib.suppress(asyncio.CancelledError):
                 await task
 
-        # Drain any pending futures in the queue
         while not self._queue.empty():
             try:
                 future, _ = self._queue.get_nowait()
-            except asyncio.QueueEmpty:  # pragma: no cover
+            except asyncio.QueueEmpty:
                 break
             if future is not None and not future.done():
                 future.set_exception(
                     SaltReqTimeoutError("Request client closed before response")
                 )
 
-    # TODO: timeout all in-flight sessions, or error
     def close(self):
-        loop = self.io_loop.asyncio_loop
+        socket = self.socket
+        context = self.context
+        task = self.send_recv_task
+        self.socket = None
+        self.context = None
+        self.send_recv_task = None
+
+        loop = getattr(self.io_loop, "asyncio_loop", None)
         try:
             running_loop = asyncio.get_running_loop()
         except RuntimeError:
             running_loop = None
 
-        if running_loop is loop and loop.is_running():
-            loop.create_task(self.close_async())
+        if loop is not None and running_loop is loop and loop.is_running():
+            loop.create_task(self.close_async(socket, context, task))
             return
 
-        future = asyncio.run_coroutine_threadsafe(self.close_async(), loop)
-        try:
-            future.result()
-        except (asyncio.CancelledError, RuntimeError):  # pragma: no cover
-            pass
+        adapter = getattr(self, "io_loop", None)
+        if adapter is not None:
+            run_sync = getattr(adapter, "run_sync", None)
+            if callable(run_sync):
+                try:
+                    run_sync(lambda: self.close_async(socket, context, task))
+                    return
+                except RuntimeError:
+                    pass
+
+        if loop is not None:
+            if loop.is_running():
+                future = asyncio.run_coroutine_threadsafe(
+                    self.close_async(socket, context, task), loop
+                )
+                try:
+                    future.result()
+                except (asyncio.CancelledError, RuntimeError):
+                    pass
+                return
+            loop.run_until_complete(self.close_async(socket, context, task))
+            return
+
+        asyncio.run(self.close_async(socket, context, task))
 
     async def send(self, load, timeout=60):
         """

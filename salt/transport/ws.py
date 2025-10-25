@@ -530,6 +530,9 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self.opts = opts
         self.site = None
         self.ssl = self.opts.get("ssl", None)
+        self._socket = None
+        self._run = None
+        self._started = None
 
     def pre_fork(self, process_manager):
         """
@@ -606,7 +609,8 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 log.error("ws connection closed with exception %s", ws.exception())
 
     def close(self):
-        self._run.clear()
+        if self._run is not None:
+            self._run.clear()
         if self._socket is not None:
             self._socket.shutdown(socket.SHUT_RDWR)
             self._socket.close()

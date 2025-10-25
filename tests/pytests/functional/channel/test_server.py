@@ -60,6 +60,7 @@ def transport_ids(value):
     params=[
         "ws",
         "tcp",
+        "tcpv2",
         "zeromq",
     ],
     ids=transport_ids,
