@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 TRANSPORTS = (
     "zeromq",
     "tcp",
-    "tcp_async",
+    "tcpv2",
     "ws",
 )
 
@@ -36,10 +36,10 @@ def request_server(opts, **kwargs):
         import salt.transport.tcp
 
         return salt.transport.tcp.RequestServer(opts)
-    elif ttype == "tcp_async":
-        import salt.transport.tcp_async
+    elif ttype == "tcpv2":
+        import salt.transport.tcpv2
 
-        return salt.transport.tcp_async.RequestServer(opts)
+        return salt.transport.tcpv2.RequestServer(opts)
     elif ttype == "ws":
         import salt.transport.ws
 
@@ -70,10 +70,10 @@ def request_client(opts, io_loop):
         return salt.transport.tcp.RequestClient(
             opts, resolver=resolver, io_loop=io_loop
         )
-    elif ttype == "tcp_async":
-        import salt.transport.tcp_async
+    elif ttype == "tcpv2":
+        import salt.transport.tcpv2
 
-        return salt.transport.tcp_async.RequestClient(opts, io_loop=io_loop)
+        return salt.transport.tcpv2.RequestClient(opts, io_loop=io_loop)
     elif ttype == "ws":
         import salt.transport.ws
 
@@ -122,10 +122,10 @@ def publish_server(opts, **kwargs):
         import salt.transport.ws
 
         factory_map["publish_server"] = salt.transport.ws.PublishServer
-    elif ttype == "tcp_async":
-        import salt.transport.tcp_async
+    elif ttype == "tcpv2":
+        import salt.transport.tcpv2
 
-        factory_map["publish_server"] = salt.transport.tcp_async.PublishServer
+        factory_map["publish_server"] = salt.transport.tcpv2.PublishServer
     elif ttype == "local":  # TODO:
         import salt.transport.local
 
@@ -180,10 +180,10 @@ def publish_client(
             path=path,
             ssl=ssl_opts,
         )
-    elif ttype == "tcp_async":
-        import salt.transport.tcp_async
+    elif ttype == "tcpv2":
+        import salt.transport.tcpv2
 
-        return salt.transport.tcp_async.PublishClient(
+        return salt.transport.tcpv2.PublishClient(
             opts,
             io_loop,
             host=host,

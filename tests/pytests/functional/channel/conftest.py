@@ -32,7 +32,7 @@ def transport_ids(value):
     return f"Transport({value})"
 
 
-@pytest.fixture(params=("zeromq", "tcp"), ids=transport_ids)
+@pytest.fixture(params=("zeromq", "tcp", "ws", "tcpv2"), ids=transport_ids)
 def transport(request):
     return request.param
 

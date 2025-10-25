@@ -117,7 +117,7 @@ class AsyncReqChannel:
         else:
             auth = None
 
-        transport = salt.transport.request_client(opts, io_loop=raw_loop)
+        transport = salt.transport.request_client(opts, io_loop=io_loop)
         return cls(opts, transport, auth, tries=tries, timeout=timeout)
 
     def __init__(
@@ -369,7 +369,7 @@ class AsyncReqChannel:
         loop = getattr(adapter, "asyncio_loop", None)
 
         if loop is not None and loop.is_running():
-            loop.call_soon_threadsafe(lambda: loop.create_task(close_async()))
+            loop.create_task(close_async())
             return
 
         if adapter is not None:
