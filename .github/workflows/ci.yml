@@ -542,6 +542,7 @@ jobs:
       PIP_INDEX_URL: https://pypi.org/simple
     needs:
       - prepare-workflow
+      - test
       - build-ci-deps
     steps:
       - uses: actions/checkout@v4
@@ -563,22 +564,12 @@ jobs:
           python3 -m pip install 'nox==2022.8.7'
 
 
-
-      - name: Merge All Code Coverage Test Run Artifacts
-        continue-on-error: true
-        uses: actions/upload-artifact/merge@v4
-        with:
-          name: all-testrun-coverage-artifacts
-          pattern: all-testrun-coverage-artifacts-*
-          separate-directories: false
-          delete-merged: true
-
       - name: Get coverage reports
         id: get-coverage-reports
         uses: actions/download-artifact@v4
         with:
           path: artifacts/coverage/
-          pattern: all-testrun-coverage-artifacts*
+          pattern: coverage*
           merge-multiple: true
 
       - name: Display structure of downloaded files
@@ -616,10 +607,6 @@ jobs:
       - name: Report Salt Code Coverage
         run: |
           nox --force-color -e coverage-report -- salt
-
-      - name: Create Salt Code Coverage HTML Report
-        run: |
-          nox --force-color -e create-html-coverage-report -- salt
 
       - name: Create Salt Code Coverage HTML Report
         run: |
