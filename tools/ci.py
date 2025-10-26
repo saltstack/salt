@@ -773,6 +773,9 @@ def workflow_config(
     if "test:coverage" in labels:
         ctx.info("Code coverage enabled.")
         config["skip_code_coverage"] = False
+    elif event_name != "pull_request":
+        ctx.info("Code coverage enabled. (not a pr).")
+        config["skip_code_coverage"] = False
     else:
         ctx.info("Skipping code coverage.")
 
