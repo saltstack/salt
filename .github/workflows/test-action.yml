@@ -349,9 +349,9 @@ jobs:
           nox --force-color -e combine-coverage
 
       - name: Rename Coverage Artifact
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         run: |
           mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
-
 
       - name: Upload Code Coverage Test Run Artifacts
         if: ${{ !cancelled() && !inputs.skip-code-coverage }}
@@ -668,6 +668,7 @@ jobs:
           nox --force-color -e combine-coverage
 
       - name: Rename Coverage Artifact
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         run: |
           mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
 
@@ -948,6 +949,7 @@ jobs:
           nox --force-color -e combine-coverage
 
       - name: Rename Coverage Artifact
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         run: |
           mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
 
@@ -1251,6 +1253,7 @@ jobs:
           nox --force-color -e combine-coverage
 
       - name: Rename Coverage Artifact
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         run: |
           mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
 
