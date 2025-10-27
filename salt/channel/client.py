@@ -623,6 +623,13 @@ class AsyncPubChannel:
                         "Payload decryption failed even after re-authenticating with master %s",
                         self.opts["master_ip"],
                     )
+                    return None
+            if isinstance(payload["load"], (bytes, str)):
+                log.error(
+                    "Discarding load from master %s because it could not be decrypted",
+                    self.opts["master_ip"],
+                )
+                return None
         return payload
 
     def __enter__(self):

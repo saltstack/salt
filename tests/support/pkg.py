@@ -84,10 +84,17 @@ class SaltPkgInstall:
     pkgs: list[str] = attr.ib(factory=list)
     file_ext: bool = attr.ib(default=None)
     relenv: bool = attr.ib(default=True)
+    installer_timeout: int = attr.ib(default=attr.NOTHING)
 
     @proc.default
     def _default_proc(self):
         return Subprocess(timeout=240)
+
+    @installer_timeout.default
+    def _default_installer_timeout(self):
+        if platform.is_windows():
+            return 600
+        return 240
 
     @distro_id.default
     def _default_distro_id(self):
@@ -258,6 +265,8 @@ class SaltPkgInstall:
         self.relenv = packaging.version.parse(self.version) >= packaging.version.parse(
             "3006.0"
         )
+        if self.installer_timeout:
+            self.proc.timeout = self.installer_timeout
 
         file_ext_re = "rpm|deb"
         if platform.is_darwin():
@@ -445,10 +454,16 @@ class SaltPkgInstall:
                 self.root = self.install_dir.parent
                 self.bin_dir = self.install_dir
                 self.ssm_bin = self.install_dir / "ssm.exe"
+                self._ensure_windows_services_stopped()
             if pkg.endswith("exe"):
                 # Install the package
                 log.info("Installing: %s", str(pkg))
-                ret = self.proc.run(str(pkg), "/start-minion=0", "/S")
+                ret = self.proc.run(
+                    str(pkg),
+                    "/start-minion=0",
+                    "/S",
+                    _timeout=self.installer_timeout,
+                )
                 self._check_retcode(ret)
             elif pkg.endswith("msi"):
                 # Install the package
@@ -559,6 +574,53 @@ class SaltPkgInstall:
             assert "/saltstack/salt/run" not in ret.stdout
             log.info(ret)
             self._check_retcode(ret)
+
+    def _ensure_windows_services_stopped(self):
+        """
+        Stop Salt Windows services prior to running the installer and wait for
+        their processes to exit to avoid upgrade timeouts.
+        """
+        if not platform.is_windows():
+            return
+        if not getattr(self, "ssm_bin", None):
+            return
+        if not pathlib.Path(self.ssm_bin).exists():
+            log.debug("Windows SSM binary not found at %s", self.ssm_bin)
+            return
+
+        for service in ("salt-minion", "salt-master", "salt-syndic"):
+            stop = self.proc.run(
+                str(self.ssm_bin), "stop", service, "confirm", _timeout=120
+            )
+            # 1062: The service has not been started.
+            if stop.returncode not in (0, 1062):
+                log.debug(
+                    "Stopping service %s returned %s",
+                    service,
+                    stop.returncode,
+                )
+
+        deadline = time.time() + 120
+        running = set()
+        tracked = {name.lower() for name in ("salt-minion.exe", "salt-master.exe")}
+        while time.time() < deadline:
+            running = {
+                (proc.info["name"] or "").lower()
+                for proc in psutil.process_iter(["name"])
+                if (proc.info["name"] or "").lower() in tracked
+            }
+            if not running:
+                break
+            log.debug(
+                "Waiting for Salt processes to exit before upgrade: %s",
+                sorted(running),
+            )
+            time.sleep(2)
+        else:
+            log.warning(
+                "Salt processes still running before upgrade: %s",
+                sorted(running),
+            )
 
     def _install_ssm_service(self, service="minion"):
         """
