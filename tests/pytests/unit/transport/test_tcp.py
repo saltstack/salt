@@ -1,6 +1,8 @@
+import gc
 import functools
 import os
 import socket
+import weakref
 
 import attr
 import pytest
@@ -609,6 +611,128 @@ async def test_salt_message_server(master_opts):
 
     assert received
     assert [msg] == received
+
+
+async def test_salt_message_server_recreates_unpacker_on_disconnect(monkeypatch):
+
+    class TrackingUnpacker:
+        created = 0
+        living = weakref.WeakSet()
+
+        def __init__(self, *args, **kwargs):
+            TrackingUnpacker.created += 1
+            TrackingUnpacker.living.add(self)
+
+        def feed(self, data):  # pylint: disable=unused-argument
+            return None
+
+        def __iter__(self):
+            return iter(())
+
+    monkeypatch.setattr(salt.utils.msgpack, "Unpacker", TrackingUnpacker)
+
+    def handler(stream, body, header):  # pylint: disable=unused-argument
+        return None
+
+    server = salt.transport.tcp.SaltMessageServer(handler)
+
+    class Stream:
+        def __init__(self, reads):
+            self.reads = reads
+
+        def read_bytes(self, *args, **kwargs):
+            if self.reads:
+                self.reads -= 1
+                future = salt.ext.tornado.concurrent.Future()
+                future.set_result(b"x")
+                return future
+            raise salt.ext.tornado.iostream.StreamClosedError()
+
+        def close(self):
+            return None
+
+    stream = Stream(reads=1)
+    await server.handle_stream(stream, "client-1")
+    await salt.ext.tornado.gen.sleep(0.01)
+    gc.collect()
+
+    assert TrackingUnpacker.created == 2  # initial + reset on disconnect
+    assert not TrackingUnpacker.living
+
+    stream = Stream(reads=1)
+    await server.handle_stream(stream, "client-2")
+    await salt.ext.tornado.gen.sleep(0.01)
+    gc.collect()
+
+    # second connection: initial + reset again
+    assert TrackingUnpacker.created == 4
+    assert not TrackingUnpacker.living
+
+
+async def test_salt_message_server_resets_unpacker_on_general_exception(monkeypatch):
+    """
+    Ensure that a general exception from the stream causes the server to reset its
+    unpacker, preventing the previous buffer from leaking.
+    """
+
+    class TrackingUnpacker:
+        living = weakref.WeakSet()
+        created = 0
+
+        def __init__(self, *args, **kwargs):
+            self.max_buffer_size = kwargs.get("max_buffer_size")
+            TrackingUnpacker.created += 1
+            TrackingUnpacker.living.add(self)
+
+        def feed(self, data):
+            return None
+
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            raise StopIteration
+
+    monkeypatch.setattr(salt.utils.msgpack, "Unpacker", TrackingUnpacker)
+
+    def handler(stream, body, header):  # pylint: disable=unused-argument
+
+        return None
+
+    server = salt.transport.tcp.SaltMessageServer(handler)
+    chunk = b"x" * 4096
+
+    class FailingStream:
+        def __init__(self):
+            self.calls = 0
+            self.closed = False
+
+        def read_bytes(self, *args, **kwargs):
+            self.calls += 1
+            if self.calls == 1:
+                future = salt.ext.tornado.concurrent.Future()
+                future.set_result(chunk)
+                return future
+            raise RuntimeError("boom")
+
+        def close(self):
+            self.closed = True
+
+    try:
+        stream = FailingStream()
+        await server.handle_stream(stream, "failing-client")
+        await salt.ext.tornado.gen.sleep(0.01)
+        gc.collect()
+        assert stream.closed
+        # initial creation + reset on exception
+        assert TrackingUnpacker.created == 2
+        assert not TrackingUnpacker.living
+    finally:
+        server.close()
+
+    gc.collect()
+
+    assert TrackingUnpacker.created == 2
 
 
 async def test_salt_message_server_exception(master_opts, io_loop):
