@@ -1,6 +1,7 @@
 import pytest
 
 import salt.channel.client
+import salt.crypt
 import salt.exceptions
 
 
@@ -50,3 +51,31 @@ def test_async_pub_channel_key_overwritten_by_bad_data(minion_opts, tmp_path):
     )
     with pytest.raises(salt.exceptions.SaltClientError):
         salt.channel.client.AsyncPubChannel.factory(minion_opts, crypt="aes")
+
+
+@pytest.mark.asyncio
+async def test_async_pub_channel_decode_payload_drops_undecrypted_payload():
+    """
+    When a payload cannot be decrypted even after re-authenticating the master it
+    should be discarded instead of surfacing bytes to the minion handler.
+    """
+
+    class DummyCrypticle:
+        def loads(self, payload):  # pylint: disable=unused-argument
+            raise salt.crypt.AuthenticationError()
+
+    class DummyAuth:
+        def __init__(self):
+            self.crypticle = DummyCrypticle()
+            self.authenticated = True
+
+        async def authenticate(self):
+            raise salt.crypt.AuthenticationError()
+
+    channel = object.__new__(salt.channel.client.AsyncPubChannel)
+    channel.opts = {"master_ip": "127.0.0.1"}
+    channel.auth = DummyAuth()
+
+    payload = {"enc": "aes", "load": b"ciphertext"}
+
+    assert await channel._decode_payload(payload) is None
