@@ -350,7 +350,7 @@ jobs:
 
       - name: Rename Coverage Artifact
         run: |
-          mv artifacts/coverage/.coverage artifacts/coverage/.coverage-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
+          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
 
 
       - name: Upload Code Coverage Test Run Artifacts
@@ -359,7 +359,7 @@ jobs:
         with:
           name: coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
           path: |
-            artifacts/coverage/.coverage-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
+            artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
           include-hidden-files: true
 
       - name: Upload JUnit XML Test Run Artifacts
@@ -669,7 +669,7 @@ jobs:
 
       - name: Rename Coverage Artifact
         run: |
-          mv artifacts/coverage/.coverage artifacts/coverage/.coverage-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
+          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
 
       - name: Upload Code Coverage Test Run Artifacts
         if: ${{ !cancelled() && !inputs.skip-code-coverage }}
@@ -677,7 +677,7 @@ jobs:
         with:
           name: coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
           path: |
-            artifacts/coverage/.coverage-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
+            artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
           include-hidden-files: true
 
       - name: Upload JUnit XML Test Run Artifacts
@@ -949,7 +949,7 @@ jobs:
 
       - name: Rename Coverage Artifact
         run: |
-          mv artifacts/coverage/.coverage artifacts/coverage/.coverage-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
+          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
 
       - name: Upload Code Coverage Test Run Artifacts
         if: ${{ !cancelled() && !inputs.skip-code-coverage }}
@@ -957,7 +957,7 @@ jobs:
         with:
           name: coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
           path: |
-            artifacts/coverage/.coverage-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
+            artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
 
           include-hidden-files: true
 
@@ -1252,7 +1252,7 @@ jobs:
 
       - name: Rename Coverage Artifact
         run: |
-          mv artifacts/coverage/.coverage artifacts/coverage/.coverage-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
+          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
 
 
       - name: Upload Code Coverage Test Run Artifacts
@@ -1261,7 +1261,7 @@ jobs:
         with:
           name: coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
           path: |
-            artifacts/coverage/.coverage-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
+            artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
 
           include-hidden-files: true
 
