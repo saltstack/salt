@@ -13,6 +13,7 @@ import os
 import signal
 import sys
 import threading
+from functools import partial
 from random import randint
 
 import zmq.asyncio
@@ -45,6 +46,37 @@ except ImportError:
 
 
 log = logging.getLogger(__name__)
+
+
+async def _await_task_completion(task):
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+
+
+def _drain_task(loop_adapter, loop, task, waiters):
+    if task is None or task.done():
+        return
+    if loop is None:
+        return
+    if loop.is_running():
+        waiters.append(
+            asyncio.run_coroutine_threadsafe(_await_task_completion(task), loop)
+        )
+        return
+    if loop_adapter is not None:
+        try:
+            loop_adapter.run_sync(partial(_await_task_completion, task))
+        except RuntimeError:
+            pass
+        return
+    policy = asyncio.get_event_loop_policy()
+    try:
+        policy.set_event_loop(loop)
+        loop.run_until_complete(_await_task_completion(task))
+    except RuntimeError:
+        pass
+    finally:
+        policy.set_event_loop(None)
 
 
 def _get_master_uri(master_ip, master_port, source_ip=None, source_port=None):
@@ -244,8 +276,15 @@ class PublishClient(salt.transport.base.PublishClient):
             self.context.term()
         callbacks = self.callbacks
         self.callbacks = {}
+        adapter = getattr(self, "io_loop", None)
+        loop = getattr(adapter, "asyncio_loop", None)
+        waiters = []
         for callback, (running, task) in callbacks.items():
             running.clear()
+            _drain_task(adapter, loop, task, waiters)
+        for waiter in waiters:
+            with contextlib.suppress(Exception):
+                waiter.result()
         return
 
     # pylint: enable=W1701
@@ -415,6 +454,8 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self._w_monitor = None
         self.tasks = set()
         self._event = asyncio.Event()
+        self.loop_adapter = None
+        self._callback_task = None
 
     def zmq_device(self):
         """
@@ -480,6 +521,14 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         log.info("MWorkerQueue under PID %s is closing", os.getpid())
         self._closing = True
         self._event.set()
+        adapter = self.loop_adapter
+        loop = None
+        if adapter is not None:
+            loop = adapter.asyncio_loop
+        waiters = []
+        if self._callback_task is not None:
+            _drain_task(adapter, loop, self._callback_task, waiters)
+            self._callback_task = None
         if getattr(self, "_monitor", None) is not None:
             self._monitor.stop()
             self._monitor = None
@@ -497,10 +546,11 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         if hasattr(self, "context") and self.context.closed is False:
             self.context.term()
         for task in list(self.tasks):
-            try:
-                task.cancel()
-            except RuntimeError:
-                log.error("IOLoop closed when trying to cancel task")
+            self.tasks.discard(task)
+            _drain_task(adapter, loop, task, waiters)
+        for waiter in waiters:
+            with contextlib.suppress(Exception):
+                waiter.result()
 
     def pre_fork(self, process_manager):
         """
@@ -561,8 +611,8 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             task.add_done_callback(self.tasks.discard)
             self.tasks.add(task)
 
-        loop_adapter = get_io_loop(io_loop)
-        callback_task = loop_adapter.create_task(callback())
+        self.loop_adapter = get_io_loop(io_loop)
+        self._callback_task = self.loop_adapter.create_task(callback())
 
     async def request_handler(self):
         while not self._event.is_set():
@@ -650,6 +700,7 @@ class ZeroMQSocketMonitor:
         self._monitor_socket = self._socket.get_monitor_socket()
         self._monitor_task = None
         self._running = asyncio.Event()
+        self._running_task = None
 
     def start_io_loop(self, io_loop):
         log.trace("Event monitor start!")
@@ -709,9 +760,21 @@ class ZeroMQSocketMonitor:
             self._socket.disable_monitor()
         except zmq.Error:
             pass
+        waiters = []
+        if self._running_task is not None:
+            loop = None
+            try:
+                loop = self._running_task.get_loop()
+            except RuntimeError:
+                loop = None
+            _drain_task(None, loop, self._running_task, waiters)
+            self._running_task = None
         self._socket = None
         self._running.clear()
         self._monitor_socket = None
+        for waiter in waiters:
+            with contextlib.suppress(Exception):
+                waiter.result()
         log.trace("Event monitor done!")
 
 
@@ -1094,39 +1157,60 @@ class RequestClient(salt.transport.base.RequestClient):
         self.send_recv_task = None
 
         loop = getattr(self.io_loop, "asyncio_loop", None)
+        if loop is None and isinstance(self.io_loop, asyncio.AbstractEventLoop):
+            loop = self.io_loop
+
+        if loop is None:
+            try:
+                running_loop = asyncio.get_running_loop()
+            except RuntimeError:
+                running_loop = None
+            if running_loop is not None and running_loop.is_running():
+                running_loop.create_task(self.close_async(socket, context, task))
+                return
+            asyncio.run(self.close_async(socket, context, task))
+            return
+
+        if loop.is_running():
+            try:
+                running_loop = asyncio.get_running_loop()
+            except RuntimeError:
+                running_loop = None
+
+            if running_loop is loop:
+                loop.create_task(self.close_async(socket, context, task))
+                return
+
+            future = asyncio.run_coroutine_threadsafe(
+                self.close_async(socket, context, task), loop
+            )
+            try:
+                future.result()
+            except (asyncio.CancelledError, RuntimeError):
+                pass
+            return
+
         try:
             running_loop = asyncio.get_running_loop()
         except RuntimeError:
             running_loop = None
 
-        if loop is not None and running_loop is loop and loop.is_running():
-            loop.create_task(self.close_async(socket, context, task))
+        if running_loop is not None and running_loop is not loop:
+
+            def _runner():
+                policy = asyncio.get_event_loop_policy()
+                try:
+                    policy.set_event_loop(loop)
+                    loop.run_until_complete(self.close_async(socket, context, task))
+                finally:
+                    policy.set_event_loop(None)
+
+            thread = threading.Thread(target=_runner, name="salt-zeromq-close")
+            thread.start()
+            thread.join()
             return
 
-        adapter = getattr(self, "io_loop", None)
-        if adapter is not None:
-            run_sync = getattr(adapter, "run_sync", None)
-            if callable(run_sync):
-                try:
-                    run_sync(lambda: self.close_async(socket, context, task))
-                    return
-                except RuntimeError:
-                    pass
-
-        if loop is not None:
-            if loop.is_running():
-                future = asyncio.run_coroutine_threadsafe(
-                    self.close_async(socket, context, task), loop
-                )
-                try:
-                    future.result()
-                except (asyncio.CancelledError, RuntimeError):
-                    pass
-                return
-            loop.run_until_complete(self.close_async(socket, context, task))
-            return
-
-        asyncio.run(self.close_async(socket, context, task))
+        loop.run_until_complete(self.close_async(socket, context, task))
 
     async def send(self, load, timeout=60):
         """

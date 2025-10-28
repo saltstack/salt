@@ -366,17 +366,59 @@ class AsyncReqChannel:
             return
 
         adapter = getattr(self.transport, "io_loop", None)
-        loop = getattr(adapter, "asyncio_loop", None)
+        run_sync = getattr(adapter, "run_sync", None)
+        if callable(run_sync):
+            try:
+                run_sync(close_async)
+                return
+            except RuntimeError:
+                pass
 
-        if loop is not None and loop.is_running():
-            loop.create_task(close_async())
+        loop = None
+        if isinstance(adapter, asyncio.AbstractEventLoop):
+            loop = adapter
+        elif adapter is not None and hasattr(adapter, "asyncio_loop"):
+            loop = adapter.asyncio_loop
+
+        if loop is None:
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+        if loop is None:
+            asyncio.run(close_async())
             return
 
-        if adapter is not None:
-            adapter.run_sync(close_async)
+        if loop.is_running():
+            try:
+                running_loop = asyncio.get_running_loop()
+            except RuntimeError:
+                running_loop = None
+
+            if running_loop is loop:
+                loop.create_task(close_async())
+                return
+
+            future = asyncio.run_coroutine_threadsafe(close_async(), loop)
+            try:
+                future.result()
+            except (asyncio.CancelledError, RuntimeError):
+                pass
             return
 
-        asyncio.run(close_async())
+        try:
+            loop.run_until_complete(close_async())
+            return
+        except RuntimeError as exc:
+            if "another loop is running" not in str(exc):
+                raise
+
+        future = asyncio.run_coroutine_threadsafe(close_async(), loop)
+        try:
+            future.result()
+        except (asyncio.CancelledError, RuntimeError):
+            pass
 
     def __enter__(self):
         return self

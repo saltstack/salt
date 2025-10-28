@@ -8,6 +8,7 @@ Wire protocol: "len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})"
 import asyncio
 import asyncio.exceptions
 import errno
+import inspect
 import logging
 import multiprocessing
 import queue
@@ -18,6 +19,7 @@ import time
 import urllib
 import uuid
 import warnings
+from contextlib import suppress
 
 import tornado
 import tornado.concurrent
@@ -47,6 +49,29 @@ else:
 
 
 log = logging.getLogger(__name__)
+
+
+async def _await_task(task):
+    with suppress(asyncio.CancelledError):
+        await task
+
+
+def _drain_task(loop, task):
+    if task is None or task.done() or loop is None:
+        return
+    if loop.is_running():
+        future = asyncio.run_coroutine_threadsafe(_await_task(task), loop)
+        with suppress(Exception):
+            future.result()
+        return
+    policy = asyncio.get_event_loop_policy()
+    try:
+        policy.set_event_loop(loop)
+        loop.run_until_complete(_await_task(task))
+    except RuntimeError:
+        pass
+    finally:
+        policy.set_event_loop(None)
 
 
 class ClosingError(Exception):
@@ -249,6 +274,7 @@ class PublishClient(salt.transport.base.PublishClient):
         self.source_ip = self.opts.get("source_ip")
         self.source_port = self.opts.get("source_publish_port")
         self.on_recv_task = None
+        self._on_recv_loop = None
         if self.host is None and self.port is None:
             if self.path is None:
                 raise RuntimeError("A host and port or a path must be provided")
@@ -265,8 +291,19 @@ class PublishClient(salt.transport.base.PublishClient):
             return
         self._closing = True
         if self.on_recv_task:
-            self.on_recv_task.cancel()
+            task = self.on_recv_task
             self.on_recv_task = None
+            loop = None
+            try:
+                loop = task.get_loop()
+            except RuntimeError:
+                loop = self._on_recv_loop
+            if not task.done():
+                try:
+                    task.cancel()
+                except RuntimeError:
+                    pass
+            _drain_task(loop, task)
         if self._stream is not None:
             self._stream.close()
         self._stream = None
@@ -400,7 +437,9 @@ class PublishClient(salt.transport.base.PublishClient):
                             self._stream = None
                             stream.close()
                             if self.disconnect_callback:
-                                self.disconnect_callback()
+                                result = self.disconnect_callback()
+                                if inspect.isawaitable(result):
+                                    await result
                             await self.connect()
                             return
                         self.unpacker.feed(byts)
@@ -430,7 +469,9 @@ class PublishClient(salt.transport.base.PublishClient):
                         self._stream = None
                         stream.close()
                         if self.disconnect_callback:
-                            self.disconnect_callback()
+                            result = self.disconnect_callback()
+                            if inspect.isawaitable(result):
+                                await result
                         await self.connect()
                         log.debug("Re-connected - continue")
                         continue
@@ -470,7 +511,9 @@ class PublishClient(salt.transport.base.PublishClient):
         if callback is None:
             self.on_recv_task = None
         else:
-            self.on_recv_task = asyncio.create_task(self.on_recv_handler(callback))
+            loop = asyncio.get_running_loop()
+            self._on_recv_loop = loop
+            self.on_recv_task = loop.create_task(self.on_recv_handler(callback))
 
     def __enter__(self):
         return self
@@ -864,7 +907,9 @@ class MessageClient:
                 if not self._stream_return_running:
                     return_task = self.io_loop.create_task(self._stream_return())
                 if self.connect_callback:
-                    self.connect_callback(True)
+                    result = self.connect_callback(True)
+                    if inspect.isawaitable(result):
+                        await result
 
     async def _stream_return(self):
         self._stream_return_running = True
@@ -903,7 +948,9 @@ class MessageClient:
                 if self._closing or self._closed:
                     return
                 if self.disconnect_callback:
-                    self.disconnect_callback()
+                    result = self.disconnect_callback()
+                    if inspect.isawaitable(result):
+                        await result
                 stream = self._stream
                 self._stream = None
                 if stream:
@@ -927,7 +974,9 @@ class MessageClient:
                 if self._closing or self._closed:
                     return
                 if self.disconnect_callback:
-                    self.disconnect_callback()
+                    result = self.disconnect_callback()
+                    if inspect.isawaitable(result):
+                        await result
                 stream = self._stream
                 self._stream = None
                 if stream:
@@ -1336,6 +1385,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         pull_path_perms=0o600,
         pub_path_perms=0o600,
         started=None,
+        io_loop=None,
         ssl=None,
     ):
         self.opts = opts
@@ -1355,7 +1405,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         else:
             self.started = started
         self.pub_server = None
-        self.io_loop = None
+        self.io_loop = io_loop
+        self._owns_io_loop = io_loop is None
         self._closing = False
 
     @classmethod
@@ -1394,7 +1445,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         """
         Bind to the interface specified in the configuration file
         """
-        io_loop = tornado.ioloop.IOLoop()
+        io_loop = self.io_loop or tornado.ioloop.IOLoop()
+        self.io_loop = io_loop
         io_loop.add_callback(
             self.publisher,
             publish_payload,
@@ -1512,11 +1564,37 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         Publish "load" to minions
         """
         if not self.pub_sock:
-            self.connect()
+            try:
+                self.connect()
+            except tornado.iostream.StreamClosedError:
+                log.debug(
+                    "TCP PublishServer failed to connect to pull socket; stream closed"
+                )
+                return
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "TCP PublishServer failed to connect to pull socket", exc_info=True
+                )
+                return
         log.debug("TCP PublishServer publishing payload (%d bytes)", len(payload))
-        result = self.pub_sock.send(payload)
+        try:
+            result = self.pub_sock.send(payload)
+        except tornado.iostream.StreamClosedError:
+            log.debug("TCP PublishServer failed sending payload; stream already closed")
+            return
+        except Exception:  # pylint: disable=broad-except
+            log.exception("TCP PublishServer failed sending payload", exc_info=True)
+            return
         if asyncio.iscoroutine(result) or isinstance(result, asyncio.Future):
-            await result
+            try:
+                await result
+            except tornado.iostream.StreamClosedError:
+                log.debug("TCP PublishServer async send failed; stream already closed")
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "TCP PublishServer async send raised unexpected exception",
+                    exc_info=True,
+                )
         else:
             log.debug("TCP PublishServer publish returned %r", result)
 
@@ -1532,8 +1610,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.pull_sock.close()
             self.pull_sock = None
         if self.io_loop:
-            self.io_loop.stop()
-            self.io_loop.close(all_fds=True)
+            if self._owns_io_loop:
+                self.io_loop.stop()
+                self.io_loop.close(all_fds=True)
             self.io_loop = None
 
     # pylint: disable=W1701
@@ -1878,7 +1957,9 @@ class RequestClient(salt.transport.base.RequestClient):
                 if not self._stream_return_running:
                     self.task = asyncio.create_task(self._stream_return())
                 if self.connect_callback is not None:
-                    self.connect_callback()
+                    result = self.connect_callback()
+                    if inspect.isawaitable(result):
+                        await result
 
     async def _stream_return(self):
         self._stream_return_running = True
@@ -1916,7 +1997,9 @@ class RequestClient(salt.transport.base.RequestClient):
                 if self._closing or self._closed:
                     return
                 if self.disconnect_callback is not None:
-                    self.disconnect_callback()
+                    result = self.disconnect_callback()
+                    if inspect.isawaitable(result):
+                        await result
                 stream = self._stream
                 self._stream = None
                 if stream:
@@ -1940,7 +2023,9 @@ class RequestClient(salt.transport.base.RequestClient):
                 if self._closing or self._closed:
                     return
                 if self.disconnect_callback is not None:
-                    self.disconnect_callback()
+                    result = self.disconnect_callback()
+                    if inspect.isawaitable(result):
+                        await result
                 stream = self._stream
                 self._stream = None
                 if stream:

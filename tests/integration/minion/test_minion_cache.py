@@ -33,9 +33,19 @@ class BasePillarTest(ModuleCase):
             "file_ignore_glob": [],
             "pillar": pillar,
         }
+
+        async def fake_eval_master(self, opts, **kwargs):
+            class DummyChannel:
+                def close(self):
+                    pass
+
+            return (opts.get("master"), DummyChannel())
+
         with patch("salt.loader.grains", return_value={}), patch(
             "salt.minion.SMinion.gen_modules"
-        ), patch("tornado.ioloop.IOLoop.current"):
+        ), patch("tornado.ioloop.IOLoop.current"), patch(
+            "salt.minion.SMinion.eval_master", new=fake_eval_master
+        ):
             minion = salt.minion.SMinion(opts)
             self.assertTrue("pillar" in os.listdir(tempdir))
             pillar_cache = os.path.join(tempdir, "pillar")

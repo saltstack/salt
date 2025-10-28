@@ -1,8 +1,5 @@
 import asyncio
 
-import tornado.gen
-import tornado.ioloop
-
 import salt.utils.asynchronous as asynchronous
 
 
@@ -15,10 +12,9 @@ class HelperA:
     def __init__(self, io_loop=None):
         pass
 
-    @tornado.gen.coroutine
-    def sleep(self):
-        yield tornado.gen.sleep(0.1)
-        raise tornado.gen.Return(True)
+    async def sleep(self):
+        await asyncio.sleep(0.1)
+        return True
 
 
 class HelperB:
@@ -32,23 +28,28 @@ class HelperB:
             a = asynchronous.SyncWrapper(HelperA)
         self.a = a
 
-    @tornado.gen.coroutine
-    def sleep(self):
-        yield tornado.gen.sleep(0.1)
+    async def sleep(self):
+        await asyncio.sleep(0.1)
         self.a.sleep()
-        raise tornado.gen.Return(False)
+        return False
 
 
 def test_helpers():
     """
     Test that the helper classes do what we expect within a regular asynchronous env
     """
-    asyncio_loop = asyncio.new_event_loop()
-    io_loop = tornado.ioloop.IOLoop(asyncio_loop=asyncio_loop, make_current=False)
-    ret = io_loop.run_sync(lambda: HelperA().sleep())
+    loop = asyncio.new_event_loop()
+    try:
+        ret = loop.run_until_complete(HelperA().sleep())
+    finally:
+        loop.close()
     assert ret is True
 
-    ret = io_loop.run_sync(lambda: HelperB().sleep())
+    loop = asyncio.new_event_loop()
+    try:
+        ret = loop.run_until_complete(HelperB().sleep())
+    finally:
+        loop.close()
     assert ret is False
 
 

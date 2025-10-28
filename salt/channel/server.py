@@ -13,6 +13,8 @@ import os
 import pathlib
 import time
 
+import tornado.ioloop
+
 import salt.cache
 import salt.crypt
 import salt.master
@@ -872,6 +874,11 @@ class PubServerChannel:
         self.opts = opts
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
         self.transport = transport
+        log.warning(
+            "PubServerChannel using transport class %s.%s",
+            transport.__class__.__module__,
+            transport.__class__.__name__,
+        )
         self.aes_funcs = salt.master.AESFuncs(self.opts)
         self.present = {}
         self.presence_events = presence_events
@@ -1055,6 +1062,13 @@ class PubServerChannel:
             repr(load)[:40],
         )
         payload = salt.payload.dumps(load)
+        log.warning(
+            "PubServerChannel delegating publish to %s.%s (method=%s.%s)",
+            self.transport.__class__.__module__,
+            self.transport.__class__.__name__,
+            self.transport.publish.__module__,
+            self.transport.publish.__qualname__,
+        )
         await self.transport.publish(payload)
 
 
@@ -1069,7 +1083,9 @@ class MasterPubServerChannel:
     def __init__(self, opts, transport, presence_events=False):
         self.opts = opts
         self.transport = transport
-        self.io_loop = get_io_loop()
+        self.loop_adapter = get_io_loop()
+        self.io_loop = self.loop_adapter
+        self._tornado_loop = None
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.peer_keys = {}
 
@@ -1136,30 +1152,43 @@ class MasterPubServerChannel:
                 self.opts["event_publisher_niceness"],
             )
             os.nice(self.opts["event_publisher_niceness"])
-        self.io_loop = get_io_loop()
+        self.loop_adapter = get_io_loop()
+        self.io_loop = self.loop_adapter
+        asyncio_loop = getattr(self.loop_adapter, "asyncio_loop", None)
+        if asyncio_loop is not None:
+            self._tornado_loop = tornado.ioloop.IOLoop(
+                asyncio_loop=asyncio_loop, make_current=False
+            )
+        else:
+            self._tornado_loop = tornado.ioloop.IOLoop.current()
         tcp_master_pool_port = self.opts["cluster_pool_port"]
         self.pushers = []
         self.auth_errors = {}
+        if self._tornado_loop is not None:
+            self._tornado_loop.make_current()
         for peer in self.opts.get("cluster_peers", []):
             pusher = salt.transport.tcp.PublishServer(
                 self.opts,
                 pull_host=peer,
                 pull_port=tcp_master_pool_port,
             )
+            pusher.io_loop = self._tornado_loop
             self.auth_errors[peer] = collections.deque()
             self.pushers.append(pusher)
         if self.opts.get("cluster_id", None):
             self.pool_puller = salt.transport.tcp.TCPPuller(
                 host=self.opts["interface"],
                 port=tcp_master_pool_port,
-                io_loop=self.io_loop,
+                io_loop=self._tornado_loop,
                 payload_handler=self.handle_pool_publish,
             )
             self.pool_puller.start()
+        if hasattr(self.transport, "io_loop"):
+            self.transport.io_loop = self._tornado_loop
         self.io_loop.add_callback(
             self.transport.publisher,
             self.publish_payload,
-            io_loop=self.io_loop,
+            io_loop=self._tornado_loop,
         )
         # run forever
         try:
@@ -1168,6 +1197,8 @@ class MasterPubServerChannel:
             pass
         finally:
             self.close()
+            if self._tornado_loop is not None:
+                self._tornado_loop.clear_current()
 
     async def handle_pool_publish(self, payload):
         """
@@ -1287,12 +1318,18 @@ class MasterPubServerChannel:
             try:
                 task.result()
             # XXX This error is transport specific and should be something else
-            except (ConnectionError, OSError):
+            except (ConnectionError, OSError) as exc:
                 if task.get_name() == self.opts["id"]:
-                    log.error("Unable to forward event to local ipc bus")
+                    log.error(
+                        "Unable to forward event to local ipc bus: %s",
+                        exc,
+                        exc_info=log.isEnabledFor(logging.DEBUG),
+                    )
                 else:
                     log.warning(
-                        "Unable to forward event to cluster peer %s", task.get_name()
+                        "Unable to forward event to cluster peer %s (%s)",
+                        task.get_name(),
+                        exc,
                     )
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(

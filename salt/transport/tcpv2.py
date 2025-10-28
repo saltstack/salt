@@ -9,9 +9,12 @@ interfaces so it can be plugged into Salt without changing higher level code.
 import asyncio
 import inspect
 import logging
+import multiprocessing
+import os
 import urllib.parse
 from contextlib import suppress
 
+import salt.payload
 import salt.transport.base
 import salt.transport.frame
 import salt.utils.msgpack
@@ -71,6 +74,14 @@ class RequestClient(salt.transport.base.RequestClient):
     """
 
     ttype = "tcpv2"
+    async_methods = [
+        "connect",
+        "send",
+        "close_async",
+    ]
+    close_methods = [
+        "close",
+    ]
 
     def __init__(self, opts, io_loop=None, **kwargs):
         super().__init__(opts, io_loop, **kwargs)
@@ -177,18 +188,27 @@ class RequestClient(salt.transport.base.RequestClient):
                 raise SaltException("Connection closed while waiting for reply")
             self._unpacker.feed(chunk)
             for msg in self._unpacker:
-                return salt.transport.frame.decode_embedded_strs(msg)
+                msg = salt.transport.frame.decode_embedded_strs(msg)
+                if isinstance(msg, dict) and "body" in msg:
+                    return msg["body"]
+                return msg
 
 
 class RequestServer(salt.transport.base.DaemonizedRequestServer):
-    """
-    Asyncio TCP request server.
-    """
+    """Asyncio TCP request/reply server mirroring the tornado implementation."""
 
     ttype = "tcpv2"
+    backlog = 5
+    async_methods = [
+        "close",
+    ]
+    close_methods = [
+        "close",
+    ]
 
     def __init__(self, opts):
         self.opts = opts
+        self.loop_adapter = None
         self.io_loop = None
         self._server = None
         self._closing = False
@@ -212,28 +232,35 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
 
     def close(self):
         self._closing = True
-        if self._server is not None:
+        if self._server is not None and self.io_loop is not None:
             self._server.close()
             self.io_loop.create_task(self._server.wait_closed())
             self._server = None
 
     def post_fork(self, message_handler, io_loop):
         self.message_handler = message_handler
-        self.io_loop = get_io_loop(io_loop)
-        host = self.opts["interface"]
-        port = int(self.opts["ret_port"])
+        self.loop_adapter = get_io_loop(io_loop)
+        self.io_loop = self.loop_adapter
 
         async def start_server():
+            host = self.opts["interface"]
+            port = int(self.opts["ret_port"])
             self._server = await asyncio.start_server(
                 self._handle_client,
                 host,
                 port,
                 reuse_port=self.opts.get("reuse_port", False),
+                backlog=self.backlog,
             )
 
-        self.io_loop.create_task(start_server())
+        loop = self.io_loop.asyncio_loop
+        if loop.is_running():
+            future = asyncio.run_coroutine_threadsafe(start_server(), loop)
+            future.result()
+        else:
+            self.io_loop.run_sync(start_server)
 
-    async def _handle_client(self, reader, writer):
+    async def _handle_client(self, reader, writer, is_worker=False):
         stream = AsyncStreamWrapper(reader, writer, self.io_loop)
         unpacker = salt.utils.msgpack.Unpacker()
         peername = writer.get_extra_info("peername")
@@ -251,13 +278,8 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                     framed_msg = salt.transport.frame.decode_embedded_strs(framed_msg)
                     header = framed_msg.get("head", {})
                     body = framed_msg.get("body")
-                    reply = await self.message_handler(stream, body, header)
-                    if reply is not None:
-                        framed = salt.transport.frame.frame_msg(
-                            reply,
-                            header=header,
-                        )
-                        stream.write(framed)
+                    log.debug("tcpv2 request server handling message header=%s", header)
+                    await self.handle_message(stream, body, header)
         except Exception:  # pylint: disable=broad-except
             log.exception("Unhandled exception in tcpv2 client handler")
         finally:
@@ -265,9 +287,27 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 await stream.close()
             log.debug("TCP async client disconnected from %s", peername)
 
+    async def handle_message(self, stream, payload, header=None):
+        payload = self.decode_payload(payload)
+        reply = await self.message_handler(payload)
+        if reply is not None:
+            framed = salt.transport.frame.frame_msg(reply, header=header)
+            await stream.write(framed)
+
+    def decode_payload(self, payload):
+        return payload
+
 
 class PublishClient(salt.transport.base.PublishClient):
     ttype = "tcpv2"
+    async_methods = [
+        "connect",
+        "send",
+        "close_async",
+    ]
+    close_methods = [
+        "close",
+    ]
 
     def __init__(self, opts, io_loop, **kwargs):  # pylint: disable=W0231
         super().__init__(opts, io_loop, **kwargs)
@@ -393,11 +433,35 @@ class PublishClient(salt.transport.base.PublishClient):
             )
 
     def _decode_messages(self, message):
-        if isinstance(message, dict):
-            return message.get("body", message)
-        body = salt.transport.frame.decode_embedded_strs(message)
-        if isinstance(body, dict) and "body" in body:
-            return body["body"]
+        decoded_message = salt.transport.frame.decode_embedded_strs(message)
+        if isinstance(decoded_message, dict):
+            body = decoded_message.get("body", decoded_message)
+            if isinstance(body, dict):
+                body = salt.transport.frame.decode_embedded_strs(body)
+        else:
+            body = decoded_message
+            if isinstance(body, dict) and "body" in body:
+                body = body["body"]
+        if isinstance(body, (bytes, bytearray)):
+            try:
+                body = salt.payload.loads(body)
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "tcpv2 publish client failed to decode payload from bytes"
+                )
+        else:
+            log.debug(
+                "tcpv2 publish client received non-bytes body type=%s", type(body)
+            )
+        if isinstance(body, dict):
+            log.debug("tcpv2 publish client decoded dict keys=%s", list(body.keys()))
+        else:
+            snippet = body[:60] if isinstance(body, (bytes, bytearray)) else body
+            log.debug(
+                "tcpv2 publish client decoded payload type=%s value=%r",
+                type(body),
+                snippet,
+            )
         return body
 
     async def send_id(self, tok, force_auth):
@@ -412,7 +476,7 @@ class PublishClient(salt.transport.base.PublishClient):
         self.writer.write(payload)
         await self.writer.drain()
 
-    async def _async_close(self):
+    async def close_async(self):
         self._closing = True
         if self.on_recv_task:
             self.on_recv_task.cancel()
@@ -428,11 +492,26 @@ class PublishClient(salt.transport.base.PublishClient):
                 await result
 
     def close(self):
-        self.loop_adapter.spawn_callback(self._async_close)
+        if self.loop_adapter is None:
+            asyncio.run(self.close_async())
+            return
+        try:
+            self.loop_adapter.run_sync(self.close_async)
+        except RuntimeError:
+            self.loop_adapter.create_task(self.close_async())
 
 
 class PublishServer(salt.transport.base.DaemonizedPublishServer):
     ttype = "tcpv2"
+    backlog = 128
+    async_methods = [
+        "publisher",
+        "publish_payload",
+        "publish",
+    ]
+    close_methods = [
+        "close",
+    ]
 
     def __init__(
         self,
@@ -448,6 +527,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         started=None,
     ):
         self.opts = opts
+        log.debug(
+            "Initializing tcpv2 PublishServer for transport=%s",
+            opts.get("transport"),
+        )
         self.pub_host = pub_host
         self.pub_port = pub_port
         self.pub_path = pub_path
@@ -456,7 +539,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pull_path = pull_path
         self.pull_path_perms = pull_path_perms
         self.pub_path_perms = pub_path_perms
-        self.started = started
+        if started is None:
+            self.started = multiprocessing.Event()
+        else:
+            self.started = started
         self.io_loop = None
         self.loop_adapter = None
         self._server = None
@@ -464,6 +550,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self._reader_tasks = set()
         self.presence_callback = None
         self.remove_presence_callback = None
+        self._pull_server = None
+        self._pull_tasks = set()
 
     @classmethod
     def support_ssl(cls):
@@ -488,28 +576,100 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.remove_presence_callback = remove_presence_callback
 
         async def start_server():
-            if self.pub_path:
-                self._server = await asyncio.start_unix_server(
-                    lambda r, w: self._accept_client(r, w, publish_payload),
-                    path=self.pub_path,
-                )
-            else:
-                host = self.pub_host or "127.0.0.1"
-                port = int(self.pub_port or self.opts.get("publish_port", 4506))
-
-                self._server = await asyncio.start_server(
-                    lambda r, w: self._accept_client(r, w, publish_payload),
-                    host,
-                    port,
-                )
-            if self.started is not None:
-                self.started.set()
+            await self._ensure_server(publish_payload)
 
         self.io_loop.create_task(start_server())
         try:
             self.io_loop.start()
         finally:
             self.close()
+
+    async def publisher(
+        self,
+        publish_payload,
+        presence_callback=None,
+        remove_presence_callback=None,
+        io_loop=None,
+    ):
+        self.presence_callback = presence_callback
+        self.remove_presence_callback = remove_presence_callback
+        self.loop_adapter = get_io_loop(io_loop)
+        self.io_loop = self.loop_adapter
+        await self._ensure_server(publish_payload)
+
+    async def _ensure_server(self, publish_payload):
+        if self._server is not None:
+            return
+        if self.pub_path:
+            if os.path.exists(self.pub_path):
+                os.unlink(self.pub_path)
+            self._server = await asyncio.start_unix_server(
+                lambda r, w: self._accept_client(r, w, publish_payload),
+                path=self.pub_path,
+            )
+            os.chmod(self.pub_path, self.pub_path_perms)
+            log.info("tcpv2 publish server listening on unix %s", self.pub_path)
+        else:
+            host = self.pub_host or "127.0.0.1"
+            port = int(self.pub_port or self.opts.get("publish_port", 4506))
+            self._server = await asyncio.start_server(
+                lambda r, w: self._accept_client(r, w, publish_payload),
+                host,
+                port,
+            )
+            log.info("tcpv2 publish server listening on %s:%s", host, port)
+        await self._ensure_pull_server(publish_payload)
+        if self.started is not None:
+            self.started.set()
+
+    async def _ensure_pull_server(self, publish_payload):
+        if self._pull_server is not None:
+            return
+
+        async def _handle(reader, writer):
+            addr = writer.get_extra_info("peername")
+            log.info("tcpv2 publish pull connection from %s", addr)
+            unpacker = salt.utils.msgpack.Unpacker()
+            try:
+                while True:
+                    data = await reader.read(4096)
+                    if not data:
+                        break
+                    unpacker.feed(data)
+                    for message in unpacker:
+                        message = salt.transport.frame.decode_embedded_strs(message)
+                        body = message.get("body")
+                        header = message.get("head", {}) or {}
+                        topic_list = header.get("topic_lst")
+                        try:
+                            if topic_list:
+                                await publish_payload(body, topic_list)
+                            else:
+                                await publish_payload(body)
+                        except Exception:  # pylint: disable=broad-except
+                            log.exception(
+                                "tcpv2 publish pull handler failed to publish payload"
+                            )
+                            raise
+            finally:
+                writer.close()
+                with suppress(Exception):
+                    await writer.wait_closed()
+                log.info("tcpv2 publish pull disconnected from %s", addr)
+
+        if self.pull_path:
+            if os.path.exists(self.pull_path):
+                os.unlink(self.pull_path)
+            self._pull_server = await asyncio.start_unix_server(
+                _handle, path=self.pull_path
+            )
+            os.chmod(self.pull_path, self.pull_path_perms)
+            log.info("tcpv2 pull server listening on unix %s", self.pull_path)
+        else:
+            host = self.pull_host or "127.0.0.1"
+            port = int(self.pull_port or self.opts.get("tcp_master_publish_pull", 4514))
+            self._pull_server = await asyncio.start_server(_handle, host, port)
+            log.info("tcpv2 pull server listening on %s:%s", host, port)
 
     async def _accept_client(self, reader, writer, publish_payload):
         addr = writer.get_extra_info("peername")
@@ -567,17 +727,44 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             with suppress(Exception):
                 subscriber.writer.close()
 
-    def publish(self, payload, **kwargs):
-        topic_list = kwargs.get("topic_list")
-        return self.loop_adapter.create_task(
-            self.publish_payload(payload, topic_list=topic_list)
+    async def publish(self, payload, **kwargs):
+        log.info(
+            "tcpv2 PublishServer.publish invoked with %d-byte payload", len(payload)
         )
+        topic_list = kwargs.get("topic_list")
+        header = None
+        if topic_list:
+            header = {"topic_lst": topic_list}
+        framed = salt.transport.frame.frame_msg_ipc(
+            payload, header=header, raw_body=True
+        )
+
+        if self.pull_path:
+            _reader, writer = await asyncio.open_unix_connection(self.pull_path)
+        else:
+            host = self.pull_host or "127.0.0.1"
+            port = int(self.pull_port or self.opts.get("tcp_master_publish_pull", 4514))
+            _reader, writer = await asyncio.open_connection(host, port)
+        writer.write(framed)
+        await writer.drain()
+        writer.close()
+        with suppress(Exception):
+            await writer.wait_closed()
+
+    def connect(self, timeout=None):
+        if self.loop_adapter is None:
+            self.loop_adapter = get_io_loop()
+            self.io_loop = self.loop_adapter
+        return True
 
     def close(self):
         async def _shutdown_server():
             if self._server is not None:
                 self._server.close()
                 await self._server.wait_closed()
+            if self._pull_server is not None:
+                self._pull_server.close()
+                await self._pull_server.wait_closed()
 
         if self.io_loop is not None:
             self.io_loop.spawn_callback(_shutdown_server)

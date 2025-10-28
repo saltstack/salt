@@ -16,13 +16,15 @@ def test_request_client_close_async_drains_queue():
         client.socket = types.SimpleNamespace(close=lambda: None)
         client.context = types.SimpleNamespace(closed=False, term=lambda: None)
         client._queue = asyncio.Queue()
-        client.send_recv_task = asyncio.create_task(asyncio.sleep(3600))
+        client.send_recv_task = asyncio.create_task(asyncio.sleep(0))
         client.io_loop = types.SimpleNamespace(asyncio_loop=loop)
 
         future = loop.create_future()
         client._queue.put_nowait((future, b"payload"))
 
-        await client.close_async()
+        # close_async is defined on the class but pylint cannot infer it on this
+        # bare __new__ instance.
+        await client.close_async()  # pylint: disable=not-callable
 
         assert client._closing is True
         assert client.socket is None
@@ -100,16 +102,20 @@ def test_async_req_channel_close_runs_when_no_loop():
 def test_request_client_close_schedules_when_loop_running():
     async def run():
         loop = asyncio.get_running_loop()
-
         invoked = asyncio.Event()
 
-        async def dummy_close_async(self):
+        async def dummy_close_async(self, socket=None, context=None, task=None):
             invoked.set()
 
         client = RequestClient.__new__(RequestClient)
         client._closing = False
         client._connect_called = False
         client.close_async = types.MethodType(dummy_close_async, client)
+        client.socket = types.SimpleNamespace(close=lambda: None)
+        client.context = types.SimpleNamespace(closed=True, term=lambda: None)
+        client.send_recv_task = loop.create_future()
+        client.send_recv_task.set_result(None)
+        client._queue = asyncio.Queue()
         client.io_loop = types.SimpleNamespace(asyncio_loop=loop)
 
         client.close()
@@ -124,7 +130,7 @@ def test_request_client_close_runs_when_loop_not_running():
 
     invoked = False
 
-    async def dummy_close_async(self):
+    async def dummy_close_async(self, socket=None, context=None, task=None):
         nonlocal invoked
         invoked = True
 
@@ -133,6 +139,11 @@ def test_request_client_close_runs_when_loop_not_running():
         client._closing = False
         client._connect_called = False
         client.close_async = types.MethodType(dummy_close_async, client)
+        client.socket = types.SimpleNamespace(close=lambda: None)
+        client.context = types.SimpleNamespace(closed=True, term=lambda: None)
+        client.send_recv_task = loop.create_future()
+        client.send_recv_task.set_result(None)
+        client._queue = asyncio.Queue()
         client.io_loop = types.SimpleNamespace(asyncio_loop=loop)
 
         client.close()

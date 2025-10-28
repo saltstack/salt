@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import logging
 import multiprocessing
 import os
@@ -23,6 +24,35 @@ from salt.transport.tcp import (
 from salt.utils.asynchronous import get_io_loop
 
 log = logging.getLogger(__name__)
+
+
+async def _await_task(task):
+    with suppress(asyncio.CancelledError):
+        await task
+
+
+def _drain_task(loop_adapter, loop, task):
+    if task is None or task.done():
+        return None
+    if loop is None:
+        return None
+    if loop.is_running():
+        return asyncio.run_coroutine_threadsafe(_await_task(task), loop)
+    if loop_adapter is not None:
+        try:
+            loop_adapter.run_sync(lambda: _await_task(task))
+        except RuntimeError:
+            pass
+        return None
+    policy = asyncio.get_event_loop_policy()
+    try:
+        policy.set_event_loop(loop)
+        loop.run_until_complete(_await_task(task))
+    except RuntimeError:
+        pass
+    finally:
+        policy.set_event_loop(None)
+    return None
 
 
 class PublishClient(salt.transport.base.PublishClient):
@@ -81,7 +111,8 @@ class PublishClient(salt.transport.base.PublishClient):
             self._session = None
         if self.on_recv_task:
             self.on_recv_task.cancel()
-            await self.on_recv_task
+            with suppress(asyncio.CancelledError):
+                await self.on_recv_task
             self.on_recv_task = None
         if self._ws is not None:
             await self._ws.close()
@@ -158,7 +189,9 @@ class PublishClient(salt.transport.base.PublishClient):
         if self._ws is None:
             self._ws, self._session = await self.getstream(timeout=timeout)
             if self.connect_callback:
-                self.connect_callback(True)  # pylint: disable=not-callable
+                result = self.connect_callback(True)  # pylint: disable=not-callable
+                if inspect.isawaitable(result):
+                    await result
             self.connected = True
 
     async def connect(
@@ -177,7 +210,10 @@ class PublishClient(salt.transport.base.PublishClient):
         await self._connect(timeout=timeout)
 
     async def send(self, msg):
-        await self.message_client.send(msg, reply=False)
+        while self._ws is None:
+            await self.connect()
+            await asyncio.sleep(0.001)
+        await self._ws.send_bytes(msg)
 
     async def recv(self, timeout=None):
         while self._ws is None:
@@ -533,6 +569,8 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self._socket = None
         self._run = None
         self._started = None
+        self.loop_adapter = None
+        self._server_task = None
 
     def pre_fork(self, process_manager):
         """
@@ -564,7 +602,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self._started = asyncio.Event()
         self._run.set()
 
-        loop_adapter = get_io_loop(io_loop)
+        self.loop_adapter = get_io_loop(io_loop)
 
         async def server():
             server = aiohttp.web.Server(self.handle_message)
@@ -584,7 +622,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             await self.site.stop()
             self._socket.close()
 
-        loop_adapter.spawn_callback(server)
+        self._server_task = self.loop_adapter.create_task(server())
 
     async def handle_message(self, request):
         try:
@@ -611,8 +649,19 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
     def close(self):
         if self._run is not None:
             self._run.clear()
+        loop = None
+        if self.loop_adapter is not None:
+            loop = getattr(self.loop_adapter, "asyncio_loop", None)
+        waiter = None
+        if self._server_task is not None:
+            waiter = _drain_task(self.loop_adapter, loop, self._server_task)
+            self._server_task = None
+        if waiter is not None:
+            with suppress(Exception):
+                waiter.result()
         if self._socket is not None:
-            self._socket.shutdown(socket.SHUT_RDWR)
+            with suppress(OSError):
+                self._socket.shutdown(socket.SHUT_RDWR)
             self._socket.close()
             self._socket = None
 
