@@ -212,6 +212,7 @@ execution modules
     sqlite3
     ssh
     ssh_pkg
+    ssh_pki
     ssh_service
     state
     status
