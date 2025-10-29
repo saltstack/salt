@@ -62,13 +62,15 @@ def _drain_task(loop, task):
     if loop.is_running():
         future = asyncio.run_coroutine_threadsafe(_await_task(task), loop)
         with suppress(Exception):
-            future.result()
+            future.result(timeout=5)
         return
     policy = asyncio.get_event_loop_policy()
     try:
         policy.set_event_loop(loop)
-        loop.run_until_complete(_await_task(task))
+        loop.run_until_complete(asyncio.wait_for(_await_task(task), timeout=5))
     except RuntimeError:
+        pass
+    except asyncio.TimeoutError:
         pass
     finally:
         policy.set_event_loop(None)
@@ -210,10 +212,15 @@ class LoadBalancerServer(salt.utils.process.SignalHandlingProcess):
                 # Sockets are picklable on Windows in Python 3.
                 self.socket_queue.put((connection, address), True, None)
             except OSError as e:
+                if self._socket is None:
+                    break
+                try:
+                    name = self._socket.getsockname()
+                except OSError:
+                    name = "<socket closed>"
                 # ECONNABORTED indicates that there was a connection
                 # but it was closed while still in the accept queue.
                 # (observed on FreeBSD).
-                name = self._socket.getsockname()
                 if isinstance(name, tuple):
                     name = name[0]
                 if tornado.util.errno_from_exception(e) == errno.ECONNABORTED:
@@ -676,8 +683,9 @@ class SaltMessageServer(tornado.tcpserver.TCPServer):
     def __init__(self, message_handler, *args, **kwargs):
         io_loop = kwargs.pop("io_loop", None) or tornado.ioloop.IOLoop.current()
         self._closing = False
+        self.loop_adapter = salt.utils.asynchronous.get_io_loop(io_loop)
+        self.io_loop = self.loop_adapter.asyncio_loop
         super().__init__(*args, **kwargs)
-        self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
         self.clients = []
         self.message_handler = message_handler
 
@@ -709,7 +717,9 @@ class SaltMessageServer(tornado.tcpserver.TCPServer):
         except Exception as e:  # pylint: disable=broad-except
             log.trace("other master-side exception: %s", e, exc_info=True)
             self.remove_client((stream, address))
-            stream.close()
+            close = getattr(stream, "close", None)
+            if callable(close):
+                close()
 
     def remove_client(self, client):
         try:
@@ -767,7 +777,7 @@ class LoadBalancerWorker(SaltMessageServer):
                 # 'self.io_loop' initialized in super class
                 # 'salt.ext.tornado.tcpserver.TCPServer'.
                 # 'self._handle_connection' defined in same super class.
-                self.io_loop.spawn_callback(
+                self.loop_adapter.spawn_callback(
                     self._handle_connection, client_socket, address
                 )
         except (KeyboardInterrupt, SystemExit):
@@ -829,12 +839,13 @@ class MessageClient:
         self.source_port = source_port
         self.connect_callback = connect_callback
         self.disconnect_callback = disconnect_callback
-        self.io_loop = salt.utils.asynchronous.aioloop(
-            io_loop or tornado.ioloop.IOLoop.current()
-        )
+        loop_target = io_loop or tornado.ioloop.IOLoop.current()
+        self.loop_adapter = salt.utils.asynchronous.get_io_loop(loop_target)
+        self.io_loop = self.loop_adapter.asyncio_loop
         self._tcp_client = TCPClientKeepAlive(opts, resolver=resolver)
         # TODO: max queue size
         self.send_future_map = {}  # mapping of request_id -> Future
+        self.send_timeout_map = {}
 
         self._read_until_future = None
         self._on_recv = None
@@ -851,18 +862,32 @@ class MessageClient:
         if self._closing or self._closed:
             return
         self._closing = True
-        self.io_loop.call_later(1, self.check_close)
+        loop = self.loop_adapter.asyncio_loop
+        if loop.is_running():
+            self.loop_adapter.add_callback(self.check_close)
+        else:
+            self.check_close()
 
     def check_close(self):
         if not self.send_future_map:
-            self._tcp_client.close()
+            if hasattr(self._tcp_client, "close"):
+                try:
+                    self._tcp_client.close()
+                except TypeError:
+                    log.debug("TCP client close attribute not callable", exc_info=True)
             if self._stream:
-                self._stream.close()
+                close = getattr(self._stream, "close", None)
+                if callable(close):
+                    close()
             self._stream = None
             self._closed = True
             self._closing = False
         else:
-            self.io_loop.add_timeout(1, self.check_close)
+            loop = self.loop_adapter.asyncio_loop
+            if loop.is_running():
+                self.loop_adapter.call_later(1, self.check_close)
+            else:
+                loop.call_soon(self.check_close)
 
     # pylint: disable=W1701
     def __del__(self):
@@ -905,7 +930,7 @@ class MessageClient:
                 self._closing = False
                 self._closed = False
                 if not self._stream_return_running:
-                    return_task = self.io_loop.create_task(self._stream_return())
+                    self.loop_adapter.create_task(self._stream_return())
                 if self.connect_callback:
                     result = self.connect_callback(True)
                     if inspect.isawaitable(result):
@@ -929,7 +954,7 @@ class MessageClient:
                         # self.remove_message_timeout(message_id)
                     else:
                         if self._on_recv is not None:
-                            self.io_loop.call_soon(self._on_recv, header, body)
+                            self.loop_adapter.add_callback(self._on_recv, header, body)
                         else:
                             log.error(
                                 "Got response for message_id %s that we are not"
@@ -1006,11 +1031,12 @@ class MessageClient:
         if message_id not in self.send_timeout_map:
             return
         timeout = self.send_timeout_map.pop(message_id)
-        self.io_loop.remove_timeout(timeout)
+        self.loop_adapter.remove_timeout(timeout)
 
     def timeout_message(self, message_id, msg):
         if message_id not in self.send_future_map:
             return
+        self.remove_message_timeout(message_id)
         future = self.send_future_map.pop(message_id)
         if future is not None:
             future.set_exception(SaltReqTimeoutError("Message timed out"))
@@ -1027,7 +1053,7 @@ class MessageClient:
 
             def handle_future(future):
                 response = future.result()
-                self.io_loop.add_callback(callback, response)
+                self.loop_adapter.add_callback(callback, response)
 
             future.add_done_callback(handle_future)
         # Add this future to the mapping
@@ -1037,7 +1063,10 @@ class MessageClient:
             timeout = 1
 
         if timeout is not None:
-            self.io_loop.call_later(timeout, self.timeout_message, message_id, msg)
+            handle = self.loop_adapter.call_later(
+                timeout, self.timeout_message, message_id, msg
+            )
+            self.send_timeout_map[message_id] = handle
 
         item = salt.transport.frame.frame_msg(msg, header=header)
 
@@ -1049,7 +1078,7 @@ class MessageClient:
 
         # Run send in a callback so we can wait on the future, in case we time
         # out before we are able to connect.
-        send_task = self.io_loop.create_task(_do_send())
+        self.loop_adapter.create_task(_do_send())
         return await future
 
 

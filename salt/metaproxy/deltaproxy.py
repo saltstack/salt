@@ -228,6 +228,25 @@ async def post_master_init(self, master):
         salt.engines.start_engines, self.opts, self.process_manager, proxy=self.proxy
     )
 
+    # At this point the control proxy finished its own initialization, allow
+    # requests targeting the control proxy to flow even if sub proxies are
+    # still spinning up (which can take a while when managing dozens of ids).
+    setup_future = getattr(self, "_setup_future", None)
+    self.ready = True
+    if self.opts.get("return_retry_timer", 0) < 20:
+        new_retry = 20
+        self.opts["return_retry_timer"] = new_retry
+        current_max = self.opts.get("return_retry_timer_max", new_retry)
+        if current_max < new_retry:
+            current_max = new_retry
+        self.opts["return_retry_timer_max"] = max(current_max, new_retry + 10)
+        log.debug(
+            "Control proxy %s adjusted return retry timers to %s-%s seconds",
+            self.opts["id"],
+            self.opts["return_retry_timer"],
+            self.opts["return_retry_timer_max"],
+        )
+
     proxy_init_func_name = f"{fq_proxyname}.init"
     proxy_shutdown_func_name = f"{fq_proxyname}.shutdown"
     if (
@@ -425,16 +444,22 @@ async def post_master_init(self, master):
     if self.opts["proxy"].get("parallel_startup"):
         log.warning("Initiating parallel startup for proxies")
         waitfor = []
+        max_concurrency = max(1, self.opts["proxy"].get("startup_concurrency", 4))
+        semaphore = asyncio.Semaphore(max_concurrency)
+
         for _id in self.opts["proxy"].get("ids", []):
-            waitfor.append(
-                subproxy_post_master_init(
-                    _id,
-                    uid,
-                    self.opts,
-                    self.proxy,
-                    self.utils,
-                )
-            )
+
+            async def _initialise_subproxy(sub_id, *, _sem=semaphore):
+                async with _sem:
+                    return await subproxy_post_master_init(
+                        sub_id,
+                        uid,
+                        self.opts,
+                        self.proxy,
+                        self.utils,
+                    )
+
+            waitfor.append(_initialise_subproxy(_id))
 
         try:
             results = await asyncio.gather(*waitfor)
@@ -504,28 +529,41 @@ async def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils
     proxy_grains = {}
     proxy_pillar = {}
 
-    proxyopts = opts.copy()
-    proxyopts["id"] = minion_id
+    loop = asyncio.get_running_loop()
 
-    proxyopts = salt.config.proxy_config(
-        opts["conf_file"], defaults=proxyopts, minion_id=minion_id
+    def _load_proxyopts_and_grains():
+        proxyopts_local = opts.copy()
+        proxyopts_local["id"] = minion_id
+
+        proxyopts_local = salt.config.proxy_config(
+            opts["conf_file"], defaults=proxyopts_local, minion_id=minion_id
+        )
+        proxyopts_local.update(
+            {"id": minion_id, "proxyid": minion_id, "subproxy": True}
+        )
+
+        proxy_context_local = {"proxy_id": minion_id}
+
+        proxy_grains_local = salt.loader.grains(
+            proxyopts_local, proxy=main_proxy, context=proxy_context_local
+        )
+        return proxyopts_local, proxy_context_local, proxy_grains_local
+
+    proxyopts, proxy_context, proxy_grains = await loop.run_in_executor(
+        None, _load_proxyopts_and_grains
     )
-    proxyopts.update({"id": minion_id, "proxyid": minion_id, "subproxy": True})
 
-    proxy_context = {"proxy_id": minion_id}
+    def _compile_proxy_pillar():
+        pillar = salt.pillar.get_pillar(
+            proxyopts,
+            proxy_grains,
+            minion_id,
+            saltenv=proxyopts["saltenv"],
+            pillarenv=proxyopts.get("pillarenv"),
+        )
+        return pillar.compile_pillar()
 
-    # We need grains first to be able to load pillar, which is where we keep the proxy
-    # configurations
-    proxy_grains = salt.loader.grains(
-        proxyopts, proxy=main_proxy, context=proxy_context
-    )
-    proxy_pillar = await salt.pillar.get_async_pillar(
-        proxyopts,
-        proxy_grains,
-        minion_id,
-        saltenv=proxyopts["saltenv"],
-        pillarenv=proxyopts.get("pillarenv"),
-    ).compile_pillar()
+    proxy_pillar = await loop.run_in_executor(None, _compile_proxy_pillar)
 
     proxyopts["proxy"] = proxy_pillar.get("proxy", {})
     if not proxyopts["proxy"]:
@@ -533,8 +571,6 @@ async def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils
             "Pillar data for proxy minion %s could not be loaded, skipping.", minion_id
         )
         return {"proxy_minion": None, "proxy_opts": {}}
-
-    loop = asyncio.get_running_loop()
 
     def _finish_subproxy_setup():
         proxyopts["proxy"].pop("ids", None)
@@ -1049,12 +1085,18 @@ async def handle_payload(self, payload):
     Verify the publication and then pass
     the payload along to _handle_decoded_payload.
     """
+    log.debug(
+        "Control proxy %s received payload enc=%s keys=%s",
+        self.opts["id"],
+        payload.get("enc") if payload else None,
+        sorted(payload["load"].keys()) if payload and "load" in payload else None,
+    )
     setup_future = getattr(self, "_setup_future", None)
     if setup_future is not None and not setup_future.done():
-        log.warning("Control proxy waiting for setup to finish before handling payload")
+        log.debug("Control proxy waiting for setup to finish before handling payload")
         await asyncio.shield(setup_future)
     else:
-        log.warning("Control proxy setup already complete; handling payload")
+        log.debug("Control proxy setup already complete; handling payload")
     if payload is not None and payload["enc"] == "aes":
         # First handle payload for the "control" proxy
         if self._target_load(payload["load"]):

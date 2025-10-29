@@ -821,6 +821,14 @@ class AsyncAuth:
         This function will de-dupe all calls here and return a *single* future
         for the sign-in-- whis way callers can all assume there aren't others
         """
+        log.debug(
+            "%s authenticate() invoked (future_exists=%s, future_done=%s)",
+            self,
+            hasattr(self, "_authenticate_future"),
+            getattr(
+                getattr(self, "_authenticate_future", None), "done", lambda: False
+            )(),
+        )
         # if an auth is in flight-- and not done-- just pass that back as the future to wait on
         if (
             hasattr(self, "_authenticate_future")
@@ -856,20 +864,58 @@ class AsyncAuth:
         :rtype: Crypticle
         :returns: A crypticle used for encryption operations
         """
+        log.debug("%s starting _authenticate()", self)
         acceptance_wait_time = self.opts["acceptance_wait_time"]
         acceptance_wait_time_max = self.opts["acceptance_wait_time_max"]
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
         creds = None
+        log.debug(
+            "%s auth config timeout=%s tries=%s safemode=%s",
+            self,
+            self.opts.get("auth_timeout"),
+            self.opts.get("auth_tries"),
+            self.opts.get("auth_safemode"),
+        )
 
         with salt.channel.client.AsyncReqChannel.factory(
             self.opts, crypt="clear", io_loop=self._loop_raw
         ) as channel:
             error = None
+            attempt = 0
+            max_attempts = self.opts.get("auth_tries", 0) or 0
             while True:
+                attempt += 1
                 try:
-                    creds = await self.sign_in(channel=channel)
+                    creds = await self.sign_in(channel=channel, tries=1)
+                    log.debug("%s sign_in returned %r", self, creds)
                 except SaltClientError as exc:
+                    message = str(exc)
+                    if any(
+                        pattern in message
+                        for pattern in (
+                            "Attempt to authenticate with the salt master failed",
+                            "-|RETRY|-",
+                        )
+                    ):
+                        log.warning(
+                            "%s sign_in transient failure: %s (will retry)",
+                            self,
+                            message,
+                        )
+                        if acceptance_wait_time:
+                            await asyncio.sleep(acceptance_wait_time)
+                        if acceptance_wait_time < acceptance_wait_time_max:
+                            acceptance_wait_time += acceptance_wait_time
+                            log.debug(
+                                "Authentication wait time is %s",
+                                acceptance_wait_time,
+                            )
+                        if max_attempts > 0 and attempt >= max_attempts:
+                            error = exc
+                            break
+                        continue
+                    log.warning("%s sign_in raised fatal error: %s", self, exc)
                     error = exc
                     break
                 if creds == "retry":
@@ -902,6 +948,13 @@ class AsyncAuth:
                         log.debug(
                             "Authentication wait time is %s", acceptance_wait_time
                         )
+                    if max_attempts > 0 and attempt >= max_attempts:
+                        error = SaltClientError(
+                            "Authentication retries exhausted for {}".format(
+                                self.opts["id"]
+                            )
+                        )
+                        break
                     continue
                 elif creds == "bad enc algo":
                     log.error(
@@ -929,6 +982,11 @@ class AsyncAuth:
                     )
                 self._authenticate_future.set_exception(error)
             else:
+                log.debug(
+                    "%s received credentials (publish_port=%s)",
+                    self,
+                    creds.get("publish_port"),
+                )
                 key = self.__key(self.opts)
                 new_aes, changed_aes, changed_session = False, False, False
                 if key not in AsyncAuth.creds_map:
@@ -946,6 +1004,13 @@ class AsyncAuth:
                     self._creds = creds
                     self._crypticle = Crypticle(self.opts, creds["aes"])
                     self._session_crypticle = Crypticle(self.opts, creds["session"])
+
+                log.debug(
+                    "%s authenticated with master %s (publish_port=%s)",
+                    self,
+                    self.opts.get("master"),
+                    creds.get("publish_port"),
+                )
 
                 self._authenticate_future.set_result(
                     True

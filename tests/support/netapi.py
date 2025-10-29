@@ -29,11 +29,16 @@ class TestsHttpClient:
     async def fetch(self, path, **kwargs):
         if "headers" not in kwargs and self.headers:
             kwargs["headers"] = self.headers.copy()
+        print(
+            f"TestsHttpClient.fetch -> {self.address}{path} kwargs={kwargs}", flush=True
+        )
         try:
             response = await self.client.fetch(f"{self.address}{path}", **kwargs)
+            print(f"TestsHttpClient.fetch <- response {response.code}", flush=True)
             return self._decode_body(response)
         except HTTPError as exc:
             exc.response = self._decode_body(exc.response)
+            print(f"TestsHttpClient.fetch <- HTTPError {exc}", flush=True)
             raise
 
     def _decode_body(self, response):
@@ -78,6 +83,13 @@ class TestsTornadoHttpServer:
     @server.default
     def _server_default(self):
         server = HTTPServer(self.app, **self.http_server_options)
+        original_handle = server._handle_connection
+
+        def _log_handle(connection, address):
+            print(f"HTTPServer.handle_connection addr={address}", flush=True)
+            return original_handle(connection, address)
+
+        server._handle_connection = _log_handle
         server.add_sockets([self.sock])
         return server
 
@@ -88,6 +100,7 @@ class TestsTornadoHttpServer:
         )
 
     def __enter__(self):
+        print(f"Starting TestsTornadoHttpServer at {self.address}", flush=True)
         return self
 
     def __exit__(self, *_):
@@ -96,7 +109,24 @@ class TestsTornadoHttpServer:
             self.io_loop.run_sync(self.server.close_all_connections, timeout=10)
         except IOLoopTimeoutError:
             pass
+        if hasattr(self.app, "event_listener"):
+            try:
+                self.app.event_listener.destroy()
+            finally:
+                delattr(self.app, "event_listener")
+        for attr_name in ("_shared_local_client", "_shared_runner_client"):
+            if hasattr(self.app, attr_name):
+                client = getattr(self.app, attr_name)
+                try:
+                    client.destroy()
+                except AttributeError:
+                    pass
+                delattr(self.app, attr_name)
         self.client.client.close()
+        try:
+            self.sock.close()
+        except OSError:
+            pass
 
 
 def load_auth(client_config):
@@ -113,7 +143,7 @@ def auth_token(load_auth, auth_creds):
 def build_tornado_app(
     urls, load_auth, client_config, minion_config, setup_event_listener=False
 ):
-    application = tornado.web.Application(urls, debug=True)
+    application = tornado.web.Application(urls, debug=False)
 
     application.auth = load_auth
     application.opts = client_config

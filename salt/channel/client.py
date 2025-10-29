@@ -197,8 +197,10 @@ class AsyncReqChannel:
                 )
                 break
             except Exception as exc:  # pylint: disable=broad-except
-                log.trace("Failed to send msg %r", exc)
-                if _try >= tries:
+                log.trace(
+                    "Failed to send msg attempt=%s tries=%s exc=%r", _try, tries, exc
+                )
+                if tries is not None and tries > 0 and _try >= tries:
                     raise
                 else:
                     _try += 1
@@ -513,6 +515,12 @@ class AsyncPubChannel:
                 publish_port = self.auth.creds["publish_port"]
             # TODO: The zeromq transport does not use connect_callback and
             # disconnect_callback.
+            log.debug(
+                "AsyncPubChannel connecting to %s:%s (authenticated=%s)",
+                self.opts.get("master_ip", "127.0.0.1"),
+                publish_port,
+                self.auth.authenticated,
+            )
             await self.transport.connect(
                 publish_port, self.connect_callback, self.disconnect_callback
             )
@@ -598,6 +606,17 @@ class AsyncPubChannel:
         try:
             # Force re-auth on reconnect since the master
             # may have been restarted
+            try:
+                self.token = self.auth.gen_token(b"salt")
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "Failed to generate authentication token for publish channel"
+                )
+            log.debug(
+                "AsyncPubChannel connect_callback (reconnected=%s, authenticated=%s)",
+                self._reconnected,
+                self.auth.authenticated,
+            )
             await self.send_id(self.token, self._reconnected)
             self.connected = True
             self.event.fire_event({"master": self.opts["master"]}, "__master_connected")
@@ -643,6 +662,15 @@ class AsyncPubChannel:
         if self._closing:
             return
         self.connected = False
+        if getattr(self, "auth", None) is not None:
+            try:
+                self.auth.invalidate()
+            except Exception:  # pylint: disable=broad-except
+                log.exception("Failed to invalidate authentication after disconnect")
+        log.debug(
+            "AsyncPubChannel disconnect_callback invoked (reconnected=%s)",
+            self._reconnected,
+        )
         self.event.fire_event({"master": self.opts["master"]}, "__master_disconnected")
 
     def _verify_master_signature(self, payload):
@@ -672,6 +700,10 @@ class AsyncPubChannel:
             try:
                 payload["load"] = self.auth.crypticle.loads(payload["load"])
             except salt.crypt.AuthenticationError:
+                log.debug(
+                    "AsyncPubChannel payload decrypt failed, attempting re-auth (authenticated=%s)",
+                    self.auth.authenticated,
+                )
                 reauth = True
             if reauth:
                 try:

@@ -58,10 +58,12 @@ def _drain_task(loop_adapter, loop, task, waiters):
         return
     if loop is None:
         return
-    if loop.is_running():
-        waiters.append(
-            asyncio.run_coroutine_threadsafe(_await_task_completion(task), loop)
-        )
+    if isinstance(loop, asyncio.AbstractEventLoop) and loop.is_running():
+        future = asyncio.run_coroutine_threadsafe(_await_task_completion(task), loop)
+        try:
+            future.result(timeout=5)
+        except Exception:  # pylint: disable=broad-except
+            future.cancel()
         return
     if loop_adapter is not None:
         try:
@@ -1242,6 +1244,11 @@ class RequestClient(salt.transport.base.RequestClient):
 
     def _timeout_message(self, future):
         if not future.done():
+            log.debug(
+                "RequestClient timeout firing for %s (master_uri=%s)",
+                self.opts.get("id"),
+                self.master_uri,
+            )
             future.set_exception(SaltReqTimeoutError("Message timed out"))
 
     @staticmethod

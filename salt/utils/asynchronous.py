@@ -270,7 +270,13 @@ def get_io_loop(io_loop: Any | None = None) -> AsyncLoopAdapter:
         return AsyncLoopAdapter(io_loop)
 
     if io_loop is not None and hasattr(io_loop, "asyncio_loop"):
-        return AsyncLoopAdapter(io_loop.asyncio_loop)
+        candidate_loop = getattr(io_loop, "asyncio_loop")
+        if isinstance(candidate_loop, AsyncLoopAdapter):
+            return candidate_loop
+        if isinstance(candidate_loop, asyncio.AbstractEventLoop):
+            return AsyncLoopAdapter(candidate_loop)
+        # Objects such as mocks may expose ``asyncio_loop`` even though they do
+        # not wrap a real loop. In that case, fall back to creating a fresh loop.
 
     try:
         loop = asyncio.get_running_loop()

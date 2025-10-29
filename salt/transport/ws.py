@@ -32,27 +32,29 @@ async def _await_task(task):
 
 
 def _drain_task(loop_adapter, loop, task):
-    if task is None or task.done():
-        return None
-    if loop is None:
-        return None
+    if task is None or task.done() or loop is None:
+        return
     if loop.is_running():
-        return asyncio.run_coroutine_threadsafe(_await_task(task), loop)
+        future = asyncio.run_coroutine_threadsafe(_await_task(task), loop)
+        with suppress(Exception):
+            future.result(timeout=5)
+        return
     if loop_adapter is not None:
         try:
-            loop_adapter.run_sync(lambda: _await_task(task))
-        except RuntimeError:
+            loop_adapter.run_sync(
+                lambda: asyncio.wait_for(_await_task(task), timeout=5)
+            )
+        except (RuntimeError, asyncio.TimeoutError):
             pass
-        return None
+        return
     policy = asyncio.get_event_loop_policy()
     try:
         policy.set_event_loop(loop)
-        loop.run_until_complete(_await_task(task))
-    except RuntimeError:
+        loop.run_until_complete(asyncio.wait_for(_await_task(task), timeout=5))
+    except (RuntimeError, asyncio.TimeoutError):
         pass
     finally:
         policy.set_event_loop(None)
-    return None
 
 
 class PublishClient(salt.transport.base.PublishClient):
@@ -652,13 +654,9 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         loop = None
         if self.loop_adapter is not None:
             loop = getattr(self.loop_adapter, "asyncio_loop", None)
-        waiter = None
         if self._server_task is not None:
-            waiter = _drain_task(self.loop_adapter, loop, self._server_task)
+            _drain_task(self.loop_adapter, loop, self._server_task)
             self._server_task = None
-        if waiter is not None:
-            with suppress(Exception):
-                waiter.result()
         if self._socket is not None:
             with suppress(OSError):
                 self._socket.shutdown(socket.SHUT_RDWR)

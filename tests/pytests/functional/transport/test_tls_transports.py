@@ -10,7 +10,14 @@ import pathlib
 from contextlib import contextmanager
 
 import pytest
-from OpenSSL import crypto
+
+try:
+    from OpenSSL import crypto
+except ImportError:  # pragma: no cover - handled at runtime
+    pytestmark = pytest.mark.skip(
+        reason="pyOpenSSL not available; install OpenSSL to run TLS functional tests"
+    )
+    crypto = None
 from saltfactories.utils import random_string
 
 from tests.conftest import FIPS_TESTRUN
@@ -60,7 +67,9 @@ def _generate_ca(cert_dir: pathlib.Path):
     cert.sign(key, "sha256")
     ca_cert_path = cert_dir / "ca.crt"
     ca_key_path = cert_dir / "ca.key"
-    _write_pem(ca_cert_path, crypto.dump_certificate(crypto.FILETYPE_PEM, cert), mode=0o644)
+    _write_pem(
+        ca_cert_path, crypto.dump_certificate(crypto.FILETYPE_PEM, cert), mode=0o644
+    )
     _write_pem(ca_key_path, crypto.dump_privatekey(crypto.FILETYPE_PEM, key))
     return ca_cert_path, ca_key_path, cert, key
 
@@ -105,7 +114,9 @@ def _generate_certificate(
     cert.sign(ca_key, "sha256")
     cert_path = cert_dir / f"{common_name}.crt"
     key_path = cert_dir / f"{common_name}.key"
-    _write_pem(cert_path, crypto.dump_certificate(crypto.FILETYPE_PEM, cert), mode=0o644)
+    _write_pem(
+        cert_path, crypto.dump_certificate(crypto.FILETYPE_PEM, cert), mode=0o644
+    )
     _write_pem(key_path, crypto.dump_privatekey(crypto.FILETYPE_PEM, key))
     return cert_path, key_path
 
@@ -155,9 +166,7 @@ def _started(factory):
 
 
 @pytest.mark.parametrize("transport", TRANSPORTS, ids=lambda item: f"transport({item})")
-def test_tls_master_minion_round_trip(
-    salt_factories, tls_materials, transport
-):
+def test_tls_master_minion_round_trip(salt_factories, tls_materials, transport):
     """
     Assert that each TLS-capable transport can negotiate a secure master/minion session and
     execute a simple command.
