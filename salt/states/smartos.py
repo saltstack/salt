@@ -121,6 +121,7 @@ Management of SmartOS Standalone Compute Nodes
 import json
 import logging
 import os
+from collections import OrderedDict
 
 import salt.utils.atomicfile
 import salt.utils.data
