@@ -288,13 +288,16 @@ def test_artifacts(
         ctx.error(f"No platform definition found for {slug}")
         ctx.exit(1)
 
-    pkgdef = None
+    pkgdef = []
     for platform in PLATFORMS:
         for _ in TEST_SALT_PKG_LISTING[platform]:
             if _.slug == slug:
                 ctx.info(f"Found pkg definition {slug}")
-                pkgdef = _
-                break
+                pkgdef.append(_)
+                # Shortcut since all non windows paltforms have only one
+                # package type.
+                if platform != "windows":
+                    break
 
     if not pkgdef:
         ctx.warn(f"No package definition found for {slug}")
@@ -311,7 +314,8 @@ def test_artifacts(
         ("./", f"nox-{platdef.platform}-{platdef.arch}-ci-test-onedir"),
     ]
     if pkgdef:
-        artifacts.append(("artifacts/pkg/", f"salt-*-{pkgdef.arch}-{pkgdef.pkg_type}"))
+        for _ in pkgdef:
+            artifacts.append(("artifacts/pkg/", f"salt-*-{_.arch}-{_.pkg_type}"))
     for dest, artifact_name in artifacts:
         succeeded = tools.utils.gh.download_artifact(
             ctx,

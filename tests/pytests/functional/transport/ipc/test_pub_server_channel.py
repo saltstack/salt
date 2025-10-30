@@ -1,4 +1,5 @@
 import logging
+import threading
 import time
 from concurrent.futures.thread import ThreadPoolExecutor
 
@@ -97,40 +98,68 @@ def test_issue_36469_tcp(salt_master, salt_minion, transport):
     #  if transport == "tcp":
     #      pytest.skip("Test not applicable to the ZeroMQ transport.")
 
-    def _send_small(opts, sid, num=10):
-        server_channel = salt.channel.server.PubServerChannel.factory(opts)
-        for idx in range(num):
-            load = {"tgt_type": "glob", "tgt": "*", "jid": f"{sid}-s{idx}"}
-            server_channel.publish(load)
-        time.sleep(0.3)
-        time.sleep(3)
-        server_channel.close_pub()
+    def _send_small(queue, finished_event, sid, num=10):
+        try:
+            for idx in range(num):
+                load = {"tgt_type": "glob", "tgt": "*", "jid": f"{sid}-s{idx}"}
+                queue.put(load)
+        finally:
+            finished_event.set()
 
-    def _send_large(opts, sid, num=10, size=250000 * 3):
-        server_channel = salt.channel.server.PubServerChannel.factory(opts)
-        for idx in range(num):
-            load = {
-                "tgt_type": "glob",
-                "tgt": "*",
-                "jid": f"{sid}-l{idx}",
-                "xdata": "0" * size,
-            }
-            server_channel.publish(load)
-        time.sleep(0.3)
-        server_channel.close_pub()
+    def _send_large(queue, finished_event, sid, num=10, size=250000 * 3):
+        try:
+            for idx in range(num):
+                load = {
+                    "tgt_type": "glob",
+                    "tgt": "*",
+                    "jid": f"{sid}-l{idx}",
+                    "xdata": "0" * size,
+                }
+                queue.put(load)
+        finally:
+            finished_event.set()
 
     opts = dict(salt_master.config.copy(), ipc_mode="tcp", pub_hwm=0)
     send_num = 10 * 4
     expect = []
     with PubServerChannelProcess(opts, salt_minion.config.copy()) as server_channel:
         assert "aes" in salt.master.SMaster.secrets
+        finished_events = [threading.Event() for _ in range(4)]
         with ThreadPoolExecutor(max_workers=4) as executor:
-            executor.submit(_send_small, opts, 1)
-            executor.submit(_send_large, opts, 2)
-            executor.submit(_send_small, opts, 3)
-            executor.submit(_send_large, opts, 4)
-        expect.extend([f"{a}-s{b}" for a in range(10) for b in (1, 3)])
-        expect.extend([f"{a}-l{b}" for a in range(10) for b in (2, 4)])
+            executor.submit(_send_small, server_channel.queue, finished_events[0], 1)
+            executor.submit(_send_large, server_channel.queue, finished_events[1], 2)
+            executor.submit(_send_small, server_channel.queue, finished_events[2], 3)
+            executor.submit(_send_large, server_channel.queue, finished_events[3], 4)
+        expect.extend([f"{sid}-s{idx}" for sid in (1, 3) for idx in range(10)])
+        expect.extend([f"{sid}-l{idx}" for sid in (2, 4) for idx in range(10)])
+
+        # Wait for all expected publishes to be observed before leaving the context.
+        expected_set = set(expect)
+        # The overall test has a 90s timeout; cap the wait so we fail fast if
+        # pubs are stuck but still allow slower builders a chance to flush.
+        deadline = time.monotonic() + 45
+        interval = 0.5
+        missing = expected_set
+        while time.monotonic() < deadline:
+            received = set(server_channel.collector.results)
+            missing = expected_set - received
+            if not missing:
+                break
+            log.debug(
+                "Collector waiting for publishes; received=%s missing=%s",
+                len(received),
+                list(sorted(missing))[:5],
+            )
+            time.sleep(interval)
+        else:
+            pytest.fail(
+                "Collector timed out waiting for publishes: "
+                f"received={len(received)} expected={len(expected_set)} "
+                f"missing={list(sorted(missing))[:5]}"
+            )
+        for event in finished_events:
+            if not event.wait(timeout=5):
+                pytest.fail("Publisher thread did not signal completion")
     results = server_channel.collector.results
     assert len(results) == send_num, "{} != {}, difference: {}".format(
         len(results), send_num, set(expect).difference(results)

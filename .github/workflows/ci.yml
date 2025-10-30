@@ -521,6 +521,7 @@ jobs:
       PIP_INDEX_URL: https://pypi.org/simple
     needs:
       - prepare-workflow
+      - test
       - build-ci-deps
     steps:
       - uses: actions/checkout@v4
@@ -542,27 +543,6 @@ jobs:
           python3 -m pip install 'nox==2022.8.7'
 
 
-
-      - name: Merge All Code Coverage Test Run Artifacts
-        continue-on-error: true
-        uses: actions/upload-artifact/merge@v4
-        with:
-          name: all-testrun-coverage-artifacts
-          pattern: all-testrun-coverage-artifacts-*
-          separate-directories: false
-          delete-merged: true
-
-      - name: Get coverage reports
-        id: get-coverage-reports
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts/coverage/
-          pattern: all-testrun-coverage-artifacts*
-          merge-multiple: true
-
-      - name: Display structure of downloaded files
-        run: tree -a artifacts/
-
       - name: Install Codecov CLI
         run: |
           # We can't yet use tokenless uploads with the codecov CLI
@@ -577,6 +557,24 @@ jobs:
           chmod +x codecov
           mv ./codecov /usr/local/bin/
 
+      - name: Get coverage reports
+        id: get-coverage-reports
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/coverage/
+          pattern: coverage*
+          merge-multiple: true
+
+      - name: Display structure of downloaded files (before combine)
+        run: tree -a artifacts/
+
+      - name: Combine Code Coverage
+        run: |
+          nox --force-color -e combine-coverage
+
+      - name: Display structure of downloaded files (after combine)
+        run: tree -a artifacts/
+
       - name: Create XML Coverage Reports
         run: |
           nox --force-color -e create-xml-coverage-reports
@@ -588,17 +586,9 @@ jobs:
         run: |
           tools ci upload-coverage --commit-sha=${{ github.event.pull_request.head.sha || github.sha }} artifacts/coverage/
 
-      - name: Combine Code Coverage
-        run: |
-          nox --force-color -e combine-coverage
-
       - name: Report Salt Code Coverage
         run: |
           nox --force-color -e coverage-report -- salt
-
-      - name: Create Salt Code Coverage HTML Report
-        run: |
-          nox --force-color -e create-html-coverage-report -- salt
 
       - name: Create Salt Code Coverage HTML Report
         run: |
