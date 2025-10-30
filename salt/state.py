@@ -1226,7 +1226,6 @@ class State:
         Alter the way a successful state run is determined
         """
         ret = {"result": False}
-        ret = {"result": False}
         for key in ("__sls__", "__id__", "name"):
             ret[key] = low_data.get(key)
         cmd_opts = {}
