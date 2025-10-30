@@ -51,10 +51,10 @@ import email.mime.multipart
 import logging
 import sys
 import time
+from collections import OrderedDict
 
 import salt.utils.compat
 import salt.utils.json
-import salt.utils.odict as odict
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
@@ -152,7 +152,7 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
                 asg = asg[0]
             else:
                 return {}
-            ret = odict.OrderedDict()
+            ret = OrderedDict()
             attrs = [
                 "name",
                 "availability_zones",
@@ -175,7 +175,7 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
                 if attr == "tags":
                     _tags = []
                     for tag in asg.tags:
-                        _tag = odict.OrderedDict()
+                        _tag = OrderedDict()
                         _tag["key"] = tag.key
                         _tag["value"] = tag.value
                         _tag["propagate_at_launch"] = tag.propagate_at_launch

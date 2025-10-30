@@ -1,44 +1,30 @@
 """
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
+Utilities for working with ordered dictionary structures.
 
-
-    salt.utils.odict
-    ~~~~~~~~~~~~~~~~
-
-    Implements a DefaultOrderedDict Class that serves as a
-    combination of ``OrderedDict`` and ``defaultdict``
-    Its source was submitted here::
-
-        http://stackoverflow.com/questions/6190331/
+.. versionadded:: 300.0.0
 """
 
 import copy
 from collections import OrderedDict
 from collections.abc import Callable
 
-from salt.utils.versions import warn_until
-
-warn_until(
-    3009,
-    "This module is deprecated. Use the standard library's collections.OrderedDict "
-    "or salt.utils.datastructures instead.",
-)
+__all__ = ["DefaultOrderedDict", "HashableOrderedDict"]
 
 
 class DefaultOrderedDict(OrderedDict):
     """
-    Dictionary that remembers insertion order
+    An ordered dictionary with a default factory for missing keys.
     """
 
-    def __init__(self, default_factory=None, *a, **kw):
+    def __init__(self, default_factory=None, *args, **kwargs):
         if default_factory is not None and not isinstance(default_factory, Callable):
             raise TypeError("first argument must be callable")
-        super().__init__(*a, **kw)
+        super().__init__(*args, **kwargs)
         self.default_factory = default_factory
 
     def __getitem__(self, key):
         try:
-            return OrderedDict.__getitem__(self, key)
+            return super().__getitem__(key)
         except KeyError:
             return self.__missing__(key)
 
@@ -61,17 +47,20 @@ class DefaultOrderedDict(OrderedDict):
     def __copy__(self):
         return type(self)(self.default_factory, self)
 
-    def __deepcopy__(self):
-        import copy
-
-        return type(self)(self.default_factory, copy.deepcopy(self.items()))
-
-    def __repr__(self, _repr_running={}):  # pylint: disable=W0102
-        return "DefaultOrderedDict({}, {})".format(
-            self.default_factory, super().__repr__()
+    def __deepcopy__(self, memo):
+        return type(self)(
+            self.default_factory,
+            copy.deepcopy(list(self.items()), memo),
         )
+
+    def __repr__(self, _repr_running={}):  # pylint: disable=dangerous-default-value
+        return f"DefaultOrderedDict({self.default_factory}, {super().__repr__()})"
 
 
 class HashableOrderedDict(OrderedDict):
+    """
+    OrderedDict variant with a stable hash based on identity.
+    """
+
     def __hash__(self):
         return id(self)

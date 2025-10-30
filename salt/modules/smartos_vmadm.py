@@ -5,6 +5,7 @@ Module for running vmadm command on SmartOS
 import logging
 import os
 import shlex
+from collections import OrderedDict
 
 import salt.utils.args
 import salt.utils.files
@@ -12,7 +13,6 @@ import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 

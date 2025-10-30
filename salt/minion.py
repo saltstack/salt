@@ -19,6 +19,7 @@ import time
 import traceback
 import types
 import uuid
+from collections import OrderedDict
 
 import salt
 import salt.beacons
@@ -77,7 +78,6 @@ from salt.utils.ctx import RequestContext
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 from salt.utils.network import parse_host_port
-from salt.utils.odict import OrderedDict
 from salt.utils.process import ProcessManager, SignalHandlingProcess, default_signals
 from salt.utils.zeromq import ZMQ_VERSION_INFO, zmq
 

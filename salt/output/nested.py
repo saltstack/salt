@@ -23,12 +23,12 @@ Example output::
                 - World
 """
 
+from collections import OrderedDict
 from collections.abc import Mapping
 from numbers import Number
 
 import salt.output
 import salt.utils.color
-import salt.utils.odict
 import salt.utils.stringutils
 
 
@@ -124,7 +124,7 @@ class NestDisplay:
                 out.append(self.ustring(indent, color, "----------"))
 
             # respect key ordering of ordered dicts
-            if isinstance(ret, salt.utils.odict.OrderedDict):
+            if isinstance(ret, OrderedDict):
                 keys = ret.keys()
             else:
                 try:

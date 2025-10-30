@@ -46,8 +46,8 @@ Connection module for Amazon Security Groups
 
 
 import logging
+from collections import OrderedDict
 
-import salt.utils.odict as odict
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -241,7 +241,7 @@ def _parse_rules(sg, rules):
     for rule in rules:
         log.debug("examining rule %s for group %s", rule, sg.id)
         attrs = ["ip_protocol", "from_port", "to_port", "grants"]
-        _rule = odict.OrderedDict()
+        _rule = OrderedDict()
         for attr in attrs:
             val = getattr(rule, attr)
             if not val:
@@ -256,7 +256,7 @@ def _parse_rules(sg, rules):
                         "group_id": "source_group_group_id",
                         "cidr_ip": "cidr_ip",
                     }
-                    _grant = odict.OrderedDict()
+                    _grant = OrderedDict()
                     for g_attr, g_attr_map in g_attrs.items():
                         g_val = getattr(grant, g_attr)
                         if not g_val:
@@ -453,7 +453,7 @@ def get_config(
         profile=profile,
     )
     if sg:
-        ret = odict.OrderedDict()
+        ret = OrderedDict()
         ret["name"] = sg.name
         # TODO: add support for vpc_id in return
         # ret['vpc_id'] = sg.vpc_id

@@ -21,9 +21,9 @@ Module for interop with the Splunk API
 
 import logging
 import urllib.parse
+from collections import OrderedDict
 
 import salt.utils.yaml
-from salt.utils.odict import OrderedDict
 
 HAS_LIBS = False
 try:

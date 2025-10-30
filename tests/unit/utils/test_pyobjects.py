@@ -4,6 +4,7 @@ import shutil
 import tempfile
 import textwrap
 import uuid
+from collections import OrderedDict
 
 import jinja2
 import pytest
@@ -12,7 +13,6 @@ import salt.config
 import salt.state
 import salt.utils.files
 from salt.template import compile_template
-from salt.utils.odict import OrderedDict
 from salt.utils.pyobjects import (
     DuplicateState,
     InvalidFunction,

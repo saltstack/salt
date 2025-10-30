@@ -1,10 +1,10 @@
 import base64
 import datetime
+from collections import OrderedDict
 
 import pytest
 
 import salt.exceptions
-from salt.utils.odict import OrderedDict
 
 try:
     import cryptography

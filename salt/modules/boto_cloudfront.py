@@ -52,9 +52,9 @@ Connection module for Amazon CloudFront
 
 
 import logging
+from collections import OrderedDict
 
 import salt.utils.versions
-from salt.utils.odict import OrderedDict
 
 try:
     # pylint: disable=unused-import

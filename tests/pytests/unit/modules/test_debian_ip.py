@@ -8,7 +8,7 @@ import salt.utils.files
 from tests.support.mock import MagicMock, patch
 
 try:
-    from salt.utils.odict import OrderedDict as odict
+    from collections import OrderedDict as odict
 except ImportError:
     from collections import OrderedDict as odict
 
