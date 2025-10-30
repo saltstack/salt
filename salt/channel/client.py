@@ -4,13 +4,11 @@ Encapsulate the different transports available to Salt.
 This includes client side transport, for the ReqServer and the Publisher
 """
 
+import asyncio
 import logging
 import os
 import time
 import uuid
-
-import tornado.gen
-import tornado.ioloop
 
 import salt.crypt
 import salt.exceptions
@@ -21,7 +19,7 @@ import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.verify
 import salt.utils.versions
-from salt.utils.asynchronous import SyncWrapper
+from salt.utils.asynchronous import SyncWrapper, get_io_loop
 
 log = logging.getLogger(__name__)
 
@@ -105,9 +103,9 @@ class AsyncReqChannel:
 
         if "master_uri" not in opts and "master_uri" in kwargs:
             opts["master_uri"] = kwargs["master_uri"]
-        io_loop = kwargs.get("io_loop")
-        if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
+        adapter = get_io_loop(kwargs.get("io_loop"))
+        io_loop = adapter
+        raw_loop = adapter.asyncio_loop
 
         timeout = opts.get("request_channel_timeout", REQUEST_CHANNEL_TIMEOUT)
         tries = opts.get("request_channel_tries", REQUEST_CHANNEL_TRIES)
@@ -115,7 +113,7 @@ class AsyncReqChannel:
         crypt = kwargs.get("crypt", "aes")
         if crypt != "clear":
             # we don't need to worry about auth as a kwarg, since its a singleton
-            auth = salt.crypt.AsyncAuth(opts, io_loop=io_loop)
+            auth = salt.crypt.AsyncAuth(opts, io_loop=raw_loop)
         else:
             auth = None
 
@@ -199,8 +197,10 @@ class AsyncReqChannel:
                 )
                 break
             except Exception as exc:  # pylint: disable=broad-except
-                log.trace("Failed to send msg %r", exc)
-                if _try >= tries:
+                log.trace(
+                    "Failed to send msg attempt=%s tries=%s exc=%r", _try, tries, exc
+                )
+                if tries is not None and tries > 0 and _try >= tries:
                     raise
                 else:
                     _try += 1
@@ -362,7 +362,65 @@ class AsyncReqChannel:
             return
         log.debug("Closing %s instance", self.__class__.__name__)
         self._closing = True
-        self.transport.close()
+        close_async = getattr(self.transport, "close_async", None)
+        if close_async is None:
+            self.transport.close()
+            return
+
+        adapter = getattr(self.transport, "io_loop", None)
+        run_sync = getattr(adapter, "run_sync", None)
+        if callable(run_sync):
+            try:
+                run_sync(close_async)
+                return
+            except RuntimeError:
+                pass
+
+        loop = None
+        if isinstance(adapter, asyncio.AbstractEventLoop):
+            loop = adapter
+        elif adapter is not None and hasattr(adapter, "asyncio_loop"):
+            loop = adapter.asyncio_loop
+
+        if loop is None:
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+        if loop is None:
+            asyncio.run(close_async())
+            return
+
+        if loop.is_running():
+            try:
+                running_loop = asyncio.get_running_loop()
+            except RuntimeError:
+                running_loop = None
+
+            if running_loop is loop:
+                loop.create_task(close_async())
+                return
+
+            future = asyncio.run_coroutine_threadsafe(close_async(), loop)
+            try:
+                future.result()
+            except (asyncio.CancelledError, RuntimeError):
+                pass
+            return
+
+        try:
+            loop.run_until_complete(close_async())
+            return
+        except RuntimeError as exc:
+            if "another loop is running" not in str(exc):
+                raise
+
+        future = asyncio.run_coroutine_threadsafe(close_async(), loop)
+        try:
+            future.result()
+        except (asyncio.CancelledError, RuntimeError):
+            pass
 
     def __enter__(self):
         return self
@@ -375,7 +433,11 @@ class AsyncReqChannel:
         return self
 
     async def __aexit__(self, *_):
-        self.close()
+        close_async = getattr(self.transport, "close_async", None)
+        if close_async is not None:
+            await close_async()
+        else:
+            self.close()
 
 
 class AsyncPubChannel:
@@ -410,19 +472,18 @@ class AsyncPubChannel:
             opts["detect_mode"] = True
             log.info("Transport is set to detect; using %s", ttype)
 
-        io_loop = kwargs.get("io_loop")
-        if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
-
-        auth = salt.crypt.AsyncAuth(opts, io_loop=io_loop)
+        adapter = get_io_loop(kwargs.get("io_loop"))
+        io_loop = adapter
+        raw_loop = adapter.asyncio_loop
+        auth = salt.crypt.AsyncAuth(opts, io_loop=raw_loop)
         host = opts.get("master_ip", "127.0.0.1")
         port = int(opts.get("publish_port", 4506))
-        transport = salt.transport.publish_client(opts, io_loop, host=host, port=port)
+        transport = salt.transport.publish_client(opts, raw_loop, host=host, port=port)
         return cls(opts, transport, auth, io_loop)
 
     def __init__(self, opts, transport, auth, io_loop=None):
         self.opts = opts
-        self.io_loop = io_loop
+        self.io_loop = get_io_loop(io_loop)
         self.auth = auth
         try:
             # This loads or generates the minion's public key.
@@ -454,6 +515,12 @@ class AsyncPubChannel:
                 publish_port = self.auth.creds["publish_port"]
             # TODO: The zeromq transport does not use connect_callback and
             # disconnect_callback.
+            log.debug(
+                "AsyncPubChannel connecting to %s:%s (authenticated=%s)",
+                self.opts.get("master_ip", "127.0.0.1"),
+                publish_port,
+                self.auth.authenticated,
+            )
             await self.transport.connect(
                 publish_port, self.connect_callback, self.disconnect_callback
             )
@@ -539,6 +606,17 @@ class AsyncPubChannel:
         try:
             # Force re-auth on reconnect since the master
             # may have been restarted
+            try:
+                self.token = self.auth.gen_token(b"salt")
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "Failed to generate authentication token for publish channel"
+                )
+            log.debug(
+                "AsyncPubChannel connect_callback (reconnected=%s, authenticated=%s)",
+                self._reconnected,
+                self.auth.authenticated,
+            )
             await self.send_id(self.token, self._reconnected)
             self.connected = True
             self.event.fire_event({"master": self.opts["master"]}, "__master_connected")
@@ -584,6 +662,15 @@ class AsyncPubChannel:
         if self._closing:
             return
         self.connected = False
+        if getattr(self, "auth", None) is not None:
+            try:
+                self.auth.invalidate()
+            except Exception:  # pylint: disable=broad-except
+                log.exception("Failed to invalidate authentication after disconnect")
+        log.debug(
+            "AsyncPubChannel disconnect_callback invoked (reconnected=%s)",
+            self._reconnected,
+        )
         self.event.fire_event({"master": self.opts["master"]}, "__master_disconnected")
 
     def _verify_master_signature(self, payload):
@@ -613,6 +700,10 @@ class AsyncPubChannel:
             try:
                 payload["load"] = self.auth.crypticle.loads(payload["load"])
             except salt.crypt.AuthenticationError:
+                log.debug(
+                    "AsyncPubChannel payload decrypt failed, attempting re-auth (authenticated=%s)",
+                    self.auth.authenticated,
+                )
                 reauth = True
             if reauth:
                 try:
@@ -636,7 +727,7 @@ class AsyncPubChannel:
         return self
 
     def __exit__(self, *args):
-        self.io_loop.spawn_callback(self.close)
+        self.io_loop.add_callback(self.close)
 
     async def __aenter__(self):
         return self

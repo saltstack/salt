@@ -414,6 +414,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
         """
         Verify that the client is in fact one we have
         """
+        self._ensure_saltclients()
         if "client" not in low or low.get("client") not in self.saltclients:
             self.set_status(400)
             self.write("400 Invalid Client: Client not found in salt clients")
@@ -432,17 +433,26 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
                 self.application.opts,
             )
 
-        if not hasattr(self, "saltclients"):
-            local_client = salt.client.get_local_client(mopts=self.application.opts)
-            self.saltclients = {
-                "local": local_client.run_job_async,
-                # not the actual client we'll use.. but its what we'll use to get args
-                "local_async": local_client.run_job_async,
-                "runner": salt.runner.RunnerClient(
-                    opts=self.application.opts
-                ).cmd_async,
-                "runner_async": None,  # empty, since we use the same client as `runner`
-            }
+    def _ensure_saltclients(self):
+        if hasattr(self, "saltclients"):
+            return
+        if not hasattr(self.application, "_shared_local_client"):
+            self.application._shared_local_client = salt.client.get_local_client(
+                mopts=self.application.opts
+            )
+        if not hasattr(self.application, "_shared_runner_client"):
+            self.application._shared_runner_client = salt.runner.RunnerClient(
+                opts=self.application.opts
+            )
+        local_client = self.application._shared_local_client
+        runner_client = self.application._shared_runner_client
+        self.saltclients = {
+            "local": local_client.run_job_async,
+            # not the actual client we'll use.. but its what we'll use to get args
+            "local_async": local_client.run_job_async,
+            "runner": runner_client.cmd_async,
+            "runner_async": None,  # empty, since we use the same client as `runner`
+        }
 
     @cached_property
     def ckminions(self):
@@ -474,6 +484,10 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
         Run before get/posts etc. Pre-flight checks:
             - verify that we can speak back to them (compatible accept header)
         """
+        print(
+            f"BaseSaltAPIHandler.prepare url={self.request.uri} content_type={self.request.headers.get('Content-Type')}",
+            flush=True,
+        )
         # Find an acceptable content-type
         accept_header = self.request.headers.get("Accept", "*/*")
         # Ignore any parameter, including q (quality) one
@@ -517,7 +531,8 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
         # timeout all the futures
         self.timeout_futures()
         # clear local_client objects to disconnect event publisher's IOStream connections
-        del self.saltclients
+        if hasattr(self, "saltclients"):
+            del self.saltclients
 
     def on_connection_close(self):
         """
@@ -574,8 +589,13 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
         Format the incoming data into a lowstate object
         """
         if not self.request.body:
+            print("BaseSaltAPIHandler._get_lowstate empty body", flush=True)
             return
         data = self.deserialize(self.request.body)
+        print(
+            f"BaseSaltAPIHandler._get_lowstate deserialized type={type(data)}",
+            flush=True,
+        )
         self.request_payload = copy(data)
 
         if data and "arg" in data and not isinstance(data["arg"], list):
@@ -734,6 +754,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                 ]
             }}
         """
+        print("SaltAuthHandler.post invoked", flush=True)
         try:
             if not isinstance(self.request_payload, dict):
                 self.send_error(400)
@@ -750,6 +771,10 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             return
 
         token = self.application.auth.mk_token(creds)
+        print(
+            f"SaltAuthHandler.post issued token for {creds.get('username')} (eauth={creds.get('eauth')})",
+            flush=True,
+        )
         if "token" not in token:
             # TODO: nicer error message
             # 'Could not authenticate using provided credentials')
@@ -763,6 +788,11 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             eauth = self.application.opts["external_auth"][token["eauth"]]
             perms = salt.netapi.sum_permissions(token, eauth)
             perms = salt.netapi.sorted_permissions(perms)
+            print(
+                f"SaltAuthHandler.post returning perms for {creds.get('username')} "
+                f"(eauth={token.get('eauth')}): {perms}",
+                flush=True,
+            )
         # If we can't find the creds, then they aren't authorized
         except KeyError:
             self.send_error(401)
@@ -836,6 +866,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
             {"clients": ["local", "local_async", "runner", "runner_async"], "return": "Welcome"}
         """
+        self._ensure_saltclients()
         ret = {"clients": list(self.saltclients.keys()), "return": "Welcome"}
         self.write(self.serialize(ret))
         self.finish()
@@ -916,6 +947,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             self.redirect("/login")
             return
 
+        self._ensure_saltclients()
         self.disbatch()
 
     @tornado.gen.coroutine

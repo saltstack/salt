@@ -20,9 +20,6 @@ import traceback
 import types
 import uuid
 
-import tornado
-import tornado.ioloop
-
 import salt
 import salt.beacons
 import salt.channel.client
@@ -74,6 +71,7 @@ from salt.exceptions import (
     SaltSystemExit,
 )
 from salt.template import SLS_ENCODING
+from salt.utils.asynchronous import get_io_loop
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 from salt.utils.network import parse_host_port
@@ -933,7 +931,7 @@ class SMinion(MinionBase):
         if self.opts.get("file_client", "remote") == "remote" or self.opts.get(
             "use_master_when_local", False
         ):
-            io_loop = tornado.ioloop.IOLoop.current()
+            loop_adapter = get_io_loop()
 
             async def eval_master():
                 """
@@ -942,9 +940,7 @@ class SMinion(MinionBase):
                 master, pub_channel = await self.eval_master(self.opts, failed=True)
                 pub_channel.close()
 
-            io_loop.run_sync(
-                lambda: eval_master()  # pylint: disable=unnecessary-lambda
-            )
+            loop_adapter.run_sync(eval_master)
 
         self.gen_modules(initial_load=True, context=context)
 
@@ -1045,11 +1041,11 @@ class MinionManager(MinionBase):
         self.max_auth_wait = self.opts["acceptance_wait_time_max"]
         self.minions = []
         self.jid_queue = []
-        self.io_loop = tornado.ioloop.IOLoop.current()
+        self.loop_adapter = get_io_loop()
+        self.io_loop = self.loop_adapter
+        self._owns_loop = not self.loop_adapter.asyncio_loop.is_running()
         self.process_manager = ProcessManager(name="MultiMinionProcessManager")
-        self.io_loop.spawn_callback(
-            self.process_manager.run, **{"asynchronous": True}
-        )  # Tornado backward compat
+        self._process_manager_started = False
         self.event_publisher = None
         self.event = None
 
@@ -1061,23 +1057,67 @@ class MinionManager(MinionBase):
 
     def _bind(self):
         # start up the event publisher, so we can see events during startup
+        self._ensure_process_manager_running()
         self.event_publisher = salt.transport.ipc_publish_server("minion", self.opts)
-        self.io_loop.spawn_callback(
+        self.loop_adapter.spawn_callback(
             self.event_publisher.publisher,
             self.event_publisher.publish_payload,
-            self.io_loop,
+            self.loop_adapter.asyncio_loop,
         )
         self.event = salt.utils.event.get_event(
-            "minion", opts=self.opts, io_loop=self.io_loop
+            "minion",
+            opts=self.opts,
+            io_loop=self.loop_adapter.asyncio_loop,
         )
         self.event.subscribe("")
         self.event.set_event_handler(self.handle_event)
 
-    async def handle_event(self, package):
+    def _ensure_process_manager_running(self):
+        if not self._process_manager_started:
+            self._process_manager_started = True
+            self.loop_adapter.spawn_callback(
+                self.process_manager.run, asynchronous=True
+            )
+
+    def _cleanup_minion(self, minion):
+        """
+        Best-effort cleanup for a managed minion that failed to connect.
+
+        Called from the exception paths inside ``_connect_minion`` to mirror the
+        clean-up work we perform when stopping the manager: make sure the minion
+        is not left tracked in ``self.minions`` and that its process manager is
+        not still watching child processes.
+        """
         try:
-            await asyncio.gather(*[_.handle_event(package) for _ in self.minions])
-        except Exception as exc:  # pylint: disable=broad-except
-            log.error("Error dispatching event. %s", exc)
+            self.minions.remove(minion)
+        except ValueError:
+            pass
+        process_manager = getattr(minion, "process_manager", None)
+        if process_manager is not None:
+            try:
+                process_manager.stop_restarting()
+                process_manager.kill_children()
+            except Exception:  # pylint: disable=broad-except
+                log.exception("Error cleaning up failed minion process manager")
+
+    async def handle_event(self, package):
+        tasks = []
+        for minion in self.minions:
+            handler = getattr(minion, "handle_event", None)
+            if handler is None:
+                continue
+            try:
+                result = handler(package)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error dispatching event. %s", exc)
+                continue
+            if asyncio.isfuture(result) or asyncio.iscoroutine(result):
+                tasks.append(result)
+        if tasks:
+            try:
+                await asyncio.gather(*tasks, return_exceptions=True)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error dispatching event. %s", exc)
 
     def _create_minion_object(
         self,
@@ -1135,15 +1175,23 @@ class MinionManager(MinionBase):
                 loaded_base_name="salt.loader.{}".format(s_opts["master"]),
                 jid_queue=self.jid_queue,
             )
-            self.io_loop.spawn_callback(self._connect_minion, minion)
-        self.io_loop.call_later(timeout, self._check_minions)
+            self.loop_adapter.spawn_callback(self._connect_minion, minion)
+        self.loop_adapter.call_later(timeout, self._check_minions)
 
     async def _connect_minion(self, minion):
         """Create a minion, and asynchronously connect it to a master"""
         last = 0  # never have we signed in
         auth_wait = minion.opts["acceptance_wait_time"]
         failed = False
+        attempt = 0
         while True:
+            attempt += 1
+            log.debug(
+                "Attempting to connect managed minion %s (attempt=%s, failed=%s)",
+                minion.opts["id"],
+                attempt,
+                failed,
+            )
             try:
                 if minion.opts.get("beacons_before_connect", False):
                     minion.setup_beacons(before_connect=True)
@@ -1153,9 +1201,15 @@ class MinionManager(MinionBase):
                     await minion.connect_master(failed=failed)
                 minion.tune_in(start=False)
                 self.minions.append(minion)
+                log.debug(
+                    "Managed minion %s connected to master %s",
+                    minion.opts["id"],
+                    minion.opts["master"],
+                )
                 break
             except SaltClientError as exc:
                 minion.destroy()
+                self._cleanup_minion(minion)
                 failed = True
                 log.error(
                     "Error while bringing up minion for multi-master. Is "
@@ -1164,12 +1218,18 @@ class MinionManager(MinionBase):
                     exc,
                     exc_info=True,
                 )
+                log.debug(
+                    "Retrying connection for managed minion %s in %s seconds",
+                    minion.opts["id"],
+                    auth_wait,
+                )
                 last = time.time()
                 if auth_wait < self.max_auth_wait:
                     auth_wait += self.auth_wait
                 await asyncio.sleep(auth_wait)
             except SaltMasterUnresolvableError:
                 minion.destroy()
+                self._cleanup_minion(minion)
                 err = (
                     "Master address: '{}' could not be resolved. Invalid or"
                     " unresolveable address. Set 'master' value in minion config.".format(
@@ -1180,6 +1240,7 @@ class MinionManager(MinionBase):
                 break
             except Exception as e:  # pylint: disable=broad-except
                 minion.destroy()
+                self._cleanup_minion(minion)
                 failed = True
                 log.critical(
                     "Unexpected error while connecting to %s",
@@ -1203,7 +1264,7 @@ class MinionManager(MinionBase):
         self._spawn_minions()
 
         # serve forever!
-        self.io_loop.start()
+        self.loop_adapter.start()
 
     @property
     def restart(self):
@@ -1219,9 +1280,20 @@ class MinionManager(MinionBase):
         Called from cli.daemons.Minion._handle_signals().
         Adds stop_async as callback to the io_loop to prevent blocking.
         """
-        self.io_loop.add_callback(  # pylint: disable=not-callable
-            self.stop_async, signum, parent_sig_handler
-        )
+        loop = self.loop_adapter.asyncio_loop
+        if loop.is_running():
+            self.loop_adapter.add_callback(self.stop_async, signum, parent_sig_handler)
+        else:
+            try:
+                self.loop_adapter.run_sync(self.stop_async, signum, parent_sig_handler)
+            except RuntimeError:
+                temp_loop = asyncio.new_event_loop()
+                try:
+                    temp_loop.run_until_complete(
+                        self.stop_async(signum, parent_sig_handler)
+                    )
+                finally:
+                    temp_loop.close()
 
     async def stop_async(self, signum, parent_sig_handler):
         """
@@ -1246,6 +1318,10 @@ class MinionManager(MinionBase):
             self.event.destroy()
             self.event = None
 
+        # Stop the loop last to allow callbacks to finish
+        if self._owns_loop:
+            self.loop_adapter.stop()
+
         # Call the parent signal handler
         parent_sig_handler(signum, None)
 
@@ -1258,6 +1334,8 @@ class MinionManager(MinionBase):
         if self.event is not None:
             self.event.destroy()
             self.event = None
+        if getattr(self, "loop_adapter", None) is not None and self._owns_loop:
+            self.loop_adapter.stop()
 
 
 class Minion(MinionBase):
@@ -1289,17 +1367,22 @@ class Minion(MinionBase):
         self.loaded_base_name = loaded_base_name
         self.connected = False
         self.restart = False
+        self._start_event_published = False
+        self._last_start_event = 0.0
         # Flag meaning minion has finished initialization including first connect to the master.
         # True means the Minion is fully functional and ready to handle events.
         self.ready = False
         self.jid_queue = [] if jid_queue is None else jid_queue
         self.periodic_callbacks = {}
         self.req_channel = None
+        self._reauth_task = None
 
         if io_loop is None:
-            self.io_loop = tornado.ioloop.IOLoop.current()
+            self.loop_adapter = get_io_loop()
         else:
-            self.io_loop = io_loop
+            self.loop_adapter = get_io_loop(io_loop)
+        self.io_loop = self.loop_adapter
+        self._owns_loop = not self.loop_adapter.asyncio_loop.is_running()
 
         # Warn if ZMQ < 3.2
         if zmq:
@@ -1344,13 +1427,7 @@ class Minion(MinionBase):
             time.sleep(sleep_time)
 
         self.process_manager = ProcessManager(name="MinionProcessManager")
-        self.io_loop.spawn_callback(self.process_manager.run, **{"asynchronous": True})
-        # We don't have the proxy setup yet, so we can't start engines
-        # Engines need to be able to access __proxy__
-        if not salt.utils.platform.is_proxy():
-            self.io_loop.spawn_callback(
-                salt.engines.start_engines, self.opts, self.process_manager
-            )
+        self._process_manager_started = False
 
         # Install the SIGINT/SIGTERM handlers if not done so far
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
@@ -1379,13 +1456,15 @@ class Minion(MinionBase):
             self._sync_connect_master_success = True
             self.io_loop.stop()
 
-        self._connect_master_future = self.connect_master(failed=failed)
+        self._connect_master_future = self.loop_adapter.create_task(
+            self.connect_master(failed=failed)
+        )
         # finish connecting to master
         self._connect_master_future.add_done_callback(on_connect_master_future_done)
         if timeout:
-            self.io_loop.call_later(timeout, self.io_loop.stop)
+            self.loop_adapter.call_later(timeout, self.io_loop.stop)
         try:
-            self.io_loop.start()
+            self.loop_adapter.start()
         except KeyboardInterrupt:
             self.destroy()
         # I made the following 3 line oddity to preserve traceback.
@@ -1404,6 +1483,12 @@ class Minion(MinionBase):
         """
         Return a future which will complete when you are connected to a master
         """
+        log.debug(
+            "connect_master invoked for %s (failed=%s, connected=%s)",
+            self.opts["id"],
+            failed,
+            self.connected,
+        )
         if hasattr(self, "pub_channel") and self.pub_channel:
             self.pub_channel.on_recv(None)
             if hasattr(self.pub_channel, "auth"):
@@ -1415,9 +1500,30 @@ class Minion(MinionBase):
             self.req_channel = None
 
         # Consider refactoring so that eval_master does not have a subtle side-effect on the contents of the opts array
+        log.debug(
+            "connect_master evaluating master connection for %s (failed=%s)",
+            self.opts["id"],
+            failed,
+        )
         master, self.pub_channel = await self.eval_master(
             self.opts, self.timeout, self.safe, failed
         )
+        log.debug(
+            "connect_master obtained pub channel for %s (master=%s, connected=%s)",
+            self.opts["id"],
+            master,
+            self.connected,
+        )
+
+        if getattr(self.pub_channel, "auth", None) is not None:
+            try:
+                self.tok = self.pub_channel.auth.gen_token(b"salt")
+                if hasattr(self.pub_channel, "token"):
+                    self.pub_channel.token = self.tok
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "Failed to generate publish token for %s", self.opts["id"]
+                )
 
         # a long-running req channel
         self.req_channel = salt.channel.client.AsyncReqChannel.factory(
@@ -1425,7 +1531,18 @@ class Minion(MinionBase):
         )
         log.debug("Connecting minion's long-running req channel")
         await self.req_channel.connect()
+        log.debug(
+            "connect_master established req channel for %s (connected=%s)",
+            self.opts["id"],
+            self.connected,
+        )
         await self._post_master_init(master)
+        log.debug(
+            "connect_master completed for %s (master=%s, connected=%s)",
+            self.opts["id"],
+            master,
+            self.connected,
+        )
 
     async def handle_payload(self, payload, reply_func):
         self.payloads.append(payload)
@@ -1451,6 +1568,11 @@ class Minion(MinionBase):
             self.opts["master"] = master
 
             # Initialize pillar before loader to make pillar accessible in modules
+            log.debug(
+                "Post master init compiling pillar for %s (connected=%s)",
+                self.opts["id"],
+                self.connected,
+            )
             async_pillar = salt.pillar.get_async_pillar(
                 self.opts,
                 self.opts["grains"],
@@ -1459,6 +1581,10 @@ class Minion(MinionBase):
                 pillarenv=self.opts.get("pillarenv"),
             )
             self.opts["pillar"] = await async_pillar.compile_pillar()
+            log.debug(
+                "Post master init finished pillar compile for %s",
+                self.opts["id"],
+            )
             async_pillar.destroy()
 
         if not self.ready:
@@ -1547,6 +1673,14 @@ class Minion(MinionBase):
                 master_event(type="alive", master=self.opts["master"]), persist=True
             )
             self.schedule.delete_job(master_event(type="failback"), persist=True)
+        log.debug(
+            "Post master init complete for %s; scheduling start event (ready=%s, connected=%s)",
+            self.opts["id"],
+            self.ready,
+            self.connected,
+        )
+        self._ensure_minion_process_manager_running()
+        self.loop_adapter.spawn_callback(self._fire_master_minion_start)
 
     def _prep_mod_opts(self):
         """
@@ -2556,23 +2690,117 @@ class Minion(MinionBase):
             )
 
     async def _fire_master_minion_start(self):
+        log.debug(
+            "Attempting to publish start event for %s (connected=%s, published=%s)",
+            self.opts["id"],
+            self.connected,
+            self._start_event_published,
+        )
+        if not self.connected:
+            log.debug(
+                "Skipping minion start event for %s because master connection is lost",
+                self.opts["id"],
+            )
+            return
+
         include_grains = False
         if self.opts["start_event_grains"]:
             include_grains = True
+
+        def _schedule_retry(delay):
+            if delay <= 0:
+                log.debug(
+                    "Retrying start event immediately for minion %s",
+                    self.opts["id"],
+                )
+                self.loop_adapter.spawn_callback(self._fire_master_minion_start)
+            else:
+                log.debug(
+                    "Retrying start event for minion %s in %s seconds",
+                    self.opts["id"],
+                    delay,
+                )
+                self.loop_adapter.call_later(
+                    delay,
+                    lambda: self.loop_adapter.spawn_callback(
+                        self._fire_master_minion_start
+                    ),
+                )
+
         # Send an event to the master that the minion is live
-        if self.opts["enable_legacy_startup_events"]:
-            # Old style event. Defaults to False in 3001 release.
+        try:
+            if self.opts["enable_legacy_startup_events"]:
+                # Old style event. Defaults to False in 3001 release.
+                await self._fire_master_main(
+                    "Minion {} started at {}".format(self.opts["id"], time.asctime()),
+                    "minion_start",
+                    include_startup_grains=include_grains,
+                )
+            # send name spaced event
             await self._fire_master_main(
                 "Minion {} started at {}".format(self.opts["id"], time.asctime()),
-                "minion_start",
+                tagify([self.opts["id"], "start"], "minion"),
                 include_startup_grains=include_grains,
             )
-        # send name spaced event
-        await self._fire_master_main(
-            "Minion {} started at {}".format(self.opts["id"], time.asctime()),
-            tagify([self.opts["id"], "start"], "minion"),
-            include_startup_grains=include_grains,
+        except SaltReqTimeoutError as exc:
+            log.warning(
+                "Timed out sending start event for %s (will retry): %s",
+                self.opts["id"],
+                exc,
+            )
+            self._start_event_published = False
+            retry_delay = self.opts.get("start_event_retry_interval", 5)
+            _schedule_retry(retry_delay)
+            return
+        except Exception:  # pylint: disable=broad-except
+            log.exception(
+                "Failed to publish start event for minion %s, will retry shortly",
+                self.opts["id"],
+            )
+            self._start_event_published = False
+            retry_delay = self.opts.get("start_event_retry_interval", 5)
+            _schedule_retry(retry_delay)
+            return
+
+        self._start_event_published = True
+        self._last_start_event = time.time()
+        log.info("Minion is ready to receive requests!")
+
+    async def _reauthenticate_after_accept(self):
+        current = asyncio.current_task()
+        if (
+            self._reauth_task is not None
+            and self._reauth_task is not current
+            and not self._reauth_task.done()
+        ):
+            return
+        self._reauth_task = current
+        log.debug(
+            "Re-authentication flow started for %s (connected=%s)",
+            self.opts["id"],
+            self.connected,
         )
+        try:
+            if hasattr(self, "pub_channel") and self.pub_channel is not None:
+                try:
+                    if hasattr(self.pub_channel, "auth"):
+                        self.pub_channel.auth.invalidate()
+                finally:
+                    self.pub_channel.on_recv(None)
+                    if hasattr(self.pub_channel, "close"):
+                        self.pub_channel.close()
+                    self.pub_channel = None
+            if getattr(self, "req_channel", None) is not None:
+                self.req_channel.close()
+                self.req_channel = None
+            self.connected = False
+            self._start_event_published = False
+            await self.connect_master(failed=True)
+        except Exception:  # pylint: disable=broad-except
+            log.exception("Re-authentication flow failed for %s", self.opts["id"])
+        finally:
+            log.debug("Re-authentication flow finished for %s", self.opts["id"])
+            self._reauth_task = None
 
     def module_refresh(self, force_refresh=False, notify=False):
         """
@@ -2899,7 +3127,7 @@ class Minion(MinionBase):
                 data.get("force_refresh", False)
                 or _minion.grains_cache != _minion.opts["grains"]
             ):
-                _minion.pillar_refresh(force_refresh=True)
+                await _minion.pillar_refresh(force_refresh=True)
                 _minion.grains_cache = _minion.opts["grains"]
         elif tag.startswith("environ_setenv"):
             self.environ_setenv(tag, data)
@@ -2954,6 +3182,7 @@ class Minion(MinionBase):
             if self.connected:
                 # we are not connected anymore
                 self.connected = False
+                self._start_event_published = False
                 log.info("Connection to master %s lost", self.opts["master"])
                 if self.opts["transport"] != "tcp":
                     self.schedule.delete_job(name=master_event(type="alive"))
@@ -3050,28 +3279,30 @@ class Minion(MinionBase):
                     self.io_loop.stop()
 
         elif tag.startswith(master_event(type="connected")):
-            # handle this event only once. otherwise it will pollute the log
-            # also if master type is failover all the reconnection work is done
-            # by `disconnected` event handler and this event must never happen,
-            # anyway check it to be sure
-            if not self.connected and self.opts["master_type"] != "failover":
-                log.info("Connection to master %s re-established", self.opts["master"])
-                self.connected = True
-                # modify the __master_alive job to only fire,
-                # if the connection is lost again
-                if self.opts["transport"] != "tcp":
-                    schedule = {
-                        "function": "status.master",
-                        "seconds": self.opts["master_alive_interval"],
-                        "jid_include": True,
-                        "maxrunning": 1,
-                        "return_job": False,
-                        "kwargs": {"master": self.opts["master"], "connected": True},
-                    }
-
-                    self.schedule.modify_job(
-                        name=master_event(type="alive", master=self.opts["master"]),
-                        schedule=schedule,
+            # Handle reconnection events, even if we already think we're connected.
+            if self.opts["master_type"] != "failover":
+                log.debug(
+                    "Received master connected event for %s (connected=%s)",
+                    self.opts["id"],
+                    self.connected,
+                )
+                if not self.connected:
+                    log.info(
+                        "Connection to master %s re-established", self.opts["master"]
+                    )
+                else:
+                    log.debug(
+                        "Received master connected event while already marked connected"
+                    )
+                self.connected = False
+                self._start_event_published = False
+                if self._reauth_task is None or self._reauth_task.done():
+                    log.debug(
+                        "Scheduling re-authentication task for %s after master connected event",
+                        self.opts["id"],
+                    )
+                    self._reauth_task = self.loop_adapter.create_task(
+                        self._reauthenticate_after_accept()
                     )
         elif tag.startswith("__schedule_return"):
             # reporting current connection with master
@@ -3088,6 +3319,19 @@ class Minion(MinionBase):
             if self.connected:
                 log.debug("Forwarding salt error event tag=%s", tag)
                 await self._fire_master_main(data, tag)
+        elif tag.startswith("salt/auth"):
+            if data.get("act") == "accept" and data.get("id") == self.opts["id"]:
+                log.debug(
+                    "Auth accept received for %s (master=%s)",
+                    self.opts["id"],
+                    data.get("__master_id__", self.opts.get("master")),
+                )
+                self.connected = True
+                self._start_event_published = False
+                if self._reauth_task is None or self._reauth_task.done():
+                    self._reauth_task = self.loop_adapter.create_task(
+                        self._reauthenticate_after_accept()
+                    )
         elif tag.startswith("salt/auth/creds"):
             key = tuple(data["key"])
             log.debug(
@@ -3109,8 +3353,9 @@ class Minion(MinionBase):
         # Add an extra fallback in case a forked process leaks through
         multiprocessing.active_children()
         self.subprocess_list.cleanup()
-        if self.schedule:
-            self.schedule.cleanup_subprocesses()
+        schedule = getattr(self, "schedule", None)
+        if schedule:
+            schedule.cleanup_subprocesses()
 
     def _setup_core(self):
         """
@@ -3220,12 +3465,75 @@ class Minion(MinionBase):
         """
         if name in self.periodic_callbacks:
             return False
-        self.periodic_callbacks[name] = tornado.ioloop.PeriodicCallback(
-            method,
-            interval * 1000,
-        )
-        self.periodic_callbacks[name].start()
+
+        async def _periodic_runner():
+            while name in self.periodic_callbacks:
+                try:
+                    result = method()
+                    if asyncio.iscoroutine(result):
+                        await result
+                except Exception:  # pylint: disable=broad-except
+                    log.exception("Error in periodic callback '%s'", name)
+                await asyncio.sleep(interval)
+
+        task = self.loop_adapter.create_task(_periodic_runner())
+        self.periodic_callbacks[name] = task
         return True
+
+    def _cancel_periodic_handle(self, handle):
+        """
+        Stop a legacy Tornado periodic callback or cancel an asyncio task.
+
+        Returns ``True`` when the caller should await the handle to let it
+        observe cancellation, ``False`` otherwise.
+        """
+        if hasattr(handle, "stop"):
+            try:
+                handle.stop()
+            except Exception:  # pylint: disable=broad-except
+                log.exception("Error stopping periodic callback")
+            return False
+        if asyncio.isfuture(handle) or isinstance(handle, asyncio.Task):
+            handle.cancel()
+            return True
+        return False
+
+    def _drain_cancelled_callbacks(self, tasks):
+        if not tasks:
+            return
+
+        async def _wait_for(handles):
+            for handle in handles:
+                try:
+                    await handle
+                except asyncio.CancelledError:
+                    pass
+                except Exception:  # pylint: disable=broad-except
+                    log.exception("Error waiting for periodic callback cleanup")
+
+        loop = self.io_loop.asyncio_loop
+        if loop.is_running():
+            self.loop_adapter.spawn_callback(_wait_for, tasks)
+            return
+        try:
+            self.loop_adapter.run_sync(_wait_for, tasks)
+        except RuntimeError:
+            temp_loop = asyncio.new_event_loop()
+            try:
+                temp_loop.run_until_complete(_wait_for(tasks))
+            finally:
+                temp_loop.close()
+
+    def _ensure_minion_process_manager_running(self):
+        if not self._process_manager_started:
+            self._process_manager_started = True
+            self.loop_adapter.spawn_callback(
+                self.process_manager.run, asynchronous=True
+            )
+            if not salt.utils.platform.is_proxy():
+                self.loop_adapter.spawn_callback(
+                    salt.engines.start_engines, self.opts, self.process_manager
+                )
 
     def remove_periodic_callback(self, name):
         """
@@ -3235,7 +3543,8 @@ class Minion(MinionBase):
         callback = self.periodic_callbacks.pop(name, None)
         if callback is None:
             return False
-        callback.stop()
+        if self._cancel_periodic_handle(callback):
+            self._drain_cancelled_callbacks([callback])
         return True
 
     # Main Minion Tune In
@@ -3254,7 +3563,7 @@ class Minion(MinionBase):
             if self.opts.get("scheduler_before_connect", False):
                 self.setup_scheduler(before_connect=True)
             self.sync_connect_master()
-        if self.connected:
+        if self.connected and not self._start_event_published:
             self.io_loop.add_callback(self._fire_master_minion_start)
             log.info("Minion is ready to receive requests!")
 
@@ -3383,6 +3692,8 @@ class Minion(MinionBase):
         Tear down the minion
         """
         self._running = False
+        self.connected = False
+        self._start_event_published = False
         if hasattr(self, "schedule"):
             del self.schedule
         if hasattr(self, "pub_channel") and self.pub_channel is not None:
@@ -3391,8 +3702,13 @@ class Minion(MinionBase):
         if hasattr(self, "req_channel") and self.req_channel is not None:
             self.req_channel.close()
         if hasattr(self, "periodic_callbacks"):
-            for cb in self.periodic_callbacks.values():
-                cb.stop()
+            handles = list(self.periodic_callbacks.values())
+            self.periodic_callbacks.clear()
+            to_drain = []
+            for handle in handles:
+                if self._cancel_periodic_handle(handle):
+                    to_drain.append(handle)
+            self._drain_cancelled_callbacks(to_drain)
 
     # pylint: disable=W1701
     def __del__(self):
@@ -3611,9 +3927,10 @@ class SyndicManager(MinionBase):
         self.jid_forward_cache = set()
 
         if io_loop is None:
-            self.io_loop = tornado.ioloop.IOLoop.current()
+            self.loop_adapter = get_io_loop()
         else:
-            self.io_loop = io_loop
+            self.loop_adapter = get_io_loop(io_loop)
+        self.io_loop = self.loop_adapter
 
         # List of events
         self.raw_events = []
@@ -3639,7 +3956,7 @@ class SyndicManager(MinionBase):
             s_opts = copy.copy(self.opts)
             s_opts["master"] = master
 
-            future = asyncio.Future()
+            future = self.loop_adapter.asyncio_loop.create_future()
             self._syndics[master] = future
 
             async def connect(future, s_opts):
@@ -3648,7 +3965,7 @@ class SyndicManager(MinionBase):
                 except Exception as exc:  # pylint: disable=broad-except
                     future.set_exception(exc)
 
-            self.io_loop.spawn_callback(connect, future, s_opts)
+            self.loop_adapter.spawn_callback(connect, future, s_opts)
 
     async def _connect_syndic(self, opts):
         """
@@ -3705,7 +4022,7 @@ class SyndicManager(MinionBase):
         # if its connected, mark it dead
         if self._syndics[master].done():
             syndic = self._syndics[master].result()  # pylint: disable=no-member
-            self._syndics[master] = syndic.reconnect()
+            self._syndics[master] = self.loop_adapter.create_task(syndic.reconnect())
         else:
             # TODO: debug?
             log.info(
@@ -3836,11 +4153,16 @@ class SyndicManager(MinionBase):
         self.local.event.set_event_handler(self._process_event)
 
         # forward events every syndic_event_forward_timeout
-        self.forward_events = tornado.ioloop.PeriodicCallback(
-            self._forward_events,
-            self.opts["syndic_event_forward_timeout"] * 1000,
-        )
-        self.forward_events.start()
+        async def forward_loop():
+            interval = self.opts["syndic_event_forward_timeout"]
+            while True:
+                try:
+                    await self._forward_events()
+                except Exception:  # pylint: disable=broad-except
+                    log.exception("Error forwarding syndic events")
+                await asyncio.sleep(interval)
+
+        self.forward_events = self.loop_adapter.create_task(forward_loop())
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()

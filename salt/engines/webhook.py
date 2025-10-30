@@ -2,11 +2,13 @@
 Send events from webhook api
 """
 
-import tornado.httpserver
-import tornado.ioloop
-import tornado.web
+import asyncio
 
+import aiohttp.web
+
+import salt.transport.base
 import salt.utils.event
+from salt.utils.asynchronous import get_io_loop
 
 
 def start(address=None, port=5000, ssl_crt=None, ssl_key=None):
@@ -64,21 +66,33 @@ def start(address=None, port=5000, ssl_crt=None, ssl_key=None):
         else:
             __salt__["event.send"](tag, msg)
 
-    class WebHook(tornado.web.RequestHandler):  # pylint: disable=abstract-method
-        def post(self, tag):  # pylint: disable=arguments-differ
-            body = self.request.body
-            headers = self.request.headers
-            payload = {
-                "headers": headers if isinstance(headers, dict) else dict(headers),
-                "body": body,
-            }
-            fire("salt/engines/hook/" + tag, payload)
+    async def webhook_handler(request):
+        tag = request.match_info.get("tag", "")
+        body = await request.read()
+        headers = dict(request.headers)
+        payload = {"headers": headers, "body": body}
+        fire("salt/engines/hook/" + tag, payload)
+        return aiohttp.web.Response(status=200)
 
-    application = tornado.web.Application([(r"/(.*)", WebHook)])
-    ssl_options = None
-    if all([ssl_crt, ssl_key]):
-        ssl_options = {"certfile": ssl_crt, "keyfile": ssl_key}
-    io_loop = tornado.ioloop.IOLoop()
-    http_server = tornado.httpserver.HTTPServer(application, ssl_options=ssl_options)
-    http_server.listen(port, address=address)
-    io_loop.start()
+    async def run_server():
+        app = aiohttp.web.Application()
+        app.router.add_post("/{tag:.*}", webhook_handler)
+        runner = aiohttp.web.AppRunner(app)
+        await runner.setup()
+        ssl_context = None
+        if ssl_crt and ssl_key:
+            ssl_context = salt.transport.base.ssl_context(
+                {"cert": ssl_crt, "key": ssl_key}, server_side=True
+            )
+        site = aiohttp.web.TCPSite(
+            runner, address or "0.0.0.0", port, ssl_context=ssl_context
+        )
+        await site.start()
+        await asyncio.Event().wait()
+
+    loop_adapter = get_io_loop()
+    loop_adapter.spawn_callback(run_server)
+    try:
+        loop_adapter.start()
+    finally:
+        loop_adapter.stop()

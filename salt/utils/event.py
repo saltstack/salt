@@ -235,9 +235,13 @@ class SaltEvent:
         self.node = node
         self.keep_loop = keep_loop
         if io_loop is not None:
-            self.io_loop = io_loop
+            self._raw_io_loop = io_loop
+            self._loop_adapter = salt.utils.asynchronous.get_io_loop(io_loop)
+            self.io_loop = self._loop_adapter
             self._run_io_loop_sync = False
         else:
+            self._raw_io_loop = None
+            self._loop_adapter = None
             self.io_loop = None
             self._run_io_loop_sync = True
         self.cpub = False
@@ -352,10 +356,13 @@ class SaltEvent:
                 )
         else:
             if self.subscriber is None:
+                raw_loop = self._raw_io_loop
+                if raw_loop is None and self._loop_adapter is not None:
+                    raw_loop = self._loop_adapter.asyncio_loop
                 self.subscriber = salt.transport.ipc_publish_client(
-                    self.node, self.opts, io_loop=self.io_loop
+                    self.node, self.opts, io_loop=raw_loop
                 )
-                self.io_loop.spawn_callback(self.subscriber.connect)
+                self._loop_adapter.spawn_callback(self.subscriber.connect)
 
             # For the asynchronous case, the connect will be defered to when
             # set_event_handler() is invoked.
@@ -751,7 +758,7 @@ class SaltEvent:
         data["_stamp"] = datetime.datetime.utcnow().isoformat()
         event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
-        self.pusher.publish(msg)
+        self._schedule_async_result(self.pusher.publish(msg))
         if cb is not None:
             warn_until(
                 3008,
@@ -797,7 +804,7 @@ class SaltEvent:
                 )
                 raise
         else:
-            asyncio.create_task(self.pusher.publish(msg))
+            self._schedule_async_result(self.pusher.publish(msg))
         return True
 
     def fire_master(self, data, tag, timeout=1000):
@@ -815,6 +822,25 @@ class SaltEvent:
             self.close_pub()
         if self.pusher is not None:
             self.close_pull()
+
+    @staticmethod
+    def _schedule_async_result(result):
+        if result is None:
+            return
+        if asyncio.iscoroutine(result):
+            asyncio.create_task(result)
+            return
+        if isinstance(result, asyncio.Future):
+            try:
+                current_loop = asyncio.get_running_loop()
+            except RuntimeError:
+                return
+            try:
+                result_loop = result.get_loop()
+            except AttributeError:
+                result_loop = current_loop
+            if result_loop is current_loop:
+                asyncio.ensure_future(result)
 
     def _fire_ret_load_specific_fun(self, load, fun_index=0):
         """
@@ -916,7 +942,10 @@ class SaltEvent:
         if not self.cpub:
             self.connect_pub()
         # This will handle reconnects
-        self.io_loop.spawn_callback(self.subscriber.on_recv, event_handler)
+        loop_adapter = self._loop_adapter
+        if loop_adapter is None:
+            loop_adapter = salt.utils.asynchronous.get_io_loop()
+        loop_adapter.spawn_callback(self.subscriber.on_recv, event_handler)
 
     # pylint: disable=W1701
     def __del__(self):
@@ -1034,7 +1063,10 @@ class AsyncEventPublisher:
         default_minion_sock_dir = self.opts["sock_dir"]
         self.opts.update(opts)
 
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        loop_obj = io_loop or tornado.ioloop.IOLoop.current()
+        self._loop_adapter = salt.utils.asynchronous.get_io_loop(loop_obj)
+        self.io_loop = self._loop_adapter
+        self._raw_io_loop = loop_obj
         self._closing = False
         self.publisher = None
         self.puller = None
@@ -1088,12 +1120,13 @@ class AsyncEventPublisher:
                         # Let's stop at this stage
                         raise
 
+        raw_loop = self._raw_io_loop or self._loop_adapter.asyncio_loop
         self.publisher = salt.transport.ipc.IPCMessagePublisher(
-            self.opts, epub_uri, io_loop=self.io_loop
+            self.opts, epub_uri, io_loop=raw_loop
         )
 
         self.puller = salt.transport.ipc.IPCMessageServer(
-            epull_uri, io_loop=self.io_loop, payload_handler=self.handle_publish
+            epull_uri, io_loop=raw_loop, payload_handler=self.handle_publish
         )
 
         log.info("Starting pull socket on %s", epull_uri)

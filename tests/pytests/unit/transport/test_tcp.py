@@ -270,18 +270,19 @@ def test_tcp_pub_server_channel_publish_filtering_str_list(temp_salt_master):
 
 @pytest.fixture(scope="function")
 def salt_message_client():
-    io_loop_mock = MagicMock(spec=tornado.ioloop.IOLoop)
-    io_loop_mock.asyncio_loop = None
-    io_loop_mock.call_later.side_effect = lambda *args, **kwargs: (args, kwargs)
-
     client = salt.transport.tcp.MessageClient(
-        {}, "127.0.0.1", ports.get_unused_localhost_port(), io_loop=io_loop_mock
+        {}, "127.0.0.1", ports.get_unused_localhost_port()
     )
 
     try:
         yield client
     finally:
         client.close()
+        loop_adapter = getattr(client, "loop_adapter", None)
+        if loop_adapter is not None:
+            loop = loop_adapter.asyncio_loop
+            if not loop.is_running() and not loop.is_closed():
+                loop.close()
 
 
 # XXX we don't return a future anymore, this needs a different way of testing.

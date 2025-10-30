@@ -22,9 +22,6 @@ import traceback
 import uuid
 import weakref
 
-import tornado.concurrent
-import tornado.ioloop
-
 import salt.cache
 import salt.channel.client
 import salt.defaults.exitcodes
@@ -48,6 +45,7 @@ from salt.exceptions import (
     SaltReqTimeoutError,
     UnsupportedAlgorithm,
 )
+from salt.utils.asynchronous import AsyncLoopAdapter, get_io_loop
 
 try:
     import cryptography.exceptions
@@ -706,33 +704,28 @@ class AsyncAuth:
     Set up an Async object to maintain authentication with the salt master
     """
 
-    # This class is only a singleton per minion/master pair
-    # mapping of io_loop -> {key -> auth}
-    instance_map = weakref.WeakKeyDictionary()
+    # mapping of (loop, key) -> auth instances (weakly referenced)
+    instance_map = weakref.WeakValueDictionary()
 
     # mapping of key -> creds
     creds_map = {}
 
     def __new__(cls, opts, io_loop=None):
-        """
-        Only create one instance of AsyncAuth per __key()
-        """
-        # do we have any mapping for this io_loop
-        io_loop = io_loop or tornado.ioloop.IOLoop.current()
-        if io_loop not in AsyncAuth.instance_map:
-            AsyncAuth.instance_map[io_loop] = weakref.WeakValueDictionary()
-        loop_instance_map = AsyncAuth.instance_map[io_loop]
+        """Only create one instance of AsyncAuth per loop/key pair."""
 
+        loop_obj = io_loop
+        loop_adapter = get_io_loop(loop_obj)
+        loop_obj = loop_adapter.asyncio_loop
+        loop_key = loop_obj
         key = cls.__key(opts)
-        auth = loop_instance_map.get(key)
+        inst_key = (loop_key, key)
+
+        auth = AsyncAuth.instance_map.get(inst_key)
         if auth is None:
             log.debug("Initializing new AsyncAuth for %s", key)
-            # we need to make a local variable for this, as we are going to store
-            # it in a WeakValueDictionary-- which will remove the item if no one
-            # references it-- this forces a reference while we return to the caller
             auth = object.__new__(cls)
-            auth.__singleton_init__(opts, io_loop=io_loop)
-            loop_instance_map[key] = auth
+            auth.__singleton_init__(opts, loop_obj=loop_obj, adapter=loop_adapter)
+            AsyncAuth.instance_map[inst_key] = auth
         else:
             log.debug("Re-using AsyncAuth for %s", key)
         return auth
@@ -746,7 +739,7 @@ class AsyncAuth:
         pass
 
     # an init for the singleton instance to call
-    def __singleton_init__(self, opts, io_loop=None):
+    def __singleton_init__(self, opts, loop_obj=None, adapter=None):
         """
         Init an Auth instance
 
@@ -766,7 +759,11 @@ class AsyncAuth:
             self.mpub = "minion_master.pub"
         if not os.path.isfile(self.pub_path):
             self.get_keys()
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        adapter = adapter or get_io_loop(loop_obj)
+        loop_obj = adapter.asyncio_loop
+        self._loop_adapter: AsyncLoopAdapter = adapter
+        self.io_loop = adapter  # backwards compatibility for existing call sites
+        self._loop_raw = loop_obj
         key = self.__key(self.opts)
         # TODO: if we already have creds for this key, lets just re-use
         if key in AsyncAuth.creds_map:
@@ -774,7 +771,7 @@ class AsyncAuth:
             self._creds = creds
             self._crypticle = Crypticle(self.opts, creds["aes"])
             self._session_crypticle = Crypticle(self.opts, creds["session"])
-            self._authenticate_future = tornado.concurrent.Future()
+            self._authenticate_future = self._loop_adapter.asyncio_loop.create_future()
             self._authenticate_future.set_result(True)
 
     def __deepcopy__(self, memo):
@@ -782,7 +779,7 @@ class AsyncAuth:
         result = cls.__new__(cls, copy.deepcopy(self.opts, memo))
         memo[id(self)] = result
         for key in self.__dict__:
-            if key in ("io_loop",):
+            if key in ("io_loop", "_loop_adapter", "_loop_raw"):
                 # The io_loop has a thread Lock which will fail to be deep
                 # copied. Skip it because it will just be recreated on the
                 # new copy.
@@ -824,6 +821,14 @@ class AsyncAuth:
         This function will de-dupe all calls here and return a *single* future
         for the sign-in-- whis way callers can all assume there aren't others
         """
+        log.debug(
+            "%s authenticate() invoked (future_exists=%s, future_done=%s)",
+            self,
+            hasattr(self, "_authenticate_future"),
+            getattr(
+                getattr(self, "_authenticate_future", None), "done", lambda: False
+            )(),
+        )
         # if an auth is in flight-- and not done-- just pass that back as the future to wait on
         if (
             hasattr(self, "_authenticate_future")
@@ -831,19 +836,23 @@ class AsyncAuth:
         ):
             future = self._authenticate_future
         else:
-            future = tornado.concurrent.Future()
+            future = self._loop_adapter.asyncio_loop.create_future()
             self._authenticate_future = future
-            self.io_loop.add_callback(self._authenticate)
+            self._loop_adapter.add_callback(self._authenticate)
 
         if callback is not None:
 
             def handle_future(future):
                 response = future.result()
-                self.io_loop.add_callback(callback, response)
+                self._loop_adapter.add_callback(callback, response)
 
             future.add_done_callback(handle_future)
 
         return future
+
+    @property
+    def asyncio_loop(self):
+        return self._loop_adapter.asyncio_loop
 
     async def _authenticate(self):
         """
@@ -855,20 +864,58 @@ class AsyncAuth:
         :rtype: Crypticle
         :returns: A crypticle used for encryption operations
         """
+        log.debug("%s starting _authenticate()", self)
         acceptance_wait_time = self.opts["acceptance_wait_time"]
         acceptance_wait_time_max = self.opts["acceptance_wait_time_max"]
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
         creds = None
+        log.debug(
+            "%s auth config timeout=%s tries=%s safemode=%s",
+            self,
+            self.opts.get("auth_timeout"),
+            self.opts.get("auth_tries"),
+            self.opts.get("auth_safemode"),
+        )
 
         with salt.channel.client.AsyncReqChannel.factory(
-            self.opts, crypt="clear", io_loop=self.io_loop
+            self.opts, crypt="clear", io_loop=self._loop_raw
         ) as channel:
             error = None
+            attempt = 0
+            max_attempts = self.opts.get("auth_tries", 0) or 0
             while True:
+                attempt += 1
                 try:
-                    creds = await self.sign_in(channel=channel)
+                    creds = await self.sign_in(channel=channel, tries=1)
+                    log.debug("%s sign_in returned %r", self, creds)
                 except SaltClientError as exc:
+                    message = str(exc)
+                    if any(
+                        pattern in message
+                        for pattern in (
+                            "Attempt to authenticate with the salt master failed",
+                            "-|RETRY|-",
+                        )
+                    ):
+                        log.warning(
+                            "%s sign_in transient failure: %s (will retry)",
+                            self,
+                            message,
+                        )
+                        if acceptance_wait_time:
+                            await asyncio.sleep(acceptance_wait_time)
+                        if acceptance_wait_time < acceptance_wait_time_max:
+                            acceptance_wait_time += acceptance_wait_time
+                            log.debug(
+                                "Authentication wait time is %s",
+                                acceptance_wait_time,
+                            )
+                        if max_attempts > 0 and attempt >= max_attempts:
+                            error = exc
+                            break
+                        continue
+                    log.warning("%s sign_in raised fatal error: %s", self, exc)
                     error = exc
                     break
                 if creds == "retry":
@@ -901,6 +948,13 @@ class AsyncAuth:
                         log.debug(
                             "Authentication wait time is %s", acceptance_wait_time
                         )
+                    if max_attempts > 0 and attempt >= max_attempts:
+                        error = SaltClientError(
+                            "Authentication retries exhausted for {}".format(
+                                self.opts["id"]
+                            )
+                        )
+                        break
                     continue
                 elif creds == "bad enc algo":
                     log.error(
@@ -928,6 +982,11 @@ class AsyncAuth:
                     )
                 self._authenticate_future.set_exception(error)
             else:
+                log.debug(
+                    "%s received credentials (publish_port=%s)",
+                    self,
+                    creds.get("publish_port"),
+                )
                 key = self.__key(self.opts)
                 new_aes, changed_aes, changed_session = False, False, False
                 if key not in AsyncAuth.creds_map:
@@ -945,6 +1004,13 @@ class AsyncAuth:
                     self._creds = creds
                     self._crypticle = Crypticle(self.opts, creds["aes"])
                     self._session_crypticle = Crypticle(self.opts, creds["session"])
+
+                log.debug(
+                    "%s authenticated with master %s (publish_port=%s)",
+                    self,
+                    self.opts.get("master"),
+                    creds.get("publish_port"),
+                )
 
                 self._authenticate_future.set_result(
                     True
@@ -1520,7 +1586,7 @@ class SAuth(AsyncAuth):
         super().__init__(opts, io_loop=io_loop)
 
     # an init for the singleton instance to call
-    def __singleton_init__(self, opts, io_loop=None):
+    def __singleton_init__(self, opts, loop_obj=None, adapter=None):
         """
         Init an Auth instance
 
@@ -1528,6 +1594,7 @@ class SAuth(AsyncAuth):
         :return: Auth instance
         :rtype: Auth
         """
+        super().__singleton_init__(opts, loop_obj=loop_obj, adapter=adapter)
         self.opts = opts
         self.cache = salt.cache.Cache(opts, driver=opts["keys.cache_driver"])
         self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())

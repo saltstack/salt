@@ -17,8 +17,6 @@ import sys
 import threading
 import time
 
-import tornado.gen
-
 import salt.acl
 import salt.auth
 import salt.channel.server
@@ -59,6 +57,7 @@ import salt.wheel
 from salt.config import DEFAULT_INTERVAL
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.transport import TRANSPORTS
+from salt.utils.asynchronous import get_io_loop
 from salt.utils.channel import iter_transport_opts
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler
 from salt.utils.event import tagify
@@ -1008,13 +1007,19 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
             log.trace("Ignore tag %s", tag)
 
     def run(self):
-        io_loop = tornado.ioloop.IOLoop()
-        with salt.utils.event.get_master_event(
-            self.opts, self.opts["sock_dir"], io_loop=io_loop, listen=True
-        ) as event_bus:
-            event_bus.subscribe("")
-            event_bus.set_event_handler(self.handle_event)
-            io_loop.start()
+        loop_adapter = get_io_loop()
+        try:
+            with salt.utils.event.get_master_event(
+                self.opts,
+                self.opts["sock_dir"],
+                io_loop=loop_adapter.asyncio_loop,
+                listen=True,
+            ) as event_bus:
+                event_bus.subscribe("")
+                event_bus.set_event_handler(self.handle_event)
+                loop_adapter.start()
+        finally:
+            loop_adapter.stop()
 
 
 class ReqServer(salt.utils.process.SignalHandlingProcess):
@@ -1138,6 +1143,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         self.k_mtime = 0
         self.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
         self.stat_clock = time.time()
+        self.loop_adapter = None
 
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
     # Otherwise, 'SMaster.secrets' won't be copied over to the spawned process
@@ -1175,13 +1181,14 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         Bind to the local port
         """
-        self.io_loop = tornado.ioloop.IOLoop()
+        self.loop_adapter = get_io_loop()
+        self.io_loop = self.loop_adapter
         for req_channel in self.req_channels:
             req_channel.post_fork(
-                self._handle_payload, io_loop=self.io_loop
+                self._handle_payload, io_loop=self.loop_adapter.asyncio_loop
             )  # TODO: cleaner? Maybe lazily?
         try:
-            self.io_loop.start()
+            self.loop_adapter.start()
         except (KeyboardInterrupt, SystemExit):
             # Tornado knows what to do
             pass
