@@ -72,6 +72,7 @@ import fnmatch
 import logging
 import os
 import re
+from collections import OrderedDict as _OrderedDict
 
 import salt.utils.args
 import salt.utils.pkg
@@ -81,7 +82,6 @@ from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationEr
 from salt.modules.pkg_resource import _repack_pkgs
 from salt.output import nested
 from salt.utils.functools import namespaced_function
-from salt.utils.odict import OrderedDict as _OrderedDict
 
 _repack_pkgs = namespaced_function(_repack_pkgs, globals())
 

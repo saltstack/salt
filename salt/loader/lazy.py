@@ -29,7 +29,6 @@ import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.files
 import salt.utils.lazy
-import salt.utils.odict
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
@@ -440,8 +439,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.suffix_map[""] = ("", "", MODULE_KIND_PKG_DIRECTORY)
 
         # create mapping of filename (without suffix) to (path, suffix)
-        # The files are added in order of priority, so order *must* be retained.
-        self.file_mapping = salt.utils.odict.OrderedDict()
+        # The files are added in order of priority; dict preserves insertion order.
+        self.file_mapping = {}
 
         opt_match = []
 

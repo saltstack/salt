@@ -11,6 +11,7 @@ import shlex
 import time
 import uuid
 import warnings
+from collections import OrderedDict
 from collections.abc import Hashable
 from functools import wraps
 from xml.dom import minidom
@@ -31,7 +32,6 @@ import salt.utils.url
 import salt.utils.yaml
 from salt.exceptions import TemplateError
 from salt.utils.decorators.jinja import jinja_filter, jinja_global, jinja_test
-from salt.utils.odict import OrderedDict
 from salt.utils.versions import Version
 
 try:

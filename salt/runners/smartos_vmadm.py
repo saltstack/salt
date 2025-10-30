@@ -2,9 +2,10 @@
 Runner for SmartOS minions control vmadm
 """
 
+from collections import OrderedDict
+
 import salt.client
 from salt.exceptions import SaltClientError
-from salt.utils.odict import OrderedDict
 
 # Function aliases
 __func_alias__ = {"list_vms": "list"}

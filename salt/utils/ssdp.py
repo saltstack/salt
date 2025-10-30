@@ -30,7 +30,7 @@ import salt.utils.json
 import salt.utils.stringutils
 
 try:
-    from salt.utils.odict import OrderedDict
+    from collections import OrderedDict
 except ImportError:
     from collections import OrderedDict
 

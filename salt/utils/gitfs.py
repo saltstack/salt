@@ -21,6 +21,7 @@ import stat
 import subprocess
 import time
 import weakref
+from collections import OrderedDict
 from datetime import datetime
 
 import salt.ext.tornado.ioloop
@@ -43,7 +44,6 @@ from salt.config import DEFAULT_HASH_TYPE
 from salt.config import DEFAULT_MASTER_OPTS as _DEFAULT_MASTER_OPTS
 from salt.exceptions import FileserverConfigError, GitLockError, get_error_message
 from salt.utils.event import tagify
-from salt.utils.odict import OrderedDict
 from salt.utils.platform import get_machine_identifier as _get_machine_identifier
 from salt.utils.versions import Version
 

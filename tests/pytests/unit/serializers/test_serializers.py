@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from textwrap import dedent
 
 import jinja2
@@ -16,7 +17,6 @@ import salt.serializers.yamlex as yamlex
 import salt.utils.platform
 from salt.serializers import SerializationError
 from salt.serializers.yaml import EncryptedString
-from salt.utils.odict import OrderedDict
 
 SKIP_MESSAGE = "{} is unavailable, have prerequisites been met?"
 

@@ -200,9 +200,9 @@ More complete example for MySQL (to also show configuration)
 
 import abc
 import logging
+from collections import OrderedDict
 
 from salt.utils.dictupdate import update
-from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 

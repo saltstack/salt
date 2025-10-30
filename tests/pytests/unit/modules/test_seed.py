@@ -5,12 +5,12 @@
 import os
 import shutil
 import uuid
+from collections import OrderedDict
 
 import pytest
 
 import salt.modules.seed as seed
 import salt.utils.files
-import salt.utils.odict
 from tests.support.mock import MagicMock, patch
 
 
@@ -22,7 +22,7 @@ def configure_loader_modules():
 @pytest.mark.slow_test
 def test_mkconfig_odict():
     with patch.dict(seed.__opts__, {"master": "foo"}):
-        ddd = salt.utils.odict.OrderedDict()
+        ddd = OrderedDict()
         ddd["b"] = "b"
         ddd["a"] = "b"
         data = seed.mkconfig(ddd, approve_key=False)

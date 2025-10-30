@@ -4,13 +4,12 @@
 
 import datetime
 import logging
+from collections import OrderedDict
 
 import pytest
 
 import salt.modules.schedule as schedule
-import salt.utils.odict
 from salt.utils.event import SaltEvent
-from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, call, mock_open, patch
 
 log = logging.getLogger(__name__)
@@ -701,8 +700,8 @@ def test_modify(job1):
     comm1 = "Modified job: job1 in schedule."
     changes1 = {
         "job1": {
-            "new": salt.utils.odict.OrderedDict(new_job1),
-            "old": salt.utils.odict.OrderedDict(current_job1),
+            "new": OrderedDict(new_job1),
+            "old": OrderedDict(current_job1),
         }
     }
 
@@ -717,8 +716,8 @@ def test_modify(job1):
 
     changes4 = {
         "job1": {
-            "new": salt.utils.odict.OrderedDict(new_job4),
-            "old": salt.utils.odict.OrderedDict(current_job1),
+            "new": OrderedDict(new_job4),
+            "old": OrderedDict(current_job1),
         }
     }
 

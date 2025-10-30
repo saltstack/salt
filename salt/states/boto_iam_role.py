@@ -87,10 +87,10 @@ on the IAM role to be persistent. This functionality was added in 2015.8.0.
 """
 
 import logging
+from collections import OrderedDict
 
 import salt.utils.dictdiffer
 import salt.utils.dictupdate as dictupdate
-from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 

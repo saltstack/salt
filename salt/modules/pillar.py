@@ -5,6 +5,7 @@ Extract the pillar data for this minion
 import copy
 import logging
 import os
+from collections import OrderedDict
 from collections.abc import Mapping
 
 import salt.pillar
@@ -12,7 +13,6 @@ import salt.utils.crypt
 import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.functools
-import salt.utils.odict
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM, NOT_SET
 from salt.exceptions import CommandExecutionError
@@ -288,7 +288,7 @@ def _obfuscate_inner(var):
     Known collection types trigger recursion.
     In the special case of mapping types, keys are not obfuscated
     """
-    if isinstance(var, (dict, salt.utils.odict.OrderedDict)):
+    if isinstance(var, (dict, OrderedDict)):
         return var.__class__((key, _obfuscate_inner(val)) for key, val in var.items())
     elif isinstance(var, (list, set, tuple)):
         return type(var)(_obfuscate_inner(v) for v in var)
