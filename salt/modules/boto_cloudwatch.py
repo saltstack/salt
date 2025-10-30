@@ -45,11 +45,11 @@ Connection module for Amazon CloudWatch
 # pylint: disable=E0602
 
 import logging
+from collections import OrderedDict
 
 import yaml  # pylint: disable=blacklisted-import
 
 import salt.utils.json
-import salt.utils.odict as odict
 import salt.utils.versions
 
 try:
@@ -164,7 +164,7 @@ def get_all_alarms(region=None, prefix=None, key=None, keyid=None, profile=None)
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     alarms = conn.describe_alarms()
-    results = odict.OrderedDict()
+    results = OrderedDict()
     for alarm in alarms:
         alarm = _metric_alarm_to_dict(alarm)
         name = alarm["name"]
@@ -339,7 +339,7 @@ def _metric_alarm_to_dict(alarm):
     Convert a boto.ec2.cloudwatch.alarm.MetricAlarm into a dict. Convenience
     for pretty printing.
     """
-    d = odict.OrderedDict()
+    d = OrderedDict()
     fields = [
         "name",
         "metric",

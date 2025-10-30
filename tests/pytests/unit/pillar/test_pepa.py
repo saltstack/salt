@@ -1,7 +1,7 @@
 import salt.pillar.pepa as pepa
 
 try:
-    from salt.utils.odict import OrderedDict
+    from collections import OrderedDict
 except ImportError:
     from collections import OrderedDict
 

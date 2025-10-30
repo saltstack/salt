@@ -11,12 +11,12 @@ import copy as pycopy
 import datetime
 import logging
 import os
+from collections import OrderedDict
 
 import yaml
 
 import salt.utils.event
 import salt.utils.files
-import salt.utils.odict
 import salt.utils.yaml
 
 try:
@@ -453,7 +453,7 @@ def build_schedule_item(name, **kwargs):
         return ret
 
     schedule = {}
-    schedule[name] = salt.utils.odict.OrderedDict()
+    schedule[name] = OrderedDict()
     schedule[name]["function"] = kwargs["function"]
 
     time_conflict = False
@@ -523,7 +523,7 @@ def build_schedule_item(name, **kwargs):
     if "splay" in kwargs:
         if isinstance(kwargs["splay"], dict):
             # Ensure ordering of start and end arguments
-            schedule[name]["splay"] = salt.utils.odict.OrderedDict()
+            schedule[name]["splay"] = OrderedDict()
             schedule[name]["splay"]["start"] = kwargs["splay"]["start"]
             schedule[name]["splay"]["end"] = kwargs["splay"]["end"]
         else:
@@ -757,8 +757,8 @@ def modify(name, **kwargs):
         return ret
 
     ret["changes"][name] = {
-        "old": salt.utils.odict.OrderedDict(_current),
-        "new": salt.utils.odict.OrderedDict(_new),
+        "old": OrderedDict(_current),
+        "new": OrderedDict(_new),
     }
 
     if "test" in kwargs and kwargs["test"]:

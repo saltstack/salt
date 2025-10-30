@@ -48,9 +48,9 @@ Connection module for Amazon Route53
 
 import logging
 import time
+from collections import OrderedDict
 
 import salt.utils.compat
-import salt.utils.odict as odict
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
@@ -582,7 +582,7 @@ def get_record(
             error_retries = rate_limit_retries
 
     _record = None
-    ret = odict.OrderedDict()
+    ret = OrderedDict()
     while error_retries > 0:
         try:
             if split_dns:

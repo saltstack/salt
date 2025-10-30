@@ -45,10 +45,10 @@ import os
 import re
 import shlex
 import tempfile
+from collections import OrderedDict
 
 import salt.utils.files
 import salt.utils.itertools
-import salt.utils.odict
 import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -614,7 +614,7 @@ def db_create(
     query = f'CREATE DATABASE "{name}"'
 
     # "With"-options to create a database
-    with_args = salt.utils.odict.OrderedDict(
+    with_args = OrderedDict(
         [
             ("TABLESPACE", _quote_ddl_value(tablespace, '"')),
             # owner needs to be enclosed in double quotes so postgres

@@ -10,11 +10,11 @@ import ast
 import itertools
 import logging
 import os
+from collections import OrderedDict
 
 import salt.utils.doc
 import salt.utils.files
 from salt.exceptions import ArgumentValueError
-from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 

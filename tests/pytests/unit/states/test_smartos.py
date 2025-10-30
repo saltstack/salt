@@ -1,7 +1,8 @@
+from collections import OrderedDict
+
 import pytest
 
 import salt.states.smartos as smartos
-from salt.utils.odict import OrderedDict
 from tests.support.mock import patch
 
 

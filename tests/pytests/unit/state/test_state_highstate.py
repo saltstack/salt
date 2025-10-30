@@ -4,11 +4,12 @@
 
 import logging
 import textwrap
+from collections import OrderedDict
 
 import pytest  # pylint: disable=unused-import
 
 import salt.state
-from salt.utils.odict import DefaultOrderedDict, OrderedDict
+from salt.utils.datastructures import DefaultOrderedDict
 
 log = logging.getLogger(__name__)
 

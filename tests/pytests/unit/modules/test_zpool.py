@@ -8,6 +8,8 @@ Tests for salt.modules.zpool
 :platform:      illumos,freebsd,linux
 """
 
+from collections import OrderedDict
+
 import pytest
 
 import salt.loader
@@ -15,7 +17,6 @@ import salt.modules.zpool as zpool
 import salt.utils.decorators
 import salt.utils.decorators.path
 import salt.utils.zfs
-from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, patch
 from tests.support.zfs import ZFSMockData
 
