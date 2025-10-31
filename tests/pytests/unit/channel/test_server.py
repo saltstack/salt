@@ -1,6 +1,7 @@
 import pytest
 
 import salt.channel.server as server
+from tests.support.mock import AsyncMock, MagicMock, patch
 
 
 @pytest.fixture
@@ -107,3 +108,109 @@ def test_req_server_validate_token_removes_token_id_traversal(root_dir):
     }
     assert reqsrv.validate_token(payload) is False
     assert "tok" not in payload["load"]
+
+
+async def test_handle_message_exceptions(temp_salt_master):
+    """
+    test exceptions are handled cleanly in handle_message
+    """
+    opts = dict(temp_salt_master.config.copy())
+    req = server.ReqServerChannel(opts, None)
+
+    with patch(
+        "salt.channel.server.ReqServerChannel._decode_payload",
+        MagicMock(side_effect=OSError()),
+    ):
+        ret = await req.handle_message({})
+        assert ret == "bad load"
+
+    with patch(
+        "salt.channel.server.ReqServerChannel._decode_payload",
+        MagicMock(return_value="foobar"),
+    ):
+        ret = await req.handle_message({})
+        assert ret == "bad load"
+
+    with patch(
+        "salt.channel.server.ReqServerChannel._decode_payload",
+        MagicMock(return_value={"load": {"id": "foo\0"}}),
+    ):
+        ret = await req.handle_message({"enc": "clear", "load": {}})
+        assert ret == "bad load: id contains a null byte"
+
+    with patch(
+        "salt.channel.server.ReqServerChannel._decode_payload",
+        MagicMock(return_value={"load": {"id": None}}),
+    ):
+        ret = await req.handle_message({"enc": "clear", "load": {}})
+        assert ret == "bad load: id None is not a string"
+
+    with patch(
+        "salt.channel.server.ReqServerChannel._decode_payload",
+        MagicMock(return_value={"enc": "clear", "load": {"cmd": "_auth"}}),
+    ):
+        with patch(
+            "salt.channel.server.ReqServerChannel._auth",
+            MagicMock(side_effect=OSError()),
+        ):
+            ret = await req.handle_message({"enc": "clear", "load": {}})
+            assert ret == "Some exception handling minion payload"
+
+    with patch(
+        "salt.channel.server.ReqServerChannel._decode_payload",
+        MagicMock(return_value={"enc": "clear", "load": {"cmd": "not_auth"}}),
+    ):
+        with patch(
+            "salt.channel.server.ReqServerChannel.payload_handler",
+            MagicMock(side_effect=OSError()),
+            create=True,
+        ):
+            ret = await req.handle_message({"enc": "clear", "load": {}})
+            assert ret == "Some exception handling minion payload"
+
+    with patch(
+        "salt.channel.server.ReqServerChannel._decode_payload",
+        MagicMock(return_value={"enc": "clear", "load": {"cmd": "not_auth"}}),
+    ):
+        with patch(
+            "salt.channel.server.ReqServerChannel.payload_handler",
+            AsyncMock(return_value=(None, {"fun": "send"})),
+            create=True,
+        ):
+            crypticle = MagicMock()
+            with patch.object(req, "crypticle", crypticle, create=True):
+                crypticle.dumps = MagicMock(side_effect=OSError())
+                ret = await req.handle_message({"enc": "clear", "load": {}})
+                assert ret == "Some exception handling minion payload"
+
+    with patch(
+        "salt.channel.server.ReqServerChannel._decode_payload",
+        MagicMock(return_value={"enc": "clear", "load": {"cmd": "not_auth"}}),
+    ):
+        with patch(
+            "salt.channel.server.ReqServerChannel.payload_handler",
+            AsyncMock(
+                return_value=(None, {"fun": "send_private", "key": None, "tgt": None})
+            ),
+            create=True,
+        ):
+            with patch.object(
+                req, "_encrypt_private", MagicMock(side_effect=OSError()), create=True
+            ):
+                ret = await req.handle_message({"enc": "clear", "load": {}})
+                assert ret == "Some exception handling minion payload"
+
+    with patch(
+        "salt.channel.server.ReqServerChannel._decode_payload",
+        MagicMock(return_value={"enc": "clear", "load": {"cmd": "not_auth"}}),
+    ):
+        with patch(
+            "salt.channel.server.ReqServerChannel.payload_handler",
+            AsyncMock(return_value=(None, {"fun": "foobar", "key": None, "tgt": None})),
+            create=True,
+        ):
+            with patch.object(
+                req, "_encrypt_private", MagicMock(side_effect=OSError()), create=True
+            ):
+                ret = await req.handle_message({"enc": "clear", "load": {}})
+                assert ret == "Server-side exception handling payload"
