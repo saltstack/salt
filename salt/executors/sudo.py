@@ -12,7 +12,7 @@ __virtualname__ = "sudo"
 
 
 def __virtual__():
-    if salt.utils.path.which("sudo") and __opts__.get("sudo_user"):
+    if (salt.utils.path.which(__opts__.get("sudo_cmd")) or salt.utils.path.which("sudo")) and __opts__.get("sudo_user"):
         return __virtualname__
     return False
 
@@ -45,9 +45,18 @@ def execute(opts, data, func, args, kwargs):
         sudo -u saltdev salt-call cmd.run 'cat /etc/sudoers'
 
     being run on ``sudo_minion``.
+
+    .. code-block:: yaml
+
+        sudo_cmd: doas
+
+    Once this setting is made, any execution module call done by the minion will be
+    run using an alternative command to ``sudo``. For example, with the above
+    minion config, all commands will be run with ``doas ...`` instead of
+    ``sudo ...``.
     """
     cmd = [
-        "sudo",
+        opts.get("sudo_cmd") if opts.get("sudo_cmd") else "sudo",
         "-u",
         opts.get("sudo_user"),
         "salt-call",
