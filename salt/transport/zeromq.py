@@ -937,6 +937,11 @@ class ZeroMQSocketMonitor:
             self._socket.disable_monitor()
         except zmq.Error:
             pass
+        if self._monitor_socket is not None:
+            try:
+                self._monitor_socket.close(0)
+            except zmq.Error:
+                pass
         self._socket = None
         self._running.clear()
         self._monitor_socket = None
@@ -1285,7 +1290,12 @@ class RequestClient(salt.transport.base.RequestClient):
             # This hangs if closing the stream causes an import error
             self.context.term()
             self.context = None
-        self.send_recv_task.cancel()
+        if getattr(self, "send_recv_task", None) and self.send_recv_task.done():
+            try:
+                self.send_recv_task.result()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.trace("Exception while retreiving send / receive task: %r", exc)
+        self.send_recv_task = None
 
     async def send(self, load, timeout=60):
         """

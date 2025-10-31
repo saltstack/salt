@@ -9,7 +9,6 @@ import attr
 import pytest
 import tornado
 import tornado.concurrent
-import tornado.gen
 import tornado.ioloop
 import tornado.iostream
 from pytestshellutils.utils import ports
@@ -39,16 +38,15 @@ def fake_crypto():
 
 @pytest.fixture
 def _fake_authd(io_loop):
-    @tornado.gen.coroutine
-    def return_nothing():
-        raise tornado.gen.Return()
+    async def return_nothing(*args, **kwargs):
+        return None
 
     with patch(
         "salt.crypt.AsyncAuth.authenticated", new_callable=PropertyMock
     ) as mock_authed, patch(
         "salt.crypt.AsyncAuth.authenticate",
         autospec=True,
-        return_value=return_nothing(),
+        side_effect=return_nothing,
     ), patch(
         "salt.crypt.AsyncAuth.gen_token", autospec=True, return_value=42
     ):
@@ -271,13 +269,9 @@ def test_tcp_pub_server_channel_publish_filtering_str_list(temp_salt_master):
 
 
 @pytest.fixture(scope="function")
-def salt_message_client():
-    io_loop_mock = MagicMock(spec=tornado.ioloop.IOLoop)
-    io_loop_mock.asyncio_loop = None
-    io_loop_mock.call_later.side_effect = lambda *args, **kwargs: (args, kwargs)
-
+def salt_message_client(io_loop):
     client = salt.transport.tcp.MessageClient(
-        {}, "127.0.0.1", ports.get_unused_localhost_port(), io_loop=io_loop_mock
+        {}, "127.0.0.1", ports.get_unused_localhost_port(), io_loop=io_loop
     )
 
     try:
@@ -397,20 +391,19 @@ def xtest_client_reconnect_backoff(client_socket):
         opts, client_socket.listen_on, client_socket.port
     )
 
-    def _sleep(t):
+    async def _sleep(t):
         client.close()
         assert t == 5
         return
-        # return tornado.gen.sleep()
+        # return asyncio.sleep()
 
-    @tornado.gen.coroutine
-    def connect(*args, **kwargs):
+    async def connect(*args, **kwargs):
         raise Exception("err")
 
     client._tcp_client.connect = connect
 
     try:
-        with patch("tornado.gen.sleep", side_effect=_sleep):
+        with patch("asyncio.sleep", side_effect=_sleep):
             client.io_loop.run_sync(client.connect)
     finally:
         client.close()
@@ -622,7 +615,7 @@ async def test_salt_message_server(master_opts):
     await server.handle_stream(stream, address)
 
     # Let loop iterate so callback gets called
-    await tornado.gen.sleep(0.01)
+    await asyncio.sleep(0.01)
 
     assert received
     assert [msg] == received
@@ -821,9 +814,9 @@ async def test_message_client_stream_return_exception(minion_opts, io_loop):
     ]
     try:
         io_loop.add_callback(client._stream_return)
-        await tornado.gen.sleep(0.01)
+        await asyncio.sleep(0.01)
         client.close()
-        await tornado.gen.sleep(0.01)
+        await asyncio.sleep(0.01)
         assert client._stream is None
     finally:
         client.close()
