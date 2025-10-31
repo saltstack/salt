@@ -2,6 +2,8 @@
 A runner to access data from the salt mine
 """
 
+import re
+
 import salt.daemons.masterapi
 
 
@@ -17,8 +19,14 @@ def get(tgt, fun, tgt_type="glob"):
         salt-run mine.get '*' network.interfaces
     """
     masterapi = salt.daemons.masterapi.RemoteFuncs(__opts__)
+
+    id = __opts__["id"]
+    pattern = re.escape("_master") + r"$"
+    if re.search(pattern, id) is not None:
+        id = __opts__["id"].removesuffix("_master")
+
     load = {
-        "id": __opts__["id"],
+        "id": id,
         "fun": fun,
         "tgt": tgt,
         "tgt_type": tgt_type,
