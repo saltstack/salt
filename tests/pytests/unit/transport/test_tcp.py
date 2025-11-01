@@ -443,7 +443,7 @@ async def test_when_async_req_channel_with_syndic_role_should_use_syndic_master_
 
 @pytest.mark.usefixtures("_fake_authd", "_fake_crypticle", "_fake_keys")
 async def test_mixin_should_use_correct_path_when_syndic():
-    mockloop = MagicMock()
+    mockloop = asyncio.get_running_loop()
     expected_pubkey_path = os.path.join("/etc/salt/pki/minion", "syndic_master.pub")
     opts = {
         "master_uri": "tcp://127.0.0.1:4506",

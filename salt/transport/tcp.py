@@ -242,7 +242,6 @@ class PublishClient(salt.transport.base.PublishClient):
     def __init__(self, opts, io_loop, **kwargs):  # pylint: disable=W0231
         super().__init__(opts, io_loop, **kwargs)
         self.opts = opts
-        # XXX self.io_loop is never used. :(
         self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
         self.unpacker = salt.utils.msgpack.Unpacker()
         self.connected = False
