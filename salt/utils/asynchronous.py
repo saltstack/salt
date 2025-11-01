@@ -18,13 +18,16 @@ def aioloop(io_loop, warn=False):
     """
     Ensure the ioloop is an asyncio loop not a tornado ioloop.
     """
-    if isinstance(io_loop, tornado.ioloop.IOLoop):
+    if isinstance(io_loop, asyncio.AbstractEventLoop):
+        return io_loop
+    elif isinstance(io_loop, tornado.ioloop.IOLoop):
         if warn:
             import traceback
 
             log.warning("Passed tornado loop %s", "".join(traceback.format_stack()))
         return io_loop.asyncio_loop
-    return io_loop
+    else:
+        raise RuntimeError("Loop must be AbstractEventLoop (prefered) or IOLoop")
 
 
 @contextlib.contextmanager

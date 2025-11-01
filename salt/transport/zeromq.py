@@ -1290,12 +1290,29 @@ class RequestClient(salt.transport.base.RequestClient):
             # This hangs if closing the stream causes an import error
             self.context.term()
             self.context = None
-        if getattr(self, "send_recv_task", None) and self.send_recv_task.done():
-            try:
-                self.send_recv_task.result()
-            except Exception as exc:  # pylint: disable=broad-except
-                log.trace("Exception while retreiving send / receive task: %r", exc)
-        self.send_recv_task = None
+        if getattr(self, "send_recv_task", None):
+            task = self.send_recv_task
+            if not task.done():
+                task.cancel()
+
+                def _drain_cancelled(cancelled_task):
+                    try:
+                        cancelled_task.exception()
+                    except asyncio.CancelledError:  # pragma: no cover
+                        pass
+                    except Exception:  # pragma: no cover
+                        log.trace(
+                            "Exception while cancelling send/receive task.",
+                            exc_info=True,
+                        )
+
+                task.add_done_callback(_drain_cancelled)
+            else:
+                try:
+                    task.result()
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.trace("Exception while retrieving send/receive task: %r", exc)
+            self.send_recv_task = None
 
     async def send(self, load, timeout=60):
         """

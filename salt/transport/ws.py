@@ -13,6 +13,7 @@ import tornado.ioloop
 import salt.payload
 import salt.transport.base
 import salt.transport.frame
+import salt.utils.asynchronous
 from salt.transport.tcp import (
     USE_LOAD_BALANCER,
     LoadBalancerServer,
@@ -43,7 +44,10 @@ class PublishClient(salt.transport.base.PublishClient):
 
     def __init__(self, opts, io_loop, **kwargs):  # pylint: disable=W0231
         self.opts = opts
+        if io_loop is None:
+            io_loop = tornado.ioloop.IOLoop.current()
         self.io_loop = io_loop
+        self.asyncio_loop = salt.utils.asynchronous.aioloop(io_loop)
 
         self.connected = False
         self._closing = False
@@ -89,7 +93,7 @@ class PublishClient(salt.transport.base.PublishClient):
         if self._closing:
             return
         self._closing = True
-        self.io_loop.spawn_callback(self._close)
+        self.asyncio_loop.create_task(self._close())
 
     # pylint: disable=W1701
     def __del__(self):
@@ -570,7 +574,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self.sending = False
         self.ws = None
         self.session = None
-        self.io_loop = io_loop
+        self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
         self._closing = False
         self._closed = False
         self.ssl = self.opts.get("ssl", None)

@@ -699,7 +699,7 @@ def test_req_server_chan_encrypt_v1(pki_dir, encryption_algorithm, master_opts):
 def test_req_chan_decode_data_dict_entry_v1(
     pki_dir, encryption_algorithm, minion_opts, master_opts
 ):
-    mockloop = MagicMock()
+    mockloop = asyncio.new_event_loop()
     minion_opts.update(
         {
             "master_uri": "tcp://127.0.0.1:4506",
@@ -717,26 +717,29 @@ def test_req_chan_decode_data_dict_entry_v1(
     )
     master_opts = dict(master_opts, pki_dir=str(pki_dir.joinpath("master")))
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
-    client = salt.channel.client.ReqChannel.factory(minion_opts, io_loop=mockloop)
-    dictkey = "pillar"
-    target = "minion"
-    pillar_data = {"pillar1": "meh"}
-    ret = server._encrypt_private(
-        pillar_data,
-        dictkey,
-        target,
-        sign_messages=False,
-        encryption_algorithm=encryption_algorithm,
-    )
-    key = client.auth.get_keys()
-    aes = key.decrypt(ret["key"], encryption_algorithm)
-    pcrypt = salt.crypt.Crypticle(client.opts, aes)
-    ret_pillar_data = pcrypt.loads(ret[dictkey])
-    assert ret_pillar_data == pillar_data
+    try:
+        client = salt.channel.client.ReqChannel.factory(minion_opts, io_loop=mockloop)
+        dictkey = "pillar"
+        target = "minion"
+        pillar_data = {"pillar1": "meh"}
+        ret = server._encrypt_private(
+            pillar_data,
+            dictkey,
+            target,
+            sign_messages=False,
+            encryption_algorithm=encryption_algorithm,
+        )
+        key = client.auth.get_keys()
+        aes = key.decrypt(ret["key"], encryption_algorithm)
+        pcrypt = salt.crypt.Crypticle(client.opts, aes)
+        ret_pillar_data = pcrypt.loads(ret[dictkey])
+        assert ret_pillar_data == pillar_data
+    finally:
+        mockloop.close()
 
 
 async def test_req_chan_decode_data_dict_entry_v2(minion_opts, master_opts, pki_dir):
-    mockloop = MagicMock()
+    mockloop = asyncio.get_running_loop()
     minion_opts.update(
         {
             "master_uri": "tcp://127.0.0.1:4506",
@@ -823,7 +826,7 @@ async def test_req_chan_decode_data_dict_entry_v2(minion_opts, master_opts, pki_
 async def test_req_chan_decode_data_dict_entry_v2_bad_nonce(
     pki_dir, minion_opts, master_opts
 ):
-    mockloop = MagicMock()
+    mockloop = asyncio.get_running_loop()
     minion_opts.update(
         {
             "master_uri": "tcp://127.0.0.1:4506",
@@ -904,7 +907,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_nonce(
 async def test_req_chan_decode_data_dict_entry_v2_bad_signature(
     pki_dir, minion_opts, master_opts
 ):
-    mockloop = MagicMock()
+    mockloop = asyncio.get_running_loop()
     minion_opts.update(
         {
             "master_uri": "tcp://127.0.0.1:4506",
@@ -1010,7 +1013,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(
 async def test_req_chan_decode_data_dict_entry_v2_bad_key(
     pki_dir, minion_opts, master_opts
 ):
-    mockloop = MagicMock()
+    mockloop = asyncio.get_running_loop()
     minion_opts.update(
         {
             "master_uri": "tcp://127.0.0.1:4506",
