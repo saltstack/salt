@@ -1,5 +1,5 @@
 """
-Tests for the file state
+Tests for the cmd state
 """
 
 import errno
@@ -15,6 +15,10 @@ import salt.utils.platform
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
+
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+]
 
 
 class CMDTest(ModuleCase, SaltReturnAssertsMixin):
@@ -273,3 +277,191 @@ class CMDRunWatchTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function("state.sls", [self.state_name])
         self.assertTrue(ret[saltines_key]["result"])
         self.assertTrue(ret[biscuits_key]["result"])
+
+
+@pytest.mark.slow_test
+class CMDRun(ModuleCase, SaltReturnAssertsMixin):
+    """
+    Validate the run function of the cmd state
+    """
+
+    def test_run_shell(self):
+        """
+        cmd.run with shell functionality
+        """
+        expected = "foo bar"
+        ret = self.run_state(
+            "cmd.run",
+            name="echo foo bar",
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltStateChangesEqual(ret, expected, "stdout")
+
+    def test_run_no_shell(self):
+        """
+        cmd.run without shell functionality
+        """
+        ret = self.run_state(
+            "cmd.run",
+            name="whoami",
+            python_shell=False,
+        )
+        self.assertSaltTrueReturn(ret)
+
+    def test_run_no_shell_fail(self):
+        """
+        expect cmd.run without shell functionality to fail when running builtin
+        shell commands
+        """
+        expected = "Unable to run command"
+        ret = self.run_state(
+            "cmd.run",
+            name="echo foo bar",
+            python_shell=False,
+        )
+        self.assertSaltFalseReturn(ret)
+        self.assertInSaltComment(expected, ret)
+
+    @pytest.mark.skip_on_windows
+    def test_run_args_string(self):
+        """
+        processing of arguments passed as a string with cmd.run while
+        executing a binary/script
+        """
+        expected = "a: foo bar, b: baz qux"
+        ret = self.run_state(
+            "cmd.run",
+            name="printf",
+            args='"a: %s, b: %s\n" "foo bar" "baz qux"',
+            python_shell=False,
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltStateChangesEqual(ret, expected, "stdout")
+
+    @pytest.mark.skip_on_windows
+    def test_run_args_list(self):
+        """
+        processing of arguments passed as a list with cmd.run while
+        executing a binary/script
+        """
+        expected = "a: foo bar, b: baz qux"
+        ret = self.run_state(
+            "cmd.run",
+            name="printf",
+            args=["a: %s, b: %s\n", "foo bar", "baz qux"],
+            python_shell=False,
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltStateChangesEqual(ret, expected, "stdout")
+
+
+@pytest.mark.slow_test
+class CMDScript(ModuleCase, SaltReturnAssertsMixin):
+    """
+    Validate the script function of the cmd state
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        if salt.utils.platform.is_windows():
+            cls.__script = "salt://echo.ps1"
+        else:
+            cls.__script = "salt://echo.sh"
+
+    def test_script_name(self):
+        """
+        cmd.script with the script passed via the name parameter
+        """
+        expected = "a: , b:"
+        ret = self.run_state(
+            "cmd.script",
+            name=self.__script,
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltStateChangesEqual(ret, expected, "stdout")
+
+    def test_script_source(self):
+        """
+        cmd.script with the script passed via the source parameter
+        """
+        expected = "a: , b:"
+        ret = self.run_state(
+            "cmd.script",
+            name="_",
+            source=self.__script,
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltStateChangesEqual(ret, expected, "stdout")
+
+    def test_script_source_nameargs(self):
+        """
+        cmd.script with the script passed via the source and arguments passed via
+        the name parameter. name is split on whitespace and the first element is
+        discarded
+        """
+        expected = "a: foo bar, b: baz qux"
+        ret = self.run_state(
+            "cmd.script",
+            name='_ "foo bar" "baz qux"',
+            source=self.__script,
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltStateChangesEqual(ret, expected, "stdout")
+
+    def test_script_args_string_with_source(self):
+        """
+        cmd.script with the script passed via the source parameter and arguments
+        passed via the args parameter as a string
+        """
+        expected = "a: foo bar, b: baz qux"
+        ret = self.run_state(
+            "cmd.script",
+            name="_",
+            source=self.__script,
+            args='"foo bar" "baz qux"',
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltStateChangesEqual(ret, expected, "stdout")
+
+    def test_script_args_list_with_source(self):
+        """
+        cmd.script with the script passed via the source parameter and arguments
+        passed via the args parameter as a list
+        """
+        expected = "a: foo bar, b: baz qux"
+        ret = self.run_state(
+            "cmd.script",
+            name="_",
+            source=self.__script,
+            args=["foo bar", "baz qux"],
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltStateChangesEqual(ret, expected, "stdout")
+
+    def test_script_args_string(self):
+        """
+        cmd.script with the script passed via the name parameter and arguments
+        passed via the args parameter as a string
+        """
+        expected = "a: foo bar, b: baz qux"
+        ret = self.run_state(
+            "cmd.script",
+            name=self.__script,
+            args='"foo bar" "baz qux"',
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltStateChangesEqual(ret, expected, "stdout")
+
+    def test_script_args_list(self):
+        """
+        cmd.script with the script passed via the name parameter and arguments
+        passed via the args parameter as a list
+        """
+        expected = "a: foo bar, b: baz qux"
+        ret = self.run_state(
+            "cmd.script",
+            name=self.__script,
+            args=["foo bar", "baz qux"],
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltStateChangesEqual(ret, expected, "stdout")

@@ -325,6 +325,7 @@ def wait(
     root=None,
     runas=None,
     shell=None,
+    python_shell=True,
     env=(),
     stateful=False,
     output_loglevel="debug",
@@ -360,6 +361,12 @@ def wait(
 
     shell
         The shell to use for execution, defaults to /bin/sh
+
+    python_shell
+        Use the shell as the program to execute. Set to False to disable shell
+        features, such as pipes or redirection
+
+        .. versionadded:: 3006.16
 
     env
         A list of environment variables to be set prior to execution.
@@ -476,6 +483,7 @@ def wait_script(
     cwd=None,
     runas=None,
     shell=None,
+    python_shell=None,
     env=None,
     stateful=False,
     use_vt=False,
@@ -514,6 +522,12 @@ def wait_script(
 
     shell
         The shell to use for execution, defaults to the shell grain
+
+    python_shell
+        Use the shell as the program to execute. Set to True to use shell features,
+        such as pipes or redirection
+
+        .. versionadded:: 3006.16
 
     env
         A list of environment variables to be set prior to execution.
@@ -614,10 +628,12 @@ def wait_script(
 
 def run(
     name,
+    args=None,
     cwd=None,
     root=None,
     runas=None,
     shell=None,
+    python_shell=True,
     env=None,
     prepend_path=None,
     stateful=False,
@@ -647,8 +663,19 @@ def run(
        refer to the :ref:`cmdmod documentation <cmdmod-module>`.
 
     name
-        The command to execute, remember that the command will execute with the
-        path and permissions of the salt-minion.
+        The command or program to execute. When running a program, consider
+        disabling shell features with ``python_shell`` and using ``args`` if required.
+        Otherwise character escaping and quoting needs to be handled manually.
+        Remember that the command will execute with the path and permissions of the
+        salt-minion.
+
+    args
+        List or string of command line args to pass to the executable. A list should
+        be preferred to avoid issues with quoting and special characters. To pass a
+        string containing spaces in YAML, you will need to doubly-quote it: "arg1
+        'arg two' arg3"
+
+        .. versionadded:: 3006.16
 
     cwd
         The current working directory to execute the command in, defaults to
@@ -663,6 +690,12 @@ def run(
 
     shell
         The shell to use for execution, defaults to the shell grain
+
+    python_shell
+        Use the shell as the program to execute. Set to False to disable shell
+        features, such as pipes or redirection
+
+        .. versionadded:: 3006.16
 
     env
         A list of environment variables to be set prior to execution.
@@ -834,7 +867,8 @@ def run(
             "root": root,
             "runas": runas,
             "use_vt": use_vt,
-            "shell": shell or __grains__["shell"],
+            "shell": shell,
+            "python_shell": python_shell,
             "env": env,
             "prepend_path": prepend_path,
             "output_loglevel": output_loglevel,
@@ -855,12 +889,24 @@ def run(
         ret["comment"] = f'Desired working directory "{cwd}" is not available'
         return ret
 
+    if shell is None and python_shell is not True:
+        # The program is executed directly. Use a list to clearly separate the
+        # program from the arguments. String splitting may be unreliable
+        if isinstance(args, (list, tuple)):
+            cmd = [name, *args] if args else [name]
+        else:
+            cmd = [name, *salt.utils.args.shlex_split(args)] if args else [name]
+    else:
+        # Execute a shell command. Always pass the command as a string
+        if isinstance(args, (list, tuple)):
+            cmd = " ".join([name, *args]) if args else name
+        else:
+            cmd = " ".join([name, args]) if args else name
+
     # Wow, we passed the test, run this sucker!
     try:
         run_cmd = "cmd.run_all" if not root else "cmd.run_chroot"
-        cmd_all = __salt__[run_cmd](
-            cmd=name, timeout=timeout, python_shell=True, **cmd_kwargs
-        )
+        cmd_all = __salt__[run_cmd](cmd=cmd, timeout=timeout, **cmd_kwargs)
     except Exception as err:  # pylint: disable=broad-except
         ret["comment"] = str(err)
         return ret
@@ -893,6 +939,7 @@ def script(
     runas=None,
     password=None,
     shell=None,
+    python_shell=None,
     env=None,
     stateful=False,
     timeout=None,
@@ -922,6 +969,16 @@ def script(
     name
         Either "cmd arg1 arg2 arg3..." (cmd is not used) or a source
         "salt://...".
+
+    args
+        List or string of command line args to pass to the executable. A list should
+        be preferred to avoid issues with quoting and special characters. To pass a
+        string containing spaces in YAML, you will need to doubly-quote it: "arg1
+        'arg two' arg3"
+
+        .. versionchanged:: 3006.15
+
+            Support a list of command line args.
 
     cwd
         The current working directory to execute the command in, defaults to
@@ -957,7 +1014,18 @@ def script(
         parameter will be ignored on non-Windows platforms.
 
     shell
-        The shell to use for execution. The default is set in grains['shell']
+        The shell to use for execution. Defaults to the shell grain if python_shell
+        is True. Examples: /bin/sh, cmd.exe
+
+        .. versionchanged:: 3006.16
+
+            Unset by default to run programs without using a shell
+
+    python_shell
+        Use the shell as the program to execute. Set to True to use shell features,
+        such as pipes or redirection
+
+        .. versionadded:: 3006.16
 
     env
         A list of environment variables to be set prior to execution.
@@ -1014,12 +1082,6 @@ def script(
     timeout
         If the command has not terminated after timeout seconds, send the
         subprocess sigterm, and if sigterm is ignored, follow up with sigkill
-
-    args
-        String of command line args to pass to the script.  Only used if no
-        args are specified as part of the `name` argument. To pass a string
-        containing spaces in YAML, you will need to doubly-quote it:  "arg1
-        'arg two' arg3"
 
     creates
         Only run if the file specified by ``creates`` do not exist. If you
@@ -1122,7 +1184,8 @@ def script(
         {
             "runas": runas,
             "password": password,
-            "shell": shell or __grains__["shell"],
+            "shell": shell,
+            "python_shell": python_shell,
             "env": env,
             "cwd": cwd,
             "template": template,
@@ -1141,7 +1204,7 @@ def script(
     run_check_cmd_kwargs = {
         "cwd": cwd,
         "runas": runas,
-        "shell": shell or __grains__["shell"],
+        "shell": shell,
     }
 
     # Change the source to be the name arg if it is not specified
@@ -1163,7 +1226,7 @@ def script(
 
     # Wow, we passed the test, run this sucker!
     try:
-        cmd_all = __salt__["cmd.script"](source, python_shell=True, **cmd_kwargs)
+        cmd_all = __salt__["cmd.script"](source, **cmd_kwargs)
     except (CommandExecutionError, SaltRenderError, OSError) as err:
         ret["comment"] = str(err)
         return ret
@@ -1226,7 +1289,7 @@ def call(
     cmd_kwargs = {
         "cwd": kwargs.get("cwd"),
         "runas": kwargs.get("user"),
-        "shell": kwargs.get("shell") or __grains__["shell"],
+        "shell": kwargs.get("shell"),
         "env": kwargs.get("env"),
         "use_vt": use_vt,
         "output_loglevel": output_loglevel,
