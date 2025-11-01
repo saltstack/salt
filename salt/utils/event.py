@@ -49,7 +49,6 @@ Namespaced tag
 
 """
 
-import asyncio
 import atexit
 import contextlib
 import datetime
@@ -235,7 +234,7 @@ class SaltEvent:
         self.node = node
         self.keep_loop = keep_loop
         if io_loop is not None:
-            self.io_loop = io_loop
+            self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
             self._run_io_loop_sync = False
         else:
             self.io_loop = None
@@ -270,6 +269,7 @@ class SaltEvent:
             # and don't read out events from the buffer on an on-going basis,
             # the buffer will grow resulting in big memory usage.
             self.connect_pub()
+        self._publish_tasks = []
 
     @classmethod
     def __load_cache_regex(cls):
@@ -355,7 +355,7 @@ class SaltEvent:
                 self.subscriber = salt.transport.ipc_publish_client(
                     self.node, self.opts, io_loop=self.io_loop
                 )
-                self.io_loop.spawn_callback(self.subscriber.connect)
+                self._connect_task = self.io_loop.create_task(self.subscriber.connect())
 
             # For the asynchronous case, the connect will be defered to when
             # set_event_handler() is invoked.
@@ -368,6 +368,11 @@ class SaltEvent:
         """
         if not self.cpub:
             return
+        if hasattr(self, "_connect_task"):
+            task = self._connect_task
+            if task and not task.done():
+                task.cancel()
+            self._connect_task = None
         self.subscriber.close()
         self.subscriber = None
         self.pending_events = []
@@ -420,6 +425,10 @@ class SaltEvent:
             self.pusher.close()
             self.pusher = None
             self.cpush = False
+        for task in self._publish_tasks:
+            if task and not task.done():
+                task.cancel()
+        self._publish_tasks.clear()
 
     @classmethod
     def unpack(cls, raw):
@@ -797,7 +806,8 @@ class SaltEvent:
                 )
                 raise
         else:
-            asyncio.create_task(self.pusher.publish(msg))
+            task = self.io_loop.create_task(self.pusher.publish(msg))
+            self._publish_tasks.append(task)
         return True
 
     def fire_master(self, data, tag, timeout=1000):
@@ -916,7 +926,7 @@ class SaltEvent:
         if not self.cpub:
             self.connect_pub()
         # This will handle reconnects
-        self.io_loop.spawn_callback(self.subscriber.on_recv, event_handler)
+        self._schedule(self.subscriber.on_recv, event_handler)
 
     # pylint: disable=W1701
     def __del__(self):

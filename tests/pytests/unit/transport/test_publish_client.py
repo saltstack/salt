@@ -304,7 +304,7 @@ async def test_recv_timeout_zero():
     """
     host = "127.0.0.1"
     port = 11122
-    ioloop = MagicMock()
+    ioloop = asyncio.get_running_loop()
     mock_stream = MagicMock()
     mock_unpacker = MagicMock()
     mock_unpacker.__iter__.return_value = []
