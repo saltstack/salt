@@ -613,6 +613,8 @@ VALID_OPTS = immutabletypes.freeze(
         "pillar_cache_ttl": int,
         # Pillar cache backend. Defaults to `disk` which stores caches in the master cache
         "pillar_cache_backend": str,
+        # Emit timing information for pillar rendering stages
+        "pillar_render_profiler": bool,
         # Cache the GPG data to avoid having to pass through the gpg renderer
         "gpg_cache": bool,
         # GPG data cache TTL, in seconds. Has no effect unless `gpg_cache` is True
@@ -1443,6 +1445,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "pillar_cache": False,
         "pillar_cache_ttl": 3600,
         "pillar_cache_backend": "disk",
+        "pillar_render_profiler": False,
         "gpg_cache": False,
         "gpg_cache_ttl": 86400,
         "gpg_cache_backend": "disk",

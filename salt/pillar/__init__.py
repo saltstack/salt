@@ -35,6 +35,42 @@ from salt.version import __version__
 log = logging.getLogger(__name__)
 
 
+class PillarRenderProfiler:
+    """
+    Collect timing information for pillar rendering stages.
+    """
+
+    __slots__ = ("enabled", "timings")
+
+    def __init__(self, enabled=False):
+        self.enabled = bool(enabled)
+        self.timings = {}
+
+    def add_timing(self, name, duration):
+        if not self.enabled:
+            return
+        self.timings[name] = self.timings.get(name, 0.0) + duration
+
+    def profile_call(self, name, func, *args, **kwargs):
+        if not self.enabled:
+            return func(*args, **kwargs)
+        start = time.perf_counter()
+        try:
+            return func(*args, **kwargs)
+        finally:
+            self.add_timing(name, time.perf_counter() - start)
+
+    def as_dict(self, precision=None):
+        if not self.enabled:
+            return {}
+        if precision is None:
+            return dict(self.timings)
+        return {
+            stage: round(duration, precision)
+            for stage, duration in self.timings.items()
+        }
+
+
 def get_pillar(
     opts,
     grains,
@@ -606,6 +642,9 @@ class Pillar:
             self.extra_minion_data = {}
             log.error("Extra minion data must be a dictionary")
         self._closing = False
+        self._pillar_profiler = PillarRenderProfiler(
+            self.opts.get("pillar_render_profiler", False)
+        )
 
     def __valid_on_demand_ext_pillar(self, opts):
         """
@@ -700,6 +739,18 @@ class Pillar:
                 )
                 opts["pillar_roots"].pop("__env__")
         return opts
+
+    def _profile_stage(self, name, func, *args, **kwargs):
+        """
+        Execute ``func`` while tracking elapsed time when profiling is enabled.
+        """
+        if not self._pillar_profiler.enabled:
+            return func(*args, **kwargs)
+        start = time.perf_counter()
+        try:
+            return func(*args, **kwargs)
+        finally:
+            self._pillar_profiler.add_timing(name, time.perf_counter() - start)
 
     def _get_envs(self):
         """
@@ -1245,14 +1296,28 @@ class Pillar:
         """
         Render the pillar data and return
         """
-        top, top_errors = self.get_top()
+        total_timer_start = (
+            time.perf_counter() if self._pillar_profiler.enabled else None
+        )
+
+        top, top_errors = self._profile_stage("get_top", self.get_top)
         if ext:
             if self.opts.get("ext_pillar_first", False):
-                self.opts["pillar"], errors = self.ext_pillar(self.pillar_override)
-                self.rend = salt.loader.render(self.opts, self.functions)
-                matches = self.top_matches(top, reload=True)
-                pillar, errors = self.render_pillar(matches, errors=errors)
-                pillar = merge(
+                self.opts["pillar"], errors = self._profile_stage(
+                    "ext_pillar", self.ext_pillar, self.pillar_override
+                )
+                self.rend = self._profile_stage(
+                    "load_renderers", salt.loader.render, self.opts, self.functions
+                )
+                matches = self._profile_stage(
+                    "top_matches", self.top_matches, top, reload=True
+                )
+                pillar, errors = self._profile_stage(
+                    "render_pillar", self.render_pillar, matches, errors=errors
+                )
+                pillar = self._profile_stage(
+                    "merge_ext_pillar",
+                    merge,
                     self.opts["pillar"],
                     pillar,
                     self.merge_strategy,
@@ -1260,12 +1325,18 @@ class Pillar:
                     self.opts.get("pillar_merge_lists", False),
                 )
             else:
-                matches = self.top_matches(top)
-                pillar, errors = self.render_pillar(matches)
-                pillar, errors = self.ext_pillar(pillar, errors=errors)
+                matches = self._profile_stage("top_matches", self.top_matches, top)
+                pillar, errors = self._profile_stage(
+                    "render_pillar", self.render_pillar, matches
+                )
+                pillar, errors = self._profile_stage(
+                    "ext_pillar", self.ext_pillar, pillar, errors=errors
+                )
         else:
-            matches = self.top_matches(top)
-            pillar, errors = self.render_pillar(matches)
+            matches = self._profile_stage("top_matches", self.top_matches, top)
+            pillar, errors = self._profile_stage(
+                "render_pillar", self.render_pillar, matches
+            )
         errors.extend(top_errors)
         if self.opts.get("pillar_opts", False):
             mopts = dict(self.opts)
@@ -1274,7 +1345,9 @@ class Pillar:
             mopts["saltversion"] = __version__
             pillar["master"] = mopts
         if "pillar" in self.opts and self.opts.get("ssh_merge_pillar", False):
-            pillar = merge(
+            pillar = self._profile_stage(
+                "ssh_merge_pillar",
+                merge,
                 self.opts["pillar"],
                 pillar,
                 self.merge_strategy,
@@ -1287,7 +1360,9 @@ class Pillar:
             pillar["_errors"] = errors
 
         if self.pillar_override:
-            pillar = merge(
+            pillar = self._profile_stage(
+                "pillar_override_merge",
+                merge,
                 pillar,
                 self.pillar_override,
                 self.merge_strategy,
@@ -1295,9 +1370,31 @@ class Pillar:
                 self.opts.get("pillar_merge_lists", False),
             )
 
-        decrypt_errors = self.decrypt_pillar(pillar)
+        decrypt_errors = self._profile_stage(
+            "decrypt_pillar", self.decrypt_pillar, pillar
+        )
         if decrypt_errors:
             pillar.setdefault("_errors", []).extend(decrypt_errors)
+
+        if total_timer_start is not None:
+            self._pillar_profiler.add_timing(
+                "total", time.perf_counter() - total_timer_start
+            )
+        if self._pillar_profiler.enabled:
+            timings = self._pillar_profiler.as_dict()
+            if timings:
+                formatted = ", ".join(
+                    f"{stage}={duration:.6f}s" for stage, duration in timings.items()
+                )
+                log.info(
+                    "Pillar profiling for minion %s (saltenv=%s): %s",
+                    self.minion_id,
+                    self.saltenv or "base",
+                    formatted,
+                )
+                pillar.setdefault(
+                    "_pillar_profiler", self._pillar_profiler.as_dict(precision=6)
+                )
         return pillar
 
     def decrypt_pillar(self, pillar):
