@@ -6,7 +6,6 @@ missing functions in other modules.
 import ctypes
 import platform
 import re
-import sys
 
 from salt.exceptions import CommandExecutionError
 
