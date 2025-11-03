@@ -738,3 +738,10 @@ def test_delkey_nested_key_force_needed():
         assert res["result"]
         assert res["changes"] == {"b": None}
         assert grainsmod.__grains__ == {"a": "aval", "c": 8}
+
+
+def test_set_val_removing_duplicates():
+    val = ["one", "two", "three", "three", "four"]
+    key = "roles"
+    ret = grainsmod.setval(key, val, refresh_pillar=True)
+    assert ret == {"roles": ["one", "two", "three", "four"]}
