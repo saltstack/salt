@@ -207,7 +207,7 @@ salt/(client/ssh/.+|cli/ssh\.py):
   - pytests.integration.ssh.test_jinja_filters
   - pytests.integration.ssh.test_pillar
   - pytests.integration.ssh.test_raw
-  - integration.ssh.test_state
+  - pytests.integration.ssh.test_state
   - pytests.integration.ssh.test_py_versions
   - pytests.integration.netapi.test_ssh_client
 
@@ -326,8 +326,8 @@ salt/utils/vt.py:
   - pytests.integration.ssh.test_jinja_filters
   - pytests.integration.ssh.test_pillar
   - pytests.integration.ssh.test_raw
-  - integration.ssh.test_state
   - pytests.integration.netapi.test_ssh_client
+  - pytests.integration.ssh.test_state
 
 salt/wheel/*:
   - pytests.integration.wheel.test_client

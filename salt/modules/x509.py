@@ -29,6 +29,7 @@ import random
 import re
 import sys
 import tempfile
+from collections import OrderedDict
 
 import salt.exceptions
 import salt.utils.data
@@ -38,7 +39,6 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
-from salt.utils.odict import OrderedDict
 
 try:
     import M2Crypto

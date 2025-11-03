@@ -1,3 +1,4 @@
+import importlib
 import os
 import time
 
@@ -264,7 +265,7 @@ def test_checkout_pygit2_with_home_env_unset(_prepare_provider):
     provider.credentials = None
     with patched_environ(__cleanup__=["HOME"]):
         assert "HOME" not in os.environ
-        provider.init_remote()
+        importlib.reload(salt.utils.gitfs)
         assert "HOME" in os.environ
 
 

@@ -17,6 +17,7 @@ import sys
 import tarfile
 import tempfile
 import time
+from collections import OrderedDict
 
 import salt.config
 import salt.defaults.exitcodes
@@ -39,7 +40,6 @@ import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.loader import _format_cached_grains
 from salt.runners.state import orchestrate as _orchestrate
-from salt.utils.odict import OrderedDict
 
 __proxyenabled__ = ["*"]
 
