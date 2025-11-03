@@ -319,6 +319,30 @@ class SaltEvent:
             ):
                 self.pending_events.append(evt)
 
+    def _schedule(self, func, *args, **kwargs):
+        """
+        Schedule ``func`` on the underlying asyncio event loop.
+
+        ``func`` can be a coroutine function or a regular callable. If it
+        returns a coroutine, we ensure it's converted into a task so that any
+        exceptions are surfaced instead of being silently ignored.
+        """
+        if self.io_loop is None:
+            raise RuntimeError("No asyncio event loop available for scheduling")
+
+        loop = salt.utils.asynchronous.aioloop(self.io_loop)
+
+        if asyncio.iscoroutinefunction(func):
+            loop.create_task(func(*args, **kwargs))
+            return
+
+        def runner():
+            result = func(*args, **kwargs)
+            if asyncio.iscoroutine(result):
+                loop.create_task(result)
+
+        loop.call_soon(runner)
+
     def connect_pub(self, timeout=None):
         """
         Establish the publish connection
