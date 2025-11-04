@@ -281,7 +281,7 @@ jobs:
     env:
       PIP_INDEX_URL: https://pypi.org/simple
     runs-on:
-      - ${{ matrix.arch == 'arm64' && 'macos-14' || 'macos-13' }}
+      - ${{ matrix.arch == 'arm64' && 'macos-14' || 'macos-15-intel' }}
 
     steps:
       - name: Check Package Signing Enabled
