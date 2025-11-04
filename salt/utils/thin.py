@@ -15,7 +15,6 @@ import tarfile
 import tempfile
 import zipfile
 
-import backports
 import distro
 import jinja2
 import looseversion
@@ -85,6 +84,11 @@ except ImportError:
         from salt.ext import ssl_match_hostname
     except ImportError:
         ssl_match_hostname = None
+
+try:
+    import backports
+except ImportError:
+    backports = None
 
 concurrent = None
 
