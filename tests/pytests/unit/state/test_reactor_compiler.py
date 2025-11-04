@@ -205,7 +205,7 @@ def test_compiler_pad_funcs_short_sls(minion_opts, tmp_path):
                 }
             },
             [
-                "State 'master_pub' in SLS '/srv/reactor/start.sls' is not formed as a list"
+                "State 'master_pub' in SLS '/srv/reactor/start.sls' is not formed as a list or dict"
             ],
         ),
         (
