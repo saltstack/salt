@@ -81,6 +81,28 @@ def test_local_sls_call(salt_master, salt_call_cli):
         assert state_run_dict["changes"]["ret"] == "hello"
 
 
+def test_local_sls_call_with_dict_args(salt_master, salt_call_cli):
+    sls_contents = """
+    regular-module:
+      module.run:
+        name: test.echo
+        text: hello
+    """
+    with salt_master.state_tree.base.temp_file("saltcalllocal.sls", sls_contents):
+        ret = salt_call_cli.run(
+            "--local",
+            "--file-root",
+            str(salt_master.state_tree.base.paths[0]),
+            "state.sls",
+            "saltcalllocal",
+        )
+        assert ret.returncode == 0
+        state_run_dict = next(iter(ret.data.values()))
+        assert state_run_dict["name"] == "test.echo"
+        assert state_run_dict["result"] is True
+        assert state_run_dict["changes"]["ret"] == "hello"
+
+
 def test_local_salt_call(salt_call_cli):
     """
     This tests to make sure that salt-call does not execute the
