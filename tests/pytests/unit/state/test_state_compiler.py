@@ -720,10 +720,7 @@ def test_verify_retry_parsing(minion_opts):
 
 
 def test_render_requisite_require_disabled(minion_opts):
-    """
-    Test that the state compiler correctly deliver a rendering
-    exception when a requisite cannot be resolved
-    """
+    """Test disabling the require requisite via the options works"""
     with patch("salt.state.State._gather_pillar"):
         high_data = {
             "step_one": salt.state.HashableOrderedDict(
@@ -815,6 +812,34 @@ def test_render_requisite_require_in_disabled(minion_opts):
             "__run_num__"
         ]
         assert run_num == 0
+
+
+def test_render_with_dict_args(minion_opts):
+    """Test calling high state with state arguments specified as a dict"""
+    with patch("salt.state.State._gather_pillar"):
+        high_data: salt.state.HighData = {
+            "step_one": {
+                "test": {
+                    "fun": "succeed_with_changes",
+                    "require": [{"test": "step_two"}],
+                },
+                "__sls__": "test.dict_args",
+                "__env__": "base",
+            },
+            "step_two": {
+                "test": ["succeed_with_changes"],
+                "__env__": "base",
+                "__sls__": "test.dict_args",
+            },
+        }
+
+        state_obj = salt.state.State(minion_opts)
+        ret = state_obj.call_high(high_data)
+        assert isinstance(ret, dict)
+        run_num = ret["test_|-step_one_|-step_one_|-succeed_with_changes"][
+            "__run_num__"
+        ]
+        assert run_num == 1
 
 
 def test_call_chunk_sub_state_run(minion_opts):

@@ -7,18 +7,13 @@ from textwrap import dedent
 
 import pytest
 
-import salt.loader
 import salt.modules.cmdmod as cmd
 import salt.modules.config as config
 import salt.modules.grains as grains
 import salt.modules.saltutil as saltutil
 import salt.modules.state as state_mod
-import salt.utils.atomicfile
-import salt.utils.files
-import salt.utils.path
 import salt.utils.platform
 import salt.utils.state as state_util
-import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 
@@ -646,6 +641,36 @@ def test_pydsl(state, state_tree, tmp_path):
         assert testfile.exists()
 
 
+def test_sls_with_state_args_dict(state, state_tree):
+    """
+    Call sls file with state argument as a dict.
+    """
+    sls_contents = """
+    A:
+      test.succeed_without_changes:
+        name: echo foo
+    """
+    with pytest.helpers.temp_file("testing.sls", sls_contents, state_tree):
+        ret = state.sls("testing")
+        for staterun in ret:
+            assert staterun.result is True
+
+
+def test_sls_with_state_args_list(state, state_tree):
+    """
+    Call sls file with state argument as a list.
+    """
+    sls_contents = """
+    A:
+      test.succeed_without_changes:
+        - name: echo foo
+    """
+    with pytest.helpers.temp_file("testing.sls", sls_contents, state_tree):
+        ret = state.sls("testing")
+        for staterun in ret:
+            assert staterun.result is True
+
+
 def test_issues_7905_and_8174_sls_syntax_error(state, state_tree):
     """
     Call sls file with yaml syntax error.
@@ -680,12 +705,19 @@ def test_issues_7905_and_8174_sls_syntax_error(state, state_tree):
         "badlist1.sls", badlist_1_sls_contents, state_tree
     ), pytest.helpers.temp_file("badlist2.sls", badlist_2_sls_contents, state_tree):
         ret = state.sls("badlist1")
-        assert ret.failed
-        assert ret.errors == ["State 'A' in SLS 'badlist1' is not formed as a list"]
+        staterun = ret["cmd_|-A_|-A_|-run"]
+        assert staterun.result is False
+        assert (
+            "A: command not found" in staterun.changes["stderr"]
+            or "'A' is not recognized as an internal or external command"
+            in staterun.changes["stderr"]
+        )
 
         ret = state.sls("badlist2")
         assert ret.failed
-        assert ret.errors == ["State 'C' in SLS 'badlist2' is not formed as a list"]
+        assert ret.errors == [
+            "State 'C' in SLS 'badlist2' is not formed as a list or dict"
+        ]
 
 
 def test_retry_option(state, state_tree):
@@ -737,7 +769,7 @@ def test_retry_option_is_true(state, state_tree):
         for state_return in ret:
             assert state_return.result is False
             assert expected_comment in state_return.comment
-            assert state_return.full_return["duration"] >= 3
+            assert state_return.full_return["duration"] >= 30
 
 
 @pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
@@ -769,7 +801,7 @@ def test_retry_option_success(state, state_tree, tmp_path):
             assert state_return.result is True
             assert state_return.full_return["duration"] < duration
             # It should not take 2 attempts
-            assert "Attempt 2" not in state_return.comment
+            assert "Attempt 1" not in state_return.comment
 
 
 @pytest.mark.skip_on_windows(
@@ -820,41 +852,44 @@ def test_retry_option_eventual_success(state, state_tree, tmp_path):
     testfile1 = tmp_path / "testfile-1"
     testfile2 = tmp_path / "testfile-2"
 
+    interval = 2
+
     def create_testfile(testfile1, testfile2):
         while True:
             if testfile1.exists():
                 break
-        time.sleep(2)
+        time.sleep(interval)
         testfile2.touch()
 
     thread = threading.Thread(target=create_testfile, args=(testfile1, testfile2))
-    sls_contents = """
+    sls_contents = f"""
     file_test_a:
       file.managed:
-        - name: {}
+        - name: {testfile1}
         - content: 'a'
 
     file_test:
       file.exists:
-        - name: {}
+        - name: {testfile2}
         - retry:
             until: True
             attempts: 5
-            interval: 2
+            interval: {interval}
             splay: 0
         - require:
           - file_test_a
-    """.format(
-        testfile1, testfile2
-    )
+    """
     with pytest.helpers.temp_file("retry.sls", sls_contents, state_tree):
         thread.start()
         ret = state.sls("retry")
-        for state_return in ret:
+        for num, state_return in enumerate(ret):
             assert state_return.result is True
-            assert state_return.full_return["duration"] > 4
-            # It should not take 5 attempts
-            assert "Attempt 5" not in state_return.comment
+            assert state_return.full_return["duration"] > interval
+            if num == 1:
+                # It should retry at least 1 time
+                assert "Attempt 1" in state_return.comment
+                # It should not take 5 attempts
+                assert "Attempt 5" not in state_return.comment
 
 
 @pytest.mark.skip_on_windows(
@@ -867,45 +902,48 @@ def test_retry_option_eventual_success_parallel(state, state_tree, tmp_path):
     testfile1 = tmp_path / "testfile-1"
     testfile2 = tmp_path / "testfile-2"
 
+    interval = 2
+
     def create_testfile(testfile1, testfile2):
         while True:
             if testfile1.exists():
                 break
-        time.sleep(2)
+        time.sleep(interval)
         testfile2.touch()
 
     thread = threading.Thread(target=create_testfile, args=(testfile1, testfile2))
-    sls_contents = """
+    sls_contents = f"""
     file_test_a:
       file.managed:
-        - name: {}
+        - name: {testfile1}
         - content: 'a'
 
     file_test:
       file.exists:
-        - name: {}
+        - name: {testfile2}
         - retry:
             until: True
             attempts: 5
-            interval: 2
+            interval: {interval}
             splay: 0
         - parallel: True
         - require:
           - file_test_a
-    """.format(
-        testfile1, testfile2
-    )
+    """
     with pytest.helpers.temp_file("retry.sls", sls_contents, state_tree):
         thread.start()
         ret = state.sls(
             "retry", __pub_jid="1"
         )  # Because these run in parallel we need a fake JID
-        for state_return in ret:
+        for num, state_return in enumerate(ret):
             log.debug("=== state_return %s ===", state_return)
             assert state_return.result is True
-            assert state_return.full_return["duration"] > 4
-            # It should not take 5 attempts
-            assert "Attempt 5" not in state_return.comment
+            assert state_return.full_return["duration"] > interval
+            if num == 1:
+                # It should retry at least 1 time
+                assert "Attempt 1" in state_return.comment
+                # It should not take 5 attempts
+                assert "Attempt 5" not in state_return.comment
 
 
 def test_state_non_base_environment(state, state_tree_prod, tmp_path):
@@ -1131,8 +1169,8 @@ def _state_requires_env(loaders, state_tree):
         """
         This should not fail on spawning platforms:
           requires_env.test_it:
-            - name: foo
-            - parallel: true
+            name: foo
+            parallel: true
         """
     )
     with pytest.helpers.temp_file(
