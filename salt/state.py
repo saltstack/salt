@@ -27,7 +27,7 @@ import site
 import time
 import traceback
 from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
-from typing import Any, TypeVar, Union
+from typing import Any, TypeVar
 
 import networkx as nx
 
@@ -69,13 +69,13 @@ log = logging.getLogger(__name__)
 # that have dict values. This could be cleaned up some by making
 # exclude and extend into dicts instead of lists so the type of all the values are
 # homogeneous.
-HighData = dict[str, Union[Mapping[str, Any], list[Union[Mapping[str, Any], str]]]]
+HighData = dict[str, Mapping[str, Any] | list[Mapping[str, Any] | str]]
 LowChunk = dict[str, Any]
 
 K = TypeVar("K")
 V = TypeVar("V")
 Pair = tuple[K, V]
-HighDataStateArgsDef = Union[Mapping[K, V], Iterable[Union[Mapping[K, V], str]]]
+HighDataStateArgsDef = Mapping[K, V] | Iterable[Mapping[K, V] | str]
 
 # These are keywords passed to state module functions which are to be used
 # by salt in this state module and not by the actual state module function
