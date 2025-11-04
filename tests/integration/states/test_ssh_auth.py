@@ -2,6 +2,7 @@
 Test the ssh_auth states
 """
 
+import logging
 import os
 
 import pytest
@@ -11,6 +12,9 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import with_system_user
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
+
+# Setup logging
+log = logging.getLogger(__name__)
 
 
 class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
@@ -123,3 +127,52 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         with salt.utils.files.fopen(authorized_keys_file, "r") as fhr:
             self.assertEqual(fhr.read(), key_contents)
+
+    @pytest.mark.destructive_test
+    @with_system_user("issue_60769", on_existing="delete", delete=True)
+    @pytest.mark.slow_test
+    @pytest.mark.skip_if_not_root
+    def test_issue_60769_behavior_using_source_and_options(self, username=None):
+        userdetails = self.run_function("user.info", [username])
+        user_ssh_dir = os.path.join(userdetails["home"], ".ssh")
+        authorized_keys_file = os.path.join(user_ssh_dir, "authorized_keys")
+        pub_key_file = "issue_60769.id_rsa.pub"
+
+        # create a prepared authorized_keys file with option
+        try:
+            os.mkdir(user_ssh_dir)
+        except FileExistsError:
+            log.debug("folder %s already exists", user_ssh_dir)
+        with salt.utils.files.fopen(authorized_keys_file, "w") as authf:
+            authf.write(
+                "no-pty ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQC3dd5ACsvJhnIOrn6bSOkX5"
+                "KyVDpTYsVAaJj3AmEo6Fr5cHXJFJoJS+Ld8K5vCscPzuXashdYUdrhL1E5Liz"
+                "bza+zneQ5AkJ7sn2NXymD6Bbra+infO4NgnQXbGMp/NyY65jbQGqJeQ081iEV"
+                f"YbDP2zXp6fmrqqmFCaakZfGRbVw== {username}\n"
+            )
+
+        # define a public key file to be used as source argument
+        with salt.utils.files.fopen(
+            os.path.join(RUNTIME_VARS.TMP_STATE_TREE, pub_key_file), "w"
+        ) as pubf:
+            pubf.write(
+                "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQC3dd5ACsvJhnIOrn6bSOkX5"
+                "KyVDpTYsVAaJj3AmEo6Fr5cHXJFJoJS+Ld8K5vCscPzuXashdYUdrhL1E5Liz"
+                "bza+zneQ5AkJ7sn2NXymD6Bbra+infO4NgnQXbGMp/NyY65jbQGqJeQ081iEV"
+                f"YbDP2zXp6fmrqqmFCaakZfGRbVw== {username}\n"
+            )
+
+        ret = self.run_state(
+            "ssh_auth.present",
+            name="Setup Keys With Options",
+            source=f"salt://{pub_key_file}",
+            enc="ssh-rsa",
+            options=["no-pty"],
+            user=username,
+            test=True,
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertInSaltComment(
+            "All host keys in file salt://issue_60769.id_rsa.pub are already present",
+            ret,
+        )
