@@ -12,7 +12,6 @@ import sys
 import tempfile
 import traceback
 from collections import OrderedDict
-from pathlib import Path
 
 import jinja2
 import jinja2.ext
