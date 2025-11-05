@@ -656,17 +656,17 @@ async def test_salt_message_server_recreates_unpacker_on_disconnect(monkeypatch)
         def read_bytes(self, *args, **kwargs):
             if self.reads:
                 self.reads -= 1
-                future = salt.ext.tornado.concurrent.Future()
+                future = tornado.concurrent.Future()
                 future.set_result(b"x")
                 return future
-            raise salt.ext.tornado.iostream.StreamClosedError()
+            raise tornado.iostream.StreamClosedError()
 
         def close(self):
             return None
 
     stream = Stream(reads=1)
     await server.handle_stream(stream, "client-1")
-    await salt.ext.tornado.gen.sleep(0.01)
+    await tornado.gen.sleep(0.01)
     gc.collect()
 
     assert TrackingUnpacker.created == 2  # initial + reset on disconnect
@@ -674,7 +674,7 @@ async def test_salt_message_server_recreates_unpacker_on_disconnect(monkeypatch)
 
     stream = Stream(reads=1)
     await server.handle_stream(stream, "client-2")
-    await salt.ext.tornado.gen.sleep(0.01)
+    await tornado.gen.sleep(0.01)
     gc.collect()
 
     # second connection: initial + reset again
@@ -723,7 +723,7 @@ async def test_salt_message_server_resets_unpacker_on_general_exception(monkeypa
         def read_bytes(self, *args, **kwargs):
             self.calls += 1
             if self.calls == 1:
-                future = salt.ext.tornado.concurrent.Future()
+                future = tornado.concurrent.Future()
                 future.set_result(chunk)
                 return future
             raise RuntimeError("boom")
@@ -734,7 +734,7 @@ async def test_salt_message_server_resets_unpacker_on_general_exception(monkeypa
     try:
         stream = FailingStream()
         await server.handle_stream(stream, "failing-client")
-        await salt.ext.tornado.gen.sleep(0.01)
+        await tornado.gen.sleep(0.01)
         gc.collect()
         assert stream.closed
         # initial creation + reset on exception
