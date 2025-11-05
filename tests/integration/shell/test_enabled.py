@@ -28,9 +28,9 @@ class EnabledTest(ModuleCase):
         """
         ensure that python_shell defaults to True for cmd.run
         """
-        disabled_ret = "3\nsaltines"  # the result of running self.cmd in a shell
+        enabled_ret = "3\nsaltines"  # the result of running self.cmd in a shell
         ret = self.run_function("cmd.run", [self.cmd])
-        self.assertEqual(ret, disabled_ret)
+        self.assertEqual(ret, enabled_ret)
 
     @pytest.mark.skip_on_windows(reason="Skip on Windows OS")
     def test_shell_disabled(self):
@@ -43,6 +43,15 @@ class EnabledTest(ModuleCase):
         )
         ret = self.run_function("cmd.run", [self.cmd], python_shell=False)
         self.assertEqual(ret.strip(), disabled_ret)
+
+    @pytest.mark.skip_on_windows(reason="Skip on Windows OS")
+    def test_shell_enabled(self):
+        """
+        test shell disabled output for cmd.run
+        """
+        enabled_ret = "3\nsaltines"
+        ret = self.run_function("cmd.run", [self.cmd], python_shell=True)
+        self.assertEqual(ret.strip(), enabled_ret)
 
     @pytest.mark.skip_on_windows(reason="Skip on Windows OS")
     @pytest.mark.skip_on_freebsd
