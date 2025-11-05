@@ -1300,7 +1300,9 @@ class RequestClient(salt.transport.base.RequestClient):
                         cancelled_task.exception()
                     except asyncio.CancelledError:  # pragma: no cover
                         pass
-                    except Exception:  # pragma: no cover
+                    except (
+                        Exception  # pylint: disable=broad-exception-caught
+                    ):  # pragma: no cover
                         log.trace(
                             "Exception while cancelling send/receive task.",
                             exc_info=True,

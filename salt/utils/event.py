@@ -49,6 +49,7 @@ Namespaced tag
 
 """
 
+import asyncio
 import atexit
 import contextlib
 import datetime
