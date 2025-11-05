@@ -231,7 +231,18 @@ class CMDModuleTest(ModuleCase):
 
     @pytest.mark.slow_test
     @pytest.mark.skip_on_windows
-    def test_script(self):
+    def test_script_args_str(self):
+        """
+        cmd.script
+        """
+        args = "saltines crackers biscuits=yes"
+        script = "salt://script.py"
+        ret = self.run_function("cmd.script", [script, args], saltenv="base")
+        self.assertEqual(ret["stdout"], args)
+
+    @pytest.mark.slow_test
+    @pytest.mark.skip_on_windows
+    def test_script_args_list(self):
         """
         cmd.script
         """
@@ -242,7 +253,18 @@ class CMDModuleTest(ModuleCase):
 
     @pytest.mark.slow_test
     @pytest.mark.skip_on_windows
-    def test_script_query_string(self):
+    def test_script_query_string_args_str(self):
+        """
+        cmd.script
+        """
+        args = "saltines crackers biscuits=yes"
+        script = "salt://script.py?saltenv=base"
+        ret = self.run_function("cmd.script", [script, args], saltenv="base")
+        self.assertEqual(ret["stdout"], args)
+
+    @pytest.mark.slow_test
+    @pytest.mark.skip_on_windows
+    def test_script_query_string_args_list(self):
         """
         cmd.script
         """
@@ -263,7 +285,21 @@ class CMDModuleTest(ModuleCase):
 
     @pytest.mark.slow_test
     @pytest.mark.skip_on_windows
-    def test_script_cwd(self):
+    def test_script_cwd_args_str(self):
+        """
+        cmd.script with cwd
+        """
+        tmp_cwd = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        args = "saltines crackers biscuits=yes"
+        script = "salt://script.py"
+        ret = self.run_function(
+            "cmd.script", [script, args], cwd=tmp_cwd, saltenv="base"
+        )
+        self.assertEqual(ret["stdout"], args)
+
+    @pytest.mark.slow_test
+    @pytest.mark.skip_on_windows
+    def test_script_cwd_args_list(self):
         """
         cmd.script with cwd
         """
@@ -277,7 +313,25 @@ class CMDModuleTest(ModuleCase):
 
     @pytest.mark.slow_test
     @pytest.mark.skip_on_windows
-    def test_script_cwd_with_space(self):
+    def test_script_cwd_with_space_args_str(self):
+        """
+        cmd.script with cwd
+        """
+        tmp_cwd = "{}{}test 2".format(
+            tempfile.mkdtemp(dir=RUNTIME_VARS.TMP), os.path.sep
+        )
+        os.mkdir(tmp_cwd)
+
+        args = "saltines crackers biscuits=yes"
+        script = "salt://script.py"
+        ret = self.run_function(
+            "cmd.script", [script, args], cwd=tmp_cwd, saltenv="base"
+        )
+        self.assertEqual(ret["stdout"], args)
+
+    @pytest.mark.slow_test
+    @pytest.mark.skip_on_windows
+    def test_script_cwd_with_space_args_list(self):
         """
         cmd.script with cwd
         """

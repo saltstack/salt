@@ -2992,6 +2992,9 @@ def script(
         os.chmod(path, 320)
         os.chown(path, __salt__["file.user_to_uid"](runas), -1)
 
+    if args:
+        python_shell = False
+
     if isinstance(args, str):
         if salt.utils.platform.is_windows():
             args = shlex_split(args)
