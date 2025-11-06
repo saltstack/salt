@@ -2654,6 +2654,8 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
         ret["type"] = "environment group"
     elif "group" in g_info:
         ret["type"] = "package group"
+    elif "name" in g_info:
+        ret["type"] = "package group"
 
     ret["group"] = (
         g_info.get("environment group") or g_info.get("group") or g_info.get("name")
@@ -2700,9 +2702,13 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
                         target_found = True
                         # The difference here from dnf (above) is that this line
                         # also contains the first package of this section.
+                        # Have to pull out the package name, but not changing the case
+                        rematch_dnf5 = re.match( r"^.*:\s*(.*?)$", line)
                         # Let line be the match we found, and then simply
                         # continue on, where we'll add this to the appropriate group
-                        line = match_dnf5.group(2)
+                        # Can't fail...
+                        if rematch_dnf5:
+                            line = rematch_dnf5.group(1)
 
             if target_found:
                 if expand and ret["type"] == "environment group":
