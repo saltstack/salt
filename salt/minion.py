@@ -41,6 +41,7 @@ import salt.serializers.msgpack
 import salt.syspaths
 import salt.transport
 import salt.utils.args
+import salt.utils.asynchronous
 import salt.utils.context
 import salt.utils.ctx
 import salt.utils.data
@@ -1045,11 +1046,9 @@ class MinionManager(MinionBase):
         self.max_auth_wait = self.opts["acceptance_wait_time_max"]
         self.minions = []
         self.jid_queue = []
-        self.io_loop = tornado.ioloop.IOLoop.current()
+        self.io_loop = salt.utils.asynchronous.aioloop(tornado.ioloop.IOLoop.current())
         self.process_manager = ProcessManager(name="MultiMinionProcessManager")
-        self.io_loop.spawn_callback(
-            self.process_manager.run, **{"asynchronous": True}
-        )  # Tornado backward compat
+        self.io_loop.create_task(self.process_manager.run(asynchronous=True))
         self.event_publisher = None
         self.event = None
 
@@ -1062,10 +1061,11 @@ class MinionManager(MinionBase):
     def _bind(self):
         # start up the event publisher, so we can see events during startup
         self.event_publisher = salt.transport.ipc_publish_server("minion", self.opts)
-        self.io_loop.spawn_callback(
-            self.event_publisher.publisher,
-            self.event_publisher.publish_payload,
-            self.io_loop,
+        self.io_loop.create_task(
+            self.event_publisher.publisher(
+                self.event_publisher.publish_payload,
+                io_loop=self.io_loop,
+            )
         )
         self.event = salt.utils.event.get_event(
             "minion", opts=self.opts, io_loop=self.io_loop
@@ -1135,7 +1135,7 @@ class MinionManager(MinionBase):
                 loaded_base_name="salt.loader.{}".format(s_opts["master"]),
                 jid_queue=self.jid_queue,
             )
-            self.io_loop.spawn_callback(self._connect_minion, minion)
+            self.io_loop.create_task(self._connect_minion(minion))
         self.io_loop.call_later(timeout, self._check_minions)
 
     async def _connect_minion(self, minion):
@@ -1219,9 +1219,7 @@ class MinionManager(MinionBase):
         Called from cli.daemons.Minion._handle_signals().
         Adds stop_async as callback to the io_loop to prevent blocking.
         """
-        self.io_loop.add_callback(  # pylint: disable=not-callable
-            self.stop_async, signum, parent_sig_handler
-        )
+        self.io_loop.create_task(self.stop_async(signum, parent_sig_handler))
 
     async def stop_async(self, signum, parent_sig_handler):
         """
@@ -1297,9 +1295,11 @@ class Minion(MinionBase):
         self.req_channel = None
 
         if io_loop is None:
-            self.io_loop = tornado.ioloop.IOLoop.current()
+            self.io_loop = salt.utils.asynchronous.aioloop(
+                tornado.ioloop.IOLoop.current()
+            )
         else:
-            self.io_loop = io_loop
+            self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
 
         # Warn if ZMQ < 3.2
         if zmq:
@@ -1344,11 +1344,11 @@ class Minion(MinionBase):
             time.sleep(sleep_time)
 
         self.process_manager = ProcessManager(name="MinionProcessManager")
-        self.io_loop.spawn_callback(self.process_manager.run, **{"asynchronous": True})
+        self.io_loop.create_task(self.process_manager.run(asynchronous=True))
         # We don't have the proxy setup yet, so we can't start engines
         # Engines need to be able to access __proxy__
         if not salt.utils.platform.is_proxy():
-            self.io_loop.spawn_callback(
+            self.io_loop.call_soon(
                 salt.engines.start_engines, self.opts, self.process_manager
             )
 
@@ -2534,7 +2534,7 @@ class Minion(MinionBase):
                 else:
                     data["fun"] = "state.highstate"
                     data["arg"] = []
-                self.io_loop.add_callback(self._handle_decoded_payload, data)
+                self.io_loop.create_task(self._handle_decoded_payload(data))
 
     def _refresh_grains_watcher(self, refresh_interval_in_minutes):
         """
@@ -3255,7 +3255,7 @@ class Minion(MinionBase):
                 self.setup_scheduler(before_connect=True)
             self.sync_connect_master()
         if self.connected:
-            self.io_loop.add_callback(self._fire_master_minion_start)
+            self.io_loop.create_task(self._fire_master_minion_start())
             log.info("Minion is ready to receive requests!")
 
         # Make sure to gracefully handle SIGUSR1
@@ -3298,11 +3298,12 @@ class Minion(MinionBase):
                                     "minion is running under an init system."
                                 )
 
-                    self.io_loop.add_callback(
-                        self._fire_master_main,
-                        "ping",
-                        "minion_ping",
-                        timeout_handler=ping_timeout_handler,
+                    self.io_loop.create_task(
+                        self._fire_master_main(
+                            "ping",
+                            "minion_ping",
+                            timeout_handler=ping_timeout_handler,
+                        )
                     )
                 except Exception:  # pylint: disable=broad-except
                     log.warning(
@@ -3611,9 +3612,11 @@ class SyndicManager(MinionBase):
         self.jid_forward_cache = set()
 
         if io_loop is None:
-            self.io_loop = tornado.ioloop.IOLoop.current()
+            self.io_loop = salt.utils.asynchronous.aioloop(
+                tornado.ioloop.IOLoop.current()
+            )
         else:
-            self.io_loop = io_loop
+            self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
 
         # List of events
         self.raw_events = []
@@ -3648,7 +3651,7 @@ class SyndicManager(MinionBase):
                 except Exception as exc:  # pylint: disable=broad-except
                     future.set_exception(exc)
 
-            self.io_loop.spawn_callback(connect, future, s_opts)
+            self.io_loop.create_task(connect(future, s_opts))
 
     async def _connect_syndic(self, opts):
         """
