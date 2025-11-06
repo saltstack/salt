@@ -140,7 +140,7 @@ salt/cli/key.py:
   - pytests.integration.cli.test_salt_key
 
 salt/cli/salt.py:
-  - integration.shell.test_enabled
+  - pytests.functional.modules.cmd.test_enabled
   - pytests.integration.cli.test_salt
   - pytests.integration.cli.test_matcher
 
