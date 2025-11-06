@@ -104,7 +104,7 @@ def test_template_shell(state, state_tree, test_cmd, ret_enabled):
     state_file_name = state_name + ".sls"
     state_file_contents = textwrap.dedent(
         f"""
-        {{% set shell_enabled = salt['cmd.shell']('{test_cmd}', python_shell=True).strip() %}}
+        {{% set shell_enabled = salt['cmd.shell']("{test_cmd}", python_shell=True).strip() %}}
 
         shell_enabled:
           test.configurable_test_state:
@@ -131,7 +131,7 @@ def test_template_default_disabled(state, state_tree, test_cmd, ret_disabled):
     state_file_name = state_name + ".sls"
     state_file_contents = textwrap.dedent(
         f"""
-        {{% set shell_disabled = salt['cmd.run']('{test_cmd}') %}}
+        {{% set shell_disabled = salt['cmd.run']("{test_cmd}") %}}
 
         shell_enabled:
           test.configurable_test_state:
@@ -140,6 +140,7 @@ def test_template_default_disabled(state, state_tree, test_cmd, ret_disabled):
     )
 
     # the result of running self.cmd not in a shell
+    ret_disabled = ret_disabled.replace(os.linesep, " ")
     ret_key = f"test_|-shell_enabled_|-{ret_disabled}_|-configurable_test_state"
     with pytest.helpers.temp_file(state_file_name, state_file_contents, state_tree):
         ret = state.sls(state_name)
