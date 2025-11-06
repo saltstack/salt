@@ -728,8 +728,6 @@ def _run(
     if python_shell is not True and not isinstance(cmd, list):
         cmd = salt.utils.args.shlex_split(cmd)
 
-    log.info("cmd: %s", " ".join(cmd) if isinstance(cmd, list) else cmd)
-
     if success_retcodes is None:
         success_retcodes = [0]
     else:
