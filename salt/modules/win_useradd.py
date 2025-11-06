@@ -815,7 +815,11 @@ def info(name):
         domainname = domainname.removesuffix(".local")
 
     if domainname:
-        server = win32net.NetGetAnyDCName(None, domainname)
+        try:
+            server = win32net.NetGetAnyDCName(None, domainname)
+        except win32net.error:
+            # Restore username to original
+            username = str(name)
 
     try:
         items = win32net.NetUserGetInfo(server, username, 4)
