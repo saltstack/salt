@@ -119,8 +119,8 @@ def get_log_format_types():
     """
     Get all available log format names and ids.
 
-    :return: A dictionary of the log format names and ids.
-    :rtype: dict
+    Returns:
+        dict: A dictionary of the log format names and IDs.
 
     CLI Example:
 
@@ -154,8 +154,8 @@ def get_servers():
     """
     Get the SMTP virtual server names.
 
-    :return: A list of the SMTP virtual servers.
-    :rtype: list
+    Returns:
+        list: A list of the SMTP virtual servers.
 
     CLI Example:
 
@@ -185,17 +185,22 @@ def get_server_setting(settings, server=_DEFAULT_SERVER):
     """
     Get the value of the setting for the SMTP virtual server.
 
-    :param str settings: A list of the setting names.
-    :param str server: The SMTP server name.
+    Args:
 
-    :return: A dictionary of the provided settings and their values.
-    :rtype: dict
+        settings (list): A list of the setting names.
+
+        server (:obj:`str`, optional): The SMTP server name.
+
+            Default is "SmtpSvc/1".
+
+    Returns:
+        dict: A dictionary of the provided settings and their values.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' win_smtp_server.get_server_setting settings="['MaxRecipients']"
+        salt '*' win_smtp_server.get_server_setting settings='["MaxRecipients"]'
     """
     ret = dict()
 
@@ -225,17 +230,22 @@ def set_server_setting(settings, server=_DEFAULT_SERVER):
 
         The setting names are case-sensitive.
 
-    :param str settings: A dictionary of the setting names and their values.
-    :param str server: The SMTP server name.
+    Args:
 
-    :return: A boolean representing whether all changes succeeded.
-    :rtype: bool
+        settings (dict): A dictionary of the setting names and their values.
+
+        server (:obj:`str`, optional): The SMTP server name.
+
+            Default is "SmtpSvc/1".
+
+    Returns:
+        bool: A boolean representing whether all changes succeeded.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' win_smtp_server.set_server_setting settings="{'MaxRecipients': '500'}"
+        salt '*' win_smtp_server.set_server_setting settings='{"MaxRecipients": "500"}'
     """
     if not settings:
         _LOG.warning("No settings provided")
@@ -292,10 +302,14 @@ def get_log_format(server=_DEFAULT_SERVER):
     """
     Get the active log format for the SMTP virtual server.
 
-    :param str server: The SMTP server name.
+    Args:
 
-    :return: A string of the log format name.
-    :rtype: str
+        server (:obj:`str`, optional): The SMTP server name.
+
+            Default is "SmtpSvc/1".
+
+    Returns:
+        str: A string of the log format name.
 
     CLI Example:
 
@@ -319,11 +333,16 @@ def set_log_format(log_format, server=_DEFAULT_SERVER):
     """
     Set the active log format for the SMTP virtual server.
 
-    :param str log_format: The log format name.
-    :param str server: The SMTP server name.
+    Args:
 
-    :return: A boolean representing whether the change succeeded.
-    :rtype: bool
+        log_format (str): The log format name.
+
+        server (:obj:`str`, optional): The SMTP server name.
+
+            Default is "SmtpSvc/1".
+
+    Returns:
+        bool: A boolean representing whether the change succeeded.
 
     CLI Example:
 
@@ -365,11 +384,18 @@ def get_connection_ip_list(as_wmi_format=False, server=_DEFAULT_SERVER):
     """
     Get the IPGrant list for the SMTP virtual server.
 
-    :param bool as_wmi_format: Returns the connection IPs as a list in the format WMI expects.
-    :param str server: The SMTP server name.
+    Args:
+        as_wmi_format (:obj:`bool`, optional):
+            Returns the connection IPs as a list in the format WMI expects.
 
-    :return: A dictionary of the IP and subnet pairs.
-    :rtype: dict
+            Default is ``False``.
+
+        server (:obj:`str`, optional): The SMTP server name.
+
+            Default is "SmtpSvc/1".
+
+    Returns:
+        dict: A dictionary of the IP and subnet pairs.
 
     CLI Example:
 
@@ -406,18 +432,29 @@ def set_connection_ip_list(
     """
     Set the IPGrant list for the SMTP virtual server.
 
-    :param str addresses: A dictionary of IP + subnet pairs.
-    :param bool grant_by_default: Whether the addresses should be a blacklist or whitelist.
-    :param str server: The SMTP server name.
+    Args:
 
-    :return: A boolean representing whether the change succeeded.
-    :rtype: bool
+        addresses (:obj:`dict`, optional): A dictionary of IP + subnet pairs.
+
+            Default is ``None``.
+
+        grant_by_default (:obj:`bool`, optional):
+            Whether the addresses should be a blacklist or whitelist.
+
+            Default is ``False``.
+
+        server (:obj:`str`, optional): The SMTP server name.
+
+            Default is "SmtpSvc/1".
+
+    Returns:
+        bool: A boolean representing whether the change succeeded.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' win_smtp_server.set_connection_ip_list addresses="{'127.0.0.1': '255.255.255.255'}"
+        salt '*' win_smtp_server.set_connection_ip_list addresses='{"127.0.0.1": "255.255.255.255"}'
     """
     setting = "IPGrant"
     formatted_addresses = list()
@@ -467,10 +504,14 @@ def get_relay_ip_list(server=_DEFAULT_SERVER):
     """
     Get the RelayIpList list for the SMTP virtual server.
 
-    :param str server: The SMTP server name.
+    Args:
 
-    :return: A list of the relay IPs.
-    :rtype: list
+        server (:obj:`str`, optional): The SMTP server name.
+
+            Default is "SmtpSvc/1".
+
+    Returns:
+        list: A list of the relay IPs.
 
     .. note::
 
@@ -529,17 +570,25 @@ def set_relay_ip_list(addresses=None, server=_DEFAULT_SERVER):
         with an empty access list configured, and setting an empty list/tuple corresponds to the
         more permissive 'All except the list below' GUI parameter.
 
-    :param str addresses: A list of the relay IPs. The order of the list is important.
-    :param str server: The SMTP server name.
+    Args:
 
-    :return: A boolean representing whether the change succeeded.
-    :rtype: bool
+        addresses (:obj:`list`, optional):
+            A list of the relay IPs. The order of the list is important.
+
+            Default is ``None``.
+
+        server (:obj:`str`, optional): The SMTP server name.
+
+            Default is "SmtpSvc/1".
+
+    Returns:
+        bool: A boolean representing whether the change succeeded.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' win_smtp_server.set_relay_ip_list addresses="['192.168.1.1', '172.16.1.1']"
+        salt '*' win_smtp_server.set_relay_ip_list addresses='["192.168.1.1", "172.16.1.1"]'
     """
     setting = "RelayIpList"
     formatted_addresses = list()

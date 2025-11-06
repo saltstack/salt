@@ -682,6 +682,7 @@ class Client:
             write_body = [None, False, None, None]
 
             def on_header(hdr):
+
                 if write_body[1] is not False and (
                     write_body[2] is None or (use_etag and write_body[3] is None)
                 ):
@@ -744,8 +745,9 @@ class Client:
                 # Check the status line of the HTTP request
                 if write_body[0] is None:
                     try:
-                        hdr = parse_response_start_line(hdr)
-                    except HTTPInputError:
+                        hdr = parse_response_start_line(hdr.strip())
+                    except HTTPInputError as exc:
+                        log.trace("Unable to parse header: %r", hdr.strip())
                         # Not the first line, do nothing
                         return
                     write_body[0] = hdr.code not in [301, 302, 303, 307]

@@ -281,18 +281,34 @@ def create_site(
         not modify the configuration of an existing site.
 
     Args:
+
         name (str): The IIS site name.
+
         sourcepath (str): The physical path of the IIS site.
-        apppool (str): The name of the IIS application pool.
-        hostheader (str): The host header of the binding. Usually the hostname
-            or website name, ie: www.contoso.com
-        ipaddress (str): The IP address of the binding.
-        port (int): The TCP port of the binding.
-        protocol (str): The application protocol of the binding. (http, https,
-            etc.)
+
+        apppool (:obj:`str`, optional):
+            The name of the IIS application pool.
+            Default is ""
+
+        hostheader (:obj:`str`, optional):
+            The host header of the binding. Usually the hostname or website
+            name, ie: www.contoso.com
+            Default is ""
+
+        ipaddress (:obj:`str`, optional):
+            The IP address of the binding.
+            Default is "*"
+
+        port (:obj:`int`, optional):
+            The TCP port of the binding.
+            Default is 80
+
+        protocol (:obj:`str`, optional):
+            The application protocol of the binding. (http, https, etc.)
+            Default is "http"
 
     Returns:
-        bool: True if successful, otherwise False.
+        bool: ``True`` if successful, otherwise ``False``.
 
     .. note::
 
@@ -368,12 +384,19 @@ def modify_site(name, sourcepath=None, apppool=None):
     .. versionadded:: 2017.7.0
 
     Args:
+
         name (str): The IIS site name.
-        sourcepath (str): The physical path of the IIS site.
-        apppool (str): The name of the IIS application pool.
+
+        sourcepath (:obj:`str`, optional):
+            The physical path of the IIS site.
+            Default is ``None``.
+
+        apppool (:obj:`str`, optional):
+            The name of the IIS application pool.
+            Default is ``None``.
 
     Returns:
-        bool: True if successful, otherwise False.
+        bool: ``True`` if successful, otherwise ``False``.
 
     .. note::
 
@@ -450,7 +473,7 @@ def remove_site(name):
         name (str): The IIS site name.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     .. note::
 
@@ -491,7 +514,7 @@ def stop_site(name):
         name (str): The name of the website to stop.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -516,7 +539,7 @@ def start_site(name):
         name (str): The name of the website to start.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -541,7 +564,7 @@ def restart_site(name):
         name (str): The name of the website to restart.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -597,16 +620,31 @@ def create_binding(
         modify the configuration of an existing binding.
 
     Args:
+
         site (str): The IIS site name.
-        hostheader (str): The host header of the binding. Usually a hostname.
-        ipaddress (str): The IP address of the binding.
-        port (int): The TCP port of the binding.
-        protocol (str): The application protocol of the binding.
-        sslflags (str): The flags representing certificate type and storage of
-            the binding.
+
+        hostheader (:obj:`str`, optional)
+            The host header of the binding. Usually a hostname.
+            Default is ""
+
+        ipaddress (:obj:`str`, optional)
+            The IP address of the binding.
+            Default is "*"
+
+        port (:obj:`int`, optional)
+            The TCP port of the binding.
+            Default is 80
+
+        protocol (:obj:`str`, optional)
+            The application protocol of the binding.
+            Default is "http
+
+        sslflags (:obj:`str`, optional)
+            The flags representing certificate type and storage of the binding.
+            Default is ``None``.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -693,19 +731,33 @@ def modify_binding(
     .. versionadded:: 2017.7.0
 
     Args:
+
         site (str): The IIS site name.
-        binding (str): The binding to edit. This is a combination of the
-            IP address, port, and hostheader. It is in the following format:
+
+        binding (str):
+            The binding to edit. This is a combination of the IP address, port,
+            and hostheader. It is in the following format:
             ipaddress:port:hostheader. For example, ``*:80:`` or
             ``*:80:salt.com``
-        hostheader (str): The host header of the binding. Usually the hostname.
-        ipaddress (str): The IP address of the binding.
-        port (int): The TCP port of the binding.
-        sslflags (str): The flags representing certificate type and storage of
-            the binding.
+
+        hostheader (:obj:`str`, optional)
+            The host header of the binding. Usually the hostname.
+            Default is ``None``.
+
+        ipaddress (:obj:`str`, optional)
+            The IP address of the binding.
+            Default is ``None``.
+
+        port (:obj:`int`, optional)
+            The TCP port of the binding.
+            Default is ``None``.
+
+        sslflags (:obj:`str`, optional)
+            The flags representing certificate type and storage of the binding.
+            Default is ``None``.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -800,13 +852,23 @@ def remove_binding(site, hostheader="", ipaddress="*", port=80):
     Remove an IIS binding.
 
     Args:
+
         site (str): The IIS site name.
-        hostheader (str): The host header of the binding.
-        ipaddress (str): The IP address of the binding.
-        port (int): The TCP port of the binding.
+
+        hostheader (:obj:`str`, optional)
+            The host header of the binding.
+            Default is "".
+
+        ipaddress (:obj:`str`, optional)
+            The IP address of the binding.
+            Default is "*"
+
+        port (:obj:`int`, optional)
+            The TCP port of the binding.
+            Default is 80
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -851,6 +913,7 @@ def list_cert_bindings(site):
     .. versionadded:: 2016.11.0
 
     Args:
+
         site (str): The IIS site name.
 
     Returns:
@@ -891,15 +954,30 @@ def create_cert_binding(name, site, hostheader="", ipaddress="*", port=443, sslf
         exist.
 
     Args:
+
         name (str): The thumbprint of the certificate.
+
         site (str): The IIS site name.
-        hostheader (str): The host header of the binding.
-        ipaddress (str): The IP address of the binding.
-        port (int): The TCP port of the binding.
-        sslflags (int): Flags representing certificate type and certificate storage of the binding.
+
+        hostheader (:obj:`str`, optional)
+            The host header of the binding.
+            Default is ""
+
+        ipaddress (:obj:`str`, optional)
+            The IP address of the binding.
+            Default is "*"
+
+        port (:obj:`int`, optional)
+            The TCP port of the binding.
+            Default is 443
+
+        sslflags (:obj:`int`, optional)
+            Flags representing certificate type and certificate storage of the
+            binding.
+            Default is 0
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1012,14 +1090,25 @@ def remove_cert_binding(name, site, hostheader="", ipaddress="*", port=443):
         not remove the web binding itself.
 
     Args:
+
         name (str): The thumbprint of the certificate.
+
         site (str): The IIS site name.
-        hostheader (str): The host header of the binding.
-        ipaddress (str): The IP address of the binding.
-        port (int): The TCP port of the binding.
+
+        hostheader (:obj:`str`, optional)
+            The host header of the binding.
+            Default is ""
+
+        ipaddress (:obj:`str`, optional)
+            The IP address of the binding.
+            Default is "*"
+
+        port (:obj:`int`, optional)
+            The TCP port of the binding.
+            Default is 443
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1159,7 +1248,7 @@ def create_apppool(name):
         name (str): The name of the IIS application pool.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1196,7 +1285,7 @@ def remove_apppool(name):
         name (str): The name of the IIS application pool.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1235,7 +1324,7 @@ def stop_apppool(name):
         name (str): The name of the App Pool to stop.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1260,7 +1349,7 @@ def start_apppool(name):
         name (str): The name of the App Pool to start.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1285,7 +1374,7 @@ def restart_apppool(name):
         name (str): The name of the IIS application pool.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1307,9 +1396,12 @@ def get_container_setting(name, container, settings):
     .. versionadded:: 2016.11.0
 
     Args:
+
         name (str): The name of the IIS container.
+
         container (str): The type of IIS container. The container types are:
             AppPools, Sites, SslBindings
+
         settings (dict): A dictionary of the setting names and their values.
 
     Returns:
@@ -1395,13 +1487,16 @@ def set_container_setting(name, container, settings):
     .. versionadded:: 2016.11.0
 
     Args:
+
         name (str): The name of the IIS container.
+
         container (str): The type of IIS container. The container types are:
             AppPools, Sites, SslBindings
+
         settings (dict): A dictionary of the setting names and their values.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1509,6 +1604,7 @@ def list_apps(site):
     Get all configured IIS applications for the specified site.
 
     Args:
+
         site (str): The IIS site name.
 
     Returns: A dictionary of the application names and properties.
@@ -1577,13 +1673,19 @@ def create_app(name, site, sourcepath, apppool=None):
         application.
 
     Args:
+
         name (str): The IIS application.
+
         site (str): The IIS site name.
+
         sourcepath (str): The physical path.
-        apppool (str): The name of the IIS application pool.
+
+        apppool (:obj:`str`, optional)
+            The name of the IIS application pool.
+            Default is ``None``.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1638,11 +1740,13 @@ def remove_app(name, site):
     Remove an IIS application.
 
     Args:
+
         name (str): The application name.
+
         site (str): The IIS site name.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1688,7 +1792,9 @@ def list_vdirs(site, app=_DEFAULT_APP):
     the combination of site and application.
 
     Args:
+
         site (str): The IIS site name.
+
         app (str): The IIS application.
 
     Returns:
@@ -1741,13 +1847,19 @@ def create_vdir(name, site, sourcepath, app=_DEFAULT_APP):
         existing virtual directory.
 
     Args:
+
         name (str): The virtual directory name.
+
         site (str): The IIS site name.
+
         sourcepath (str): The physical path.
-        app (str): The IIS application.
+
+        app (:obj:`str`, optional)
+            The IIS application.
+            Default is _DEFAULT_APP ("/")
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1802,12 +1914,17 @@ def remove_vdir(name, site, app=_DEFAULT_APP):
     Remove an IIS virtual directory.
 
     Args:
+
         name (str): The virtual directory name.
+
         site (str): The IIS site name.
-        app (str): The IIS application.
+
+        app (:obj:`str`, optional)
+            The IIS application.
+            Default is _DEFAULT_APP ("/")
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1907,10 +2024,11 @@ def create_backup(name):
         folder.
 
     Args:
+
         name (str): The name to give the backup
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1941,10 +2059,11 @@ def remove_backup(name):
     .. versionadded:: 2017.7.0
 
     Args:
+
         name (str): The name of the backup to remove
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1977,6 +2096,7 @@ def list_worker_processes(apppool):
     .. versionadded:: 2017.7.0
 
     Args:
+
         apppool (str): The application pool to query
 
     Returns:
@@ -2016,11 +2136,18 @@ def get_webapp_settings(name, site, settings):
     .. note::
         Params are case sensitive
 
-    :param str name: The name of the IIS web application.
-    :param str site: The site name contains the web application.
-        Example: Default Web Site
-    :param str settings: A dictionary of the setting names and their values.
-        Available settings: physicalPath, applicationPool, userName, password
+    Args:
+
+        name (str): The name of the IIS web application.
+        site (site): The site name contains the web application.
+            Example: Default Web Site
+        settings (str): A dictionary of the setting names and their values.
+            Available settings:
+
+            - physicalPath
+            - applicationPool
+            - userName
+            - password
     Returns:
         dict: A dictionary of the provided settings and their values.
 
@@ -2029,7 +2156,7 @@ def get_webapp_settings(name, site, settings):
     .. code-block:: bash
 
         salt '*' win_iis.get_webapp_settings name='app0' site='Default Web Site'
-            settings="['physicalPath','applicationPool']"
+            settings='["physicalPath","applicationPool"]'
     """
     ret = dict()
     pscmd = list()
@@ -2105,24 +2232,30 @@ def set_webapp_settings(name, site, settings):
     Configure an IIS application.
 
     .. note::
-        This function only configures an existing app. Params are case
-        sensitive.
+        This function only configures an existing app. Params are
+        case-sensitive.
 
-    :param str name: The IIS application.
-    :param str site: The IIS site name.
-    :param str settings: A dictionary of the setting names and their values.
-        - physicalPath: The physical path of the webapp.
-        - applicationPool: The application pool for the webapp.
-        - userName: "connectAs" user
-        - password: "connectAs" password for user
-    :return: A boolean representing whether all changes succeeded.
-    :rtype: bool
+    Args:
+
+        name (str): The IIS application.
+
+        site (str): The IIS site name.
+
+        settings (str): A dictionary of the setting names and their values.
+
+            - physicalPath: The physical path of the webapp.
+            - applicationPool: The application pool for the webapp.
+            - userName: "connectAs" user
+            - password: "connectAs" password for user
+
+    Returns:
+        bool: A boolean representing whether all changes succeeded.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' win_iis.set_webapp_settings name='app0' site='site0' settings="{'physicalPath': 'C:\site0', 'apppool': 'site0'}"
+        salt '*' win_iis.set_webapp_settings name='app0' site='site0' settings='{"physicalPath": "C:\site0", "apppool": "site0"}'
     """
     pscmd = list()
     current_apps = list_apps(site)
@@ -2220,7 +2353,9 @@ def get_webconfiguration_settings(name, settings):
     Get the webconfiguration settings for the IIS PSPath.
 
     Args:
+
         name (str): The PSPath of the IIS webconfiguration settings.
+
         settings (list): A list of dictionaries containing setting name and filter.
 
     Returns:
@@ -2230,7 +2365,7 @@ def get_webconfiguration_settings(name, settings):
 
     .. code-block:: bash
 
-        salt '*' win_iis.get_webconfiguration_settings name='IIS:\' settings="[{'name': 'enabled', 'filter': 'system.webServer/security/authentication/anonymousAuthentication'}]"
+        salt '*' win_iis.get_webconfiguration_settings name='IIS:\' settings='[{"name": "enabled", "filter": "system.webServer/security/authentication/anonymousAuthentication"}]'
     """
     ret = {}
     ps_cmd = [r"$Settings = New-Object System.Collections.ArrayList;"]
@@ -2319,17 +2454,19 @@ def set_webconfiguration_settings(name, settings):
     Set the value of the setting for an IIS container.
 
     Args:
+
         name (str): The PSPath of the IIS webconfiguration settings.
+
         settings (list): A list of dictionaries containing setting name, filter and value.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' win_iis.set_webconfiguration_settings name='IIS:\' settings="[{'name': 'enabled', 'filter': 'system.webServer/security/authentication/anonymousAuthentication', 'value': False}]"
+        salt '*' win_iis.set_webconfiguration_settings name='IIS:\' settings='[{"name": "enabled", "filter": "system.webServer/security/authentication/anonymousAuthentication", "value": False}]'
     """
     ps_cmd = []
     settings = _prepare_settings(name, settings)

@@ -8574,12 +8574,17 @@ def get_policy_info(policy_name, policy_class, adml_language="en-US"):
     Returns information about a specified policy
 
     Args:
+
         policy_name (str):
             The name of the policy to lookup
+
         policy_class (str):
             The class of policy, i.e. machine, user, both
-        adml_language (str):
-            The ADML language to use for Administrative Template data lookup
+
+        adml_language (:obj:`str`, optional):
+            The ADML language to use for Administrative Template data lookup.
+
+            Default is ``en-US``.
 
     Returns:
         dict: Information about the specified policy
@@ -8798,29 +8803,39 @@ def get(
 
     Args:
 
-        policy_class (str):
+        policy_class (:obj:`str`, optional):
             Some policies are both user and computer, by default all policies
             will be pulled, but this can be used to retrieve only a specific
             policy class User/USER/user = retrieve user policies
             Machine/MACHINE/machine/Computer/COMPUTER/computer = retrieve
-            machine/computer policies
+            machine/computer policies.
 
-        return_full_policy_names (bool):
-            True/False to return the policy name as it is seen in the
+            Default is ``None``.
+
+        return_full_policy_names (:obj:`bool`, optional):
+            ``True``/``False`` to return the policy name as it is seen in the
             ``gpedit.msc`` GUI or to only return the policy key/id.
 
-        hierarchical_return (bool):
-            True/False to return the policy data in the hierarchy as seen in the
-            ``gpedit.msc`` GUI. The default of False will return data split only
-            into User/Computer configuration sections
+            Default is ``True``.
 
-        adml_language (str):
+        hierarchical_return (:obj:`bool`, optional):
+            ``True``/``False`` to return the policy data in the hierarchy as
+            seen in the ``gpedit.msc`` GUI. The default of False will return
+            data split only into User/Computer configuration sections.
+
+            Default is ``False``.
+
+        adml_language (:obj:`str`, optional):
             The ADML language to use for processing display/descriptive names
-            and enumeration values of ADMX template data, defaults to en-US
+            and enumeration values of ADMX template data.
 
-        return_not_configured (bool):
+            Default is ``en-US``.
+
+        return_not_configured (:obj:`bool`, optional):
             Include Administrative Template policies that are 'Not Configured'
-            in the return data
+            in the return data.
+
+            Default is ``False``.
 
     Returns:
         dict: A dictionary containing the policy values for the specified class
@@ -9693,6 +9708,7 @@ def get_policy(
     Get the current settings for a single policy on the machine
 
     Args:
+
         policy_name (str):
             The name of the policy to retrieve. Can be the any of the names
             or alieses returned by ``lgpo.get_policy_info``
@@ -9700,26 +9716,33 @@ def get_policy(
         policy_class (str):
             The policy class. Must be one of ``machine`` or ``user``
 
-        adml_language (str):
-            The language code for the adml file to use for localization. The
-            default is ``en-US``
+        adml_language (:obj:`str`, optional):
+            The language code for the adml file to use for localization.
 
-        return_value_only (bool):
+            Default is ``en-US``.
+
+        return_value_only (:obj:`bool`, optional):
             ``True`` will return only the value for the policy, without the
             name of the policy. ``return_full_policy_names`` and
-            ``hierarchical_return`` will be ignored. Default is ``True``
+            ``hierarchical_return`` will be ignored.
 
-        return_full_policy_names (bool):
+            Default is ``True``
+
+        return_full_policy_names (:obj:`bool`, optional):
             Returns the full policy name regardless of what was passed in
-            ``policy_name``
+            ``policy_name``.
 
             .. note::
                 This setting applies to sub-elements of the policy if they
                 exist. The value passed in ``policy_name`` will always be used
                 as the policy name when this setting is ``False``
 
-        hierarchical_return (bool):
-            Returns a hierarchical view of the policy showing its parents
+            Default is ``True``.
+
+        hierarchical_return (:obj:`bool`, optional):
+            Returns a hierarchical view of the policy showing its parents.
+
+            Default is ``False``.
 
     Returns:
         dict: A dictionary containing the policy settings
@@ -9821,24 +9844,29 @@ def set_computer_policy(
     Set a single computer policy
 
     Args:
+
         name (str):
             The name of the policy to configure
 
         setting (str):
             The setting to configure the named policy with
 
-        cumulative_rights_assignments (bool): Determine how user rights
-            assignment policies are configured. If True, user right assignment
-            specifications are simply added to the existing policy. If False,
-            only the users specified will get the right (any existing will have
-            the right revoked)
+        cumulative_rights_assignments (:obj:`bool`, optional):
+            Determine how user rights assignment policies are configured. If
+            ``True``, user right assignment specifications are simply added to
+            the existing policy. If ``False``, only the users specified will get
+            the right (any existing will have the right revoked)
 
-        adml_language (str): The language files to use for looking up
-            Administrative Template policy data (i.e. how the policy is
-            displayed in the GUI).  Defaults to 'en-US' (U.S. English).
+            Default is ``True``.
+
+        adml_language (:obj:`str`, optional):
+            The language files to use for looking up Administrative Template
+            policy data (i.e. how the policy is displayed in the GUI).
+
+            Default is ``en-US``.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -9867,10 +9895,11 @@ def set_user_policy(name, setting, adml_language="en-US"):
         setting (str):
             The setting to configure the named policy with
 
-        adml_language (str):
+        adml_language (:obj:`str`, optional):
             The language files to use for looking up Administrative Template
-            policy data (i.e. how the policy is displayed in the GUI). Defaults
-            to 'en-US' (U.S. English).
+            policy data (i.e. how the policy is displayed in the GUI).
+
+            Default is ``en-US``.
 
     Returns:
         bool: True if successful, Otherwise False
@@ -9901,12 +9930,13 @@ def set_(
 
     Args:
 
-        computer_policy (dict):
+        computer_policy (:obj:`dict`, optional):
             A dictionary of "policyname: value" pairs of computer policies to
             set. 'value' should be how it is displayed in the gpedit GUI, i.e.
-            if a setting can be 'Enabled'/'Disabled', then that should be passed
+            if a setting can be 'Enabled'/'Disabled', then that should be
+            passed.
 
-            Administrative Template data may require dicts within dicts, to
+            Administrative Template data may require dicts within dicts to
             specify each element of the Administrative Template policy.
             Administrative Templates policies are always cumulative.
 
@@ -9943,32 +9973,39 @@ def set_(
                     Use the get_policy_info function for the policy name to view
                     the element ID/names that the module will accept.
 
-        user_policy (dict):
+            Default is ``None``.
+
+        user_policy (:obj:`dict`, optional):
             The same setup as the computer_policy, except with data to configure
             the local user policy.
 
-        cumulative_rights_assignments (bool):
+            Default is ``None``.
+
+        cumulative_rights_assignments (:obj:`bool`, optional):
             Determine how user rights assignment policies are configured.
 
-            If True, user right assignment specifications are simply added to
-            the existing policy
+            If ``True``, user right assignment specifications are simply added
+            to the existing policy
 
-            If False, only the users specified will get the right (any existing
-            will have the right revoked)
+            If ``False``, only the users specified will get the right (any
+            existing will have the right revoked)
 
-        adml_language (str):
+            Default is ``True``.
+
+        adml_language (:obj:`str`, optional):
             The language files to use for looking up Administrative Template
-            policy data (i.e. how the policy is displayed in the GUI). Defaults
-            to 'en-US' (U.S. English).
+            policy data (i.e. how the policy is displayed in the GUI).
+
+            Default is ``en-US``.
 
     Returns:
-        bool: True is successful, otherwise False
+        bool: ``True`` is successful, otherwise ``False``.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' lgpo.set computer_policy="{'LockoutDuration': 2, 'RestrictAnonymous': 'Enabled', 'AuditProcessTracking': 'Succes, Failure'}"
+        salt '*' lgpo.set computer_policy='{"LockoutDuration": 2, "RestrictAnonymous": "Enabled", "AuditProcessTracking": "Succes, Failure"}'
     """
 
     if computer_policy and not isinstance(computer_policy, dict):

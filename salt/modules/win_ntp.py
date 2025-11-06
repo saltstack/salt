@@ -27,6 +27,10 @@ def set_servers(*servers):
     """
     Set Windows to use a list of NTP servers
 
+    Args:
+
+        servers (list): List of NTP servers
+
     CLI Example:
 
     .. code-block:: bash

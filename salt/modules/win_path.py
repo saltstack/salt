@@ -96,8 +96,13 @@ def exists(path):
     Check if the directory is configured in the SYSTEM path
     Case-insensitive and ignores trailing backslash
 
+    Args:
+
+        path (str):
+            Path to the directory to check
+
     Returns:
-        boolean True if path exists, False if not
+        bool: ``True`` if path exists, otherwise ``False``.
 
     CLI Example:
 
@@ -119,19 +124,26 @@ def _update_local_path(local_path):
 
 def add(path, index=None, **kwargs):
     """
-    Add the directory to the SYSTEM path in the index location. Returns
-    ``True`` if successful, otherwise ``False``.
+    Add the directory to the SYSTEM path in the index location.
 
-    path
-        Directory to add to path
+    Args:
 
-    index
-        Optionally specify an index at which to insert the directory
+        path (str): Directory to add to path
 
-    rehash : True
-        If the registry was updated, and this value is set to ``True``, sends a
-        WM_SETTINGCHANGE broadcast to refresh the environment variables. Set
-        this to ``False`` to skip this broadcast.
+        index (:obj:`int`, optional):
+            Optionally specify an index at which to insert the directory
+
+            Default is ``None``.
+
+    Kwargs:
+
+        rehash (:obj:`bool`, optional):
+            If the registry was updated, and this value is set to ``True``,
+            sends a WM_SETTINGCHANGE broadcast to refresh the environment
+            variables. Set this to ``False`` to skip this broadcast.
+
+    Returns:
+        bool: ``True`` if path was added, otherwise ``False``.
 
     CLI Examples:
 
@@ -285,13 +297,19 @@ def remove(path, **kwargs):
     r"""
     Remove the directory from the SYSTEM path
 
-    Returns:
-        boolean True if successful, False if unsuccessful
+    Args:
 
-    rehash : True
-        If the registry was updated, and this value is set to ``True``, sends a
-        WM_SETTINGCHANGE broadcast to refresh the environment variables. Set
-        this to ``False`` to skip this broadcast.
+        path (str): Directory to remove from path
+
+    Kwargs:
+
+        rehash : True
+            If the registry was updated, and this value is set to ``True``,
+            sends a WM_SETTINGCHANGE broadcast to refresh the environment
+            variables. Set this to ``False`` to skip this broadcast.
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 

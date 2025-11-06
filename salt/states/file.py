@@ -3995,12 +3995,21 @@ def _depth_limited_walk(top, max_depth=None):
     Walk the directory tree under root up till reaching max_depth.
     With max_depth=None (default), do not limit depth.
     """
+    top_depth = top.rstrip(os.path.sep).count(os.path.sep)
+
     for root, dirs, files in salt.utils.path.os_walk(top):
+        rel_depth = root.rstrip(os.path.sep).count(os.path.sep) - top_depth
+
         if max_depth is not None:
-            rel_depth = root.count(os.path.sep) - top.count(os.path.sep)
             if rel_depth >= max_depth:
-                del dirs[:]
-        yield (str(root), list(dirs), list(files))
+                # This clear does nothing because os_walk returns copies of data from os.walk,
+                # so modifying this list has no effect on recursion.
+                # If os_walk ever returns the "real" dirs list, this will speed up execution
+                # by preventing recursion into directories deeper than max_depth.
+                dirs.clear()
+                continue
+
+        yield (str(root), dirs.copy(), files.copy())
 
 
 def directory(

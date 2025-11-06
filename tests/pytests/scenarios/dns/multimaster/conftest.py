@@ -112,7 +112,7 @@ def salt_mm_minion_1(salt_mm_master_1, salt_mm_master_2, master_alive_interval):
         "master_alive_interval": master_alive_interval,
         "master_tries": -1,
         "verify_master_pubkey_sign": True,
-        "retry_dns": True,
+        "retry_dns": 10,
         "fips_mode": FIPS_TESTRUN,
         "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",

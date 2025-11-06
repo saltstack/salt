@@ -4,8 +4,11 @@ import pytest
 
 import salt.netapi
 from salt.exceptions import EauthAuthenticationError, SaltInvocationError
-from tests.pytests.integration.ssh import check_system_python_version
-from tests.support.helpers import SaveRequestsPostHandler, Webserver
+from tests.support.helpers import (
+    SaveRequestsPostHandler,
+    Webserver,
+    system_python_version,
+)
 from tests.support.mock import patch
 
 pytestmark = [
@@ -19,10 +22,11 @@ pytestmark = [
         # has been deprecated since Python 3.7, so, the logic goes into trying to import
         # backports.ssl-match-hostname which is not installed on the system.
     ),
-    pytest.mark.timeout_unless_on_windows(120),
     pytest.mark.skipif(
-        not check_system_python_version(), reason="Needs system python >= 3.9"
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
     ),
+    pytest.mark.timeout_unless_on_windows(120),
 ]
 
 log = logging.getLogger(__name__)

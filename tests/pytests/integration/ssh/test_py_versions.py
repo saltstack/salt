@@ -10,8 +10,7 @@ import pytest
 from saltfactories.utils import random_string
 
 from salt.utils.versions import Version
-from tests.pytests.integration.ssh import check_system_python_version
-from tests.support.helpers import Keys
+from tests.support.helpers import Keys, system_python_version
 
 docker = pytest.importorskip("docker")
 
@@ -26,7 +25,8 @@ pytestmark = [
         reason="Test does not work in this version of docker-py",
     ),
     pytest.mark.skipif(
-        not check_system_python_version("3.10"), reason="Needs system python >= 3.9"
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
     ),
 ]
 

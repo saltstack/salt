@@ -2,12 +2,13 @@ import json
 
 import pytest
 
-from tests.pytests.integration.ssh import check_system_python_version
+from tests.support.helpers import system_python_version
 
 pytestmark = [
     pytest.mark.skip_unless_on_linux,
     pytest.mark.skipif(
-        not check_system_python_version(), reason="Needs system python >= 3.9"
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
     ),
 ]
 

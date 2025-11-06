@@ -147,7 +147,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
             for msg in self.unpacker:
                 serial_payload = salt.payload.loads(msg["body"])
                 return serial_payload
-            byts = await self.sock.read_bytes(8096, partial=True)
+            byts = await self.sock.read_bytes(48096, partial=True)
             self.unpacker.feed(byts)
             for msg in self.unpacker:
                 serial_payload = salt.payload.loads(msg["body"])

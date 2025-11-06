@@ -11,9 +11,6 @@ import threading
 import traceback
 import types
 
-import tornado.gen
-import tornado.ioloop
-
 import salt
 import salt.beacons
 import salt.cli.daemons
@@ -58,8 +55,7 @@ from salt.utils.process import SignalHandlingProcess, default_signals
 log = logging.getLogger(__name__)
 
 
-@tornado.gen.coroutine
-def post_master_init(self, master):
+async def post_master_init(self, master):
     """
     Function to finish init after a proxy
     minion has finished connecting to a master.
@@ -72,7 +68,7 @@ def post_master_init(self, master):
     if self.connected:
         self.opts["master"] = master
 
-        self.opts["pillar"] = yield salt.pillar.get_async_pillar(
+        self.opts["pillar"] = await salt.pillar.get_async_pillar(
             self.opts,
             self.opts["grains"],
             self.opts["id"],

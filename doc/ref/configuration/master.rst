@@ -5469,6 +5469,22 @@ send events to all connected masters.
 
     syndic_forward_all_events: False
 
+.. conf_master:: syndic_retries
+
+``syndic_retries``
+------------------
+
+.. versionadded:: 3006.16
+
+Default: ``3``
+
+The maximum number of retries for a syndic return attempt to the Master of Masters.
+If multiple Master of Masters listed, it will attempt this number of retries for
+each master in the list.
+
+.. code-block:: yaml
+
+    syndic_retries: 4
 
 .. _peer-publish-settings:
 

@@ -11,6 +11,7 @@ import pytest
 
 import salt.utils.files
 import salt.utils.platform
+from salt.modules.gpg import _homedir_fix
 
 try:
     import gnupg as gnupglib
@@ -86,7 +87,9 @@ def gpghome(tmp_path):
 
 @pytest.fixture
 def gnupg(gpghome):
-    return gnupglib.GPG(gnupghome=str(gpghome))
+    gpg = gnupglib.GPG(gnupghome=str(gpghome))
+    gpg.gnupghome = _homedir_fix(gpghome)
+    return gpg
 
 
 @pytest.fixture

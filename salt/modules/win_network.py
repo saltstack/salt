@@ -75,6 +75,15 @@ def ping(host, timeout=False, return_boolean=False):
     """
     Performs a ping to a host
 
+    Args:
+
+        host (str): The host to ping
+
+        timeout (:obj:`bool`, optional): Timeout in seconds.
+            Defaults is ``False``.
+
+        return_boolean (:obj:`bool`, optional): Return boolean.
+
     CLI Example:
 
     .. code-block:: bash
@@ -161,6 +170,10 @@ def traceroute(host):
     """
     Performs a traceroute to a 3rd party host
 
+    Args:
+
+        host (str): The host to target with traceroute
+
     CLI Example:
 
     .. code-block:: bash
@@ -218,6 +231,10 @@ def nslookup(host):
     """
     Query DNS for information about a domain or ip address
 
+    Args:
+
+        host (str): The domain or ip address to lookup
+
     CLI Example:
 
     .. code-block:: bash
@@ -253,6 +270,10 @@ def get_route(ip):
 
     .. versionadded:: 2016.11.5
 
+    Args:
+
+        ip (str): The to find routing information for
+
     CLI Example:
 
     .. code-block:: bash
@@ -283,6 +304,10 @@ def dig(host):
     Performs a DNS lookup with dig
 
     Note: dig must be installed on the Windows minion
+
+    Args:
+
+        host (str): The host to lookup with dig
 
     CLI Example:
 
@@ -330,6 +355,10 @@ def hw_addr(iface):
     """
     Return the hardware address (a.k.a. MAC address) for a given interface
 
+    Args:
+
+        iface (str): The interface name
+
     CLI Example:
 
     .. code-block:: bash
@@ -358,7 +387,14 @@ def subnets():
 
 def in_subnet(cidr):
     """
-    Returns True if host is within specified subnet, otherwise False
+    Determine if a host is within a subnet
+
+    Args:
+
+        cidr (str): The CIDR to check
+
+    Returns:
+        bool: ``True`` if host is within specified subnet, otherwise ``False``
 
     CLI Example:
 
@@ -373,23 +409,33 @@ def ip_addrs(interface=None, include_loopback=False, cidr=None, type=None):
     """
     Returns a list of IPv4 addresses assigned to the host.
 
-    interface
-        Only IP addresses from that interface will be returned.
+    Args:
 
-    include_loopback : False
-        Include loopback 127.0.0.1 IPv4 address.
+        interface (:obj:`str`, optional):
+            Only IP addresses from that interface will be returned.
 
-    cidr
-        Describes subnet using CIDR notation and only IPv4 addresses that belong
-        to this subnet will be returned.
+            Default is ``None``.
 
-      .. versionchanged:: 2019.2.0
+        include_loopback (:obj:`bool`, optional):
+            Include loopback 127.0.0.1 IPv4 address.
 
-    type
-        If option set to 'public' then only public addresses will be returned.
-        Ditto for 'private'.
+            Default is ``False``.
 
-        .. versionchanged:: 2019.2.0
+        cidr (:obj:`str`, optional):
+            Describes subnet using CIDR notation and only IPv4 addresses that belong
+            to this subnet will be returned.
+
+            Default is ``None``.
+
+          .. versionchanged:: 2019.2.0
+
+        type (:obj:`str`, optional):
+            If option set to 'public' then only public addresses will be returned.
+            Ditto for 'private'.
+
+            Default is ``None``.
+
+            .. versionchanged:: 2019.2.0
 
     CLI Example:
 
@@ -420,17 +466,25 @@ def ip_addrs6(interface=None, include_loopback=False, cidr=None):
     """
     Returns a list of IPv6 addresses assigned to the host.
 
-    interface
-        Only IP addresses from that interface will be returned.
+    Args:
 
-    include_loopback : False
-        Include loopback ::1 IPv6 address.
+        interface (:obj:`str`, optional):
+            Only IP addresses from that interface will be returned.
 
-    cidr
-        Describes subnet using CIDR notation and only IPv6 addresses that belong
-        to this subnet will be returned.
+            Default is ``None``.
 
-        .. versionchanged:: 2019.2.0
+        include_loopback (:obj:`bool`, optional):
+            Include loopback ::1 IPv6 address.
+
+            Default is ``False``.
+
+        cidr (:obj:`str`, optional):
+            Describes subnet using CIDR notation and only IPv6 addresses that belong
+            to this subnet will be returned.
+
+            Default is ``None``.
+
+            .. versionchanged:: 2019.2.0
 
     CLI Example:
 
@@ -457,6 +511,15 @@ def connect(host, port=None, **kwargs):
     port from the minion.
 
     .. versionadded:: 2016.3.0
+
+    Args:
+
+        host (str): The host to connect to
+
+        port (:obj:`int`, optional):
+            The port to connect to
+
+            Default is ``None``.
 
     CLI Example:
 
@@ -552,6 +615,10 @@ def is_private(ip_addr):
     Check if the given IP address is a private address
 
     .. versionadded:: 2019.2.0
+
+    Args:
+
+        ip_addr (str): The IP address to check
 
     CLI Example:
 

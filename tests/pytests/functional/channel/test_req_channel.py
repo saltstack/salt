@@ -69,8 +69,10 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self.io_loop.add_callback(self.running.set)
         try:
             self.io_loop.start()
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, SystemExit):
             pass
+        finally:
+            self.req_server_channel.close()
 
     def _handle_signals(self, signum, sigframe):
         self.close()

@@ -180,6 +180,7 @@ def parse_arch(name):
 
 
 def latest_version(*names, **kwargs):
+    # pylint: disable=W0640
     """
     .. versionchanged:: 3007.0
 
@@ -215,13 +216,11 @@ def latest_version(*names, **kwargs):
         )
     fromrepo = kwargs.pop("fromrepo", None)
     cache_valid_time = kwargs.pop("cache_valid_time", 0)
+    names = list(names)
 
     if not names:
         return ""
-    ret = {}
-    # Initialize the dict with empty strings
-    for name in names:
-        ret[name] = ""
+    ret = {name: "" for name in names}  # Initialize the dict with empty strings
     pkgs = list_pkgs(versions_as_list=True)
     repo = ["-o", f"APT::Default-Release={fromrepo}"] if fromrepo else None
 
@@ -239,9 +238,16 @@ def latest_version(*names, **kwargs):
 
     candidates = {}
     for line in salt.utils.itertools.split(out["stdout"], "\n"):
-        if line.endswith(":") and line[:-1] in short_names:
-            this_pkg = names[short_names.index(line[:-1])]
-        elif "Candidate" in line:
+        line = line.strip()
+        if line.endswith(":") and not line.startswith("Version table"):
+            if any(
+                [
+                    line[:-1] in names,  # native package
+                    line[:-1].split(":")[0] in short_names,  # foreign package by name
+                ]
+            ):
+                this_pkg = line[:-1]
+        elif line.startswith("Candidate"):
             candidate = ""
             comps = line.split()
             if len(comps) >= 2:
@@ -250,26 +256,48 @@ def latest_version(*names, **kwargs):
                     candidate = ""
             candidates[this_pkg] = candidate
 
-    for name in names:
-        installed = pkgs.get(name, [])
-        if not installed:
-            ret[name] = candidates.get(name, "")
-        elif installed and show_installed:
-            ret[name] = candidates.get(name, "")
-        elif candidates.get(name):
-            # If there are no installed versions that are greater than or equal
-            # to the install candidate, then the candidate is an upgrade, so
-            # add it to the return dict
-            if not any(
-                salt.utils.versions.compare(
-                    ver1=x,
-                    oper=">=",
-                    ver2=candidates.get(name, ""),
-                    cmp_func=version_cmp,
+    _extensions, _pops = [], []
+    while True:
+        for name in names:
+            # no native package found, extend with possible foreign arch ones
+            if name not in candidates:
+                _extensions.extend(
+                    filter(lambda pkg: pkg.startswith(f"{name}:"), candidates)
                 )
-                for x in installed
-            ):
+
+                # since foreign packages are returned only when faced with a lack of
+                # native ones, remove the original package name; this does, however,
+                # risk a case of returning multiple foreign arch packages
+                _pops.append(name)
+
+            # continue with populating entries as usual
+            installed = pkgs.get(name, [])
+            if not installed:
                 ret[name] = candidates.get(name, "")
+            elif installed and show_installed:
+                ret[name] = candidates.get(name, "")
+            elif candidates.get(name):
+                # If there are no installed versions that are greater than or equal
+                # to the install candidate, then the candidate is an upgrade, so
+                # add it to the return dict
+                if not any(
+                    salt.utils.versions.compare(
+                        ver1=x,
+                        oper=">=",
+                        ver2=candidates.get(name, ""),
+                        cmp_func=version_cmp,
+                    )
+                    for x in installed
+                ):
+                    ret[name] = candidates.get(name, "")
+
+        if not any([_extensions, _pops]):
+            break
+
+        names.extend(_extensions)
+        _extensions.clear()
+        list(map(names.remove, _pops))
+        _pops.clear()
 
     # Return a string if only one package name passed
     if len(names) == 1:

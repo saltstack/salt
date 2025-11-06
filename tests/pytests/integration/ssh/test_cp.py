@@ -6,14 +6,15 @@ from pathlib import Path
 import pytest
 from saltfactories.utils import random_string
 
-from tests.pytests.integration.ssh import check_system_python_version
+from tests.support.helpers import system_python_version
 from tests.support.runtests import RUNTIME_VARS
 
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows"),
     pytest.mark.skipif(
-        not check_system_python_version(), reason="Needs system python >= 3.9"
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
     ),
 ]
 

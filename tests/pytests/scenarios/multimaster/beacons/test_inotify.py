@@ -27,7 +27,7 @@ pytestmark = [
 ]
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def inotify_test_path(tmp_path_factory):
     test_path = tmp_path_factory.mktemp("inotify-tests")
     try:
@@ -36,7 +36,7 @@ def inotify_test_path(tmp_path_factory):
         shutil.rmtree(str(test_path), ignore_errors=True)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def setup_beacons(mm_master_1_salt_cli, salt_mm_minion_1, inotify_test_path):
     start_time = time.time()
     try:
@@ -87,9 +87,9 @@ def setup_beacons(mm_master_1_salt_cli, salt_mm_minion_1, inotify_test_path):
 def test_beacons_duplicate_53344(
     event_listener,
     inotify_test_path,
-    salt_mm_minion_1,
     salt_mm_master_1,
     salt_mm_master_2,
+    salt_mm_minion_1,
     setup_beacons,
 ):
     # We have to wait beacon first execution that would configure the inotify watch.

@@ -40,7 +40,7 @@
 %define fish_dir %{_datadir}/fish/vendor_functions.d
 
 Name:    salt
-Version: 3007.6
+Version: 3007.8
 Release: 0
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
@@ -735,6 +735,80 @@ if [ $1 -ge 1 ] ; then
 fi
 
 %changelog
+* Thu Sep 18 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3007.8
+
+# Fixed
+
+- Fixed an issue with the win_network salt.util to select interfaces
+  by name instead of description. [#58138](https://github.com/saltstack/salt/issues/58138)
+- Fixes debug logging for master AES and session keys to be consistent across crypt.AsyncAuth._authenticate() and crypt.SAuth.authenticate(). Now differentiates between master key rotation and session key rotation. [#68113](https://github.com/saltstack/salt/issues/68113)
+- Fix filedescriptor out of range problem in tcp.py by replacing select.sect() with the higher-level selectors API [#68136](https://github.com/saltstack/salt/issues/68136)
+- Fixed loader handling of already loaded modules, thereby fixed an interaction between the `x509_v2` state module and any following state having a `prereq` on a `file` state [#68281](https://github.com/saltstack/salt/issues/68281)
+- Fix potential race conditions an memory usage in zeromq request client
+  tranport. [#68297](https://github.com/saltstack/salt/issues/68297)
+- Revert change to store cargo home as a temporary directory [#68311](https://github.com/saltstack/salt/issues/68311)
+- Update openssl FIPS provider to 3.1.2 (certified until 2030) [#68317](https://github.com/saltstack/salt/issues/68317)
+
+# Added
+
+- Added the ability to pass the context to pyobjects renderer [#68224](https://github.com/saltstack/salt/issues/68224)
+
+
+* Thu Aug 28 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3007.7
+
+# Changed
+
+- cmdmod: invoke a shell only with cmd.shell or when using the shell parameter
+  cmdmod: run PowerShell scripts via -File instead of -Command
+  cmdmod: allow passing args as a list for cmd.script
+  cmdmod: return an error when running a bad command with cmd.powershell [#68156](https://github.com/saltstack/salt/issues/68156)
+
+# Fixed
+
+- Fixes issue with the `minion.restart` function not working with systemd. Will
+  now detect if the system is using systemd or is a Windows system and use
+  `service.restart` instead. [#46255](https://github.com/saltstack/salt/issues/46255)
+- Fixed max_depth not respected in file.directory state [#55306](https://github.com/saltstack/salt/issues/55306)
+- Updated CLI examples in docs to conform to bash syntax. Standardized
+  documentation on Windows modules to Google Style Python Docstrings. [#63856](https://github.com/saltstack/salt/issues/63856)
+- Ensure the right HOME environment value is set during Pygit2 remote initialization. [#64121](https://github.com/saltstack/salt/issues/64121)
+- Fix sync_renderers failure when the custom renderer is specified via config [#66453](https://github.com/saltstack/salt/issues/66453)
+- modules.aptpkg: correct handling of foreign-arch packages [#66940](https://github.com/saltstack/salt/issues/66940)
+- Ensure network connections are cleanly closed in ipc and tcp transports [#67076](https://github.com/saltstack/salt/issues/67076)
+- cmdmod: fix special character handling on Windows [#68096](https://github.com/saltstack/salt/issues/68096)
+- cmdmod: fix quotation handling with Windows and Powershell [#68118](https://github.com/saltstack/salt/issues/68118)
+- Fix `test mode` causing unintended execution when non-boolean values are passed. [#68121](https://github.com/saltstack/salt/issues/68121)
+- Fixed ssh_known_hosts.present failure when ssh host keys changed [#68132](https://github.com/saltstack/salt/issues/68132)
+- Revert 'ipc_write_timeout' change (3006.13) due to multiple reports of this change causing instability [#68151](https://github.com/saltstack/salt/issues/68151)
+- cmdmod: handle cases where the temp script is not removed with cmd.script [#68156](https://github.com/saltstack/salt/issues/68156)
+- win_runas: fix output decoding exceptions
+  win_runas: ensure opened handles are closed [#68157](https://github.com/saltstack/salt/issues/68157)
+- Fixed MinionManager.stop() to allow processing of minion event bus when called, to allow jobs returns from `service.restart salt-minion no_block=True` to reach
+  master. [#68183](https://github.com/saltstack/salt/issues/68183)
+- grains.disks: fix exception with incompatible output of Get-PhysicalDisk [#68184](https://github.com/saltstack/salt/issues/68184)
+- Log a useful error if the minion's key is overwritten with bad data; instead of a traceback. [#68190](https://github.com/saltstack/salt/issues/68190)
+- win_lgpo_reg only applies user settings to the registry.pol file. It no longer
+  applies those same settings to the user registry. Those settings will be applied
+  to all users the next time they log in. [#68191](https://github.com/saltstack/salt/issues/68191)
+- salt.crypt.AsyncAuth and salt.crypt.SAuth read the private key from the
+  filesystem a single time. [#68195](https://github.com/saltstack/salt/issues/68195)
+- Modifies systemd_service.{restart,stop} to default to using no_block=True when the service being stopped or restarted is the salt-minion. [#68212](https://github.com/saltstack/salt/issues/68212)
+- Upgrade onedir relenv to 0.20.5:
+    - Update gdbm from 1.25 to 1.26
+    - Update libffi from 3.5.1 to 3.5.2
+    - Update readline from 8.2.13 to 8.3
+    - Update sqlite from 3.50.2 to 3.50.4
+    - Update sqlite on windows from 3.40.1 to 0.35.4 (CVE-2025-6965) [#68291](https://github.com/saltstack/salt/issues/68291)
+
+# Added
+
+- Added a new `force` option to pkg.install on Windows to force the installer
+  to run even if the package is already installed [#68102](https://github.com/saltstack/salt/issues/68102)
+- win_runas: support cmdmod parameters bg, env, redirect_stderr, timeout [#68157](https://github.com/saltstack/salt/issues/68157)
+- Adds support for creating a scheduled job to restart the minion if the initial
+  attempt at restarting it via `minion.restart` has failed. [#68225](https://github.com/saltstack/salt/issues/68225)
+
+
 * Thu Jul 10 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3007.6
 
 # Fixed
@@ -755,6 +829,55 @@ fi
 - Zeromq RequestServer continues to serve requests after encountering an
   un-handled exception [#66519](https://github.com/saltstack/salt/issues/66519)
 - * Added support for `icmpv6-type` to salt.modules.nftables [#67882](https://github.com/saltstack/salt/issues/67882)
+
+
+* Thu Aug 28 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.15
+
+# Changed
+
+- cmdmod: invoke a shell only with cmd.shell or when using the shell parameter
+  cmdmod: run PowerShell scripts via -File instead of -Command
+  cmdmod: allow passing args as a list for cmd.script
+  cmdmod: return an error when running a bad command with cmd.powershell [#68156](https://github.com/saltstack/salt/issues/68156)
+
+# Fixed
+
+- Fixes issue with the `minion.restart` function not working with systemd. Will
+  now detect if the system is using systemd or is a Windows system and use
+  `service.restart` instead. [#46255](https://github.com/saltstack/salt/issues/46255)
+- Fixed max_depth not respected in file.directory state [#55306](https://github.com/saltstack/salt/issues/55306)
+- Updated CLI examples in docs to conform to bash syntax. Standardized
+  documentation on Windows modules to Google Style Python Docstrings. [#63856](https://github.com/saltstack/salt/issues/63856)
+- Ensure the right HOME environment value is set during Pygit2 remote initialization. [#64121](https://github.com/saltstack/salt/issues/64121)
+- Ensure network connections are cleanly closed in ipc and tcp transports [#67076](https://github.com/saltstack/salt/issues/67076)
+- cmdmod: fix special character handling on Windows [#68096](https://github.com/saltstack/salt/issues/68096)
+- cmdmod: fix quotation handling with Windows and Powershell [#68118](https://github.com/saltstack/salt/issues/68118)
+- Fixed ssh_known_hosts.present failure when ssh host keys changed [#68132](https://github.com/saltstack/salt/issues/68132)
+- Revert 'ipc_write_timeout' change (3006.13) due to multiple reports of this change causing instability [#68151](https://github.com/saltstack/salt/issues/68151)
+- cmdmod: handle cases where the temp script is not removed with cmd.script [#68156](https://github.com/saltstack/salt/issues/68156)
+- Fixed MinionManager.stop() to allow processing of minion event bus when called, to allow jobs returns from `service.restart salt-minion no_block=True` to reach
+  master. [#68183](https://github.com/saltstack/salt/issues/68183)
+- grains.disks: fix exception with incompatible output of Get-PhysicalDisk [#68184](https://github.com/saltstack/salt/issues/68184)
+- Log a useful error if the minion's key is overwritten with bad data; instead of a traceback. [#68190](https://github.com/saltstack/salt/issues/68190)
+- win_lgpo_reg only applies user settings to the registry.pol file. It no longer
+  applies those same settings to the user registry. Those settings will be applied
+  to all users the next time they log in. [#68191](https://github.com/saltstack/salt/issues/68191)
+- salt.crypt.AsyncAuth and salt.crypt.SAuth read the private key from the
+  filesystem a single time. [#68195](https://github.com/saltstack/salt/issues/68195)
+- Modifies systemd_service.{restart,stop} to default to using no_block=True when the service being stopped or restarted is the salt-minion. [#68212](https://github.com/saltstack/salt/issues/68212)
+- Upgrade onedir relenv to 0.20.5:
+    - Update gdbm from 1.25 to 1.26
+    - Update libffi from 3.5.1 to 3.5.2
+    - Update readline from 8.2.13 to 8.3
+    - Update sqlite from 3.50.2 to 3.50.4
+    - Update sqlite on windows from 3.40.1 to 0.35.4 (CVE-2025-6965) [#68291](https://github.com/saltstack/salt/issues/68291)
+
+# Added
+
+- Added a new `force` option to pkg.install on Windows to force the installer
+  to run even if the package is already installed [#68102](https://github.com/saltstack/salt/issues/68102)
+- Adds support for creating a scheduled job to restart the minion if the initial
+  attempt at restarting it via `minion.restart` has failed. [#68225](https://github.com/saltstack/salt/issues/68225)
 
 
 * Thu Jul 10 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.14

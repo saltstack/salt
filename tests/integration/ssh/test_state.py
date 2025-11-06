@@ -8,8 +8,8 @@ import time
 import pytest
 from saltfactories.utils.tempfiles import temp_file
 
-from tests.pytests.integration.ssh import check_system_python_version
 from tests.support.case import SSHCase
+from tests.support.helpers import system_python_version
 from tests.support.runtests import RUNTIME_VARS
 
 pytestmark = [
@@ -24,7 +24,8 @@ pytestmark = [
         # backports.ssl-match-hostname which is not installed on the system.
     ),
     pytest.mark.skipif(
-        not check_system_python_version(), reason="Needs system python >= 3.9"
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
     ),
 ]
 

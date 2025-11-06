@@ -209,11 +209,11 @@ def getent(refresh=False):
 
     Args:
 
-        refresh (bool):
+        refresh (:obj:`bool`, optional):
             Refresh the info for all groups in ``__context__``. If False only
             the groups in ``__context__`` will be returned. If True the
             ``__context__`` will be refreshed with current data and returned.
-            Default is False
+            Default is ``False``.
 
     Returns:
         A list of groups and their information
@@ -431,11 +431,11 @@ def list_groups(refresh=False):
 
     Args:
 
-        refresh (bool):
+        refresh (:obj:`bool`, optional):
             Refresh the info for all groups in ``__context__``. If False only
             the groups in ``__context__`` will be returned. If True, the
             ``__context__`` will be refreshed with current data and returned.
-            Default is False
+            Default is ``False``.
 
     Returns:
         list: A list of groups on the machine

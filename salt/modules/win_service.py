@@ -56,6 +56,7 @@ def _status_wait(service_name, end_time, service_states):
     .. versionadded:: 2017.7.9,2018.3.4
 
     Args:
+
         service_name (str):
             The name of the service
 
@@ -102,6 +103,7 @@ def _cmd_quote(cmd):
     ``"C:\Program Files\Path\to\bin.exe"``
 
     Args:
+
         cmd (str): Full path to the binary
 
     Returns:
@@ -168,6 +170,7 @@ def available(name):
     Check if a service is available on the system.
 
     Args:
+
         name (str): The name of the service to check
 
     Returns:
@@ -191,6 +194,7 @@ def missing(name):
     The inverse of service.available.
 
     Args:
+
         name (str): The name of the service to check
 
     Returns:
@@ -290,7 +294,9 @@ def info(name):
     Get information about a service on the system
 
     Args:
-        name (str): The name of the service. This is not the display name. Use
+
+        name (str):
+            The name of the service. This is not the display name. Use
             ``get_service_name`` to find the service name.
 
     Returns:
@@ -314,13 +320,16 @@ def start(name, timeout=90):
         disabled, it will be changed to ``Manual`` start.
 
     Args:
+
         name (str): The name of the service to start
 
-        timeout (int):
+        timeout (:obj:`int`, optional):
             The time in seconds to wait for the service to start before
-            returning. Default is 90 seconds
+            returning.
 
             .. versionadded:: 2017.7.9,2018.3.4
+
+            Default is 90 seconds.
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``. Also returns ``True``
@@ -357,13 +366,16 @@ def stop(name, timeout=90):
     Stop the specified service
 
     Args:
+
         name (str): The name of the service to stop
 
-        timeout (int):
+        timeout (:obj:`int`, optional):
             The time in seconds to wait for the service to stop before
-            returning. Default is 90 seconds
+            returning.
 
             .. versionadded:: 2017.7.9,2018.3.4
+
+            Default is 90 seconds.
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``. Also returns ``True``
@@ -396,15 +408,16 @@ def restart(name, timeout=90):
     Restart the named service. This issues a stop command followed by a start.
 
     Args:
+
         name: The name of the service to restart.
 
             .. note::
                 If the name passed is ``salt-minion`` a scheduled task is
                 created and executed to restart the salt-minion service.
 
-        timeout (int):
+        timeout (:obj:`int`, optional):
             The time in seconds to wait for the service to stop and start before
-            returning. Default is 90 seconds
+            returning.
 
             .. note::
                 The timeout is cumulative meaning it is applied to the stop and
@@ -412,6 +425,8 @@ def restart(name, timeout=90):
                 seconds if the service is long in stopping and starting
 
             .. versionadded:: 2017.7.9,2018.3.4
+
+            Default is 90 seconds.
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -487,6 +502,7 @@ def status(name, *args, **kwargs):
         Returns "Not Found" if the service is not found on the system
 
     Args:
+
         name (str): The name of the service to check
 
     Returns:
@@ -523,6 +539,7 @@ def getsid(name):
     Return the SID for this windows service
 
     Args:
+
         name (str): The name of the service for which to return the SID
 
     Returns:
@@ -561,26 +578,35 @@ def modify(
     .. versionadded:: 2016.11.0
 
     Args:
+
         name (str):
             The name of the service. Can be found using the
-            ``service.get_service_name`` function
+            ``service.get_service_name`` function.
 
-        bin_path (str):
+        bin_path (:obj:`str`, optional):
             The path to the service executable. Backslashes must be escaped, eg:
-            ``C:\\path\\to\\binary.exe``
+            ``C:\\path\\to\\binary.exe``.
 
-        exe_args (str):
-            Any arguments required by the service executable
+            Default is ``None``.
 
-        display_name (str):
-            The name to display in the service manager
+        exe_args (:obj:`str`, optional):
+            Any arguments required by the service executable.
 
-        description (str):
-            The description to display for the service
+            Default is ``None``.
 
-        service_type (str):
-            Specifies the service type. Default is ``own``. Valid options are as
-            follows:
+        display_name (:obj:`str`, optional):
+            The name to display in the service manager.
+
+            Default is ``None``.
+
+        description (:obj:`str`, optional):
+            The description to display for the service.
+
+            Default is ``None``.
+
+        service_type (:obj:`str`, optional):
+            Specifies the service type. ``None`` defaults to ``own``. Valid
+            options are as follows:
 
             - kernel: Driver service
             - filesystem: File system driver service
@@ -589,7 +615,9 @@ def modify(
             - own (default): Service runs in its own process
             - share: Service shares a process with one or more other services
 
-        start_type (str):
+            Default is ``None``.
+
+        start_type (:obj:`str`, optional):
             Specifies the service start type. Valid options are as follows:
 
             - boot: Device driver that is loaded by the boot loader
@@ -598,12 +626,16 @@ def modify(
             - manual: Service must be started manually
             - disabled: Service cannot be started
 
-        start_delayed (bool):
+            Default is ``None``.
+
+        start_delayed (:obj:`bool`, optional):
             Set the service to Auto(Delayed Start). Only valid if the start_type
             is set to ``Auto``. If service_type is not passed, but the service
             is already set to ``Auto``, then the flag will be set.
 
-        error_control (str):
+            Default is ``None``.
+
+        error_control (:obj:`str`, optional):
             The severity of the error, and action taken, if this service fails
             to start. Valid options are as follows:
 
@@ -612,17 +644,23 @@ def modify(
               last known good configuration
             - critical: Error is logged, computer attempts to restart with the
               last known good configuration, system halts on failure
-            - ignore: Error is logged and startup continues, no notification is
+            - ignore: Error is logged and startup continues. No notification is
               given to the user
 
-        load_order_group (str):
-            The name of the load order group to which this service belongs
+            Default is ``None``.
 
-        dependencies (list):
+        load_order_group (:obj:`str`, optional):
+            The name of the load order group to which this service belongs.
+
+            Default is ``None``.
+
+        dependencies (:obj:`list`, optional):
             A list of services or load ordering groups that must start before
-            this service
+            this service.
 
-        account_name (str):
+            Default is ``None``.
+
+        account_name (:obj:`str`, optional):
             The name of the account under which the service should run. For
             ``own`` type services this should be in the ``domain\\username``
             format. The following are examples of valid built-in service
@@ -633,15 +671,21 @@ def modify(
             - NT Authority\\LocalSystem
             - .\\LocalSystem
 
-        account_password (str):
+            Default is ``None``.
+
+        account_password (:obj:`str`, optional):
             The password for the account name specified in ``account_name``. For
-            the above built-in accounts, this can be None. Otherwise a password
+            the above built-in accounts, this can be None. Otherwise, a password
             must be specified.
 
-        run_interactive (bool):
+            Default is ``None``.
+
+        run_interactive (:obj:`bool`, optional):
             If this setting is True, the service will be allowed to interact
             with the user. Not recommended for services that run with elevated
             privileges.
+
+            Default is ``None``.
 
     Returns:
         dict: a dictionary of changes made
@@ -782,10 +826,11 @@ def enable(name, start_type="auto", start_delayed=False, **kwargs):
     Enable the named service to start at boot
 
     Args:
+
         name (str): The name of the service to enable.
 
-        start_type (str): Specifies the service start type. Valid options are as
-            follows:
+        start_type (:obj:`str`, optional):
+            Specifies the service start type. Valid options are as follows:
 
             - boot: Device driver that is loaded by the boot loader
             - system: Device driver that is started during kernel initialization
@@ -793,13 +838,17 @@ def enable(name, start_type="auto", start_delayed=False, **kwargs):
             - manual: Service must be started manually
             - disabled: Service cannot be started
 
-        start_delayed (bool): Set the service to Auto(Delayed Start). Only valid
-            if the start_type is set to ``Auto``. If service_type is not passed,
-            but the service is already set to ``Auto``, then the flag will be
-            set.
+            Default is "auto".
+
+        start_delayed (:obj:`bool`, optional):
+            Set the service to Auto(Delayed Start). Only valid if the start_type
+            is set to ``Auto``. If service_type is not passed, but the service
+            is already set to ``Auto``, then the flag will be set.
+
+            Default is ``False``.
 
     Returns:
-        bool: ``True`` if successful, ``False`` otherwise
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -824,10 +873,11 @@ def disable(name, **kwargs):
     Disable the named service to start at boot
 
     Args:
-        name (str): The name of the service to disable
+
+        name (str): The name of the service to disable.
 
     Returns:
-        bool: ``True`` if disabled, ``False`` otherwise
+        bool: ``True`` if disabled, otherwise ``False``
 
     CLI Example:
 
@@ -844,10 +894,11 @@ def enabled(name, **kwargs):
     Check to see if the named service is enabled to start on boot
 
     Args:
+
         name (str): The name of the service to check
 
     Returns:
-        bool: True if the service is set to start
+        bool: ``True`` if the service is set to start, otherwise ``False``
 
     CLI Example:
 
@@ -863,10 +914,11 @@ def disabled(name):
     Check to see if the named service is disabled to start on boot
 
     Args:
+
         name (str): The name of the service to check
 
     Returns:
-        bool: True if the service is disabled
+        bool: ``True`` if the service is disabled, otherwise ``False``
 
     CLI Example:
 
@@ -902,25 +954,29 @@ def create(
     Args:
 
         name (str):
-            Specifies the service name. This is not the display_name
+            Specifies the service name. This is not the display_name.
 
         bin_path (str):
             Specifies the path to the service binary file. Backslashes must be
-            escaped, eg: ``C:\\path\\to\\binary.exe``
+            escaped, eg: ``C:\\path\\to\\binary.exe``.
 
-        exe_args (str):
+        exe_args (:obj:`str`, optional):
             Any additional arguments required by the service binary.
 
-        display_name (str):
+            Default is ``None``.
+
+        display_name (:obj:`str`, optional):
             The name to be displayed in the service manager. If not passed, the
-            ``name`` will be used
+            ``name`` will be used.
 
-        description (str):
-            A description of the service
+            Default is ``None``.
 
-        service_type (str):
-            Specifies the service type. Default is ``own``. Valid options are as
-            follows:
+        description (:obj:`str`, optional): A description of the service.
+
+            Default is ``None``.
+
+        service_type (:obj:`str`, optional):
+            Specifies the service type. Valid options are as follows:
 
             - kernel: Driver service
             - filesystem: File system driver service
@@ -929,26 +985,31 @@ def create(
             - own (default): Service runs in its own process
             - share: Service shares a process with one or more other services
 
-        start_type (str):
+            Default is "own".
+
+        start_type (:obj:`str`, optional):
             Specifies the service start type. Valid options are as follows:
 
-            - boot: Device driver that is loaded by the boot loader
+            - boot: Device driver that is loaded by the bootloader
             - system: Device driver that is started during kernel initialization
             - auto: Service that automatically starts
             - manual (default): Service must be started manually
             - disabled: Service cannot be started
 
-        start_delayed (bool):
+            Default is "manual".
+
+        start_delayed (:obj:`bool`, optional):
             Set the service to Auto(Delayed Start). Only valid if the start_type
             is set to ``Auto``. If service_type is not passed, but the service
-            is already set to ``Auto``, then the flag will be set. Default is
-            ``False``
+            is already set to ``Auto``, then the flag will be set.
 
-        error_control (str):
+             Default is ``False``.
+
+        error_control (:obj:`str`, optional):
             The severity of the error, and action taken, if this service fails
             to start. Valid options are as follows:
 
-            - normal (normal): Error is logged and a message box is displayed
+            - normal (default): Error is logged and a message box is displayed
             - severe: Error is logged and computer attempts a restart with the
               last known good configuration
             - critical: Error is logged, computer attempts to restart with the
@@ -956,14 +1017,20 @@ def create(
             - ignore: Error is logged and startup continues, no notification is
               given to the user
 
-        load_order_group (str):
-            The name of the load order group to which this service belongs
+              Default is "normal".
 
-        dependencies (list):
+        load_order_group (:obj:`str`, optional):
+            The name of the load order group to which this service belongs.
+
+            Default is ``None``.
+
+        dependencies (:obj:`list`, optional):
             A list of services or load ordering groups that must start before
-            this service
+            this service.
 
-        account_name (str):
+            Default is ``None``.
+
+        account_name (:obj:`str`, optional):
             The name of the account under which the service should run. For
             ``own`` type services this should be in the ``domain\\username``
             format. The following are examples of valid built-in service
@@ -974,15 +1041,21 @@ def create(
             - NT Authority\\LocalSystem
             - .\\LocalSystem
 
-        account_password (str):
+            Default is ``\\LocalSystem``.
+
+        account_password (:obj:`str`, optional):
             The password for the account name specified in ``account_name``. For
-            the above built-in accounts, this can be None. Otherwise a password
+            the above built-in accounts, this can be None. Otherwise, a password
             must be specified.
 
-        run_interactive (bool):
-            If this setting is True, the service will be allowed to interact
+            Default is ``None``.
+
+        run_interactive (:obj:`bool`, optional):
+            If this setting is ``True``, the service will be allowed to interact
             with the user. Not recommended for services that run with elevated
             privileges.
+
+            Default is ``False``.
 
     Returns:
         dict: A dictionary containing information about the new service
@@ -1089,12 +1162,14 @@ def delete(name, timeout=90):
 
         name (str): The name of the service to delete
 
-        timeout (int):
+        timeout (:obj:`int`, optional):
             The time in seconds to wait for the service to be deleted before
             returning. This is necessary because a service must be stopped
-            before it can be deleted. Default is 90 seconds
+            before it can be deleted.
 
             .. versionadded:: 2017.7.9,2018.3.4
+
+            Default is 90 seconds.
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``. Also returns ``True``

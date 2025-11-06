@@ -1,5 +1,6 @@
 import pytest
 
+from tests.support.helpers import system_python_version
 from tests.support.pytest.helpers import reap_stray_processes
 
 
@@ -16,6 +17,8 @@ def _auto_skip_on_system_python_too_recent(grains):
             # has been deprecated since Python 3.7, so, the logic goes into trying to import
             # backports.ssl-match-hostname which is not installed on the system.
         )
+    if system_python_version() < (3, 10):
+        pytest.skip("System python too old for these tests")
 
 
 @pytest.fixture(autouse=True)

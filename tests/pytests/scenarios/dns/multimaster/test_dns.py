@@ -7,8 +7,20 @@ import pytest
 log = logging.getLogger(__name__)
 
 
+@pytest.fixture
+def orig_address(etc_hosts):
+    try:
+        etc_hosts.write_text(
+            f"{etc_hosts.orig_text}\n172.16.0.1    master1.local master2.local"
+        )
+        yield
+    finally:
+        subprocess.run(["ip", "addr", "del", "172.16.0.1/32", "dev", "lo"], check=False)
+
+
 @pytest.mark.skip_unless_on_linux
 def test_multimaster_dns(
+    orig_address,
     salt_mm_master_1,
     salt_mm_minion_1,
     mm_master_1_salt_cli,
@@ -20,10 +32,6 @@ def test_multimaster_dns(
     Verify a minion configured with multimaster hot/hot will pick up a master's
     dns change if it's been disconnected.
     """
-
-    etc_hosts.write_text(
-        f"{etc_hosts.orig_text}\n172.16.0.1    master1.local master2.local"
-    )
 
     log.info("Added hosts record for master1.local and master2.local")
 

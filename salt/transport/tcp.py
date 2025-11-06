@@ -11,7 +11,7 @@ import errno
 import logging
 import multiprocessing
 import queue
-import select
+import selectors
 import socket
 import threading
 import time
@@ -21,7 +21,6 @@ import warnings
 
 import tornado
 import tornado.concurrent
-import tornado.gen
 import tornado.iostream
 import tornado.netutil
 import tornado.tcpclient
@@ -54,7 +53,7 @@ class ClosingError(Exception):
     """ """
 
 
-def _null_callback(*args, **kwargs):
+async def _null_callback(*args, **kwargs):
     pass
 
 
@@ -176,7 +175,7 @@ class LoadBalancerServer(salt.utils.process.SignalHandlingProcess):
         self._socket.bind(_get_bind_addr(self.opts, "ret_port"))
         self._socket.listen(self.backlog)
 
-        while True:
+        while self._socket and not self._socket._closed:
             try:
                 # Wait for a connection to occur since the socket is
                 # blocking.
@@ -189,8 +188,19 @@ class LoadBalancerServer(salt.utils.process.SignalHandlingProcess):
                 # ECONNABORTED indicates that there was a connection
                 # but it was closed while still in the accept queue.
                 # (observed on FreeBSD).
+                name = self._socket.getsockname()
+                if isinstance(name, tuple):
+                    name = name[0]
                 if tornado.util.errno_from_exception(e) == errno.ECONNABORTED:
                     continue
+                elif e.errno == errno.EINVAL:
+                    # This can happen after socket.shutdown but before socket.close
+                    log.trace("Socket shutdown: %s", name)
+                    break
+                elif e.errno == errno.EBADF:
+                    # This can happen after socket.close
+                    log.trace("Socket closed: %s", name)
+                    break
                 raise
 
 
@@ -332,7 +342,7 @@ class PublishClient(salt.transport.base.PublishClient):
             self._stream = await self.getstream(timeout=timeout)
             if self._stream:
                 if self.connect_callback:
-                    self.connect_callback(True)
+                    await self.connect_callback(True)
             self.connected = True
 
     async def connect(
@@ -371,10 +381,13 @@ class PublishClient(salt.transport.base.PublishClient):
         if timeout == 0:
             for msg in self.unpacker:
                 return msg[b"body"]
-            try:
-                events, _, _ = select.select([self._stream.socket], [], [], 0)
-            except TimeoutError:
-                events = []
+
+            with selectors.DefaultSelector() as sel:
+                sel.register(self._stream.socket, selectors.EVENT_READ)
+                ready = sel.select(timeout=0)
+                events = [key.fileobj for key, _ in ready]
+                sel.unregister(self._stream.socket)
+
             if events:
                 while not self._closing:
                     async with self._read_in_progress:
@@ -795,13 +808,14 @@ class MessageClient:
         self._closing = True
         self.io_loop.add_timeout(1, self.check_close)
 
-    @tornado.gen.coroutine
-    def check_close(self):
+    async def check_close(self):
         if not self.send_future_map:
             self._tcp_client.close()
+            if self._stream:
+                self._stream.close()
             self._stream = None
-            self._closing = False
             self._closed = True
+            self._closing = False
         else:
             self.io_loop.add_timeout(1, self.check_close)
 
@@ -811,8 +825,7 @@ class MessageClient:
 
     # pylint: enable=W1701
 
-    @tornado.gen.coroutine
-    def getstream(self, **kwargs):
+    async def getstream(self, **kwargs):
         if self.source_ip or self.source_port:
             kwargs = {
                 "source_ip": self.source_ip,
@@ -821,7 +834,7 @@ class MessageClient:
         stream = None
         while stream is None and (not self._closed and not self._closing):
             try:
-                stream = yield self._tcp_client.connect(
+                stream = await self._tcp_client.connect(
                     ip_bracket(self.host, strip=True),
                     self.port,
                     ssl_options=self.opts.get("ssl"),
@@ -836,26 +849,27 @@ class MessageClient:
                     exc,
                     self.backoff,
                 )
-                yield tornado.gen.sleep(self.backoff)
-        raise tornado.gen.Return(stream)
+                await asyncio.sleep(self.backoff)
 
-    @tornado.gen.coroutine
-    def connect(self):
+        return stream
+
+    async def connect(self):
         if self._stream is None:
-            self._stream = yield self.getstream()
+            self._stream = await self.getstream()
             if self._stream:
+                self._closing = False
+                self._closed = False
                 if not self._stream_return_running:
                     self.io_loop.spawn_callback(self._stream_return)
                 if self.connect_callback:
                     self.connect_callback(True)
 
-    @tornado.gen.coroutine
-    def _stream_return(self):
+    async def _stream_return(self):
         self._stream_return_running = True
         unpacker = salt.utils.msgpack.Unpacker()
-        while not self._closing:
+        while not self._closed and not self._closing:
             try:
-                wire_bytes = yield self._stream.read_bytes(4096, partial=True)
+                wire_bytes = await self._stream.read_bytes(4096, partial=True)
                 unpacker.feed(wire_bytes)
                 for framed_msg in unpacker:
                     framed_msg = salt.transport.frame.decode_embedded_strs(framed_msg)
@@ -893,7 +907,7 @@ class MessageClient:
                 if stream:
                     stream.close()
                 unpacker = salt.utils.msgpack.Unpacker()
-                yield self.connect()
+                await self.connect()
             except TypeError:
                 # This is an invalid transport
                 if "detect_mode" in self.opts:
@@ -917,7 +931,7 @@ class MessageClient:
                 if stream:
                     stream.close()
                 unpacker = salt.utils.msgpack.Unpacker()
-                yield self.connect()
+                await self.connect()
         self._stream_return_running = False
 
     def _message_id(self):
@@ -950,8 +964,7 @@ class MessageClient:
         if future is not None:
             future.set_exception(SaltReqTimeoutError("Message timed out"))
 
-    @tornado.gen.coroutine
-    def send(self, msg, timeout=None, callback=None, raw=False):
+    async def send(self, msg, timeout=None, callback=None, raw=False):
         if self._closing:
             raise ClosingError()
         message_id = self._message_id()
@@ -977,18 +990,16 @@ class MessageClient:
 
         item = salt.transport.frame.frame_msg(msg, header=header)
 
-        @tornado.gen.coroutine
-        def _do_send():
-            yield self.connect()
+        async def _do_send():
+            await self.connect()
             # If the _stream is None, we failed to connect.
             if self._stream:
-                yield self._stream.write(item)
+                await self._stream.write(item)
 
         # Run send in a callback so we can wait on the future, in case we time
         # out before we are able to connect.
         self.io_loop.add_callback(_do_send)
-        recv = yield future
-        raise tornado.gen.Return(recv)
+        return await future
 
 
 class Subscriber:
@@ -1022,7 +1033,7 @@ class Subscriber:
     def __del__(self):
         if not self._closing:
             warnings.warn(
-                "unclosed publish subscriber {self!r}", ResourceWarning, source=self
+                f"unclosed publish subscriber {self!r}", ResourceWarning, source=self
             )
 
     # pylint: enable=W1701
@@ -1062,7 +1073,7 @@ class PubServer(tornado.tcpserver.TCPServer):
             return
         self._closing = True
         for client in self.clients:
-            client.stream.close()
+            client.close()
 
     # pylint: disable=W1701
     def __del__(self):
@@ -1070,7 +1081,9 @@ class PubServer(tornado.tcpserver.TCPServer):
 
     # pylint: enable=W1701
 
-    async def _stream_read(self, client):
+    async def _stream_read(
+        self, client, _StreamClosedError=tornado.iostream.StreamClosedError
+    ):
         unpacker = salt.utils.msgpack.Unpacker()
         while not self._closing:
             try:
@@ -1082,7 +1095,7 @@ class PubServer(tornado.tcpserver.TCPServer):
                     body = framed_msg["body"]
                     if self.presence_callback:
                         self.presence_callback(client, body)
-            except tornado.iostream.StreamClosedError as e:
+            except _StreamClosedError as e:
                 log.debug("tcp stream to %s closed, unable to recv", client.address)
                 client.close()
                 self.remove_presence_callback(client)
@@ -1283,7 +1296,7 @@ class TCPPuller:
     # pylint: disable=W1701
     def __del__(self):
         if not self._closing:
-            warnings.warn("unclosed tcp puller {self!r}", ResourceWarning, source=self)
+            warnings.warn(f"unclosed tcp puller {self!r}", ResourceWarning, source=self)
 
     # pylint: enable=W1701
 
@@ -1328,6 +1341,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pub_host = pub_host
         self.pub_port = pub_port
         self.pub_path = pub_path
+        self.pull_sock = None
         self.pull_host = pull_host
         self.pull_port = pull_port
         self.pull_path = pull_path
@@ -1338,6 +1352,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.started = multiprocessing.Event()
         else:
             self.started = started
+        self.pub_server = None
+        self.io_loop = None
+        self._closing = False
 
     @classmethod
     def support_ssl(cls):
@@ -1404,7 +1421,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         ctx = None
         if self.ssl is not None:
             ctx = salt.transport.base.ssl_context(self.ssl, server_side=True)
-        self.pub_server = pub_server = PubServer(
+        self.pub_server = PubServer(
             self.opts,
             io_loop=io_loop,
             presence_callback=presence_callback,
@@ -1433,10 +1450,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             sock.bind((self.pub_host, self.pub_port))
         sock.listen(self.backlog)
         # pub_server will take ownership of the socket
-        pub_server.add_socket(sock)
+        self.pub_server.add_socket(sock)
 
         # Set up Salt IPC server
-        self.pub_server = pub_server
         if self.pull_path:
             log.debug("Publish server binding pull to %s", self.pull_path)
             pull_path = self.pull_path
@@ -1498,9 +1514,29 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pub_sock.send(payload)
 
     def close(self):
+        self._closing = True
         if self.pub_sock:
             self.pub_sock.close()
             self.pub_sock = None
+        if self.pub_server:
+            self.pub_server.close()
+            self.pub_server = None
+        if self.pull_sock:
+            self.pull_sock.close()
+            self.pull_sock = None
+        if self.io_loop:
+            self.io_loop.stop()
+            self.io_loop.close(all_fds=True)
+            self.io_loop = None
+
+    # pylint: disable=W1701
+    def __del__(self):
+        if not self._closing:
+            warnings.warn(
+                f"unclosed publish server {self!r}", ResourceWarning, source=self
+            )
+
+    # pylint: enable=W1701
 
 
 class TCPPublishServer(PublishServer):
@@ -1885,6 +1921,12 @@ class RequestClient(salt.transport.base.RequestClient):
         if self._stream is not None:
             self._stream.close()
             self._stream = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
 
 class TCPReqClient(RequestClient):

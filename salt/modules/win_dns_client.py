@@ -34,8 +34,11 @@ def get_dns_servers(interface="Local Area Connection"):
     Return a list of the configured DNS servers of the specified interface
 
     Args:
-        interface (str): The name of the network interface. This is the name as
-        it appears in the Control Panel under Network Connections
+
+        interface (:obj:`str`, optional):
+            The name of the network interface. This is the name as it appears in
+            the Control Panel under Network Connections.
+            Default is ``Local Area Connection``.
 
     Returns:
         list: A list of dns servers
@@ -69,6 +72,15 @@ def rm_dns(ip, interface="Local Area Connection"):
     """
     Remove the DNS server from the network interface
 
+    Args:
+
+        ip (str): The IP address of the DNS server to remove.
+
+        interface (:obj:`str`, optional):
+            The name of the network interface. This is the name as it appears in
+            the Control Panel under Network Connections.
+            Default is ``Local Area Connection``.
+
     CLI Example:
 
     .. code-block:: bash
@@ -81,8 +93,8 @@ def rm_dns(ip, interface="Local Area Connection"):
         "ip",
         "delete",
         "dns",
-        f'"{interface}"',
-        f'"{ip}"',
+        interface,
+        ip,
         "validate=no",
     ]
     return __salt__["cmd.retcode"](cmd, python_shell=False) == 0
@@ -90,11 +102,23 @@ def rm_dns(ip, interface="Local Area Connection"):
 
 def add_dns(ip, interface="Local Area Connection", index=1):
     """
-    Add the DNS server to the network interface
-    (index starts from 1)
+    Add the DNS server to the network interface (index starts from 1)
 
     Note: if the interface DNS is configured by DHCP, all the DNS servers will
     be removed from the interface and the requested DNS will be the only one
+
+    Args:
+
+        ip (str): The IP address of the DNS server to remove.
+
+        interface (:obj:`str`, optional):
+            The name of the network interface. This is the name as it appears in
+            the Control Panel under Network Connections.
+            Default is ``Local Area Connection``.
+
+        index (:obj:`int`, optional):
+            The index to add the DNS server to.
+            Default is 1.
 
     CLI Example:
 
@@ -125,8 +149,8 @@ def add_dns(ip, interface="Local Area Connection", index=1):
         "ip",
         "add",
         "dns",
-        f'"{interface}"',
-        f'"{ip}"',
+        interface,
+        ip,
         f"index={index}",
         "validate=no",
     ]
@@ -138,13 +162,20 @@ def dns_dhcp(interface="Local Area Connection"):
     """
     Configure the interface to get its DNS servers from the DHCP server
 
+    Args:
+
+        interface (:obj:`str`, optional):
+            The name of the network interface. This is the name as it appears in
+            the Control Panel under Network Connections.
+            Default is ``Local Area Connection``.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' win_dns_client.dns_dhcp <interface>
     """
-    cmd = ["netsh", "interface", "ip", "set", "dns", f'"{interface}"', "source=dhcp"]
+    cmd = ["netsh", "interface", "ip", "set", "dns", interface, "source=dhcp"]
     return __salt__["cmd.retcode"](cmd, python_shell=False) == 0
 
 
@@ -153,8 +184,11 @@ def get_dns_config(interface="Local Area Connection"):
     Get the type of DNS configuration (dhcp / static).
 
     Args:
-        interface (str): The name of the network interface. This is the
-        Description in the Network Connection Details for the device
+
+        interface (:obj:`str`, optional):
+            The name of the network interface. This is the name as it appears in
+            the Control Panel under Network Connections.
+            Default is ``Local Area Connection``.
 
     Returns:
         bool: ``True`` if DNS is configured, otherwise ``False``

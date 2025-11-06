@@ -193,6 +193,29 @@ def test_pkg_install_existing():
         assert expected == result
 
 
+def test_pkg_install_existing_force_true():
+    """
+    test pkg.install when the package is already installed
+    and force=True
+    """
+    ret_reg = {"Nullsoft Install System": "3.03"}
+    # The 2nd time it's run, pkg.list_pkgs uses with stringify
+    se_list_pkgs = {"nsis": ["3.03"]}
+    with patch.object(win_pkg, "list_pkgs", return_value=se_list_pkgs), patch.object(
+        win_pkg, "_get_reg_software", return_value=ret_reg
+    ), patch.dict(
+        win_pkg.__salt__,
+        {
+            "cmd.run_all": MagicMock(return_value={"retcode": 0}),
+            "cp.cache_file": MagicMock(return_value="C:\\fake\\path.exe"),
+            "cp.is_cached": MagicMock(return_value=True),
+        },
+    ):
+        expected = {"nsis": {"install status": "success"}}
+        result = win_pkg.install(name="nsis", force=True)
+        assert expected == result
+
+
 def test_pkg_install_latest():
     """
     test pkg.install when the package is already installed

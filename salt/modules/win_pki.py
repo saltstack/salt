@@ -144,11 +144,20 @@ def get_certs(context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE):
     """
     Get the available certificates in the given store.
 
-    :param str context: The name of the certificate store location context.
-    :param str store: The name of the certificate store.
+    Args:
 
-    :return: A dictionary of the certificate thumbprints and properties.
-    :rtype: dict
+        context (:obj:`str`, optional):
+            The name of the certificate store location context.
+
+            Default is "LocalMachine"
+
+        store (:obj:`str`, optional):
+            The name of the certificate store.
+
+            Default is "My"
+
+    Returns:
+        dict: A dictionary of the certificate thumbprints and properties.
 
     CLI Example:
 
@@ -187,15 +196,26 @@ def get_cert_file(name, cert_format=_DEFAULT_FORMAT, password=""):
     """
     Get the details of the certificate file.
 
-    :param str name: The filesystem path of the certificate file.
-    :param str cert_format: The certificate format. Specify 'cer' for X.509, or
-        'pfx' for PKCS #12.
-    :param str password: The password of the certificate. Only applicable to pfx
-        format. Note that if used interactively, the password will be seen by all minions.
-        To protect the password, use a state and get the password from pillar.
+    Args:
 
-    :return: A dictionary of the certificate thumbprints and properties.
-    :rtype: dict
+        name (str): The filesystem path of the certificate file.
+
+        cert_format (:obj:`str`, optional):
+            The certificate format. Specify 'cer' for X.509, or 'pfx' for PKCS
+            #12.
+
+            Default is "cer"
+
+        password (:obj:`str`, optional):
+            The password of the certificate. Only applicable to pfx format. Note
+            that if used interactively, the password will be seen by all
+            minions. To protect the password, use a state and get the password
+            from pillar.
+
+            Default is "".
+
+    Returns:
+        dict: A dictionary of the certificate thumbprints and properties.
 
     CLI Example:
 
@@ -269,20 +289,44 @@ def import_cert(
     """
     Import the certificate file into the given certificate store.
 
-    :param str name: The path of the certificate file to import.
-    :param str cert_format: The certificate format. Specify 'cer' for X.509, or
-        'pfx' for PKCS #12.
-    :param str context: The name of the certificate store location context.
-    :param str store: The name of the certificate store.
-    :param bool exportable: Mark the certificate as exportable. Only applicable
-        to pfx format.
-    :param str password: The password of the certificate. Only applicable to pfx
-        format. Note that if used interactively, the password will be seen by all minions.
-        To protect the password, use a state and get the password from pillar.
-    :param str saltenv: The environment the file resides in.
+    Args:
 
-    :return: A boolean representing whether all changes succeeded.
-    :rtype: bool
+        name (str): The path of the certificate file to import.
+
+        cert_format (:obj:`str`, optional):
+            The certificate format. Specify 'cer' for X.509, or 'pfx' for PKCS
+            #12.
+
+            Default is "cer"
+
+        context (:obj:`str`, optional):
+            The name of the certificate store location context.
+
+            Default is "LocalMachine"
+
+        store (str): The name of the certificate store.
+
+            Default is "My"
+
+        exportable (:obj:`bool`, optional):
+            Mark the certificate as exportable. Only applicable to pfx format.
+
+            Default is ``True``.
+
+        password (:obj:`str`, optional):
+            The password of the certificate. Only applicable to pfx format. Note
+            that if used interactively, the password will be seen by all
+            minions. To protect the password, use a state and get the password
+            from pillar.
+
+            Default is "".
+
+        saltenv (:obj:`str`, optional): The environment the file resides in.
+
+            Default is "base".
+
+    Returns:
+        bool: A boolean representing whether all changes succeeded.
 
     CLI Example:
 
@@ -370,18 +414,38 @@ def export_cert(
     """
     Export the certificate to a file from the given certificate store.
 
-    :param str name: The destination path for the exported certificate file.
-    :param str thumbprint: The thumbprint value of the target certificate.
-    :param str cert_format: The certificate format. Specify 'cer' for X.509, or
-        'pfx' for PKCS #12.
-    :param str context: The name of the certificate store location context.
-    :param str store: The name of the certificate store.
-    :param str password: The password of the certificate. Only applicable to pfx
-        format. Note that if used interactively, the password will be seen by all minions.
-        To protect the password, use a state and get the password from pillar.
+    Args:
 
-    :return: A boolean representing whether all changes succeeded.
-    :rtype: bool
+        name (str): The destination path for the exported certificate file.
+
+        thumbprint (str): The thumbprint value of the target certificate.
+
+        cert_format (:obj:`str`, optional):
+            The certificate format. Specify 'cer' for X.509, or 'pfx' for PKCS
+            #12.
+
+            Default is "cer"
+
+        context (:obj:`str`, optional):
+            The name of the certificate store location context.
+
+            Default is "LocalMachine"
+
+        store (:obj:`str`, optional):
+            The name of the certificate store.
+
+            Default is "My"
+
+        password (:obj:`str`, optional):
+            The password of the certificate. Only applicable to pfx format. Note
+            that if used interactively, the password will be seen by all
+            minions. To protect the password, use a state and get the password
+            from pillar.
+
+            Default is "".
+
+    Returns:
+        bool: A boolean representing whether all changes succeeded.
 
     CLI Example:
 
@@ -441,18 +505,39 @@ def test_cert(
     """
     Check the certificate for validity.
 
-    :param str thumbprint: The thumbprint value of the target certificate.
-    :param str context: The name of the certificate store location context.
-    :param str store: The name of the certificate store.
-    :param bool untrusted_root: Whether the root certificate is required to be
-        trusted in chain building.
-    :param str dns_name: The DNS name to verify as valid for the certificate.
-    :param str eku: The enhanced key usage object identifiers to verify for the
-        certificate chain.
+    Args:
 
-    :return: A boolean representing whether the certificate was considered
-        valid.
-    :rtype: bool
+        thumbprint (str): The thumbprint value of the target certificate.
+
+        context (:obj:`str`, optional):
+            The name of the certificate store location context.
+
+            Default is "LocalMachine"
+
+        store (:obj:`str`, optional): The name of the certificate store.
+
+            Default is "My"
+
+        untrusted_root (:obj:`bool`, optional):
+            Whether the root certificate is required to be trusted in chain
+            building.
+
+            Default is ``False``.
+
+        dns_name (:obj:`str`, optional):
+            The DNS name to verify as valid for the certificate.
+
+            Default is "".
+
+        eku (:obj:`str`, optional):
+            The enhanced key usage object identifiers to verify for the
+            certificate chain.
+
+            Default is "".
+
+    Returns:
+        bool: A boolean representing whether the certificate was considered
+            valid.
 
     CLI Example:
 
@@ -483,12 +568,21 @@ def remove_cert(thumbprint, context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE):
     """
     Remove the certificate from the given certificate store.
 
-    :param str thumbprint: The thumbprint value of the target certificate.
-    :param str context: The name of the certificate store location context.
-    :param str store: The name of the certificate store.
+    Args:
 
-    :return: A boolean representing whether all changes succeeded.
-    :rtype: bool
+        thumbprint (str): The thumbprint value of the target certificate.
+
+        context (:obj:`str`, optional):
+            The name of the certificate store location context.
+
+            Default is "LocalMachine".
+
+        store (:obj:`str`, optional): The name of the certificate store.
+
+            Default is "My"
+
+    Returns:
+        bool: A boolean representing whether all changes succeeded.
 
     CLI Example:
 

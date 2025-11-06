@@ -43,10 +43,10 @@ def is_installed(name):
     Args:
 
         name (str):
-            The name of the KB to check
+            The name of the KB to check.
 
     Returns:
-        bool: ``True`` if installed, otherwise ``False``
+        bool: ``True`` if installed, otherwise ``False``.
 
     CLI Example:
 
@@ -73,13 +73,15 @@ def install(path, restart=False):
         path (str):
             The full path to the msu file to install
 
-        restart (bool):
+        restart (:obj:`bool`, optional):
             ``True`` to force a restart if required by the installation. Adds
             the ``/forcerestart`` switch to the ``wusa.exe`` command. ``False``
-            will add the ``/norestart`` switch instead. Default is ``False``
+            will add the ``/norestart`` switch instead.
+
+            Default is ``False``.
 
     Returns:
-        bool: ``True`` if successful, otherwise ``False``
+        bool: ``True`` if successful, otherwise ``False``.
 
     Raise:
         CommandExecutionError: If the package is already installed or an error
@@ -129,13 +131,15 @@ def uninstall(path, restart=False):
             The full path to the msu file to uninstall. This can also be just
             the name of the KB to uninstall
 
-        restart (bool):
+        restart (:obj:`bool`, optional):
             ``True`` to force a restart if required by the installation. Adds
             the ``/forcerestart`` switch to the ``wusa.exe`` command. ``False``
-            will add the ``/norestart`` switch instead. Default is ``False``
+            will add the ``/norestart`` switch instead.
+
+            Default is ``False``.
 
     Returns:
-        bool: ``True`` if successful, otherwise ``False``
+        bool: ``True`` if successful, otherwise ``False``.
 
     Raises:
         CommandExecutionError: If an error is encountered
@@ -183,10 +187,10 @@ def uninstall(path, restart=False):
 
 def list_():
     """
-    Get a list of updates installed on the machine
+    Get a list of updates installed on the machine.
 
     Returns:
-        list: A list of installed updates
+        list: A list of installed updates.
 
     CLI Example:
 

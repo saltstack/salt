@@ -61,7 +61,9 @@ def get(path):
     Gets the properties for a shortcut
 
     Args:
-        path (str): The path to the shortcut. Must have a `.lnk` or `.url` file
+
+        path (str):
+            The path to the shortcut. Must have a `.lnk` or `.url` file
             extension.
 
     Returns:
@@ -72,7 +74,7 @@ def get(path):
 
     .. code-block:: bash
 
-        salt * shortcut.get path="C:\path\to\shortcut.lnk"
+        salt '*' shortcut.get path='C:\path\to\shortcut.lnk'
     """
     if not os.path.exists(path):
         raise CommandExecutionError(f"Shortcut not found: {path}")
@@ -154,49 +156,66 @@ def _set_info(
 
     Args:
 
-        path (str): The full path to the shortcut
+        path (str): The full path to the shortcut.
 
-        target (str): The full path to the target
+        target (:obj:`str`, optional): The full path to the target.
 
-        arguments (str, optional): Any arguments to be passed to the target
+            Defaults is "".
 
-        description (str, optional): The description for the shortcut. This is
-            shown in the ``Comment`` field of the dialog box. Default is an
-            empty string
+        arguments (:obj:`str`, optional):
+            Any arguments to be passed to the target.
 
-        hot_key (str, optional): A combination of hot Keys to trigger this
-            shortcut. This is something like ``Ctrl+Alt+D``. This is shown in
-            the ``Shortcut key`` field in the dialog box. Default is an empty
-            string. Available options are:
+            Default is "".
+
+        description (:obj:`str`, optional):
+            The description for the shortcut. This is shown in the ``Comment``
+            field of the dialog box.
+
+            Default is "".
+
+        hot_key (:obj:`str`, optional):
+            A combination of hot Keys to trigger this shortcut. This is
+            something like ``Ctrl+Alt+D``. This is shown in the ``Shortcut key``
+            field in the dialog box. Available options are:
 
             - Ctrl
             - Alt
             - Shift
             - Ext
 
-        icon_index (int, optional): The index for the icon to use in files that
-            contain multiple icons. Default is 0
+            Default is "".
 
-        icon_location (str, optional): The full path to a file containing icons.
-            This is shown in the ``Change Icon`` dialog box by clicking the
-            ``Change Icon`` button. If no file is specified and a binary is
-            passed as the target, Windows will attempt to get the icon from the
-            binary file. Default is an empty string
+        icon_index (:obj:`int`, optional):
+            The index for the icon to use in files that contain multiple icons.
 
-        window_style (str, optional): The window style the program should start
-            in. This is shown in the ``Run`` field of the dialog box. Default is
-            ``Normal``. Valid options are:
+            Default is 0.
+
+        icon_location (:obj`str`, optional):
+            The full path to a file containing icons. This is shown in the
+            ``Change Icon`` dialog box by clicking the ``Change Icon`` button.
+            If no file is specified and a binary is passed as the target,
+            Windows will attempt to get the icon from the binary file.
+
+            Default is "".
+
+        window_style (:obj:`str`, optional):
+            The window style the program should start in. This is shown in the
+            ``Run`` field of the dialog box. Valid options are:
 
             - Normal
             - Minimized
             - Maximized
 
-        working_dir (str, optional): The full path to the working directory for
-            the program to run in. This is shown in the ``Start in`` field of
-            the dialog box.
+            Default is "Normal".
+
+        working_dir (:obj:`str`, optional):
+            The full path to the working directory for the program to run in.
+            This is shown in the ``Start in`` field of the dialog box.
+
+            Default is "".
 
     Returns:
-        bool: True if successful
+        bool: ``True`` if successful.
     """
     path = salt.utils.path.expand(path)
 
@@ -252,54 +271,71 @@ def modify(
         path (str): The full path to the shortcut. Must have a `.lnk` or `.url`
             file extension.
 
-        target (str, optional): The full path to the target
+        target (:obj:`str`, optional): The full path to the target.
 
-        arguments (str, optional): Any arguments to be passed to the target
+            Default is "".
 
-        description (str, optional): The description for the shortcut. This is
-            shown in the ``Comment`` field of the dialog box. Default is an
-            empty string
+        arguments (:obj:`str`, optional):
+            Any arguments to be passed to the target.
 
-        hot_key (str, optional): A combination of hot Keys to trigger this
-            shortcut. This is something like ``Ctrl+Alt+D``. This is shown in
-            the ``Shortcut key`` field in the dialog box. Default is an empty
-            string. Available options are:
+            Default is "".
+
+        description (:obj:`str`, optional):
+            The description for the shortcut. This is shown in the ``Comment``
+            field of the dialog box.
+
+            Default is "".
+
+        hot_key (:obj:`str`, optional):
+            A combination of hot Keys to trigger this shortcut. This is
+            something like ``Ctrl+Alt+D``. This is shown in the ``Shortcut key``
+            field in the dialog box. Available options are:
 
             - Ctrl
             - Alt
             - Shift
             - Ext
 
-        icon_index (int, optional): The index for the icon to use in files that
-            contain multiple icons. Default is 0
+            Default is "".
 
-        icon_location (str, optional): The full path to a file containing icons.
-            This is shown in the ``Change Icon`` dialog box by clicking the
-            ``Change Icon`` button. If no file is specified and a binary is
-            passed as the target, Windows will attempt to get the icon from the
-            binary file. Default is an empty string
+        icon_index (:obj:`int`, optional):
+            The index for the icon to use in files that contain multiple icons.
 
-        window_style (str, optional): The window style the program should start
-            in. This is shown in the ``Run`` field of the dialog box. Default is
-            ``Normal``. Valid options are:
+            Default is 0.
+
+        icon_location (:obj:`str`, optional):
+            The full path to a file containing icons. This is shown in the
+            ``Change Icon`` dialog box by clicking the ``Change Icon`` button.
+            If no file is specified and a binary is passed as the target,
+            Windows will attempt to get the icon from the binary file.
+
+            Default is "".
+
+        window_style (:obj:`str`, optional):
+            The window style the program should start in. This is shown in the
+            ``Run`` field of the dialog box. Valid options are:
 
             - Normal
             - Minimized
             - Maximized
 
-        working_dir (str, optional): The full path to the working directory for
-            the program to run in. This is shown in the ``Start in`` field of
-            the dialog box.
+            Default is "Normal".
+
+        working_dir (:obj:`str`, optional):
+            The full path to the working directory for the program to run in.
+            This is shown in the ``Start in`` field of the dialog box.
+
+            Default is "".
 
     Returns:
-        bool: True if successful
+        bool: ``True`` if successful.
 
     CLI Example:
 
     .. code-block:: bash
 
         # Modify an existing shortcut. Set it to target notepad.exe
-        salt * shortcut.modify "C:\path\to\shortcut.lnk" "C:\Windows\notepad.exe"
+        salt '*' shortcut.modify 'C:\path\to\shortcut.lnk' 'C:\Windows\notepad.exe'
     """
     if not os.path.exists(path):
         raise CommandExecutionError(f"Shortcut not found: {path}")
@@ -342,67 +378,93 @@ def create(
 
     Args:
 
-        path (str): The full path to the shortcut. Must have a `.lnk` or `.url`
-            file extension.
+        path (str):
+            The full path to the shortcut. Must have a `.lnk` or `.url` file
+            extension.
 
-        target (str): The full path to the target
+        target (str): The full path to the target.
 
-        arguments (str, optional): Any arguments to be passed to the target
+        arguments (:obj:`str`, optional):
+            Any arguments to be passed to the target.
 
-        description (str, optional): The description for the shortcut. This is
-            shown in the ``Comment`` field of the dialog box. Default is an
-            empty string
+            Default is "".
 
-        hot_key (str, optional): A combination of hot Keys to trigger this
-            shortcut. This is something like ``Ctrl+Alt+D``. This is shown in
-            the ``Shortcut key`` field in the dialog box. Default is an empty
-            string. Available options are:
+        description (:obj:`str`, optional):
+            The description for the shortcut. This is shown in the ``Comment``
+            field of the dialog box.
+
+            Default is "".
+
+        hot_key (:obj:`str`, optional):
+            A combination of hot Keys to trigger this shortcut. This is
+            something like ``Ctrl+Alt+D``. This is shown in the ``Shortcut key``
+            field in the dialog box. Available options are:
 
             - Ctrl
             - Alt
             - Shift
             - Ext
 
-        icon_index (int, optional): The index for the icon to use in files that
-            contain multiple icons. Default is 0
+            Default is "".
 
-        icon_location (str, optional): The full path to a file containing icons.
-            This is shown in the ``Change Icon`` dialog box by clicking the
-            ``Change Icon`` button. If no file is specified and a binary is
-            passed as the target, Windows will attempt to get the icon from the
-            binary file. Default is an empty string
+        icon_index (:obj:`int`, optional):
+            The index for the icon to use in files that contain multiple icons.
 
-        window_style (str, optional): The window style the program should start
-            in. This is shown in the ``Run`` field of the dialog box. Default is
-            ``Normal``. Valid options are:
+            Default is 0.
+
+        icon_location (:obj:`str`, optional):
+            The full path to a file containing icons. This is shown in the
+            ``Change Icon`` dialog box by clicking the ``Change Icon`` button.
+            If no file is specified and a binary is passed as the target,
+            Windows will attempt to get the icon from the binary file.
+
+            Default is "".
+
+        window_style (:obj:`str`, optional):
+            The window style the program should start in. This is shown in the
+            ``Run`` field of the dialog box. Valid options are:
 
             - Normal
             - Minimized
             - Maximized
 
-        working_dir (str, optional): The full path to the working directory for
-            the program to run in. This is shown in the ``Start in`` field of
-            the dialog box.
+            Default is "Normal".
 
-        backup (bool, optional): If there is already a shortcut with the same
-            name, set this value to ``True`` to backup the existing shortcut and
-            continue creating the new shortcut. Default is ``False``
+        working_dir (:obj:`str`, optional):
+            The full path to the working directory for the program to run in.
+            This is shown in the ``Start in`` field of the dialog box.
 
-        force (bool, optional): If there is already a shortcut with the same
-            name and you aren't backing up the shortcut, set this value to
-            ``True`` to remove the existing shortcut and create a new with these
-            settings. Default is ``False``
+            Default is "".
 
-        make_dirs (bool, optional): If the parent directory structure does not
-            exist for the new shortcut, create it. Default is ``False``
+        backup (:obj:`bool`, optional):
+            If there is already a shortcut with the same name, set this value to
+            ``True`` to backup the existing shortcut and continue creating the
+            new shortcut.
 
-        user (str, optional): The user to be the owner of any directories
-            created by setting ``make_dirs`` to ``True``. If no value is passed
-            Salt will use the user account that it is running under. Default is
-            an empty string.
+            Default is ``False``.
+
+        force (:obj:`bool`, optional):
+            If there is already a shortcut with the same name and you aren't
+            backing up the shortcut, set this value to ``True`` to remove the
+            existing shortcut and create a new with these settings.
+
+            Default is ``False``.
+
+        make_dirs (:obj:`bool`, optional):
+            If the parent directory structure does not exist for the new
+            shortcut, create it.
+
+            Default is ``False``.
+
+        user (:obj:`str`, optional):
+            The user to be the owner of any directories created by setting
+            ``make_dirs`` to ``True``. If no value is passed, Salt will use the
+            user account that it is running under.
+
+            Default is "".
 
     Returns:
-        bool: True if successful
+        bool: ``True`` if successful.
 
     Raises:
         CommandExecutionError: If the path is not a ``.lnk`` or ``.url`` file
@@ -419,22 +481,22 @@ def create(
     .. code-block:: bash
 
         # Create a shortcut and set the ``Shortcut key`` (``hot_key``)
-        salt * shortcut.create "C:\path\to\shortcut.lnk" "C:\Windows\notepad.exe" hot_key="Ctrl+Alt+N"
+        salt '*' shortcut.create 'C:\path\to\shortcut.lnk' 'C:\Windows\notepad.exe' hot_key='Ctrl+Alt+N'
 
         # Create a shortcut and change the icon to the 3rd one in the icon file
-        salt * shortcut.create "C:\path\to\shortcut.lnk" "C:\Windows\notepad.exe" icon_location="C:\path\to\icon.ico" icon_index=2
+        salt '*' shortcut.create 'C:\path\to\shortcut.lnk' 'C:\Windows\notepad.exe' icon_location='C:\path\to\icon.ico' icon_index=2
 
         # Create a shortcut and change the startup mode to full screen
-        salt * shortcut.create "C:\path\to\shortcut.lnk" "C:\Windows\notepad.exe" window_style="Maximized"
+        salt '*' shortcut.create 'C:\path\to\shortcut.lnk' 'C:\Windows\notepad.exe' window_style='Maximized'
 
         # Create a shortcut and change the icon
-        salt * shortcut.create "C:\path\to\shortcut.lnk" "C:\Windows\notepad.exe" icon_location="C:\path\to\icon.ico"
+        salt '*' shortcut.create 'C:\path\to\shortcut.lnk' 'C:\Windows\notepad.exe' icon_location='C:\path\to\icon.ico'
 
         # Create a shortcut and force it to overwrite an existing shortcut
-        salt * shortcut.create "C:\path\to\shortcut.lnk" "C:\Windows\notepad.exe" force=True
+        salt '*' shortcut.create 'C:\path\to\shortcut.lnk' 'C:\Windows\notepad.exe' force=True
 
         # Create a shortcut and create any parent directories if they are missing
-        salt * shortcut.create "C:\path\to\shortcut.lnk" "C:\Windows\notepad.exe" make_dirs=True
+        salt '*' shortcut.create 'C:\path\to\shortcut.lnk' 'C:\Windows\notepad.exe' make_dirs=True
     """
     if not path.endswith((".lnk", ".url")):
         _, ext = os.path.splitext(path)
