@@ -2,6 +2,7 @@
 Functions for daemonizing and otherwise modifying running processes
 """
 
+import asyncio
 import contextlib
 import copy
 import errno
@@ -20,8 +21,6 @@ import subprocess
 import sys
 import threading
 import time
-
-from tornado import gen
 
 import salt._logging
 import salt.defaults.exitcodes
@@ -608,8 +607,7 @@ class ProcessManager:
                 # Otherwise, it's a dead process, remove it from the process map
                 del self._process_map[pid]
 
-    @gen.coroutine
-    def run(self, asynchronous=False):
+    async def run(self, asynchronous=False):
         """
         Load and start all available api modules
         """
@@ -634,7 +632,7 @@ class ProcessManager:
                 # because os.wait() conflicts with the subprocesses management logic
                 # implemented in `multiprocessing` package. See #35480 for details.
                 if asynchronous:
-                    yield gen.sleep(10)
+                    await asyncio.sleep(10)
                 else:
                     time.sleep(10)
                 if not self._process_map:

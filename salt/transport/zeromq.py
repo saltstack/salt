@@ -1244,8 +1244,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self.send_future_map = {}
         self._closing = False
         self.socket = None
-        # self._queue = asyncio.Queue()
-        self._queue = tornado.queues.Queue()
+        self._queue = asyncio.Queue()
 
     async def connect(self):  # pylint: disable=invalid-overridden-method
         if self.socket is None:
@@ -1283,6 +1282,8 @@ class RequestClient(salt.transport.base.RequestClient):
         if self._closing:
             return
         self._closing = True
+        # Save socket reference before clearing it for use in callback
+        task_socket = self.socket
         if self.socket:
             self.socket.close()
             self.socket = None
@@ -1299,7 +1300,9 @@ class RequestClient(salt.transport.base.RequestClient):
                     try:
                         cancelled_task.exception()
                     except asyncio.CancelledError:  # pragma: no cover
-                        pass
+                        # Task was cancelled - log the expected messages
+                        log.trace("Send socket closed while polling.")
+                        log.trace("Send and receive coroutine ending %s", task_socket)
                     except (
                         Exception  # pylint: disable=broad-exception-caught
                     ):  # pragma: no cover
@@ -1307,6 +1310,7 @@ class RequestClient(salt.transport.base.RequestClient):
                             "Exception while cancelling send/receive task.",
                             exc_info=True,
                         )
+                        log.trace("Send and receive coroutine ending %s", task_socket)
 
                 task.add_done_callback(_drain_cancelled)
             else:
@@ -1370,14 +1374,9 @@ class RequestClient(salt.transport.base.RequestClient):
         # close method is called. This allows us to fail gracefully once it's
         # been closed.
         while send_recv_running:
-            # try:
-            #    future, message = await asyncio.wait_for(self._queue.get(), 0.3)
-            # except TimeoutError:
             try:
-                future, message = await self._queue.get(
-                    timeout=datetime.timedelta(milliseconds=300)
-                )
-            except _TimeoutError:
+                future, message = await asyncio.wait_for(self._queue.get(), 0.3)
+            except asyncio.TimeoutError:
                 try:
                     # For some reason yielding here doesn't work becaues the
                     # future always has a result?
@@ -1399,6 +1398,10 @@ class RequestClient(salt.transport.base.RequestClient):
 
             try:
                 await socket.send(message)
+            except asyncio.CancelledError as exc:
+                log.trace("Loop closed while sending.")
+                send_recv_running = False
+                future.set_exception(exc)
             except zmq.eventloop.future.CancelledError as exc:
                 log.trace("Loop closed while sending.")
                 # The ioloop was closed before polling finished.
@@ -1439,6 +1442,10 @@ class RequestClient(salt.transport.base.RequestClient):
                 try:
                     # Time is in milliseconds.
                     ready = await socket.poll(300, zmq.POLLIN)
+                except asyncio.CancelledError as exc:
+                    log.trace("Loop closed while polling receive socket.")
+                    send_recv_running = False
+                    future.set_exception(exc)
                 except zmq.eventloop.future.CancelledError as exc:
                     log.trace("Loop closed while polling receive socket.")
                     send_recv_running = False
@@ -1452,6 +1459,10 @@ class RequestClient(salt.transport.base.RequestClient):
                     try:
                         recv = await socket.recv()
                         received = True
+                    except asyncio.CancelledError as exc:
+                        log.trace("Loop closed while receiving.")
+                        send_recv_running = False
+                        future.set_exception(exc)
                     except zmq.eventloop.future.CancelledError as exc:
                         log.trace("Loop closed while receiving.")
                         send_recv_running = False

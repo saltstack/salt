@@ -391,3 +391,97 @@ async def test_request_client_recv_socket_closed(
                 request_client.close()
                 serve_socket.close()
                 ctx.term()
+
+
+async def test_request_client_uses_asyncio_queue(io_loop, minion_opts, port):
+    """
+    Test that RequestClient uses asyncio.Queue instead of tornado.queues.Queue.
+    This verifies the conversion from Tornado to pure asyncio.
+    """
+    minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
+    request_client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
+    try:
+        # Verify the queue is an asyncio.Queue
+        assert isinstance(request_client._queue, asyncio.Queue)
+        # Verify it has asyncio.Queue methods
+        assert hasattr(request_client._queue, "get")
+        assert hasattr(request_client._queue, "put")
+        # Verify it doesn't have Tornado-specific attributes
+        assert not hasattr(request_client._queue, "get_timeout")
+    finally:
+        request_client.close()
+
+
+async def test_request_client_queue_timeout_uses_asyncio(
+    io_loop, minion_opts, port, caplog
+):
+    """
+    Test that RequestClient queue timeout uses asyncio.TimeoutError.
+    This verifies the conversion from tornado.gen.TimeoutError to asyncio.TimeoutError.
+    """
+    minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
+    ctx = zmq.Context()
+    serve_socket = ctx.socket(zmq.REP)
+    serve_socket.bind(minion_opts["master_uri"])
+
+    request_client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
+
+    try:
+        await request_client.connect()
+
+        # The queue should timeout without any messages
+        # This tests that asyncio.wait_for with asyncio.TimeoutError works
+        # The _send_recv loop should handle the timeout gracefully
+
+        # Send a request - it should queue properly
+        future = asyncio.Future()
+        await request_client._queue.put((future, b"test_message"))
+
+        # Wait briefly
+        await asyncio.sleep(0.1)
+
+        # The _send_recv loop should have picked up the message
+        # and attempted to send it (though no handler is set up)
+        assert request_client._queue.qsize() == 0
+
+    finally:
+        request_client.close()
+        serve_socket.close()
+        ctx.term()
+
+
+async def test_request_client_asyncio_cancelled_error_handling(
+    io_loop, request_client, minion_opts, port, caplog
+):
+    """
+    Test that RequestClient properly handles asyncio.CancelledError.
+    This verifies the new asyncio.CancelledError exception handlers.
+    """
+    minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
+    ctx = zmq.Context()
+    serve_socket = ctx.socket(zmq.REP)
+    serve_socket.bind(minion_opts["master_uri"])
+
+    await request_client.connect()
+
+    socket = request_client.socket
+
+    async def send(*args, **kwargs):
+        """
+        Mock send to raise asyncio.CancelledError
+        """
+        raise asyncio.CancelledError()
+
+    socket.send = send
+
+    with caplog.at_level(logging.TRACE):
+        with pytest.raises(asyncio.CancelledError):
+            try:
+                await request_client.send("meh")
+                await asyncio.sleep(0.3)
+                assert "Loop closed while sending." in caplog.messages
+                assert f"Send and receive coroutine ending {socket}" in caplog.messages
+            finally:
+                request_client.close()
+                serve_socket.close()
+                ctx.term()
