@@ -55,7 +55,6 @@ except ImportError:
 if salt.utils.platform.is_windows():
     import salt.platform.win
     from salt.utils.win_functions import escape_argument as _cmd_quote
-    from salt.utils.win_functions import shlex_split
     from salt.utils.win_runas import runas as win_runas
 
     HAS_WIN_RUNAS = True
@@ -331,9 +330,7 @@ def _run(
     """
     if "pillar" in kwargs and not pillar_override:
         pillar_override = kwargs["pillar"]
-    if shell is None and python_shell and not salt.utils.platform.is_windows():
-        shell = DEFAULT_SHELL
-    if output_loglevel != "quiet" and shell and _is_valid_shell(shell) is False:
+    if output_loglevel != "quiet" and _is_valid_shell(shell) is False:
         log.warning(
             "Attempt to run a shell command with what may be an invalid shell! "
             "Check to ensure that the shell <%s> is valid for this user.",
@@ -728,12 +725,10 @@ def _run(
             f"Specified cwd '{cwd}' either not absolute or does not exist"
         )
 
-    if (
-        python_shell is not True
-        and not salt.utils.platform.is_windows()
-        and not isinstance(cmd, list)
-    ):
+    if python_shell is not True and not isinstance(cmd, list):
         cmd = salt.utils.args.shlex_split(cmd)
+
+    log.info("cmd: %s", " ".join(cmd) if isinstance(cmd, list) else cmd)
 
     if success_retcodes is None:
         success_retcodes = [0]
@@ -1618,17 +1613,10 @@ def shell(
 
         salt '*' cmd.shell cmd='sed -e s/=/:/g'
     """
-    if shell:
-        if salt.utils.platform.is_windows():
-            # shell invocations are handled manually
-            python_shell = False
-        else:
-            if "python_shell" in kwargs:
-                python_shell = kwargs.pop("python_shell")
-            else:
-                python_shell = True
+    if "python_shell" in kwargs:
+        python_shell = kwargs.pop("python_shell")
     else:
-        python_shell = False
+        python_shell = True
     return run(
         cmd,
         cwd=cwd,
@@ -2996,10 +2984,7 @@ def script(
         python_shell = False
 
     if isinstance(args, str):
-        if salt.utils.platform.is_windows():
-            args = shlex_split(args)
-        else:
-            args = shlex.split(args)
+        args = salt.utils.args.shlex_split(args)
 
     new_cmd = [path, *args] if args else [path]
 
