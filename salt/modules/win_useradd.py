@@ -802,8 +802,23 @@ def info(name):
     """
     ret = {}
     items = {}
+    username = str(name)
+    domainname = None
+    server = None
+
+    # Handles domain users with Down-Level Logon Name: DOMAIN\user
+    if "\\" in str(name):
+        domainname, username = str(name).split("\\", 1)
+    # And domain users with User Principal Name (UPN): user@DOMAIN
+    if "@" in str(name):
+        username, domainname = str(name).split("@", 1)
+        domainname = domainname.removesuffix(".local")
+
+    if domainname:
+        server = win32net.NetGetAnyDCName(None, domainname)
+
     try:
-        items = win32net.NetUserGetInfo(None, str(name), 4)
+        items = win32net.NetUserGetInfo(server, username, 4)
     except win32net.error:
         pass
 
