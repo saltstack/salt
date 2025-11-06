@@ -1251,3 +1251,79 @@ async def test_minion_manager_async_stop(io_loop, minion_opts, tmp_path):
     parent_signal_handler.assert_called_once_with(signal.SIGTERM, None)
     assert mm.event_publisher is None
     assert mm.event is None
+
+
+def test_minion_io_loop_is_asyncio_loop(minion_opts):
+    """
+    Test that Minion io_loop is converted to asyncio.AbstractEventLoop.
+    This verifies the salt.utils.asynchronous.aioloop() conversion.
+    """
+    minion = salt.minion.Minion(minion_opts, load_grains=False)
+    try:
+        # Verify io_loop is an asyncio loop, not a Tornado IOLoop
+        assert isinstance(minion.io_loop, asyncio.AbstractEventLoop)
+        # Ensure it has asyncio methods
+        assert hasattr(minion.io_loop, "create_task")
+        assert hasattr(minion.io_loop, "call_soon")
+        # Ensure it doesn't have Tornado-specific methods
+        assert not hasattr(minion.io_loop, "spawn_callback")
+    finally:
+        minion.destroy()
+
+
+def test_minion_io_loop_with_provided_loop(minion_opts):
+    """
+    Test that Minion io_loop conversion works when a loop is provided.
+    """
+    # Create a Tornado IOLoop
+    tornado_loop = tornado.ioloop.IOLoop()
+    try:
+        minion = salt.minion.Minion(
+            minion_opts, io_loop=tornado_loop, load_grains=False
+        )
+        try:
+            # Should still be converted to asyncio loop
+            assert isinstance(minion.io_loop, asyncio.AbstractEventLoop)
+            # Should be the same underlying loop
+            assert minion.io_loop is tornado_loop.asyncio_loop
+        finally:
+            minion.destroy()
+    finally:
+        tornado_loop.close()
+
+
+def test_minion_manager_io_loop_is_asyncio_loop(minion_opts):
+    """
+    Test that MinionManager io_loop is converted to asyncio.AbstractEventLoop.
+    """
+    with patch("salt.utils.process.SignalHandlingProcess.start"):
+        with patch("salt.utils.verify.valid_id"):
+            mm = salt.minion.MinionManager(minion_opts)
+            try:
+                # Verify io_loop is an asyncio loop
+                assert isinstance(mm.io_loop, asyncio.AbstractEventLoop)
+                # Ensure it has asyncio methods
+                assert hasattr(mm.io_loop, "create_task")
+                assert hasattr(mm.io_loop, "call_soon")
+                # Ensure it doesn't have Tornado-specific methods
+                assert not hasattr(mm.io_loop, "spawn_callback")
+            finally:
+                mm.destroy()
+
+
+def test_syndic_manager_io_loop_is_asyncio_loop(minion_opts):
+    """
+    Test that SyndicManager io_loop is converted to asyncio.AbstractEventLoop.
+    """
+    minion_opts["order_masters"] = True
+    sm = salt.minion.SyndicManager(minion_opts)
+    try:
+        # Verify io_loop is an asyncio loop
+        assert isinstance(sm.io_loop, asyncio.AbstractEventLoop)
+        # Ensure it has asyncio methods
+        assert hasattr(sm.io_loop, "create_task")
+        assert hasattr(sm.io_loop, "call_soon")
+        # Ensure it doesn't have Tornado-specific methods
+        assert not hasattr(sm.io_loop, "spawn_callback")
+    finally:
+        sm.destroy()
