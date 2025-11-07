@@ -658,7 +658,13 @@ async def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodi
         try:
             try:
                 minion.connected = MagicMock(side_effect=(False, True))
-                minion._fire_master_minion_start = MagicMock()
+
+                # _fire_master_minion_start is now called as a coroutine via create_task
+                # so it must be an async function
+                async def async_mock():
+                    pass
+
+                minion._fire_master_minion_start = async_mock
                 minion.tune_in(start=False)
             except RuntimeError:
                 pass
@@ -834,10 +840,13 @@ def test_minion_manage_beacons(minion_opts):
         "salt.utils.process.SignalHandlingProcess.join",
         MagicMock(return_value=True),
     ):
+        minion = None
         try:
             minion_opts["beacons"] = {}
 
-            io_loop = MagicMock()
+            # io_loop must be a real Tornado IOLoop because our code calls
+            # salt.utils.asynchronous.aioloop() on it
+            io_loop = tornado.ioloop.IOLoop()
 
             mock_functions = {"test.ping": None}
             minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
@@ -853,7 +862,8 @@ def test_minion_manage_beacons(minion_opts):
             assert "ps" in minion.opts["beacons"]
             assert minion.opts["beacons"]["ps"] == bdata
         finally:
-            minion.destroy()
+            if minion is not None:
+                minion.destroy()
 
 
 def test_prep_ip_port():
@@ -1214,7 +1224,8 @@ async def test_minion_manager_async_stop(io_loop, minion_opts, tmp_path):
     assert mm.event is not None
 
     # Check io_loop is running
-    assert mm.io_loop.asyncio_loop.is_running()
+    # mm.io_loop is now an asyncio.AbstractEventLoop (not Tornado IOLoop)
+    assert mm.io_loop.is_running()
 
     # Wait for the ipc socket to be created, meaning the publish server is listening.
     while not list(pathlib.Path(minion_opts["sock_dir"]).glob("*")):

@@ -1476,7 +1476,8 @@ class RequestClient(salt.transport.base.RequestClient):
                     break
 
             if future.done():
-                if isinstance(future.exception, SaltReqTimeoutError):
+                exc = future.exception()
+                if isinstance(exc, SaltReqTimeoutError):
                     log.trace(
                         "Request timed out while waiting for a response. reconnecting."
                     )

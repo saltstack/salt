@@ -616,16 +616,24 @@ class ProcessManager:
             appendproctitle(self.name)
 
         # make sure to kill the subprocesses if the parent is killed
-        if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
-            # There are no SIGTERM handlers installed, install ours
-            signal.signal(signal.SIGTERM, self._handle_signals)
-        if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
-            # There are no SIGINT handlers installed, install ours
-            signal.signal(signal.SIGINT, self._handle_signals)
+        # Only set up signal handlers if we're in the main thread
+        if threading.current_thread() == threading.main_thread():
+            if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
+                # There are no SIGTERM handlers installed, install ours
+                signal.signal(signal.SIGTERM, self._handle_signals)
+            if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
+                # There are no SIGINT handlers installed, install ours
+                signal.signal(signal.SIGINT, self._handle_signals)
 
         while True:
             log.trace("Process manager iteration")
             try:
+                # Check if there are no processes to manage
+                if not self._process_map:
+                    if not asynchronous:
+                        # In synchronous mode, exit immediately
+                        break
+                    # In async mode, keep running (long-running service)
                 # in case someone died while we were waiting...
                 self.check_children()
                 # The event-based subprocesses management code was removed from here
@@ -635,8 +643,6 @@ class ProcessManager:
                     await asyncio.sleep(10)
                 else:
                     time.sleep(10)
-                if not self._process_map:
-                    break
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait
             except OSError:
                 break
