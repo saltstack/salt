@@ -442,7 +442,7 @@ class PublishClient(salt.transport.base.PublishClient):
                         self._stream = None
                         stream.close()
                         if self.disconnect_callback:
-                            self.disconnect_callback()
+                            await self.disconnect_callback()
                         await self.connect()
                         log.debug("Re-connected - continue")
                         continue
@@ -748,8 +748,10 @@ class LoadBalancerWorker(SaltMessageServer):
                 log.trace(
                     "LoadBalancerWorker received queued connection from %s", address
                 )
-                # Schedule handling the connection using the tornado IOLoop.
-                self.io_loop.spawn_callback(
+                # Schedule handling the connection using the event loop.
+                # Must use call_soon_threadsafe since we're in a background thread
+                aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
+                aio_loop.call_soon_threadsafe(
                     self._handle_connection, client_socket, address
                 )
         except (KeyboardInterrupt, SystemExit):
@@ -1084,7 +1086,12 @@ class PubServer(tornado.tcpserver.TCPServer):
         ssl=None,
     ):
         super().__init__(ssl_options=ssl)
-        self.io_loop = io_loop
+        if io_loop is None:
+            self.io_loop = salt.utils.asynchronous.aioloop(
+                tornado.ioloop.IOLoop.current()
+            )
+        else:
+            self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
         self.opts = opts
         self._closing = False
         self.clients = set()
@@ -1151,7 +1158,7 @@ class PubServer(tornado.tcpserver.TCPServer):
         log.debug("Subscriber at %s connected", address)
         client = Subscriber(stream, address)
         self.clients.add(client)
-        self.io_loop.spawn_callback(self._stream_read, client)
+        self.io_loop.create_task(self._stream_read(client))
 
     # TODO: ACK the publish through IPC
     async def publish_payload(self, package, topic_list=None):
@@ -1230,7 +1237,12 @@ class TCPPuller:
 
         # Placeholders for attributes to be populated by method calls
         self.sock = None
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        if io_loop is None:
+            self.io_loop = salt.utils.asynchronous.aioloop(
+                tornado.ioloop.IOLoop.current()
+            )
+        else:
+            self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
         self._closing = False
 
     def start(self):
@@ -1274,10 +1286,7 @@ class TCPPuller:
                 unpacker.feed(wire_bytes)
                 for framed_msg in unpacker:
                     body = framed_msg["body"]
-                    self.io_loop.spawn_callback(
-                        self.payload_handler,
-                        body,
-                    )
+                    self.io_loop.create_task(self.payload_handler(body))
             except tornado.iostream.StreamClosedError:
                 if self.path:
                     log.trace("Client disconnected from IPC %s", self.path)
@@ -1309,7 +1318,7 @@ class TCPPuller:
             stream = tornado.iostream.IOStream(
                 connection,
             )
-            self.io_loop.spawn_callback(self.handle_stream, stream)
+            self.io_loop.create_task(self.handle_stream(stream))
         except Exception as exc:  # pylint: disable=broad-except
             log.error("IPC streaming error: %s", exc)
 
@@ -1629,7 +1638,12 @@ class _TCPPubServerPublisher:
         to the server.
 
         """
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        if io_loop is None:
+            self.io_loop = salt.utils.asynchronous.aioloop(
+                tornado.ioloop.IOLoop.current()
+            )
+        else:
+            self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
         self.host = host
         self.port = port
         self.path = path
@@ -1654,7 +1668,7 @@ class _TCPPubServerPublisher:
             future = tornado.concurrent.Future()
             self._connecting_future = future
             # self._connect(timeout)
-            self.io_loop.spawn_callback(self._connect, timeout)
+            self.io_loop.create_task(self._connect(timeout))
 
         if callback is not None:
 
@@ -1771,7 +1785,7 @@ class RequestClient(salt.transport.base.RequestClient):
     def __init__(self, opts, io_loop, **kwargs):  # pylint: disable=W0231
         super().__init__(opts, io_loop, **kwargs)
         self.opts = opts
-        self.io_loop = io_loop
+        self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
 
         parse = urllib.parse.urlparse(self.opts["master_uri"])
         master_host, master_port = parse.netloc.rsplit(":", 1)
@@ -1832,7 +1846,7 @@ class RequestClient(salt.transport.base.RequestClient):
                 if not self._stream_return_running:
                     self.task = asyncio.create_task(self._stream_return())
                 if self.connect_callback is not None:
-                    self.connect_callback()
+                    await self.connect_callback()
 
     async def _stream_return(self):
         self._stream_return_running = True
@@ -1851,7 +1865,7 @@ class RequestClient(salt.transport.base.RequestClient):
                         self.send_future_map.pop(message_id).set_result(body)
                     else:
                         if self._on_recv is not None:
-                            self.io_loop.spawn_callback(self._on_recv, header, body)
+                            self.io_loop.call_soon(self._on_recv, header, body)
                         else:
                             log.error(
                                 "Got response for message_id %s that we are not"
@@ -1942,7 +1956,7 @@ class RequestClient(salt.transport.base.RequestClient):
 
         # Run send in a callback so we can wait on the future, in case we time
         # out before we are able to connect.
-        self.io_loop.add_callback(_do_send)
+        self.io_loop.create_task(_do_send())
         recv = await future
         return recv
 
