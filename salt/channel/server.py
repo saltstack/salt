@@ -1171,10 +1171,13 @@ class MasterPubServerChannel:
                 payload_handler=self.handle_pool_publish,
             )
             self.pool_puller.start()
-        self.io_loop.add_callback(
-            self.transport.publisher,
-            self.publish_payload,
-            io_loop=self.io_loop,
+        # Extract asyncio loop for create_task
+        aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
+        aio_loop.create_task(
+            self.transport.publisher(
+                self.publish_payload,
+                io_loop=self.io_loop,
+            )
         )
         # run forever
         try:

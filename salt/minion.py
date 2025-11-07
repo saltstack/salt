@@ -1046,7 +1046,8 @@ class MinionManager(MinionBase):
         self.max_auth_wait = self.opts["acceptance_wait_time_max"]
         self.minions = []
         self.jid_queue = []
-        self.io_loop = salt.utils.asynchronous.aioloop(tornado.ioloop.IOLoop.current())
+        self.tornado_loop = tornado.ioloop.IOLoop.current()
+        self.io_loop = salt.utils.asynchronous.aioloop(self.tornado_loop)
         self.process_manager = ProcessManager(name="MultiMinionProcessManager")
         self.io_loop.create_task(self.process_manager.run(asynchronous=True))
         self.event_publisher = None
@@ -1064,11 +1065,11 @@ class MinionManager(MinionBase):
         self.io_loop.create_task(
             self.event_publisher.publisher(
                 self.event_publisher.publish_payload,
-                io_loop=self.io_loop,
+                io_loop=self.tornado_loop,
             )
         )
         self.event = salt.utils.event.get_event(
-            "minion", opts=self.opts, io_loop=self.io_loop
+            "minion", opts=self.opts, io_loop=self.tornado_loop
         )
         self.event.subscribe("")
         self.event.set_event_handler(self.handle_event)
@@ -1131,7 +1132,7 @@ class MinionManager(MinionBase):
                 s_opts,
                 s_opts["auth_timeout"],
                 False,
-                io_loop=self.io_loop,
+                io_loop=self.tornado_loop,
                 loaded_base_name="salt.loader.{}".format(s_opts["master"]),
                 jid_queue=self.jid_queue,
             )
@@ -1203,7 +1204,7 @@ class MinionManager(MinionBase):
         self._spawn_minions()
 
         # serve forever!
-        self.io_loop.start()
+        self.tornado_loop.start()
 
     @property
     def restart(self):
@@ -1295,11 +1296,15 @@ class Minion(MinionBase):
         self.req_channel = None
 
         if io_loop is None:
-            self.io_loop = salt.utils.asynchronous.aioloop(
-                tornado.ioloop.IOLoop.current()
-            )
+            self.tornado_loop = tornado.ioloop.IOLoop.current()
         else:
-            self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
+            # Ensure we have a Tornado IOLoop for .start(), .stop(), etc.
+            if isinstance(io_loop, tornado.ioloop.IOLoop):
+                self.tornado_loop = io_loop
+            else:
+                # If passed an asyncio loop, wrap it in Tornado IOLoop
+                self.tornado_loop = tornado.ioloop.IOLoop.current()
+        self.io_loop = salt.utils.asynchronous.aioloop(self.tornado_loop)
 
         # Warn if ZMQ < 3.2
         if zmq:
@@ -1385,7 +1390,7 @@ class Minion(MinionBase):
         if timeout:
             self.io_loop.call_later(timeout, self.io_loop.stop)
         try:
-            self.io_loop.start()
+            self.tornado_loop.start()
         except KeyboardInterrupt:
             self.destroy()
         # I made the following 3 line oddity to preserve traceback.
@@ -3321,7 +3326,7 @@ class Minion(MinionBase):
 
         if start:
             try:
-                self.io_loop.start()
+                self.tornado_loop.start()
                 if self.restart:
                     self.destroy()
             except (
@@ -3612,11 +3617,15 @@ class SyndicManager(MinionBase):
         self.jid_forward_cache = set()
 
         if io_loop is None:
-            self.io_loop = salt.utils.asynchronous.aioloop(
-                tornado.ioloop.IOLoop.current()
-            )
+            self.tornado_loop = tornado.ioloop.IOLoop.current()
         else:
-            self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
+            # Ensure we have a Tornado IOLoop for .start(), .stop(), etc.
+            if isinstance(io_loop, tornado.ioloop.IOLoop):
+                self.tornado_loop = io_loop
+            else:
+                # If passed an asyncio loop, wrap it in Tornado IOLoop
+                self.tornado_loop = tornado.ioloop.IOLoop.current()
+        self.io_loop = salt.utils.asynchronous.aioloop(self.tornado_loop)
 
         # List of events
         self.raw_events = []
@@ -3629,6 +3638,8 @@ class SyndicManager(MinionBase):
         self.tries = collections.defaultdict(int)
         # Active pub futures: {master_id: (future, [job_ret, ...]), ...}
         self.pub_futures = {}
+        # Local client (set in tune_in())
+        self.local = None
 
     def _spawn_syndics(self):
         """
@@ -3848,7 +3859,7 @@ class SyndicManager(MinionBase):
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
 
-        self.io_loop.start()
+        self.tornado_loop.start()
 
     async def _process_event(self, raw):
         # TODO: cleanup: Move down into event class

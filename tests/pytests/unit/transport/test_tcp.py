@@ -492,6 +492,8 @@ async def test_presence_removed_on_stream_closed():
     opts = {"presence_events": True}
 
     io_loop_mock = MagicMock(spec=tornado.ioloop.IOLoop)
+    # Add asyncio_loop attribute for aioloop() compatibility
+    io_loop_mock.asyncio_loop = MagicMock()
 
     with patch("salt.master.AESFuncs.__init__", return_value=None):
         server = salt.transport.tcp.PubServer(opts, io_loop=io_loop_mock)
