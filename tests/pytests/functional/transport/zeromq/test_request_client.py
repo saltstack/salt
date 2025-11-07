@@ -131,7 +131,9 @@ async def test_request_client_send_recv_socket_closed(
     with caplog.at_level(logging.TRACE):
         request_client.close()
         await asyncio.sleep(0.5)
-        assert "Send socket closed while polling." in caplog.messages
+        # The tornado version would see this log.
+        # assert "Send socket closed while polling." in caplog.messages
+        assert "Received send/recv shutdown sentinal" in caplog.messages
         assert f"Send and receive coroutine ending {socket}" in caplog.messages
 
 
