@@ -628,21 +628,25 @@ class ProcessManager:
         while True:
             log.trace("Process manager iteration")
             try:
-                # Check if there are no processes to manage
-                if not self._process_map:
-                    if not asynchronous:
-                        # In synchronous mode, exit immediately
-                        break
-                    # In async mode, keep running (long-running service)
                 # in case someone died while we were waiting...
                 self.check_children()
                 # The event-based subprocesses management code was removed from here
                 # because os.wait() conflicts with the subprocesses management logic
                 # implemented in `multiprocessing` package. See #35480 for details.
+
+                # In synchronous mode with no processes, exit after checking children
+                # but before sleeping (to avoid unnecessary 10s delay in tests)
+                if not asynchronous and not self._process_map:
+                    break
+
                 if asynchronous:
                     await asyncio.sleep(10)
                 else:
                     time.sleep(10)
+
+                # Check again after sleep - in async mode, exit if no processes
+                if not self._process_map:
+                    break
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait
             except OSError:
                 break
