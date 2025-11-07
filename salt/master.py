@@ -951,7 +951,7 @@ class Master(SMaster):
         if self.opts.get("cluster_id", None):
             # Notify the rest of the cluster we're starting.
             ipc_publisher.send_aes_key_event()
-        self.process_manager.run()
+        asyncio.run(self.process_manager.run())
 
     def _handle_signals(self, signum, sigframe):
         # escalate the signals to the process manager
@@ -1175,10 +1175,14 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         Bind to the local port
         """
-        self.io_loop = tornado.ioloop.IOLoop()
+        asyncio_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(asyncio_loop)
+        self.io_loop = tornado.ioloop.IOLoop(
+            asyncio_loop=asyncio_loop, make_current=False
+        )
         for req_channel in self.req_channels:
             req_channel.post_fork(
-                self._handle_payload, io_loop=self.io_loop
+                self._handle_payload, io_loop=asyncio_loop
             )  # TODO: cleaner? Maybe lazily?
         try:
             self.io_loop.start()
