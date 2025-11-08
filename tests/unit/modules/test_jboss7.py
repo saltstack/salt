@@ -1,5 +1,6 @@
+from collections import OrderedDict
+
 import salt.modules.jboss7 as jboss7
-from salt.utils.odict import OrderedDict
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
 from tests.support.unit import TestCase

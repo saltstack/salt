@@ -53,7 +53,7 @@ idna==3.7
     # via
     #   requests
     #   yarl
-immutables==0.21 ; sys_platform != "linux"
+immutables==0.21
     # via
     #   -r requirements/base.txt
     #   contextvars

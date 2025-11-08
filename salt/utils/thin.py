@@ -85,6 +85,11 @@ except ImportError:
     except ImportError:
         ssl_match_hostname = None
 
+try:
+    import backports
+except ImportError:
+    backports = None
+
 concurrent = None
 
 
@@ -283,6 +288,7 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
         "backports_abc",
         "looseversion",
         "packaging",
+        "backports",
     ]
     if ext_py_ver and tuple(ext_py_ver) >= (3, 0):
         mods.append("distro")
@@ -432,6 +438,7 @@ def get_tops(extra_mods="", so_mods=""):
         backports_abc,
         looseversion,
         packaging,
+        backports,
     ]
     modules = find_site_modules("contextvars")
     if modules:

@@ -15,11 +15,11 @@ Module for running ZFS zpool command
 
 import logging
 import os
+from collections import OrderedDict
 
 import salt.utils.decorators
 import salt.utils.decorators.path
 import salt.utils.path
-from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 

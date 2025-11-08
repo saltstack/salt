@@ -11,8 +11,8 @@ their attributes.
 import copy
 import inspect
 import logging
+from collections import OrderedDict
 
-from salt.utils.odict import OrderedDict
 from salt.utils.oset import OrderedSet
 from salt.utils.stringutils import to_bytes
 

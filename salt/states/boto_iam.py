@@ -133,12 +133,12 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 import logging
 import os
 import xml.etree.ElementTree as ET
+from collections import OrderedDict
 
 import salt.utils.data
 import salt.utils.dictupdate as dictupdate
 import salt.utils.files
 import salt.utils.json
-import salt.utils.odict as odict
 import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
@@ -687,9 +687,7 @@ def _user_policies_present(
     policies_to_delete = []
     for policy_name, policy in policies.items():
         if isinstance(policy, str):
-            dict_policy = salt.utils.json.loads(
-                policy, object_pairs_hook=odict.OrderedDict
-            )
+            dict_policy = salt.utils.json.loads(policy, object_pairs_hook=OrderedDict)
         else:
             dict_policy = policy
         _policy = __salt__["boto_iam.get_user_policy"](
@@ -1241,9 +1239,7 @@ def _group_policies_present(
     policies_to_delete = []
     for policy_name, policy in policies.items():
         if isinstance(policy, str):
-            dict_policy = salt.utils.json.loads(
-                policy, object_pairs_hook=odict.OrderedDict
-            )
+            dict_policy = salt.utils.json.loads(policy, object_pairs_hook=OrderedDict)
         else:
             dict_policy = policy
         _policy = __salt__["boto_iam.get_group_policy"](

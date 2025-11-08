@@ -5,9 +5,9 @@
     salt.utils.odict
     ~~~~~~~~~~~~~~~~
 
-    Implements a DefaultOrderedDict Class that serves  as a
+    Implements a DefaultOrderedDict Class that serves as a
     combination of ``OrderedDict`` and ``defaultdict``
-    It's source was submitted here::
+    Its source was submitted here::
 
         http://stackoverflow.com/questions/6190331/
 """
@@ -15,6 +15,14 @@
 import copy
 from collections import OrderedDict
 from collections.abc import Callable
+
+from salt.utils.versions import warn_until
+
+warn_until(
+    3009,
+    "This module is deprecated. Use the standard library's collections.OrderedDict "
+    "or salt.utils.datastructures instead.",
+)
 
 
 class DefaultOrderedDict(OrderedDict):

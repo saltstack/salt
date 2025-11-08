@@ -157,6 +157,157 @@ def combine_comments(comments):
     return "".join(ret)
 
 
+def evr_compare(
+    # evr1: tuple[str | None, str | None, str | None],
+    evr1,
+    # evr2: tuple[str | None, str | None, str | None],
+    evr2,
+) -> int:
+    """
+    Compare two RPM package identifiers using full epoch–version–release semantics.
+
+    This is a pure‑Python equivalent of ``rpm.labelCompare()``, returning the same
+    ordering as the system RPM library without requiring the ``python3-rpm`` bindings.
+
+    The comparison is performed in three stages:
+
+    1. **Epoch** — compared numerically; missing or empty values are treated as 0.
+    2. **Version** — compared using RPM's ``rpmvercmp`` rules:
+       - Split into digit, alpha, and tilde (``~``) segments.
+       - Tilde sorts before all other characters (e.g. ``1.0~beta`` < ``1.0``).
+       - Numeric segments are compared as integers, ignoring leading zeros.
+       - Numeric segments sort before alpha segments.
+    3. **Release** — compared with the same rules as version.
+
+    :param evr1: The first ``(epoch, version, release)`` triple to compare.
+                 Each element may be a string or ``None``.
+    :param evr2: The second ``(epoch, version, release)`` triple to compare.
+                 Each element may be a string or ``None``.
+    :return: ``-1`` if ``evr1`` is considered older than ``evr2``,
+             ``0`` if they are considered equal,
+             ``1`` if ``evr1`` is considered newer than ``evr2``.
+
+    .. note::
+       This comparison is **not** the same as PEP 440, ``LooseVersion``, or
+       ``StrictVersion``. It is intended for RPM package metadata and will match
+       the ordering used by tools like ``rpm``, ``dnf``, and ``yum``.
+
+    .. code-block:: python
+
+       >>> label_compare(("0", "1.2.3", "1"), ("0", "1.2.3", "2"))
+       -1
+       >>> label_compare(("1", "1.0", "1"), ("0", "9.9", "9"))
+       1
+       >>> label_compare(("0", "1.0~beta", "1"), ("0", "1.0", "1"))
+       -1
+    """
+    epoch1, version1, release1 = evr1
+    epoch2, version2, release2 = evr2
+    epoch1 = int(epoch1 or 0)
+    epoch2 = int(epoch2 or 0)
+    if epoch1 != epoch2:
+        return 1 if epoch1 > epoch2 else -1
+    cmp_versions = _rpmvercmp(version1 or "", version2 or "")
+    if cmp_versions != 0:
+        return cmp_versions
+    return _rpmvercmp(release1 or "", release2 or "")
+
+
+def _rpmvercmp(a: str, b: str) -> int:
+    """
+    Pure-Python comparator matching RPM's rpmvercmp().
+    Handles separators, tilde (~), caret (^), numeric/alpha segments.
+    """
+    # Fast path: identical strings
+    if a == b:
+        return 0
+
+    i = j = 0
+    la, lb = len(a), len(b)
+
+    def isalnum_(c: str) -> bool:
+        return c.isalnum()
+
+    while i < la or j < lb:
+        # Skip separators: anything not alnum, not ~, not ^
+        while i < la and not (isalnum_(a[i]) or a[i] in "~^"):
+            i += 1
+        while j < lb and not (isalnum_(b[j]) or b[j] in "~^"):
+            j += 1
+
+        # Tilde: sorts before everything else
+        if i < la and a[i] == "~" or j < lb and b[j] == "~":
+            if not (i < la and a[i] == "~"):
+                return 1
+            if not (j < lb and b[j] == "~"):
+                return -1
+            i += 1
+            j += 1
+            continue
+
+        # Caret: like tilde except base (end) loses to caret
+        if i < la and a[i] == "^" or j < lb and b[j] == "^":
+            if i >= la:
+                return -1
+            if j >= lb:
+                return 1
+            if not (i < la and a[i] == "^"):
+                return 1
+            if not (j < lb and b[j] == "^"):
+                return -1
+            i += 1
+            j += 1
+            continue
+
+        # If either ran out now, stop
+        if not (i < la and j < lb):
+            break
+
+        # Segment start positions
+        si, sj = i, j
+
+        # Decide type from left side
+        isnum = a[i].isdigit()
+        if isnum:
+            while i < la and a[i].isdigit():
+                i += 1
+            while j < lb and b[j].isdigit():
+                j += 1
+        else:
+            while i < la and a[i].isalpha():
+                i += 1
+            while j < lb and b[j].isalpha():
+                j += 1
+
+        # If right side had no same‑type run, types differ
+        if sj == j:
+            return 1 if isnum else -1
+
+        seg_a = a[si:i]
+        seg_b = b[sj:j]
+
+        if isnum:
+            # Strip leading zeros
+            seg_a_nz = seg_a.lstrip("0")
+            seg_b_nz = seg_b.lstrip("0")
+            # Compare by length
+            if len(seg_a_nz) != len(seg_b_nz):
+                return 1 if len(seg_a_nz) > len(seg_b_nz) else -1
+            # Same length: lexicographic
+            if seg_a_nz != seg_b_nz:
+                return 1 if seg_a_nz > seg_b_nz else -1
+        else:
+            # Alpha vs alpha
+            if seg_a != seg_b:
+                return 1 if seg_a > seg_b else -1
+        # else equal segment → loop continues
+
+    # Tail handling
+    if i >= la and j >= lb:
+        return 0
+    return -1 if i >= la else 1
+
+
 def version_to_evr(verstring):
     """
     Split the package version string into epoch, version and release.

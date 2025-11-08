@@ -21,6 +21,7 @@ import tempfile
 import textwrap
 import time
 import urllib.parse
+from collections import OrderedDict
 
 import salt.config
 import salt.utils.args
@@ -31,7 +32,6 @@ import salt.utils.files
 import salt.utils.functools
 import salt.utils.hashutils
 import salt.utils.network
-import salt.utils.odict
 import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -423,12 +423,12 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     # do the interface with lxc.init mainly via nic_opts
     # to avoid extra and confusing extra use cases.
     if not isinstance(nic_opts, dict):
-        nic_opts = salt.utils.odict.OrderedDict()
+        nic_opts = OrderedDict()
     # have a reference to the default nic
-    eth0 = nic_opts.setdefault(default_nic, salt.utils.odict.OrderedDict())
+    eth0 = nic_opts.setdefault(default_nic, OrderedDict())
     # lxc config is based of ifc order, be sure to use odicts.
-    if not isinstance(nic_opts, salt.utils.odict.OrderedDict):
-        bnic_opts = salt.utils.odict.OrderedDict()
+    if not isinstance(nic_opts, OrderedDict):
+        bnic_opts = OrderedDict()
         bnic_opts.update(nic_opts)
         nic_opts = bnic_opts
     gw = None
@@ -742,7 +742,7 @@ def _network_conf(conf_tuples=None, **kwargs):
         link = opts.get("link", args.get("link", ""))
         ipv4 = opts.get("ipv4", args.get("ipv4", ""))
         ipv6 = opts.get("ipv6", args.get("ipv6", ""))
-        infos = salt.utils.odict.OrderedDict(
+        infos = OrderedDict(
             [
                 (
                     "lxc.network.type",
@@ -873,7 +873,7 @@ def _network_conf(conf_tuples=None, **kwargs):
     ret = []
     for val in new.values():
         for row in val:
-            ret.append(salt.utils.odict.OrderedDict([(row, val[row])]))
+            ret.append(OrderedDict([(row, val[row])]))
     # on old versions of lxc, still support the gateway auto mode
     # if we didn't explicitly say no to
     # (lxc.network.ipv4.gateway: auto)
@@ -970,8 +970,8 @@ def _get_veths(net_data):
     """
     if isinstance(net_data, dict):
         net_data = list(net_data.items())
-    nics = salt.utils.odict.OrderedDict()
-    current_nic = salt.utils.odict.OrderedDict()
+    nics = OrderedDict()
+    current_nic = OrderedDict()
     no_names = True
     for item in net_data:
         if item and isinstance(item, dict):
@@ -985,7 +985,7 @@ def _get_veths(net_data):
             elif "=" in item:
                 item = tuple(a.strip() for a in item.split("=", 1))
         if item[0] == "lxc.network.type":
-            current_nic = salt.utils.odict.OrderedDict()
+            current_nic = OrderedDict()
         if item[0] == "lxc.network.name":
             no_names = False
             nics[item[1].strip()] = current_nic
@@ -4445,10 +4445,10 @@ def edit_conf(
                 lxc_kws.pop(kwarg, None)
         if net_params:
             net_config.append(net_params)
-    nic_opts = salt.utils.odict.OrderedDict()
+    nic_opts = OrderedDict()
     for params in net_config:
         dev = params.get("lxc.network.name", DEFAULT_NIC)
-        dev_opts = nic_opts.setdefault(dev, salt.utils.odict.OrderedDict())
+        dev_opts = nic_opts.setdefault(dev, OrderedDict())
         for param in params:
             opt = param.replace("lxc.network.", "")
             opt = {"hwaddr": "mac"}.get(opt, opt)
@@ -4636,7 +4636,7 @@ def reconfigure(
         utsname = select("utsname", utsname)
     if os.path.exists(path):
         old_chunks = read_conf(path, out_format="commented")
-        make_kw = salt.utils.odict.OrderedDict(
+        make_kw = OrderedDict(
             [
                 ("utsname", utsname),
                 ("rootfs", rootfs),
@@ -4653,7 +4653,7 @@ def reconfigure(
         # match 0 and none as memory = 0 in lxc config is harmful
         if memory:
             make_kw["memory"] = memory
-        kw = salt.utils.odict.OrderedDict()
+        kw = OrderedDict()
         for key, val in make_kw.items():
             if val is not None:
                 kw[key] = val

@@ -49,9 +49,9 @@ Connection module for Amazon RDS
 
 import logging
 import time
+from collections import OrderedDict
 
 import salt.utils.compat
-import salt.utils.odict as odict
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
@@ -621,7 +621,7 @@ def update_parameter_group(
 
     param_list = []
     for key, value in parameters.items():
-        item = odict.OrderedDict()
+        item = OrderedDict()
         item.update({"ParameterName": key})
         item.update({"ApplyMethod": apply_method})
         if type(value) is bool:
@@ -1093,12 +1093,12 @@ def describe_parameters(
             "ApplyMethod",
         ]
 
-        parameters = odict.OrderedDict()
+        parameters = OrderedDict()
         ret = {"result": True}
 
         for p in pit:
             for result in p["Parameters"]:
-                data = odict.OrderedDict()
+                data = OrderedDict()
                 for k in keys:
                     data[k] = result.get(k)
 

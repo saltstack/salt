@@ -9,11 +9,11 @@ Module for running fmadm and fmdump on Solaris
 """
 
 import logging
+from collections import OrderedDict
 
 import salt.utils.decorators as decorators
 import salt.utils.path
 import salt.utils.platform
-from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
