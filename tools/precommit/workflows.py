@@ -82,6 +82,12 @@ TEST_SALT_LISTING = PlatformDefinitions(
                 container="ghcr.io/saltstack/salt-ci-containers/testing:debian-12",
             ),
             Linux(
+                slug="debian-13",
+                display_name="Debian 13",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:debian-13",
+            ),
+            Linux(
                 slug="fedora-40",
                 display_name="Fedora 40",
                 arch="x86_64",
