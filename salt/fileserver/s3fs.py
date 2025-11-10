@@ -591,7 +591,9 @@ def _prune_deleted_files(metadata):
                     roots.add(root)
 
             for meta in env_data:
-                cached_files.add(meta["Key"])
+                for bucket in meta.keys():
+                    for obj in meta[bucket]:
+                        cached_files.add(obj["Key"])
 
     if log.isEnabledFor(logging.DEBUG):
         import pprint
