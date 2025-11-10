@@ -1015,7 +1015,8 @@ def _get_site_prefixes(
     # Clean up duplicate data in the dictionary
     prefix_count = 0
     for prefix in site_prefixes_results:
-        del site_prefixes_results[prefix_count]["site"]
+        site_prefixes_results[prefix_count].pop("site", None)
+        site_prefixes_results[prefix_count].pop("scope", None)
         prefix_count += 1
 
     # Return the results
