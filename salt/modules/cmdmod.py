@@ -419,7 +419,8 @@ def _run(
             ):
                 cmd = _prep_powershell_cmd(win_shell, cmd, encoded_cmd)
             elif any(win_shell_lower.endswith(word) for word in ["cmd.exe"]):
-                cmd = salt.platform.win.prepend_cmd(win_shell, cmd)
+                if python_shell:
+                    cmd = salt.platform.win.prepend_cmd(win_shell, cmd)
             else:
                 raise CommandExecutionError(f"unsupported shell type: {win_shell}")
         else:
@@ -456,7 +457,7 @@ def _run(
 
     if runas and salt.utils.platform.is_darwin():
         # We need to insert the user simulation into the command itself and not
-        # just run it from the environment on macOS as that method doesn't work
+        # just run it from the environment on MacOS as that method doesn't work
         # properly when run as root for certain commands.
         if isinstance(cmd, (list, tuple)):
             cmd = " ".join(map(_cmd_quote, cmd))
@@ -725,7 +726,12 @@ def _run(
             f"Specified cwd '{cwd}' either not absolute or does not exist"
         )
 
-    if python_shell is not True and not isinstance(cmd, list):
+    if (
+        python_shell is not True
+        and shell is not None
+        # and not salt.utils.platform.is_windows()
+        and not isinstance(cmd, list)
+    ):
         cmd = salt.utils.args.shlex_split(cmd)
 
     if success_retcodes is None:
@@ -1112,7 +1118,7 @@ def run(
 
         .. warning::
 
-            For versions 2018.3.3 and above on macosx while using runas,
+            For versions 2018.3.3 and above on MacOS while using runas,
             on linux while using run, to pass special characters to the
             command you need to escape the characters on the shell.
 
@@ -1434,12 +1440,12 @@ def shell(
 
     :param str runas: Specify an alternate user to run the command. The default
         behavior is to run as the user under which Salt is running. If running
-        on a Windows minion you must also use the ``password`` argument, and
+        on a Windows minion, you must also use the ``password`` argument, and
         the target user account must be in the Administrators group.
 
         .. warning::
 
-            For versions 2018.3.3 and above on macosx while using runas,
+            For versions 2018.3.3 and above on MacOS while using runas,
             to pass special characters to the command you need to escape
             the characters on the shell.
 
@@ -1611,9 +1617,10 @@ def shell(
 
         salt '*' cmd.shell cmd='sed -e s/=/:/g'
     """
-    if "python_shell" in kwargs:
-        python_shell = kwargs.pop("python_shell")
-    else:
+    # for cmd.shell, we always want to use python_shell, unless otherwise
+    # specified. If it is None, we will make it True
+    python_shell = kwargs.pop("python_shell", True)
+    if python_shell is None:
         python_shell = True
     return run(
         cmd,
@@ -1696,7 +1703,7 @@ def run_stdout(
 
         .. warning::
 
-            For versions 2018.3.3 and above on macosx while using runas,
+            For versions 2018.3.3 and above on MacOS while using runas,
             to pass special characters to the command you need to escape
             the characters on the shell.
 
@@ -1930,7 +1937,7 @@ def run_stderr(
 
         .. warning::
 
-            For versions 2018.3.3 and above on macosx while using runas,
+            For versions 2018.3.3 and above on MacOS while using runas,
             to pass special characters to the command you need to escape
             the characters on the shell.
 
@@ -2166,7 +2173,7 @@ def run_all(
 
         .. warning::
 
-            For versions 2018.3.3 and above on macosx while using runas,
+            For versions 2018.3.3 and above on MacOS while using runas,
             to pass special characters to the command you need to escape
             the characters on the shell.
 
@@ -2443,7 +2450,7 @@ def retcode(
 
         .. warning::
 
-            For versions 2018.3.3 and above on macosx while using runas,
+            For versions 2018.3.3 and above on MacOS while using runas,
             to pass special characters to the command you need to escape
             the characters on the shell.
 
@@ -4695,7 +4702,7 @@ def run_bg(
 
         .. warning::
 
-            For versions 2018.3.3 and above on macosx while using runas,
+            For versions 2018.3.3 and above on MacOS while using runas,
             to pass special characters to the command you need to escape
             the characters on the shell.
 

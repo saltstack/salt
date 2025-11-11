@@ -13,21 +13,14 @@ import salt.utils.platform
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
+    pytest.mark.skip_on_freebsd,
 ]
 
 
 @pytest.fixture
 def test_cmd():
     if salt.utils.platform.is_windows():
-        # I couldn't find a command on Windows that acts the same way as the
-        # printf statement in Linux
-        # Powershell
-        # cmd = (
-        #     '("{0}`n{1}`n{2}" -f "first", "second", "third" | Measure-Object -Line).Lines; '
-        #     "$env:SALTY_VARIABLE='saltines'; echo $env:SALTY_VARIABLE; "
-        #     "echo duh *> $null"
-        # )
-        return '(echo(first & echo(second & echo(third) | find /v /c "" && echo saltines && echo duh > NUL 2>&1'
+        return 'where cmd whoami xcopy | find /c /v "" && echo saltines && echo duh > NUL 2>&1'
     else:
         return (
             "printf '%s\\n' first second third | wc -l ; "
@@ -39,7 +32,7 @@ def test_cmd():
 @pytest.fixture
 def ret_disabled():
     if salt.utils.platform.is_windows():
-        return "Access denied - \\"
+        return 'ERROR: Value for default option cannot be empty.\r\nType "WHERE /?" for usage.'
     else:
         return (
             "first\nsecond\nthird\n|\nwc\n-l\n;\nexport\nSALTY_VARIABLE=saltines"
@@ -62,9 +55,7 @@ def state(modules):
     return modules.state
 
 
-# @pytest.mark.skip_on_windows(reason="Skip on Windows OS")
-@pytest.mark.skip_on_freebsd
-def test_shell_default_disabled(cmd, test_cmd, ret_disabled):
+def test_run_default(cmd, test_cmd, ret_disabled):
     """
     ensure that python_shell defaults to False for cmd.run
     """
@@ -72,27 +63,195 @@ def test_shell_default_disabled(cmd, test_cmd, ret_disabled):
     assert ret == ret_disabled
 
 
-# @pytest.mark.skip_on_windows(reason="Skip on Windows OS")
-def test_shell_disabled(cmd, test_cmd, ret_disabled):
+def test_shell_default(cmd, test_cmd, ret_enabled):
     """
-    test shell disabled output for cmd.run
+    ensure that python_shell defaults to True for cmd.shell
+    """
+    ret = cmd.shell(test_cmd)
+    assert ret == ret_enabled
+
+
+def test_run_disabled(cmd, test_cmd, ret_disabled):
+    """
+    test python_shell disabled output for cmd.run
     """
     ret = cmd.run(test_cmd, python_shell=False)
     assert ret.strip() == ret_disabled
 
 
-# @pytest.mark.skip_on_windows(reason="Skip on Windows OS")
-def test_shell_enabled(cmd, test_cmd, ret_enabled):
+def test_shell_disabled(cmd, test_cmd, ret_disabled):
     """
-    test shell disabled output for cmd.run
+    test python_shell disabled output for cmd.shell
     """
-    enabled_ret = f"3{os.linesep}saltines"
+    ret = cmd.shell(test_cmd, python_shell=False)
+    assert ret.strip() == ret_disabled
+
+
+def test_run_enabled(cmd, test_cmd, ret_enabled):
+    """
+    test python_shell enabled output for cmd.run
+    """
     ret = cmd.run(test_cmd, python_shell=True)
     assert ret.strip() == ret_enabled
 
 
-# @pytest.mark.skip_on_windows(reason="Skip on Windows OS")
-def test_template_shell(state, state_tree, test_cmd, ret_enabled):
+def test_shell_enabled(cmd, test_cmd, ret_enabled):
+    """
+    test python_shell enabled output for cmd.shell
+    """
+    ret = cmd.shell(test_cmd, python_shell=True)
+    assert ret.strip() == ret_enabled
+
+
+@pytest.mark.slow_test
+def test_template_run_default(state, state_tree, test_cmd, ret_disabled):
+    """
+    test python_shell disabled output for templates using run
+    (python_shell=False is the default beginning with the 2017.7.0 release).
+    """
+    state_name = "template_run_default"
+    state_file_name = state_name + ".sls"
+    if salt.utils.platform.is_windows():
+        test_cmd = f"'{test_cmd}'"
+    else:
+        test_cmd = f'"{test_cmd}"'
+    state_file_contents = textwrap.dedent(
+        f"""
+        {{% set run_default= salt['cmd.run']({test_cmd}) %}}
+
+        run_default:
+          test.configurable_test_state:
+            - name: '{{{{ run_default }}}}'
+        """
+    )
+
+    # the result of running self.cmd not in a shell
+    ret_disabled = ret_disabled.replace(os.linesep, " ")
+    ret_key = f"test_|-run_default_|-{ret_disabled}_|-configurable_test_state"
+    with pytest.helpers.temp_file(state_file_name, state_file_contents, state_tree):
+        ret = state.sls(state_name)
+        assert ret[ret_key]["name"] == ret_disabled
+
+
+@pytest.mark.slow_test
+def test_template_shell_default(state, state_tree, test_cmd, ret_enabled):
+    """
+    test python_shell enabled output for templates using shell
+    (python_shell=True is the default beginning with the 2017.7.0 release).
+    """
+    state_name = "template_shell_enabled"
+    state_file_name = state_name + ".sls"
+    if salt.utils.platform.is_windows():
+        test_cmd = f"'{test_cmd}'"
+    else:
+        test_cmd = f'"{test_cmd}"'
+    state_file_contents = textwrap.dedent(
+        f"""
+        {{% set shell_default= salt['cmd.shell']({test_cmd}) %}}
+
+        shell_default:
+          test.configurable_test_state:
+            - name: '{{{{ shell_default }}}}'
+        """
+    )
+
+    # the result of running self.cmd not in a shell
+    ret_enabled = ret_enabled.replace(os.linesep, " ")
+    ret_key = f"test_|-shell_default_|-{ret_enabled}_|-configurable_test_state"
+    with pytest.helpers.temp_file(state_file_name, state_file_contents, state_tree):
+        ret = state.sls(state_name)
+        assert ret[ret_key]["name"] == ret_enabled
+
+
+@pytest.mark.slow_test
+def test_template_run_disabled(state, state_tree, test_cmd, ret_disabled):
+    """
+    test python_shell disabled output for templates using run
+    """
+    state_name = "template_run_disabled"
+    state_file_name = state_name + ".sls"
+    if salt.utils.platform.is_windows():
+        test_cmd = f"'{test_cmd}'"
+    else:
+        test_cmd = f'"{test_cmd}"'
+    state_file_contents = textwrap.dedent(
+        f"""
+        {{% set run_disabled = salt['cmd.run']({test_cmd}, python_shell=False) %}}
+
+        run_disabled:
+          test.configurable_test_state:
+            - name: '{{{{ run_disabled }}}}'
+        """
+    )
+
+    # the result of running self.cmd not in a shell
+    ret_disabled = ret_disabled.replace(os.linesep, " ")
+    ret_key = f"test_|-run_disabled_|-{ret_disabled}_|-configurable_test_state"
+    with pytest.helpers.temp_file(state_file_name, state_file_contents, state_tree):
+        ret = state.sls(state_name)
+        assert ret[ret_key]["name"] == ret_disabled
+
+
+@pytest.mark.slow_test
+def test_template_shell_disabled(state, state_tree, test_cmd, ret_disabled):
+    """
+    test python_shell disabled output for templates using shell
+    """
+    state_name = "template_shell_disabled"
+    state_file_name = state_name + ".sls"
+    if salt.utils.platform.is_windows():
+        test_cmd = f"'{test_cmd}'"
+    else:
+        test_cmd = f'"{test_cmd}"'
+    state_file_contents = textwrap.dedent(
+        f"""
+        {{% set shell_disabled = salt['cmd.shell']({test_cmd}, python_shell=False) %}}
+
+        shell_disabled:
+          test.configurable_test_state:
+            - name: '{{{{ shell_disabled }}}}'
+        """
+    )
+
+    # the result of running self.cmd not in a shell
+    ret_disabled = ret_disabled.replace(os.linesep, " ")
+    ret_key = f"test_|-shell_disabled_|-{ret_disabled}_|-configurable_test_state"
+    with pytest.helpers.temp_file(state_file_name, state_file_contents, state_tree):
+        ret = state.sls(state_name)
+        assert ret[ret_key]["name"] == ret_disabled
+
+
+@pytest.mark.slow_test
+def test_template_run_enabled(state, state_tree, test_cmd, ret_enabled):
+    """
+    Test cmd.run works correctly when using a template.
+    """
+    state_name = "template_run_enabled"
+    state_file_name = state_name + ".sls"
+    if salt.utils.platform.is_windows():
+        test_cmd = f"'{test_cmd}'"
+    else:
+        test_cmd = f'"{test_cmd}"'
+    state_file_contents = textwrap.dedent(
+        f"""
+        {{% set run_enabled = salt['cmd.run']({test_cmd}, python_shell=True).strip() %}}
+
+        run_enabled:
+          test.configurable_test_state:
+            - name: '{{{{ run_enabled }}}}'
+        """
+    )
+
+    ret_enabled = ret_enabled.replace(os.linesep, " ")
+    ret_key = f"test_|-run_enabled_|-{ret_enabled}_|-configurable_test_state"
+
+    with pytest.helpers.temp_file(state_file_name, state_file_contents, state_tree):
+        ret = state.sls(state_name)
+        assert ret[ret_key]["name"] == ret_enabled
+
+
+@pytest.mark.slow_test
+def test_template_shell_enabled(state, state_tree, test_cmd, ret_enabled):
     """
     Test cmd.shell works correctly when using a template.
 
@@ -102,9 +261,13 @@ def test_template_shell(state, state_tree, test_cmd, ret_enabled):
     """
     state_name = "template_shell_enabled"
     state_file_name = state_name + ".sls"
+    if salt.utils.platform.is_windows():
+        test_cmd = f"'{test_cmd}'"
+    else:
+        test_cmd = f'"{test_cmd}"'
     state_file_contents = textwrap.dedent(
         f"""
-        {{% set shell_enabled = salt['cmd.shell']("{test_cmd}", python_shell=True).strip() %}}
+        {{% set shell_enabled = salt['cmd.shell']({test_cmd}, python_shell=True).strip() %}}
 
         shell_enabled:
           test.configurable_test_state:
@@ -118,30 +281,3 @@ def test_template_shell(state, state_tree, test_cmd, ret_enabled):
     with pytest.helpers.temp_file(state_file_name, state_file_contents, state_tree):
         ret = state.sls(state_name)
         assert ret[ret_key]["name"] == ret_enabled
-
-
-# @pytest.mark.skip_on_windows(reason="Skip on Windows OS")
-@pytest.mark.slow_test
-def test_template_default_disabled(state, state_tree, test_cmd, ret_disabled):
-    """
-    test shell disabled output for templates (python_shell=False is the default
-    beginning with the 2017.7.0 release).
-    """
-    state_name = "template_shell_disabled"
-    state_file_name = state_name + ".sls"
-    state_file_contents = textwrap.dedent(
-        f"""
-        {{% set shell_disabled = salt['cmd.run']("{test_cmd}") %}}
-
-        shell_enabled:
-          test.configurable_test_state:
-            - name: '{{{{ shell_disabled }}}}'
-        """
-    )
-
-    # the result of running self.cmd not in a shell
-    ret_disabled = ret_disabled.replace(os.linesep, " ")
-    ret_key = f"test_|-shell_enabled_|-{ret_disabled}_|-configurable_test_state"
-    with pytest.helpers.temp_file(state_file_name, state_file_contents, state_tree):
-        ret = state.sls(state_name)
-        assert ret[ret_key]["name"] == ret_disabled

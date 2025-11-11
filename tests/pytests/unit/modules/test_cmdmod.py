@@ -671,11 +671,14 @@ def test_run_all_output_loglevel_debug(caplog):
     stdout = b"test"
     proc = MagicMock(return_value=MockTimedProc(stdout=stdout))
 
-    if salt.utils.platform.is_windows():
-        run_cmd = salt.utils.path.which("cmd")
-        expected = f"Executing command '{run_cmd}' in directory"
-    else:
-        expected = "Executing command 'some' in directory"
+    # When we get back to having to specify a shell, we may need to change this
+    # back.
+    # if salt.utils.platform.is_windows():
+    #     run_cmd = salt.utils.path.which("cmd")
+    #     expected = f"Executing command '{run_cmd}' in directory"
+    # else:
+    #     expected = "Executing command 'some' in directory"
+    expected = "Executing command 'some' in directory"
 
     with patch("salt.utils.timed_subprocess.TimedProc", proc):
         with caplog.at_level(logging.DEBUG, logger="salt.modules.cmdmod"):

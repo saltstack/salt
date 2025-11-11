@@ -19,7 +19,7 @@ AVAILABLE_PYTHON_EXECUTABLE = salt.utils.path.which_bin(
 
 if sys.platform.startswith("win32"):
     SHELL = "cmd"
-    PYTHON_SHELL = False
+    PYTHON_SHELL = True
 elif sys.platform.startswith(("freebsd", "openbsd")):
     SHELL = "/bin/sh"
     PYTHON_SHELL = True
@@ -370,6 +370,17 @@ class CMDModuleTest(ModuleCase):
         self.assertIsInstance(cmd_run, str)
         self.assertEqual(cmd_which.rstrip(), cmd_run.rstrip())
 
+    @pytest.mark.skip_unless_on_windows
+    def test_which_win(self):
+        """
+        cmd.which
+        """
+        cmd_which = self.run_function("cmd.which", ["cmd"])
+        self.assertIsInstance(cmd_which, str)
+        cmd_run = self.run_function("cmd.run", ["where cmd"])
+        self.assertIsInstance(cmd_run, str)
+        self.assertEqual(cmd_which.rstrip().lower(), cmd_run.rstrip().lower())
+
     @pytest.mark.skip_on_windows
     @pytest.mark.skip_if_binaries_missing("which")
     def test_which_bin(self):
@@ -379,6 +390,15 @@ class CMDModuleTest(ModuleCase):
         cmds = ["pip3", "pip2", "pip", "pip-python"]
         ret = self.run_function("cmd.which_bin", [cmds])
         self.assertTrue(os.path.split(ret)[1] in cmds)
+
+    @pytest.mark.skip_unless_on_windows
+    def test_which_bin_win(self):
+        """
+        cmd.which_bin
+        """
+        cmds = ["python.exe", "find.exe", "where.exe", "findstr.exe"]
+        ret = self.run_function("cmd.which_bin", [cmds])
+        self.assertTrue(os.path.split(ret)[1].lower() in cmds)
 
     @pytest.mark.slow_test
     def test_has_exec(self):
