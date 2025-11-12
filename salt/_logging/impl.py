@@ -559,6 +559,13 @@ if logging.getLoggerClass() is not SaltLoggingClass:
         logging.root.addHandler(get_temp_handler())
 
 
+# Override asyncio logger class if asyncio is already imported
+if "asyncio" in sys.modules:
+    asyncio_logger = logging.getLogger("asyncio")
+    if not isinstance(asyncio_logger, SaltLoggingClass):
+        asyncio_logger.__class__ = SaltLoggingClass
+
+
 # Now that we defined the default logging logger class, we can instantiate our logger
 # DO NOT MOVE THIS
 log = logging.getLogger(__name__)
