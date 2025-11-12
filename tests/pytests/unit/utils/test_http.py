@@ -183,6 +183,9 @@ def test_query_tornado_httperror_no_response():
 
     mock_client = MagicMock()
     mock_client.fetch.side_effect = http_error
+    # http.query() uses SyncWrapper as a context manager; ensure
+    # __enter__() returns the mock_client itself.
+    mock_client.__enter__.return_value = mock_client
 
     # http.query() wraps tornado's AsyncHTTPClient in a SyncWrapper before
     # calling .fetch(); patch the wrapper so .fetch() raises the HTTPError.
