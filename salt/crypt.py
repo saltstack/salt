@@ -29,6 +29,7 @@ import salt.cache
 import salt.channel.client
 import salt.defaults.exitcodes
 import salt.payload
+import salt.utils.asynchronous
 import salt.utils.crypt
 import salt.utils.decorators
 import salt.utils.event
@@ -766,7 +767,12 @@ class AsyncAuth:
             self.mpub = "minion_master.pub"
         if not os.path.isfile(self.pub_path):
             self.get_keys()
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        if io_loop is None:
+            self.io_loop = salt.utils.asynchronous.aioloop(
+                tornado.ioloop.IOLoop.current()
+            )
+        else:
+            self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
         key = self.__key(self.opts)
         # TODO: if we already have creds for this key, lets just re-use
         if key in AsyncAuth.creds_map:
@@ -833,13 +839,13 @@ class AsyncAuth:
         else:
             future = tornado.concurrent.Future()
             self._authenticate_future = future
-            self.io_loop.add_callback(self._authenticate)
+            self.io_loop.create_task(self._authenticate())
 
         if callback is not None:
 
             def handle_future(future):
                 response = future.result()
-                self.io_loop.add_callback(callback, response)
+                self.io_loop.call_soon(callback, response)
 
             future.add_done_callback(handle_future)
 
