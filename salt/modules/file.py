@@ -479,6 +479,9 @@ def lchown(path, user, group):
         else:
             gid = -1
 
+    if err:
+        return err
+
     return os.lchown(path, uid, gid)
 
 
@@ -3604,6 +3607,8 @@ def seek_write(path, data, offset):
 
         salt '*' file.seek_write /path/to/file 'some data' 4096
     """
+    if isinstance(data, str):
+        data = data.encode()
     path = os.path.expanduser(path)
     seek_fh = os.open(path, os.O_WRONLY)
     try:
