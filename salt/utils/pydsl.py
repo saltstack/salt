@@ -83,10 +83,10 @@ Example of a ``cmd`` state calling a python function::
 #
 
 
+from collections import OrderedDict
 from uuid import uuid4 as _uuid
 
 from salt.state import HighState
-from salt.utils.odict import OrderedDict
 
 REQUISITES = set(
     "listen require watch prereq use listen_in require_in watch_in prereq_in use_in"

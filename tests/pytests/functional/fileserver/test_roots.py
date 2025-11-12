@@ -1,10 +1,10 @@
 import os.path
 import posixpath
+from collections import OrderedDict
 
 import pytest
 
 import salt.fileserver.roots as roots
-from salt.utils.odict import OrderedDict
 from tests.support.mock import patch
 
 pytestmark = [

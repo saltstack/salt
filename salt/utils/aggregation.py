@@ -104,8 +104,7 @@
 
 import copy
 import logging
-
-from salt.utils.odict import OrderedDict
+from collections import OrderedDict
 
 __all__ = ["aggregate", "Aggregate", "Map", "Scalar", "Sequence"]
 

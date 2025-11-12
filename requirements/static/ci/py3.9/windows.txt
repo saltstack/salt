@@ -162,12 +162,12 @@ idna==3.7
     #   requests
     #   trustme
     #   yarl
-immutables==0.21 ; sys_platform != "linux"
+immutables==0.21
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/base.txt
     #   contextvars
-importlib-metadata==6.6.0
+importlib-metadata==8.7.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/base.txt
@@ -479,7 +479,7 @@ toml==0.10.2
     # via -r requirements/static/ci/common.in
 tomli==2.0.1
     # via pytest
-tornado==6.4.2
+tornado==6.5.2
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/base.txt

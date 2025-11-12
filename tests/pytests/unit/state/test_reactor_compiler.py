@@ -1,10 +1,10 @@
 import logging
+from collections import OrderedDict
 
 import pytest
 
 import salt.minion
 import salt.state
-from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)

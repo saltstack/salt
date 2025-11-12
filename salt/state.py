@@ -59,6 +59,7 @@ from salt.exceptions import CommandExecutionError, SaltRenderError, SaltReqTimeo
 from salt.serializers.msgpack import deserialize as msgpack_deserialize
 from salt.serializers.msgpack import serialize as msgpack_serialize
 from salt.template import compile_template, compile_template_str
+from salt.utils.datastructures import DefaultOrderedDict, HashableOrderedDict
 from salt.utils.odict import DefaultOrderedDict, HashableOrderedDict
 from salt.utils.requisite import DependencyGraph, RequisiteType
 

@@ -109,7 +109,7 @@ jobs:
       matrix:
         include: ${{ fromJSON(inputs.matrix)['macos'] }}
     runs-on:
-      - ${{ matrix.arch == 'arm64' && 'macos-14' || 'macos-13' }}
+      - ${{ matrix.arch == 'arm64' && 'macos-14' || 'macos-15-intel' }}
     env:
       PIP_INDEX_URL: https://pypi.org/simple
       USE_S3_CACHE: 'false'

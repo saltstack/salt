@@ -3,11 +3,12 @@
     :codeauthor: Gareth J. Greenaway <ggreenaway@vmware.com>
 """
 
+from collections import OrderedDict
+
 import pytest
 
 import salt.modules.schedule as schedule_mod
 import salt.states.schedule as schedule
-from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, mock_open, patch
 
 

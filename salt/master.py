@@ -16,6 +16,7 @@ import stat
 import sys
 import threading
 import time
+from collections import OrderedDict
 
 import tornado.gen
 
@@ -62,7 +63,6 @@ from salt.transport import TRANSPORTS
 from salt.utils.channel import iter_transport_opts
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler
 from salt.utils.event import tagify
-from salt.utils.odict import OrderedDict
 from salt.utils.zeromq import ZMQ_VERSION_INFO, zmq
 
 try:

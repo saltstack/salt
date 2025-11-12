@@ -244,13 +244,13 @@ idna==3.7
     #   httpx
     #   requests
     #   yarl
-immutables==0.15 ; sys_platform == "linux"
+immutables==0.21
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
     #   contextvars
-importlib-metadata==6.6.0
+importlib-metadata==8.7.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -574,7 +574,7 @@ redis==3.5.3
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   redis-py-cluster
-requests==2.32.3 ; python_version >= "3.10"
+requests==2.32.5 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -697,7 +697,7 @@ toml==0.10.2
     #   -r requirements/static/ci/lint.in
 tomlkit==0.12.3
     # via pylint
-tornado==6.4.2
+tornado==6.5.2
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt

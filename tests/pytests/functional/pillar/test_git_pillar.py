@@ -1,8 +1,9 @@
+from collections import OrderedDict
+
 import pytest
 
 from salt.pillar.git_pillar import ext_pillar
 from salt.utils.immutabletypes import ImmutableDict, ImmutableList
-from salt.utils.odict import OrderedDict
 from tests.support.mock import patch
 
 pytestmark = [

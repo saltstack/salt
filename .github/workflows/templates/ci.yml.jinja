@@ -1,7 +1,7 @@
 <%- set gh_environment = gh_environment|default("ci") %>
 
 <%- extends 'layout.yml.jinja' %>
-<%- set pre_commit_version = "3.0.4" %>
+<%- set pre_commit_version = "4.3.0" %>
 
 
 <%- block jobs %>
@@ -19,6 +19,8 @@
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
       pre-commit-version: "<{ pre_commit_version }>"
+      ci-python-version: "<{ gh_actions_workflows_python_version }>"
+      full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
 
   <%- endif %>
 
@@ -295,6 +297,7 @@
       PIP_INDEX_URL: https://pypi.org/simple
     needs:
       - prepare-workflow
+      - test
       <%- for need in test_salt_needs.iter(consume=False) %>
       - <{ need }>
       <%- endfor %>
@@ -329,27 +332,6 @@
             send-notifications --git-service github --sha ${{ github.sha }}
 
 #}
-
-      - name: Merge All Code Coverage Test Run Artifacts
-        continue-on-error: true
-        uses: actions/upload-artifact/merge@v4
-        with:
-          name: all-testrun-coverage-artifacts
-          pattern: all-testrun-coverage-artifacts-*
-          separate-directories: false
-          delete-merged: true
-
-      - name: Get coverage reports
-        id: get-coverage-reports
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts/coverage/
-          pattern: all-testrun-coverage-artifacts*
-          merge-multiple: true
-
-      - name: Display structure of downloaded files
-        run: tree -a artifacts/
-
       - name: Install Codecov CLI
         run: |
           # We can't yet use tokenless uploads with the codecov CLI
@@ -364,6 +346,24 @@
           chmod +x codecov
           mv ./codecov /usr/local/bin/
 
+      - name: Get coverage reports
+        id: get-coverage-reports
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/coverage/
+          pattern: coverage*
+          merge-multiple: true
+
+      - name: Display structure of downloaded files (before combine)
+        run: tree -a artifacts/
+
+      - name: Combine Code Coverage
+        run: |
+          nox --force-color -e combine-coverage
+
+      - name: Display structure of downloaded files (after combine)
+        run: tree -a artifacts/
+
       - name: Create XML Coverage Reports
         run: |
           nox --force-color -e create-xml-coverage-reports
@@ -375,17 +375,9 @@
         run: |
           tools ci upload-coverage --commit-sha=${{ github.event.pull_request.head.sha || github.sha }} artifacts/coverage/
 
-      - name: Combine Code Coverage
-        run: |
-          nox --force-color -e combine-coverage
-
       - name: Report Salt Code Coverage
         run: |
           nox --force-color -e coverage-report -- salt
-
-      - name: Create Salt Code Coverage HTML Report
-        run: |
-          nox --force-color -e create-html-coverage-report -- salt
 
       - name: Create Salt Code Coverage HTML Report
         run: |

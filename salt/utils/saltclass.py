@@ -3,10 +3,10 @@ import glob
 import logging
 import os
 import re
+from collections import OrderedDict
 
 from jinja2 import Environment, FileSystemLoader
 
-import salt.utils.odict
 import salt.utils.path
 import salt.utils.yaml
 
@@ -295,10 +295,10 @@ def expand_classes_in_order(minion_dict, salt_data, seen_classes, classes_to_exp
     :param iterable(str) seen_classes: classes already processed
     :param iterable(str) classes_to_expand: classes to recursivly expand
     :return: Expanded classes in proper order
-    :rtype: salt.utils.odict.OrderedDict
+    :rtype: OrderedDict
     """
 
-    expanded_classes = salt.utils.odict.OrderedDict()
+    expanded_classes = OrderedDict()
 
     # Get classes to expand from minion dictionary
     if not classes_to_expand and "classes" in minion_dict:
@@ -310,9 +310,7 @@ def expand_classes_in_order(minion_dict, salt_data, seen_classes, classes_to_exp
     for klass in classes_to_expand:
         if klass not in seen_classes:
             seen_classes.append(klass)
-            klass_dict = salt.utils.odict.OrderedDict(
-                {klass: get_class(klass, salt_data)}
-            )
+            klass_dict = OrderedDict({klass: get_class(klass, salt_data)})
             # Fix corner case where class is loaded but doesn't contain anything
             if klass_dict[klass] is None:
                 klass_dict[klass] = {}

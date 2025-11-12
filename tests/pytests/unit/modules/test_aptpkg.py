@@ -4,6 +4,7 @@ import logging
 import os
 import pathlib
 import textwrap
+from collections import OrderedDict
 
 import pytest
 
@@ -15,7 +16,6 @@ from salt.exceptions import (
     CommandNotFoundError,
     SaltInvocationError,
 )
-from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, Mock, call, patch
 
 log = logging.getLogger(__name__)

@@ -2,8 +2,9 @@
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
+from collections import OrderedDict
+
 import salt.states.group as group
-from salt.utils.odict import OrderedDict
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase

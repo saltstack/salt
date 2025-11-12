@@ -10,12 +10,12 @@ and can be used from any Proxy or regular Minion.
 
 import difflib
 
+# Import Salt modules
+from collections import OrderedDict
+
 import salt.utils.dictdiffer
 import salt.utils.dictupdate
 from salt.exceptions import SaltException
-
-# Import Salt modules
-from salt.utils.odict import OrderedDict
 
 # ------------------------------------------------------------------------------
 # module properties
