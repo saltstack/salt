@@ -1046,8 +1046,11 @@ class MinionManager(MinionBase):
         self.max_auth_wait = self.opts["acceptance_wait_time_max"]
         self.minions = []
         self.jid_queue = []
-        self.tornado_loop = tornado.ioloop.IOLoop.current()
-        self.io_loop = salt.utils.asynchronous.aioloop(self.tornado_loop)
+        try:
+            self.io_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self.io_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self.io_loop)
         self.process_manager = ProcessManager(name="MultiMinionProcessManager")
         self.io_loop.create_task(self.process_manager.run(asynchronous=True))
         self.event_publisher = None
@@ -1065,11 +1068,11 @@ class MinionManager(MinionBase):
         self.io_loop.create_task(
             self.event_publisher.publisher(
                 self.event_publisher.publish_payload,
-                io_loop=self.tornado_loop,
+                io_loop=self.io_loop,
             )
         )
         self.event = salt.utils.event.get_event(
-            "minion", opts=self.opts, io_loop=self.tornado_loop
+            "minion", opts=self.opts, io_loop=self.io_loop
         )
         self.event.subscribe("")
         self.event.set_event_handler(self.handle_event)
@@ -1132,7 +1135,7 @@ class MinionManager(MinionBase):
                 s_opts,
                 s_opts["auth_timeout"],
                 False,
-                io_loop=self.tornado_loop,
+                io_loop=self.io_loop,
                 loaded_base_name="salt.loader.{}".format(s_opts["master"]),
                 jid_queue=self.jid_queue,
             )
@@ -1204,7 +1207,12 @@ class MinionManager(MinionBase):
         self._spawn_minions()
 
         # serve forever!
-        self.tornado_loop.start()
+        try:
+            self.io_loop.run_forever()
+        except (KeyboardInterrupt, SystemExit):
+            pass
+        finally:
+            self.io_loop.close()
 
     @property
     def restart(self):
@@ -1296,15 +1304,18 @@ class Minion(MinionBase):
         self.req_channel = None
 
         if io_loop is None:
-            self.tornado_loop = tornado.ioloop.IOLoop.current()
+            try:
+                self.io_loop = asyncio.get_running_loop()
+            except RuntimeError:
+                self.io_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(self.io_loop)
         else:
-            # Ensure we have a Tornado IOLoop for .start(), .stop(), etc.
-            if isinstance(io_loop, tornado.ioloop.IOLoop):
-                self.tornado_loop = io_loop
+            # Accept either asyncio loop or Tornado IOLoop (extract asyncio loop)
+            if isinstance(io_loop, asyncio.AbstractEventLoop):
+                self.io_loop = io_loop
             else:
-                # If passed an asyncio loop, wrap it in Tornado IOLoop
-                self.tornado_loop = tornado.ioloop.IOLoop.current()
-        self.io_loop = salt.utils.asynchronous.aioloop(self.tornado_loop)
+                # Assume it's a Tornado IOLoop, extract the asyncio loop
+                self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
 
         # Warn if ZMQ < 3.2
         if zmq:
@@ -1390,7 +1401,7 @@ class Minion(MinionBase):
         if timeout:
             self.io_loop.call_later(timeout, self.io_loop.stop)
         try:
-            self.tornado_loop.start()
+            self.io_loop.run_forever()
         except KeyboardInterrupt:
             self.destroy()
         # I made the following 3 line oddity to preserve traceback.
@@ -3326,14 +3337,17 @@ class Minion(MinionBase):
 
         if start:
             try:
-                self.tornado_loop.start()
+                self.io_loop.run_forever()
                 if self.restart:
                     self.destroy()
             except (
                 KeyboardInterrupt,
                 RuntimeError,
-            ):  # A RuntimeError can be re-raised by Tornado on shutdown
+            ):  # A RuntimeError can be re-raised during shutdown
                 self.destroy()
+            finally:
+                if not self.io_loop.is_closed():
+                    self.io_loop.close()
 
     async def _handle_payload(self, payload):
         if payload is not None and payload["enc"] == "aes":
@@ -3617,15 +3631,18 @@ class SyndicManager(MinionBase):
         self.jid_forward_cache = set()
 
         if io_loop is None:
-            self.tornado_loop = tornado.ioloop.IOLoop.current()
+            try:
+                self.io_loop = asyncio.get_running_loop()
+            except RuntimeError:
+                self.io_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(self.io_loop)
         else:
-            # Ensure we have a Tornado IOLoop for .start(), .stop(), etc.
-            if isinstance(io_loop, tornado.ioloop.IOLoop):
-                self.tornado_loop = io_loop
+            # Accept either asyncio loop or Tornado IOLoop (extract asyncio loop)
+            if isinstance(io_loop, asyncio.AbstractEventLoop):
+                self.io_loop = io_loop
             else:
-                # If passed an asyncio loop, wrap it in Tornado IOLoop
-                self.tornado_loop = tornado.ioloop.IOLoop.current()
-        self.io_loop = salt.utils.asynchronous.aioloop(self.tornado_loop)
+                # Assume it's a Tornado IOLoop, extract the asyncio loop
+                self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
 
         # List of events
         self.raw_events = []
@@ -3859,7 +3876,13 @@ class SyndicManager(MinionBase):
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
 
-        self.tornado_loop.start()
+        try:
+            self.io_loop.run_forever()
+        except (KeyboardInterrupt, SystemExit):
+            pass
+        finally:
+            if not self.io_loop.is_closed():
+                self.io_loop.close()
 
     async def _process_event(self, raw):
         # TODO: cleanup: Move down into event class
