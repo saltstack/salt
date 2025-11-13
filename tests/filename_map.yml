@@ -28,7 +28,7 @@ salt/modules/cmdmod.py:
   - pytests.integration.modules.test_cmdmod
   - pytests.unit.modules.test_cmdmod
   - pytests.unit.platform.test_win
-  - pytests.unit.test_win_functions
+  - pytests.unit.utils.test_win_functions
 
 salt/modules/(apkpkg|aptpkg|ebuildpkg|dpkg_lowpkg|freebsdpkg|mac_brew_pkg|mac_ports_pkg|openbsdpkg|opkg|pacmanpkg|pkgin|pkgng|pkg_resource|rpm_lowpkg|solarisipspkg|solarispkg|win_pkg|xbpspkg|yumpkg|zypperpkg)\.py:
   - pytests.unit.states.test_pkg
