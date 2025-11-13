@@ -9,8 +9,8 @@ Requisites
 
 The Salt requisite system is used to create relationships between states. This
 provides a method to easily define inter-dependencies between states. These
-dependencies are expressed by declaring the relationships using state names
-and IDs or names. The generalized form of a requisite target is ``<state name>:
+dependencies are expressed by declaring the relationships using state module names
+and IDs or names. The generalized form of a requisite target is ``<state module name>:
 <ID or name>``. The specific form is defined as a :ref:`Requisite Reference
 <requisite-reference>`.
 
@@ -23,10 +23,10 @@ package could not be installed, Salt will not try to manage the service.
 
     nginx:
       pkg.installed:
-        - name: nginx-light
+        name: nginx-light
       service.running:
-        - enable: True
-        - require:
+        enable: True
+        require:
           - pkg: nginx
 
 Without the requisite defined, salt would attempt to install the package and
@@ -75,13 +75,13 @@ so either of the following versions for "Extract server package" is correct:
     # Match by ID declaration
     Extract server package:
       archive.extracted:
-        - onchanges:
+        onchanges:
           - file: Deploy server package
 
     # Match by name parameter
     Extract server package:
       archive.extracted:
-        - onchanges:
+        onchanges:
           - file: /usr/local/share/myapp.tar.xz
 
 Wildcard matching in requisites
@@ -105,7 +105,7 @@ will reload/restart the service:
 
     apache2:
       service.running:
-        - watch:
+        watch:
           - file: /etc/apache2/*
 
 A leading or bare ``*`` must be quoted to avoid confusion with YAML references:
@@ -114,7 +114,7 @@ A leading or bare ``*`` must be quoted to avoid confusion with YAML references:
 
     /etc/letsencrypt/renewal-hooks/deploy/install.sh:
       cmd.run:
-        - onchanges:
+        onchanges:
           - acme: '*'
 
 
@@ -129,9 +129,10 @@ module they are using.
 
 .. code-block:: yaml
 
-    - require:
+    require:
       - vim
 
+.. _requisite-types:
 
 Requisites Types
 ----------------
@@ -178,7 +179,7 @@ In the following example, the ``service`` state will not be checked unless both
 
     nginx:
       service.running:
-        - require:
+        require:
           - file: /etc/nginx/nginx.conf
           - file: /etc/nginx/conf.d/ssl.conf
 
@@ -196,7 +197,7 @@ file:
 
     bar:
       pkg.installed:
-        - require:
+        require:
           - sls: foo
 
 This will add a ``require`` to all of the state declarations found in the given
@@ -222,11 +223,11 @@ if any of the watched states changes.
 
     myservice:
       file.managed:
-        - name: /etc/myservice/myservice.conf
-        - source: salt://myservice/files/myservice.conf
+        name: /etc/myservice/myservice.conf
+        source: salt://myservice/files/myservice.conf
       cmd.run:
-        - name: /usr/local/sbin/run-build
-        - onchanges:
+        name: /usr/local/sbin/run-build
+        onchanges:
           - file: /etc/myservice/myservice.conf
 
 In the example above, ``cmd.run`` will run only if there are changes in the
@@ -239,11 +240,11 @@ correct choice, as seen in this next example.
 
     myservice:
       file.managed:
-        - name: /etc/myservice/myservice.conf
-        - source: salt://myservice/files/myservice.conf
+        name: /etc/myservice/myservice.conf
+        source: salt://myservice/files/myservice.conf
       cmd.run:
-        - name: /usr/local/sbin/run-build
-        - onchanges_in:  # <-- broken logic
+        name: /usr/local/sbin/run-build
+        onchanges_in:  # <-- broken logic
           - file: /etc/myservice/myservice.conf
 
 
@@ -295,11 +296,11 @@ to Salt ensuring that the service is running.
 
     ntpd:
       service.running:
-        - watch:
+        watch:
           - file: /etc/ntp.conf
       file.managed:
-        - name: /etc/ntp.conf
-        - source: salt://ntp/files/ntp.conf
+        name: /etc/ntp.conf
+        source: salt://ntp/files/ntp.conf
 
 Another useful example of ``watch`` is using salt to ensure a configuration file
 is present and in a correct state, ensure the service is running, and trigger
@@ -310,12 +311,12 @@ dropping any connections.
 
     nginx:
       service.running:
-        - reload: True
-        - watch:
+        reload: True
+        watch:
           - file: nginx
       file.managed:
-        - name: /etc/nginx/conf.d/tls-settings.conf
-        - source: salt://nginx/files/tls-settings.conf
+        name: /etc/nginx/conf.d/tls-settings.conf
+        source: salt://nginx/files/tls-settings.conf
 
 .. note::
 
@@ -391,14 +392,14 @@ every necessary change. You might be tempted to write something like this:
 
    httpd:
      service.running:
-       - enable: True
-       - watch:
+       enable: True
+       watch:
          - file: httpd-config
 
    httpd-config:
      file.managed:
-       - name: /etc/httpd/conf/httpd.conf
-       - source: salt://httpd/files/apache.conf
+       name: /etc/httpd/conf/httpd.conf
+       source: salt://httpd/files/apache.conf
 
 If your service is already running but not enabled, you might expect that Salt
 will be able to tell that since the config file changed your service needs to
@@ -413,18 +414,18 @@ simply make sure that ``service.running`` is in a state on its own:
 
    enable-httpd:
      service.enabled:
-       - name: httpd
+       name: httpd
 
    start-httpd:
      service.running:
-       - name: httpd
-       - watch:
+       name: httpd
+       watch:
          - file: httpd-config
 
    httpd-config:
      file.managed:
-       - name: /etc/httpd/conf/httpd.conf
-       - source: salt://httpd/files/apache.conf
+       name: /etc/httpd/conf/httpd.conf
+       source: salt://httpd/files/apache.conf
 
 Now that ``service.running`` is its own state, changes to ``service.enabled``
 will no longer prevent ``mod_watch`` from getting triggered, so your ``httpd``
@@ -445,30 +446,30 @@ created by ``listen`` will execute at the end of the state run.
 
  restart-apache2:
    service.running:
-     - name: apache2
-     - listen:
+     name: apache2
+     listen:
        - file: /etc/apache2/apache2.conf
 
  configure-apache2:
    file.managed:
-     - name: /etc/apache2/apache2.conf
-     - source: salt://apache2/apache2.conf
+     name: /etc/apache2/apache2.conf
+     source: salt://apache2/apache2.conf
 
 This example will cause apache2 to restart when the apache2.conf file is
 changed, but the apache2 restart will happen at the end of the state run.
 
 .. code-block:: yaml
 
- restart-apache2:
-   service.running:
-     - name: apache2
+  restart-apache2:
+    service.running:
+      name: apache2
 
- configure-apache2:
-   file.managed:
-     - name: /etc/apache2/apache2.conf
-     - source: salt://apache2/apache2.conf
-     - listen_in:
-       - service: apache2
+  configure-apache2:
+    file.managed:
+      name: /etc/apache2/apache2.conf
+      source: salt://apache2/apache2.conf
+      listen_in:
+        - service: apache2
 
 This example does the same as the above example, but puts the state argument
 on the file resource, rather than the service resource.
@@ -494,14 +495,14 @@ is the pre-required state.
 
     graceful-down:
       cmd.run:
-        - name: service apache graceful
-        - prereq:
+        name: service apache graceful
+        prereq:
           - file: site-code
 
     site-code:
       file.recurse:
-        - name: /opt/site_code
-        - source: salt://site/code
+        name: /opt/site_code
+        source: salt://site/code
 
 In this case, the apache server will only be shut down if the site-code state
 expects to deploy fresh code via the file.recurse call. The site-code deployment
@@ -542,28 +543,28 @@ The ``onfail`` requisite is applied in the same way as ``require`` and ``watch``
 
     primary_mount:
       mount.mounted:
-        - name: /mnt/share
-        - device: 10.0.0.45:/share
-        - fstype: nfs
+        name: /mnt/share
+        device: 10.0.0.45:/share
+        fstype: nfs
 
     backup_mount:
       mount.mounted:
-        - name: /mnt/share
-        - device: 192.168.40.34:/share
-        - fstype: nfs
-        - onfail:
+        name: /mnt/share
+        device: 192.168.40.34:/share
+        fstype: nfs
+        onfail:
           - mount: primary_mount
 
 .. code-block:: yaml
 
     build_site:
       cmd.run:
-        - name: /srv/web/app/build_site
+        name: /srv/web/app/build_site
 
     notify-build_failure:
       hipchat.send_message:
-        - room_id: 123456
-        - message: "Building website fail on {{ grains['id'] }}"
+        room_id: 123456
+        message: "Building website fail on {{ grains['id'] }}"
 
 
 The default behavior of the ``onfail`` when multiple requisites are listed is
@@ -577,17 +578,17 @@ form:
 
     test_site_a:
       cmd.run:
-        - name: ping -c1 10.0.0.1
+        name: ping -c1 10.0.0.1
 
     test_site_b:
       cmd.run:
-        - name: ping -c1 10.0.0.2
+        name: ping -c1 10.0.0.2
 
     notify_site_down:
       hipchat.send_message:
-        - room_id: 123456
-        - message: "Both primary and backup sites are down!"
-      - onfail_all:
+        room_id: 123456
+        message: "Both primary and backup sites are down!"
+      onfail_all:
         - cmd: test_site_a
         - cmd: test_site_b
 
@@ -625,17 +626,17 @@ id declaration. This is useful when many files need to have the same defaults.
 
     /etc/foo.conf:
       file.managed:
-        - source: salt://foo.conf
-        - template: jinja
-        - mkdirs: True
-        - user: apache
-        - group: apache
-        - mode: 755
+        source: salt://foo.conf
+        template: jinja
+        mkdirs: True
+        user: apache
+        group: apache
+        mode: 755
 
     /etc/bar.conf:
       file.managed:
-        - source: salt://bar.conf
-        - use:
+        source: salt://bar.conf
+        use:
           - file: /etc/foo.conf
 
 The ``use`` statement was developed primarily for the networking states but
@@ -669,14 +670,14 @@ the exact same dependency mapping.
     httpd:
       pkg.installed: []
       service.running:
-        - require:
+        require:
           - pkg: httpd
 
 .. code-block:: yaml
 
     httpd:
       pkg.installed:
-        - require_in:
+        require_in:
           - service: httpd
       service.running: []
 
@@ -689,9 +690,9 @@ nginx`` requisite.
     nginx:
       pkg.installed: []
       service.running:
-        - enable: True
-        - reload: True
-        - require:
+        enable: True
+        reload: True
+        require:
           - pkg: nginx
 
 php.sls
@@ -703,7 +704,7 @@ php.sls
 
     php:
       pkg.installed:
-        - require_in:
+        require_in:
           - service: httpd
 
 mod_python.sls
@@ -715,7 +716,7 @@ mod_python.sls
 
     mod_python:
       pkg.installed:
-        - require_in:
+        require_in:
           - service: httpd
 
 Now the httpd server will only start if both php and mod_python are first verified to
@@ -754,18 +755,18 @@ from ``all()`` to ``any()``.
 
     A:
       cmd.run:
-        - name: echo A
-        - require_any:
+        name: echo A
+        require_any:
           - cmd: B
           - cmd: C
 
     B:
       cmd.run:
-        - name: echo B
+        name: echo B
 
     C:
       cmd.run:
-        - name: /bin/false
+        name: /bin/false
 
 In this example ``A`` will run because at least one of the requirements specified,
 ``B`` or ``C``, will succeed.
@@ -777,18 +778,18 @@ In this example ``A`` will run because at least one of the requirements specifie
 
     /etc/myservice/myservice.conf:
       file.managed:
-        - source: salt://myservice/files/myservice.conf
+        source: salt://myservice/files/myservice.conf
 
     /etc/yourservice/yourservice.conf:
       file.managed:
-        - source: salt://yourservice/files/yourservice.conf
+        source: salt://yourservice/files/yourservice.conf
 
     /usr/local/sbin/myservice/post-changes-hook.sh
       cmd.run:
-        - onchanges_any:
+        onchanges_any:
           - file: /etc/myservice/myservice.conf
           - file: /etc/your_service/yourservice.conf
-        - require:
+        require:
           - pkg: myservice
 
 In this example, `cmd.run` would be run only if either of the `file.managed`
@@ -817,12 +818,12 @@ See :ref:`Reloading Modules <reloading-modules>`.
 
     grains_refresh:
       module.run:
-       - name: saltutil.refresh_grains
-       - reload_grains: true
+       name: saltutil.refresh_grains
+       reload_grains: true
 
     grains_read:
       module.run:
-       - name: grains.items
+        name: grains.items
 
 .. _unless-requisite:
 
@@ -847,7 +848,7 @@ concept of ``True`` and ``False``.
 
     vim:
       pkg.installed:
-        - unless:
+        unless:
           - rpm -q vim-enhanced
           - ls /usr/bin/vim
 
@@ -866,10 +867,10 @@ For example:
 
     deploy_app:
       cmd.run:
-        - names:
+        names:
           - first_deploy_cmd
           - second_deploy_cmd
-        - unless: some_check
+        unless: some_check
 
 In the above case, ``some_check`` will be run prior to _each_ name -- once for
 ``first_deploy_cmd`` and a second time for ``second_deploy_cmd``.
@@ -884,9 +885,9 @@ In the above case, ``some_check`` will be run prior to _each_ name -- once for
 
         install apache on debian based distros:
           cmd.run:
-            - name: make install
-            - cwd: /path/to/dir/whatever-2.1.5/
-            - unless:
+            name: make install
+            cwd: /path/to/dir/whatever-2.1.5/
+            unless:
               - fun: file.file_exists
                 path: /usr/local/bin/whatever
 
@@ -894,10 +895,10 @@ In the above case, ``some_check`` will be run prior to _each_ name -- once for
 
       set mysql root password:
         debconf.set:
-          - name: mysql-server-5.7
-          - data:
+          name: mysql-server-5.7
+          data:
               'mysql-server/root_password': {'type': 'password', 'value': {{pillar['mysql.pass']}} }
-          - unless:
+          unless:
             - fun: pkg.version
               args:
                 - mysql-server-5.7
@@ -910,8 +911,8 @@ In the above case, ``some_check`` will be run prior to _each_ name -- once for
 
       test:
         test.nop:
-          - name: foo
-          - unless:
+          name: foo
+          unless:
             - fun: consul.get
               consul_url: http://127.0.0.1:8500
               key:  not-existing
@@ -933,11 +934,11 @@ In the above case, ``some_check`` will be run prior to _each_ name -- once for
 
       jim_nologin:
         user.present:
-          - name: jim
-          - shell: /sbin/nologin
-          - unless:
+          name: jim
+          shell: /sbin/nologin
+          unless:
             - echo hello world
-          - cmd_opts_exclude:
+          cmd_opts_exclude:
             - shell
 
 .. _onlyif-requisite:
@@ -962,19 +963,19 @@ concept of ``True`` and ``False``.
 
     stop-volume:
       module.run:
-        - name: glusterfs.stop_volume
-        - m_name: work
-        - onlyif:
+        name: glusterfs.stop_volume
+        m_name: work
+        onlyif:
           - gluster volume status work
-        - order: 1
+        order: 1
 
     remove-volume:
       module.run:
-        - name: glusterfs.delete
-        - m_name: work
-        - onlyif:
+        name: glusterfs.delete
+        m_name: work
+        onlyif:
           - gluster volume info work
-        - watch:
+        watch:
           - cmd: stop-volume
 
 The above example ensures that the stop_volume and delete modules only run
@@ -990,15 +991,15 @@ if the gluster commands return a 0 ret value.
 
         install apache on redhat based distros:
           pkg.latest:
-            - name: httpd
-            - onlyif:
+            name: httpd
+            onlyif:
               - fun: match.grain
                 tgt: 'os_family:RedHat'
 
         install apache on debian based distros:
           pkg.latest:
-            - name: apache2
-            - onlyif:
+            name: apache2
+            onlyif:
               - fun: match.grain
                 tgt: 'os_family:Debian'
 
@@ -1006,8 +1007,8 @@ if the gluster commands return a 0 ret value.
 
       arbitrary file example:
         file.touch:
-          - name: /path/to/file
-          - onlyif:
+          name: /path/to/file
+          onlyif:
             - fun: file.search
               args:
                 - /etc/crontab
@@ -1021,8 +1022,8 @@ if the gluster commands return a 0 ret value.
 
       test:
         test.nop:
-          - name: foo
-          - onlyif:
+          name: foo
+          onlyif:
             - fun: consul.get
               consul_url: http://127.0.0.1:8500
               key:  does-exist
@@ -1044,11 +1045,11 @@ if the gluster commands return a 0 ret value.
 
       jim_nologin:
         user.present:
-          - name: jim
-          - shell: /sbin/nologin
-          - onlyif:
+          name: jim
+          shell: /sbin/nologin
+          onlyif:
             - echo hello world
-          - cmd_opts_exclude:
+          cmd_opts_exclude:
             - shell
 
 .. _creates-requisite:
@@ -1068,8 +1069,8 @@ should execute. This was previously used by the :mod:`cmd <salt.states.cmd>` and
 
       contrived creates example:
         file.touch:
-          - name: /path/to/file
-          - creates: /path/to/file
+          name: /path/to/file
+          creates: /path/to/file
 
 ``creates`` also accepts a list of files, in which case this state will
 run if **any** of the files do not exist:
@@ -1078,8 +1079,8 @@ run if **any** of the files do not exist:
 
       creates list:
         file.cmd:
-          - name: /path/to/command
-          - creates:
+          name: /path/to/command
+          creates:
               - /path/file
               - /path/file2
 
@@ -1096,9 +1097,9 @@ the command in the ``cmd.run`` module.
 
     django:
       pip.installed:
-        - name: django >= 1.6, <= 1.7
-        - runas: daniel
-        - require:
+        name: django >= 1.6, <= 1.7
+        runas: daniel
+        require:
           - pkg: python-pip
 
 In the above state, the pip command run by ``cmd.run`` will be run by the daniel user.
@@ -1116,9 +1117,9 @@ is specified. It will be set when ``runas_password`` is defined in the state.
 
     run_script:
       cmd.run:
-        - name: Powershell -NonInteractive -ExecutionPolicy Bypass -File C:\\Temp\\script.ps1
-        - runas: frank
-        - runas_password: supersecret
+        name: Powershell -NonInteractive -ExecutionPolicy Bypass -File C:\\Temp\\script.ps1
+        runas: frank
+        runas_password: supersecret
 
 In the above state, the Powershell script run by ``cmd.run`` will be run by the
 frank user with the password ``supersecret``.
@@ -1140,10 +1141,10 @@ the salt-minion.
 
     comment-repo:
       file.replace:
-        - name: /etc/yum.repos.d/fedora.repo
-        - pattern: '^enabled=0'
-        - repl: enabled=1
-        - check_cmd:
+        name: /etc/yum.repos.d/fedora.repo
+        pattern: '^enabled=0'
+        repl: enabled=1
+        check_cmd:
           - "! grep 'enabled=0' /etc/yum.repos.d/fedora.repo"
 
 This will attempt to do a replace on all ``enabled=0`` in the .repo file, and
@@ -1188,8 +1189,8 @@ of the state gets added to the tag.
 
     nano_stuff:
       pkg.installed:
-        - name: nano
-        - fire_event: True
+        name: nano
+        fire_event: True
 
 In the following example instead of setting `fire_event` to `True`,
 `fire_event` is set to an arbitrary string, which will cause the event to be
@@ -1200,8 +1201,8 @@ sent with this tag:
 
     nano_stuff:
       pkg.installed:
-        - name: nano
-        - fire_event: custom/tag/nano/finished
+        name: nano
+        fire_event: custom/tag/nano/finished
 
 Retrying States
 ===============
@@ -1237,8 +1238,8 @@ up to an additional ``10`` seconds:
 
     my_retried_state:
       pkg.installed:
-        - name: nano
-        - retry:
+        name: nano
+        retry:
             attempts: 5
             until: True
             interval: 60
@@ -1252,8 +1253,8 @@ returns ``True``.
 
     install_nano:
       pkg.installed:
-        - name: nano
-        - retry: True
+        name: nano
+        retry: True
 
 The following example will run the file.exists state every ``30`` seconds up to ``15`` times
 or until the file exists (i.e. the state returns ``True``).
@@ -1262,8 +1263,8 @@ or until the file exists (i.e. the state returns ``True``).
 
     wait_for_file:
       file.exists:
-        - name: /path/to/file
-        - retry:
+        name: /path/to/file
+        retry:
             attempts: 15
             interval: 30
 
@@ -1288,8 +1289,8 @@ For example:
 
     wait_for_file:
       file.exists:
-        - name: /path/to/file
-        - retry:
+        name: /path/to/file
+        retry:
             attempts: 10
             interval: 2
             splay: 5
@@ -1330,7 +1331,7 @@ states, but it is now a global state argument that can be applied to any state.
 
     cleanup_script:
       cmd.script:
-        - name: salt://myapp/files/my_script.sh
-        - umask: "077"
-        - onchanges:
+        name: salt://myapp/files/my_script.sh
+        umask: "077"
+        onchanges:
           - file: /some/file
