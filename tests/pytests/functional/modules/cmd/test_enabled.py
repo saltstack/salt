@@ -41,8 +41,13 @@ def ret_disabled():
 
 
 @pytest.fixture
-def ret_enabled():
-    return f"3{os.linesep}saltines"
+def ret_enabled(cmd):
+    if salt.utils.platform.is_windows():
+        cmd_text = 'where cmd whoami xcopy | find /c /v ""'
+        num_lines = cmd.run(cmd_text, python_shell=True)
+        return f"{num_lines}{os.linesep}saltines"
+    else:
+        return f"3{os.linesep}saltines"
 
 
 @pytest.fixture(scope="module")
