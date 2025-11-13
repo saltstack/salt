@@ -131,10 +131,14 @@ def test_pipe_run_python_shell_true(modules, pipe_script):
 def test_pipe_run_python_shell_false(modules, pipe_script):
     if salt.utils.platform.is_windows():
         cmd = f'{str(pipe_script)} | find /c /v ""'
+        # Behavior is different on Windows, I think it has to do with how cmd
+        # deals with args vs bash... or maybe how args are passed on Windows
+        expected = "1"
     else:
         cmd = f"{str(pipe_script)} | wc -l"
+        expected = "b0rken"
     result = modules.cmd.run(cmd, python_shell=False)
-    assert result == "b0rken"
+    assert result == expected
 
 
 def test_pipe_run_default(modules, pipe_script):
@@ -142,7 +146,10 @@ def test_pipe_run_default(modules, pipe_script):
         cmd = f'{str(pipe_script)} | find /c /v ""'
     else:
         cmd = f"{str(pipe_script)} | wc -l"
-    result = modules.cmd.run(cmd)
+    # We need to mock running from the CLI by passing __pub_jid
+    # Normally this is populated when run from the CLI, but when run from the
+    # test suite, the value is empty
+    result = modules.cmd.run(cmd, __pub_jid="test")
     assert result == "1"
 
 
@@ -153,5 +160,8 @@ def test_pipe_run_shell(modules, pipe_script):
     else:
         cmd = f"{str(pipe_script)} | wc -l"
         shell = "/bin/bash"
-    result = modules.cmd.run(cmd, shell=shell)
+    # We need to mock running from the CLI by passing __pub_jid
+    # Normally this is populated when run from the CLI, but when run from the
+    # test suite, the value is empty
+    result = modules.cmd.run(cmd, shell=shell, __pub_jid="test")
     assert result == "1"
