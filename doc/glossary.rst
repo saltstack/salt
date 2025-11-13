@@ -223,6 +223,11 @@ Glossary
         set of host machines. Often used to create and deploy private clouds.
         *See also*: :py:mod:`virt runner <salt.runners.virt>`.
 
+    SLS
+        Structured Layered State. The SLS is a representation of the state in
+        which a system should be in, and is set up to contain this data in a
+        simple format. This is often called configuration management.
+
     SLS Module
         Contains a set of :term:`state declarations <State Declaration>`.
 
