@@ -53,7 +53,7 @@ def ssh_docker_container(salt_factories, ssh_keys, ssh_auth):
                 "SSH_AUTHORIZED_KEYS": ssh_keys.pub,
                 "SSH_USER_PASSWORD": ssh_pass,
             },
-            "cap_add": "IPC_LOCK",
+            "cap_add": ["IPC_LOCK"],
         },
         pull_before_start=True,
         skip_on_pull_failure=True,

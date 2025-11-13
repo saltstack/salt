@@ -93,10 +93,11 @@ certvalidator==0.11.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   vcert
-cffi==1.14.6
+cffi==2.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   cryptography
     #   napalm

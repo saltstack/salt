@@ -82,6 +82,12 @@ TEST_SALT_LISTING = PlatformDefinitions(
                 container="ghcr.io/saltstack/salt-ci-containers/testing:debian-12",
             ),
             Linux(
+                slug="debian-13",
+                display_name="Debian 13",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:debian-13",
+            ),
+            Linux(
                 slug="fedora-40",
                 display_name="Fedora 40",
                 arch="x86_64",
@@ -174,6 +180,13 @@ TEST_SALT_PKG_LISTING = PlatformDefinitions(
                 arch="x86_64",
                 pkg_type="deb",
                 container="ghcr.io/saltstack/salt-ci-containers/testing:debian-12",
+            ),
+            LinuxPkg(
+                slug="debian-13-arm64",
+                display_name="Debian 13 Arm64",
+                arch="arm64",
+                pkg_type="deb",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:debian-13",
             ),
             LinuxPkg(
                 slug="photonos-4-arm64",
