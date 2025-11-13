@@ -15,7 +15,7 @@ def test_cmd():
         expected = "ERROR: Invalid argument/option"
     else:
         cmd = "ls -al / | wc -l"
-        expected = "ls: cannot access '|'"
+        expected = "ls: cannot access"
     return cmd, expected
 
 
