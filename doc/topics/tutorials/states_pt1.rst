@@ -83,7 +83,7 @@ named ``webserver.sls``, containing the following:
 .. code-block:: yaml
 
     apache:                 # ID declaration
-      pkg:                  # state declaration
+      pkg:                  # state module declaration
         - installed         # function declaration
 
 The first line, called the :ref:`id-declaration`, is an arbitrary identifier.
@@ -95,7 +95,7 @@ In this case it defines the name of the package to be installed.
     OS or distro — for example, on Fedora it is ``httpd`` but on
     Debian/Ubuntu it is ``apache2``.
 
-The second line, called the :ref:`state-declaration`, defines which of the Salt
+The second line, called the :ref:`state-module-declaration`, defines which of the Salt
 States we are using. In this example, we are using the :mod:`pkg state
 <salt.states.pkg>` to ensure that a given package is installed.
 
