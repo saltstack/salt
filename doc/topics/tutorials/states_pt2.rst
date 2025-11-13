@@ -61,7 +61,7 @@ installed and running. Include the following at the bottom of your
           - pkg: apache
 
     /var/www/index.html:                        # ID declaration
-      file:                                     # state declaration
+      file:                                     # state module declaration
         - managed                               # function
         - source: salt://webserver/index.html   # function arg
         - require:                              # requisite declaration
@@ -72,7 +72,7 @@ want to install our custom HTML file. (**Note:** the default location that
 Apache serves may differ from the above on your OS or distro. ``/srv/www``
 could also be a likely place to look.)
 
-**Line 8** the :ref:`state-declaration`. This example uses the Salt :mod:`file
+**Line 8** the :ref:`state-module-declaration`. This example uses the Salt :mod:`file
 state <salt.states.file>`.
 
 **Line 9** is the :ref:`function-declaration`. The :func:`managed function
