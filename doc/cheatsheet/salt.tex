@@ -48,7 +48,7 @@ apache:
     - running
     - enable: True
 /var/www/index.html: # ID declaration
-  file:              # state declaration
+  file:              # state module declaration
     - managed        # function
     - source: salt://webserver/index.html
     - user: root

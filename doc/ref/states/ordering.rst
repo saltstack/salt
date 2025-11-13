@@ -78,7 +78,7 @@ can be evaluated to see if they have executed correctly.
 Require statements can refer to any state defined in Salt. The basic examples
 are `pkg`, `service`, and `file`, but any used state can be referenced.
 
-In addition to state declarations such as pkg, file, etc., **sls** type requisites
+In addition to state module declarations such as pkg, file, etc., **sls** type requisites
 are also recognized, and essentially allow 'chaining' of states. This provides a
 mechanism to ensure the proper sequence for complex state formulas, especially when
 the discrete states are split or groups into separate sls files:
