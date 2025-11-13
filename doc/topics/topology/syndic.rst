@@ -209,8 +209,35 @@ are below their Syndics, the CLI requires a short wait time in order to allow
 the Syndics to gather responses from their Minions. This value is defined in
 the :conf_master:`syndic_wait` config option and has a default of five seconds.
 
-Syndic config options
-=====================
+Syndic Modes
+============
+
+The Syndic can operate in two different modes, controlled by the ``syndic_mode`` configuration option:
+
+sync
+----
+This is the default mode. In this mode, the Syndic will synchronize all events, job publish and return events between the
+local master and higher level masters. This provides complete visibility of all events across all masters.
+
+cluster
+-------
+In cluster mode, the Syndic will only synchronize job publish and return events between the local master and higher level masters.
+This mode is more efficient in terms of the amount of events propagated to higher level masters, but provides less visibility since
+not all events are propagated.
+
+.. important::
+
+    When using ``cluster`` mode, you **must** set a unique ``master_id`` in the configuration of both:
+
+    - The syndic master (the lower-level masters)
+    - The higher-level master(s) (the master of masters)
+
+Choose the mode based on your needs:
+- Use ``sync`` mode when you need complete event visibility across your entire Salt infrastructure
+- Use ``cluster`` mode when you want to optimize for performance and only need job-related information synchronized
+
+Syndic Config Options
+===================
 
 These are the options that can be used to configure a Syndic node.  Note that
 other than ``id``, Syndic config options are placed in the Master config on the
@@ -223,6 +250,7 @@ Syndic node.
     - :conf_master:`syndic_log_file`: path to the logfile (absolute or not)
     - :conf_master:`syndic_pidfile`: path to the pidfile (absolute or not)
     - :conf_master:`syndic_wait`: time in seconds to wait on returns from this syndic
+    - :conf_master:`syndic_mode`: The mode in which the syndic operates. Can be either ``sync`` (default) or ``cluster``
 
 Minion Data Cache
 =================
