@@ -50,16 +50,16 @@ def test_avoid_injecting_shell_code_as_root(
     cmd = "echo $(id -u)"
 
     ret = salt_call_cli.run("cmd.run_stdout", cmd, python_shell=True)
-    root_id = ret.json
+    root_id = ret.data
     ret = salt_call_cli.run(
         "cmd.run_stdout", cmd, runas=running_username, python_shell=True
     )
-    runas_root_id = ret.json
+    runas_root_id = ret.data
 
     ret = salt_call_cli.run(
         "cmd.run_stdout", cmd, runas=non_root_account.username, python_shell=True
     )
-    user_id = ret.json
+    user_id = ret.data
 
     assert user_id != root_id
     assert user_id != runas_root_id
