@@ -630,12 +630,13 @@ def query(
         req_kwargs = salt.utils.data.decode(req_kwargs, to_str=True)
 
         try:
-            download_client = SyncWrapper(
+            download_client_kwargs = {"max_body_size": max_body} if supports_max_body_size else {}
+            with SyncWrapper(
                 AsyncHTTPClient,
-                kwargs={"max_body_size": max_body} if supports_max_body_size else {},
+                kwargs=download_client_kwargs,
                 async_methods=["fetch"],
-            )
-            result = download_client.fetch(url_full, **req_kwargs)
+            ) as download_client:
+                result = download_client.fetch(url_full, **req_kwargs)
         except tornado.httpclient.HTTPError as exc:
             ret["status"] = exc.code
             ret["error"] = str(exc)
