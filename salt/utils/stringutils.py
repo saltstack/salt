@@ -182,11 +182,6 @@ def is_binary(data):
     Detects if the passed string of data is binary or text
     """
 
-    def int2byte(x):
-        return bytes((x,))
-
-    text_characters = b"".join(int2byte(i) for i in range(32, 127)) + b"\n\r\t\f\b"
-
     if not data or not isinstance(data, ((str,), bytes)):
         return False
 
@@ -196,15 +191,24 @@ def is_binary(data):
     if b"\0" in data:
         return True
 
+    def int2byte(x):
+        return bytes((x,))
+
+    # Defines the text characters as being the ASCII characters plus a few
+    # control characters (newline, carriage return, tab, formfeed and backspace)
+    text_characters = b"".join(int2byte(i) for i in range(32, 127)) + b"\n\r\t\f\b"
+
     try:
+        # Defines the range of values used by UTF-8 multibyte characters
+        mb_utf8_characters = b"".join(int2byte(i) for i in range(128, 255))
+
         data.decode(__salt_system_encoding__)
-        text_characters = text_characters + b"".join(
-            int2byte(i) for i in range(128, 255)
-        )
+
+        text_characters = text_characters + mb_utf8_characters
     except UnicodeDecodeError as err:
         # This handles truncated characters at end of string
         if err.reason == "unexpected end of data":
-            return False
+            text_characters = text_characters + mb_utf8_characters
 
     nontext = data.translate(None, text_characters)
 
