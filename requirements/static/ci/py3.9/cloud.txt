@@ -533,7 +533,7 @@ pytest-custom-exit-code==0.3.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/pytest.txt
-pytest-helpers-namespace==2021.4.29
+pytest-helpers-namespace==2021.12.29
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/pytest.txt
@@ -543,7 +543,7 @@ pytest-httpserver==1.0.8
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/pytest.txt
-pytest-salt-factories==1.0.1
+pytest-salt-factories==1.0.5
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/pytest.txt

@@ -326,14 +326,14 @@ pyrsistent==0.17.3
     # via jsonschema
 pytest-custom-exit-code==0.3.0
     # via -r requirements/pytest.txt
-pytest-helpers-namespace==2021.4.29
+pytest-helpers-namespace==2021.12.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
 pytest-httpserver==1.0.8
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.1
+pytest-salt-factories==1.0.5
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.9.7 ; python_version >= "3.10"
     # via
