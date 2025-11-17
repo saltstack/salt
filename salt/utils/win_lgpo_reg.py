@@ -8,8 +8,11 @@ import os
 import re
 import struct
 
+import win32con
+
 import salt.modules.win_file
 import salt.utils.files
+import salt.utils.platform
 import salt.utils.win_reg
 from salt.exceptions import CommandExecutionError
 
@@ -153,9 +156,9 @@ def write_reg_pol_data(
     # TODO: This needs to be more specific
     except Exception as e:  # pylint: disable=broad-except
         msg = (
-            "An error occurred attempting to write to {}, the exception was: {}".format(
-                policy_file_path, e
-            )
+            "An error occurred attempting to write to registry.pol\n"
+            f"PATH: {policy_file_path}\n"
+            f"EXCEPTION: {e}"
         )
         log.exception(msg)
         raise CommandExecutionError(msg)
@@ -226,12 +229,15 @@ def write_reg_pol_data(
         )
     else:
         general_location = re.search(
-            r"^\[General\]\r\n", gpt_ini_data, re.IGNORECASE | re.MULTILINE
+            r"^\[General]\r\n", gpt_ini_data, re.IGNORECASE | re.MULTILINE
         )
         if gpt_extension.lower() == "gPCMachineExtensionNames".lower():
             version_nums = (0, 1)
         elif gpt_extension.lower() == "gPCUserExtensionNames".lower():
             version_nums = (1, 0)
+        else:
+            msg = "LGPO_REG Util: Could not determine gpt extension"
+            raise CommandExecutionError(msg)
         gpt_ini_data = "{}{}={}\r\n{}".format(
             gpt_ini_data[general_location.start() : general_location.end()],
             "Version",
@@ -278,8 +284,8 @@ def reg_pol_to_dict(policy_data):
 
     reg_pol_header = REG_POL_HEADER.encode("utf-16-le")
 
-    # If policy_data is None, that means the Registry.pol file is missing
-    # So, we'll create it
+    # If policy_data is None, that means the Registry.pol file is missing,
+    # so we'll create it
     if policy_data is None:
         policy_data = reg_pol_header
 
@@ -306,7 +312,7 @@ def reg_pol_to_dict(policy_data):
     for policy in pol_file_data.split(b"]\x00[\x00"):
         # Now remove the lingering square braces
         policy = policy.replace(b"]\x00", b"").replace(b"[\x00", b"")
-        # Each policy element is delimited by a semi-colon, encoded utf-16-le
+        # Each policy element is delimited by a semicolon, encoded utf-16-le
         # The first 4 are the key, name, type and size
         # all remaining is data
         key, v_name, v_type, v_size, v_data = policy.split(b";\x00", 4)
@@ -316,28 +322,53 @@ def reg_pol_to_dict(policy_data):
         # v_type is one of (0, 1, 2, 3, 4, 5, 7, 11) as 32-bit little-endian
         v_type = struct.unpack("<i", v_type)[0]
         if v_type == 0:
-            # REG_NONE : No Type
+            # REG_NONE: No Type
             # We don't know what this data is, so don't do anything
+            # Sometimes this is treated the same as REG_BINARY. We may need to
+            # consider adding some transformation here
             pass
-        elif v_type in (1, 2):
-            # REG_SZ : String Type
-            # REG_EXPAND_SZ : String with Environment Variables, ie %PATH%
+        elif v_type in (win32con.REG_SZ, win32con.REG_EXPAND_SZ):  # 1, 2
+            # (0x01) REG_SZ: String Type
+            # (0x02) REG_EXPAND_SZ: String with Environment Variables, i.e., %PATH%
             v_data = strip_field_end(v_data).decode("utf-16-le")
-        elif v_type == 4:
-            # REG_DWORD : 32-bit little endian
+        elif v_type == win32con.REG_BINARY:  # 3
+            # (0x03) REG_BINARY: Binary Type
+            v_data = v_data.hex()
+        elif v_type == win32con.REG_DWORD:  # 4
+            # (0x04) REG_DWORD | REG_WORD_LITTLE_ENDIAN: 32-bit little endian
             v_data = struct.unpack("<i", v_data)[0]
-        elif v_type == 5:
-            # REG_DWORD : 32-bit big endian
+        elif v_type == win32con.REG_DWORD_BIG_ENDIAN:  # 5
+            # (0x05) REG_DWORD_BIG_ENDIAN: 32-bit big endian
             v_data = struct.unpack(">i", v_data)[0]
-        elif v_type == 7:
-            # REG_MULTI_SZ : Multiple strings, delimited by \x00
+        elif v_type == win32con.REG_LINK:  # 6
+            # (0x06) REG_LINK:
+            # Not a data type that is supported by standard group policy
+            # templates or the registry.pol file
+            log.warning("LGPO_REG Util: REG_LINK not supported")
+        elif v_type == win32con.REG_MULTI_SZ:  # 7
+            # (0x07) REG_MULTI_SZ: Multiple strings, delimited by \x00
             v_data = strip_field_end(v_data)
             if not v_data:
                 v_data = None
             else:
                 v_data = v_data.decode("utf-16-le").split("\x00")
-        elif v_type == 11:
-            # REG_QWORD : 64-bit little endian
+        elif v_type == win32con.REG_RESOURCE_LIST:  # 8
+            # (0x08) REG_RESOURCE_LIST:
+            # Not a data type that is supported by standard group policy
+            # templates or the registry.pol file
+            log.warning("LGPO_REG Util: REGO_RESOURCE_LIST not supported")
+        elif v_type == win32con.REG_FULL_RESOURCE_DESCRIPTOR:  # 9
+            # (0x09) REG_FULL_RESOURCE_DESCRIPTOR:
+            # Not a data type that is supported by standard group policy
+            # templates or the registry.pol file
+            log.warning("LGPO_REG Util: REG_FULL_RESOURCE_DESCRIPTOR not supported")
+        elif v_type == win32con.REG_RESOURCE_REQUIREMENTS_LIST:  # 10
+            # (0x0A) REG_RESOURCE_REQUIREMENTS_LIST
+            # Not a data type that is supported by standard group policy
+            # templates or the registry.pol file
+            log.warning("LGPO_REG Util: REG_RESOURCE_REQUIREMENTS_LIST not supported")
+        elif v_type == win32con.REG_QWORD:  # 11
+            # (0x0B) REG_QWORD | REG_QWORD_LITTLE_ENDIAN: 64-bit little endian
             v_data = struct.unpack("<q", v_data)[0]
         else:
             msg = f"LGPO_REG Util: Found unknown registry type: {v_type}"
@@ -359,7 +390,7 @@ def reg_pol_to_dict(policy_data):
 
 def dict_to_reg_pol(data):
     """
-    Convert a dictionary to the bytes format expected by the Registry.pol file
+    Convert a dictionary to the byte format expected by the Registry.pol file
 
     Args:
         data (dict): A dictionary containing the contents to be converted
@@ -399,35 +430,44 @@ def dict_to_reg_pol(data):
                 # Type in 32-bit little-endian
                 struct.pack("<i", v_type),
             ]
+            v_data = None
             # The data is encoded depending on the Type
-            if v_type == 0:
-                # REG_NONE : No value
+            if v_type == win32con.REG_NONE:  # 0
+                # (0x00) REG_NONE: No value
                 v_data = b""
-            elif v_type in (1, 2):
-                # REG_SZ : String Type
-                # REG_EXPAND_SZ : String with Environment Variables, ie %PATH%
+            elif v_type in (win32con.REG_SZ, win32con.REG_EXPAND_SZ):  # 1, 2
+                # (0x01) REG_SZ: String Type
+                # (0x02) REG_EXPAND_SZ: String with Environment Variables, ie %PATH%
                 # Value followed by null byte
                 v_data = d["data"].encode("utf-16-le") + pol_section_term
-            elif v_type == 4:
-                # REG_DWORD : Little Endian
+            elif v_type == win32con.REG_BINARY:  # 3
+                # (0x03) REG_BINARY: Binary Type
+                v_data = bytes.fromhex(d["data"])
+            elif v_type == win32con.REG_DWORD:  # 4
+                # (0x04) REG_DWORD: Little Endian
                 # 32-bit little endian
                 v_data = struct.pack("<i", int(d["data"]))
-            elif v_type == 5:
-                # REG_DWORD : Big Endian (not common)
+            elif v_type == win32con.REG_DWORD_BIG_ENDIAN:  # 5
+                # (0x05) REG_DWORD_BIG_ENDIAN: Big Endian (not common)
                 # 32-bit big endian
                 v_data = struct.pack(">i", int(d["data"]))
-            elif v_type == 7:
-                # REG_MULTI_SZ : Multiple strings
+            elif v_type == win32con.REG_LINK:  # 6
+                # (0x06) REG_LINK:
+                # Not a data type that is supported by standard group policy
+                # templates or the registry.pol file
+                log.warning("LGPO_REG Util: REG_LINK not supported")
+            elif v_type == win32con.REG_MULTI_SZ:  # 7
+                # (0x07) REG_MULTI_SZ: Multiple strings
                 # Each element is delimited by \x00, terminated by \x00\x00
                 # Then the entire output is terminated with a null byte
                 if d["data"] is None:
-                    # An None value just gets the section terminator
+                    # A None value just gets the section terminator
                     v_data = pol_section_term
                 elif len(d["data"]) == 0:
                     # An empty list just gets the section terminator
                     v_data = pol_section_term
                 elif len(d["data"]) == 1 and not d["data"][0]:
-                    # An list with an empty value just gets the section terminator
+                    # A list with an empty value just gets the section terminator
                     v_data = pol_section_term
                 else:
                     # All others will be joined with a null byte, the list
@@ -437,8 +477,25 @@ def dict_to_reg_pol(data):
                         + pol_section_term
                         + pol_section_term
                     )
-            elif v_type == 11:
-                # REG_QWORD : Little Endian
+            elif v_type == win32con.REG_RESOURCE_LIST:  # 8
+                # (0x08) REG_RESOURCE_LIST
+                # Not a data type that is supported by standard group policy
+                # templates or the registry.pol file
+                log.warning("LGPO_REG Util: REGO_RESOURCE_LIST not supported")
+            elif v_type == win32con.REG_FULL_RESOURCE_DESCRIPTOR:  # 9
+                # (0x09) REG_FULL_RESOURCE_DESCRIPTOR
+                # Not a data type that is supported by standard group policy
+                # templates or the registry.pol file
+                log.warning("LGPO_REG Util: REG_FULL_RESOURCE_DESCRIPTOR not supported")
+            elif v_type == win32con.REG_RESOURCE_REQUIREMENTS_LIST:  # 10
+                # (0x0A) REG_RESOURCE_REQUIREMENTS_LIST
+                # Not a data type that is supported by standard group policy
+                # templates or the registry.pol file
+                log.warning(
+                    "LGPO_REG Util: REG_RESOURCE_REQUIREMENTS_LIST not supported"
+                )
+            elif v_type == win32con.REG_QWORD:  # 11
+                # (0x0B) REG_QWORD: Little Endian
                 # 64-bit little endian
                 v_data = struct.pack("<q", int(d["data"]))
 
@@ -447,6 +504,11 @@ def dict_to_reg_pol(data):
             if len(v_data) > 65535:
                 msg = "LGPO_REG Util: Size exceeds 65535 bytes"
                 raise CommandExecutionError(msg)
+            if v_data is None:
+                msg = "LGPO_REG Util: Unknown data transformation"
+                raise CommandExecutionError(msg)
+
+            # Calculate the size of the data to be written
             v_size = len(v_data).to_bytes(2, "little") + pol_section_term
 
             policy.append(v_size)
