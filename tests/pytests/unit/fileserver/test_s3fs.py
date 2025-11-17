@@ -179,3 +179,122 @@ def test_ignore_pickle_load_exceptions():
     #  TODO: parameterized test with patched pickle.load that raises the
     #  various allowable exception from _read_buckets_cache_file
     pass
+
+
+@pytest.mark.skip_on_fips_enabled_platform
+def test_prune_deleted_files_multiple_envs_per_bucket(tmp_path, bucket, s3):
+    """Test that _prune_deleted_files works correctly with multiple environments per bucket."""
+    
+    # Create test files in S3
+    keys = {
+        "base/test1.sls": {"content": "test1 content"},
+        "base/test2.sls": {"content": "test2 content"},
+        "dev/test3.sls": {"content": "test3 content"},
+    }
+    make_keys(bucket, s3, keys)
+    
+    # Configure for multiple environments per bucket mode
+    opts = {
+        "cachedir": tmp_path,
+        "s3.buckets": [bucket],  # List mode = multiple environments per bucket
+        "s3.location": "us-east-1",
+        "s3.s3_cache_expire": -1,
+    }
+    utils = {"s3.query": salt.utils.s3.query}
+    
+    # Update the module configuration
+    s3fs.__opts__ = opts
+    s3fs.__utils__ = utils
+    
+    # Initial update to populate cache
+    s3fs.update()
+    
+    # Verify files are cached
+    for key in keys:
+        env, filename = key.split("/", 1)
+        cache_file = s3fs._get_cached_file_name(bucket, env, filename)
+        assert os.path.exists(cache_file)
+    
+    # Delete one file from S3
+    s3.delete_object(Bucket=bucket, Key="base/test1.sls")
+    del keys["base/test1.sls"]
+    
+    # Update metadata to reflect the deletion
+    # This simulates what would happen after S3 metadata refresh
+    metadata = {
+        "base": [
+            {bucket: [{"Key": "base/test2.sls"}]}
+        ],
+        "dev": [
+            {bucket: [{"Key": "dev/test3.sls"}]}
+        ]
+    }
+    
+    # Call _prune_deleted_files directly
+    s3fs._prune_deleted_files(metadata)
+    
+    # Verify that deleted file was removed from cache
+    deleted_cache_file = s3fs._get_cached_file_name(bucket, "base", "test1.sls")
+    assert not os.path.exists(deleted_cache_file)
+    
+    # Verify that remaining files still exist
+    remaining_cache_file = s3fs._get_cached_file_name(bucket, "base", "test2.sls")
+    assert os.path.exists(remaining_cache_file)
+    
+    dev_cache_file = s3fs._get_cached_file_name(bucket, "dev", "test3.sls")
+    assert os.path.exists(dev_cache_file)
+
+
+@pytest.mark.skip_on_fips_enabled_platform
+def test_prune_deleted_files_single_env_per_bucket(tmp_path, bucket, s3):
+    """Test that _prune_deleted_files works correctly with single environment per bucket."""
+    
+    # Create test files in S3
+    keys = {
+        "test1.sls": {"content": "test1 content"},
+        "test2.sls": {"content": "test2 content"},
+    }
+    make_keys(bucket, s3, keys)
+    
+    # Configure for single environment per bucket mode
+    opts = {
+        "cachedir": tmp_path,
+        "s3.buckets": {"base": [bucket]},  # Dict mode = single environment per bucket
+        "s3.location": "us-east-1",
+        "s3.s3_cache_expire": -1,
+    }
+    utils = {"s3.query": salt.utils.s3.query}
+    
+    # Update the module configuration
+    s3fs.__opts__ = opts
+    s3fs.__utils__ = utils
+    
+    # Initial update to populate cache
+    s3fs.update()
+    
+    # Verify files are cached
+    for key in keys:
+        cache_file = s3fs._get_cached_file_name(bucket, "base", key)
+        assert os.path.exists(cache_file)
+    
+    # Delete one file from S3
+    s3.delete_object(Bucket=bucket, Key="test1.sls")
+    del keys["test1.sls"]
+    
+    # Update metadata to reflect the deletion
+    metadata = {
+        "base": [
+            {bucket: [{"Key": "test2.sls"}]}
+        ]
+    }
+    
+    # Call _prune_deleted_files directly
+    s3fs._prune_deleted_files(metadata)
+    
+    # Verify that deleted file was removed from cache
+    deleted_cache_file = s3fs._get_cached_file_name(bucket, "base", "test1.sls")
+    assert not os.path.exists(deleted_cache_file)
+    
+    # Verify that remaining file still exists
+    remaining_cache_file = s3fs._get_cached_file_name(bucket, "base", "test2.sls")
+    assert os.path.exists(remaining_cache_file)
