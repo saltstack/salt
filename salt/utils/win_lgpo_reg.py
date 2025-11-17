@@ -8,13 +8,19 @@ import os
 import re
 import struct
 
-import win32con
-
 import salt.modules.win_file
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.win_reg
 from salt.exceptions import CommandExecutionError
+
+try:
+    import win32con
+
+    HAS_WINDOWS_MODULES = True
+except ImportError:
+    HAS_WINDOWS_MODULES = False
+
 
 CLASS_INFO = {
     "User": {
@@ -60,6 +66,8 @@ def __virtual__():
     """
     if not salt.utils.platform.is_windows():
         return False, "LGPO_REG Util: Only available on Windows"
+    if not HAS_WINDOWS_MODULES:
+        return False, "LGPO_REG Util: Missing win32 modules"
 
     return __virtualname__
 
