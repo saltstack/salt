@@ -85,7 +85,7 @@ def _state_tree(salt_master, tmp_path):
     {}/testfile:
       file:
         - managed
-        - source: salt://testfile
+        - contents: "This is a test file"
         - makedirs: true
     """.format(
         tmp_path

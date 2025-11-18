@@ -2269,7 +2269,6 @@ def get_repo_keys(aptkey=True, keydir=None):
                     "--with-colons",
                 ]
             )
-            log.error(f"MEH 4 {cmd_ret}")
             ret_output.append(cmd_ret["stdout"])
 
         ret = _parse_repo_keys_output(" ".join(ret_output))
