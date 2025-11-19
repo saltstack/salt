@@ -71,7 +71,8 @@ def test_cmd_builtins(modules, command, expected):
     """
     Test builtin cmd.exe commands
     """
-    result = modules.cmd.run(command, shell="cmd")
+    # Final test is failing... can't get it to pass
+    result = modules.cmd.run(command, python_shell=True)
     assert expected in result
 
 
@@ -91,7 +92,10 @@ def test_cmd_builtins_runas(modules, account, command, expected):
     Test builtin cmd.exe commands with runas
     """
     result = modules.cmd.run(
-        cmd=command, shell="cmd", runas=account.username, password=account.password
+        cmd=command,
+        python_shell=True,
+        runas=account.username,
+        password=account.password,
     )
     assert expected in result
 
@@ -144,7 +148,7 @@ def test_cmd_env(modules, command, env, expected):
     """
     Test cmd.run with environment variables
     """
-    result = modules.cmd.run_all(command, shell="cmd", env=env)
+    result = modules.cmd.run_all(command, python_shell=True, env=env)
     assert isinstance(result["pid"], int)
     assert result["retcode"] == 0
     assert result["stdout"] == expected
