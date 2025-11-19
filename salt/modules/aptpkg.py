@@ -16,9 +16,7 @@ import os
 import pathlib
 import re
 import shutil
-import tempfile
 import time
-from collections import OrderedDict
 from urllib.error import HTTPError
 from urllib.request import Request as _Request
 from urllib.request import urlopen as _urlopen
@@ -47,11 +45,12 @@ from salt.exceptions import (
 )
 from salt.modules.cmdmod import _parse_env
 from salt.utils.pkg.deb import (
-    Deb822SourceEntry,
     Deb822Section,
+    Deb822SourceEntry,
     SourceEntry,
     SourcesList,
     _invalid,
+    string_to_bool,
 )
 
 log = logging.getLogger(__name__)
@@ -64,7 +63,7 @@ LP_SRC_FORMAT = "deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main"
 LP_PVT_SRC_FORMAT = "deb https://{0}private-ppa.launchpad.net/{1}/{2}/ubuntu {3} main"
 
 _MODIFY_OK = frozenset(
-    ["uri", "comps", "architectures", "disabled", "file", "dist", "signedby"]
+    ["uri", "comps", "architectures", "disabled", "file", "dist", "signedby", "trusted"]
 )
 DPKG_ENV_VARS = {
     "APT_LISTBUGS_FRONTEND": "none",
@@ -101,215 +100,6 @@ def __init__(opts):
     if __virtual__() == __virtualname__:
         # Export these puppies so they persist
         os.environ.update(DPKG_ENV_VARS)
-
-
-def _invalid(line):
-    """
-    This is a workaround since python3-apt does not support
-    the signed-by argument. This function was removed from
-    the class to ensure users using the python3-apt module or
-    not can use the signed-by option.
-    """
-    disabled = False
-    invalid = False
-    comment = ""
-    line = line.strip()
-    if not line:
-        invalid = True
-        return disabled, invalid, comment, ""
-
-    if line.startswith("#"):
-        disabled = True
-        line = line[1:]
-
-    idx = line.find("#")
-    if idx > 0:
-        comment = line[idx + 1 :]
-        line = line[:idx]
-
-    cdrom_match = re.match(r"(.*)(cdrom:.*/)(.*)", line.strip())
-    if cdrom_match:
-        repo_line = (
-            [p.strip() for p in cdrom_match.group(1).split()]
-            + [cdrom_match.group(2).strip()]
-            + [p.strip() for p in cdrom_match.group(3).split()]
-        )
-    else:
-        repo_line = line.strip().split()
-    if (
-        not repo_line
-        or repo_line[0] not in ["deb", "deb-src", "rpm", "rpm-src"]
-        or len(repo_line) < 3
-    ):
-        invalid = True
-        return disabled, invalid, comment, repo_line
-
-    if repo_line[1].startswith("["):
-        if not any(x.endswith("]") for x in repo_line[1:]):
-            invalid = True
-            return disabled, invalid, comment, repo_line
-
-    return disabled, invalid, comment, repo_line
-
-
-if not HAS_APT:
-
-    class SourceEntry:  # pylint: disable=function-redefined
-        def __init__(self, line, file=None):
-            self.invalid = False
-            self.comps = []
-            self.disabled = False
-            self.comment = ""
-            self.dist = ""
-            self.type = ""
-            self.uri = ""
-            self.line = line
-            self.architectures = []
-            self.signedby = ""
-            self.file = file
-            if not self.file:
-                self.file = str(pathlib.Path(os.sep, "etc", "apt", "sources.list"))
-            self._parse_sources(line)
-
-        def str(self):
-            return self.repo_line()
-
-        def repo_line(self):
-            """
-            Return the repo line for the sources file
-            """
-            repo_line = []
-            if self.invalid:
-                return self.line
-            if self.disabled:
-                repo_line.append("#")
-
-            repo_line.append(self.type)
-            opts = _get_opts(self.line)
-            if self.architectures:
-                if "arch" not in opts:
-                    opts["arch"] = {}
-                opts["arch"]["full"] = f"arch={','.join(self.architectures)}"
-                opts["arch"]["value"] = self.architectures
-            if self.signedby:
-                if "signedby" not in opts:
-                    opts["signedby"] = {}
-                opts["signedby"]["full"] = f"signed-by={self.signedby}"
-                opts["signedby"]["value"] = self.signedby
-
-            ordered_opts = []
-
-            for opt in opts.values():
-                if opt["full"] != "":
-                    ordered_opts.append(opt["full"])
-
-            if ordered_opts:
-                repo_line.append(f"[{' '.join(ordered_opts)}]")
-
-            repo_line += [self.uri, self.dist, " ".join(self.comps)]
-            if self.comment:
-                repo_line.append(f"#{self.comment}")
-            return " ".join(repo_line) + "\n"
-
-        def _parse_sources(self, line):
-            """
-            Parse lines from sources files
-            """
-            self.disabled, self.invalid, self.comment, repo_line = _invalid(line)
-            if self.invalid:
-                return False
-            if repo_line[1].startswith("["):
-                repo_line = [x for x in (line.strip("[]") for line in repo_line) if x]
-                opts = _get_opts(self.line)
-                if "arch" in opts:
-                    self.architectures.extend(opts["arch"]["value"])
-                if "signedby" in opts:
-                    self.signedby = opts["signedby"]["value"]
-                for opt in opts.values():
-                    opt = opt["full"]
-                    if opt:
-                        try:
-                            repo_line.pop(repo_line.index(opt))
-                        except ValueError:
-                            repo_line.pop(repo_line.index("[" + opt + "]"))
-            self.type = repo_line[0]
-            self.uri = repo_line[1]
-            self.dist = repo_line[2]
-            self.comps = repo_line[3:]
-            return True
-
-    class SourcesList:  # pylint: disable=function-redefined
-        def __init__(self):
-            self.list = []
-            self.files = [
-                pathlib.Path(os.sep, "etc", "apt", "sources.list"),
-                pathlib.Path(os.sep, "etc", "apt", "sources.list.d"),
-            ]
-            for file in self.files:
-                if file.is_dir():
-                    for fp in file.glob("*.list"):
-                        self.add_file(file=fp)
-                else:
-                    self.add_file(file)
-
-        def __iter__(self):
-            yield from self.list
-
-        def add_file(self, file):
-            """
-            Add the lines of a file to self.list
-            """
-            if file.is_file():
-                with salt.utils.files.fopen(str(file)) as source:
-                    for line in source:
-                        self.list.append(SourceEntry(line, file=str(file)))
-            else:
-                log.debug("The apt sources file %s does not exist", file)
-
-        def add(self, type, uri, dist, orig_comps, architectures, signedby):
-            opts_count = []
-            opts_line = ""
-            if architectures:
-                architectures = "arch={}".format(",".join(architectures))
-                opts_count.append(architectures)
-            if signedby:
-                signedby = f"signed-by={signedby}"
-                opts_count.append(signedby)
-            if len(opts_count) > 1:
-                opts_line = "[" + " ".join(opts_count) + "]"
-            elif len(opts_count) == 1:
-                opts_line = "[" + "".join(opts_count) + "]"
-            repo_line = [
-                type,
-                opts_line,
-                uri,
-                dist,
-                " ".join(orig_comps),
-            ]
-            return SourceEntry(" ".join([line for line in repo_line if line.strip()]))
-
-        def remove(self, source):
-            """
-            remove a source from the list of sources
-            """
-            self.list.remove(source)
-
-        def save(self):
-            """
-            write all of the sources from the list of sources
-            to the file.
-            """
-            filemap = {}
-            with tempfile.TemporaryDirectory() as tmpdir:
-                for source in self.list:
-                    fname = pathlib.Path(tmpdir, pathlib.Path(source.file).name)
-                    with salt.utils.files.fopen(str(fname), "a") as fp:
-                        fp.write(source.repo_line())
-                    if source.file not in filemap:
-                        filemap[source.file] = {"tmp": fname}
-
-                for fp in filemap:
-                    shutil.move(str(filemap[fp]["tmp"]), fp)
 
 
 def _get_ppa_info_from_launchpad(owner_name, ppa_name):
@@ -600,7 +390,14 @@ def refresh_db(cache_valid_time=0, failhard=False, **kwargs):
         except OSError as exp:
             log.warning("could not stat cache directory due to: %s", exp)
 
-    call = _call_apt(["apt-get", "-q", "update"], scope=False)
+    call = _call_apt(
+        ["apt-get", "-q", "update"],
+        scope=False,
+        timeout=kwargs.get("timeout", __opts__.get("aptpkg_refresh_db_timeout", 30)),
+    )
+    if "Timed out" in call["stdout"]:
+        _call_apt(["apt-get", "-q", "clean"], scope=False)
+        call = _call_apt(["apt-get", "-q", "update"], scope=False)
     if call["retcode"] != 0:
         comment = ""
         if "stderr" in call:
@@ -1721,35 +1518,6 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):
     return None
 
 
-def _get_opts(line):
-    """
-    Return all opts in [] for a repo line
-    """
-    get_opts = re.search(r"\[(.*=.*?)\]", line)
-
-    ret = OrderedDict()
-    if not get_opts:
-        return ret
-    opts = get_opts.group(0).strip("[]")
-    architectures = []
-    for opt in opts.split():
-        if opt.startswith("arch"):
-            architectures.extend(opt.split("=", 1)[1].split(","))
-            ret["arch"] = {}
-            ret["arch"]["full"] = opt
-            ret["arch"]["value"] = architectures
-        elif opt.startswith("signed-by"):
-            ret["signedby"] = {}
-            ret["signedby"]["full"] = opt
-            ret["signedby"]["value"] = opt.split("=", 1)[1]
-        else:
-            other_opt = opt.split("=", 1)[0]
-            ret[other_opt] = {}
-            ret[other_opt]["full"] = opt
-            ret[other_opt]["value"] = opt.split("=", 1)[1]
-    return ret
-
-
 def _split_repo_str(repo):
     """
     Return APT source entry as a dictionary
@@ -1916,38 +1684,47 @@ def list_repos(**kwargs):
     for source in sources:
         if _skip_source(source):
             continue
-        signedby = source.signedby
+        if isinstance(source, Deb822SourceEntry):
+            # deb822 could contain multiple types and suites
+            # for backward compatibility we need to expand it
+            # to get separate entries for each type and suite
+            for suite in source.suites:
+                for source_type in source.types:
+                    compat_source = SourceEntry(
+                        f"{source_type} {source.uri} {suite} {' '.join(getattr(source, 'comps', []))}"
+                    )
+                    for attr in ("disabled", "architectures", "signedby", "trusted"):
+                        setattr(compat_source, attr, getattr(source, attr))
+                    repo = {
+                        "file": source.file,
+                        "comps": getattr(source, "comps", []),
+                        "disabled": source.disabled,
+                        "enabled": not source.disabled,  # This is for compatibility with the other modules
+                        "dist": suite,
+                        "suites": source.suites,
+                        "type": source_type,
+                        "uri": source.uri,
+                        "line": str(compat_source),
+                        "architectures": getattr(source, "architectures", []),
+                        "signedby": source.signedby,
+                    }
+                    repos.setdefault(source.uri, []).append(repo)
+            continue
         repo = {}
         repo["file"] = source.file
-        repo_comps = getattr(source, "comps", [])
-        repo_dists = source.dist.split(" ")
-        repo["comps"] = repo_comps
+        repo["comps"] = getattr(source, "comps", [])
         repo["disabled"] = source.disabled
         repo["enabled"] = not repo[
             "disabled"
         ]  # This is for compatibility with the other modules
-        repo["dist"] = repo_dists.pop(0)
+        repo["dist"] = source.dist
         repo["suites"] = list(source.suites)
         repo["type"] = source.type
         repo["uri"] = source.uri
-        if "Types: " in source.line and "\n" in source.line:
-            repo["line"] = (
-                f"{source.type} {source.uri} {repo['dist']} {' '.join(repo_comps)}"
-            )
-        else:
-            repo["line"] = source.line.strip()
+        repo["line"] = source.line.strip()
         repo["architectures"] = getattr(source, "architectures", [])
-        repo["signedby"] = signedby
+        repo["signedby"] = source.signedby
         repos.setdefault(source.uri, []).append(repo)
-        if len(repo_dists):
-            for dist in repo_dists:
-                repo_copy = repo.copy()
-                repo_copy["dist"] = dist
-                if "Types: " in source.line and "\n" in source.line:
-                    repo_copy["line"] = (
-                        f"{source.type} {source.uri} {repo_copy['dist']} {' '.join(repo_comps)}"
-                    )
-                repos[source.uri].append(repo_copy)
     return repos
 
 
@@ -2063,7 +1840,7 @@ def del_repo(repo, **kwargs):
 
         for source in repos:
             if (
-                source.type == repo_entry["type"]
+                repo_entry["type"] in source.type.split()
                 and source.architectures == repo_entry["architectures"]
                 and source.uri.rstrip("/") == repo_entry["uri"].rstrip("/")
                 and repo_entry["dist"] in source.suites
@@ -2776,9 +2553,6 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         pathlib.Path(repo_entry["signedby"]) if repo_entry["signedby"] else ""
     )
 
-    if not aptkey and not kwargs["signedby"]:
-        raise SaltInvocationError("missing 'signedby' option when apt-key is missing")
-
     if "keyid" in kwargs:
         keyid = kwargs.pop("keyid", None)
         keyserver = kwargs.pop("keyserver", None)
@@ -2913,11 +2687,11 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         # we are not returning bogus data because the source line
         # has already been modified on a previous run.
         repo_matches = (
-            apt_source.type == repo_entry["type"]
+            repo_entry["type"] in apt_source.type.split()
             and apt_source.uri.rstrip("/") == repo_entry["uri"].rstrip("/")
             and repo_entry["dist"] in apt_source.suites
         )
-        kw_matches = kw_dist in apt_source.suites and apt_source.type == kw_type
+        kw_matches = kw_dist in apt_source.suites and kw_type in apt_source.type.split()
 
         if repo_matches or kw_matches:
             for comp in full_comp_list:
@@ -2935,6 +2709,13 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     repo_source_entry = SourceEntry(repo)
     if not mod_source:
+        if not aptkey and not (
+            kwargs["signedby"] or string_to_bool(kwargs.get("trusted", "no"))
+        ):
+            raise SaltInvocationError(
+                "missing 'signedby' or 'trusted' option when apt-key is missing"
+            )
+
         apt_source_file = kwargs.get("file")
         if not apt_source_file:
             raise SaltInvocationError(
@@ -2977,26 +2758,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     if refresh:
         refresh_db()
 
-    signedby = mod_source.signedby
-
-    repo_source_line = mod_source.line
-    if "Types: " in repo_source_line and "\n" in repo_source_line:
-        repo_source_line = f"{mod_source.type} {mod_source.uri} {repo_entry['dist']} {' '.join(mod_source.comps)}"
-
-    return {
-        repo: {
-            "architectures": getattr(mod_source, "architectures", []),
-            "dist": mod_source.dist,
-            "suites": mod_source.suites,
-            "comps": mod_source.comps,
-            "disabled": mod_source.disabled,
-            "file": mod_source.file,
-            "type": mod_source.type,
-            "uri": mod_source.uri,
-            "line": repo_source_line,
-            "signedby": signedby,
-        }
-    }
+    return {repo: get_repo(repo)}
 
 
 def file_list(*packages, **kwargs):
@@ -3084,11 +2846,8 @@ def _expand_repo_def(os_name, os_codename=None, **kwargs):
         architectures=getattr(source_entry, "architectures", []),
         **kwargs,
     )
-    if hasattr(_source_entry, "set_enabled"):
-        _source_entry.set_enabled(not source_entry.disabled)
-    else:
-        _source_entry.disabled = source_entry.disabled
-        _source_entry.line = _source_entry.repo_line()
+    _source_entry.disabled = source_entry.disabled
+    _source_entry.line = _source_entry.repo_line()
 
     sanitized["file"] = _source_entry.file
     sanitized["comps"] = getattr(_source_entry, "comps", [])
@@ -3096,7 +2855,7 @@ def _expand_repo_def(os_name, os_codename=None, **kwargs):
     sanitized["dist"] = _source_entry.dist
     sanitized["type"] = _source_entry.type
     sanitized["uri"] = _source_entry.uri
-    sanitized["line"] = getattr(_source_entry, "line", "").strip()
+    sanitized["line"] = str(_source_entry)
     sanitized["architectures"] = getattr(_source_entry, "architectures", [])
     sanitized["signedby"] = signedby
 
