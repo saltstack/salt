@@ -1006,6 +1006,8 @@ VALID_OPTS = immutabletypes.freeze(
         "publish_signing_algorithm": str,
         "request_server_ttl": int,
         "request_server_aes_session": int,
+        # Minimum authentication protocol version to accept from minions
+        "minimum_auth_version": int,
     }
 )
 
@@ -1666,6 +1668,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "publish_signing_algorithm": "PKCS1v15-SHA1",
         "request_server_aes_session": 0,
         "request_server_ttl": 0,
+        "minimum_auth_version": 0,
     }
 )
 
