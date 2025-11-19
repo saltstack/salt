@@ -16,10 +16,12 @@ _APT_SOURCES_LIST = "/etc/apt/sources.list"
 _APT_SOURCES_PARTSDIR = "/etc/apt/sources.list.d/"
 
 
-def string_to_bool(s):
+def string_to_bool_int(s):
     """
     Convert string representation of bool values to integer
     """
+    if isinstance(s, bool):
+        s = "yes" if s else "no"
     s = s.lower()
     if s in ("no", "false", "without", "off", "disable"):
         return 0
@@ -51,40 +53,40 @@ class Deb822Section:
         """
         Parse section string to comments and tags
         """
-        _pure_data = []
-        _header = []
-        _footer = []
-        _tag_re = re.compile(r"\A(\S+): (.*)")
-        _tags = OrderedDict()
+        header = []
+        footer = []
+        raw_data = []
+        tag_re = re.compile(r"\A(\S+):\s*(\S.*|)")
+        tags = OrderedDict()
 
         for line in section_string.splitlines():
             if line.startswith("#"):
-                if _pure_data:
-                    _footer.append(line)
+                if raw_data:
+                    footer.append(line)
                 else:
-                    _header.append(line)
+                    header.append(line)
             else:
-                _pure_data.append(line)
+                raw_data.append(line)
 
-        _tag = None
-        _value = None
-        for line in _pure_data:
-            match = _tag_re.match(line)
+        tag = None
+        value = None
+        for line in raw_data:
+            match = tag_re.match(line)
             if match:
-                if _tag is not None:
+                if tag is not None:
                     # Store previous found tag,
                     # as the values could contain multiple lines
-                    _tags[_tag] = _value.strip()
-                _tag = match.group(1)
-                _value = match.group(2)
-            elif line == "" and _tag is not None:
-                _tags[_tag] = _value.strip()
+                    tags[tag] = value.strip()
+                tag = match.group(1)
+                value = match.group(2)
+            elif line == "" and tag is not None:
+                tags[tag] = value.strip()
             else:
-                _value = f"{value}\n{line}"
-        if _tag is not None:
-            _tags[_tag] = _value.strip()
+                value = f"{value}\n{line}"
+        if tag is not None:
+            tags[tag] = value.strip()
 
-        return _tags, _header, _footer
+        return tags, header, footer
 
     def __getitem__(self, key):
         """
@@ -151,6 +153,7 @@ class Deb822SourceEntry:
         "suites": {"key": "Suites", "multi": True},
         "dist": {"key": "Suites", "multi": False, "deprecated": True},
         "comps": {"key": "Components", "multi": True},
+        "signedby": {"key": "Signed-By", "multi": False},
     }
 
     def __init__(
@@ -168,8 +171,6 @@ class Deb822SourceEntry:
 
         self._line = str(self.section)
         self.file = file
-
-        self.signedby = self.section.tags.get("Signed-By", "")
 
     def __getattr__(self, name):
         """
@@ -194,6 +195,8 @@ class Deb822SourceEntry:
         if value is None:
             del self.section[key]
         else:
+            if key == "Signed-By":
+                value = str(value)
             self.section[key] = (
                 " ".join(value) if self._properties[name]["multi"] else value
             )
@@ -234,26 +237,34 @@ class Deb822SourceEntry:
         Return the value of the Trusted field
         """
         try:
-            return string_to_bool(self.section["Trusted"])
+            return string_to_bool_int(self.section["Trusted"]) == 1
         except KeyError:
             return None
 
     @trusted.setter
     def trusted(self, value):
-        if value is None:
+        import traceback
+        log.critical("ST822: %s: %s | %s", type(value), value, "".join(traceback.format_stack()))
+        if isinstance(value, bool):
+            self.section["Trusted"] = "yes" if value else "no"
+        elif isinstance(value, int) and value in (0, 1):
+            self.section["Trusted"] = "yes" if value == 1 else "no"
+        elif isinstance(value, str):
+            self.section["Trusted"] = (
+                "yes" if string_to_bool_int(value) == 1 else "no"
+            )
+        else:
             try:
                 del self.section["Trusted"]
             except KeyError:
                 pass
-        else:
-            self.section["Trusted"] = "yes" if value else "no"
 
     @property
     def disabled(self):
         """
         Return True if the source is enabled
         """
-        return not string_to_bool(self.section.get("Enabled", "yes"))
+        return not string_to_bool_int(self.section.get("Enabled", "yes"))
 
     @disabled.setter
     def disabled(self, value):
@@ -302,8 +313,8 @@ class SourceEntry:
         self.disabled = False  # identified as disabled if commented
         self.type = ""  # type of the source (deb, deb-src)
         self.architectures = []
-        self.signedby = ""
-        self.trusted = None
+        self._signedby = ""
+        self._trusted = None
         self.uri = ""
         self.dist = ""  # distribution name
         self.comps = []  # list of available componetns (or empty)
@@ -382,6 +393,8 @@ class SourceEntry:
                 self.architectures.extend(opts["arch"]["value"])
             if "signedby" in opts:
                 self.signedby = opts["signedby"]["value"]
+            if "trusted" in opts:
+                self.trusted = opts["trusted"]["value"]
             for opt in opts.values():
                 opt = opt["full"]
                 if opt:
@@ -423,6 +436,13 @@ class SourceEntry:
                 opts["signedby"] = {}
             opts["signedby"]["full"] = f"signed-by={self.signedby}"
             opts["signedby"]["value"] = self.signedby
+        if self._trusted:
+            if "trusted" not in opts:
+                opts["trusted"] = {}
+            opts["trusted"]["value"] = "yes" if self._trusted else "no"
+            opts["trusted"]["full"] = f"trusted={opts['trusted']['value']}"
+        if "trusted" in opts and opts["trusted"]["value"] == "no":
+            del opts["trusted"]
 
         ordered_opts = []
         for opt in opts.values():
@@ -473,6 +493,41 @@ class SourceEntry:
         else:
             self.dist = ""
             assert self.dist == ""
+
+    @property
+    def signedby(self):
+        """
+        Deb822 compatible attribute for the signedby
+        """
+        return self._signedby
+
+    @signedby.setter
+    def signedby(self, signedby):
+        """
+        Deb822 compatible setter for the signedy
+        """
+        self._signedby = str(signedby)
+
+    @property
+    def trusted(self):
+        """
+        Deb822 compatible attribute for the trusted
+        """
+        return self._trusted
+
+    @trusted.setter
+    def trusted(self, trusted):
+        """
+        Deb822 compatible setter for the trusted
+        """
+        if isinstance(trusted, bool):
+            self._trusted = trusted
+        elif isinstance(trusted, int) and trusted in (0, 1):
+            self._trusted = trusted == 1
+        elif isinstance(trusted, str):
+            self._trusted = string_to_bool_int(trusted) == 1
+        else:
+            self._trusted = None
 
 
 class SourcesList:
@@ -669,7 +724,7 @@ class SourcesList:
                         source = SourceEntry(line, file_path)
                         self.list.append(source)
         except Exception as exc:  # pylint: disable=broad-except
-            log.error("Could not parse source file '%s'", file, exc_info=True)
+            log.error("Could not parse source file '%s'", file_path, exc_info=True)
 
     def index(self, entry):
         return self.list.index(entry)
@@ -758,7 +813,7 @@ def _get_opts(line):
     """
     Return all opts in [] for a repo line
     """
-    get_opts = re.search(r"\[(.*?=.*?)\]", line)
+    get_opts = re.search(r"\[(.*=.*)\]", line)
     ret = OrderedDict()
 
     if not get_opts:
@@ -775,6 +830,10 @@ def _get_opts(line):
             ret["signedby"] = {}
             ret["signedby"]["full"] = opt
             ret["signedby"]["value"] = opt.split("=", 1)[1]
+        elif opt.startswith("trusted"):
+            ret["trusted"] = {}
+            ret["trusted"]["full"] = opt
+            ret["trusted"]["value"] = opt.split("=", 1)[1]
         else:
             other_opt = opt.split("=", 1)[0]
             ret[other_opt] = {}

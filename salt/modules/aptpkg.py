@@ -50,6 +50,7 @@ from salt.utils.pkg.deb import (
     Deb822Section,
     SourceEntry,
     SourcesList,
+    string_to_bool_int,
     _invalid,
 )
 
@@ -63,7 +64,7 @@ LP_SRC_FORMAT = "deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main"
 LP_PVT_SRC_FORMAT = "deb https://{0}private-ppa.launchpad.net/{1}/{2}/ubuntu {3} main"
 
 _MODIFY_OK = frozenset(
-    ["uri", "comps", "architectures", "disabled", "file", "dist", "signedby"]
+    ["uri", "comps", "architectures", "disabled", "file", "dist", "signedby", "trusted"]
 )
 DPKG_ENV_VARS = {
     "APT_LISTBUGS_FRONTEND": "none",
@@ -390,7 +391,14 @@ def refresh_db(cache_valid_time=0, failhard=False, **kwargs):
         except OSError as exp:
             log.warning("could not stat cache directory due to: %s", exp)
 
-    call = _call_apt(["apt-get", "-q", "update"], scope=False)
+    call = _call_apt(
+        ["apt-get", "-q", "update"],
+        scope=False,
+        timeout=kwargs.get("timeout", __opts__.get("aptpkg_refresh_db_timeout", 30)),
+    )
+    if "Timed out" in call["stdout"]:
+        _call_apt(["apt-get", "-q", "clean"], scope=False)
+        call = _call_apt(["apt-get", "-q", "update"], scope=False)
     if call["retcode"] != 0:
         comment = ""
         if "stderr" in call:
@@ -1511,35 +1519,6 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):
     return None
 
 
-def _get_opts(line):
-    """
-    Return all opts in [] for a repo line
-    """
-    get_opts = re.search(r"\[(.*=.*?)\]", line)
-
-    ret = OrderedDict()
-    if not get_opts:
-        return ret
-    opts = get_opts.group(0).strip("[]")
-    architectures = []
-    for opt in opts.split():
-        if opt.startswith("arch"):
-            architectures.extend(opt.split("=", 1)[1].split(","))
-            ret["arch"] = {}
-            ret["arch"]["full"] = opt
-            ret["arch"]["value"] = architectures
-        elif opt.startswith("signed-by"):
-            ret["signedby"] = {}
-            ret["signedby"]["full"] = opt
-            ret["signedby"]["value"] = opt.split("=", 1)[1]
-        else:
-            other_opt = opt.split("=", 1)[0]
-            ret[other_opt] = {}
-            ret[other_opt]["full"] = opt
-            ret[other_opt]["value"] = opt.split("=", 1)[1]
-    return ret
-
-
 def _split_repo_str(repo):
     """
     Return APT source entry as a dictionary
@@ -1706,38 +1685,48 @@ def list_repos(**kwargs):
     for source in sources:
         if _skip_source(source):
             continue
-        signedby = source.signedby
+        if isinstance(source, Deb822SourceEntry):
+            # deb822 could contain multiple types and suites
+            # for backward compatibility we need to expand it
+            # to get separate entries for each type and suite
+            for suite in source.suites:
+                for source_type in source.types:
+                    repo = {}
+                    repo["file"] = source.file
+                    repo["comps"] = getattr(source, "comps", [])
+                    repo["disabled"] = source.disabled
+                    repo["enabled"] = not repo[
+                        "disabled"
+                    ]  # This is for compatibility with the other modules
+                    repo["dist"] = suite
+                    repo["suites"] = source.suites
+                    repo["type"] = source_type
+                    repo["uri"] = source.uri
+                    compat_source = SourceEntry(
+                        f"{source_type} {source.uri} {suite} {' '.join(getattr(source, 'comps', []))}"
+                    )
+                    for attr in ("disabled", "architectures", "signedby", "trusted"):
+                        setattr(compat_source, attr, getattr(source, attr))
+                    repo["line"] = str(compat_source)
+                    repo["architectures"] = getattr(source, "architectures", [])
+                    repo["signedby"] = source.signedby
+                    repos.setdefault(source.uri, []).append(repo)
+            continue
         repo = {}
         repo["file"] = source.file
-        repo_comps = getattr(source, "comps", [])
-        repo_dists = source.dist.split(" ")
-        repo["comps"] = repo_comps
+        repo["comps"] = getattr(source, "comps", [])
         repo["disabled"] = source.disabled
         repo["enabled"] = not repo[
             "disabled"
         ]  # This is for compatibility with the other modules
-        repo["dist"] = repo_dists.pop(0)
+        repo["dist"] = source.dist
         repo["suites"] = list(source.suites)
         repo["type"] = source.type
         repo["uri"] = source.uri
-        if "Types: " in source.line and "\n" in source.line:
-            repo["line"] = (
-                f"{source.type} {source.uri} {repo['dist']} {' '.join(repo_comps)}"
-            )
-        else:
-            repo["line"] = source.line.strip()
+        repo["line"] = source.line.strip()
         repo["architectures"] = getattr(source, "architectures", [])
-        repo["signedby"] = signedby
+        repo["signedby"] = source.signedby
         repos.setdefault(source.uri, []).append(repo)
-        if len(repo_dists):
-            for dist in repo_dists:
-                repo_copy = repo.copy()
-                repo_copy["dist"] = dist
-                if "Types: " in source.line and "\n" in source.line:
-                    repo_copy["line"] = (
-                        f"{source.type} {source.uri} {repo_copy['dist']} {' '.join(repo_comps)}"
-                    )
-                repos[source.uri].append(repo_copy)
     return repos
 
 
@@ -1853,7 +1842,7 @@ def del_repo(repo, **kwargs):
 
         for source in repos:
             if (
-                source.type == repo_entry["type"]
+                repo_entry["type"] in source.type.split()
                 and source.architectures == repo_entry["architectures"]
                 and source.uri.rstrip("/") == repo_entry["uri"].rstrip("/")
                 and repo_entry["dist"] in source.suites
@@ -2565,9 +2554,6 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         pathlib.Path(repo_entry["signedby"]) if repo_entry["signedby"] else ""
     )
 
-    if not aptkey and not kwargs["signedby"]:
-        raise SaltInvocationError("missing 'signedby' option when apt-key is missing")
-
     if "keyid" in kwargs:
         keyid = kwargs.pop("keyid", None)
         keyserver = kwargs.pop("keyserver", None)
@@ -2702,11 +2688,11 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         # we are not returning bogus data because the source line
         # has already been modified on a previous run.
         repo_matches = (
-            apt_source.type == repo_entry["type"]
+            repo_entry["type"] in apt_source.type.split()
             and apt_source.uri.rstrip("/") == repo_entry["uri"].rstrip("/")
             and repo_entry["dist"] in apt_source.suites
         )
-        kw_matches = kw_dist in apt_source.suites and apt_source.type == kw_type
+        kw_matches = kw_dist in apt_source.suites and kw_type in apt_source.type.split()
 
         if repo_matches or kw_matches:
             for comp in full_comp_list:
@@ -2724,6 +2710,13 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     repo_source_entry = SourceEntry(repo)
     if not mod_source:
+        if not aptkey and not (
+            kwargs["signedby"] or string_to_bool_int(kwargs.get("trusted", "no")) == 1
+        ):
+            raise SaltInvocationError(
+                "missing 'signedby' or 'trusted' option when apt-key is missing"
+            )
+
         apt_source_file = kwargs.get("file")
         if not apt_source_file:
             raise SaltInvocationError(
@@ -2766,25 +2759,8 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     if refresh:
         refresh_db()
 
-    signedby = mod_source.signedby
-
-    repo_source_line = mod_source.line
-    if "Types: " in repo_source_line and "\n" in repo_source_line:
-        repo_source_line = f"{mod_source.type} {mod_source.uri} {repo_entry['dist']} {' '.join(mod_source.comps)}"
-
     return {
-        repo: {
-            "architectures": getattr(mod_source, "architectures", []),
-            "dist": mod_source.dist,
-            "suites": mod_source.suites,
-            "comps": mod_source.comps,
-            "disabled": mod_source.disabled,
-            "file": mod_source.file,
-            "type": mod_source.type,
-            "uri": mod_source.uri,
-            "line": repo_source_line,
-            "signedby": signedby,
-        }
+        repo: get_repo(repo)
     }
 
 
