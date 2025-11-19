@@ -2069,7 +2069,7 @@ is changed from the default setting.
 
 .. versionadded:: 3006.17,3007.9
 
-Default: ``0``
+Default: ``3``
 
 Enforce a minimum authentication protocol version from minions connecting to the master.
 This setting protects against authentication downgrade attacks (CVE-2025-62349) where a
@@ -2082,32 +2082,36 @@ Authentication protocol versions and their security features:
 - **Version 2**: Message signing and nonce, but missing TTL validation, token validation,
   and minion ID matching (partially secure)
 - **Version 3+**: Full security with message signing, nonce, TTL checks, token validation,
-  minion ID matching, and session keys (recommended)
+  minion ID matching, and session keys (default and recommended)
 
-**Important Security Considerations:**
+**Security-by-Default:**
 
-The default value of ``0`` allows all authentication protocol versions for backward
-compatibility during rolling upgrades (where the master is typically upgraded before minions).
+The default value of ``3`` enforces modern authentication protocol for maximum security.
+New installations automatically receive protection against authentication downgrade attacks
+without requiring additional configuration.
 
-**Recommended value:** ``3`` - Once all minions in your infrastructure have been upgraded
-to a version that supports protocol version 3 or higher, set this value to ``3`` to ensure
-maximum security.
+**Important for Upgrades:**
 
-**Upgrade Path:**
+If you are upgrading a Salt deployment with minions running older versions that do not
+support authentication protocol version 3, you must temporarily lower this value during
+the upgrade process to prevent minions from being locked out.
 
-1. Upgrade your Salt Master to a version supporting ``minimum_auth_version``
-2. Keep the default value of ``0`` during the minion upgrade process
-3. Upgrade all minions to a version supporting authentication protocol v3+
-4. Set ``minimum_auth_version: 3`` in the master configuration
-5. Restart the Salt Master to enforce the new security requirement
+**Upgrade Path for Environments with Older Minions:**
+
+1. Before upgrading your Salt Master, set ``minimum_auth_version: 0`` in master config
+2. Upgrade your Salt Master to a version supporting ``minimum_auth_version``
+3. Restart the Salt Master
+4. Upgrade all minions to a version supporting authentication protocol v3+
+5. Remove the ``minimum_auth_version: 0`` override (or explicitly set to ``3``)
+6. Restart the Salt Master to enforce the secure default
 
 .. code-block:: yaml
 
-    # Default - allows all versions (backward compatible but less secure)
-    minimum_auth_version: 0
-
-    # Recommended - enforces modern authentication protocol (secure)
+    # Default - enforces modern authentication protocol (secure)
     minimum_auth_version: 3
+
+    # Temporary setting for upgrades with older minions
+    minimum_auth_version: 0
 
 .. warning::
     Setting ``minimum_auth_version`` to a value higher than what your minions support
