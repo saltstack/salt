@@ -7,7 +7,7 @@ from tests.support.pytest.helpers import reap_stray_processes
 @pytest.fixture(scope="package", autouse=True)
 def _auto_skip_on_system_python_too_recent(grains):
     if (
-        grains["osfinger"] in ("Fedora Linux-40", "Ubuntu-24.04")
+        grains["osfinger"] in ("Fedora Linux-40", "Ubuntu-24.04", "Debian-13")
         or grains["os_family"] == "Arch"
     ):
         pytest.skip(
@@ -16,6 +16,7 @@ def _auto_skip_on_system_python_too_recent(grains):
             # and it imports `ssl` and checks if the `match_hostname` function is defined, which
             # has been deprecated since Python 3.7, so, the logic goes into trying to import
             # backports.ssl-match-hostname which is not installed on the system.
+            # Debian 13 ships with Python 3.13 which has similar compatibility issues.
         )
     if system_python_version() < (3, 10):
         pytest.skip("System python too old for these tests")
