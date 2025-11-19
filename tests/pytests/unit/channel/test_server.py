@@ -272,19 +272,18 @@ async def test_auth_version_downgrade_from_v3(
     """
     REGRESSION TEST: CVE-2025-62349 - Auth Version Downgrade Attack (Parametrized)
 
-    Test that minions cannot downgrade to versions 0, 1, or 2 to bypass
-    version 3 security features:
-    - v0: No message signing, no nonce
-    - v1: No message signing, no nonce
+    Test that the master rejects authentication attempts using protocol versions
+    0, 1, or 2 when minimum_auth_version is set to 3.
+
+    This prevents malicious or compromised minions from using older protocol
+    versions to bypass security features:
+    - v0/v1: No message signing, no nonce
     - v2: Message signing but no token validation, no TTL checks, no ID matching
     - v3+: Full security (token validation, TTL, ID matching, session keys)
 
-    EXPECTED BEHAVIOR:
-    - All downgrade attempts should be rejected
-
-    CURRENT BEHAVIOR (VULNERABLE):
-    - Test will FAIL - downgrades are accepted, bypassing security
-    - After fix is implemented, this test will PASS
+    The test verifies that minimum_auth_version enforcement prevents minions from
+    establishing low-version sessions that would allow them to bypass security
+    controls and potentially impersonate other minions or maintain unauthorized access.
     """
     with salt.utils.files.fopen(str(pki_dir / "minion" / "minion.pub"), "r") as fp:
         pub_key = fp.read()
