@@ -18,14 +18,16 @@ _APT_SOURCES_PARTSDIR = "/etc/apt/sources.list.d/"
 
 def string_to_bool(s):
     """
-    Convert string representation of bool values to integer
+    Convert string representation of bool values to bool
     """
+    if isinstance(s, bool):
+        return s
     s = s.lower()
     if s in ("no", "false", "without", "off", "disable"):
-        return 0
+        return False
     elif s in ("yes", "true", "with", "on", "enable"):
-        return 1
-    return -1
+        return True
+    raise ValueError(f"Unable to convert to boolean: {s}")
 
 
 class Deb822Section:
@@ -51,40 +53,39 @@ class Deb822Section:
         """
         Parse section string to comments and tags
         """
-        _pure_data = []
-        _header = []
-        _footer = []
-        _tag_re = re.compile(r"\A(\S+): (.*)")
-        _tags = OrderedDict()
+        header = []
+        footer = []
+        raw_data = []
+        tag_re = re.compile(r"\A(\S+):\s*(\S.*|)")
+        tags = OrderedDict()
 
         for line in section_string.splitlines():
             if line.startswith("#"):
-                if _pure_data:
-                    _footer.append(line)
+                if raw_data:
+                    footer.append(line)
                 else:
-                    _header.append(line)
+                    header.append(line)
             else:
-                _pure_data.append(line)
+                raw_data.append(line)
 
-        _tag = None
-        _value = None
-        for line in _pure_data:
-            match = _tag_re.match(line)
+        tag = None
+        value = None
+        for line in raw_data:
+            match = tag_re.match(line)
             if match:
-                if _tag is not None:
+                if tag is not None:
                     # Store previous found tag,
                     # as the values could contain multiple lines
-                    _tags[_tag] = _value.strip()
-                _tag = match.group(1)
-                _value = match.group(2)
-            elif line == "" and _tag is not None:
-                _tags[_tag] = _value.strip()
+                    tags[tag] = value.strip()
+                tag, value = match.groups()
+            elif line == "" and tag is not None:
+                tags[tag] = value.strip()
             else:
-                _value = f"{value}\n{line}"
-        if _tag is not None:
-            _tags[_tag] = _value.strip()
+                value = f"{value}\n{line}"
+        if tag is not None:
+            tags[tag] = value.strip()
 
-        return _tags, _header, _footer
+        return tags, header, footer
 
     def __getitem__(self, key):
         """
@@ -151,6 +152,7 @@ class Deb822SourceEntry:
         "suites": {"key": "Suites", "multi": True},
         "dist": {"key": "Suites", "multi": False, "deprecated": True},
         "comps": {"key": "Components", "multi": True},
+        "signedby": {"key": "Signed-By", "multi": False},
     }
 
     def __init__(
@@ -168,8 +170,6 @@ class Deb822SourceEntry:
 
         self._line = str(self.section)
         self.file = file
-
-        self.signedby = self.section.tags.get("Signed-By", "")
 
     def __getattr__(self, name):
         """
@@ -194,6 +194,8 @@ class Deb822SourceEntry:
         if value is None:
             del self.section[key]
         else:
+            if key == "Signed-By":
+                value = str(value)
             self.section[key] = (
                 " ".join(value) if self._properties[name]["multi"] else value
             )
@@ -240,13 +242,17 @@ class Deb822SourceEntry:
 
     @trusted.setter
     def trusted(self, value):
-        if value is None:
+        if isinstance(value, bool):
+            self.section["Trusted"] = "yes" if value else "no"
+        elif isinstance(value, int) and value in (0, 1):
+            self.section["Trusted"] = "yes" if value == 1 else "no"
+        elif isinstance(value, str):
+            self.section["Trusted"] = "yes" if string_to_bool(value) else "no"
+        else:
             try:
                 del self.section["Trusted"]
             except KeyError:
                 pass
-        else:
-            self.section["Trusted"] = "yes" if value else "no"
 
     @property
     def disabled(self):
@@ -285,12 +291,6 @@ class Deb822SourceEntry:
         """
         return str(self.section).strip()
 
-    def set_enabled(self, enabled):
-        """
-        Opposite to .disabled
-        """
-        self.disabled = not enabled
-
 
 class SourceEntry:
     """
@@ -302,8 +302,8 @@ class SourceEntry:
         self.disabled = False  # identified as disabled if commented
         self.type = ""  # type of the source (deb, deb-src)
         self.architectures = []
-        self.signedby = ""
-        self.trusted = None
+        self._signedby = ""
+        self._trusted = None
         self.uri = ""
         self.dist = ""  # distribution name
         self.comps = []  # list of available componetns (or empty)
@@ -382,6 +382,8 @@ class SourceEntry:
                 self.architectures.extend(opts["arch"]["value"])
             if "signedby" in opts:
                 self.signedby = opts["signedby"]["value"]
+            if "trusted" in opts:
+                self.trusted = opts["trusted"]["value"]
             for opt in opts.values():
                 opt = opt["full"]
                 if opt:
@@ -423,6 +425,13 @@ class SourceEntry:
                 opts["signedby"] = {}
             opts["signedby"]["full"] = f"signed-by={self.signedby}"
             opts["signedby"]["value"] = self.signedby
+        if self._trusted:
+            if "trusted" not in opts:
+                opts["trusted"] = {}
+            opts["trusted"]["value"] = "yes" if self._trusted else "no"
+            opts["trusted"]["full"] = f"trusted={opts['trusted']['value']}"
+        if "trusted" in opts and opts["trusted"]["value"] == "no":
+            del opts["trusted"]
 
         ordered_opts = []
         for opt in opts.values():
@@ -474,6 +483,41 @@ class SourceEntry:
             self.dist = ""
             assert self.dist == ""
 
+    @property
+    def signedby(self):
+        """
+        Deb822 compatible attribute for the signedby
+        """
+        return self._signedby
+
+    @signedby.setter
+    def signedby(self, signedby):
+        """
+        Deb822 compatible setter for the signedy
+        """
+        self._signedby = str(signedby)
+
+    @property
+    def trusted(self):
+        """
+        Deb822 compatible attribute for the trusted
+        """
+        return self._trusted
+
+    @trusted.setter
+    def trusted(self, trusted):
+        """
+        Deb822 compatible setter for the trusted
+        """
+        if isinstance(trusted, bool):
+            self._trusted = trusted
+        elif isinstance(trusted, int) and trusted in (0, 1):
+            self._trusted = trusted == 1
+        elif isinstance(trusted, str):
+            self._trusted = string_to_bool(trusted)
+        else:
+            self._trusted = None
+
 
 class SourcesList:
     """
@@ -507,16 +551,6 @@ class SourcesList:
         """
         yield from self.list
 
-    def __find(self, *predicates, **attrs):
-        uri = attrs.pop("uri", None)
-        for source in self.list:
-            if uri and source.uri and uri.rstrip("/") != source.uri.rstrip("/"):
-                continue
-            if all(getattr(source, key) == attrs[key] for key in attrs) and all(
-                predicate(source) for predicate in predicates
-            ):
-                yield source
-
     def add(
         self,
         type,
@@ -528,6 +562,7 @@ class SourcesList:
         file=None,
         architectures=None,
         signedby="",
+        trusted=False,
         parent=None,
     ):
         """
@@ -542,47 +577,9 @@ class SourcesList:
             type = type[1:].lstrip()
         if architectures is None:
             architectures = []
-        architectures = set(architectures)
         # create a working copy of the component list so that
         # we can modify it later
         comps = orig_comps[:]
-        sources = self.__find(
-            lambda s: set(s.architectures) == architectures,
-            disabled=disabled,
-            invalid=False,
-            type=type,
-            uri=uri,
-            dist=dist,
-        )
-        # check if we have this source already in the sources.list
-        for source in sources:
-            for new_comp in comps:
-                if new_comp in source.comps:
-                    # we have this component already, delete it
-                    # from the new_comps list
-                    del comps[comps.index(new_comp)]
-                    if len(comps) == 0:
-                        return source
-
-        sources = self.__find(
-            lambda s: set(s.architectures) == architectures,
-            invalid=False,
-            type=type,
-            uri=uri,
-            dist=dist,
-        )
-        for source in sources:
-            if source.disabled == disabled:
-                # if there is a repo with the same (disabled, type, uri, dist)
-                # just add the components
-                if set(source.comps) != set(comps):
-                    source.comps = list(set(source.comps + comps))
-                return source
-            elif source.disabled and not disabled:
-                # enable any matching (type, uri, dist), but disabled repo
-                if set(source.comps) == set(comps):
-                    source.disabled = False
-                    return source
 
         new_entry = None
         if file is None:
@@ -602,12 +599,26 @@ class SourcesList:
                 new_entry.architectures = list(architectures)
             new_entry.section.header = comment
             new_entry.disabled = disabled
+            if signedby:
+                new_entry.signedby = signedby
+            if trusted is not False:
+                new_entry.trusted = trusted
         else:
-            # there isn't any matching source, so create a new line and parse it
+            ext_attrs = ""
+            if architectures:
+                ext_attrs = f"arch={','.join(architectures)}"
+            if signedby:
+                if ext_attrs:
+                    ext_attrs = f"{ext_attrs} "
+                ext_attrs = f"{ext_attrs}signed-by={signedby}"
+            if trusted:
+                if ext_attrs:
+                    ext_attrs = f"{ext_attrs} "
+                ext_attrs = f"{ext_attrs}trusted=yes"
             parts = [
                 "#" if disabled else "",
                 type,
-                ("[arch=%s]" % ",".join(architectures)) if architectures else "",
+                f"[{ext_attrs}]" if ext_attrs else "",
                 uri,
                 dist,
             ]
@@ -669,7 +680,7 @@ class SourcesList:
                         source = SourceEntry(line, file_path)
                         self.list.append(source)
         except Exception as exc:  # pylint: disable=broad-except
-            log.error("Could not parse source file '%s'", file, exc_info=True)
+            log.error("Could not parse source file '%s'", file_path, exc_info=True)
 
     def index(self, entry):
         return self.list.index(entry)
