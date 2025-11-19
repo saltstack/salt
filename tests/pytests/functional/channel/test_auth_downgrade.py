@@ -218,21 +218,22 @@ async def test_replay_attack_via_version_downgrade(
     should_pass,
 ):
     """
-    REGRESSION TEST: CVE-TBD - Replay Attack via Version Downgrade
+    REGRESSION TEST: CVE-2025-62349 - Authentication Protocol Version Downgrade Attack
 
     This parameterized test verifies that version downgrade attacks are prevented
     based on the minimum_auth_version configuration.
 
     Attack Scenario:
-    1. A legitimate minion sends a version 3 authenticated message
-    2. An attacker captures the encrypted payload
-    3. The attacker attempts to replay it with an older version to bypass security
+    A malicious or compromised minion attempts to authenticate using an older protocol
+    version to bypass security features introduced in newer versions (token validation,
+    TTL checks, ID matching, session keys). This allows the attacker to impersonate
+    other minions or maintain persistent unauthorized access.
 
     Test Matrix:
     - minimum_auth_version=0: VULNERABLE - accepts all versions (xfail)
     - minimum_auth_version=1: Partially secure - rejects v0 only
     - minimum_auth_version=2: Partially secure - rejects v0, v1
-    - minimum_auth_version=3: SECURE - rejects v0, v1, v2 (recommended)
+    - minimum_auth_version=3: SECURE - rejects v0, v1, v2 (default and recommended)
 
     This test uses xfail for vulnerable configurations to document the security risk.
     """
