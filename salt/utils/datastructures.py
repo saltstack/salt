@@ -1,7 +1,7 @@
 """
 Utilities for working with ordered dictionary structures.
 
-.. versionadded:: 300.0.0
+.. versionadded:: 3006.17
 """
 
 import copy

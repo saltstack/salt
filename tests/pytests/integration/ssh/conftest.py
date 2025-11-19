@@ -32,8 +32,10 @@ def _reap_stray_processes():
 
 @pytest.fixture(scope="module")
 def state_tree(base_env_state_tree_root_dir):
+    # Remove unused import from top file to avoid salt-ssh file sync issues
+    # Note: top file references "basic" but we create "test.sls" - this appears
+    # intentional as tests run state.sls directly and don't use the top file
     top_file = """
-    {%- from "map.jinja" import abc with context %}
     base:
       'localhost':
         - basic
@@ -43,6 +45,7 @@ def state_tree(base_env_state_tree_root_dir):
     map_file = """
     {%- set abc = "def" %}
     """
+    # State file imports from map.jinja - this is what we're testing
     state_file = """
     {%- from "map.jinja" import abc with context %}
     Ok with {{ abc }}:

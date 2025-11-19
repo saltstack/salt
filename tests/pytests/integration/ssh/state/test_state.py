@@ -15,6 +15,67 @@ def test_state_with_import(salt_ssh_cli, state_tree):
     assert ret.data
 
 
+@pytest.mark.parametrize(
+    "ssh_cmd",
+    [
+        "state.sls",
+        "state.highstate",
+        "state.apply",
+        "state.show_top",
+        "state.show_highstate",
+        "state.show_low_sls",
+        "state.show_lowstate",
+        "state.sls_id",
+        "state.show_sls",
+        "state.top",
+    ],
+)
+def test_state_with_import_dir(salt_ssh_cli, state_tree_dir, ssh_cmd):
+    """
+    verify salt-ssh can use imported map files in states
+    when the map files are in another directory outside of
+    sls files importing them.
+    """
+    if ssh_cmd in ("state.sls", "state.show_low_sls", "state.show_sls"):
+        ret = salt_ssh_cli.run("-w", "-t", ssh_cmd, "testdir")
+    elif ssh_cmd == "state.top":
+        ret = salt_ssh_cli.run("-w", "-t", ssh_cmd, "top.sls")
+    elif ssh_cmd == "state.sls_id":
+        ret = salt_ssh_cli.run("-w", "-t", ssh_cmd, "Ok with def", "testdir")
+    else:
+        ret = salt_ssh_cli.run("-w", "-t", ssh_cmd)
+    assert ret.returncode == 0
+    if ssh_cmd == "state.show_top":
+        assert ret.data == {"base": ["testdir", "master_tops_test"]} or {
+            "base": ["testdir"]
+        }
+    elif ssh_cmd in ("state.show_highstate", "state.show_sls"):
+        assert ret.data == {
+            "Ok with def": {
+                "__sls__": "testdir",
+                "__env__": "base",
+                "test": ["succeed_without_changes", {"order": 10000}],
+            }
+        }
+    elif ssh_cmd in ("state.show_low_sls", "state.show_lowstate", "state.show_sls"):
+        assert ret.data == [
+            {
+                "state": "test",
+                "name": "Ok with def",
+                "__sls__": "testdir",
+                "__env__": "base",
+                "__id__": "Ok with def",
+                "order": 10000,
+                "fun": "succeed_without_changes",
+            }
+        ]
+    else:
+        assert ret.data["test_|-Ok with def_|-Ok with def_|-succeed_without_changes"][
+            "result"
+        ]
+    assert ret.data
+
+
 def test_state_with_import_from_dir(salt_ssh_cli, nested_state_tree):
     """
     verify salt-ssh can use imported map files in states

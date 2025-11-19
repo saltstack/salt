@@ -1788,7 +1788,8 @@ def _get_opts(line):
     """
     Return all opts in [] for a repo line
     """
-    get_opts = re.search(r"\[(.*=.*)\]", line)
+    get_opts = re.search(r"\[(.*=.*?)\]", line)
+    log.error("WTFSON %s", get_opts)
 
     ret = OrderedDict()
     if not get_opts:
@@ -2288,11 +2289,14 @@ def get_repo_keys(aptkey=True, keydir=None):
 
     if not aptkey:
         if not keydir:
+            log.error("MEH 1")
             keydir = pathlib.Path("/etc", "apt", "keyrings")
         if not isinstance(keydir, pathlib.Path):
+            log.error("MEH 2")
             keydir = pathlib.Path(keydir)
 
         if not keydir.is_dir():
+            log.error("MEH 3")
             log.error(
                 "The directory %s does not exist. Please create this directory only writable by root",
                 keydir,
