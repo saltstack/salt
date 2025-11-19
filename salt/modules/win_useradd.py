@@ -33,6 +33,7 @@ import salt.utils.dateutils
 import salt.utils.platform
 import salt.utils.versions
 import salt.utils.win_reg
+import salt.utils.win_runas
 import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
 
@@ -802,34 +803,26 @@ def info(name):
     """
     ret = {}
     items = {}
-    username = str(name)
-    domainname = None
     server = None
 
-    # Handles domain users with Down-Level Logon Name: DOMAIN\user
-    if "\\" in str(name):
-        domainname, username = str(name).split("\\", 1)
-    # And domain users with User Principal Name (UPN): user@DOMAIN
-    if "@" in str(name):
-        username, domainname = str(name).split("@", 1)
-        domainname = domainname.removesuffix(".local")
+    domain_name, user_name = salt.utils.win_runas.split_username(name)
 
-    if domainname:
+    if domain_name:
         try:
-            server = win32net.NetGetAnyDCName(None, domainname)
+            server = win32net.NetGetAnyDCName(None, domain_name)
         except win32net.error:
             # Restore username to original
-            username = str(name)
+            user_name = str(name)
 
     try:
-        items = win32net.NetUserGetInfo(server, username, 4)
+        items = win32net.NetUserGetInfo(server, user_name, 4)
     except win32net.error:
         pass
 
     if items:
         groups = []
         try:
-            groups = win32net.NetUserGetLocalGroups(None, str(name))
+            groups = win32net.NetUserGetLocalGroups(server, user_name)
         except win32net.error:
             pass
 
