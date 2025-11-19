@@ -29,20 +29,22 @@ pytestmark = [
 )
 def test_state_with_import_dir(salt_ssh_cli, state_tree_dir, ssh_cmd):
     if ssh_cmd in ("state.sls", "state.show_low_sls", "state.show_sls"):
-        ret = salt_ssh_cli.run("-w", "-t", ssh_cmd, "test")
+        ret = salt_ssh_cli.run("-w", "-t", ssh_cmd, "testdir")
     elif ssh_cmd == "state.top":
         ret = salt_ssh_cli.run("-w", "-t", ssh_cmd, "top.sls")
     elif ssh_cmd == "state.sls_id":
-        ret = salt_ssh_cli.run("-w", "-t", ssh_cmd, "Ok with def", "test")
+        ret = salt_ssh_cli.run("-w", "-t", ssh_cmd, "Ok with def", "testdir")
     else:
         ret = salt_ssh_cli.run("-w", "-t", ssh_cmd)
     assert ret.returncode == 0
     if ssh_cmd == "state.show_top":
-        assert ret.data == {"base": ["test", "master_tops_test"]} or {"base": ["test"]}
+        assert ret.data == {"base": ["testdir", "master_tops_test"]} or {
+            "base": ["testdir"]
+        }
     elif ssh_cmd in ("state.show_highstate", "state.show_sls"):
         assert ret.data == {
             "Ok with def": {
-                "__sls__": "test",
+                "__sls__": "testdir",
                 "__env__": "base",
                 "test": ["succeed_without_changes", {"order": 10000}],
             }
@@ -52,7 +54,7 @@ def test_state_with_import_dir(salt_ssh_cli, state_tree_dir, ssh_cmd):
             {
                 "state": "test",
                 "name": "Ok with def",
-                "__sls__": "test",
+                "__sls__": "testdir",
                 "__env__": "base",
                 "__id__": "Ok with def",
                 "order": 10000,

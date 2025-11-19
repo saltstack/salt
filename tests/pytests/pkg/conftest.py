@@ -541,7 +541,12 @@ def salt_api(salt_master, install_salt, extras_pypath):
     """
     start up and configure salt_api
     """
-    shutil.rmtree(str(extras_pypath), ignore_errors=True)
+    # There are some pip tests in tests/pytests/pkg/integration/test_pip.py
+    # that are installing cffi into extras directory. So removing it causes
+    # lots of tests to break where cffi can't be found anymore. This still
+    # needs to be fixed.
+    #
+    # shutil.rmtree(str(extras_pypath), ignore_errors=True)
     start_timeout = None
     factory = salt_master.salt_api_daemon()
     with factory.started(start_timeout=start_timeout):
