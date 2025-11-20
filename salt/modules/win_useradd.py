@@ -805,7 +805,7 @@ def info(name):
     items = {}
     server = None
 
-    domain_name, user_name = salt.utils.win_runas.split_username(name)
+    user_name, domain_name = salt.utils.win_runas.split_username(name)
 
     if domain_name:
         try:
