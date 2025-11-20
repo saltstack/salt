@@ -503,7 +503,7 @@ jobs:
 
       - name: Code signing with Software Trust Manager
         if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
-        uses: digicert/ssm-code-signing@v0.0.2
+        uses: digicert/ssm-code-signing@v1.1.1
 
       - name: Build Windows Packages
         run: |
