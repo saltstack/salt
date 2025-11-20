@@ -113,7 +113,7 @@ jobs:
         run: |
           mkdir -p ~/.local/relenv
           python3 -m venv venv
-          venv/bin/python3 -m pip install relenv ppbt
+          venv/bin/python3 -m pip install ppbt relenv==${{ inputs.relenv-version }}
           venv/bin/python3 -c 'from relenv import common; common.get_toolchain()'
 
       - name: Download Release Patch
@@ -208,7 +208,7 @@ jobs:
         run: |
           mkdir -p ~/.local/relenv
           python3 -m venv venv
-          venv/bin/python3 -m pip install relenv ppbt
+          venv/bin/python3 -m pip install ppbt relenv==${{ inputs.relenv-version }}
           venv/bin/python3 -c 'from relenv import common; common.get_toolchain()'
 
       - name: Download Release Patch
