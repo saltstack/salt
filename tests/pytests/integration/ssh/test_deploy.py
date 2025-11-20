@@ -250,8 +250,9 @@ def test_retcode_json_decode_error(salt_ssh_cli):
         ret.data["stdout"]
         == '{  "local": {    "whoops": "hrhrhr"  }Warning: Chaos is not a letter\n}'
     )
-    assert ret.data["_error"] == "Failed to return clean data"
+    assert ret.data["_error"] == "Return dict was malformed"
     assert ret.data["retcode"] == 0
+    assert ret.data["parsed"] == {"whoops": "hrhrhr"}
 
 
 @pytest.mark.usefixtures("invalid_return_exe_mod")
@@ -295,12 +296,13 @@ def test_wrapper_unwrapped_command_parsing_failure(salt_ssh_cli):
     assert ret.data
     assert "Probably got garbage" not in ret.data["stderr"]
     assert isinstance(ret.data, dict)
-    assert ret.data["_error"] == "Failed to return clean data"
+    assert ret.data["_error"] == "Return dict was malformed"
     assert ret.data["retcode"] == 0
     assert (
         ret.data["stdout"]
         == '{  "local": {    "whoops": "hrhrhr"  }Warning: Chaos is not a letter\n}'
     )
+    assert ret.data["parsed"] == {"whoops": "hrhrhr"}
 
 
 @pytest.mark.usefixtures("remote_parsing_failure_wrap_mod", "invalid_return_exe_mod")
