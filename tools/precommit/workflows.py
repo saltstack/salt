@@ -83,6 +83,12 @@ TEST_SALT_LISTING = PlatformDefinitions(
                 container="ghcr.io/saltstack/salt-ci-containers/testing:debian-12",
             ),
             Linux(
+                slug="debian-13",
+                display_name="Debian 13",
+                arch="x86_64",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:debian-13",
+            ),
+            Linux(
                 slug="fedora-40",
                 display_name="Fedora 40",
                 arch="x86_64",
@@ -129,7 +135,7 @@ TEST_SALT_LISTING = PlatformDefinitions(
             ),
         ],
         "macos": [
-            MacOS(slug="macos-13", display_name="macOS 13", arch="x86_64"),
+            MacOS(slug="macos-15-intel", display_name="macOS 15", arch="x86_64"),
             MacOS(slug="macos-15", display_name="macOS 15 (M1)", arch="arm64"),
         ],
         "windows": [
@@ -177,6 +183,13 @@ TEST_SALT_PKG_LISTING = PlatformDefinitions(
                 container="ghcr.io/saltstack/salt-ci-containers/testing:debian-12",
             ),
             LinuxPkg(
+                slug="debian-13-arm64",
+                display_name="Debian 13 Arm64",
+                arch="arm64",
+                pkg_type="deb",
+                container="ghcr.io/saltstack/salt-ci-containers/testing:debian-13",
+            ),
+            LinuxPkg(
                 slug="photonos-4-arm64",
                 display_name="Photon OS 4 Arm64",
                 arch="arm64",
@@ -222,7 +235,7 @@ TEST_SALT_PKG_LISTING = PlatformDefinitions(
             ),
         ],
         "macos": [
-            MacOSPkg(slug="macos-13", display_name="macOS 13", arch="x86_64"),
+            MacOSPkg(slug="macos-13-intel", display_name="macOS 15", arch="x86_64"),
             MacOSPkg(slug="macos-15", display_name="macOS 15 (M1)", arch="arm64"),
         ],
         "windows": [

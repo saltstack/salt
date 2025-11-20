@@ -1,10 +1,8 @@
-import os.path
-import posixpath
+from collections import OrderedDict
 
 import pytest
 
 import salt.fileserver.roots as roots
-from salt.utils.odict import OrderedDict
 from tests.support.mock import patch
 
 pytestmark = [
@@ -23,7 +21,7 @@ def test_symlink_list(state_tree):
         link = state_tree / "link"
         link.symlink_to(str(target))
         ret = roots.symlink_list({"saltenv": "base"})
-        assert ret == {"link": str(target).replace(os.path.sep, posixpath.sep)}
+        assert ret == {"link": str(target)}
 
 
 @pytest.mark.parametrize(

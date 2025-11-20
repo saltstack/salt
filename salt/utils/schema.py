@@ -322,10 +322,10 @@
 import inspect
 import textwrap
 
-import salt.utils.args
-
 # import salt.utils.yaml
-from salt.utils.odict import OrderedDict
+from collections import OrderedDict
+
+import salt.utils.args
 
 BASE_SCHEMA_URL = "https://non-existing.saltstack.com/schemas"
 RENDER_COMMENT_YAML_MAX_LINE_LENGTH = 80

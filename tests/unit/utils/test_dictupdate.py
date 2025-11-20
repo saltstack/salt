@@ -1,8 +1,8 @@
 import copy
+from collections import OrderedDict
 
 import salt.utils.dictupdate as dictupdate
 from salt.exceptions import SaltInvocationError
-from salt.utils.odict import OrderedDict
 from tests.support.unit import TestCase
 
 

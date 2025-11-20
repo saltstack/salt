@@ -33,6 +33,7 @@ import salt.utils.dateutils
 import salt.utils.platform
 import salt.utils.versions
 import salt.utils.win_reg
+import salt.utils.win_runas
 import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
 
@@ -802,15 +803,26 @@ def info(name):
     """
     ret = {}
     items = {}
+    server = None
+
+    domain_name, user_name = salt.utils.win_runas.split_username(name)
+
+    if domain_name:
+        try:
+            server = win32net.NetGetAnyDCName(None, domain_name)
+        except win32net.error:
+            # Restore username to original
+            user_name = str(name)
+
     try:
-        items = win32net.NetUserGetInfo(None, str(name), 4)
+        items = win32net.NetUserGetInfo(server, user_name, 4)
     except win32net.error:
         pass
 
     if items:
         groups = []
         try:
-            groups = win32net.NetUserGetLocalGroups(None, str(name))
+            groups = win32net.NetUserGetLocalGroups(server, user_name)
         except win32net.error:
             pass
 

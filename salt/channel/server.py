@@ -142,8 +142,23 @@ class ReqServerChannel:
             or "load" not in payload
         ):
             log.warn("bad load received on socket")
-            return "bad load"
-        version = payload.get("version", 0)
+            raise tornado.gen.Return("bad load")
+        try:
+            version = int(payload.get("version", 0))
+        except ValueError:
+            version = 0
+
+        # Enforce minimum authentication protocol version to prevent downgrade attacks
+        minimum_version = self.opts.get("minimum_auth_version", 0)
+        if minimum_version > 0 and version < minimum_version:
+            log.warning(
+                "Rejected authentication attempt using protocol version %d "
+                "(minimum required: %d)",
+                version,
+                minimum_version,
+            )
+            raise tornado.gen.Return("bad load")
+
         try:
             payload = self._decode_payload(payload, version)
         except Exception as exc:  # pylint: disable=broad-except

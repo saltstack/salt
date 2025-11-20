@@ -86,10 +86,11 @@ certvalidator==0.11.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   vcert
-cffi==1.16.0
+cffi==2.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   cryptography
     #   pynacl
@@ -215,7 +216,7 @@ idna==3.7
     #   requests
     #   trustme
     #   yarl
-immutables==0.15 ; sys_platform == "linux"
+immutables==0.21
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -493,7 +494,7 @@ pytest-httpserver==1.0.8
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/pytest.txt
-pytest-salt-factories==1.0.1
+pytest-salt-factories==1.0.5
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/pytest.txt

@@ -7,8 +7,7 @@ for more documentation.
 
 import inspect
 import logging
-
-from salt.utils.odict import OrderedDict
+from collections import OrderedDict
 
 REQUISITES = (
     "listen",

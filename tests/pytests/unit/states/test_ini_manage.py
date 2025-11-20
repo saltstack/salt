@@ -4,12 +4,12 @@
 
 import copy
 import os
+from collections import OrderedDict
 
 import pytest
 
 import salt.modules.ini_manage as mod_ini_manage
 import salt.states.ini_manage as ini_manage
-from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, patch
 
 

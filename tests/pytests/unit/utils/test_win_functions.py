@@ -190,3 +190,19 @@ def test_get_sam_name(test_user):
     expected = "\\".join([platform.node()[:15], test_user])
     result = win_functions.get_sam_name(test_user)
     assert result.lower() == expected.lower()
+
+
+@pytest.mark.parametrize(
+    "string, expected",
+    [
+        ("foo", ["foo"]),
+        ("foo bar", ["foo", "bar"]),
+        ("foo bar=baz", ["foo", "bar=baz"]),
+        ('foo "bar baz"', ["foo", "bar baz"]),
+        ("C:\\Temp\\test.txt", ["C:\\Temp\\test.txt"]),
+        ('"C:\\Temp\\Space Dir\\test.txt"', ["C:\\Temp\\Space Dir\\test.txt"]),
+    ],
+)
+def test_shlex_split(string, expected):
+    result = win_functions.shlex_split(string=string)
+    assert result == expected
