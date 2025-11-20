@@ -17,6 +17,7 @@ import pathlib
 import re
 import shutil
 import time
+from collections import OrderedDict
 from urllib.error import HTTPError
 from urllib.request import Request as _Request
 from urllib.request import urlopen as _urlopen
