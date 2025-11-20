@@ -16,8 +16,6 @@ import salt.channel.server
 import salt.config
 import salt.crypt
 import salt.daemons.masterapi
-import salt.ext.tornado.gen
-import salt.ext.tornado.ioloop
 import salt.master
 import salt.payload
 import salt.utils.event
