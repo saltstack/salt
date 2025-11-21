@@ -235,7 +235,6 @@ class PublishClient(salt.transport.base.PublishClient):
         self.connected = False
         self._closing = False
         self._stream = None
-        self._closing = False
         self._closed = False
         self.backoff = opts.get("tcp_reconnect_backoff", 1)
         self.resolver = kwargs.get("resolver")
@@ -1769,6 +1768,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self._closed = False
         self._stream_return_running = False
         self._stream = None
+        self.task = None
         self.disconnect_callback = _null_callback
         self.connect_callback = _null_callback
         self.backoff = opts.get("tcp_reconnect_backoff", 1)
@@ -1837,7 +1837,7 @@ class RequestClient(salt.transport.base.RequestClient):
                                 message_id,
                             )
             except tornado.iostream.StreamClosedError as e:
-                log.error(
+                log.debug(
                     "tcp stream to %s:%s closed, unable to recv",
                     self.host,
                     self.port,
@@ -1879,6 +1879,8 @@ class RequestClient(salt.transport.base.RequestClient):
                     stream.close()
                 unpacker = salt.utils.msgpack.Unpacker()
                 await self.connect()
+            except asyncio.CancelledError:
+                log.debug("Stream return cancelled")
         self._stream_return_running = False
 
     def _message_id(self):
@@ -1927,9 +1929,20 @@ class RequestClient(salt.transport.base.RequestClient):
     def close(self):
         if self._closing:
             return
+        self._closing = True
         if self._stream is not None:
             self._stream.close()
             self._stream = None
+        if self.task is not None:
+            self.task.cancel()
+            # Wait for the task to finish via asyncio
+            group = asyncio.gather(self.task)
+            try:
+                self.task.get_loop().run_until_complete(group)
+            except RuntimeError:
+                # Ignore event loop was already running message
+                pass
+            self.task = None
 
     def __enter__(self):
         return self
