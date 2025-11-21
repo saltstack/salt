@@ -142,7 +142,7 @@ class ReqServerChannel:
             or "load" not in payload
         ):
             log.warn("bad load received on socket")
-            raise tornado.gen.Return("bad load")
+            return "bad load"
         try:
             version = int(payload.get("version", 0))
         except ValueError:
@@ -157,7 +157,7 @@ class ReqServerChannel:
                 version,
                 minimum_version,
             )
-            raise tornado.gen.Return("bad load")
+            return "bad load"
 
         try:
             payload = self._decode_payload(payload, version)

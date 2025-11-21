@@ -75,6 +75,7 @@ class ThinTestContext:
             "yaml": os.path.join(lib_root, "yaml"),
             "tornado": os.path.join(lib_root, "tornado"),
             "msgpack": os.path.join(lib_root, "msgpack"),
+            "networkx": os.path.join(lib_root, "networkx"),
         }
 
         code_dir = pathlib.Path(RUNTIME_VARS.CODE_DIR).resolve()
@@ -84,11 +85,14 @@ class ThinTestContext:
             "yaml": str(code_dir / "yaml"),
             "tornado": str(code_dir / "tornado"),
             "msgpack": str(code_dir / "msgpack"),
+            "networkx": str(code_dir / "networkx"),
             "certifi": str(code_dir / "certifi"),
             "singledispatch": str(code_dir / "singledispatch.py"),
             "looseversion": str(code_dir / "looseversion.py"),
             "packaging": str(code_dir / "packaging"),
-            "backports": str(code_dir / "backports"),
+            "requests": str(code_dir / "requests"),
+            "idna": str(code_dir / "idna"),
+            "urllib3": str(code_dir / "urllib3"),
         }
         self.exc_libs = ["jinja2", "yaml"]
 
@@ -311,6 +315,7 @@ def test_get_ext_tops_config_pass(thin_ctx):
                 "tornado": "/tornado/tornado.py",
                 "msgpack": "msgpack.py",
                 "distro": "distro.py",
+                "networkx": "/networkx/",
             },
         }
     }
@@ -324,6 +329,7 @@ def test_get_ext_tops_config_pass(thin_ctx):
             "/yaml/",
             "msgpack.py",
             "distro.py",
+            "/networkx/",
         ]
     )
 
@@ -347,8 +353,8 @@ def test_add_dep_path(thin_ctx):
     container = []
     for pth in ["/foo/bar.py", "/something/else/__init__.py"]:
         thin._add_dependency(container, type("obj", (), {"__file__": pth})())
-    assert "__init__" not in container[1]
-    assert container == ["/foo/bar.py", "/something/else"]
+    assert "__init__" not in container[1][0]
+    assert container == [("/foo/bar.py", None), ("/something/else", None)]
 
 
 def test_thin_path(thin_ctx):
@@ -503,17 +509,20 @@ def test_get_tops(thin_ctx):
         "sdp_hlp",
         "ssl_mh",
         "markupsafe",
-        "backports",
         "backports_abc",
         "concurrent",
         "contextvars",
         "looseversion",
         "packaging",
+        "idna",
+        "networkx",
+        "requests",
+        "urllib3",
     ]
     if salt.utils.thin.has_immutables:
         base_tops.extend(["immutables"])
     tops = []
-    for top in thin.get_tops(extra_mods="foo,bar"):
+    for top, namespace in thin.get_tops(extra_mods="foo,bar"):
         if top.find("/") != -1:
             spl = "/"
         else:
@@ -615,11 +624,14 @@ def test_get_tops_extra_mods(thin_ctx):
         "ssl_mh",
         "concurrent",
         "markupsafe",
-        "backports",
         "backports_abc",
         "contextvars",
         "looseversion",
         "packaging",
+        "idna",
+        "networkx",
+        "requests",
+        "urllib3",
         "foo",
         "bar.py",
     ]
@@ -634,7 +646,7 @@ def test_get_tops_extra_mods(thin_ctx):
             MagicMock(side_effect=[type("foo", (), foo), type("bar", (), bar)]),
         ):
             tops = []
-            for top in thin.get_tops(extra_mods="foo,bar"):
+            for top, namespace in thin.get_tops(extra_mods="foo,bar"):
                 if top.find("/") != -1:
                     spl = "/"
                 else:
@@ -736,11 +748,14 @@ def test_get_tops_so_mods(thin_ctx):
         "ssl_mh",
         "concurrent",
         "markupsafe",
-        "backports",
         "backports_abc",
         "contextvars",
         "looseversion",
         "packaging",
+        "idna",
+        "networkx",
+        "requests",
+        "urllib3",
         "foo.so",
         "bar.so",
     ]
@@ -758,7 +773,7 @@ def test_get_tops_so_mods(thin_ctx):
             ),
         ):
             tops = []
-            for top in thin.get_tops(so_mods="foo,bar"):
+            for top, namespace in thin.get_tops(so_mods="foo,bar"):
                 if top.find("/") != -1:
                     spl = "/"
                 else:
@@ -825,7 +840,10 @@ def test_gen_thin_fails_ancient_python_version(thin_ctx):
 @patch("salt.utils.files.fopen", MagicMock())
 @patch("salt.utils.thin._get_salt_call", MagicMock())
 @patch("salt.utils.thin._get_ext_namespaces", MagicMock())
-@patch("salt.utils.thin.get_tops", MagicMock(return_value=["/foo3", "/bar3"]))
+@patch(
+    "salt.utils.thin.get_tops",
+    MagicMock(return_value=[("/foo3", None), ("/bar3", None)]),
+)
 @patch("salt.utils.thin.get_ext_tops", MagicMock(return_value={}))
 @patch("salt.utils.thin.os.path.isfile", MagicMock())
 @patch("salt.utils.thin.os.path.isdir", MagicMock(return_value=True))
@@ -875,7 +893,11 @@ def test_gen_thin_compression_fallback_py3(thin_ctx):
 @patch("salt.utils.files.fopen", MagicMock())
 @patch("salt.utils.thin._get_salt_call", MagicMock())
 @patch("salt.utils.thin._get_ext_namespaces", MagicMock())
-@patch("salt.utils.thin.get_tops", MagicMock(return_value=["/foo3", "/bar3"]))
+@patch("salt.utils.thin._discover_saltexts", MagicMock(return_value=([], {})))
+@patch(
+    "salt.utils.thin.get_tops",
+    MagicMock(return_value=[("/foo3", None), ("/bar3", None)]),
+)
 @patch("salt.utils.thin.get_ext_tops", MagicMock(return_value={}))
 @patch("salt.utils.thin.os.path.isfile", MagicMock())
 @patch("salt.utils.thin.os.path.isdir", MagicMock(return_value=False))
@@ -924,7 +946,11 @@ def test_gen_thin_control_files_written_py3(thin_ctx):
 @patch("salt.utils.files.fopen", MagicMock())
 @patch("salt.utils.thin._get_salt_call", MagicMock())
 @patch("salt.utils.thin._get_ext_namespaces", MagicMock())
-@patch("salt.utils.thin.get_tops", MagicMock(return_value=["/salt", "/bar3"]))
+@patch("salt.utils.thin._discover_saltexts", MagicMock(return_value=([], {})))
+@patch(
+    "salt.utils.thin.get_tops",
+    MagicMock(return_value=[("/salt", None), ("/bar3", None)]),
+)
 @patch("salt.utils.thin.get_ext_tops", MagicMock(return_value={}))
 @patch("salt.utils.thin.os.path.isfile", MagicMock())
 @patch("salt.utils.thin.os.path.isdir", MagicMock(return_value=True))
@@ -981,6 +1007,7 @@ def test_gen_thin_main_content_files_written_py3(thin_ctx):
 @patch("salt.utils.files.fopen", MagicMock())
 @patch("salt.utils.thin._get_salt_call", MagicMock())
 @patch("salt.utils.thin._get_ext_namespaces", MagicMock())
+@patch("salt.utils.thin._discover_saltexts", MagicMock(return_value=([], {})))
 @patch("salt.utils.thin.get_tops", MagicMock(return_value=[]))
 @patch(
     "salt.utils.thin.get_ext_tops",
@@ -1110,7 +1137,11 @@ def test_get_supported_py_config_ext_tops(thin_ctx):
 @patch("salt.utils.files.fopen", MagicMock())
 @patch("salt.utils.thin._get_salt_call", MagicMock())
 @patch("salt.utils.thin._get_ext_namespaces", MagicMock())
-@patch("salt.utils.thin.get_tops", MagicMock(return_value=["/foo3", "/bar3"]))
+@patch("salt.utils.thin._discover_saltexts", MagicMock(return_value=([], {})))
+@patch(
+    "salt.utils.thin.get_tops",
+    MagicMock(return_value=[("/foo3", None), ("/bar3", None)]),
+)
 @patch("salt.utils.thin.get_ext_tops", MagicMock(return_value={}))
 @patch("salt.utils.thin.os.path.isfile", MagicMock())
 @patch("salt.utils.thin.os.path.isdir", MagicMock(return_value=False))
@@ -1171,16 +1202,19 @@ def test_get_tops_python(thin_ctx):
                 (bts("yaml/__init__.py"), bts("")),
                 (bts("tornado/__init__.py"), bts("")),
                 (bts("msgpack/__init__.py"), bts("")),
+                (bts("networkx/__init__.py"), bts("")),
+                (bts("requests/__init__.py"), bts("")),
+                (bts("idna/__init__.py"), bts("")),
+                (bts("urllib3/__init__.py"), bts("")),
                 (bts("certifi/__init__.py"), bts("")),
                 (bts("singledispatch.py"), bts("")),
-                (bts(""), bts("")),
-                (bts(""), bts("")),
-                (bts(""), bts("")),
-                (bts(""), bts("")),
-                (bts(""), bts("")),
+                (bts(""), bts("")),  # concurrent
+                (bts(""), bts("")),  # singledispatch_helpers
+                (bts(""), bts("")),  # ssl_match_hostname
+                (bts(""), bts("")),  # markupsafe
+                (bts(""), bts("")),  # backports_abc
                 (bts("looseversion.py"), bts("")),
                 (bts("packaging/__init__.py"), bts("")),
-                (bts("backports/__init__.py"), bts("")),
                 (bts("distro.py"), bts("")),
             ],
         ),
@@ -1213,18 +1247,22 @@ def test_get_tops_python_exclude(thin_ctx):
         _popen(
             None,
             side_effect=[
+                # jinja2 and yaml excluded
                 (bts("tornado/__init__.py"), bts("")),
                 (bts("msgpack/__init__.py"), bts("")),
+                (bts("networkx/__init__.py"), bts("")),
+                (bts("requests/__init__.py"), bts("")),
+                (bts("idna/__init__.py"), bts("")),
+                (bts("urllib3/__init__.py"), bts("")),
                 (bts("certifi/__init__.py"), bts("")),
                 (bts("singledispatch.py"), bts("")),
-                (bts(""), bts("")),
-                (bts(""), bts("")),
-                (bts(""), bts("")),
-                (bts(""), bts("")),
-                (bts(""), bts("")),
+                (bts(""), bts("")),  # concurrent
+                (bts(""), bts("")),  # singledispatch_helpers
+                (bts(""), bts("")),  # ssl_match_hostname
+                (bts(""), bts("")),  # markupsafe
+                (bts(""), bts("")),  # backports_abc
                 (bts("looseversion.py"), bts("")),
                 (bts("packaging/__init__.py"), bts("")),
-                (bts("backports/__init__.py"), bts("")),
                 (bts("distro.py"), bts("")),
             ],
         ),
@@ -1258,19 +1296,24 @@ def test_pack_alternatives_exclude(thin_ctx):
         _popen(
             None,
             side_effect=[
-                (bts(thin_ctx.fake_libs["distro"]), bts("")),
+                # jinja2 excluded, using fake_libs paths for some modules
                 (bts(thin_ctx.fake_libs["yaml"]), bts("")),
                 (bts(thin_ctx.fake_libs["tornado"]), bts("")),
                 (bts(thin_ctx.fake_libs["msgpack"]), bts("")),
-                (bts(""), bts("")),
-                (bts(""), bts("")),
-                (bts(""), bts("")),
-                (bts(""), bts("")),
-                (bts(""), bts("")),
-                (bts(""), bts("")),
-                (bts(""), bts("")),
+                (bts(thin_ctx.fake_libs["networkx"]), bts("")),
+                (bts("requests/__init__.py"), bts("")),
+                (bts("idna/__init__.py"), bts("")),
+                (bts("urllib3/__init__.py"), bts("")),
+                (bts("certifi/__init__.py"), bts("")),
+                (bts("singledispatch.py"), bts("")),
+                (bts(""), bts("")),  # concurrent
+                (bts(""), bts("")),  # singledispatch_helpers
+                (bts(""), bts("")),  # ssl_match_hostname
+                (bts(""), bts("")),  # markupsafe
+                (bts(""), bts("")),  # backports_abc
                 (bts("looseversion.py"), bts("")),
                 (bts("packaging/__init__.py"), bts("")),
+                (bts(thin_ctx.fake_libs["distro"]), bts("")),
             ],
         ),
     )

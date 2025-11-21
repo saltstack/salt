@@ -140,10 +140,14 @@ def pki_dir(tmp_path):
     (master_pki / "minions_denied").mkdir()
 
     # Generate master keys
-    salt.crypt.gen_keys(str(master_pki), "master", 4096)
+    master_priv, master_pub = salt.crypt.gen_keys(4096)
+    (master_pki / "master.pem").write_text(master_priv)
+    (master_pki / "master.pub").write_text(master_pub)
 
     # Generate minion keys
-    salt.crypt.gen_keys(str(minion_pki), "minion", 4096)
+    minion_priv, minion_pub = salt.crypt.gen_keys(4096)
+    (minion_pki / "minion.pem").write_text(minion_priv)
+    (minion_pki / "minion.pub").write_text(minion_pub)
 
     return tmp_path
 
@@ -151,32 +155,44 @@ def pki_dir(tmp_path):
 @pytest.fixture
 def auth_master_opts(pki_dir, tmp_path):
     """Master configuration for auth tests."""
-    opts = {
-        "master_uri": "tcp://127.0.0.1:4506",
-        "interface": "127.0.0.1",
-        "ret_port": 4506,
-        "ipv6": False,
-        "sock_dir": str(tmp_path / "sock"),
-        "cachedir": str(tmp_path / "cache"),
-        "pki_dir": str(pki_dir / "master"),
-        "id": "master",
-        "__role": "master",
-        "keysize": 4096,
-        "max_minions": 0,
-        "auto_accept": False,
-        "open_mode": False,
-        "key_pass": None,
-        "publish_port": 4505,
-        "auth_mode": 1,
-        "auth_events": True,
-        "publish_session": 86400,
-        "request_server_ttl": 300,  # 5 minutes
-        "master_sign_pubkey": False,
-        "sign_pub_messages": False,
-        "cluster_id": None,
-        "transport": "zeromq",
-        "minimum_auth_version": 3,  # Enforce version 3+ for security
-    }
+    import salt.config
+
+    # Start with default master opts to get all necessary loader paths
+    opts = salt.config.DEFAULT_MASTER_OPTS.copy()
+
+    # Override with test-specific configuration
+    opts.update(
+        {
+            "master_uri": "tcp://127.0.0.1:4506",
+            "interface": "127.0.0.1",
+            "ret_port": 4506,
+            "ipv6": False,
+            "sock_dir": str(tmp_path / "sock"),
+            "cachedir": str(tmp_path / "cache"),
+            "pki_dir": str(pki_dir / "master"),
+            "id": "master",
+            "__role": "master",
+            "keysize": 4096,
+            "max_minions": 0,
+            "auto_accept": False,
+            "open_mode": False,
+            "key_pass": None,
+            "publish_port": 4505,
+            "auth_mode": 1,
+            "auth_events": True,
+            "publish_session": 86400,
+            "request_server_ttl": 300,  # 5 minutes
+            "master_sign_pubkey": False,
+            "sign_pub_messages": False,
+            "cluster_id": None,
+            "transport": "zeromq",
+            "minimum_auth_version": 3,  # Enforce version 3+ for security
+            "keys.cache_driver": "localfs_key",
+            "extension_modules": str(tmp_path / "extmods"),
+            "file_roots": {"base": [str(tmp_path / "file_roots")]},
+            "pillar_roots": {"base": [str(tmp_path / "pillar_roots")]},
+        }
+    )
     (tmp_path / "sock").mkdir(exist_ok=True)
     (tmp_path / "cache").mkdir(exist_ok=True)
     (tmp_path / "cache" / "sessions").mkdir(exist_ok=True)
