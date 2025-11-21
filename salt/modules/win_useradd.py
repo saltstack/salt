@@ -807,11 +807,13 @@ def info(name):
 
     user_name, domain_name = salt.utils.win_runas.split_username(name)
 
-    if domain_name:
+    if domain_name != ".":
         try:
             server = win32net.NetGetAnyDCName(None, domain_name)
+            log.debug("Found DC: %s", server)
         except win32net.error:
             # Restore username to original
+            log.debug("DC not found. Using username: %s", str(name))
             user_name = str(name)
 
     try:
