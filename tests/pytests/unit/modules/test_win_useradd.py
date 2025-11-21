@@ -1,0 +1,75 @@
+import logging
+
+import pytest
+import win32net
+from saltfactories.utils import random_string
+
+import salt.modules.cmdmod as cmdmod
+import salt.modules.win_useradd as win_useradd
+from tests.support.mock import MagicMock, patch
+
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+    pytest.mark.skip_unless_on_windows,
+]
+
+
+@pytest.fixture
+def configure_loader_modules():
+    return {
+        win_useradd: {
+            "__salt__": {
+                "cmd.run_all": cmdmod.run_all,
+            },
+        }
+    }
+
+
+@pytest.fixture
+def username():
+    _username = random_string("test-account-", uppercase=False)
+    try:
+        yield _username
+    finally:
+        try:
+            win_useradd.delete(_username, purge=True, force=True)
+        except Exception:  # pylint: disable=broad-except
+            # The point here is just system cleanup. It can fail if no account
+            # was created
+            pass
+
+
+@pytest.fixture
+def account(username):
+    with pytest.helpers.create_account(username=username) as account:
+        win_useradd.addgroup(account.username, "Users")
+        yield account
+
+
+def test_info(account, caplog):
+    with caplog.at_level(logging.DEBUG):
+        win_useradd.info(account.username)
+    assert f"user_name: {account.username}" in caplog.text
+    assert f"domain_name: ." in caplog.text
+
+
+def test_info_domain(account, caplog):
+    domain = "mydomain"
+    dc = "myDC"
+    with caplog.at_level(logging.DEBUG), patch(
+        "win32net.NetGetAnyDCName", MagicMock(return_value=dc)
+    ):
+        account.username = f"{domain}\\{account.username}"
+        win_useradd.info(account.username)
+    assert f"Found DC: {dc}" in caplog.text
+
+
+def test_info_error(account, caplog):
+    domain = "mydomain"
+    dc = "myDC"
+    with caplog.at_level(logging.DEBUG), patch(
+        "win32net.NetGetAnyDCName", MagicMock(side_effect=win32net.error)
+    ):
+        account.username = f"{domain}\\{account.username}"
+        win_useradd.info(account.username)
+    assert f"DC not found. Using username: {account.username}" in caplog.text
