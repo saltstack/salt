@@ -50,7 +50,7 @@ def test_info(account, caplog):
     with caplog.at_level(logging.DEBUG):
         win_useradd.info(account.username)
     assert f"user_name: {account.username}" in caplog.text
-    assert f"domain_name: ." in caplog.text
+    assert "domain_name: ." in caplog.text
 
 
 def test_info_domain(account, caplog):
