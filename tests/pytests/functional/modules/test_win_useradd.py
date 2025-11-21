@@ -24,7 +24,8 @@ def username_str(user):
         try:
             user.delete(_username, purge=True, force=True)
         except Exception:  # pylint: disable=broad-except
-            # The point here is just system cleanup. It can fail if no account was created
+            # The point here is just system cleanup. It can fail if no account
+            # was created
             pass
 
 
