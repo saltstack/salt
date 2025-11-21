@@ -806,6 +806,8 @@ def info(name):
     server = None
 
     user_name, domain_name = salt.utils.win_runas.split_username(name)
+    log.debug("user_name: %s", user_name)
+    log.debug("domain_name: %s", domain_name)
 
     if domain_name != ".":
         try:
