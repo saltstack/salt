@@ -68,7 +68,7 @@ def split_username(username):
     return str(user_name), str(domain)
 
 
-def create_env(user_token, inherit, timeout=1):
+def create_env(username, user_token, inherit=False, timeout=1):
     """
     CreateEnvironmentBlock might fail when we close a login session and then
     try to re-open one very quickly. Run the method multiple times to work
@@ -79,11 +79,16 @@ def create_env(user_token, inherit, timeout=1):
     exc = None
     while True:
         try:
-            env = win32profile.CreateEnvironmentBlock(user_token, False)
+            profile_info_dict = {"UserName": username}
+            profile_handle = win32profile.LoadUserProfile(user_token, profile_info_dict)
+            env = win32profile.CreateEnvironmentBlock(user_token, inherit)
         except pywintypes.error as exc:
             pass
         else:
             break
+        finally:
+            win32profile.UnloadUserProfile(user_token, profile_handle)
+
         if time.time() - start > timeout:
             break
     if env is not None:
@@ -95,8 +100,8 @@ def create_env(user_token, inherit, timeout=1):
 def runas(cmd, username, password=None, cwd=None):
     """
     Run a command as another user. If the process is running as an admin or
-    system account this method does not require a password. Other non
-    privileged accounts need to provide a password for the user to runas.
+    system account, this method does not require a password. Other
+    non-privileged accounts need to provide a password for the user to "runas".
     Commands are run in with the highest level privileges possible for the
     account provided.
     """
@@ -211,7 +216,7 @@ def runas(cmd, username, password=None, cwd=None):
     )
 
     # Create the environment for the user
-    env = create_env(user_token, False)
+    env = create_env(username, user_token, inherit=False)
 
     hProcess = None
     try:
@@ -232,7 +237,7 @@ def runas(cmd, username, password=None, cwd=None):
         dwProcessId = process_info.dwProcessId
         dwThreadId = process_info.dwThreadId
 
-        # We don't use these so let's close the handle
+        # We don't use these, so let's close the handle
         salt.platform.win.kernel32.CloseHandle(stdin_write.handle)
         salt.platform.win.kernel32.CloseHandle(stdout_write.handle)
         salt.platform.win.kernel32.CloseHandle(stderr_write.handle)
