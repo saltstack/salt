@@ -463,10 +463,6 @@ def test_get_ext_namespaces_failure(thin_ctx):
     type("markupsafe", (), {"__file__": "/site-packages/markupsafe"}),
 )
 @patch(
-    "salt.utils.thin.backports",
-    type("backports", (), {"__file__": "/site-packages/backports"}),
-)
-@patch(
     "salt.utils.thin.backports_abc",
     type("backports_abc", (), {"__file__": "/site-packages/backports_abc"}),
 )
@@ -575,10 +571,6 @@ def test_get_tops(thin_ctx):
 @patch(
     "salt.utils.thin.markupsafe",
     type("markupsafe", (), {"__file__": "/site-packages/markupsafe"}),
-)
-@patch(
-    "salt.utils.thin.backports",
-    type("backports", (), {"__file__": "/site-packages/backports"}),
 )
 @patch(
     "salt.utils.thin.backports_abc",
@@ -699,10 +691,6 @@ def test_get_tops_extra_mods(thin_ctx):
 @patch(
     "salt.utils.thin.markupsafe",
     type("markupsafe", (), {"__file__": "/site-packages/markupsafe"}),
-)
-@patch(
-    "salt.utils.thin.backports",
-    type("backports", (), {"__file__": "/site-packages/backports"}),
 )
 @patch(
     "salt.utils.thin.backports_abc",
