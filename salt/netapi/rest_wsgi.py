@@ -65,6 +65,7 @@ Usage examples
 ==============
 
 .. http:post:: /
+    :noindex:
 
     **Example request** for a basic ``test.ping``::
 
