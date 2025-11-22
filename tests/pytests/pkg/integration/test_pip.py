@@ -74,7 +74,12 @@ def test_pip_install(salt_call_cli, install_salt, shell):
 
 @pytest.fixture
 def extras_pypath(install_salt):
-    python_bin = os.path.join(*install_salt.binary_paths["python"])
+    # Handle both single-element (Path) and multi-element (path components) lists
+    python_path = install_salt.binary_paths["python"]
+    if len(python_path) == 1:
+        python_bin = str(python_path[0])
+    else:
+        python_bin = os.path.join(*python_path)
     ret = subprocess.run([python_bin, "--version"], check=True, capture_output=True)
     v = packaging.version.Version(ret.stdout.decode().split()[1])
     extras_dir = f"extras-{v.major}.{v.minor}"
