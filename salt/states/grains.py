@@ -38,30 +38,6 @@ def exists(name, delimiter=DEFAULT_TARGET_DELIM):
     return ret
 
 
-def make_hashable(list_grain, result=None):
-    """
-    Ensure that a list grain is hashable.
-
-    list_grain
-        The list grain that should be hashable
-
-    result
-        This function is recursive, so it must be possible to use a
-        sublist as parameter to the function. Should not be used by a caller
-        outside of the function.
-
-    Make it possible to compare two list grains to each other if the list
-    contains complex objects.
-    """
-    result = result or set()
-    for sublist in list_grain:
-        if type(sublist) == list:
-            make_hashable(sublist, result)
-        else:
-            result.add(frozenset(sublist))
-    return result
-
-
 def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
     """
     Ensure that a grain is set
@@ -185,30 +161,32 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
             ret["comment"] = f"Grain {name} is not a valid list"
             return ret
         if isinstance(value, list):
-            if make_hashable(value).issubset(
-                make_hashable(__salt__["grains.get"](name))
-            ):
+            # An older implementation tried to convert everything to a set. Information was lost
+            # during that conversion. It even converted str to set! Trying to add "racer" if
+            # "racecar" was already present would fail. Additionaly, dictionary values would also
+            # be lost. Trying to add {"foo": "bar"} and {"foo": "baz"} would also fail.
+            # While potentially slower, the only valid option is to actually check for existance
+            # within the existing grain.
+            # Hopefully the performance penality is reasonable in the effort for correctness.
+            # Very very very large grain lists will be probematic..
+            intersection = []
+            difference = []
+            for new_value in value:
+                if new_value in grain:
+                    intersection.append(new_value)
+                else:
+                    difference.append(new_value)
+            if difference:
+                value = difference
+            else:
                 ret["comment"] = f"Value {value} is already in grain {name}"
                 return ret
-            elif name in __context__.get("pending_grains", {}):
-                # elements common to both
-                intersection = set(value).intersection(
-                    __context__.get("pending_grains", {})[name]
+            if intersection:
+                ret["comment"] = (
+                    'Removed value {} from update due to value found in "{}".\n'.format(
+                        intersection, name
+                    )
                 )
-                if intersection:
-                    value = list(
-                        set(value).difference(__context__["pending_grains"][name])
-                    )
-                    ret["comment"] = (
-                        'Removed value {} from update due to context found in "{}".\n'.format(
-                            value, name
-                        )
-                    )
-            if "pending_grains" not in __context__:
-                __context__["pending_grains"] = {}
-            if name not in __context__["pending_grains"]:
-                __context__["pending_grains"][name] = set()
-            __context__["pending_grains"][name].update(value)
         else:
             if value in grain:
                 ret["comment"] = f"Value {value} is already in grain {name}"
@@ -227,17 +205,23 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
         ret["changes"] = {"new": grain}
         return ret
     new_grains = __salt__["grains.append"](name, value)
+    # TODO: Rather than fetching the grains again can we just rely on the status of grains.append?
+    actual_grains = __salt__["grains.get"](name, [])
+    # Previous implementation tried to use a set for comparison. See above notes on why that is
+    # not good.
     if isinstance(value, list):
-        if not set(value).issubset(set(__salt__["grains.get"](name))):
-            ret["result"] = False
-            ret["comment"] = f"Failed append value {value} to grain {name}"
-            return ret
-    else:
-        if value not in __salt__["grains.get"](name, delimiter=DEFAULT_TARGET_DELIM):
-            ret["result"] = False
-            ret["comment"] = f"Failed append value {value} to grain {name}"
-            return ret
-    ret["comment"] = f"Append value {value} to grain {name}"
+        for new_value in value:
+            if new_value not in actual_grains:
+                ret["result"] = False
+                ret["comment"] = f"Failed append value {value} to grain {name}"
+                return ret
+    elif value not in actual_grains:
+        ret["result"] = False
+        ret["comment"] = f"Failed append value {value} to grain {name}"
+        return ret
+    ret["comment"] = "{}Append value {} to grain {}".format(
+        ret.get("comment", ""), value, name
+    )
     ret["changes"] = {"new": new_grains}
     return ret
 
