@@ -265,7 +265,7 @@ if not HAS_APT:
             ]
             for file in self.files:
                 if file.is_dir():
-                    for fp in file.glob("**/*.list"):
+                    for fp in file.glob("*.list"):
                         self.add_file(file=fp)
                 else:
                     self.add_file(file)
