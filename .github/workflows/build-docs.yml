@@ -68,12 +68,19 @@ jobs:
         run: |
           tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
 
+      - name: Get Hash For Docs Requirements
+        id: docs-requirements-hash
+        shell: bash
+        run: |
+          HASH=$(python3 .github/scripts/hash-files.py 'requirements/**/docs.txt')
+          echo "hash=${HASH}" | tee -a "$GITHUB_OUTPUT"
+
       - name: Cache Python Tools Docs Virtualenv
         id: tools-venvs-dependencies-cache
         uses: ./.github/actions/cache
         with:
           path: .tools-venvs/docs
-          key: ${{ inputs.cache-seed }}|${{ github.workflow }}|${{ github.job }}|tools-venvs|${{ steps.python-tools-scripts.outputs.version }}|docs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/docs.txt') }}
+          key: ${{ inputs.cache-seed }}|${{ github.workflow }}|${{ github.job }}|tools-venvs|${{ steps.python-tools-scripts.outputs.version }}|docs|${{ steps.get-python-version.outputs.version }}|${{ steps.docs-requirements-hash.outputs.hash }}
 
       - name: Prepare Docs Build
         run: |
