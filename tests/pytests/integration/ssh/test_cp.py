@@ -470,6 +470,7 @@ def test_get_url_file_contents(salt_ssh_cli_parameterized, tmp_path, caplog):
     )
 
 
+@pytest.mark.timeout(300)  # FTP can be slow, allow 5 minutes
 def test_get_url_ftp(salt_ssh_cli_parameterized, tmp_path, cachedir):
     tgt = tmp_path / "README.TXT"
     res = salt_ssh_cli_parameterized.run(
