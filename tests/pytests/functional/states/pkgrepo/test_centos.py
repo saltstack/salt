@@ -167,6 +167,9 @@ def test_pkgrepo_managed_absent(grains, modules, subtests, centos_state_tree):
     """
     Test adding/removing a repo
     """
+    if grains["os"] == "Fedora" and grains["osmajorrelease"] == 40:
+        pytest.skip("No repo for {} in test COPR yet".format(grains["osfinger"]))
+
     add_repo_test_passed = False
 
     with subtests.test("Add Repo"):
@@ -197,10 +200,13 @@ def pkgrepo_with_comments_name(pkgrepo):
             pass
 
 
-def test_pkgrepo_with_comments(pkgrepo, pkgrepo_with_comments_name, subtests):
+def test_pkgrepo_with_comments(grains, pkgrepo, pkgrepo_with_comments_name, subtests):
     """
     Test adding a repo with comments
     """
+    if grains["os"] == "Fedora" and grains["osmajorrelease"] == 40:
+        pytest.skip("No repo for {} in test COPR yet".format(grains["osfinger"]))
+
     kwargs = {
         "name": pkgrepo_with_comments_name,
         "baseurl": "http://example.com/repo",
@@ -248,6 +254,7 @@ def copr_pkgrepo_with_comments_name(pkgrepo, grains):
         or grains["osfinger"] == "Amazon Linux-2023"
     ):
         pytest.skip("No repo for {} in test COPR yet".format(grains["osfinger"]))
+
     pkgrepo_name = "hello-copr"
     try:
         yield pkgrepo_name
@@ -258,10 +265,15 @@ def copr_pkgrepo_with_comments_name(pkgrepo, grains):
             pass
 
 
-def test_copr_pkgrepo_with_comments(pkgrepo, copr_pkgrepo_with_comments_name, subtests):
+def test_copr_pkgrepo_with_comments(
+    grains, pkgrepo, copr_pkgrepo_with_comments_name, subtests
+):
     """
     Test adding a repo with comments
     """
+    if grains["os"] == "Fedora" and grains["osmajorrelease"] == 40:
+        pytest.skip("No repo for {} in test COPR yet".format(grains["osfinger"]))
+
     kwargs = {
         "name": copr_pkgrepo_with_comments_name,
         "copr": "mymindstorm/hello",

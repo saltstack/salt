@@ -1,6 +1,7 @@
 import logging
 import socket
 import textwrap
+from collections import OrderedDict
 
 import pytest
 
@@ -20,7 +21,6 @@ from salt.utils.dns import (
     _weighted_order,
     lookup,
 )
-from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 

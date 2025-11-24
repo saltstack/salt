@@ -3,9 +3,7 @@ Application Kinds of Salt apps.
 These are used to indicate what kind of Application is using RAET
 """
 
-from collections import namedtuple
-
-from salt.utils.odict import OrderedDict
+from collections import OrderedDict, namedtuple
 
 # Python equivalent of an enum
 APPL_KINDS = OrderedDict([("master", 0), ("minion", 1), ("syndic", 2), ("caller", 3)])

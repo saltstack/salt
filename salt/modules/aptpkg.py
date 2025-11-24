@@ -17,6 +17,7 @@ import pathlib
 import re
 import shutil
 import time
+from collections import OrderedDict
 from urllib.error import HTTPError
 from urllib.request import Request as _Request
 from urllib.request import urlopen as _urlopen
@@ -1502,6 +1503,35 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):
     except Exception as exc:  # pylint: disable=broad-except
         log.error(exc)
     return None
+
+
+def _get_opts(line):
+    """
+    Return all opts in [] for a repo line
+    """
+    get_opts = re.search(r"\[(.*=.*?)\]", line)
+
+    ret = OrderedDict()
+    if not get_opts:
+        return ret
+    opts = get_opts.group(0).strip("[]")
+    architectures = []
+    for opt in opts.split():
+        if opt.startswith("arch"):
+            architectures.extend(opt.split("=", 1)[1].split(","))
+            ret["arch"] = {}
+            ret["arch"]["full"] = opt
+            ret["arch"]["value"] = architectures
+        elif opt.startswith("signed-by"):
+            ret["signedby"] = {}
+            ret["signedby"]["full"] = opt
+            ret["signedby"]["value"] = opt.split("=", 1)[1]
+        else:
+            other_opt = opt.split("=", 1)[0]
+            ret[other_opt] = {}
+            ret[other_opt]["full"] = opt
+            ret[other_opt]["value"] = opt.split("=", 1)[1]
+    return ret
 
 
 def _split_repo_str(repo):

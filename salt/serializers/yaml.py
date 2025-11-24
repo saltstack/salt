@@ -10,13 +10,13 @@
 
 import datetime
 import logging
+from collections import OrderedDict
 
 import yaml
 from yaml.constructor import ConstructorError
 from yaml.scanner import ScannerError
 
 from salt.serializers import DeserializationError, SerializationError
-from salt.utils.odict import OrderedDict
 
 __all__ = ["deserialize", "serialize", "available"]
 

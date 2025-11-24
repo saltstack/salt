@@ -7,6 +7,7 @@ import itertools
 import os
 import pprint
 import re
+from collections import OrderedDict
 
 import pytest
 from jinja2 import DictLoader, Environment, exceptions
@@ -23,7 +24,6 @@ import salt.utils.yaml
 from salt.exceptions import SaltRenderError
 from salt.utils.decorators.jinja import JinjaFilter
 from salt.utils.jinja import SerializerExtension, ensure_sequence_filter
-from salt.utils.odict import OrderedDict
 from salt.utils.templates import render_jinja_tmpl
 
 try:

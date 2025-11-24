@@ -22,6 +22,7 @@ import shlex
 import socket
 import ssl
 import string
+from collections import OrderedDict
 
 import salt.modules.cmdmod
 import salt.utils.files
@@ -29,7 +30,6 @@ import salt.utils.network
 import salt.utils.path
 import salt.utils.stringutils
 from salt._compat import ipaddress
-from salt.utils.odict import OrderedDict
 
 # Integrations
 try:

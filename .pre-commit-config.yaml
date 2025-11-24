@@ -1496,6 +1496,8 @@ repos:
             salt/client/ssh/wrapper/pillar.py
             |
             salt/ext/.*\.py
+            |
+            .github/scripts/hash-files.py
           )$
 
   - repo: https://github.com/saltstack/pre-commit-remove-import-headers

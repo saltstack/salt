@@ -8,7 +8,7 @@ import salt.utils.files
 from tests.support.mock import MagicMock, patch
 
 try:
-    from salt.utils.odict import OrderedDict as odict
+    from collections import OrderedDict as odict
 except ImportError:
     from collections import OrderedDict as odict
 
@@ -844,6 +844,61 @@ def test_interfaces():
                 '    address 2001:db8:dead:beef::3/64\n',
                 '    gateway 2001:db8:dead:beef::1\n',
                 '    accept_ra 2\n',
+                '\n']},
+
+        # Command hooks
+        {'iface_name': 'eth_optmap_test', 'iface_type': 'eth', 'enabled': True,
+            'build_interface': {
+                'proto': 'manual',
+                'up_cmds': ['echo "interface up"'],
+                'down_cmds': ['echo "interface down"'],
+                'pre_up_cmds': ['echo "pre-up"'],
+                'post_up_cmds': ['echo "post-up"'],
+                'pre_down_cmds': ['echo "pre-down"'],
+                'post_down_cmds': ['echo "post-down"'],
+                },
+            'get_interface': odict([('eth_optmap_test', odict([('enabled', True), ('data', odict([
+                ('inet', odict([
+                    ('addrfam', 'inet'),
+                    ('proto', 'manual'),
+                    ('filename', None),
+                    ('up_cmds', ['echo "interface up"']),
+                    ('down_cmds', ['echo "interface down"']),
+                    ('pre_up_cmds', ['echo "pre-up"']),
+                    ('post_up_cmds', ['echo "post-up"']),
+                    ('pre_down_cmds', ['echo "pre-down"']),
+                    ('post_down_cmds', ['echo "post-down"']),
+                    ])),
+                ]))]))]),
+            'return': [
+                'auto eth_optmap_test\n',
+                'iface eth_optmap_test inet manual\n',
+                '    up echo "interface up"\n',
+                '    down echo "interface down"\n',
+                '    pre-up echo "pre-up"\n',
+                '    post-up echo "post-up"\n',
+                '    pre-down echo "pre-down"\n',
+                '    post-down echo "post-down"\n',
+                '\n']},
+
+        # hwaddr should map to hwaddress
+        {'iface_name': 'eth_hwaddr_test', 'iface_type': 'eth', 'enabled': True,
+            'build_interface': {
+                'proto': 'manual',
+                'hwaddr': '00:11:22:33:44:55',
+                },
+            'get_interface': odict([('eth_hwaddr_test', odict([('enabled', True), ('data', odict([
+                ('inet', odict([
+                    ('addrfam', 'inet'),
+                    ('proto', 'manual'),
+                    ('filename', None),
+                    ('hwaddress', '00:11:22:33:44:55'),
+                    ])),
+                ]))]))]),
+            'return': [
+                'auto eth_hwaddr_test\n',
+                'iface eth_hwaddr_test inet manual\n',
+                '    hwaddress 00:11:22:33:44:55\n',
                 '\n']},
         ]
 # fmt: on

@@ -3,11 +3,12 @@
     :codeauthor: Herbert Buurman <herbert.buurman@ogd.nl>
 """
 
+from collections import OrderedDict
+
 import pytest
 
 import salt.modules.mine as mine
 import salt.utils.mine
-from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, patch
 
 
