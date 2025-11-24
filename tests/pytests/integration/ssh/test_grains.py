@@ -36,8 +36,11 @@ def grains_filter_by_lookup(salt_ssh_cli_parameterized):
     }
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def grains_filter_by_default():
+    """
+    Note: Module scope is fine here since this fixture has no dependencies.
+    """
     return {
         "common": {
             "has_common": True,
@@ -142,11 +145,11 @@ def test_grains_filter_by_jinja(salt_ssh_cli):
     assert "defaulted" not in rendered
 
 
-def test_grains_filter_by_default(salt_ssh_cli, grains_filter_by_default):
+def test_grains_filter_by_default(grains_filter_by_default, salt_ssh_cli_parameterized):
     """
-    test grains.filter_by with salt-ssh and default parameter
+    test grains.filter_by with salt-ssh and default parameter (parameterized for both thin and relenv)
     """
-    ret = salt_ssh_cli.run(
+    ret = salt_ssh_cli_parameterized.run(
         "grains.filter_by",
         grains_filter_by_default,
         grain="os",
@@ -162,11 +165,11 @@ def test_grains_filter_by_default(salt_ssh_cli, grains_filter_by_default):
 
 
 @pytest.mark.usefixtures("grains_filter_by_states")
-def test_grains_filter_by_default_jinja(salt_ssh_cli, grains_filter_by_default):
+def test_grains_filter_by_default_jinja(grains_filter_by_default, salt_ssh_cli_parameterized):
     """
-    test grains.filter_by during template rendering with salt-ssh and default parameter
+    test grains.filter_by during template rendering with salt-ssh and default parameter (parameterized for both thin and relenv)
     """
-    ret = salt_ssh_cli.run("state.show_sls", "grains_filter_by_default")
+    ret = salt_ssh_cli_parameterized.run("state.show_sls", "grains_filter_by_default")
     assert ret.returncode == 0
     assert ret.data
     rendered = ret.data["grains-filter-by"]["file"][1]["context"]
