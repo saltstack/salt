@@ -22,8 +22,8 @@ pytestmark = [
 ]
 
 
-def test_pillar_is_only_rendered_once_without_overrides(salt_ssh_cli, caplog):
-    ret = salt_ssh_cli.run("state.apply", "test")
+def test_pillar_is_only_rendered_once_without_overrides(salt_ssh_cli_parameterized, caplog):
+    ret = salt_ssh_cli_parameterized.run("state.apply", "test")
     assert ret.returncode == 0
     assert isinstance(ret.data, dict)
     assert ret.data
@@ -31,8 +31,8 @@ def test_pillar_is_only_rendered_once_without_overrides(salt_ssh_cli, caplog):
     assert caplog.text.count("hithere: pillar was rendered") == 1
 
 
-def test_pillar_is_rerendered_with_overrides(salt_ssh_cli, caplog):
-    ret = salt_ssh_cli.run("state.apply", "test", pillar={"foo": "bar"})
+def test_pillar_is_rerendered_with_overrides(salt_ssh_cli_parameterized, caplog):
+    ret = salt_ssh_cli_parameterized.run("state.apply", "test", pillar={"foo": "bar"})
     assert ret.returncode == 0
     assert isinstance(ret.data, dict)
     assert ret.data
@@ -96,9 +96,9 @@ def override(base):
     return expected, poverride
 
 
-def test_state_sls(salt_ssh_cli, override):
+def test_state_sls(salt_ssh_cli_parameterized, override):
     expected, override = override
-    ret = salt_ssh_cli.run("state.sls", "showpillar", pillar=override)
+    ret = salt_ssh_cli_parameterized.run("state.sls", "showpillar", pillar=override)
     _assert_basic(ret)
     assert len(ret.data) == 2
     for sid, sret in ret.data.items():
@@ -109,9 +109,9 @@ def test_state_sls(salt_ssh_cli, override):
 
 
 @pytest.mark.parametrize("sid", ("deep_thought", "target_check"))
-def test_state_sls_id(salt_ssh_cli, sid, override):
+def test_state_sls_id(salt_ssh_cli_parameterized, sid, override):
     expected, override = override
-    ret = salt_ssh_cli.run("state.sls_id", sid, "showpillar", pillar=override)
+    ret = salt_ssh_cli_parameterized.run("state.sls_id", sid, "showpillar", pillar=override)
     _assert_basic(ret)
     state_res = ret.data[next(iter(ret.data))]
     if sid == "deep_thought":
@@ -120,9 +120,9 @@ def test_state_sls_id(salt_ssh_cli, sid, override):
         assert state_res["result"] is True
 
 
-def test_state_highstate(salt_ssh_cli, override):
+def test_state_highstate(salt_ssh_cli_parameterized, override):
     expected, override = override
-    ret = salt_ssh_cli.run("state.highstate", pillar=override, whitelist=["showpillar"])
+    ret = salt_ssh_cli_parameterized.run("state.highstate", pillar=override, whitelist=["showpillar"])
     _assert_basic(ret)
     assert len(ret.data) == 2
     for sid, sret in ret.data.items():
@@ -132,26 +132,26 @@ def test_state_highstate(salt_ssh_cli, override):
             assert sret["result"] is True
 
 
-def test_state_show_sls(salt_ssh_cli, override):
+def test_state_show_sls(salt_ssh_cli_parameterized, override):
     expected, override = override
-    ret = salt_ssh_cli.run("state.show_sls", "showpillar", pillar=override)
+    ret = salt_ssh_cli_parameterized.run("state.show_sls", "showpillar", pillar=override)
     _assert_basic(ret)
     pillar = ret.data["deep_thought"]["test"]
     pillar = next(x["text"] for x in pillar if isinstance(x, dict))
     _assert_pillar(pillar, expected)
 
 
-def test_state_show_low_sls(salt_ssh_cli, override):
+def test_state_show_low_sls(salt_ssh_cli_parameterized, override):
     expected, override = override
-    ret = salt_ssh_cli.run("state.show_low_sls", "showpillar", pillar=override)
+    ret = salt_ssh_cli_parameterized.run("state.show_low_sls", "showpillar", pillar=override)
     _assert_basic(ret, list)
     pillar = ret.data[0]["text"]
     _assert_pillar(pillar, expected)
 
 
-def test_state_single(salt_ssh_cli, override):
+def test_state_single(salt_ssh_cli_parameterized, override):
     expected, override = override
-    ret = salt_ssh_cli.run(
+    ret = salt_ssh_cli_parameterized.run(
         "state.single",
         "test.check_pillar",
         "foo",
@@ -169,9 +169,9 @@ def test_state_single(salt_ssh_cli, override):
     assert state_res["result"] is True
 
 
-def test_state_top(salt_ssh_cli, override):
+def test_state_top(salt_ssh_cli_parameterized, override):
     expected, override = override
-    ret = salt_ssh_cli.run("state.top", "top.sls", pillar=override)
+    ret = salt_ssh_cli_parameterized.run("state.top", "top.sls", pillar=override)
     _assert_basic(ret)
     assert len(ret.data) == 2
     for sid, sret in ret.data.items():

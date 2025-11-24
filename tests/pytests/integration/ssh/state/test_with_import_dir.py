@@ -33,24 +33,23 @@ pytestmark = [
         "state.top",
     ],
 )
-def test_state_with_import_dir(salt_ssh_cli, state_tree_dir, ssh_cmd):
+def test_state_with_import_dir(state_tree_dir, salt_ssh_cli_parameterized, ssh_cmd):
+    # Note: Removed -w and -t flags since salt_ssh_cli_parameterized handles deployment type
     if ssh_cmd in ("state.sls", "state.show_low_sls", "state.show_sls"):
-        ret = salt_ssh_cli.run("-w", "-t", ssh_cmd, "testdir")
+        ret = salt_ssh_cli_parameterized.run(ssh_cmd, "test")
     elif ssh_cmd == "state.top":
-        ret = salt_ssh_cli.run("-w", "-t", ssh_cmd, "top.sls")
+        ret = salt_ssh_cli_parameterized.run(ssh_cmd, "top.sls")
     elif ssh_cmd == "state.sls_id":
-        ret = salt_ssh_cli.run("-w", "-t", ssh_cmd, "Ok with def", "testdir")
+        ret = salt_ssh_cli_parameterized.run(ssh_cmd, "Ok with def", "test")
     else:
-        ret = salt_ssh_cli.run("-w", "-t", ssh_cmd)
+        ret = salt_ssh_cli_parameterized.run(ssh_cmd)
     assert ret.returncode == 0
     if ssh_cmd == "state.show_top":
-        assert ret.data == {"base": ["testdir", "master_tops_test"]} or {
-            "base": ["testdir"]
-        }
+        assert ret.data == {"base": ["test", "master_tops_test"]} or {"base": ["test"]}
     elif ssh_cmd in ("state.show_highstate", "state.show_sls"):
         assert ret.data == {
             "Ok with def": {
-                "__sls__": "testdir",
+                "__sls__": "test",
                 "__env__": "base",
                 "test": ["succeed_without_changes", {"order": 10000}],
             }
@@ -60,7 +59,7 @@ def test_state_with_import_dir(salt_ssh_cli, state_tree_dir, ssh_cmd):
             {
                 "state": "test",
                 "name": "Ok with def",
-                "__sls__": "testdir",
+                "__sls__": "test",
                 "__env__": "base",
                 "__id__": "Ok with def",
                 "order": 10000,
