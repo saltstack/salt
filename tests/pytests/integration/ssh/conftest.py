@@ -18,8 +18,9 @@ def relenv_tarball_cached(tmp_path_factory):
     Runs automatically at session start (autouse=True).
     """
     # Import here to avoid issues if salt is not installed
-    import salt.utils.relenv
     import tempfile
+
+    import salt.utils.relenv
 
     # Use a shared system temp directory that persists across test master instances
     # This allows all tests in the session to share the same cached tarball
@@ -43,7 +44,12 @@ def relenv_tarball_cached(tmp_path_factory):
     else:
         os_arch = machine
 
-    log.info("Pre-caching relenv tarball for %s/%s in shared cache: %s", kernel, os_arch, shared_cache)
+    log.info(
+        "Pre-caching relenv tarball for %s/%s in shared cache: %s",
+        kernel,
+        os_arch,
+        shared_cache,
+    )
 
     try:
         # Download and cache the tarball to the shared location
@@ -57,12 +63,17 @@ def relenv_tarball_cached(tmp_path_factory):
 
             # Set environment variable so salt.utils.relenv can find it
             # This allows individual test masters to copy from the shared cache
-            os.environ['SALT_SSH_TEST_RELENV_CACHE'] = shared_cache
+            os.environ["SALT_SSH_TEST_RELENV_CACHE"] = shared_cache
             return tarball_path
         else:
-            log.warning("Tarball download completed but file not found at: %s", tarball_path)
+            log.warning(
+                "Tarball download completed but file not found at: %s", tarball_path
+            )
             return None
-    except Exception as e:
+    except (OSError, ValueError) as e:
+        # We catch these here to prevent the whole test session from failing
+        # if pre-caching the tarball fails. Tests that require relenv will
+        # fail or skip later if they can't find the tarball.
         log.warning("Failed to pre-cache relenv tarball: %s", e)
         return None
 
@@ -78,7 +89,11 @@ def ssh_deployment_type(request):
 
 @pytest.fixture(scope="function")
 def salt_ssh_cli_parameterized(
-    ssh_deployment_type, salt_master, salt_ssh_roster_file, sshd_config_dir, known_hosts_file
+    ssh_deployment_type,
+    salt_master,
+    salt_ssh_roster_file,
+    sshd_config_dir,
+    known_hosts_file,
 ):
     """
     Parameterized salt-ssh CLI fixture that tests with both thin and relenv deployments.
@@ -101,8 +116,10 @@ def salt_ssh_cli_parameterized(
 
     def run_with_deployment(*args, **kwargs):
         if ssh_deployment_type == "relenv":
-            # Insert --relenv flag at the beginning of args
-            args = ("--relenv",) + args
+            # Filter out -t/--thin flags which are incompatible with --relenv
+            filtered_args = tuple(arg for arg in args if arg not in ("-t", "--thin"))
+            # Insert --relenv flag at the beginning
+            args = ("--relenv",) + filtered_args
         return original_run(*args, **kwargs)
 
     cli.run = run_with_deployment
