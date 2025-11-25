@@ -77,10 +77,9 @@ def tuned(name, **kwargs):
         "read-write": "getro",
     }
 
-    if not __salt__["file.is_blkdev"]:
-        ret["comment"] = "Changes to {} cannot be applied. Not a block device. ".format(
-            name
-        )
+    if not __salt__["file.is_blkdev"](name):
+        ret["comment"] = f"Changes to {name} cannot be applied. Not a block device."
+        ret["result"] = False
     elif __opts__["test"]:
         ret["comment"] = f"Changes to {name} will be applied "
         ret["result"] = None
