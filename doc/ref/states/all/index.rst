@@ -18,6 +18,7 @@ state modules
     archive
     at
     beacon
+    blockdev
     chocolatey
     cloud
     cmd
