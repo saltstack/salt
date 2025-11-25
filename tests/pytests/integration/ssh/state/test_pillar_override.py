@@ -22,22 +22,35 @@ pytestmark = [
 ]
 
 
-def test_pillar_is_only_rendered_once_without_overrides(salt_ssh_cli_parameterized, caplog):
+def test_pillar_is_only_rendered_once_without_overrides(
+    salt_ssh_cli_parameterized, ssh_deployment_type, caplog
+):
     ret = salt_ssh_cli_parameterized.run("state.apply", "test")
     assert ret.returncode == 0
     assert isinstance(ret.data, dict)
     assert ret.data
     assert ret.data[next(iter(ret.data))]["result"] is True
-    assert caplog.text.count("hithere: pillar was rendered") == 1
+
+    # Both thin and relenv now compile pillar once:
+    # - Relenv: Once in __init__ via _compile_pillar_for_relenv(), then uses salt-call directly
+    # - Thin: Once in _run_wfunc_thin() via the wrapper system
+    expected_count = 1
+    assert caplog.text.count("hithere: pillar was rendered") == expected_count
 
 
-def test_pillar_is_rerendered_with_overrides(salt_ssh_cli_parameterized, caplog):
+def test_pillar_is_rerendered_with_overrides(
+    salt_ssh_cli_parameterized, ssh_deployment_type, caplog
+):
     ret = salt_ssh_cli_parameterized.run("state.apply", "test", pillar={"foo": "bar"})
     assert ret.returncode == 0
     assert isinstance(ret.data, dict)
     assert ret.data
     assert ret.data[next(iter(ret.data))]["result"] is True
-    assert caplog.text.count("hithere: pillar was rendered") == 2
+
+    # With pillar overrides, both thin and relenv re-render pillar.
+    # Both now render twice: once for initial setup, once with overrides applied.
+    expected_count = 2
+    assert caplog.text.count("hithere: pillar was rendered") == expected_count
 
 
 @pytest.fixture(scope="module", autouse=True)

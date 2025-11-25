@@ -101,8 +101,10 @@ def salt_ssh_cli_parameterized(
 
     def run_with_deployment(*args, **kwargs):
         if ssh_deployment_type == "relenv":
-            # Insert --relenv flag at the beginning of args
-            args = ("--relenv",) + args
+            # Filter out -t/--thin flags which are incompatible with --relenv
+            filtered_args = tuple(arg for arg in args if arg not in ("-t", "--thin"))
+            # Insert --relenv flag at the beginning
+            args = ("--relenv",) + filtered_args
         return original_run(*args, **kwargs)
 
     cli.run = run_with_deployment
