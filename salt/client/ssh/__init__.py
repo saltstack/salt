@@ -1213,42 +1213,6 @@ class Single:
         else:
             self.thin = thin if thin else salt.utils.thin.thin_path(opts["cachedir"])
 
-    def _compile_pillar_for_relenv(self):
-        """
-        Compile pillar data for relenv deployment.
-
-        For relenv, we need to compile pillar early (during init) because the minion
-        config file is written once by the shim. Thin compiles pillar later in
-        _run_wfunc_thin() since wrappers handle it differently.
-
-        This method follows the same pillar compilation logic as _run_wfunc_thin()
-        but adds the result to self.minion_opts and regenerates self.minion_config.
-        """
-        # Build pillar options by combining minion_opts with master opts
-        # This mirrors the logic in _run_wfunc_thin() at lines 1480-1488
-        popts = {}
-        popts.update(self.minion_opts)
-        popts.update(self.opts)  # Master opts
-
-        # Compile pillar using Salt's pillar system
-        try:
-            pillar_compiler = salt.pillar.Pillar(
-                popts,
-                self.minion_opts.get("grains", {}),
-                self.id,
-                self.minion_opts.get("saltenv", "base"),
-            )
-            pillar_data = pillar_compiler.compile_pillar()
-            log.info("RELENV: Successfully compiled pillar data with %d top-level keys", len(pillar_data))
-        except Exception as e:
-            log.warning("RELENV: Failed to compile pillar, continuing with empty pillar: %s", e)
-            pillar_data = {}
-
-        # Add pillar to minion_opts and regenerate minion_config
-        self.minion_opts["pillar"] = pillar_data
-        self.minion_config = salt.serializers.yaml.serialize(self.minion_opts)
-        log.debug("RELENV: Updated minion config with pillar data")
-
     def detect_os_arch(self):
         """
         Detect the OS and architecture of the target machine.
@@ -2169,45 +2133,6 @@ ARGS = {arguments}\n'''.format(
                 while re.search(RSTR_RE, stderr):
                     stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
 
-        return stdout, stderr, retcode
-
-    def _cmd_block_relenv(self):
-        """
-        Execute command using salt-call from relenv deployment.
-        Bypasses the shim system entirely since relenv includes a full salt-call binary.
-
-        This is similar to _run_wfunc_relenv() but handles direct function execution
-        (non-wrapper functions) which go through cmd_block() instead of run_wfunc().
-
-        Returns tuple of (stdout, stderr, retcode)
-        """
-        log.info("RELENV: _cmd_block_relenv() starting - thin_dir=%s, fun=%s", self.thin_dir, self.fun)
-
-        # Build salt-call command - relenv has full salt-call binary
-        salt_call = f"{self.thin_dir}/salt-call"
-        args_str = self._build_salt_call_args()
-
-        # Determine output level
-        log_level = self.opts.get("log_level", "error")
-
-        # Build full command
-        cmd = f"{salt_call} --local {self.fun} {args_str} --out=json --log-level={log_level}"
-
-        log.info("RELENV CMD_BLOCK: About to execute salt-call: %s", cmd)
-
-        # Execute via shell
-        log.info("RELENV CMD_BLOCK: Calling self.shell.exec_cmd()...")
-        stdout, stderr, retcode = self.shell.exec_cmd(cmd)
-        log.info("RELENV CMD_BLOCK: exec_cmd() returned - retcode=%s, stdout_len=%d, stderr_len=%d",
-                 retcode, len(stdout) if stdout else 0, len(stderr) if stderr else 0)
-
-        log.trace("RELENV CMD_BLOCK STDOUT: %s", stdout)
-        log.trace("RELENV CMD_BLOCK STDERR: %s", stderr)
-        log.debug("RELENV CMD_BLOCK RETCODE: %s", retcode)
-
-        # For cmd_block(), we need to return the raw stdout
-        # The caller (handle_routine) will parse the JSON
-        log.info("RELENV CMD_BLOCK: Returning results to caller")
         return stdout, stderr, retcode
 
     def categorize_shim_errors(self, stdout_bytes, stderr_bytes, retcode):
