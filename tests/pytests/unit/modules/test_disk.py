@@ -1,10 +1,11 @@
 """
-    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
+:codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
 import pytest
 
 import salt.modules.disk as disk
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mock import MagicMock, patch
 
 
@@ -226,11 +227,12 @@ def test_wipe():
 
 def test_tune():
     mock = MagicMock(
-        return_value=(
-            "712971264\n512\n512\n512\n0\n0\n88\n712971264\n365041287168\n512\n512"
-        )
+        return_value={
+            "retcode": 0,
+            "stdout": "712971264\n512\n512\n512\n0\n0\n88\n712971264\n365041287168\n512\n512",
+        }
     )
-    with patch.dict(disk.__salt__, {"cmd.run": mock}):
+    with patch.dict(disk.__salt__, {"cmd.run_all": mock}):
         mock_dump = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch("salt.modules.disk.dump", mock_dump):
             kwargs = {"read-ahead": 512, "filesystem-read-ahead": 1024}
@@ -239,6 +241,78 @@ def test_tune():
             mock.assert_called_with(
                 "blockdev --setra 512 --setfra 1024 /dev/sda", python_shell=False
             )
+
+
+@pytest.mark.parametrize(
+    "kwarg_key,kwarg_value,expected_flag",
+    [
+        ("read-write", True, "setrw"),
+        ("read-only", True, "setro"),
+    ],
+)
+def test_tune_issue_68490(kwarg_key, kwarg_value, expected_flag):
+    """
+    Test for issue #68490 where blockdev was not called with correct flags
+    for read-write (--setrw) and read-only (--setro)
+    """
+    mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    with patch.dict(disk.__salt__, {"cmd.run_all": mock}):
+        mock_dump = MagicMock(return_value={"retcode": 0, "stdout": ""})
+        with patch("salt.modules.disk.dump", mock_dump):
+            kwargs = {kwarg_key: kwarg_value}
+            disk.tune("/dev/sda", **kwargs)
+
+            mock.assert_called_with(
+                f"blockdev --{expected_flag} /dev/sda", python_shell=False
+            )
+
+
+def test_tune_invalid_option():
+    """
+    Test for passing invalid option to disk.tune
+    """
+    with pytest.raises(SaltInvocationError) as excinfo:
+        disk.tune("/dev/sda", invalid_option=True)
+
+
+@pytest.mark.parametrize(
+    "kwarg_key, kwarg_value, raise_error",
+    [
+        ("read-only", True, False),
+        ("read-only", False, True),
+        ("read-write", True, False),
+        ("read-write", False, True),
+    ],
+)
+def test_tune_true_only_options(kwarg_key, kwarg_value, raise_error):
+    """
+    Test for options that should only be set to True for disk.tune
+    """
+    mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    with patch.dict(disk.__salt__, {"cmd.run_all": mock}):
+        mock_dump = MagicMock(return_value={"retcode": 0, "stdout": ""})
+        with patch("salt.modules.disk.dump", mock_dump):
+            kwargs = {kwarg_key: kwarg_value}
+            if raise_error:
+                with pytest.raises(SaltInvocationError) as excinfo:
+                    disk.tune("/dev/sda", **kwargs)
+                return
+            else:
+                result = disk.tune("/dev/sda", **kwargs)
+                assert result["retcode"] == 0
+
+
+def test_tune_blockdev_error():
+    """
+    Test for blockdev command returning an error in disk.tune
+    """
+    mock = MagicMock(return_value={"retcode": 1, "stderr": "Some error"})
+    with patch.dict(disk.__salt__, {"cmd.run_all": mock}):
+        mock_dump = MagicMock(return_value={"retcode": 0, "stdout": ""})
+        with patch("salt.modules.disk.dump", mock_dump):
+            kwargs = {"read-ahead": 512}
+            with pytest.raises(CommandExecutionError) as excinfo:
+                disk.tune("/dev/sda", **kwargs)
 
 
 def test_format():
