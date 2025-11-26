@@ -13,7 +13,7 @@ import salt.utils.decorators
 import salt.utils.decorators.path
 import salt.utils.path
 import salt.utils.platform
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 __func_alias__ = {"format_": "format"}
 
@@ -334,6 +334,8 @@ def tune(device, **kwargs):
     Valid options are: ``read-ahead``, ``filesystem-read-ahead``,
     ``read-only``, ``read-write``.
 
+    For ``read-only`` and ``read-write``, the value must be set to ``True``.
+
     See the ``blockdev(8)`` manpage for a more complete description of these
     options.
     """
@@ -346,19 +348,45 @@ def tune(device, **kwargs):
     }
     opts = ""
     args = []
-    for key in kwargs:
+    invalid_kwargs = {}
+
+    for key, value in kwargs.items():
+        # Check for invalid kwargs but ignore dunder args
+        if key not in kwarg_map and not key.startswith("__"):
+            invalid_kwargs[key] = value
+            continue
+
+        # Check that read-only and read-write have a value of True
+        # they do not accept other values
+        if key in ("read-only", "read-write") and not (
+            value == "True" or value is True
+        ):
+            invalid_kwargs[key] = value
+            continue
+
         if key in kwarg_map:
             switch = kwarg_map[key]
             if key != "read-write":
                 args.append(switch.replace("set", "get"))
             else:
                 args.append("getro")
-            if kwargs[key] == "True" or kwargs[key] is True:
-                opts += f"--{key} "
+            if key in ("read-only", "read-write"):
+                opts += f"--{switch} "
             else:
-                opts += f"--{switch} {kwargs[key]} "
+                opts += f"--{switch} {value} "
+
+    # Raise error if any invalid kwargs were found
+    if invalid_kwargs:
+        invalid_kwargs_str = ", ".join(f"{k}={v}" for k, v in invalid_kwargs.items())
+        raise SaltInvocationError(f"Invalid keyword arguments: {invalid_kwargs_str}")
+
     cmd = f"blockdev {opts}{device}"
-    out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
+
+    # Any other errors, including invalid values for valid kwargs, will be
+    # caught by blockdev
+    blockdev_result = __salt__["cmd.run_all"](cmd, python_shell=False)
+    if blockdev_result["retcode"] != 0:
+        raise CommandExecutionError(f"{blockdev_result['stderr']}")
     return dump(device, args)
 
 
@@ -376,7 +404,7 @@ def wipe(device):
     cmd = f"wipefs -a {device}"
     try:
         out = __salt__["cmd.run_all"](cmd, python_shell=False)
-    except subprocess.CalledProcessError as err:
+    except subprocess.CalledProcessError:
         return False
     if out["retcode"] == 0:
         return True
@@ -438,7 +466,7 @@ def resize2fs(device):
     cmd = f"resize2fs {device}"
     try:
         out = __salt__["cmd.run_all"](cmd, python_shell=False)
-    except subprocess.CalledProcessError as err:
+    except subprocess.CalledProcessError:
         return False
     if out["retcode"] == 0:
         return True
