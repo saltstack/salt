@@ -194,9 +194,11 @@ def set_locale(locale):
         salt '*' locale.set_locale 'en_US.UTF-8'
     """
     lc_ctl = salt.utils.systemd.booted(__context__)
-    # localectl on SLE12 is installed but the integration is broken -- config is rewritten by YaST2
     if lc_ctl and not (
+        # localectl on SLE12 is installed but the integration is broken -- config is rewritten by YaST2
         __grains__["os_family"] in ["Suse"] and __grains__["osmajorrelease"] in [12]
+        # starting from Debian 13, update-locale must be used instead of localectl set-locale
+        or __grains__["os_family"] in ["Debian"] and __grains__["osmajorrelease"] >= 13
     ):
         return _localectl_set(locale)
 
