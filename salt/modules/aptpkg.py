@@ -1742,7 +1742,6 @@ def _get_opts(line):
     Return all opts in [] for a repo line
     """
     get_opts = re.search(r"\[(.*=.*?)\]", line)
-    log.error("WTFSON %s", get_opts)
 
     ret = OrderedDict()
     if not get_opts:
