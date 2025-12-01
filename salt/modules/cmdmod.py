@@ -292,28 +292,8 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
     # The third item[2] in each tuple is the name of that method.
     stack = traceback.extract_stack(limit=3)
     if stack[-3][2] == "script":
-        # If this is cmd.script, then we're running a file
-        # You might be tempted to use -File here instead of -Command
-        # The problem with using -File is that any arguments that contain
-        # powershell commands themselves will not be evaluated
-        # See GitHub issue #56195
-        new_cmd.append("-Command")
-        if isinstance(cmd, list):
-            quoted_cmd = []
-            for item in cmd:
-                if item.startswith('"') and item.endswith('"'):
-                    item = item.strip('"')
-                if " " in item:
-                    item = f"'{item}'"
-                quoted_cmd.append(item)
-
-            cmd = " ".join(quoted_cmd)
-
-        # We need to append $LASTEXITCODE here to return the actual exit code
-        # from the script. Otherwise, it will always return 1 on any non-zero
-        # exit code failure. Issue: #60884
-        new_cmd.append(f'"& {{ {cmd.strip()}; exit $LASTEXITCODE }}"')
-        new_cmd = " ".join(new_cmd)
+        new_cmd.append("-File")
+        new_cmd.extend(cmd)
     elif encoded_cmd:
         new_cmd.extend(["-EncodedCommand", cmd])
     else:
@@ -322,7 +302,7 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
             cmd = " ".join(cmd)
         new_cmd.append(cmd)
 
-    log.debug(f"prepped cmd: {new_cmd}")
+    log.debug(new_cmd)
     return new_cmd
 
 
