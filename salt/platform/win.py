@@ -1361,6 +1361,6 @@ def prepend_cmd(win_shell, cmd):
         args = subprocess.list2cmdline(cmd)
     else:
         args = cmd
-    new_cmd = f'{win_shell} /s /c {args}'
+    new_cmd = f"{win_shell} /s /c {args}"
 
     return new_cmd

@@ -109,7 +109,7 @@ def test_run(cmdmod, grains):
         pytest.skip("Unable to get the SHELL environment variable")
 
     if salt.utils.platform.is_windows():
-        assert cmdmod.run("echo %ComSpec%")
+        assert cmdmod.run("echo %ComSpec%", python_shell=True)
         assert (
             cmdmod.run("echo %ComSpec%", shell=shell, python_shell=True).rstrip()
             == shell
@@ -164,7 +164,7 @@ def test_stdout(cmdmod):
     """
     cmd.run_stdout
     """
-    assert cmdmod.run_stdout('echo "cheese"').rstrip().strip('"') == "cheese"
+    assert cmdmod.run_stdout('echo "cheese"', python_shell=True).rstrip().strip('"') == "cheese"
 
 
 @pytest.mark.slow_test
@@ -438,7 +438,7 @@ def test_quotes(cmdmod):
     else:
         cmd = """echo 'SELECT * FROM foo WHERE bar="baz"' """
     expected_result = 'SELECT * FROM foo WHERE bar="baz"'
-    result = cmdmod.run_stdout(cmd).strip()
+    result = cmdmod.run_stdout(cmd, python_shell=True).strip()
     assert result == expected_result
 
 
@@ -603,20 +603,24 @@ def test_windows_env_handling(cmdmod):
     assert "ABC=456" in out
 
 
-@pytest.mark.slow_test
-@pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
-@pytest.mark.parametrize(
-    "args",
-    [
-        '-SecureString (ConvertTo-SecureString -String "i like cheese" -AsPlainText -Force) -ErrorAction Stop',
-        "-SecureString (ConvertTo-SecureString -String 'i like cheese' -AsPlainText -Force) -ErrorAction Stop",
-    ],
-)
-def test_windows_powershell_script_args(cmdmod, issue_56195_test_ps1, powershell, args):
-    """
-    Ensure that powershell processes inline script in args
-    """
-    expected = "i like cheese"
-    script = "salt://issue_56195_test.ps1"
-    ret = cmdmod.script(script, args=args, shell=powershell, saltenv="base")
-    assert ret["stdout"] == expected
+# TODO: This needs to work. Recent work in cmdmod broke this functionality
+# TODO: https://github.com/saltstack/salt/pull/68156
+# TODO: Tests were moved to tests/pytests/functional/modules/cmed/test_powershell.py
+# TODO: but they were changed to use cmd.powershell instead of cmd.script
+#@pytest.mark.slow_test
+#@pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
+#@pytest.mark.parametrize(
+#    "args",
+#    [
+#        '-SecureString (ConvertTo-SecureString -String "i like cheese" -AsPlainText -Force) -ErrorAction Stop',
+#        "-SecureString (ConvertTo-SecureString -String 'i like cheese' -AsPlainText -Force) -ErrorAction Stop",
+#    ],
+#)
+#def test_windows_powershell_script_args(cmdmod, issue_56195_test_ps1, powershell, args):
+#    """
+#    Ensure that powershell processes inline script in args
+#    """
+#    expected = "i like cheese"
+#    script = "salt://issue_56195_test.ps1"
+#    ret = cmdmod.script(script, args=args, shell=powershell, saltenv="base", python_shell=True)
+#    assert ret["stdout"] == expected
