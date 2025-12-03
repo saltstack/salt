@@ -24,6 +24,12 @@ integration.test: True
 
 # Grains addons
 grains:
+  roles:
+    - one
+    - two
+    - three
+    - three
+    - four
   test_grain: cheese
   script: grail
   alot: many
