@@ -75,7 +75,7 @@ jobs:
         include: ${{ fromJSON(inputs.matrix)['linux'] }}
 
     container:
-      image: ghcr.io/saltstack/salt-ci-containers/packaging:debian-12
+      image: ghcr.io/saltstack/salt-ci-containers/testing:debian-13
 
     steps:
       # Checkout here so we can easily use custom actions
@@ -193,7 +193,7 @@ jobs:
         include: ${{ fromJSON(inputs.matrix)['linux'] }}
 
     container:
-      image: ghcr.io/saltstack/salt-ci-containers/packaging:rockylinux-9
+      image: ghcr.io/saltstack/salt-ci-containers/testing:fedora-42
 
     steps:
       - uses: actions/checkout@v4
