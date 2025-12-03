@@ -10,6 +10,7 @@ state modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    alias
     ansiblegate
     apache
     apache_conf
