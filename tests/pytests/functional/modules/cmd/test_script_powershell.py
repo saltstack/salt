@@ -76,7 +76,7 @@ def test_exitcode(cmd, shell, exitcode_script):
         ("foo bar", "a: foo, b: bar"),
         ('foo "bar bar"', "a: foo, b: bar bar"),
         (["foo", "bar"], "a: foo, b: bar"),
-        (['"foo foo"', '"bar bar"'], "a: foo foo, b: bar bar"),
+        (["foo foo", "bar bar"], "a: foo foo, b: bar bar"),
     ],
 )
 def test_echo(cmd, shell, echo_script, args, expected):
@@ -96,7 +96,7 @@ def test_echo(cmd, shell, echo_script, args, expected):
         ("foo bar", "a: foo, b: bar"),
         ('foo "bar bar"', "a: foo, b: bar bar"),
         (["foo", "bar"], "a: foo, b: bar"),
-        (['"foo foo"', '"bar bar"'], "a: foo foo, b: bar bar"),
+        (["foo foo", "bar bar"], "a: foo foo, b: bar bar"),
     ],
 )
 def test_echo_runas(cmd, shell, account, echo_script, args, expected):
