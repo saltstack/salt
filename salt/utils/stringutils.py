@@ -181,31 +181,40 @@ def is_binary(data):
     """
     Detects if the passed string of data is binary or text
     """
+
     if not data or not isinstance(data, ((str,), bytes)):
         return False
 
-    if isinstance(data, bytes):
-        if b"\0" in data:
-            return True
-    elif "\0" in data:
+    if not isinstance(data, bytes):
+        data = to_bytes(data)
+
+    if b"\0" in data:
         return True
 
-    text_characters = "".join([chr(x) for x in range(32, 127)] + list("\n\r\t\b"))
-    # Get the non-text characters (map each character to itself then use the
-    # 'remove' option to get rid of the text characters.)
-    if isinstance(data, bytes):
-        import salt.utils.data
+    def int2byte(x):
+        return bytes((x,))
 
-        nontext = data.translate(None, salt.utils.data.encode(text_characters))
-    else:
-        trans = "".maketrans("", "", text_characters)
-        nontext = data.translate(trans)
+    # Defines the text characters as being the ASCII characters plus a few
+    # control characters (newline, carriage return, tab, formfeed and backspace)
+    text_characters = b"".join(int2byte(i) for i in range(32, 127)) + b"\n\r\t\f\b"
+
+    try:
+        # Defines the range of values used by UTF-8 multibyte characters
+        mb_utf8_characters = b"".join(int2byte(i) for i in range(128, 255))
+
+        data.decode(__salt_system_encoding__)
+
+        text_characters = text_characters + mb_utf8_characters
+    except UnicodeDecodeError as err:
+        # This handles truncated characters at end of string
+        if err.reason == "unexpected end of data":
+            text_characters = text_characters + mb_utf8_characters
+
+    nontext = data.translate(None, text_characters)
 
     # If more than 30% non-text characters, then
     # this is considered binary data
-    if float(len(nontext)) / len(data) > 0.30:
-        return True
-    return False
+    return float(len(nontext)) / len(data) > 0.30
 
 
 @jinja_filter("random_str")
