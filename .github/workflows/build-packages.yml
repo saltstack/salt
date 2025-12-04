@@ -75,7 +75,7 @@ jobs:
         include: ${{ fromJSON(inputs.matrix)['linux'] }}
 
     container:
-      image: ghcr.io/saltstack/salt-ci-containers/packaging:debian-12
+      image: ghcr.io/saltstack/salt-ci-containers/testing:debian-13
 
     steps:
       # Checkout here so we can easily use custom actions
@@ -98,6 +98,8 @@ jobs:
       - name: Install toolchain
         if: inputs.source != 'onedir'
         run: |
+          # Installing pytho3-venv should be moved to the container image
+          apt-get install -y python3-venv
           mkdir -p ~/.local/relenv
           python3 -m venv venv
           venv/bin/python3 -m pip install ppbt relenv==${{ inputs.relenv-version }}
@@ -178,7 +180,7 @@ jobs:
         include: ${{ fromJSON(inputs.matrix)['linux'] }}
 
     container:
-      image: ghcr.io/saltstack/salt-ci-containers/packaging:rockylinux-9
+      image: ghcr.io/saltstack/salt-ci-containers/testing:fedora-42
 
     steps:
       - uses: actions/checkout@v4
