@@ -27,16 +27,6 @@ import salt.utils.data
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
-try:
-    import pkg_resources
-
-    HAS_PKG_RESOURCES = True
-except ImportError:
-    HAS_PKG_RESOURCES = False
-
-
-# pylint: disable=import-error
-
 
 def purge_pip():
     """
@@ -362,11 +352,11 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
     pkg2 = normalize(pkg2)
 
     try:
-        if pkg_resources.parse_version(pkg1) < pkg_resources.parse_version(pkg2):
+        if salt.utils.versions.Version(pkg1) < salt.utils.versions.Version(pkg2):
             return -1
-        if pkg_resources.parse_version(pkg1) == pkg_resources.parse_version(pkg2):
+        if salt.utils.versions.Version(pkg1) == salt.utils.versions.Version(pkg2):
             return 0
-        if pkg_resources.parse_version(pkg1) > pkg_resources.parse_version(pkg2):
+        if salt.utils.versions.Version(pkg1) > salt.utils.versions.Version(pkg2):
             return 1
     except Exception as exc:  # pylint: disable=broad-except
         logger.exception(
