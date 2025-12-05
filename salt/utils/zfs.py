@@ -16,11 +16,11 @@ import logging
 import math
 import os
 import re
+from collections import OrderedDict
 from numbers import Number
 
 import salt.modules.cmdmod
 from salt.utils.decorators import memoize as real_memoize
-from salt.utils.odict import OrderedDict
 from salt.utils.stringutils import to_num as str_to_num
 
 # Size conversion data

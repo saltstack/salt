@@ -3,11 +3,11 @@
 """
 
 import urllib.error
+from collections import OrderedDict
 
 import pytest
 
 import salt.modules.apache as apache
-from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, mock_open, patch
 
 

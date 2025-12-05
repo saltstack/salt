@@ -11,7 +11,6 @@ import salt.utils.decorators.path
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.pkg.rpm
-import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils.versions import LooseVersion
 
@@ -698,14 +697,23 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
     """
 
     def normalize(x):
-        return str(x).split(":", 1)[-1] if ignore_epoch else str(x)
+        return str(x).split(":", maxsplit=1)[-1] if ignore_epoch else str(x)
 
     ver1 = normalize(ver1)
     ver2 = normalize(ver2)
 
-    try:
-        cmp_func = None
-        if HAS_RPM:
+    (ver1_e, ver1_v, ver1_r) = salt.utils.pkg.rpm.version_to_evr(ver1)
+    (ver2_e, ver2_v, ver2_r) = salt.utils.pkg.rpm.version_to_evr(ver2)
+    # If one EVR is missing a release but not the other and they
+    # otherwise would be equal, ignore the release. This can happen if
+    # e.g. you are checking if a package version 3.2 is satisfied by
+    # 3.2-1.
+    if not ver1_r or not ver2_r:
+        ver1_r = ver2_r = ""
+
+    if HAS_RPM:
+        try:
+            cmp_func = None
             try:
                 cmp_func = rpm.labelCompare
             except AttributeError:
@@ -716,91 +724,27 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                     "labelCompare function. Not using rpm.labelCompare for "
                     "version comparison."
                 )
-        else:
-            log.warning(
-                "Please install a package that provides rpm.labelCompare for "
-                "more accurate version comparisons."
-            )
-
-        # If one EVR is missing a release but not the other and they
-        # otherwise would be equal, ignore the release. This can happen if
-        # e.g. you are checking if a package version 3.2 is satisfied by
-        # 3.2-1.
-        (ver1_e, ver1_v, ver1_r) = salt.utils.pkg.rpm.version_to_evr(ver1)
-        (ver2_e, ver2_v, ver2_r) = salt.utils.pkg.rpm.version_to_evr(ver2)
-
-        if not ver1_r or not ver2_r:
-            ver1_r = ver2_r = ""
-
-        if cmp_func is None:
-            ver1 = f"{ver1_e}:{ver1_v}-{ver1_r}"
-            ver2 = f"{ver2_e}:{ver2_v}-{ver2_r}"
-
-            if salt.utils.path.which("rpmdev-vercmp"):
-                log.warning(
-                    "Installing the rpmdevtools package may surface dev tools in"
-                    " production."
+            if cmp_func is not None:
+                cmp_result = cmp_func(
+                    (ver1_e, ver1_v, ver1_r), (ver2_e, ver2_v, ver2_r)
                 )
-
-                # rpmdev-vercmp always uses epochs, even when zero
-                def _ensure_epoch(ver):
-                    def _prepend(ver):
-                        return f"0:{ver}"
-
-                    try:
-                        if ":" not in ver:
-                            return _prepend(ver)
-                    except TypeError:
-                        return _prepend(ver)
-                    return ver
-
-                ver1 = _ensure_epoch(ver1)
-                ver2 = _ensure_epoch(ver2)
-                result = __salt__["cmd.run_all"](
-                    ["rpmdev-vercmp", ver1, ver2],
-                    python_shell=False,
-                    redirect_stderr=True,
-                    ignore_retcode=True,
-                )
-                # rpmdev-vercmp returns 0 on equal, 11 on greater-than, and
-                # 12 on less-than.
-                if result["retcode"] == 0:
-                    return 0
-                elif result["retcode"] == 11:
-                    return 1
-                elif result["retcode"] == 12:
-                    return -1
-                else:
-                    # We'll need to fall back to salt.utils.versions.version_cmp()
-                    log.warning(
-                        "Failed to interpret results of rpmdev-vercmp output. "
-                        "This is probably a bug, and should be reported. "
-                        "Return code was %s. Output: %s",
-                        result["retcode"],
-                        result["stdout"],
+                if cmp_result not in (-1, 0, 1):
+                    raise CommandExecutionError(
+                        f"Comparison result '{cmp_result}' is invalid"
                     )
-            else:
-                log.warning(
-                    "Falling back on salt.utils.versions.version_cmp() for version"
-                    " comparisons"
-                )
-        else:
-            cmp_result = cmp_func((ver1_e, ver1_v, ver1_r), (ver2_e, ver2_v, ver2_r))
-            if cmp_result not in (-1, 0, 1):
-                raise CommandExecutionError(
-                    f"Comparison result '{cmp_result}' is invalid"
-                )
-            return cmp_result
-
-    except Exception as exc:  # pylint: disable=broad-except
-        log.warning(
-            "Failed to compare version '%s' to '%s' using RPM: %s", ver1, ver2, exc
+                return cmp_result
+        except Exception as exc:  # pylint: disable=broad-except
+            log.warning(
+                "Failed to compare version '%s' to '%s' using RPM: %s", ver1, ver2, exc
+            )
+    else:
+        log.info(
+            "Install a package that provides rpm.labelCompare for "
+            "faster version comparisons."
         )
-
-    # We would already have normalized the versions at the beginning of this
-    # function if ignore_epoch=True, so avoid unnecessary work and just pass
-    # False for this value.
-    return salt.utils.versions.version_cmp(ver1, ver2, ignore_epoch=False)
+    return salt.utils.pkg.rpm.evr_compare(
+        (ver1_e, ver1_v, ver1_r), (ver2_e, ver2_v, ver2_r)
+    )
 
 
 def checksum(*paths, **kwargs):

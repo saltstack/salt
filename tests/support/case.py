@@ -389,6 +389,8 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             cmd = "python "
         else:
             cmd = "python{}.{} ".format(*sys.version_info)
+            if not salt.utils.path.which(cmd):
+                cmd = f"{sys.executable} "
 
         cmd += "{} --config-dir={} {} ".format(
             script_path, config_dir or RUNTIME_VARS.TMP_CONF_DIR, arg_str
@@ -477,6 +479,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
 
         log.debug("Running Popen(%r, %r)", cmd, popen_kwargs)
         process = subprocess.Popen(cmd, **popen_kwargs)
+        log.debug("Result %r", process)
 
         if timeout is not None:
             stop_at = datetime.now() + timedelta(seconds=timeout)

@@ -17,6 +17,7 @@ import os
 import shutil
 import sys
 import tempfile
+from collections import OrderedDict
 from datetime import date
 
 from jinja2 import Template
@@ -24,7 +25,6 @@ from jinja2 import Template
 import salt.utils.files
 import salt.version
 from salt.serializers.yaml import deserialize
-from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 

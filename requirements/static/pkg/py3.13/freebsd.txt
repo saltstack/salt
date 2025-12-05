@@ -18,8 +18,10 @@ certifi==2024.8.30 ; python_version >= "3.10"
     # via
     #   -r requirements/base.txt
     #   requests
-cffi==1.17.1
-    # via cryptography
+cffi==2.0.0
+    # via
+    #   -r requirements/base.txt
+    #   cryptography
 charset-normalizer==3.4.0
     # via requests
 cheroot==10.0.1
@@ -45,7 +47,7 @@ idna==3.10
     # via
     #   requests
     #   yarl
-immutables==0.21 ; sys_platform != "linux"
+immutables==0.21
     # via
     #   -r requirements/base.txt
     #   contextvars

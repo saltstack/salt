@@ -10,6 +10,7 @@ import os
 import sys
 import time
 import traceback
+from collections import OrderedDict
 
 import salt.channel.client
 import salt.fileclient
@@ -28,7 +29,6 @@ from salt.template import compile_template
 # causes an UnboundLocalError. This should be investigated and fixed, but until
 # then, leave the import directly below this comment intact.
 from salt.utils.dictupdate import merge
-from salt.utils.odict import OrderedDict
 from salt.version import __version__
 
 log = logging.getLogger(__name__)

@@ -13,6 +13,22 @@ salt/_logging/(impl|handlers).py:
   - pytests.integration._logging.test_multiple_processes_logging
   - pytests.unit._logging.handlers.test_deferred_stream_handler
 
+salt/modules/cmdmod.py:
+  - integration.states.test_cmd
+  - pytests.functional.modules.cmd.test_enabled
+  - pytests.functional.modules.cmd.test_powershell
+  - pytests.functional.modules.cmd.test_run
+  - pytests.functional.modules.cmd.test_run_win
+  - pytests.functional.modules.cmd.test_runas
+  - pytests.functional.modules.cmd.test_script
+  - pytests.functional.modules.cmd.test_script_powershell
+  - pytests.functional.states.cmd.test_cmd_run
+  - pytests.functional.states.cmd.test_runas
+  - pytests.integration.modules.test_cmdmod
+  - pytests.unit.modules.test_cmdmod
+  - pytests.unit.platform.test_win
+  - pytests.unit.utils.test_win_functions
+
 salt/modules/(apkpkg|aptpkg|ebuildpkg|dpkg_lowpkg|freebsdpkg|mac_brew_pkg|mac_ports_pkg|openbsdpkg|opkg|pacmanpkg|pkgin|pkgng|pkg_resource|rpm_lowpkg|solarisipspkg|solarispkg|win_pkg|xbpspkg|yumpkg|zypperpkg)\.py:
   - pytests.unit.states.test_pkg
   - pytests.functional.modules.test_pkg
@@ -118,7 +134,7 @@ salt/cli/key.py:
   - pytests.integration.cli.test_salt_key
 
 salt/cli/salt.py:
-  - integration.shell.test_enabled
+  - pytests.functional.modules.cmd.test_enabled
   - pytests.integration.cli.test_salt
   - pytests.integration.cli.test_matcher
 
@@ -185,7 +201,7 @@ salt/(client/ssh/.+|cli/ssh\.py):
   - pytests.integration.ssh.test_jinja_filters
   - pytests.integration.ssh.test_pillar
   - pytests.integration.ssh.test_raw
-  - integration.ssh.test_state
+  - pytests.integration.ssh.test_state
   - pytests.integration.ssh.test_py_versions
   - pytests.integration.netapi.test_ssh_client
 
@@ -197,7 +213,7 @@ salt/client/ssh/wrapper/*:
   - pytests.integration.ssh.test_jinja_filters
   - pytests.integration.ssh.test_pillar
   - pytests.integration.ssh.test_raw
-  - integration.ssh.test_state
+  - pytests.integration.ssh.test_state
   - pytests.integration.ssh.test_py_versions
   - pytests.integration.netapi.test_ssh_client
 
@@ -298,8 +314,8 @@ salt/utils/vt.py:
   - pytests.integration.ssh.test_jinja_filters
   - pytests.integration.ssh.test_pillar
   - pytests.integration.ssh.test_raw
-  - integration.ssh.test_state
   - pytests.integration.netapi.test_ssh_client
+  - pytests.integration.ssh.test_state
 
 salt/wheel/*:
   - pytests.integration.wheel.test_client

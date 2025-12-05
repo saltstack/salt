@@ -1,4 +1,5 @@
 import logging
+from collections import OrderedDict
 from pathlib import Path
 
 import pytest
@@ -6,7 +7,6 @@ import pytest
 import salt.loader
 import salt.pillar
 import salt.utils.cache
-from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock
 
 

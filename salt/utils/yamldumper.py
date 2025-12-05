@@ -9,11 +9,12 @@
 
 
 import collections
+from collections import OrderedDict
 
 import yaml  # pylint: disable=blacklisted-import
 
 import salt.utils.context
-from salt.utils.odict import HashableOrderedDict, OrderedDict
+from salt.utils.datastructures import HashableOrderedDict
 
 try:
     from yaml import CDumper as Dumper

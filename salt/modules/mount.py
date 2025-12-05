@@ -5,6 +5,7 @@ Salt module to manage Unix mounts and the fstab file
 import logging
 import os
 import re
+from collections import OrderedDict
 
 import salt.utils.args
 import salt.utils.data
@@ -14,7 +15,6 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
-from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 

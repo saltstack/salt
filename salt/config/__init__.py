@@ -1022,6 +1022,8 @@ VALID_OPTS = immutabletypes.freeze(
         "keys.cache_driver": (type(None), str),
         "request_server_ttl": int,
         "request_server_aes_session": int,
+        # Minimum authentication protocol version to accept from minions
+        "minimum_auth_version": int,
     }
 )
 
@@ -1690,6 +1692,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "keys.cache_driver": "localfs_key",
         "request_server_aes_session": 0,
         "request_server_ttl": 0,
+        "minimum_auth_version": 3,
     }
 )
 

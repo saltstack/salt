@@ -73,9 +73,10 @@ certifi==2024.8.30 ; python_version >= "3.10"
     #   httpx
     #   kubernetes
     #   requests
-cffi==1.17.1
+cffi==2.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   cryptography
     #   pygit2
@@ -171,7 +172,7 @@ idna==3.10
     #   requests
     #   trustme
     #   yarl
-immutables==0.15 ; sys_platform == "linux"
+immutables==0.21
     # via
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
     #   -r requirements/base.txt

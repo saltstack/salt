@@ -357,6 +357,8 @@ def test_get_repo_keys_keydir_not_exist(key):
     Test aptpkg.get_repo_keys when aptkey is False and True
     and keydir does not exist
     """
+    if key is True and not salt.utils.path.which("apt-key"):
+        pytest.xfail("Test should fail when on apt-key binary exists.")
     ret = aptpkg.get_repo_keys(aptkey=key, keydir="/doesnotexist/")
     if not key:
         assert not ret
