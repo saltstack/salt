@@ -26,7 +26,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2025.09.03"
+__ScriptVersion="2025.12.05"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -1952,11 +1952,6 @@ __wait_for_apt(){
     # Timeout set at 15 minutes
     WAIT_TIMEOUT=900
 
-    ## see if sync'ing the clocks helps
-    if [ -f /usr/sbin/hwclock ]; then
-        /usr/sbin/hwclock -s
-    fi
-
     # Run our passed in apt command
     "${@}" 2>"$APT_ERR"
     APT_RETURN=$?
@@ -2826,11 +2821,11 @@ __install_salt_from_repo() {
 
     echodebug "Running '${_pip_cmd} install ${_USE_BREAK_SYSTEM_PACKAGES} --no-deps --force-reinstall ${_PIP_INSTALL_ARGS} ${_TMP_DIR}/git/deps/salt*.whl'"
 
-    echodebug "Running ${_pip_cmd} install ${_USE_BREAK_SYSTEM_PACKAGES} --no-deps --force-reinstall ${_PIP_INSTALL_ARGS} --global-option=--salt-config-dir=$_SALT_ETC_DIR --salt-cache-dir=${_SALT_CACHE_DIR} ${SETUP_PY_INSTALL_ARGS} ${_TMP_DIR}/git/deps/salt*.whl"
+    echodebug "Running ${_pip_cmd} install ${_USE_BREAK_SYSTEM_PACKAGES} --no-deps --force-reinstall ${_PIP_INSTALL_ARGS} --config-settings=--global-option=--salt-config-dir=$_SALT_ETC_DIR --salt-cache-dir=${_SALT_CACHE_DIR} ${SETUP_PY_INSTALL_ARGS} ${_TMP_DIR}/git/deps/salt*.whl"
 
     ${_pip_cmd} install ${_USE_BREAK_SYSTEM_PACKAGES} --no-deps --force-reinstall \
         ${_PIP_INSTALL_ARGS} \
-        --global-option="--salt-config-dir=$_SALT_ETC_DIR --salt-cache-dir=${_SALT_CACHE_DIR} ${SETUP_PY_INSTALL_ARGS}" \
+        --config-settings="--global-option=--salt-config-dir=$_SALT_ETC_DIR --salt-cache-dir=${_SALT_CACHE_DIR} ${SETUP_PY_INSTALL_ARGS}" \
         ${_TMP_DIR}/git/deps/salt*.whl || return 1
 
     echoinfo "Checking if Salt can be imported using ${_py_exe}"
