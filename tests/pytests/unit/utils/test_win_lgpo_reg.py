@@ -591,3 +591,53 @@ def test_issue_56769_mixed_line_endings():
             result = fp.read()
 
         assert result == expected
+
+
+def test_dict_to_reg_pol_reg_binary():
+    """
+    Test REG_QWORD
+    """
+    test_dict = {
+        "SOFTWARE\\MyKey": {
+            "MyValue": {
+                "data": "1552f6a579b77b61460df56cb4b2ce0a34fe96b6176829d7916275b806edc2bb",
+                "type": "REG_BINARY",
+            },
+        },
+    }
+    expected = (
+        b"PReg\x01\x00\x00\x00[\x00"
+        b"S\x00O\x00F\x00T\x00W\x00A\x00R\x00E\x00\\\x00M\x00y\x00K\x00e\x00y\x00\x00\x00;\x00"
+        b"M\x00y\x00V\x00a\x00l\x00u\x00e\x00\x00\x00;\x00"
+        b"\x03\x00\x00\x00;\x00"
+        b" \x00\x00\x00;\x00"
+        b"\x15R\xf6\xa5y\xb7{aF\r\xf5l\xb4\xb2\xce\n4\xfe\x96\xb6\x17h)\xd7\x91bu\xb8\x06\xed\xc2\xbb"
+        b"]\x00"
+    )
+    result = win_lgpo_reg.dict_to_reg_pol(test_dict)
+    assert result == expected
+
+
+def test_reg_pol_to_dict_reg_binary():
+    """
+    Test REG_QWORD
+    """
+    test_data = (
+        b"PReg\x01\x00\x00\x00[\x00"
+        b"S\x00O\x00F\x00T\x00W\x00A\x00R\x00E\x00\\\x00M\x00y\x00K\x00e\x00y\x00\x00\x00;\x00"
+        b"M\x00y\x00V\x00a\x00l\x00u\x00e\x00\x00\x00;\x00"
+        b"\x03\x00\x00\x00;\x00"
+        b" \x00\x00\x00;\x00"
+        b"\x15R\xf6\xa5y\xb7{aF\r\xf5l\xb4\xb2\xce\n4\xfe\x96\xb6\x17h)\xd7\x91bu\xb8\x06\xed\xc2\xbb"
+        b"]\x00"
+    )
+    expected = {
+        "SOFTWARE\\MyKey": {
+            "MyValue": {
+                "data": "1552f6a579b77b61460df56cb4b2ce0a34fe96b6176829d7916275b806edc2bb",
+                "type": "REG_BINARY",
+            },
+        },
+    }
+    result = win_lgpo_reg.reg_pol_to_dict(test_data)
+    assert result == expected

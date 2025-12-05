@@ -1858,7 +1858,7 @@ def get_table(
             try:
                 with salt.utils.files.fopen(file_loc) as fp:
                     ret["table"] = yaml.load(
-                        fp.read(), Loader=yamlordereddictloader.Loader
+                        fp.read(), Loader=yamlordereddictloader.SafeLoader
                     )
                     globals().update(FactoryLoader().load(ret["table"]))
             except OSError as err:

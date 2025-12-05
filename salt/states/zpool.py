@@ -71,8 +71,7 @@ States for managing zpools
 
 import logging
 import os
-
-from salt.utils.odict import OrderedDict
+from collections import OrderedDict
 
 log = logging.getLogger(__name__)
 

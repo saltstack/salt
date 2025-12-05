@@ -250,18 +250,48 @@ def ensure_connections(
     run_salt_cmds,
 ):
     # define the function
-    def _ensure_connections_fn(clis, minions):
-        log.error("ENSURE CONNECTIONS - START")
-        retries = 3
-        while retries:
+    def _ensure_connections_fn(clis, minions, *, timeout=120, interval=5):
+        """
+        Verify every CLI/minion pair can talk to each other.
+
+        On slower transports (for example TCP on ARM builders) the minions can
+        take longer than the original 30 seconds to re-auth.  Instead of a
+        fixed number of retries, spin until ``timeout`` elapses so the caller
+        only fails when we truly give up.
+        """
+
+        deadline = time.monotonic() + timeout
+        # Track the expected pairings as a set of human-readable identifiers
+        expected = {
+            (cli.get_display_name(), minion.id) for cli in clis for minion in minions
+        }
+        last_returned = []
+
+        log.debug("ensure_connections start: expected=%s", expected)
+        while time.monotonic() < deadline:
             returned = run_salt_cmds(clis, minions)
-            if len(returned) == len(clis) * len(minions):
-                break
-            time.sleep(10)
-            retries -= 1
-        else:
-            pytest.fail("Could not ensure the connections were okay.")
-        log.error("ENSURE CONNECTIONS - END")
+            returned_pairs = {
+                (cli.get_display_name(), minion.id) for cli, minion in returned
+            }
+            if returned_pairs == expected:
+                log.debug("ensure_connections successful: returned=%s", returned_pairs)
+                return
+
+            # Remember the last good attempt for debugging
+            last_returned = list(returned_pairs)
+            missing = sorted(expected - returned_pairs)
+            log.debug(
+                "ensure_connections retrying; missing=%s interval=%ss",
+                missing,
+                interval,
+            )
+            time.sleep(interval)
+
+        missing = sorted(expected - set(last_returned))
+        pytest.fail(
+            "Could not ensure the connections were okay. "
+            f"Missing responses for {missing} after {timeout}s."
+        )
 
     # run the function to ensure initial connections
     _ensure_connections_fn(

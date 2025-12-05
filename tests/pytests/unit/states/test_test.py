@@ -2,11 +2,12 @@
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
+from collections import OrderedDict
+
 import pytest
 
 import salt.states.test as test
 from salt.exceptions import SaltInvocationError
-from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, patch
 
 

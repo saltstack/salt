@@ -14,13 +14,13 @@ Module for Solaris 10's zonecfg
 
 import logging
 import re
+from collections import OrderedDict
 
 import salt.utils.args
 import salt.utils.data
 import salt.utils.decorators
 import salt.utils.files
 import salt.utils.path
-from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 

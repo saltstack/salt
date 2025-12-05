@@ -34,7 +34,6 @@ import time
 from collections.abc import MutableMapping
 
 from salt.ext.tornado.escape import native_str, parse_qs_bytes, utf8
-from salt.ext.tornado.log import gen_log
 from salt.ext.tornado.util import PY3, ObjectDict
 
 if PY3:
@@ -68,6 +67,9 @@ try:
 except ImportError:
     pass
 
+
+# To be used with str.strip() and related methods.
+HTTP_WHITESPACE = " \t"
 
 # RFC 7230 section 3.5: a recipient MAY recognize a single LF as a line
 # terminator and ignore any preceding CR.
@@ -189,12 +191,12 @@ class HTTPHeaders(MutableMapping):
         """
         if line[0].isspace():
             # continuation of a multi-line header
-            new_part = " " + line.lstrip()
+            new_part = " " + line.lstrip(HTTP_WHITESPACE)
             self._as_list[self._last_key][-1] += new_part
             self._dict[self._last_key] += new_part
         else:
             name, value = line.split(":", 1)
-            self.add(name, value.strip())
+            self.add(name, value.strip(HTTP_WHITESPACE))
 
     @classmethod
     def parse(cls, headers):
@@ -753,14 +755,13 @@ def parse_body_arguments(content_type, body, arguments, files, headers=None):
     with the parsed contents.
     """
     if headers and "Content-Encoding" in headers:
-        gen_log.warning("Unsupported Content-Encoding: %s", headers["Content-Encoding"])
+        raise HTTPInputError("Unsupported Content-Encoding: %s" % headers["Content-Encoding"])
         return
     if content_type.startswith("application/x-www-form-urlencoded"):
         try:
             uri_arguments = parse_qs_bytes(native_str(body), keep_blank_values=True)
         except Exception as e:
-            gen_log.warning("Invalid x-www-form-urlencoded body: %s", e)
-            uri_arguments = {}
+            raise HTTPInputError("Invalid x-www-form-urlencoded body: %s" % e) from e
         for name, values in uri_arguments.items():
             if values:
                 arguments.setdefault(name, []).extend(values)
@@ -773,9 +774,9 @@ def parse_body_arguments(content_type, body, arguments, files, headers=None):
                     parse_multipart_form_data(utf8(v), body, arguments, files)
                     break
             else:
-                raise ValueError("multipart boundary not found")
+                raise HTTPInputError("multipart boundary not found")
         except Exception as e:
-            gen_log.warning("Invalid multipart/form-data: %s", e)
+            raise HTTPInputError("Invalid multipart/form-data: %s" % e) from e
 
 
 def parse_multipart_form_data(boundary, data, arguments, files):
@@ -794,26 +795,22 @@ def parse_multipart_form_data(boundary, data, arguments, files):
         boundary = boundary[1:-1]
     final_boundary_index = data.rfind(b"--" + boundary + b"--")
     if final_boundary_index == -1:
-        gen_log.warning("Invalid multipart/form-data: no final boundary")
-        return
+        raise HTTPInputError("Invalid multipart/form-data: no final boundary")
     parts = data[:final_boundary_index].split(b"--" + boundary + b"\r\n")
     for part in parts:
         if not part:
             continue
         eoh = part.find(b"\r\n\r\n")
         if eoh == -1:
-            gen_log.warning("multipart/form-data missing headers")
-            continue
+            raise HTTPInputError("multipart/form-data missing headers")
         headers = HTTPHeaders.parse(part[:eoh].decode("utf-8"))
         disp_header = headers.get("Content-Disposition", "")
         disposition, disp_params = _parse_header(disp_header)
         if disposition != "form-data" or not part.endswith(b"\r\n"):
-            gen_log.warning("Invalid multipart/form-data")
-            continue
+            raise HTTPInputError("Invalid multipart/form-data")
         value = part[eoh + 4 : -2]
         if not disp_params.get("name"):
-            gen_log.warning("multipart/form-data value missing name")
-            continue
+            raise HTTPInputError("multipart/form-data value missing name")
         name = disp_params["name"]
         if disp_params.get("filename"):
             ctype = headers.get("Content-Type", "application/unknown")
@@ -977,15 +974,20 @@ def split_host_and_port(netloc):
     return (host, port)
 
 
-_OctalPatt = re.compile(r"\\[0-3][0-7][0-7]")
-_QuotePatt = re.compile(r"[\\].")
-_nulljoin = "".join
+_unquote_sub = re.compile(r"\\(?:([0-3][0-7][0-7])|(.))").sub
+
+
+def _unquote_replace(m):
+    if m[1]:
+        return chr(int(m[1], 8))
+    else:
+        return m[2]
 
 
 def _unquote_cookie(str):
     """Handle double quotes and escaping in cookie values.
 
-    This method is copied verbatim from the Python 3.5 standard
+    This method is copied verbatim from the Python 3.13 standard
     library (http.cookies._unquote) so we don't have to depend on
     non-public interfaces.
     """
@@ -1006,30 +1008,7 @@ def _unquote_cookie(str):
     #    \012 --> \n
     #    \"   --> "
     #
-    i = 0
-    n = len(str)
-    res = []
-    while 0 <= i < n:
-        o_match = _OctalPatt.search(str, i)
-        q_match = _QuotePatt.search(str, i)
-        if not o_match and not q_match:  # Neither matched
-            res.append(str[i:])
-            break
-        # else:
-        j = k = -1
-        if o_match:
-            j = o_match.start(0)
-        if q_match:
-            k = q_match.start(0)
-        if q_match and (not o_match or k < j):  # QuotePatt matched
-            res.append(str[i:k])
-            res.append(str[k + 1])
-            i = k + 2
-        else:  # OctalPatt matched
-            res.append(str[i:j])
-            res.append(chr(int(str[j + 1 : j + 4], 8)))
-            i = j + 4
-    return _nulljoin(res)
+    return _unquote_sub(_unquote_replace, s)
 
 
 def parse_cookie(cookie):

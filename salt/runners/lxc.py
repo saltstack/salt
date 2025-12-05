@@ -8,6 +8,7 @@ import copy
 import logging
 import os
 import time
+from collections import OrderedDict as _OrderedDict
 
 import salt.client
 import salt.key
@@ -16,7 +17,6 @@ import salt.utils.cloud
 import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.virt
-from salt.utils.odict import OrderedDict as _OrderedDict
 
 log = logging.getLogger(__name__)
 

@@ -12,13 +12,13 @@ Edit ini files
 import logging
 import os
 import re
+from collections import OrderedDict
 
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 

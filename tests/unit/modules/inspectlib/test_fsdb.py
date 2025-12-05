@@ -18,10 +18,10 @@
 """
 
 import io
+from collections import OrderedDict
 
 from salt.modules.inspectlib.entities import CsvDBEntity
 from salt.modules.inspectlib.fsdb import CsvDB
-from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 

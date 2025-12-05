@@ -8,13 +8,14 @@ Tests for salt.states.zpool
 :platform:      illumos,freebsd,linux
 """
 
+from collections import OrderedDict
+
 import pytest
 
 import salt.config
 import salt.loader
 import salt.states.zpool as zpool
 import salt.utils.zfs
-from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, patch
 from tests.support.zfs import ZFSMockData
 

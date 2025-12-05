@@ -52,7 +52,7 @@ from salt.exceptions import CommandExecutionError, SaltRenderError, SaltReqTimeo
 from salt.serializers.msgpack import deserialize as msgpack_deserialize
 from salt.serializers.msgpack import serialize as msgpack_serialize
 from salt.template import compile_template, compile_template_str
-from salt.utils.odict import DefaultOrderedDict, HashableOrderedDict
+from salt.utils.datastructures import DefaultOrderedDict, HashableOrderedDict
 
 log = logging.getLogger(__name__)
 
@@ -1231,6 +1231,8 @@ class State:
         cmd_opts = {}
         if "shell" in self.opts["grains"]:
             cmd_opts["shell"] = self.opts["grains"].get("shell")
+        if isinstance(low_data["check_cmd"], str):
+            low_data["check_cmd"] = [low_data["check_cmd"]]
         for entry in low_data["check_cmd"]:
             cmd = self.functions["cmd.retcode"](
                 entry, ignore_retcode=True, python_shell=True, **cmd_opts

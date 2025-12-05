@@ -47,8 +47,8 @@ Connection module for Amazon Elasticache
 
 import logging
 import time
+from collections import OrderedDict
 
-import salt.utils.odict as odict
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
@@ -212,7 +212,7 @@ def describe_replication_group(
         log.error(msg)
         log.debug(e)
         return {}
-    ret = odict.OrderedDict()
+    ret = OrderedDict()
     cc = cc["DescribeReplicationGroupsResponse"]["DescribeReplicationGroupsResult"]
     cc = cc["ReplicationGroups"][0]
 
@@ -284,7 +284,7 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
         return {}
     cc = cc["DescribeCacheClustersResponse"]["DescribeCacheClustersResult"]
     cc = cc["CacheClusters"][0]
-    ret = odict.OrderedDict()
+    ret = OrderedDict()
     attrs = [
         "engine",
         "cache_parameter_group",

@@ -314,6 +314,27 @@ def test_user_present_home_directory_created(modules, states, username, createho
     assert pathlib.Path(user_info["home"]).is_dir() is createhome
 
 
+@pytest.mark.skip_on_windows(reason="windows minion does not support persist_home")
+@pytest.mark.skip_on_darwin(reason="Mac minion does not support persist_home")
+@pytest.mark.parametrize("persist_home", [True, False])
+def test_user_present_home_directory_persisted(
+    modules, states, existing_account, user_home, persist_home
+):
+    """
+    It ensures that the home directory is persisted when home changed.
+    """
+    pathlib.Path(existing_account.info.home, "testfile").touch()
+    ret = states.user.present(
+        name=existing_account.username, home=str(user_home), persist_home=persist_home
+    )
+    assert ret.result is True
+
+    user_info = modules.user.info(existing_account.info.name)
+    assert user_info
+
+    assert pathlib.Path(user_info["home"], "testfile").is_file() is persist_home
+
+
 @pytest.mark.skip_on_darwin(reason="groups/gid not fully supported")
 @pytest.mark.skip_on_windows(reason="groups/gid not fully supported")
 def test_user_present_change_gid_but_keep_group(

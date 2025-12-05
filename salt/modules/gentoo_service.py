@@ -12,8 +12,8 @@ to the correct service manager
 import fnmatch
 import logging
 import re
+from collections import OrderedDict
 
-import salt.utils.odict as odict
 import salt.utils.systemd
 
 # Set up logging
@@ -107,7 +107,7 @@ def get_enabled():
         salt '*' service.get_enabled
     """
     (enabled_services, disabled_services) = _get_service_list()
-    return odict.OrderedDict(enabled_services)
+    return OrderedDict(enabled_services)
 
 
 def get_disabled():
@@ -172,7 +172,7 @@ def get_all():
         include_enabled=True, include_disabled=True
     )
     enabled_services.update({s: [] for s in disabled_services})
-    return odict.OrderedDict(enabled_services)
+    return OrderedDict(enabled_services)
 
 
 def start(name):

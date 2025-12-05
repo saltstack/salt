@@ -17,7 +17,7 @@ timelib>=0.2.5
 vultr>=1.0.1
 
 # ImportLib-Metadata
-importlib-metadata>=3.3.0
+importlib-metadata>=8.7.0
 zipp>=3.19.1
 
 more-itertools>=9.1.0

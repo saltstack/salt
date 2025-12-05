@@ -23,6 +23,7 @@ import sys
 import threading
 import time
 import weakref
+from collections import OrderedDict
 
 import salt.config
 import salt.defaults.exitcodes
@@ -44,7 +45,6 @@ import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.yaml
 from salt.exceptions import SaltInvocationError
-from salt.utils.odict import OrderedDict
 
 # pylint: disable=import-error
 try:

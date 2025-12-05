@@ -10,6 +10,7 @@ import os
 import sys
 import tempfile
 import traceback
+from collections import OrderedDict
 from pathlib import Path
 
 import jinja2
@@ -32,7 +33,6 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError, SaltRend
 from salt.loader.context import NamedLoaderContext
 from salt.loader.dunder import __file_client__
 from salt.utils.decorators.jinja import JinjaFilter, JinjaGlobal, JinjaTest
-from salt.utils.odict import OrderedDict
 from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)

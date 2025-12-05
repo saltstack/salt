@@ -1,9 +1,9 @@
 import logging
+from collections import OrderedDict
 
 import pytest
 
 import salt.renderers.pyobjects as pyobjects
-from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock
 
 log = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ def pyobjects_template():
             return [
                 "#!pyobjects",
                 "state_id = __sls__ + '_' + __opts__['id']",
-                "File.directory(state_id, name='/tmp', mode='1777', owner='root', group='root')",
+                "File.directory(state_id, name='/tmp', mode='1777', owner=passed_owner, group=passed_group)",
             ]
 
     return Template
@@ -43,7 +43,9 @@ def pyobjects_template():
 
 @pytest.mark.slow_test
 def test_opts_and_sls_access(pyobjects_template):
-    ret = pyobjects.render(pyobjects_template, sls="pyobj.runtest")
+    context = {"passed_owner": "root", "passed_group": "root"}
+
+    ret = pyobjects.render(pyobjects_template, sls="pyobj.runtest", context=context)
     assert ret == OrderedDict(
         [
             (

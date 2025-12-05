@@ -46,9 +46,9 @@ Connection module for Amazon ELB
 
 import logging
 import time
+from collections import OrderedDict
 
 import salt.utils.json
-import salt.utils.odict as odict
 import salt.utils.versions
 
 try:
@@ -534,11 +534,11 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
     while retries:
         try:
             lbattrs = conn.get_all_lb_attributes(name)
-            ret = odict.OrderedDict()
-            ret["access_log"] = odict.OrderedDict()
-            ret["cross_zone_load_balancing"] = odict.OrderedDict()
-            ret["connection_draining"] = odict.OrderedDict()
-            ret["connecting_settings"] = odict.OrderedDict()
+            ret = OrderedDict()
+            ret["access_log"] = OrderedDict()
+            ret["cross_zone_load_balancing"] = OrderedDict()
+            ret["connection_draining"] = OrderedDict()
+            ret["connecting_settings"] = OrderedDict()
             al = lbattrs.access_log
             czlb = lbattrs.cross_zone_load_balancing
             cd = lbattrs.connection_draining
@@ -679,7 +679,7 @@ def get_health_check(name, region=None, key=None, keyid=None, profile=None):
         try:
             lb = conn.get_all_load_balancers(load_balancer_names=[name])
             lb = lb[0]
-            ret = odict.OrderedDict()
+            ret = OrderedDict()
             hc = lb.health_check
             ret["interval"] = hc.interval
             ret["target"] = hc.target

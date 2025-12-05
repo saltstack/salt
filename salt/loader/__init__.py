@@ -11,6 +11,7 @@ import os
 import re
 import time
 import types
+from collections import OrderedDict
 
 import salt.config
 import salt.defaults.events
@@ -22,7 +23,6 @@ import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.lazy
-import salt.utils.odict
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions

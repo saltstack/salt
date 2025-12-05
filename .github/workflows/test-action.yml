@@ -334,11 +334,6 @@ jobs:
         run: |
           sudo chown -R "$(id -un)" .
 
-      - name: Combine Coverage Reports
-        if: always() && inputs.skip-code-coverage == false
-        run: |
-          nox --force-color -e combine-coverage
-
       - name: Prepare Test Run Artifacts
         id: download-artifacts-from-vm
         if: always()
@@ -347,17 +342,24 @@ jobs:
           # from it showing in the tree command below
           sudo rm -rf artifacts/salt*
           tree -a artifacts
-          if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
-            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
-          fi
+
+      - name: Combine Code Coverage
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
+        run: |
+          nox --force-color -e combine-coverage
+
+      - name: Rename Coverage Artifact
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
+        run: |
+          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
 
       - name: Upload Code Coverage Test Run Artifacts
-        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         uses: actions/upload-artifact@v4
         with:
-          name: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
+          name: coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
           path: |
-            artifacts/coverage/
+            artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
           include-hidden-files: true
 
       - name: Upload JUnit XML Test Run Artifacts
@@ -651,11 +653,6 @@ jobs:
         run: |
           sudo chown -R "$(id -un)" .
 
-      - name: Combine Coverage Reports
-        if: always() && inputs.skip-code-coverage == false
-        run: |
-          nox --force-color -e combine-coverage
-
       - name: Prepare Test Run Artifacts
         id: download-artifacts-from-vm
         if: always()
@@ -664,17 +661,24 @@ jobs:
           # from it showing in the tree command below
           sudo rm -rf artifacts/salt*
           tree -a artifacts
-          if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
-            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
-          fi
+
+      - name: Combine Code Coverage
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
+        run: |
+          nox --force-color -e combine-coverage
+
+      - name: Rename Coverage Artifact
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
+        run: |
+          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
 
       - name: Upload Code Coverage Test Run Artifacts
-        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         uses: actions/upload-artifact@v4
         with:
-          name: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
+          name: coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
           path: |
-            artifacts/coverage/
+            artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
           include-hidden-files: true
 
       - name: Upload JUnit XML Test Run Artifacts
@@ -930,11 +934,6 @@ jobs:
         run: |
           sudo chown -R "$(id -un)" .
 
-      - name: Combine Coverage Reports
-        if: always() && inputs.skip-code-coverage == false
-        run: |
-          nox --force-color -e combine-coverage
-
       - name: Prepare Test Run Artifacts
         id: download-artifacts-from-vm
         if: always()
@@ -943,17 +942,25 @@ jobs:
           # from it showing in the tree command below
           rm -rf artifacts/salt*
           tree -a artifacts
-          if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
-            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
-          fi
+
+      - name: Combine Code Coverage
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
+        run: |
+          nox --force-color -e combine-coverage
+
+      - name: Rename Coverage Artifact
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
+        run: |
+          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
 
       - name: Upload Code Coverage Test Run Artifacts
-        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         uses: actions/upload-artifact@v4
         with:
-          name: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}
+          name: coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
           path: |
-            artifacts/coverage/
+            artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
+
           include-hidden-files: true
 
       - name: Upload JUnit XML Test Run Artifacts
@@ -1231,11 +1238,6 @@ jobs:
           --slow-tests --core-tests -k "win" --test-group-count=${{ matrix.test-group-count || 1 }} --test-group=${{ matrix.test-group || 1 }}
 
 
-      - name: Combine Coverage Reports
-        if: always() && inputs.skip-code-coverage == false
-        run: |
-          nox --force-color -e combine-coverage
-
       - name: Prepare Test Run Artifacts
         id: download-artifacts-from-vm
         if: always()
@@ -1244,17 +1246,26 @@ jobs:
           # Delete the salt onedir, we won't need it anymore and it will prevent
           # from it showing in the tree command below
           rm -rf artifacts/salt*
-          if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
-            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
-          fi
+
+      - name: Combine Code Coverage
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
+        run: |
+          nox --force-color -e combine-coverage
+
+      - name: Rename Coverage Artifact
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
+        run: |
+          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
+
 
       - name: Upload Code Coverage Test Run Artifacts
-        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         uses: actions/upload-artifact@v4
         with:
-          name: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}
+          name: coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
           path: |
-            artifacts/coverage/
+            artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
+
           include-hidden-files: true
 
       - name: Upload JUnit XML Test Run Artifacts
@@ -1323,25 +1334,6 @@ jobs:
           separate-directories: false
           delete-merged: true
 
-      - name: Merge Code Coverage Test Run Artifacts
-        if: ${{ inputs.skip-code-coverage == false }}
-        continue-on-error: true
-        uses: actions/upload-artifact/merge@v4
-        with:
-          name: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}
-          pattern: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-*
-          separate-directories: false
-          delete-merged: true
-
-      - name: Download Code Coverage Test Run Artifacts
-        uses: actions/download-artifact@v4
-        if: ${{ inputs.skip-code-coverage == false }}
-        id: download-coverage-artifacts
-        with:
-          path: artifacts/coverage/
-          pattern: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}*
-          merge-multiple: true
-
       - name: Show Downloaded Test Run Artifacts
         if: ${{ inputs.skip-code-coverage == false }}
         run: |
@@ -1355,36 +1347,3 @@ jobs:
       - name: Install Nox
         run: |
           python3 -m pip install 'nox==${{ inputs.nox-version }}'
-
-      - name: Create XML Coverage Reports
-        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success' && job.status != 'cancelled'
-        run: |
-          nox --force-color -e create-xml-coverage-reports
-          mv artifacts/coverage/salt.xml artifacts/coverage/salt..${{ matrix.slug }}..${{ inputs.nox-session }}.xml
-          mv artifacts/coverage/tests.xml artifacts/coverage/tests..${{ matrix.slug }}..${{ inputs.nox-session }}.xml
-
-      - name: Report Salt Code Coverage
-        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
-        continue-on-error: true
-        run: |
-          nox --force-color -e report-coverage -- salt
-
-      - name: Report Combined Code Coverage
-        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
-        continue-on-error: true
-        run: |
-          nox --force-color -e report-coverage
-
-      - name: Rename Code Coverage DB
-        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
-        continue-on-error: true
-        run: |
-          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}.${{ inputs.nox-session }}
-
-      - name: Upload Code Coverage DB
-        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
-        uses: actions/upload-artifact@v4
-        with:
-          name: all-testrun-coverage-artifacts-${{ matrix.slug }}.${{ inputs.nox-session }}
-          path: artifacts/coverage
-          include-hidden-files: true

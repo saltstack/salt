@@ -376,9 +376,12 @@ def load_states():
     __context__["pyobjects_states"] = states
 
 
-def render(template, saltenv="base", sls="", salt_data=True, **kwargs):
+def render(template, saltenv="base", sls="", salt_data=True, context=None, **kwargs):
     if "pyobjects_states" not in __context__:
         load_states()
+
+    if context is None:
+        context = {}
 
     # these hold the scope that our sls file will be executed with
     _globals = {}
@@ -423,6 +426,7 @@ def render(template, saltenv="base", sls="", salt_data=True, **kwargs):
                 "__sls__": sls,
             }
         )
+        _globals.update(context)
     except NameError:
         pass
 

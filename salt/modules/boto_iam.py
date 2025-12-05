@@ -41,10 +41,10 @@ Connection module for Amazon IAM
 import logging
 import time
 import urllib.parse
+from collections import OrderedDict
 
 import salt.utils.compat
 import salt.utils.json
-import salt.utils.odict as odict
 import salt.utils.versions
 
 # pylint: disable=unused-import
@@ -627,7 +627,7 @@ def get_group_policy(
             return False
         info = info.get_group_policy_response.get_group_policy_result.policy_document
         info = urllib.parse.unquote(info)
-        info = salt.utils.json.loads(info, object_pairs_hook=odict.OrderedDict)
+        info = salt.utils.json.loads(info, object_pairs_hook=OrderedDict)
         return info
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -1194,7 +1194,7 @@ def get_role_policy(
         _policy = _policy.get_role_policy_response.policy_document
         # Policy is url encoded
         _policy = urllib.parse.unquote(_policy)
-        _policy = salt.utils.json.loads(_policy, object_pairs_hook=odict.OrderedDict)
+        _policy = salt.utils.json.loads(_policy, object_pairs_hook=OrderedDict)
         return _policy
     except boto.exception.BotoServerError:
         return {}
@@ -1221,7 +1221,7 @@ def create_role_policy(
             return True
         mode = "modify"
     if isinstance(policy, str):
-        policy = salt.utils.json.loads(policy, object_pairs_hook=odict.OrderedDict)
+        policy = salt.utils.json.loads(policy, object_pairs_hook=OrderedDict)
     try:
         _policy = salt.utils.json.dumps(policy)
         conn.put_role_policy(role_name, policy_name, _policy)
@@ -1286,7 +1286,7 @@ def update_assume_role_policy(
 
     if isinstance(policy_document, str):
         policy_document = salt.utils.json.loads(
-            policy_document, object_pairs_hook=odict.OrderedDict
+            policy_document, object_pairs_hook=OrderedDict
         )
     try:
         _policy_document = salt.utils.json.dumps(policy_document)
@@ -1478,7 +1478,7 @@ def get_user_policy(
             return False
         info = info.get_user_policy_response.get_user_policy_result.policy_document
         info = urllib.parse.unquote(info)
-        info = salt.utils.json.loads(info, object_pairs_hook=odict.OrderedDict)
+        info = salt.utils.json.loads(info, object_pairs_hook=OrderedDict)
         return info
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -1658,7 +1658,7 @@ def export_users(path_prefix="/", region=None, key=None, keyid=None, profile=Non
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if not conn:
         return None
-    results = odict.OrderedDict()
+    results = OrderedDict()
     users = get_all_users(path_prefix, region, key, keyid, profile)
     for user in users:
         name = user.user_name
@@ -1697,7 +1697,7 @@ def export_roles(path_prefix="/", region=None, key=None, keyid=None, profile=Non
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if not conn:
         return None
-    results = odict.OrderedDict()
+    results = OrderedDict()
     roles = get_all_roles(path_prefix, region, key, keyid, profile)
     for role in roles:
         name = role.role_name

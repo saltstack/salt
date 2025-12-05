@@ -8,9 +8,10 @@ from salt.utils import win_runas
     [
         ("test_user", ("test_user", ".")),  # Simple system name
         ("domain\\test_user", ("test_user", "domain")),  # Sam name
-        ("domain.com\\test_user", ("test_user", "domain.com")),  # Sam name with com
+        ("domain.com\\test_user", ("test_user", "domain.com")),  # Sam name with .com
         ("test_user@domain", ("test_user", "domain")),  # UPN Name
-        ("test_user@domain.com", ("test_user", "domain.com")),  # UPN Name with com
+        ("test_user@domain.com", ("test_user", "domain.com")),  # UPN Name with .com
+        ("test_user@domain.local", ("test_user", "domain")),  # UPN Name with .local
     ],
 )
 def test_split_username(input_value, expected):

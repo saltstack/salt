@@ -440,9 +440,11 @@ class SaltMessageServer(salt.ext.tornado.tcpserver.TCPServer):
                     )
         except _StreamClosedError:
             log.trace("req client disconnected %s", address)
+            unpacker = salt.utils.msgpack.Unpacker()
             self.remove_client((stream, address))
         except Exception as e:  # pylint: disable=broad-except
             log.trace("other master-side exception: %s", e, exc_info=True)
+            unpacker = salt.utils.msgpack.Unpacker()
             self.remove_client((stream, address))
             stream.close()
 
@@ -459,7 +461,7 @@ class SaltMessageServer(salt.ext.tornado.tcpserver.TCPServer):
         if self._closing:
             return
         self._closing = True
-        for item in self.clients:
+        for item in list(self.clients):
             client, address = item
             client.close()
             self.remove_client(item)
@@ -851,8 +853,9 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
         if self._closing:
             return
         self._closing = True
-        for client in self.clients:
+        for client in list(self.clients):
             client.close()
+        self.clients.clear()
 
     # pylint: disable=W1701
     def __del__(self):

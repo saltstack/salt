@@ -6,11 +6,11 @@ Loader mechanism for caching data, with data expiration, etc.
 
 import logging
 import time
+from collections import OrderedDict
 
 import salt.config
 import salt.loader
 import salt.syspaths
-from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 

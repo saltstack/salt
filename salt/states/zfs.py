@@ -44,9 +44,8 @@ States for managing zfs datasets
 """
 
 import logging
+from collections import OrderedDict
 from datetime import datetime
-
-from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 

@@ -237,6 +237,8 @@ jobs:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
       pre-commit-version: "3.0.4"
+      ci-python-version: "3.11"
+      full: true
 
   lint:
     name: Lint
@@ -546,8 +548,8 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact/merge@v4
         with:
-          name: all-testrun-coverage-artifacts
-          pattern: all-testrun-coverage-artifacts-*
+          name: all-coverage-artifacts
+          pattern: coverage-artifacts-*
           separate-directories: false
           delete-merged: true
 
@@ -556,7 +558,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts/coverage/
-          pattern: all-testrun-coverage-artifacts*
+          pattern: all-coverage-artifacts*
           merge-multiple: true
 
       - name: Display structure of downloaded files

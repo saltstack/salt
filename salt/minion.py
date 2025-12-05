@@ -3,6 +3,7 @@ Routines to set up a minion
 """
 
 import binascii
+import collections
 import contextlib
 import copy
 import functools
@@ -18,6 +19,7 @@ import time
 import traceback
 import types
 import uuid
+from collections import OrderedDict
 
 import salt
 import salt.beacons
@@ -76,7 +78,6 @@ from salt.utils.ctx import RequestContext
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 from salt.utils.network import parse_host_port
-from salt.utils.odict import OrderedDict
 from salt.utils.process import ProcessManager, SignalHandlingProcess, default_signals
 from salt.utils.zeromq import ZMQ_VERSION_INFO, zmq
 
@@ -3622,6 +3623,8 @@ class SyndicManager(MinionBase):
         # List of delayed job_rets which was unable to send for some reason and will be resend to
         # any available master
         self.delayed = []
+        # Keep track of retries for Syndics between multiple Master of Masters
+        self.tries = collections.defaultdict(int)
         # Active pub futures: {master_id: (future, [job_ret, ...]), ...}
         self.pub_futures = {}
 
@@ -3758,9 +3761,17 @@ class SyndicManager(MinionBase):
                     )
                     self._mark_master_dead(master)
                     del self.pub_futures[master]
-                    # Add not sent data to the delayed list and try the next master
-                    self.delayed.extend(data)
+                    self.tries[master] += 1
+                    if self.tries[master] < self.opts.get("syndic_retries", 3):
+                        # Add not sent data to the delayed list and try the next master
+                        self.delayed.extend(data)
+                    else:
+                        self.tries = collections.defaultdict(int)
+                        return True
                     continue
+                else:
+                    self.tries = collections.defaultdict(int)
+
             future = getattr(syndic_future.result(), func)(
                 values, "_syndic_return", timeout=self._return_retry_timer(), sync=False
             )

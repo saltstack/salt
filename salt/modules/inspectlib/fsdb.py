@@ -22,8 +22,7 @@ import gzip
 import os
 import re
 import shutil
-
-from salt.utils.odict import OrderedDict
+from collections import OrderedDict
 
 
 class CsvDBEntity:

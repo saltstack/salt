@@ -62,7 +62,7 @@ def vault_container_version(request, salt_factories, vault_port, shell):
                 "VAULT_DEV_ROOT_TOKEN_ID": "testsecret",
                 "VAULT_LOCAL_CONFIG": json.dumps(config),
             },
-            "cap_add": "IPC_LOCK",
+            "cap_add": ["IPC_LOCK"],
         },
         pull_before_start=True,
         skip_on_pull_failure=True,

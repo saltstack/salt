@@ -110,6 +110,7 @@ Or we can remove the limit altogether!
 """
 
 import logging
+from collections import OrderedDict
 
 import salt.utils.args
 import salt.utils.atomicfile
@@ -117,7 +118,6 @@ import salt.utils.files
 from salt.exceptions import CommandExecutionError
 from salt.modules.zonecfg import _parse_value, _zonecfg_resource_default_selectors
 from salt.utils.dictupdate import merge as merge_dict
-from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 

@@ -11,6 +11,7 @@ import hashlib
 import logging
 import random
 import re
+from collections import OrderedDict
 from collections.abc import Mapping, MutableMapping, Sequence
 
 import salt.utils.dictupdate
@@ -19,7 +20,6 @@ import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 from salt.utils.decorators.jinja import jinja_filter
-from salt.utils.odict import OrderedDict
 
 try:
     import jmespath
