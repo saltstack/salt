@@ -35,15 +35,9 @@ def _write_pillar_state(base_env_state_tree_root_dir, tmp_path_factory):
       '127.0.0.1':
         - writepillar
     """
-    nested_pillar_file = f"""
-    deep_thought:
-      file.managed:
-        - name: {tgt_file}
-        - source: salt://deepthought.txt.jinja
-        - template: jinja
-    """
-    deepthought = r"""
-    {{
+    # Inline the Jinja template content to avoid salt-ssh file server lookup issues
+    # while still testing Jinja rendering with pillar data
+    deepthought_template = r"""{{
       {
         "raw": {
           "the_meaning": pillar.get("the_meaning"),
@@ -51,7 +45,14 @@ def _write_pillar_state(base_env_state_tree_root_dir, tmp_path_factory):
         "modules": {
           "the_meaning": salt["pillar.get"]("the_meaning"),
           "btw": salt["pillar.get"]("btw")}
-      } | json }}
+      } | json }}"""
+    nested_pillar_file = f"""
+    deep_thought:
+      file.managed:
+        - name: {tgt_file}
+        - contents: |
+            {deepthought_template}
+        - template: jinja
     """
     top_tempfile = pytest.helpers.temp_file(
         "top.sls", top_file, base_env_state_tree_root_dir
@@ -59,11 +60,8 @@ def _write_pillar_state(base_env_state_tree_root_dir, tmp_path_factory):
     show_tempfile = pytest.helpers.temp_file(
         "writepillar.sls", nested_pillar_file, base_env_state_tree_root_dir
     )
-    deepthought_tempfile = pytest.helpers.temp_file(
-        "deepthought.txt.jinja", deepthought, base_env_state_tree_root_dir
-    )
 
-    with top_tempfile, show_tempfile, deepthought_tempfile:
+    with top_tempfile, show_tempfile:
         yield tgt_file
 
 

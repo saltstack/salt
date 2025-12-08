@@ -102,25 +102,20 @@ def _check_cb(cb_):
     return lambda x: x
 
 
-def _python_shell_default(python_shell, shell=False):
+def _python_shell_default(python_shell, __pub_jid):
     """
     Set python_shell default based on the shell parameter and __opts__['cmd_safe']
     """
-    if shell:
-        if salt.utils.platform.is_windows():
-            # On Windows python_shell / subprocess 'shell' parameter must always be
-            # False as we prepend the shell manually
-            return False
-        else:
-            # Non-Windows requires python_shell to be enabled
-            return True if python_shell is None else python_shell
-    else:
-        try:
-            if __opts__.get("cmd_safe", True) is False and python_shell is None:
-                # Override-switch for python_shell
-                return True
-        except NameError:
-            pass
+    try:
+        # Default to python_shell=True when run directly from remote execution
+        # system. Cross-module calls won't have a jid.
+        if __pub_jid and python_shell is None:
+            return True
+        elif __opts__.get("cmd_safe", True) is False and python_shell is None:
+            # Override-switch for python_shell
+            return True
+    except NameError:
+        pass
     return python_shell
 
 
@@ -297,28 +292,8 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
     # The third item[2] in each tuple is the name of that method.
     stack = traceback.extract_stack(limit=3)
     if stack[-3][2] == "script":
-        # If this is cmd.script, then we're running a file
-        # You might be tempted to use -File here instead of -Command
-        # The problem with using -File is that any arguments that contain
-        # powershell commands themselves will not be evaluated
-        # See GitHub issue #56195
-        new_cmd.append("-Command")
-        if isinstance(cmd, list):
-            quoted_cmd = []
-            for item in cmd:
-                if item.startswith('"') and item.endswith('"'):
-                    item = item.strip('"')
-                if " " in item:
-                    item = f"'{item}'"
-                quoted_cmd.append(item)
-
-            cmd = " ".join(quoted_cmd)
-
-        # We need to append $LASTEXITCODE here to return the actual exit code
-        # from the script. Otherwise, it will always return 1 on any non-zero
-        # exit code failure. Issue: #60884
-        new_cmd.append(f'"& {{ {cmd.strip()}; exit $LASTEXITCODE }}"')
-        new_cmd = " ".join(new_cmd)
+        new_cmd.append("-File")
+        new_cmd.extend(cmd)
     elif encoded_cmd:
         new_cmd.extend(["-EncodedCommand", cmd])
     else:
@@ -327,7 +302,7 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
             cmd = " ".join(cmd)
         new_cmd.append(cmd)
 
-    log.debug(f"prepped cmd: {new_cmd}")
+    log.debug(new_cmd)
     return new_cmd
 
 
@@ -342,7 +317,7 @@ def _run(
     log_callback=None,
     runas=None,
     group=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=False,
     env=None,
     clean_env=False,
@@ -372,9 +347,7 @@ def _run(
     """
     if "pillar" in kwargs and not pillar_override:
         pillar_override = kwargs["pillar"]
-    if shell is None and python_shell and not salt.utils.platform.is_windows():
-        shell = DEFAULT_SHELL
-    if output_loglevel != "quiet" and shell and _is_valid_shell(shell) is False:
+    if output_loglevel != "quiet" and _is_valid_shell(shell) is False:
         log.warning(
             "Attempt to run a shell command with what may be an invalid shell! "
             "Check to ensure that the shell <%s> is valid for this user.",
@@ -464,7 +437,8 @@ def _run(
         ):
             cmd = _prep_powershell_cmd(win_shell, cmd, encoded_cmd)
         elif any(win_shell_lower.endswith(word) for word in ["cmd.exe"]):
-            cmd = salt.platform.win.prepend_cmd(win_shell, cmd)
+            if python_shell:
+                cmd = salt.platform.win.prepend_cmd(win_shell, cmd)
         else:
             raise CommandExecutionError(f"unsupported shell type: {win_shell}")
 
@@ -499,7 +473,7 @@ def _run(
 
     if runas and salt.utils.platform.is_darwin():
         # We need to insert the user simulation into the command itself and not
-        # just run it from the environment on macOS as that method doesn't work
+        # just run it from the environment on MacOS as that method doesn't work
         # properly when run as root for certain commands.
         if isinstance(cmd, (list, tuple)):
             cmd = " ".join(map(_cmd_quote, cmd))
@@ -773,7 +747,8 @@ def _run(
 
     if (
         python_shell is not True
-        and not salt.utils.platform.is_windows()
+        and shell is not None
+        # and not salt.utils.platform.is_windows()
         and not isinstance(cmd, list)
     ):
         cmd = salt.utils.args.shlex_split(cmd)
@@ -1044,7 +1019,7 @@ def _run_quiet(
     stdin=None,
     output_encoding=None,
     runas=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=False,
     env=None,
     template=None,
@@ -1093,7 +1068,7 @@ def _run_all_quiet(
     cwd=None,
     stdin=None,
     runas=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=False,
     env=None,
     template=None,
@@ -1149,7 +1124,7 @@ def run(
     stdin=None,
     runas=None,
     group=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -1194,7 +1169,7 @@ def run(
 
         .. warning::
 
-            For versions 2018.3.3 and above on macosx while using runas,
+            For versions 2018.3.3 and above on MacOS while using runas,
             on linux while using run, to pass special characters to the
             command you need to escape the characters on the shell.
 
@@ -1429,7 +1404,7 @@ def run(
 
         salt '*' cmd.run cmd='sed -e s/=/:/g'
     """
-    python_shell = _python_shell_default(python_shell, shell)
+    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
     stderr = subprocess.STDOUT if redirect_stderr else subprocess.PIPE
     ret = _run(
         cmd,
@@ -1528,12 +1503,12 @@ def shell(
 
     :param str runas: Specify an alternate user to run the command. The default
         behavior is to run as the user under which Salt is running. If running
-        on a Windows minion you must also use the ``password`` argument, and
+        on a Windows minion, you must also use the ``password`` argument, and
         the target user account must be in the Administrators group.
 
         .. warning::
 
-            For versions 2018.3.3 and above on macosx while using runas,
+            For versions 2018.3.3 and above on MacOS while using runas,
             to pass special characters to the command you need to escape
             the characters on the shell.
 
@@ -1714,17 +1689,11 @@ def shell(
 
         salt '*' cmd.shell cmd='sed -e s/=/:/g'
     """
-    if shell:
-        if salt.utils.platform.is_windows():
-            # shell invocations are handled manually
-            python_shell = False
-        else:
-            if "python_shell" in kwargs:
-                python_shell = kwargs.pop("python_shell")
-            else:
-                python_shell = True
-    else:
-        python_shell = False
+    # for cmd.shell, we always want to use python_shell, unless otherwise
+    # specified. If it is None, we will make it True
+    python_shell = kwargs.pop("python_shell", True)
+    if python_shell is None:
+        python_shell = True
     return run(
         cmd,
         cwd=cwd,
@@ -1763,7 +1732,7 @@ def run_stdout(
     stdin=None,
     runas=None,
     group=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -1806,7 +1775,7 @@ def run_stdout(
 
         .. warning::
 
-            For versions 2018.3.3 and above on macosx while using runas,
+            For versions 2018.3.3 and above on MacOS while using runas,
             to pass special characters to the command you need to escape
             the characters on the shell.
 
@@ -1964,7 +1933,7 @@ def run_stdout(
 
         salt '*' cmd.run_stdout "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     """
-    python_shell = _python_shell_default(python_shell, shell)
+    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
     ret = _run(
         cmd,
         runas=runas,
@@ -2003,7 +1972,7 @@ def run_stderr(
     stdin=None,
     runas=None,
     group=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -2046,7 +2015,7 @@ def run_stderr(
 
         .. warning::
 
-            For versions 2018.3.3 and above on macosx while using runas,
+            For versions 2018.3.3 and above on MacOS while using runas,
             to pass special characters to the command you need to escape
             the characters on the shell.
 
@@ -2204,7 +2173,7 @@ def run_stderr(
 
         salt '*' cmd.run_stderr "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     """
-    python_shell = _python_shell_default(python_shell, shell)
+    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
     ret = _run(
         cmd,
         runas=runas,
@@ -2243,7 +2212,7 @@ def run_all(
     stdin=None,
     runas=None,
     group=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -2288,7 +2257,7 @@ def run_all(
 
         .. warning::
 
-            For versions 2018.3.3 and above on macosx while using runas,
+            For versions 2018.3.3 and above on MacOS while using runas,
             to pass special characters to the command you need to escape
             the characters on the shell.
 
@@ -2493,7 +2462,7 @@ def run_all(
 
         salt '*' cmd.run_all "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     """
-    python_shell = _python_shell_default(python_shell, shell)
+    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
     stderr = subprocess.STDOUT if redirect_stderr else subprocess.PIPE
     ret = _run(
         cmd,
@@ -2537,7 +2506,7 @@ def retcode(
     stdin=None,
     runas=None,
     group=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -2577,7 +2546,7 @@ def retcode(
 
         .. warning::
 
-            For versions 2018.3.3 and above on macosx while using runas,
+            For versions 2018.3.3 and above on MacOS while using runas,
             to pass special characters to the command you need to escape
             the characters on the shell.
 
@@ -2724,7 +2693,7 @@ def retcode(
 
         salt '*' cmd.retcode "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     """
-    python_shell = _python_shell_default(python_shell, shell)
+    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
     ret = _run(
         cmd,
         runas=runas,
@@ -2761,7 +2730,7 @@ def _retcode_quiet(
     stdin=None,
     runas=None,
     group=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=False,
     env=None,
     clean_env=False,
@@ -2819,7 +2788,7 @@ def script(
     stdin=None,
     runas=None,
     group=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=None,
     env=None,
     template=None,
@@ -3034,7 +3003,8 @@ def script(
             saltenv = __opts__.get("saltenv", "base")
         except NameError:
             saltenv = "base"
-    python_shell = _python_shell_default(python_shell, shell)
+
+    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
 
     def _cleanup_tempfile(path):
         try:
@@ -3126,10 +3096,13 @@ def script(
         os.chmod(path, 320)
         os.chown(path, __salt__["file.user_to_uid"](runas), -1)
 
-    if isinstance(args, (list, tuple)):
-        new_cmd = [path, *args] if args else [path]
-    else:
-        new_cmd = [path, *salt.utils.args.shlex_split(args)] if args else [path]
+    if args:
+        python_shell = False
+
+    if isinstance(args, str):
+        args = salt.utils.args.shlex_split(args)
+
+    new_cmd = [path, *args] if args else [path]
 
     ret = {}
     try:
@@ -3181,7 +3154,7 @@ def script_retcode(
     stdin=None,
     runas=None,
     group=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=None,
     env=None,
     template="jinja",
@@ -3532,7 +3505,7 @@ def run_chroot(
     stdin=None,
     runas=None,
     group=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=True,
     binds=None,
     env=None,
@@ -4776,7 +4749,7 @@ def run_bg(
     cwd=None,
     runas=None,
     group=None,
-    shell=None,
+    shell=DEFAULT_SHELL,
     python_shell=None,
     env=None,
     clean_env=False,
@@ -4858,7 +4831,7 @@ def run_bg(
 
         .. warning::
 
-            For versions 2018.3.3 and above on macosx while using runas,
+            For versions 2018.3.3 and above on MacOS while using runas,
             to pass special characters to the command you need to escape
             the characters on the shell.
 
@@ -4987,7 +4960,7 @@ def run_bg(
 
         salt '*' cmd.run_bg cmd='ls -lR / | sed -e s/=/:/g > /tmp/dontwait'
     """
-    python_shell = _python_shell_default(python_shell, shell)
+    python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
     res = _run(
         cmd,
         stdin=None,

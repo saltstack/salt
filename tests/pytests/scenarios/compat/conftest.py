@@ -140,6 +140,8 @@ def salt_master(
         "publish_signing_algorithm": (
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
+        # Allow older minion versions to connect (they don't support auth protocol v3)
+        "minimum_auth_version": 0,
     }
 
     # We need to copy the extension modules into the new master root_dir or

@@ -31,7 +31,7 @@
 
     .. code-block:: python
 
-        from salt.utils.odict import OrderedDict
+        from collections import OrderedDict
 
         assert isinstance(obj, dict)
         assert isinstance(obj, OrderedDict)
@@ -106,6 +106,7 @@
 import copy
 import datetime
 import logging
+from collections import OrderedDict
 
 import yaml
 from yaml.constructor import ConstructorError
@@ -114,7 +115,6 @@ from yaml.scanner import ScannerError
 
 from salt.serializers import DeserializationError, SerializationError
 from salt.utils.aggregation import Map, Sequence, aggregate
-from salt.utils.odict import OrderedDict
 
 __all__ = ["deserialize", "serialize", "available"]
 

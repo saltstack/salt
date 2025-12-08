@@ -215,8 +215,15 @@ jobs:
 
       - name: Get Hash For Nox Tarball Cache
         id: nox-archive-hash
+        shell: bash
         run: |
-          echo "nox-archive-hash=${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" | tee -a "$GITHUB_OUTPUT"
+          HASH=$(python3 .github/scripts/hash-files.py \
+            'requirements/**/*.txt' \
+            'cicd/golden-images.json' \
+            'noxfile.py' \
+            'pkg/common/env-cleanup-rules.yml' \
+            '.github/workflows/build-deps-ci-action.yml')
+          echo "nox-archive-hash=${HASH}" | tee -a "$GITHUB_OUTPUT"
 
       - name: Write Changed Files To A Local File
         run:
@@ -482,7 +489,7 @@ jobs:
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.21.1"
+      relenv-version: "0.21.2"
       python-version: "3.11.14"
       ci-python-version: "3.11"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
@@ -499,7 +506,7 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.21.1"
+      relenv-version: "0.21.2"
       python-version: "3.11.14"
       ci-python-version: "3.11"
       source: "onedir"
@@ -516,7 +523,7 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.21.1"
+      relenv-version: "0.21.2"
       python-version: "3.11.14"
       ci-python-version: "3.11"
       source: "src"

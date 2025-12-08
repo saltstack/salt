@@ -368,7 +368,7 @@ import sys
 import time
 import traceback
 import urllib.parse
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from collections.abc import Iterable, Mapping
 from datetime import date, datetime  # python3 problem in the making?
 from itertools import zip_longest
@@ -391,7 +391,6 @@ import salt.utils.versions
 from salt.exceptions import CommandExecutionError
 from salt.serializers import DeserializationError
 from salt.state import get_accumulator_dir as _get_accumulator_dir
-from salt.utils.odict import OrderedDict
 
 if salt.utils.platform.is_windows():
     import salt.utils.win_dacl

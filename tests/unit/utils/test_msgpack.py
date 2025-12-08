@@ -7,12 +7,12 @@ import os
 import pprint
 import struct
 import sys
+from collections import OrderedDict
 from io import BytesIO
 
 import pytest
 
 import salt.utils.msgpack
-from salt.utils.odict import OrderedDict
 from tests.support.unit import TestCase
 
 msgpack = pytest.importorskip("msgpack")

@@ -6,6 +6,7 @@
 import copy
 import datetime
 import logging
+from collections import OrderedDict
 
 import zmq
 
@@ -14,7 +15,6 @@ import salt.payload
 import salt.utils.msgpack
 from salt.defaults import _Constant
 from salt.utils import immutabletypes
-from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 

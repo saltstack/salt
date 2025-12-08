@@ -1,8 +1,9 @@
+from collections import OrderedDict
+
 import pytest
 from jinja2.exceptions import TemplateNotFound
 
 import salt.utils.jinja
-from salt.utils.odict import OrderedDict
 
 
 def test_utils_jinja_cache_removed_file_from_root(temp_salt_minion, tmp_path):

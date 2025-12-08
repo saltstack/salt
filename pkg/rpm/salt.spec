@@ -40,7 +40,7 @@
 %define fish_dir %{_datadir}/fish/vendor_functions.d
 
 Name:    salt
-Version: 3007.8
+Version: 3007.9
 Release: 0
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
@@ -735,6 +735,51 @@ if [ $1 -ge 1 ] ; then
 fi
 
 %changelog
+* Thu Nov 20 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3007.9
+
+# Fixed
+
+- Render post/pre up/down and hwaddr options for debian-ip. See #58210 and #57820. [#58210](https://github.com/saltstack/salt/issues/58210)
+- Fix event flood by ensuring we do not retry sending the event indefinitely to the Master of Masters. [#61845](https://github.com/saltstack/salt/issues/61845)
+- Prevent `_pygit2.GitError: error loading known_hosts` with certain pygit2/libgit2 versions. [#64121](https://github.com/saltstack/salt/issues/64121)
+- - salt-ssh now supports `state.sls_exists` (#66893) [#66893](https://github.com/saltstack/salt/issues/66893)
+- Allows file.symlink to pass a string to cmd_check [#66939](https://github.com/saltstack/salt/issues/66939)
+- Simplied and sped up `utils.json.find_json` function [#68258](https://github.com/saltstack/salt/issues/68258)
+- Improved runtime performance of chocolatey.installed [#68308](https://github.com/saltstack/salt/issues/68308)
+- Add check for vault in __opts__ var [#68312](https://github.com/saltstack/salt/issues/68312)
+- Fixed user.present not having capability to persist home directory by adding persist_home flag. [#68322](https://github.com/saltstack/salt/issues/68322)
+- Fixed pkg.installed state from showing warning if python rpm package not installed.
+  Fixed pkg.installed state from showing warning and using slow process fork for version comparison when rpmdevtools is installed [#68341](https://github.com/saltstack/salt/issues/68341)
+- Update pre-commit version used in github workflows to 4.3.0 [#68349](https://github.com/saltstack/salt/issues/68349)
+- Fixed issue with network grains in interfaces that don't support ip4 or ip6 [#68355](https://github.com/saltstack/salt/issues/68355)
+- Patch tornado for BDSA-2024-3438 [#68377](https://github.com/saltstack/salt/issues/68377)
+- Patch tornado for BDSA-2024-3439 [#68379](https://github.com/saltstack/salt/issues/68379)
+- Patch tornado for BDSA-2025-4215 [#68381](https://github.com/saltstack/salt/issues/68381)
+- Patch tornado for BDSA-2024-9026 [#68383](https://github.com/saltstack/salt/issues/68383)
+- * Update LZMA to 5.8.2
+  * Update ncurses to 6.5
+  * Update openssl to 3.5.4
+  * Fix shebang creating to work with pip >=25.2
+  * Fix python source hash checking
+  * Update to recent python versions: 3.12.12, 3.11.14, 3.10.19 and 3.9.24. [#68385](https://github.com/saltstack/salt/issues/68385)
+- Fixed the lgpo_reg error when reading REG_BINARY type data in the registry.pol
+  file. [#68387](https://github.com/saltstack/salt/issues/68387)
+- Fix gnupghome directory translation for some versions of git for windows, e.g. 2.51.0.windows.2 [#68392](https://github.com/saltstack/salt/issues/68392)
+- Fix leak in SaltMessageServer where the unpacker was re-used on a stream disconnect. [#68394](https://github.com/saltstack/salt/issues/68394)
+- * Upgrade relenv to 0.21.2:
+    * We refresh the ensurepip bundle during every build so new runtimes ship with pip 25.2 and setuptools 80.9.0.
+    * Windows builds now pull newer SQLite (3.50.4.0) and XZ (5.6.2) sources, copy in a missing XZ config file, and tweak SBOM metadata; the libexpat update is prepared but only runs on older maintenance releases.
+    * Our downloader helpers log more clearly, know about more archive formats, and retry cleanly on transient errors.
+    * pip’s changing install API is handled by runtime wrappers that adapt to all of the current signatures.
+    * Linux verification tests install pip 25.2/25.3 before building setuptools to make sure that flow keeps working. [#68431](https://github.com/saltstack/salt/issues/68431)
+- salt/utils/odict.py has been deprecated and will be removed in 3009. Use the standard library implementation instead. [#68440](https://github.com/saltstack/salt/issues/68440)
+- Fixed issue in cmd execution module that always return "Invalid user" for domain users. [#68450](https://github.com/saltstack/salt/issues/68450)
+- Fixed authentication protocol version downgrade vulnerability (CVE-2025-62349) by adding `minimum_auth_version` configuration option (default: 3) to prevent minions from bypassing security features through protocol downgrade attacks.
+
+  **BREAKING CHANGE:** The default value enforces authentication protocol version 3 or higher. If upgrading a deployment with older minions that do not support protocol v3, you must temporarily set `minimum_auth_version: 0` in the master configuration before upgrading the master, then upgrade all minions before removing this override. [#68467](https://github.com/saltstack/salt/issues/68467)
+- Fixed unsafe YAML loader usage in junos execution module (CVE-2025-62348) [#68469](https://github.com/saltstack/salt/issues/68469)
+
+
 * Thu Sep 18 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3007.8
 
 # Fixed

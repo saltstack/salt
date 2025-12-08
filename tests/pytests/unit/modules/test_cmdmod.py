@@ -17,6 +17,7 @@ import pytest
 import salt.grains.extra
 import salt.modules.cmdmod as cmdmod
 import salt.utils.files
+import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 from salt._logging import LOG_LEVELS
@@ -670,9 +671,20 @@ def test_run_all_output_loglevel_debug(caplog):
     stdout = b"test"
     proc = MagicMock(return_value=MockTimedProc(stdout=stdout))
 
+    # When we get back to having to specify a shell, we may need to change this
+    # back.
+    # if salt.utils.platform.is_windows():
+    #     run_cmd = salt.utils.path.which("cmd")
+    #     expected = f"Executing command '{run_cmd}' in directory"
+    # else:
+    #     expected = "Executing command 'some' in directory"
+    expected = "Executing command 'some' in directory"
+
     with patch("salt.utils.timed_subprocess.TimedProc", proc):
         with caplog.at_level(logging.DEBUG, logger="salt.modules.cmdmod"):
             ret = cmdmod.run_all("some command", output_loglevel="debug")
+        result = caplog.text
+        assert expected.lower() in result.lower()
 
     assert ret["stdout"] == salt.utils.stringutils.to_unicode(stdout)
 
@@ -1162,10 +1174,10 @@ def test_prep_powershell_cmd_script():
             "-NoProfile",
             "-ExecutionPolicy",
             "Bypass",
-            "-Command",
-            f'"& {{ {script}; exit $LASTEXITCODE }}"',
+            "-File",
+            script,
         ]
-        assert ret == " ".join(expected)
+        assert ret == expected
 
 
 @pytest.mark.parametrize(

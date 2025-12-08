@@ -33,9 +33,10 @@ certifi==2024.7.4 ; python_version >= "3.10"
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
     #   requests
-cffi==1.16.0
+cffi==2.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
     #   cryptography
 charset-normalizer==3.2.0
     # via
@@ -82,7 +83,7 @@ idna==3.7
     #   yarl
 imagesize==1.4.1
     # via sphinx
-immutables==0.15 ; sys_platform == "linux"
+immutables==0.21
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
