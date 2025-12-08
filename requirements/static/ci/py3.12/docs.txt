@@ -282,7 +282,7 @@ typing-extensions==4.14.1
     #   aiosignal
 uc-micro-py==1.0.1
     # via linkify-it-py
-urllib3==2.5.0 ; python_version >= "3.10"
+urllib3==2.6.0 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
