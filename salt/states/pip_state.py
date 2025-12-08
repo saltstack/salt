@@ -337,6 +337,7 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
     and 1 if version1 > version2. Return None if there was a problem
     making the comparison.
     """
+
     def normalize(x):
         return str(x).split("!", 1)[-1] if ignore_epoch else str(x)
 
