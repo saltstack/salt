@@ -62,7 +62,8 @@ def relenv_tarball_cached(tmp_path_factory):
         else:
             log.warning("Tarball download completed but file not found at: %s", tarball_path)
             return None
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        # Broad exception is intentional - we don't want relenv caching failures to break test setup
         log.warning("Failed to pre-cache relenv tarball: %s", e)
         return None
 
