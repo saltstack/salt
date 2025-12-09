@@ -124,7 +124,9 @@ def test_state_sls(salt_ssh_cli_parameterized, override):
 @pytest.mark.parametrize("sid", ("deep_thought", "target_check"))
 def test_state_sls_id(salt_ssh_cli_parameterized, sid, override):
     expected, override = override
-    ret = salt_ssh_cli_parameterized.run("state.sls_id", sid, "showpillar", pillar=override)
+    ret = salt_ssh_cli_parameterized.run(
+        "state.sls_id", sid, "showpillar", pillar=override
+    )
     _assert_basic(ret)
     state_res = ret.data[next(iter(ret.data))]
     if sid == "deep_thought":
@@ -135,7 +137,9 @@ def test_state_sls_id(salt_ssh_cli_parameterized, sid, override):
 
 def test_state_highstate(salt_ssh_cli_parameterized, override):
     expected, override = override
-    ret = salt_ssh_cli_parameterized.run("state.highstate", pillar=override, whitelist=["showpillar"])
+    ret = salt_ssh_cli_parameterized.run(
+        "state.highstate", pillar=override, whitelist=["showpillar"]
+    )
     _assert_basic(ret)
     assert len(ret.data) == 2
     for sid, sret in ret.data.items():
@@ -147,7 +151,9 @@ def test_state_highstate(salt_ssh_cli_parameterized, override):
 
 def test_state_show_sls(salt_ssh_cli_parameterized, override):
     expected, override = override
-    ret = salt_ssh_cli_parameterized.run("state.show_sls", "showpillar", pillar=override)
+    ret = salt_ssh_cli_parameterized.run(
+        "state.show_sls", "showpillar", pillar=override
+    )
     _assert_basic(ret)
     pillar = ret.data["deep_thought"]["test"]
     pillar = next(x["text"] for x in pillar if isinstance(x, dict))
@@ -156,7 +162,9 @@ def test_state_show_sls(salt_ssh_cli_parameterized, override):
 
 def test_state_show_low_sls(salt_ssh_cli_parameterized, override):
     expected, override = override
-    ret = salt_ssh_cli_parameterized.run("state.show_low_sls", "showpillar", pillar=override)
+    ret = salt_ssh_cli_parameterized.run(
+        "state.show_low_sls", "showpillar", pillar=override
+    )
     _assert_basic(ret, list)
     pillar = ret.data[0]["text"]
     _assert_pillar(pillar, expected)

@@ -1100,7 +1100,10 @@ class Single:
             # Differentiate between thin and relenv deployments to avoid contamination
             if self.opts.get("relenv"):
                 self.thin_dir = self.thin_dir.replace("_salt", "_salt_relenv")
-                log.info("RELENV: Configured thin_dir=%s for relenv deployment", self.thin_dir)
+                log.info(
+                    "RELENV: Configured thin_dir=%s for relenv deployment",
+                    self.thin_dir,
+                )
         self.opts["thin_dir"] = self.thin_dir
         self.fsclient = fsclient
         self.context = {"master_opts": self.opts, "fileclient": self.fsclient}
@@ -1179,11 +1182,16 @@ class Single:
                 opts["relenv_os_arch"] = os_arch
                 log.warning(f"RELENV: Detected and cached OS/arch: {kernel}/{os_arch}")
 
-            log.info("RELENV: About to call gen_relenv() to download/generate tarball...")
+            log.info(
+                "RELENV: About to call gen_relenv() to download/generate tarball..."
+            )
             self.thin = salt.utils.relenv.gen_relenv(
                 opts["cachedir"], kernel=kernel, os_arch=os_arch
             )
-            log.info("RELENV: gen_relenv() completed successfully, tarball path: %s", self.thin)
+            log.info(
+                "RELENV: gen_relenv() completed successfully, tarball path: %s",
+                self.thin,
+            )
 
             # Add file_roots and related config to minion config
             # (required for slsutil functions and other fileserver operations)
@@ -1196,14 +1204,19 @@ class Single:
             # For relenv, we need to override extension_modules to point to where the shim
             # extracts the tarball on the remote system. The wrapper system will copy this
             # to opts_pkg["extension_modules"] which is used by salt-call.
-            self.minion_opts["extension_modules"] = f"{self.thin_dir}/running_data/var/cache/salt/minion/extmods"
+            self.minion_opts["extension_modules"] = (
+                f"{self.thin_dir}/running_data/var/cache/salt/minion/extmods"
+            )
             self.minion_opts["module_dirs"] = self.opts["module_dirs"]
             self.minion_opts["__master_opts__"] = self.context["master_opts"]
 
             # Re-serialize the minion config after updating relenv-specific paths
             # This ensures the config file sent to the remote system has the correct extension_modules path
             self.minion_config = salt.serializers.yaml.serialize(self.minion_opts)
-            log.debug("RELENV: Re-serialized minion config with extension_modules=%s", self.minion_opts["extension_modules"])
+            log.debug(
+                "RELENV: Re-serialized minion config with extension_modules=%s",
+                self.minion_opts["extension_modules"],
+            )
 
             # NOTE: We no longer pre-compile pillar for relenv here.
             # Both thin and relenv now use the wrapper system (_run_wfunc_thin())
@@ -1485,10 +1498,15 @@ class Single:
             opts_pkg["ext_pillar"] = self.opts["ext_pillar"]
             # For SSH, don't override extension_modules if it's already set correctly in minion_opts
             # (pointing to the remote system's cache, not the master's cache)
-            if "extension_modules" not in opts_pkg or opts_pkg["extension_modules"] == self.opts["extension_modules"]:
+            if (
+                "extension_modules" not in opts_pkg
+                or opts_pkg["extension_modules"] == self.opts["extension_modules"]
+            ):
                 # Only override if it's still using the master's path or not set
                 if "extension_modules" in self.minion_opts:
-                    opts_pkg["extension_modules"] = self.minion_opts["extension_modules"]
+                    opts_pkg["extension_modules"] = self.minion_opts[
+                        "extension_modules"
+                    ]
                 else:
                     opts_pkg["extension_modules"] = self.opts["extension_modules"]
             opts_pkg["module_dirs"] = self.opts["module_dirs"]
@@ -1667,7 +1685,11 @@ class Single:
 
         Returns tuple of (json_data, retcode)
         """
-        log.info("RELENV WFUNC: Starting execution - fun=%s, thin_dir=%s", self.fun, self.thin_dir)
+        log.info(
+            "RELENV WFUNC: Starting execution - fun=%s, thin_dir=%s",
+            self.fun,
+            self.thin_dir,
+        )
 
         # Build salt-call command - relenv has full salt-call binary
         salt_call = f"{self.thin_dir}/salt-call"
@@ -1689,8 +1711,12 @@ class Single:
         # Execute via shell
         log.info("RELENV WFUNC: Calling self.shell.exec_cmd()...")
         stdout, stderr, retcode = self.shell.exec_cmd(cmd)
-        log.info("RELENV WFUNC: exec_cmd() returned - retcode=%s, stdout_len=%d, stderr_len=%d",
-                 retcode, len(stdout) if stdout else 0, len(stderr) if stderr else 0)
+        log.info(
+            "RELENV WFUNC: exec_cmd() returned - retcode=%s, stdout_len=%d, stderr_len=%d",
+            retcode,
+            len(stdout) if stdout else 0,
+            len(stderr) if stderr else 0,
+        )
 
         log.trace("RELENV WFUNC STDOUT: %s", stdout)
         log.trace("RELENV WFUNC STDERR: %s", stderr)
@@ -1811,15 +1837,23 @@ class Single:
 
             # If argv is a list with a single string element (common with wrappers),
             # split it into proper arguments
-            if len(self.argv) == 1 and isinstance(self.argv[0], str) and ' ' in self.argv[0]:
+            if (
+                len(self.argv) == 1
+                and isinstance(self.argv[0], str)
+                and " " in self.argv[0]
+            ):
                 # Split the string into shell words
                 argv_to_use = shlex.split(self.argv[0])
             else:
                 argv_to_use = self.argv
 
             quoted_args = " ".join(shlex.quote(str(arg)) for arg in argv_to_use)
-            log.debug("RELENV: Building shim with argv=%s, argv_to_use=%s, quoted_args=%s",
-                     self.argv, argv_to_use, quoted_args)
+            log.debug(
+                "RELENV: Building shim with argv=%s, argv_to_use=%s, quoted_args=%s",
+                self.argv,
+                argv_to_use,
+                quoted_args,
+            )
 
             # Note: Config is sent separately via SCP in cmd_block() to avoid ARG_MAX issues
             # The shim expects the config file to already exist at {THIN_DIR}/minion
@@ -1919,11 +1953,15 @@ ARGS = {arguments}\n'''.format(
                 log.warning(
                     "RELENV: Large shim command detected: %d bytes (ARG_MAX is typically ~2MB). "
                     "This may cause 'Argument list too long' errors.",
-                    cmd_size
+                    cmd_size,
                 )
                 # Log first 500 and last 500 chars to see what's in it
-                log.debug("RELENV: Command preview - first 500 chars: %s", cmd_str[:500])
-                log.debug("RELENV: Command preview - last 500 chars: %s", cmd_str[-500:])
+                log.debug(
+                    "RELENV: Command preview - first 500 chars: %s", cmd_str[:500]
+                )
+                log.debug(
+                    "RELENV: Command preview - last 500 chars: %s", cmd_str[-500:]
+                )
             return self.shell.exec_cmd(cmd_str)
 
         # Write the shim to a temporary file in the default temp directory
@@ -1982,26 +2020,43 @@ ARGS = {arguments}\n'''.format(
             check_cmd = f"test -f {remote_config_path} && echo exists || echo missing"
             check_result = self.shell.exec_cmd(check_cmd)
 
-            config_exists = check_result[0].strip() == "exists" if check_result[2] == 0 else False
+            config_exists = (
+                check_result[0].strip() == "exists" if check_result[2] == 0 else False
+            )
 
             if config_exists:
-                log.debug("RELENV: Config file already exists at %s, skipping transfer (nested/wrapper call)", remote_config_path)
+                log.debug(
+                    "RELENV: Config file already exists at %s, skipping transfer (nested/wrapper call)",
+                    remote_config_path,
+                )
             else:
                 # Write minion config to a temporary file
-                with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".conf") as config_tmp_file:
+                with tempfile.NamedTemporaryFile(
+                    mode="w", delete=False, suffix=".conf"
+                ) as config_tmp_file:
                     config_tmp_file.write(self.minion_config)
                     local_config_path = config_tmp_file.name
 
                 try:
                     # SCP the config file to the target
                     # makedirs=True ensures the thin_dir exists
-                    log.debug("RELENV: Sending minion config to %s:%s", self.target["host"], remote_config_path)
-                    send_result = self.shell.send(local_config_path, remote_config_path, makedirs=True)
+                    log.debug(
+                        "RELENV: Sending minion config to %s:%s",
+                        self.target["host"],
+                        remote_config_path,
+                    )
+                    send_result = self.shell.send(
+                        local_config_path, remote_config_path, makedirs=True
+                    )
 
                     # Check if send failed
                     if send_result and send_result[2] != 0:
-                        log.error("RELENV: Failed to send minion config - stdout: %s, stderr: %s, retcode: %s",
-                                  send_result[0], send_result[1], send_result[2])
+                        log.error(
+                            "RELENV: Failed to send minion config - stdout: %s, stderr: %s, retcode: %s",
+                            send_result[0],
+                            send_result[1],
+                            send_result[2],
+                        )
                         return (
                             f"ERROR: Failed to transfer minion config (retcode {send_result[2]}): {send_result[0] or send_result[1]}",
                             send_result[1],
@@ -2014,7 +2069,11 @@ ARGS = {arguments}\n'''.format(
                     try:
                         os.unlink(local_config_path)
                     except OSError as e:
-                        log.warning("RELENV: Failed to delete temporary config file %s: %s", local_config_path, e)
+                        log.warning(
+                            "RELENV: Failed to delete temporary config file %s: %s",
+                            local_config_path,
+                            e,
+                        )
 
         # Regenerate extension modules tarball with fresh fileserver scan
         # This ensures that any dynamically-added modules (like test fixtures)
@@ -2320,7 +2379,11 @@ def mod_data(fsclient):
 
         # Debug logging to track extension modules
         states_found = ret.get("states", {})
-        log.debug("EXTMODS DEBUG: Found %d state modules: %s", len(states_found), list(states_found.keys()))
+        log.debug(
+            "EXTMODS DEBUG: Found %d state modules: %s",
+            len(states_found),
+            list(states_found.keys()),
+        )
         log.debug("EXTMODS DEBUG: Version hash: %s", ver)
         log.debug("EXTMODS DEBUG: Tarball path: %s", ext_tar_path)
         log.debug("EXTMODS DEBUG: Tarball exists: %s", os.path.isfile(ext_tar_path))

@@ -107,7 +107,9 @@ def test_state_high(salt_ssh_cli_parameterized):
     """
     test state.high with salt-ssh
     """
-    ret = salt_ssh_cli_parameterized.run("state.high", '{"echo blah": {"cmd": ["run"]}}')
+    ret = salt_ssh_cli_parameterized.run(
+        "state.high", '{"echo blah": {"cmd": ["run"]}}'
+    )
     assert ret.data["cmd_|-echo blah_|-echo blah_|-run"]["changes"]["stdout"] == "blah"
 
 

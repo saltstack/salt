@@ -165,7 +165,9 @@ def test_grains_filter_by_default(grains_filter_by_default, salt_ssh_cli_paramet
 
 
 @pytest.mark.usefixtures("grains_filter_by_states")
-def test_grains_filter_by_default_jinja(grains_filter_by_default, salt_ssh_cli_parameterized):
+def test_grains_filter_by_default_jinja(
+    grains_filter_by_default, salt_ssh_cli_parameterized
+):
     """
     test grains.filter_by during template rendering with salt-ssh and default parameter (parameterized for both thin and relenv)
     """

@@ -18,8 +18,9 @@ def relenv_tarball_cached(tmp_path_factory):
     Runs automatically at session start (autouse=True).
     """
     # Import here to avoid issues if salt is not installed
-    import salt.utils.relenv
     import tempfile
+
+    import salt.utils.relenv
 
     # Use a shared system temp directory that persists across test master instances
     # This allows all tests in the session to share the same cached tarball
@@ -43,7 +44,12 @@ def relenv_tarball_cached(tmp_path_factory):
     else:
         os_arch = machine
 
-    log.info("Pre-caching relenv tarball for %s/%s in shared cache: %s", kernel, os_arch, shared_cache)
+    log.info(
+        "Pre-caching relenv tarball for %s/%s in shared cache: %s",
+        kernel,
+        os_arch,
+        shared_cache,
+    )
 
     try:
         # Download and cache the tarball to the shared location
@@ -57,10 +63,12 @@ def relenv_tarball_cached(tmp_path_factory):
 
             # Set environment variable so salt.utils.relenv can find it
             # This allows individual test masters to copy from the shared cache
-            os.environ['SALT_SSH_TEST_RELENV_CACHE'] = shared_cache
+            os.environ["SALT_SSH_TEST_RELENV_CACHE"] = shared_cache
             return tarball_path
         else:
-            log.warning("Tarball download completed but file not found at: %s", tarball_path)
+            log.warning(
+                "Tarball download completed but file not found at: %s", tarball_path
+            )
             return None
     except Exception as e:  # pylint: disable=broad-exception-caught
         # Broad exception is intentional - we don't want relenv caching failures to break test setup
@@ -79,7 +87,11 @@ def ssh_deployment_type(request):
 
 @pytest.fixture(scope="function")
 def salt_ssh_cli_parameterized(
-    ssh_deployment_type, salt_master, salt_ssh_roster_file, sshd_config_dir, known_hosts_file
+    ssh_deployment_type,
+    salt_master,
+    salt_ssh_roster_file,
+    sshd_config_dir,
+    known_hosts_file,
 ):
     """
     Parameterized salt-ssh CLI fixture that tests with both thin and relenv deployments.
