@@ -1,12 +1,18 @@
 import logging
 
 import pytest
-import win32net
 from saltfactories.utils import random_string
 
 import salt.modules.cmdmod as cmdmod
 import salt.modules.win_useradd as win_useradd
 from tests.support.mock import MagicMock, patch
+
+try:
+    import win32net
+
+    WINAPI = True
+except ImportError:
+    WINAPI = False
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -46,6 +52,7 @@ def account(username):
         yield account
 
 
+@pytest.mark.skipif(not WINAPI, reason="pywin32 not available")
 def test_info(account, caplog):
     with caplog.at_level(logging.DEBUG):
         win_useradd.info(account.username)
@@ -53,6 +60,7 @@ def test_info(account, caplog):
     assert "domain_name: ." in caplog.text
 
 
+@pytest.mark.skipif(not WINAPI, reason="pywin32 not available")
 def test_info_domain(account, caplog):
     domain = "mydomain"
     dc = "myDC"
@@ -64,6 +72,7 @@ def test_info_domain(account, caplog):
     assert f"Found DC: {dc}" in caplog.text
 
 
+@pytest.mark.skipif(not WINAPI, reason="pywin32 not available")
 def test_info_error(account, caplog):
     domain = "mydomain"
     dc = "myDC"
