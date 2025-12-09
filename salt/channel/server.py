@@ -31,6 +31,28 @@ from salt.utils.cache import CacheCli
 log = logging.getLogger(__name__)
 
 
+def _get_crypticle(opts, key_string, key_size=192, serial=0):
+    """
+    Get appropriate Crypticle class based on configuration.
+
+    Returns TLSAwareCrypticle if TLS optimization is enabled, otherwise
+    returns standard Crypticle.
+
+    Args:
+        opts: Configuration dictionary
+        key_string: AES key string
+        key_size: Key size in bits (default: 192)
+        serial: Serial number (default: 0)
+
+    Returns:
+        Crypticle or TLSAwareCrypticle instance
+    """
+    if opts.get("disable_aes_with_tls", False):
+        return salt.crypt.TLSAwareCrypticle(opts, key_string, key_size, serial)
+    else:
+        return salt.crypt.Crypticle(opts, key_string, key_size, serial)
+
+
 class ReqServerChannel:
     """
     ReqServerChannel handles request/reply messages from ReqChannels.
@@ -116,7 +138,7 @@ class ReqServerChannel:
             )
             os.nice(self.opts["pub_server_niceness"])
         self.io_loop = io_loop
-        self.crypticle = salt.crypt.Crypticle(self.opts, self.aes_key)
+        self.crypticle = _get_crypticle(self.opts, self.aes_key)
         # other things needed for _auth
         # Create the event manager
         self.event = salt.utils.event.get_master_event(
@@ -258,7 +280,7 @@ class ReqServerChannel:
                 return ret
             elif req_fun == "send":
                 if version > 2:
-                    return salt.crypt.Crypticle(self.opts, self.session_key(id_)).dumps(
+                    return _get_crypticle(self.opts, self.session_key(id_)).dumps(
                         ret, nonce
                     )
                 else:
@@ -282,6 +304,7 @@ class ReqServerChannel:
             log.error("Some exception handling a payload from minion", exc_info=True)
             return "Some exception handling minion payload"
 
+
     def _encrypt_private(
         self,
         ret,
@@ -298,7 +321,7 @@ class ReqServerChannel:
         # encrypt with a specific AES key
         try:
             key = salt.crypt.Crypticle.generate_key_string()
-            pcrypt = salt.crypt.Crypticle(self.opts, key)
+            pcrypt = _get_crypticle(self.opts, key)
             pub = self.cache.fetch("keys", target)
             if not isinstance(pub, dict) or "pub" not in pub:
                 log.error(
@@ -365,7 +388,7 @@ class ReqServerChannel:
             salt.master.SMaster.secrets[key]["secret"].value
             != self.crypticle.key_string
         ):
-            self.crypticle = salt.crypt.Crypticle(
+            self.crypticle = _get_crypticle(
                 self.opts, salt.master.SMaster.secrets[key]["secret"].value
             )
             return True
@@ -376,7 +399,7 @@ class ReqServerChannel:
         if payload["enc"] == "aes":
             if version > 2:
                 if salt.utils.verify.valid_id(self.opts, payload["id"]):
-                    payload["load"] = salt.crypt.Crypticle(
+                    payload["load"] = _get_crypticle(
                         self.opts,
                         self.session_key(payload["id"]),
                     ).loads(payload["load"])
@@ -1043,7 +1066,7 @@ class PubServerChannel:
         if msg["enc"] != "aes":
             # We only accept 'aes' encoded messages for 'id'
             return
-        crypticle = salt.crypt.Crypticle(self.opts, self.aes_key)
+        crypticle = _get_crypticle(self.opts, self.aes_key)
         load = crypticle.loads(msg["load"])
         load = salt.transport.frame.decode_embedded_strs(load)
         if not self.aes_funcs.verify_minion(load["id"], load["tok"]):
@@ -1119,7 +1142,7 @@ class PubServerChannel:
         payload = {"enc": "aes"}
         if not self.opts.get("cluster_id", None):
             load["serial"] = salt.master.SMaster.get_serial()
-        crypticle = salt.crypt.Crypticle(self.opts, self.aes_key)
+        crypticle = _get_crypticle(self.opts, self.aes_key)
         payload["load"] = crypticle.dumps(load)
         if self.opts["sign_pub_messages"]:
             log.debug("Signing data packet")
@@ -1357,7 +1380,7 @@ class MasterPubServerChannel:
 
     def extract_cluster_event(self, peer_id, data):
         if peer_id in self.peer_keys:
-            crypticle = salt.crypt.Crypticle(self.opts, self.peer_keys[peer_id])
+            crypticle = _get_crypticle(self.opts, self.peer_keys[peer_id])
             event_data = crypticle.loads(data)["event_payload"]
             # __peer_id can be used to know if this event came from a
             # different master.
@@ -1381,7 +1404,7 @@ class MasterPubServerChannel:
                     asyncio.create_task(pusher.publish(load), name=pusher.pull_host)
                 )
                 continue
-            crypticle = salt.crypt.Crypticle(
+            crypticle = _get_crypticle(
                 self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
             )
             load = {"event_payload": data}
