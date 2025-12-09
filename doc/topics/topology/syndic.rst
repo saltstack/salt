@@ -237,7 +237,7 @@ Choose the mode based on your needs:
 - Use ``cluster`` mode when you want to optimize for performance and only need job-related information synchronized
 
 Syndic Config Options
-===================
+=====================
 
 These are the options that can be used to configure a Syndic node.  Note that
 other than ``id``, Syndic config options are placed in the Master config on the
