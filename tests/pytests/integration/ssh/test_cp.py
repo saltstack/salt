@@ -77,7 +77,9 @@ def test_get_file(salt_ssh_cli_parameterized, tmp_path, template, dst_is_dir, ca
         tgt = tmp_path
     else:
         tgt = tmp_path / ("cheese" if not template else "{{pillar.test_pillar}}")
-    res = salt_ssh_cli_parameterized.run("cp.get_file", src, str(tgt), template=template)
+    res = salt_ssh_cli_parameterized.run(
+        "cp.get_file", src, str(tgt), template=template
+    )
     assert res.returncode == 0
     assert res.data
     tgt = tmp_path / "cheese"
@@ -99,7 +101,9 @@ def test_get_file(salt_ssh_cli_parameterized, tmp_path, template, dst_is_dir, ca
 
 def test_get_file_gzipped(salt_ssh_cli_parameterized, caplog, tmp_path):
     tgt = tmp_path / random_string("foo-")
-    res = salt_ssh_cli_parameterized.run("cp.get_file", "salt://grail/scene33", str(tgt), gzip=5)
+    res = salt_ssh_cli_parameterized.run(
+        "cp.get_file", "salt://grail/scene33", str(tgt), gzip=5
+    )
     assert res.returncode == 0
     assert res.data
     assert res.data == str(tgt)
@@ -137,7 +141,9 @@ def test_get_file_makedirs(salt_ssh_cli_parameterized, tmp_path, cachedir):
 @pytest.mark.parametrize("suffix", ("", "?saltenv=prod"))
 def test_get_file_from_env(salt_ssh_cli_parameterized, tmp_path, suffix):
     tgt = tmp_path / "cheese"
-    ret = salt_ssh_cli_parameterized.run("cp.get_file", "salt://cheese" + suffix, str(tgt))
+    ret = salt_ssh_cli_parameterized.run(
+        "cp.get_file", "salt://cheese" + suffix, str(tgt)
+    )
     assert ret.returncode == 0
     assert ret.data
     assert ret.data == str(tgt)
@@ -147,7 +153,9 @@ def test_get_file_from_env(salt_ssh_cli_parameterized, tmp_path, suffix):
 
 
 def test_get_file_nonexistent_source(salt_ssh_cli_parameterized):
-    res = salt_ssh_cli_parameterized.run("cp.get_file", "salt://grail/nonexistent_scene", "")
+    res = salt_ssh_cli_parameterized.run(
+        "cp.get_file", "salt://grail/nonexistent_scene", ""
+    )
     assert res.returncode == 0  # not a fan of this
     assert res.data == ""
 
@@ -185,7 +193,9 @@ def test_get_template(salt_ssh_cli_parameterized, tmp_path, cachedir):
 
 
 def test_get_template_dest_empty(salt_ssh_cli_parameterized, cachedir):
-    res = salt_ssh_cli_parameterized.run("cp.get_template", "salt://grail/scene33", "", spam="bacon")
+    res = salt_ssh_cli_parameterized.run(
+        "cp.get_template", "salt://grail/scene33", "", spam="bacon"
+    )
     assert res.returncode == 0
     assert res.data
     assert isinstance(res.data, str)
@@ -208,7 +218,9 @@ def test_get_template_dest_empty(salt_ssh_cli_parameterized, cachedir):
 
 
 def test_get_template_nonexistent_source(salt_ssh_cli_parameterized, tmp_path):
-    res = salt_ssh_cli_parameterized.run("cp.get_template", "salt://grail/nonexistent_scene", "")
+    res = salt_ssh_cli_parameterized.run(
+        "cp.get_template", "salt://grail/nonexistent_scene", ""
+    )
     assert res.returncode == 0  # not a fan of this
     assert res.data == ""
     # The regular module only logs "unable to fetch" with get_url
@@ -229,7 +241,11 @@ def test_get_dir(salt_ssh_cli_parameterized, tmp_path, template, suffix, cachedi
     assert isinstance(res.data, list)
     tgt = tmp_path / "many"
     master_path = (
-        cachedir / "salt-ssh" / salt_ssh_cli_parameterized.get_minion_tgt() / "files" / "base"
+        cachedir
+        / "salt-ssh"
+        / salt_ssh_cli_parameterized.get_minion_tgt()
+        / "files"
+        / "base"
     )
     for path in (tgt, master_path):
         assert path.exists()
@@ -268,7 +284,9 @@ def test_get_dir_gzipped(salt_ssh_cli_parameterized, caplog, tmp_path):
 
 
 def test_get_dir_nonexistent_source(salt_ssh_cli_parameterized, caplog):
-    res = salt_ssh_cli_parameterized.run("cp.get_dir", "salt://grail/non/ex/is/tent", "")
+    res = salt_ssh_cli_parameterized.run(
+        "cp.get_dir", "salt://grail/non/ex/is/tent", ""
+    )
     assert res.returncode == 0  # not a fan of this
     assert isinstance(res.data, list)
     assert not res.data
@@ -365,7 +383,9 @@ def test_get_url_no_dest(salt_ssh_cli_parameterized):
 
 
 def test_get_url_nonexistent_source(salt_ssh_cli_parameterized, caplog):
-    res = salt_ssh_cli_parameterized.run("cp.get_url", "salt://grail/nonexistent_scene", None)
+    res = salt_ssh_cli_parameterized.run(
+        "cp.get_url", "salt://grail/nonexistent_scene", None
+    )
     assert res.returncode == 0  # not a fan of this
     assert res.data is False
     assert (
@@ -376,7 +396,9 @@ def test_get_url_nonexistent_source(salt_ssh_cli_parameterized, caplog):
 
 def test_get_url_https(salt_ssh_cli_parameterized, tmp_path, cachedir):
     tgt = tmp_path / "index.html"
-    res = salt_ssh_cli_parameterized.run("cp.get_url", "https://saltproject.io/index.html", tgt)
+    res = salt_ssh_cli_parameterized.run(
+        "cp.get_url", "https://saltproject.io/index.html", tgt
+    )
     assert res.returncode == 0
     assert res.data
     assert res.data == str(tgt)
@@ -399,7 +421,9 @@ def test_get_url_https_dest_empty(salt_ssh_cli_parameterized, tmp_path, cachedir
     """
     https:// source given and destination omitted, should still cache the file
     """
-    res = salt_ssh_cli_parameterized.run("cp.get_url", "https://saltproject.io/index.html")
+    res = salt_ssh_cli_parameterized.run(
+        "cp.get_url", "https://saltproject.io/index.html"
+    )
     assert res.returncode == 0
     assert res.data
     master_path = (
@@ -427,7 +451,9 @@ def test_get_url_https_no_dest(salt_ssh_cli_parameterized):
     start = time.time()
     sleep = 5
     while time.time() - start <= timeout:
-        res = salt_ssh_cli_parameterized.run("cp.get_url", "https://saltproject.io/index.html", None)
+        res = salt_ssh_cli_parameterized.run(
+            "cp.get_url", "https://saltproject.io/index.html", None
+        )
         if isinstance(res.data, str) and res.data.find("HTTP 599") == -1:
             break
         time.sleep(sleep)
@@ -603,7 +629,9 @@ def _cache_twice(salt_master, request, salt_ssh_cli_parameterized, cachedir):
 
 
 def test_cache_file_context_cache(salt_ssh_cli_parameterized, cachedir, _cache_twice):
-    res = salt_ssh_cli_parameterized.run("slsutil.renderer", _cache_twice, default_renderer="jinja")
+    res = salt_ssh_cli_parameterized.run(
+        "slsutil.renderer", _cache_twice, default_renderer="jinja"
+    )
     assert res.returncode == 0
     tgt = res.data.strip()
     assert tgt
@@ -618,7 +646,9 @@ def test_cache_file_context_cache(salt_ssh_cli_parameterized, cachedir, _cache_t
 def test_cache_file_context_cache_requires_both_caches(
     salt_ssh_cli_parameterized, cachedir, _cache_twice
 ):
-    res = salt_ssh_cli_parameterized.run("slsutil.renderer", _cache_twice, default_renderer="jinja")
+    res = salt_ssh_cli_parameterized.run(
+        "slsutil.renderer", _cache_twice, default_renderer="jinja"
+    )
     assert res.returncode == 0
     tgt = res.data.strip()
     assert tgt
@@ -630,7 +660,9 @@ def test_cache_file_context_cache_requires_both_caches(
 
 
 def test_cache_file_nonexistent_source(salt_ssh_cli_parameterized):
-    res = salt_ssh_cli_parameterized.run("cp.get_template", "salt://grail/nonexistent_scene", "")
+    res = salt_ssh_cli_parameterized.run(
+        "cp.get_template", "salt://grail/nonexistent_scene", ""
+    )
     assert res.returncode == 0  # not a fan of this
     assert res.data == ""
     # The regular module only logs "unable to fetch" with get_url
@@ -678,7 +710,9 @@ def test_cache_dir(salt_ssh_cli_parameterized, cachedir):
 
 
 def test_cache_dir_nonexistent_source(salt_ssh_cli_parameterized, caplog):
-    res = salt_ssh_cli_parameterized.run("cp.cache_dir", "salt://grail/non/ex/is/tent", "")
+    res = salt_ssh_cli_parameterized.run(
+        "cp.cache_dir", "salt://grail/non/ex/is/tent", ""
+    )
     assert res.returncode == 0  # not a fan of this
     assert isinstance(res.data, list)
     assert not res.data
@@ -768,7 +802,9 @@ def test_list_master_symlinks(salt_ssh_cli_parameterized, salt_master):
 def _is_cached(salt_ssh_cli_parameterized, suffix, request, cachedir):
     remove = ["files", "extrn_files"]
     if request.param == "cached":
-        ret = salt_ssh_cli_parameterized.run("cp.cache_file", "salt://grail/scene33" + suffix)
+        ret = salt_ssh_cli_parameterized.run(
+            "cp.cache_file", "salt://grail/scene33" + suffix
+        )
         assert ret.returncode == 0
         assert ret.data
         remove.remove("files")
@@ -797,7 +833,9 @@ def test_is_cached(salt_ssh_cli_parameterized, cachedir, _is_cached, suffix):
         tgt = cachedir / "extrn_files" / "base" / "grail" / "scene33"
     else:
         tgt = cachedir / "files" / "base" / "grail" / "scene33"
-    res = salt_ssh_cli_parameterized.run("cp.is_cached", "salt://grail/scene33" + suffix)
+    res = salt_ssh_cli_parameterized.run(
+        "cp.is_cached", "salt://grail/scene33" + suffix
+    )
     assert res.returncode == 0
     assert (res.data == str(tgt)) is bool(_is_cached)
     assert (res.data != "") is bool(_is_cached)
@@ -811,7 +849,9 @@ def test_is_cached_nonexistent(salt_ssh_cli_parameterized):
 
 @pytest.mark.parametrize("suffix", ("", "?saltenv=base"))
 def test_hash_file(salt_ssh_cli_parameterized, cachedir, suffix):
-    res = salt_ssh_cli_parameterized.run("cp.hash_file", "salt://grail/scene33" + suffix)
+    res = salt_ssh_cli_parameterized.run(
+        "cp.hash_file", "salt://grail/scene33" + suffix
+    )
     assert res.returncode == 0
     assert res.data
     sha256_hash = res.data["hsum"]
