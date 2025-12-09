@@ -563,7 +563,7 @@ class LazyLoaderReloadingTest(TestCase):
         # when modules are reloaded quickly (see TODO comments below)
         self._original_dont_write_bytecode = sys.dont_write_bytecode
         sys.dont_write_bytecode = True
-        
+
         self.tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, self.tmp_dir, ignore_errors=True)
 
@@ -588,7 +588,7 @@ class LazyLoaderReloadingTest(TestCase):
     def tearDown(self):
         # Restore original dont_write_bytecode setting
         sys.dont_write_bytecode = self._original_dont_write_bytecode
-        
+
         for attrname in ("tmp_dir", "utils", "proxy", "loader", "minion_mods", "utils"):
             try:
                 delattr(self, attrname)
