@@ -1696,11 +1696,18 @@ def list_all_versions(
     for line in result["stdout"].splitlines():
         match = regex.search(line)
         if match:
-            versions = [
-                v for v in match.group(1).split(", ") if v and excludes.match(v)
-            ]
-            versions.sort(key=pkg_resources.parse_version)
-            break
+            versions = []
+            for v in match.group(1).split(", "):
+                if v and excludes.match(v):
+                    try:
+                        pkg_resources.parse_version(v)
+
+                    except pkg_resources.extern.packaging.version.InvalidVersion as e:
+                        logger.info(f"{e} for package {pkg}, skipping this version...")
+                        continue
+
+                    versions.append(v)
+
     if not versions:
         return None
 
