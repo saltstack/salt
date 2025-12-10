@@ -1717,6 +1717,7 @@ def salt_refs(data):
                     ret.append(comp)
     return ret
 
+
 def mod_data(fsclient):
     """
     Generate the module arguments for the shim data
@@ -1735,14 +1736,16 @@ def mod_data(fsclient):
     for ref in sync_refs:
         try:
             # Use salt.loader._module_dirs to get all module paths (including entry-points)
-            module_dirs = salt.loader._module_dirs(opts, ref, tag=ref.rstrip('s'))
+            module_dirs = salt.loader._module_dirs(opts, ref, tag=ref.rstrip("s"))
 
             for mod_dir in module_dirs:
                 if not os.path.isdir(mod_dir):
                     continue
 
                 for fn_ in os.listdir(mod_dir):
-                    if fn_.endswith((".py", ".so", ".pyx")) and not fn_.startswith("__"):
+                    if fn_.endswith((".py", ".so", ".pyx")) and not fn_.startswith(
+                        "__"
+                    ):
                         mod_path = os.path.join(mod_dir, fn_)
                         if not os.path.isfile(mod_path):
                             continue
@@ -1759,7 +1762,7 @@ def mod_data(fsclient):
 
     # Also scan file_roots directly to find modules (avoids fsclient.cache_file issues)
     try:
-        file_roots = opts.get('file_roots', {})
+        file_roots = opts.get("file_roots", {})
         for saltenv, roots in file_roots.items():
             for root in roots:
                 if not os.path.isdir(root):
@@ -1773,7 +1776,9 @@ def mod_data(fsclient):
 
                     try:
                         for fn_ in os.listdir(mod_dir):
-                            if fn_.endswith((".py", ".so", ".pyx")) and not fn_.startswith("__"):
+                            if fn_.endswith(
+                                (".py", ".so", ".pyx")
+                            ) and not fn_.startswith("__"):
                                 mod_path = os.path.join(mod_dir, fn_)
                                 if not os.path.isfile(mod_path):
                                     continue
