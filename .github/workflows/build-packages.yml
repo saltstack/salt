@@ -110,6 +110,12 @@ jobs:
           name: salt-${{ inputs.salt-version }}.patch
           path: pkgs/checkout/
 
+      - name: Download MAN Pages
+        uses: actions/download-artifact@v4
+        with:
+          name: man-pages-${{ inputs.salt-version }}
+          path: pkgs/checkout/doc/man/
+
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
         with:
@@ -203,6 +209,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: salt-${{ inputs.salt-version }}.patch
+
+      - name: Download MAN Pages
+        uses: actions/download-artifact@v4
+        with:
+          name: man-pages-${{ inputs.salt-version }}
+          path: doc/man/
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -329,6 +341,12 @@ jobs:
         with:
           name: salt-${{ inputs.salt-version }}-onedir-macos-${{ matrix.arch }}.tar.xz
           path: artifacts/
+
+      - name: Download MAN Pages
+        uses: actions/download-artifact@v4
+        with:
+          name: man-pages-${{ inputs.salt-version }}
+          path: doc/man/
 
       - name: Setup Keychain
         if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
@@ -480,6 +498,12 @@ jobs:
         with:
           name: salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip
           path: artifacts/
+
+      - name: Download MAN Pages
+        uses: actions/download-artifact@v4
+        with:
+          name: man-pages-${{ inputs.salt-version }}
+          path: doc/man/
 
       - name: Setup Certificate
         if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
