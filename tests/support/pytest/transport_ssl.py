@@ -148,9 +148,17 @@ def _generate_certificate(
 
     # Add Subject Alternative Name if DNS names provided
     if san_dns_names:
-        san = x509.SubjectAlternativeName(
-            [x509.DNSName(name) for name in san_dns_names]
-        )
+        import ipaddress
+
+        san_entries = []
+        for name in san_dns_names:
+            # Try to parse as IP address first, otherwise treat as DNS name
+            try:
+                ip = ipaddress.ip_address(name)
+                san_entries.append(x509.IPAddress(ip))
+            except ValueError:
+                san_entries.append(x509.DNSName(name))
+        san = x509.SubjectAlternativeName(san_entries)
         builder = builder.add_extension(san, critical=False)
 
     cert = builder.sign(ca_key, hashes.SHA256(), default_backend())
@@ -188,8 +196,19 @@ def ssl_ca_cert_key(tmp_path_factory):
     if not HAS_CRYPTOGRAPHY:
         pytest.skip("cryptography library not available")
 
-    # Create directory for certificates
-    cert_dir = tmp_path_factory.mktemp("ssl_certs")
+    # Use basetemp but don't rely on tmp_path_factory's cleanup
+    # The certs need to persist for the entire session including subprocess access
+    import atexit
+    import pathlib
+    import shutil
+    import tempfile
+
+    # Create a persistent temp directory that won't be cleaned up mid-session
+    # We'll use a subdirectory of the system temp with a stable name
+    cert_dir = (
+        pathlib.Path(tempfile.gettempdir()) / f"salt_ssl_test_{id(tmp_path_factory)}"
+    )
+    cert_dir.mkdir(parents=True, exist_ok=True)
 
     # Generate CA private key
     ca_key = _generate_private_key()
@@ -200,6 +219,14 @@ def ssl_ca_cert_key(tmp_path_factory):
     ca_cert = _generate_ca_certificate(ca_key, common_name="Salt Test CA")
     ca_cert_path = cert_dir / "ca.crt"
     _write_certificate(ca_cert, ca_cert_path)
+
+    # Register cleanup to remove the cert directory after session ends
+    def cleanup_cert_dir():
+        if cert_dir.exists():
+            shutil.rmtree(cert_dir, ignore_errors=True)
+
+    # Use atexit to clean up after the process ends
+    atexit.register(cleanup_cert_dir)
 
     return str(ca_cert_path), str(ca_key_path)
 

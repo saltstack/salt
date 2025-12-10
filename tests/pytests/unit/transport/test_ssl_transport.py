@@ -5,8 +5,13 @@ These tests verify that TCP and WebSocket transports can be properly
 configured with SSL certificates.
 """
 
-import pytest
+import ssl
 
+import pytest
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+
+import salt.config
 import salt.utils.files
 
 pytestmark = [
@@ -37,11 +42,6 @@ def test_ssl_certificates_are_valid(
     """
     Test that generated certificates are valid PEM format.
     """
-    try:
-        from cryptography import x509
-        from cryptography.hazmat.backends import default_backend
-    except ImportError:
-        pytest.skip("cryptography library not available")
 
     ca_cert_path, _ = ssl_ca_cert_key
     server_cert_path, _ = ssl_server_cert_key
@@ -79,11 +79,6 @@ def test_server_cert_has_san(ssl_server_cert_key):
     """
     Test that server certificate has Subject Alternative Name extension.
     """
-    try:
-        from cryptography import x509
-        from cryptography.hazmat.backends import default_backend
-    except ImportError:
-        pytest.skip("cryptography library not available")
 
     server_cert_path, _ = ssl_server_cert_key
 
@@ -96,18 +91,23 @@ def test_server_cert_has_san(ssl_server_cert_key):
     )
 
     # Verify localhost and 127.0.0.1 are in SAN
-    dns_names = [name.value for name in san_ext.value]
-    assert "localhost" in dns_names
-    assert "127.0.0.1" in dns_names
+    # Note: IP addresses are stored as IPAddress objects, not DNS names
+
+    san_values = []
+    for name in san_ext.value:
+        if isinstance(name, x509.DNSName):
+            san_values.append(name.value)
+        elif isinstance(name, x509.IPAddress):
+            san_values.append(str(name.value))
+
+    assert "localhost" in san_values
+    assert "127.0.0.1" in san_values
 
 
 def test_cert_reqs_string_to_constant():
     """
     Test that cert_reqs string is properly converted to SSL constant.
     """
-    import ssl
-
-    import salt.config
 
     opts = {"ssl": {"cert_reqs": "CERT_REQUIRED"}}
     salt.config._update_ssl_config(opts)
@@ -120,7 +120,6 @@ def test_ssl_config_with_none():
     """
     Test that ssl=None is handled correctly.
     """
-    import salt.config
 
     opts = {"ssl": None}
     salt.config._update_ssl_config(opts)
@@ -132,7 +131,6 @@ def test_ssl_config_with_false():
     """
     Test that ssl=False is handled correctly.
     """
-    import salt.config
 
     opts = {"ssl": False}
     salt.config._update_ssl_config(opts)
@@ -144,7 +142,6 @@ def test_ssl_config_with_true():
     """
     Test that ssl=True creates empty dict.
     """
-    import salt.config
 
     opts = {"ssl": True}
     salt.config._update_ssl_config(opts)
