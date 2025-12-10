@@ -540,9 +540,9 @@ def test_mod_data_with_global_loader_modules(tmp_path):
         "file_roots": {},
     }
 
-    with patch(
-        "salt.loader._module_dirs", return_value=[str(modules_dir)]
-    ), patch("salt.utils.hashutils.get_hash", return_value="abc123"):
+    with patch("salt.loader._module_dirs", return_value=[str(modules_dir)]), patch(
+        "salt.utils.hashutils.get_hash", return_value="abc123"
+    ):
         result = ssh.mod_data(mock_fsclient)
 
     assert "version" in result
@@ -629,11 +629,9 @@ def test_mod_data_cached_tarball(tmp_path):
     }
 
     # Mock the version calculation to match our fake file
-    with patch(
-        "salt.loader._module_dirs", return_value=[str(modules_dir)]
-    ), patch("salt.utils.hashutils.get_hash", return_value="hash"), patch(
-        "hashlib.sha1"
-    ) as mock_sha:
+    with patch("salt.loader._module_dirs", return_value=[str(modules_dir)]), patch(
+        "salt.utils.hashutils.get_hash", return_value="hash"
+    ), patch("hashlib.sha1") as mock_sha:
         mock_sha.return_value.hexdigest.return_value = "testversion"
         result = ssh.mod_data(mock_fsclient)
 
@@ -658,9 +656,9 @@ def test_mod_data_filters_dunder_files(tmp_path):
         "file_roots": {},
     }
 
-    with patch(
-        "salt.loader._module_dirs", return_value=[str(modules_dir)]
-    ), patch("salt.utils.hashutils.get_hash", return_value="xyz789"):
+    with patch("salt.loader._module_dirs", return_value=[str(modules_dir)]), patch(
+        "salt.utils.hashutils.get_hash", return_value="xyz789"
+    ):
         result = ssh.mod_data(mock_fsclient)
 
     # Should only include valid_module.py, not __init__.py
@@ -717,9 +715,9 @@ def test_mod_data_supports_multiple_extensions(tmp_path):
         "file_roots": {},
     }
 
-    with patch(
-        "salt.loader._module_dirs", return_value=[str(modules_dir)]
-    ), patch("salt.utils.hashutils.get_hash", return_value="ext123"):
+    with patch("salt.loader._module_dirs", return_value=[str(modules_dir)]), patch(
+        "salt.utils.hashutils.get_hash", return_value="ext123"
+    ):
         result = ssh.mod_data(mock_fsclient)
 
     assert "version" in result
