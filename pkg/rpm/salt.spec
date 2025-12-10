@@ -192,6 +192,11 @@ cd $RPM_BUILD_DIR
   popd
   build/venv/bin/python3 -m pip uninstall -y ppbt
 
+  # Generate man pages for source builds
+  pushd %{_salt_src}
+  LATEST_RELEASE=${SALT_VERSION} SALT_ON_SALTSTACK=1 $RPM_BUILD_DIR/build/venv/bin/tools docs man
+  popd
+
   # Generate master config
   sed 's/#user: root/user: salt/g' %{_salt_src}/conf/master > $RPM_BUILD_DIR/build/master
 
@@ -297,7 +302,6 @@ mkdir -p %{buildroot}%{_mandir}/man7
 install -p -m 0644 %{_salt_src}/doc/man/spm.1 %{buildroot}%{_mandir}/man1/spm.1
 install -p -m 0644 %{_salt_src}/doc/man/spm.1 %{buildroot}%{_mandir}/man1/spm.1
 install -p -m 0644 %{_salt_src}/doc/man/salt.1 %{buildroot}%{_mandir}/man1/salt.1
-install -p -m 0644 %{_salt_src}/doc/man/salt.7 %{buildroot}%{_mandir}/man7/salt.7
 install -p -m 0644 %{_salt_src}/doc/man/salt-cp.1 %{buildroot}%{_mandir}/man1/salt-cp.1
 install -p -m 0644 %{_salt_src}/doc/man/salt-key.1 %{buildroot}%{_mandir}/man1/salt-key.1
 install -p -m 0644 %{_salt_src}/doc/man/salt-master.1 %{buildroot}%{_mandir}/man1/salt-master.1
@@ -333,7 +337,6 @@ rm -rf %{buildroot}
 
 %files master
 %defattr(-,root,root)
-%doc %{_mandir}/man7/salt.7*
 %doc %{_mandir}/man1/salt.1*
 %doc %{_mandir}/man1/salt-cp.1*
 %doc %{_mandir}/man1/salt-key.1*

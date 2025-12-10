@@ -356,12 +356,19 @@ jobs:
 
       - name: Generate MAN Pages
         shell: bash
-        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         env:
           LATEST_RELEASE: "${{ needs.prepare-workflow.outputs.salt-version }}"
           SALT_ON_SALTSTACK: "1"
         run: |
           tools docs man
+
+      - name: Upload MAN Pages Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: man-pages-${{ needs.prepare-workflow.outputs.salt-version }}
+          path: doc/man/
+          retention-days: 7
+          if-no-files-found: error
 
       - name: Update Changelog
         shell: bash

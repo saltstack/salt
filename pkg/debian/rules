@@ -35,6 +35,9 @@ override_dh_auto_build:
 	build/onedir/venv/bin/tools pkg pre-archive-cleanup --pkg build/onedir/salt
 	build/onedir/venv/bin/pip uninstall -y ppbt
 
+	# Generate man pages for source builds
+	LATEST_RELEASE=$${SALT_VERSION} SALT_ON_SALTSTACK=1 build/onedir/venv/bin/tools docs man
+
 else
 override_dh_auto_build:
 	# The relenv onedir is being provided, all setup up until Salt is installed
