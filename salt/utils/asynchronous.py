@@ -39,12 +39,15 @@ def current_ioloop(io_loop):
         orig_loop = tornado.ioloop.IOLoop.current()
     except RuntimeError:
         orig_loop = None
-    asyncio.set_event_loop(io_loop.asyncio_loop)
+
+    # Normalize io_loop to asyncio loop
+    asyncio_loop = aioloop(io_loop)
+    asyncio.set_event_loop(asyncio_loop)
     try:
         yield
     finally:
         if orig_loop:
-            asyncio.set_event_loop(orig_loop.asyncio_loop)
+            asyncio.set_event_loop(aioloop(orig_loop))
         else:
             asyncio.set_event_loop(None)
 
