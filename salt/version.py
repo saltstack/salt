@@ -713,7 +713,7 @@ def dependency_information(include_salt_cloud=False):
         ("gitdb", "gitdb", "__version__"),
         ("gitpython", "git", "__version__"),
         ("python-gnupg", "gnupg", "__version__"),
-        ("mysql-python", "MySQLdb", "__version__"),
+        ("mysql-python", "MySQLdb", "version_info"),
         ("cherrypy", "cherrypy", "__version__"),
         ("docker-py", "docker", "__version__"),
         ("packaging", "packaging", "__version__"),
