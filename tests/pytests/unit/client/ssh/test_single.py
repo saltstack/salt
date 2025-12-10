@@ -634,7 +634,9 @@ def test_cmd_block_python_version_error(opts, target):
         return_value=(("", "ERROR: Unable to locate appropriate python command\n", 10))
     )
     patch_shim = patch("salt.client.ssh.Single.shim_cmd", mock_shim)
-    with patch_shim:
+    patch_mod_data = patch("salt.client.ssh.mod_data", return_value={})
+    patch_deploy_ext = patch("salt.client.ssh.Single.deploy_ext")
+    with patch_shim, patch_mod_data, patch_deploy_ext:
         ret = single.cmd_block()
         assert "ERROR: Python version error. Recommendation(s) follow:" in ret[0]
 

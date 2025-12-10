@@ -51,19 +51,39 @@ def relenv_tarball_cached(tmp_path_factory):
         shared_cache,
     )
 
+    # Try to copy from local artifacts first (for CI/test environments)
+    import glob
+    import shutil
+
+    artifacts_tarball = f"/salt/artifacts/salt-*-onedir-{kernel}-{os_arch}.tar.xz"
+    matching_files = glob.glob(artifacts_tarball)
+    if matching_files:
+        source_tarball = matching_files[0]
+        dest_dir = os.path.join(shared_cache, "relenv", kernel, os_arch)
+        os.makedirs(dest_dir, exist_ok=True)
+        dest_tarball = os.path.join(dest_dir, "salt-relenv.tar.xz")
+
+        try:
+            shutil.copy(source_tarball, dest_tarball)
+            file_size = os.path.getsize(dest_tarball) / (1024 * 1024)  # Size in MB
+            log.info(
+                "Copied local tarball from %s to %s (%.2f MB)",
+                source_tarball,
+                dest_tarball,
+                file_size,
+            )
+            return dest_tarball
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            log.warning("Failed to copy local tarball: %s", e)
+
+    # Fall back to downloading if local tarball not available
     try:
-        # Download and cache the tarball to the shared location
         tarball_path = salt.utils.relenv.gen_relenv(shared_cache, kernel, os_arch)
         log.info("Relenv tarball cached at: %s", tarball_path)
 
-        # Verify the tarball exists
         if os.path.exists(tarball_path):
             file_size = os.path.getsize(tarball_path) / (1024 * 1024)  # Size in MB
             log.info("Cached tarball size: %.2f MB", file_size)
-
-            # Set environment variable so salt.utils.relenv can find it
-            # This allows individual test masters to copy from the shared cache
-            os.environ["SALT_SSH_TEST_RELENV_CACHE"] = shared_cache
             return tarball_path
         else:
             log.warning(
@@ -229,17 +249,19 @@ def state_tree_dir(base_env_state_tree_root_dir):
     State tree with files to test salt-ssh
     when the map.jinja file is in another directory
     """
+    # Remove unused import from top file to avoid salt-ssh file sync issues
+    # Use "testdir" instead of "test" to avoid conflicts with state_tree fixture
     top_file = """
-    {%- from "test/map.jinja" import abc with context %}
     base:
       'localhost':
-        - test
+        - testdir
       '127.0.0.1':
-        - test
+        - testdir
     """
     map_file = """
     {%- set abc = "def" %}
     """
+    # State file imports from subdirectory - this is what we're testing
     state_file = """
     {%- from "test/map.jinja" import abc with context %}
 
@@ -252,8 +274,9 @@ def state_tree_dir(base_env_state_tree_root_dir):
     map_tempfile = pytest.helpers.temp_file(
         "test/map.jinja", map_file, base_env_state_tree_root_dir
     )
+    # Use testdir.sls to avoid collision with state_tree's test.sls
     state_tempfile = pytest.helpers.temp_file(
-        "test.sls", state_file, base_env_state_tree_root_dir
+        "testdir.sls", state_file, base_env_state_tree_root_dir
     )
 
     with top_tempfile, map_tempfile, state_tempfile:
