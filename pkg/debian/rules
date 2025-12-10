@@ -36,7 +36,12 @@ override_dh_auto_build:
 	build/onedir/venv/bin/pip uninstall -y ppbt
 
 	# Generate man pages for source builds
-	LATEST_RELEASE=$${SALT_VERSION} SALT_ON_SALTSTACK=1 build/onedir/venv/bin/tools docs man
+	export PY=$$(build/onedir/venv/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()') \
+		&& build/onedir/venv/bin/python3 -m pip install --no-deps -r requirements/static/ci/py$${PY}/docs.txt
+	LATEST_RELEASE=$${SALT_VERSION} SALT_ON_SALTSTACK=1 $(MAKE) -C doc man SPHINXBUILD=../build/onedir/venv/bin/sphinx-build
+	# Copy generated man pages to doc/man
+	mkdir -p doc/man
+	cp -f doc/_build/man/*.1 doc/_build/man/*.7 doc/man/ 2>/dev/null || true
 
 else
 override_dh_auto_build:
