@@ -164,6 +164,7 @@ extensions = [
 # Add spelling extension only if enchant library is available
 try:
     import enchant
+
     extensions.append("sphinxcontrib.spelling")
 except (ImportError, OSError):
     # enchant C library not available, skip spelling extension

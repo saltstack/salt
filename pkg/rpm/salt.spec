@@ -195,7 +195,7 @@ cd $RPM_BUILD_DIR
   # Generate man pages for source builds
   pushd %{_salt_src}
   export PY=$($RPM_BUILD_DIR/build/venv/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()')
-  $RPM_BUILD_DIR/build/venv/bin/python3 -m pip install --no-deps -r requirements/static/ci/py${PY}/docs.txt
+  $RPM_BUILD_DIR/build/venv/bin/python3 -m pip install -r requirements/static/ci/py${PY}/docs.txt
   export LATEST_RELEASE=%{version}
   export SALT_ON_SALTSTACK=1
   make -C doc man SPHINXBUILD=$RPM_BUILD_DIR/build/venv/bin/sphinx-build

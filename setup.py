@@ -1001,9 +1001,24 @@ class SaltDistribution(distutils.dist.Distribution):
                 continue
             missing.append(file)
         if missing:
-            sys.stderr.write(MISSING_MAN_MSG.format(", ".join(missing)))
-            sys.stderr.flush()
-            sys.exit(1)
+            # Only treat missing man pages as fatal error if we're in a packaging build
+            # (indicated by SALT_ON_SALTSTACK env var). For development/test installs,
+            # just skip the man pages.
+            if os.environ.get("SALT_ON_SALTSTACK"):
+                sys.stderr.write(MISSING_MAN_MSG.format(", ".join(missing)))
+                sys.stderr.flush()
+                sys.exit(1)
+            else:
+                # Development/test install - remove missing man pages from data_files
+                log.warn(
+                    "Skipping installation of man pages (missing: %s). "
+                    "Run 'tools docs man' to generate them.",
+                    ", ".join(missing),
+                )
+                data_files[0] = (
+                    data_files[0][0],
+                    [f for f in data_files[0][1] if f not in missing],
+                )
         return data_files
 
     @property
