@@ -1654,7 +1654,11 @@ def list_all_versions(
     pip_version = version(bin_env=bin_env, cwd=cwd, user=user)
     if salt.utils.versions.compare(ver1=pip_version, oper=">=", ver2="21.2"):
         regex = re.compile(r"\s*Available versions: (.*)")
-        cmd.extend(["index", "versions", pkg])
+        # pre-release versions are not included by default
+        if any([include_alpha, include_beta, include_rc]):
+            cmd.extend(["index", "versions", "--pre", pkg])
+        else:
+            cmd.extend(["index", "versions", pkg])
     else:
         if salt.utils.versions.compare(ver1=pip_version, oper=">=", ver2="20.3"):
             cmd.append("--use-deprecated=legacy-resolver")
