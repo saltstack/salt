@@ -1816,6 +1816,12 @@ def mod_data(fsclient):
     mods = {"version": ver, "file": ext_tar_path}
     if os.path.isfile(ext_tar_path):
         return mods
+
+    # Ensure cache directory exists
+    cache_dir = fsclient.opts["cachedir"]
+    if not os.path.isdir(cache_dir):
+        os.makedirs(cache_dir)
+
     tfp = tarfile.open(ext_tar_path, "w:gz")
     verfile = os.path.join(fsclient.opts["cachedir"], "ext_mods.ver")
     with salt.utils.files.fopen(verfile, "w+") as fp_:
