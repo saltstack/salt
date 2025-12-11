@@ -9,6 +9,8 @@ import os
 import subprocess
 import time
 
+import salt.platform.win
+import salt.utils.path
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -77,20 +79,30 @@ def create_env(username, user_token, inherit=False, timeout=1):
     start = time.time()
     env = None
     exc = None
-    while True:
-        try:
-            profile_info_dict = {"UserName": username}
-            profile_handle = win32profile.LoadUserProfile(user_token, profile_info_dict)
-            env = win32profile.CreateEnvironmentBlock(user_token, inherit)
-        except pywintypes.error as exc:
-            pass
-        else:
-            break
-        finally:
-            win32profile.UnloadUserProfile(user_token, profile_handle)
+    profile_info_dict = {"UserName": username}
+    try:
+        profile_handle = win32profile.LoadUserProfile(user_token, profile_info_dict)
+        while True:
+            try:
+                env = win32profile.CreateEnvironmentBlock(user_token, inherit)
+                if env is not None:
+                    break
+            except pywintypes.error as exc:
+                pass
+            else:
+                break
+            if time.time() - start > timeout:
+                break
+    except (win32api.error, pywintypes.error) as e:
+        msg = f"Failed to load user profile: {e}"
+        raise CommandExecutionError(msg)
 
-        if time.time() - start > timeout:
-            break
+    try:
+        win32profile.UnloadUserProfile(user_token, profile_handle)
+    except (win32api.error, pywintypes.error) as e:
+        msg = f"Failed to unload user profile: {e}"
+        raise CommandExecutionError(msg)
+
     if env is not None:
         return env
     if exc is not None:
@@ -120,10 +132,12 @@ def runas(cmd, username, password=None, cwd=None):
     # Elevate the token from the current process
     access = win32security.TOKEN_QUERY | win32security.TOKEN_ADJUST_PRIVILEGES
     th = win32security.OpenProcessToken(win32api.GetCurrentProcess(), access)
+    import salt.platform.win
+
     salt.platform.win.elevate_token(th)
 
     # Try to impersonate the SYSTEM user. This process needs to be running as a
-    # user who as been granted the SeImpersonatePrivilege, Administrator
+    # user who has been granted the SeImpersonatePrivilege, Administrator
     # accounts have this permission by default.
     try:
         impersonation_token = salt.platform.win.impersonate_sid(
@@ -217,6 +231,13 @@ def runas(cmd, username, password=None, cwd=None):
 
     # Create the environment for the user
     env = create_env(username, user_token, inherit=False)
+    application_name = None
+    # TODO: Maybe it has something to do with applicationname
+    # application_name = salt.utils.path.which("cmd.exe")
+    # application_name = cmd
+    # import salt.utils.args
+    # if salt.utils.args.shlex_split(cmd)[0].endswith((".bat", "cmd", "cmd.exe")):
+    #     application_name = salt.utils.path.which("cmd.exe")
 
     hProcess = None
     try:
@@ -224,7 +245,7 @@ def runas(cmd, username, password=None, cwd=None):
         process_info = salt.platform.win.CreateProcessWithTokenW(
             int(user_token),
             logonflags=1,
-            applicationname=None,
+            applicationname=application_name,
             commandline=cmd,
             currentdirectory=cwd,
             creationflags=creationflags,

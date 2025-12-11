@@ -20,7 +20,6 @@ def account():
 @pytest.fixture
 def echo_script_contents():
     if salt.utils.platform.is_windows():
-        file_name = "echo_script.bat"
         contents = dedent(
             """\
             @echo off
@@ -30,7 +29,6 @@ def echo_script_contents():
             """
         )
     else:
-        file_name = "echo_script.sh"
         contents = dedent(
             """\
             #!/bin/bash
@@ -39,27 +37,32 @@ def echo_script_contents():
             echo "a: $a, b: $b"
             """
         )
-    return file_name, contents
+    return contents
 
 
 @pytest.fixture
 def echo_script(state_tree, echo_script_contents):
-    file_name, contents = echo_script_contents
-    with pytest.helpers.temp_file(file_name, contents, state_tree / "echo-script"):
+    if salt.utils.platform.is_windows():
+        file_name = "echo_script.bat"
+    else:
+        file_name = "echo_script.sh"
+    with pytest.helpers.temp_file(file_name, echo_script_contents, state_tree):
         yield file_name
 
 
 @pytest.fixture
 def echo_script_with_space(state_tree, echo_script_contents):
-    file_name, contents = echo_script_contents
-    with pytest.helpers.temp_file(file_name, contents, state_tree / "echo script"):
+    if salt.utils.platform.is_windows():
+        file_name = "echo script space.bat"
+    else:
+        file_name = "echo script space.sh"
+    with pytest.helpers.temp_file(file_name, echo_script_contents, state_tree):
         yield file_name
 
 
 @pytest.fixture
 def pipe_script_contents():
     if salt.utils.platform.is_windows():
-        file_name = "pipe_script.bat"
         contents = dedent(
             """\
             @echo off
@@ -71,7 +74,6 @@ def pipe_script_contents():
             """
         )
     else:
-        file_name = "pipe_script.sh"
         contents = dedent(
             """\
             #!/bin/bash
@@ -82,13 +84,16 @@ def pipe_script_contents():
             fi
             """
         )
-    return file_name, contents
+    return contents
 
 
 @pytest.fixture
 def pipe_script(pipe_script_contents, state_tree):
-    file_name, contents = pipe_script_contents
-    with pytest.helpers.temp_file(file_name, contents, state_tree / "echo-script") as f:
+    if salt.utils.platform.is_windows():
+        file_name = "pipe_script.bat"
+    else:
+        file_name = "pipe_script.sh"
+    with pytest.helpers.temp_file(file_name, pipe_script_contents, state_tree) as f:
         if not salt.utils.platform.is_windows():
             current_perms = f.stat().st_mode
             new_perms = current_perms | stat.S_IXUSR
@@ -99,18 +104,17 @@ def pipe_script(pipe_script_contents, state_tree):
 
 @pytest.fixture
 def pipe_script_with_space(pipe_script_contents, state_tree):
-    file_name, contents = pipe_script_contents
-    with pytest.helpers.temp_directory() as temp_path:
-        temp_file_path = temp_path / "dir with spaces" / file_name
-        temp_file_path.parent.mkdir(parents=True)
-        assert temp_file_path.parent.exists()
-        temp_file_path.write_text(contents)
+    if salt.utils.platform.is_windows():
+        file_name = "pipe script space.bat"
+    else:
+        file_name = "pipe script space.sh"
+    with pytest.helpers.temp_file(file_name, pipe_script_contents, state_tree) as f:
         if not salt.utils.platform.is_windows():
-            current_perms = temp_file_path.stat().st_mode
+            current_perms = f.stat().st_mode
             new_perms = current_perms | stat.S_IXUSR
-            temp_file_path.chmod(new_perms)
-            temp_file_path.chmod(0o755)
-        yield temp_file_path
+            f.chmod(new_perms)
+            f.chmod(0o755)
+        yield f
 
 
 @pytest.mark.parametrize(
@@ -126,7 +130,7 @@ def test_script_args(modules, echo_script, args, expected):
     """
     Test argument processing with a batch script
     """
-    script = f"salt://echo-script/{echo_script}"
+    script = f"salt://{echo_script}"
     result = modules.cmd.script(script, args=args)
     assert result["stdout"] == expected
 
@@ -144,7 +148,7 @@ def test_script_args_with_space(modules, echo_script_with_space, args, expected)
     """
     Test argument processing with a batch script
     """
-    script = f"salt://echo script/{echo_script_with_space}"
+    script = f"salt://{echo_script_with_space}"
     result = modules.cmd.script(script, args=args)
     assert result["stdout"] == expected
 
@@ -162,7 +166,7 @@ def test_script_args_runas(modules, account, echo_script, args, expected):
     """
     Test argument processing with a batch/bash script and runas
     """
-    script = f"salt://echo-script/{echo_script}"
+    script = f"salt://{echo_script}"
     result = modules.cmd.script(
         script,
         args=args,
@@ -181,11 +185,13 @@ def test_script_args_runas(modules, account, echo_script, args, expected):
         (["foo foo", "bar bar"], "a: foo foo, b: bar bar"),
     ],
 )
-def test_script_args_runas_with_space(modules, account, echo_script_with_space, args, expected):
+def test_script_args_runas_with_space(
+    modules, account, echo_script_with_space, args, expected
+):
     """
     Test argument processing with a batch/bash script and runas
     """
-    script = f"salt://echo script/{echo_script_with_space}"
+    script = f"salt://{echo_script_with_space}"
     result = modules.cmd.script(
         script,
         args=args,
@@ -249,6 +255,7 @@ def test_run_spaces(modules, pipe_script_with_space):
     assert result == "fine"
 
 
+###### FAILING
 def test_run_spaces_runas(modules, pipe_script_with_space, account):
     cmd = f"{str(pipe_script_with_space)}"
     result = modules.cmd.run(
