@@ -9,7 +9,6 @@ import os
 import subprocess
 import time
 
-import salt.platform.win
 import salt.utils.path
 from salt.exceptions import CommandExecutionError
 
