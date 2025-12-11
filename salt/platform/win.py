@@ -17,13 +17,18 @@ import subprocess
 from ctypes import wintypes
 
 # pylint: disable=3rd-party-module-not-gated
-import ntsecuritycon
-import psutil
-import win32api
-import win32con
-import win32process
-import win32security
-import win32service
+try:
+    import ntsecuritycon
+    import psutil
+    import win32api
+    import win32con
+    import win32process
+    import win32security
+    import win32service
+
+    HAS_PYWIN32 = True
+except ImportError:
+    HAS_PYWIN32 = False
 
 # pylint: enable=3rd-party-module-not-gated
 
