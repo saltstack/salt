@@ -11,6 +11,7 @@ import os
 import salt.payload
 import salt.state
 import salt.utils.files
+import salt.utils.optsdict
 import salt.utils.process
 from salt.exceptions import CommandExecutionError
 
@@ -354,7 +355,8 @@ def get_sls_opts(opts, **kwargs):
     """
     Return a copy of the opts for use, optionally load a local config on top
     """
-    opts = copy.deepcopy(opts)
+    # Use OptsDict for copy-on-write instead of deep copy
+    opts = salt.utils.optsdict.safe_opts_copy(opts, name="get_sls_opts")
 
     if "localconfig" in kwargs:
         return salt.config.minion_config(kwargs["localconfig"], defaults=opts)
