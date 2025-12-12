@@ -1741,7 +1741,7 @@ def _get_opts(line):
     """
     Return all opts in [] for a repo line
     """
-    get_opts = re.search(r"\[(.*=.*)\]", line)
+    get_opts = re.search(r"\[(.*=.*?)\]", line)
 
     ret = OrderedDict()
     if not get_opts:

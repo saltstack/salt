@@ -19,7 +19,7 @@ AVAILABLE_PYTHON_EXECUTABLE = salt.utils.path.which_bin(
 
 if sys.platform.startswith("win32"):
     SHELL = "cmd"
-    PYTHON_SHELL = False
+    PYTHON_SHELL = True
 elif sys.platform.startswith(("freebsd", "openbsd")):
     SHELL = "/bin/sh"
     PYTHON_SHELL = True
@@ -231,7 +231,18 @@ class CMDModuleTest(ModuleCase):
 
     @pytest.mark.slow_test
     @pytest.mark.skip_on_windows
-    def test_script(self):
+    def test_script_args_str(self):
+        """
+        cmd.script
+        """
+        args = "saltines crackers biscuits=yes"
+        script = "salt://script.py"
+        ret = self.run_function("cmd.script", [script, args], saltenv="base")
+        self.assertEqual(ret["stdout"], args)
+
+    @pytest.mark.slow_test
+    @pytest.mark.skip_on_windows
+    def test_script_args_list(self):
         """
         cmd.script
         """
@@ -242,7 +253,18 @@ class CMDModuleTest(ModuleCase):
 
     @pytest.mark.slow_test
     @pytest.mark.skip_on_windows
-    def test_script_query_string(self):
+    def test_script_query_string_args_str(self):
+        """
+        cmd.script
+        """
+        args = "saltines crackers biscuits=yes"
+        script = "salt://script.py?saltenv=base"
+        ret = self.run_function("cmd.script", [script, args], saltenv="base")
+        self.assertEqual(ret["stdout"], args)
+
+    @pytest.mark.slow_test
+    @pytest.mark.skip_on_windows
+    def test_script_query_string_args_list(self):
         """
         cmd.script
         """
@@ -263,7 +285,21 @@ class CMDModuleTest(ModuleCase):
 
     @pytest.mark.slow_test
     @pytest.mark.skip_on_windows
-    def test_script_cwd(self):
+    def test_script_cwd_args_str(self):
+        """
+        cmd.script with cwd
+        """
+        tmp_cwd = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        args = "saltines crackers biscuits=yes"
+        script = "salt://script.py"
+        ret = self.run_function(
+            "cmd.script", [script, args], cwd=tmp_cwd, saltenv="base"
+        )
+        self.assertEqual(ret["stdout"], args)
+
+    @pytest.mark.slow_test
+    @pytest.mark.skip_on_windows
+    def test_script_cwd_args_list(self):
         """
         cmd.script with cwd
         """
@@ -277,7 +313,25 @@ class CMDModuleTest(ModuleCase):
 
     @pytest.mark.slow_test
     @pytest.mark.skip_on_windows
-    def test_script_cwd_with_space(self):
+    def test_script_cwd_with_space_args_str(self):
+        """
+        cmd.script with cwd
+        """
+        tmp_cwd = "{}{}test 2".format(
+            tempfile.mkdtemp(dir=RUNTIME_VARS.TMP), os.path.sep
+        )
+        os.mkdir(tmp_cwd)
+
+        args = "saltines crackers biscuits=yes"
+        script = "salt://script.py"
+        ret = self.run_function(
+            "cmd.script", [script, args], cwd=tmp_cwd, saltenv="base"
+        )
+        self.assertEqual(ret["stdout"], args)
+
+    @pytest.mark.slow_test
+    @pytest.mark.skip_on_windows
+    def test_script_cwd_with_space_args_list(self):
         """
         cmd.script with cwd
         """
@@ -293,6 +347,7 @@ class CMDModuleTest(ModuleCase):
         )
         self.assertEqual(ret["stdout"], " ".join(args))
 
+    @pytest.mark.skip_if_not_root
     @pytest.mark.destructive_test
     def test_tty(self):
         """
@@ -315,6 +370,17 @@ class CMDModuleTest(ModuleCase):
         self.assertIsInstance(cmd_run, str)
         self.assertEqual(cmd_which.rstrip(), cmd_run.rstrip())
 
+    @pytest.mark.skip_unless_on_windows
+    def test_which_win(self):
+        """
+        cmd.which
+        """
+        cmd_which = self.run_function("cmd.which", ["cmd"])
+        self.assertIsInstance(cmd_which, str)
+        cmd_run = self.run_function("cmd.run", ["where cmd"])
+        self.assertIsInstance(cmd_run, str)
+        self.assertEqual(cmd_which.rstrip().lower(), cmd_run.rstrip().lower())
+
     @pytest.mark.skip_on_windows
     @pytest.mark.skip_if_binaries_missing("which")
     def test_which_bin(self):
@@ -324,6 +390,15 @@ class CMDModuleTest(ModuleCase):
         cmds = ["pip3", "pip2", "pip", "pip-python"]
         ret = self.run_function("cmd.which_bin", [cmds])
         self.assertTrue(os.path.split(ret)[1] in cmds)
+
+    @pytest.mark.skip_unless_on_windows
+    def test_which_bin_win(self):
+        """
+        cmd.which_bin
+        """
+        cmds = ["python.exe", "find.exe", "where.exe", "findstr.exe"]
+        ret = self.run_function("cmd.which_bin", [cmds])
+        self.assertTrue(os.path.split(ret)[1].lower() in cmds)
 
     @pytest.mark.slow_test
     def test_has_exec(self):
