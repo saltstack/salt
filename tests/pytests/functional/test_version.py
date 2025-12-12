@@ -47,6 +47,30 @@ def test_salt_extensions_in_versions_report(tmp_path, salt_extension):
     assert salt_extension.name in versions_information["Salt Extensions"]
 
 
+def test_mysql_extensions_in_versions_report(tmp_path):
+    with SaltVirtualEnv(venv_dir=tmp_path / ".venv") as venv:
+        # These are required for the test to pass, why are they not already
+        # installed?
+        venv.install("pyyaml")
+        venv.install("looseversion")
+        venv.install("packaging")
+        # Install mysql extension into the virtualenv
+        venv.install("mysqlclient")
+        installed_packages = venv.get_installed_packages()
+        assert "mysqlclient" in installed_packages
+        ret = venv.run_code(
+            """
+            import json
+            import salt.version
+
+            print(json.dumps(salt.version.versions_information()))
+            """
+        )
+    versions_information = json.loads(ret.stdout)
+    assert "Dependency Versions" in versions_information
+    assert versions_information.get("Dependency Versions").get("mysql-python") is not None
+
+
 def test_salt_extensions_absent_in_versions_report(tmp_path, salt_extension):
     """
     Ensure that the 'Salt Extensions' header does not show up when no extension is installed
