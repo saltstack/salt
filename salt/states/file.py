@@ -7837,8 +7837,8 @@ def patch(
             # Try to reverse-apply hunks from rejects file using a dry-run.
             # If this returns a retcode of 0, we know that the patch was
             # already applied. Rejects are written from the base of the
-            # directory, so the strip option doesn't apply here.
-            reverse_pass = _patch(patch_rejects, ["-R", "-f"], dry_run=True)
+            # directory, so the required strip level is 0.
+            reverse_pass = _patch(patch_rejects, ["-R", "-f", "-p0"], dry_run=True)
             already_applied = reverse_pass["retcode"] == 0
 
             # Check if the patch command threw an error upon execution
