@@ -47,19 +47,6 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             self.exit(2, f"{exc}\n")
             return
 
-        # Check for async first - if async is enabled, skip batch mode
-        # as batch mode is inherently synchronous (waits for each batch)
-        if getattr(self.options, "async", False) and (
-            self.options.batch or self.options.static
-        ):
-            salt.utils.stringutils.print_cli(
-                "WARNING: --async is incompatible with --batch-size. "
-                "Running in async mode (batch mode disabled)."
-            )
-            # Clear batch options to proceed with async execution
-            self.options.batch = ""
-            self.options.static = False
-
         if self.options.batch or self.options.static:
             # _run_batch() will handle all output and
             # exit with the appropriate error condition
