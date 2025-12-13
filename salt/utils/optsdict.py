@@ -499,6 +499,47 @@ class OptsDict(MutableMapping):
                         ),
                     )
 
+    def __deepcopy__(self, memo):
+        """
+        Support for copy.deepcopy().
+
+        When deepcopied, we return a regular dict to avoid issues with
+        unpicklable locks. This matches the behavior expected by code
+        that does copy.deepcopy(opts).
+        """
+        with self._lock:
+            # Return a deep copy as a regular dict
+            return copy.deepcopy(dict(self), memo)
+
+    def __getstate__(self):
+        """
+        Support for pickling.
+
+        Excludes the lock since it can't be pickled.
+        """
+        state = self.__dict__.copy()
+        # Remove the unpicklable lock
+        state.pop("_lock", None)
+        # Also remove the tracker's lock
+        if "_tracker" in state and hasattr(state["_tracker"], "_lock"):
+            tracker_state = state["_tracker"].__dict__.copy()
+            tracker_state.pop("_lock", None)
+            state["_tracker"] = tracker_state
+        return state
+
+    def __setstate__(self, state):
+        """
+        Support for unpickling.
+
+        Recreates the lock after unpickling.
+        """
+        self.__dict__.update(state)
+        # Recreate the lock
+        self._lock = threading.RLock()
+        # Recreate the tracker's lock if it has one
+        if hasattr(self, "_tracker") and not hasattr(self._tracker, "_lock"):
+            self._tracker._lock = threading.RLock()
+
     def __repr__(self) -> str:
         """String representation."""
         with self._lock:
