@@ -2343,6 +2343,8 @@ def mod_data(fsclient):
         "renderers",
         "returners",
         "utils",
+        "wrapper",
+        "tops",
     ]
     ret = {}
     with fsclient:
@@ -2368,6 +2370,28 @@ def mod_data(fsclient):
                         ret[ref].update(mods_data)
                     else:
                         ret[ref] = mods_data
+
+        # Also check extension_modules directory for wrapper and tops modules
+        # These are used by tests and custom deployments
+        ext_mods_dir = fsclient.opts.get("extension_modules")
+        if ext_mods_dir and os.path.isdir(ext_mods_dir):
+            for ref in sync_refs:
+                ref_dir = os.path.join(ext_mods_dir, ref)
+                if os.path.isdir(ref_dir):
+                    mods_data = {}
+                    for fn_ in os.listdir(ref_dir):
+                        if fn_.endswith((".py", ".so", ".pyx")):
+                            mod_path = os.path.join(ref_dir, fn_)
+                            if os.path.isfile(mod_path):
+                                mods_data[fn_] = mod_path
+                                chunk = salt.utils.hashutils.get_hash(mod_path)
+                                ver_base += chunk
+                    if mods_data:
+                        if ref in ret:
+                            ret[ref].update(mods_data)
+                        else:
+                            ret[ref] = mods_data
+
         if not ret:
             return {}
 

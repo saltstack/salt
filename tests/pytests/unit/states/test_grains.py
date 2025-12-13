@@ -705,7 +705,7 @@ def test_list_present_nested_already():
     with set_grains({"a": "aval", "b": {"foo": ["bar"]}}):
         ret = grains.list_present(name="b:foo", value="bar")
         assert ret["result"] is True
-        assert ret["comment"] == "Value bar is already in grain b:foo"
+        assert ret["comment"] == "Value bar is already in grain b:foo (or pending)"
         assert ret["changes"] == {}
         assert grains.__grains__ == {"a": "aval", "b": {"foo": ["bar"]}}
         assert_grain_file_content("a: aval\nb:\n  foo:\n  - bar\n")
@@ -715,7 +715,7 @@ def test_list_present_already():
     with set_grains({"a": "aval", "foo": ["bar"]}):
         ret = grains.list_present(name="foo", value="bar")
         assert ret["result"] is True
-        assert ret["comment"] == "Value bar is already in grain foo"
+        assert ret["comment"] == "Value bar is already in grain foo (or pending)"
         assert ret["changes"] == {}
         assert grains.__grains__ == {"a": "aval", "foo": ["bar"]}
         assert_grain_file_content("a: aval\nfoo:\n- bar\n")
