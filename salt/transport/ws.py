@@ -144,6 +144,14 @@ class PublishClient(salt.transport.base.PublishClient):
                         url = "http://ipc.saltproject.io/ws"
                 log.debug("pub client connect %r %r", url, ctx)
                 ws = await asyncio.wait_for(session.ws_connect(url, ssl=ctx), 3)
+                # For SSL connections, give handshake time to complete and fail if invalid
+                if ws and self.ssl:
+                    await asyncio.sleep(0.1)
+                    if ws.closed:
+                        log.debug("WS closed after SSL handshake")
+                        ws = None
+                        await session.close()
+                        continue
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
                     "WS Message Client encountered an exception while connecting to"
@@ -520,6 +528,8 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self.opts = opts
         self.site = None
         self.ssl = self.opts.get("ssl", None)
+        self._run = None
+        self._socket = None
 
     def pre_fork(self, process_manager):
         """
@@ -559,7 +569,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             await runner.setup()
             ctx = None
             if self.ssl is not None:
-                ctx = tornado.netutil.ssl_options_to_context(self.ssl, server_side=True)
+                ctx = salt.transport.base.ssl_context(self.ssl, server_side=True)
             self.site = aiohttp.web.SockSite(runner, self._socket, ssl_context=ctx)
             log.info("Worker binding to socket %s", self._socket)
             await self.site.start()
@@ -596,7 +606,8 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 log.error("ws connection closed with exception %s", ws.exception())
 
     def close(self):
-        self._run.set()  # Signal shutdown
+        if self._run is not None:
+            self._run.set()  # Signal shutdown
         if self._socket is not None:
             self._socket.shutdown(socket.SHUT_RDWR)
             self._socket.close()
@@ -620,7 +631,7 @@ class RequestClient(salt.transport.base.RequestClient):
     async def connect(self):  # pylint: disable=invalid-overridden-method
         ctx = None
         if self.ssl is not None:
-            ctx = tornado.netutil.ssl_options_to_context(self.ssl, server_side=False)
+            ctx = salt.transport.base.ssl_context(self.ssl, server_side=False)
         self.session = aiohttp.ClientSession()
         URL = self.get_master_uri(self.opts)
         log.debug("Connect to %s %s", URL, ctx)
