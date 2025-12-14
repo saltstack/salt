@@ -53,6 +53,13 @@ class DictProxy(dict):
         object.__setattr__(self, "_parent", parent_optsdict)
         object.__setattr__(self, "_key", key)
         object.__setattr__(self, "_copied", False)
+        import sys
+
+        print(
+            f"[DICTPROXY] Created DictProxy for key={key}, target type={type(target).__name__}, target len={len(target)}, target id={id(target)}",
+            file=sys.stderr,
+            flush=True,
+        )
 
     def _ensure_copied(self):
         """Copy target to parent's _local on first mutation."""
@@ -102,7 +109,16 @@ class DictProxy(dict):
         return iter(object.__getattribute__(self, "_target"))
 
     def __len__(self):
-        return len(object.__getattribute__(self, "_target"))
+        target = object.__getattribute__(self, "_target")
+        key = object.__getattribute__(self, "_key")
+        import sys
+
+        print(
+            f"[DICTPROXY] __len__ called for key={key}, target id={id(target)}, target len={len(target)}",
+            file=sys.stderr,
+            flush=True,
+        )
+        return len(target)
 
     def __repr__(self):
         return repr(object.__getattribute__(self, "_target"))
@@ -511,6 +527,13 @@ class OptsDict(MutableMapping):
                 if found:
                     # Wrap mutable values in proxies to catch mutations
                     if isinstance(value, dict) and not isinstance(value, OptsDict):
+                        import sys
+
+                        print(
+                            f"[OPTSDICT] __getitem__({key}): Creating DictProxy from parent chain, value type={type(value).__name__}, len={len(value) if isinstance(value, dict) else 'N/A'}, id={id(value)}",
+                            file=sys.stderr,
+                            flush=True,
+                        )
                         return DictProxy(value, self, key)
                     elif isinstance(value, list):
                         return ListProxy(value, self, key)
@@ -518,15 +541,28 @@ class OptsDict(MutableMapping):
                     return value
 
             # Check base (root level only)
-            if self._parent is None and key in self._base:
-                value = self._base[key]
-                # Even root instances need proxies to track when values are mutated
-                # This allows us to know when a key has been accessed/modified
-                if isinstance(value, dict) and not isinstance(value, OptsDict):
-                    return DictProxy(value, self, key)
-                elif isinstance(value, list):
-                    return ListProxy(value, self, key)
-                return value
+            if self._parent is None:
+                import sys
+
+                print(
+                    f"[OPTSDICT] __getitem__({key}): Checking base, key in base={key in self._base}, base id={id(self._base)}, base keys={list(self._base.keys())[:10]}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                if key in self._base:
+                    value = self._base[key]
+                    # Even root instances need proxies to track when values are mutated
+                    # This allows us to know when a key has been accessed/modified
+                    if isinstance(value, dict) and not isinstance(value, OptsDict):
+                        print(
+                            f"[OPTSDICT] __getitem__({key}): Creating DictProxy from base, value type={type(value).__name__}, len={len(value) if isinstance(value, dict) else 'N/A'}, id={id(value)}",
+                            file=sys.stderr,
+                            flush=True,
+                        )
+                        return DictProxy(value, self, key)
+                    elif isinstance(value, list):
+                        return ListProxy(value, self, key)
+                    return value
 
             raise KeyError(key)
 
@@ -828,8 +864,9 @@ def generate_global_mutation_report(include_locations: bool = True) -> str:
     return "\n".join(report_lines)
 
 
-# Global primary root OptsDict tracker (per-process)
-_primary_root_optsdict = None
+# Global mapping from source dict id() to its OptsDict root
+# Keyed by id(source_dict), value is the root OptsDict that wraps it
+_dict_to_root = {}
 
 
 # Convenience function for backward compatibility
@@ -854,18 +891,50 @@ def safe_opts_copy(opts: Any, name: str | None = None) -> OptsDict:
         from salt.utils.optsdict import safe_opts_copy
         opts = safe_opts_copy(opts, name="loader:states")
     """
-    global _primary_root_optsdict
+    global _dict_to_root
 
     if isinstance(opts, OptsDict):
-        return OptsDict.from_parent(opts, name=name)
+        # Find the root of this OptsDict tree
+        root = opts
+        while root._parent is not None:
+            root = root._parent
+
+        import sys
+
+        print(
+            f"[OPTSDICT] safe_opts_copy called with OptsDict (name={opts._name}), found root={root._name}, creating child of root with name={name}",
+            file=sys.stderr,
+            flush=True,
+        )
+
+        # Always create children from the root to ensure all children are siblings
+        # This allows them to see each other's mutations through the root's _local
+        return OptsDict.from_parent(root, name=name)
     else:
         # Converting from regular dict
-        # If we have a primary root, create a child instead of a new root
-        # This ensures all OptsDict instances share the same base data
-        if _primary_root_optsdict is not None:
-            return OptsDict.from_parent(_primary_root_optsdict, name=name)
+        # Check if we've already created a root for this specific dict object
+        opts_id = id(opts)
+        if opts_id in _dict_to_root:
+            # Reuse existing root - this ensures all OptsDict instances
+            # from the same source dict share the same base and see mutations
+            root = _dict_to_root[opts_id]
+            import sys
+
+            print(
+                f"[OPTSDICT] Reusing root for dict id={opts_id}, has grains={'grains' in opts}, name={name}",
+                file=sys.stderr,
+                flush=True,
+            )
+            return OptsDict.from_parent(root, name=name)
         else:
-            # First root - create it and store as primary
-            root = OptsDict.from_dict(opts, name=name)
-            _primary_root_optsdict = root
+            # First time seeing this dict - create a new root that wraps it
+            root = OptsDict.from_dict(opts, name=name or f"root@{opts_id}")
+            _dict_to_root[opts_id] = root
+            import sys
+
+            print(
+                f"[OPTSDICT] Created NEW root for dict id={opts_id}, has grains={'grains' in opts}, name={name}",
+                file=sys.stderr,
+                flush=True,
+            )
             return root
