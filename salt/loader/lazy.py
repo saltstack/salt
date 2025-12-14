@@ -702,20 +702,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         """
         if "__grains__" not in self.pack:
             grains = opts.get("grains", {})
-            import sys
-
-            print(
-                f"[LAZYLOADER] Got grains from opts: type={type(grains).__name__}, len={len(grains) if isinstance(grains, dict) else 'N/A'}, is_context={isinstance(grains, salt.loader.context.NamedLoaderContext)}",
-                file=sys.stderr,
-                flush=True,
-            )
             if isinstance(grains, salt.loader.context.NamedLoaderContext):
                 grains = grains.value()
-                print(
-                    f"[LAZYLOADER] After .value(): type={type(grains).__name__}, len={len(grains) if isinstance(grains, dict) else 'N/A'}",
-                    file=sys.stderr,
-                    flush=True,
-                )
             self.pack["__grains__"] = grains
 
         if "__pillar__" not in self.pack:
