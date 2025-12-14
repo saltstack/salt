@@ -2269,8 +2269,8 @@ Default: ``False``
 
 When set to ``True``, Salt will skip application-layer AES encryption when TLS
 is active with validated certificates. This optimization can improve performance
-by 10-50% by eliminating redundant encryption, as TLS already provides
-encryption at the transport layer.
+by eliminating redundant encryption, as TLS already provides encryption at the
+transport layer.
 
 **Requirements for optimization to activate:**
 

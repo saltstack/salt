@@ -82,7 +82,7 @@ TLS Encryption Optimization
 When TLS is configured with mutual authentication (``cert_reqs: CERT_REQUIRED``),
 the application-layer AES encryption becomes redundant. Salt 3008.0 introduces
 an optional TLS encryption optimization that eliminates this redundant encryption,
-improving performance by 10-50% while maintaining security.
+improving performance while maintaining security.
 
 Overview
 --------
