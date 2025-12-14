@@ -38,6 +38,231 @@ from typing import Any, Optional
 log = logging.getLogger(__name__)
 
 
+class DictProxy(dict):
+    """
+    Proxy for dict that triggers copy-on-write in parent OptsDict on mutation.
+
+    Subclasses dict to pass isinstance checks while providing copy-on-write semantics.
+    """
+
+    def __init__(self, target: dict, parent_optsdict: "OptsDict", key: str):
+        # Initialize underlying dict with target data AND keep _target
+        # We need both: underlying dict for C code, _target for our logic
+        super().__init__(target)
+        object.__setattr__(self, "_target", target)
+        object.__setattr__(self, "_parent", parent_optsdict)
+        object.__setattr__(self, "_key", key)
+        object.__setattr__(self, "_copied", False)
+
+    def _ensure_copied(self):
+        """Copy target to parent's _local on first mutation."""
+        if not object.__getattribute__(self, "_copied"):
+            parent = object.__getattribute__(self, "_parent")
+            key = object.__getattribute__(self, "_key")
+            target = object.__getattribute__(self, "_target")
+
+            with parent._lock:
+                # Deep copy the entire dict to parent's _local
+                copied = copy.deepcopy(target)
+                parent._local[key] = copied
+                object.__setattr__(self, "_target", copied)
+                # Also update the underlying dict storage
+                dict.clear(self)
+                dict.update(self, copied)
+                object.__setattr__(self, "_copied", True)
+
+    def __getitem__(self, key):
+        target = object.__getattribute__(self, "_target")
+        value = target[key]
+        # For nested mutable values, copy THIS dict first,
+        # then return the value from the copied dict without further wrapping
+        if isinstance(value, (dict, list)) and not object.__getattribute__(
+            self, "_copied"
+        ):
+            # Trigger copy-on-access for nested mutables to prevent unwrapped references
+            self._ensure_copied()
+            # Return value from the now-copied target
+            target = object.__getattribute__(self, "_target")
+            return target[key]
+        return value
+
+    def __setitem__(self, key, value):
+        self._ensure_copied()
+        object.__getattribute__(self, "_target")[key] = value
+        # Also update underlying dict
+        dict.__setitem__(self, key, value)
+
+    def __delitem__(self, key):
+        self._ensure_copied()
+        del object.__getattribute__(self, "_target")[key]
+        # Also update underlying dict
+        dict.__delitem__(self, key)
+
+    def __iter__(self):
+        return iter(object.__getattribute__(self, "_target"))
+
+    def __len__(self):
+        return len(object.__getattribute__(self, "_target"))
+
+    def __repr__(self):
+        return repr(object.__getattribute__(self, "_target"))
+
+    def __str__(self):
+        return str(object.__getattribute__(self, "_target"))
+
+    def __contains__(self, key):
+        return key in object.__getattribute__(self, "_target")
+
+    def keys(self):
+        return object.__getattribute__(self, "_target").keys()
+
+    def values(self):
+        return object.__getattribute__(self, "_target").values()
+
+    def items(self):
+        return object.__getattribute__(self, "_target").items()
+
+    def get(self, key, default=None):
+        return object.__getattribute__(self, "_target").get(key, default)
+
+    def pop(self, key, *args):
+        self._ensure_copied()
+        result = object.__getattribute__(self, "_target").pop(key, *args)
+        # Also update underlying dict
+        dict.pop(self, key, *args)
+        return result
+
+    def update(self, *args, **kwargs):
+        self._ensure_copied()
+        object.__getattribute__(self, "_target").update(*args, **kwargs)
+        # Also update underlying dict
+        dict.update(self, *args, **kwargs)
+
+    def setdefault(self, key, default=None):
+        self._ensure_copied()
+        result = object.__getattribute__(self, "_target").setdefault(key, default)
+        # Also update underlying dict
+        dict.setdefault(self, key, default)
+        return result
+
+    def __deepcopy__(self, memo):
+        """Return a deep copy of the underlying dict, not the proxy."""
+        target = object.__getattribute__(self, "_target")
+        return copy.deepcopy(target, memo)
+
+    def __reduce_ex__(self, protocol):
+        """For pickling, return the underlying dict, not the proxy."""
+        target = object.__getattribute__(self, "_target")
+        return (dict, (target,))
+
+
+class ListProxy(list):
+    """
+    Proxy for list that triggers copy-on-write in parent OptsDict on mutation.
+
+    Subclasses list to pass isinstance checks while providing copy-on-write semantics.
+    """
+
+    def __init__(self, target: list, parent_optsdict: "OptsDict", key: str):
+        # Initialize underlying list with target data AND keep _target
+        # We need both: underlying list for C code, _target for our logic
+        super().__init__(target)
+        object.__setattr__(self, "_target", target)
+        object.__setattr__(self, "_parent", parent_optsdict)
+        object.__setattr__(self, "_key", key)
+        object.__setattr__(self, "_copied", False)
+
+    def _ensure_copied(self):
+        """Copy target to parent's _local on first mutation."""
+        if not object.__getattribute__(self, "_copied"):
+            parent = object.__getattribute__(self, "_parent")
+            key = object.__getattribute__(self, "_key")
+            target = object.__getattribute__(self, "_target")
+
+            with parent._lock:
+                # Deep copy the entire list to parent's _local
+                copied = copy.deepcopy(target)
+                parent._local[key] = copied
+                object.__setattr__(self, "_target", copied)
+                object.__setattr__(self, "_copied", True)
+
+    def __getitem__(self, index):
+        return object.__getattribute__(self, "_target")[index]
+
+    def __setitem__(self, index, value):
+        self._ensure_copied()
+        object.__getattribute__(self, "_target")[index] = value
+
+    def __delitem__(self, index):
+        self._ensure_copied()
+        del object.__getattribute__(self, "_target")[index]
+
+    def __len__(self):
+        return len(object.__getattribute__(self, "_target"))
+
+    def __iter__(self):
+        return iter(object.__getattribute__(self, "_target"))
+
+    def __contains__(self, item):
+        return item in object.__getattribute__(self, "_target")
+
+    def insert(self, index, value):
+        self._ensure_copied()
+        object.__getattribute__(self, "_target").insert(index, value)
+
+    def append(self, value):
+        self._ensure_copied()
+        object.__getattribute__(self, "_target").append(value)
+
+    def extend(self, values):
+        self._ensure_copied()
+        object.__getattribute__(self, "_target").extend(values)
+
+    def remove(self, value):
+        self._ensure_copied()
+        object.__getattribute__(self, "_target").remove(value)
+
+    def pop(self, index=-1):
+        self._ensure_copied()
+        return object.__getattribute__(self, "_target").pop(index)
+
+    def __deepcopy__(self, memo):
+        """Return a deep copy of the underlying list, not the proxy."""
+        return copy.deepcopy(object.__getattribute__(self, "_target"), memo)
+
+    def __reduce_ex__(self, protocol):
+        """For pickling, return the underlying list, not the proxy."""
+        return (list, (object.__getattribute__(self, "_target"),))
+
+    def clear(self):
+        self._ensure_copied()
+        object.__getattribute__(self, "_target").clear()
+
+    def __repr__(self):
+        return repr(object.__getattribute__(self, "_target"))
+
+    def __str__(self):
+        return str(object.__getattribute__(self, "_target"))
+
+    def __eq__(self, other):
+        target = object.__getattribute__(self, "_target")
+        if isinstance(other, ListProxy):
+            return target == object.__getattribute__(other, "_target")
+        return target == other
+
+    def index(self, value, *args):
+        """Return first index of value."""
+        return object.__getattribute__(self, "_target").index(value, *args)
+
+    def count(self, value):
+        """Return number of occurrences of value."""
+        return object.__getattribute__(self, "_target").count(value)
+
+
+# DictProxy and ListProxy now subclass dict and list respectively, so they pass
+# isinstance checks. This ensures compatibility with Salt code that uses isinstance(x, dict).
+
+
 class MutationTracker:
     """
     Tracks mutations to OptsDict keys for auditing and future unwinding.
@@ -268,9 +493,15 @@ class OptsDict(MutableMapping):
         return False, None
 
     def __getitem__(self, key: str) -> Any:
-        """Get item, checking local then parent chain."""
+        """
+        Get item with proxy-based copy-on-write for mutable values.
+
+        When accessing mutable values from parent/base, we return a proxy object
+        that triggers copy-on-write on first mutation. This provides isolation
+        without copying until actually needed.
+        """
         with self._lock:
-            # Check local first
+            # Check local first - if already copied, return direct reference
             if key in self._local:
                 return self._local[key]
 
@@ -278,11 +509,24 @@ class OptsDict(MutableMapping):
             if self._parent is not None:
                 found, value = self._get_from_parent_chain(key)
                 if found:
+                    # Wrap mutable values in proxies to catch mutations
+                    if isinstance(value, dict) and not isinstance(value, OptsDict):
+                        return DictProxy(value, self, key)
+                    elif isinstance(value, list):
+                        return ListProxy(value, self, key)
+                    # Immutable values can be returned directly
                     return value
 
             # Check base (root level only)
             if self._parent is None and key in self._base:
-                return self._base[key]
+                value = self._base[key]
+                # Even root instances need proxies to track when values are mutated
+                # This allows us to know when a key has been accessed/modified
+                if isinstance(value, dict) and not isinstance(value, OptsDict):
+                    return DictProxy(value, self, key)
+                elif isinstance(value, list):
+                    return ListProxy(value, self, key)
+                return value
 
             raise KeyError(key)
 
@@ -584,6 +828,10 @@ def generate_global_mutation_report(include_locations: bool = True) -> str:
     return "\n".join(report_lines)
 
 
+# Global primary root OptsDict tracker (per-process)
+_primary_root_optsdict = None
+
+
 # Convenience function for backward compatibility
 def safe_opts_copy(opts: Any, name: str | None = None) -> OptsDict:
     """
@@ -606,8 +854,18 @@ def safe_opts_copy(opts: Any, name: str | None = None) -> OptsDict:
         from salt.utils.optsdict import safe_opts_copy
         opts = safe_opts_copy(opts, name="loader:states")
     """
+    global _primary_root_optsdict
+
     if isinstance(opts, OptsDict):
         return OptsDict.from_parent(opts, name=name)
     else:
-        # Converting from regular dict - create root OptsDict
-        return OptsDict.from_dict(opts, name=name)
+        # Converting from regular dict
+        # If we have a primary root, create a child instead of a new root
+        # This ensures all OptsDict instances share the same base data
+        if _primary_root_optsdict is not None:
+            return OptsDict.from_parent(_primary_root_optsdict, name=name)
+        else:
+            # First root - create it and store as primary
+            root = OptsDict.from_dict(opts, name=name)
+            _primary_root_optsdict = root
+            return root
