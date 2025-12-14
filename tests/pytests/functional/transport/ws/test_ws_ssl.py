@@ -79,6 +79,7 @@ async def test_ws_pub_server_with_ssl(
     finally:
         pub_server.close()
         pub_client.close()
+        process_manager.terminate()
 
     # Yield to loop to allow cleanup
     await asyncio.sleep(0.3)
@@ -142,6 +143,8 @@ async def test_ws_ssl_connection_refused_without_client_cert(
     master_opts["ssl"] = ssl_master_config
 
     minion_opts["transport"] = "ws"
+    # Remove any SSL config from previous tests - minion should NOT have SSL
+    minion_opts.pop("ssl", None)
     # Note: minion_opts does NOT have ssl config - connection should fail
 
     # Create publish server with SSL

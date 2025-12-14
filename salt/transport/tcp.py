@@ -14,6 +14,7 @@ import multiprocessing
 import queue
 import selectors
 import socket
+import ssl
 import threading
 import time
 import urllib
@@ -298,21 +299,27 @@ class PublishClient(salt.transport.base.PublishClient):
                     self._tcp_client = TCPClientKeepAlive(
                         self.opts, resolver=self.resolver
                     )
-                    # ctx = None
-                    # if self.ssl is not None:
-                    #     ctx = salt.transport.base.ssl_context(
-                    #         self.ssl, server_side=False
-                    #     )
+                    ctx = None
+                    if self.ssl is not None:
+                        ctx = salt.transport.base.ssl_context(
+                            self.ssl, server_side=False
+                        )
                     stream = await asyncio.wait_for(
                         self._tcp_client.connect(
                             ip_bracket(self.host, strip=True),
                             self.port,
-                            # ssl_options=ctx,
-                            ssl_options=self.opts.get("ssl"),
+                            ssl_options=ctx,
                             **kwargs,
                         ),
                         1,
                     )
+                    # When SSL is enabled, tornado does lazy SSL handshaking.
+                    # Give the handshake time to complete so failures are detected.
+                    if stream and self.ssl:
+                        await asyncio.sleep(0.1)
+                        if stream.closed():
+                            stream = None
+                            continue
                     self.unpacker = salt.utils.msgpack.Unpacker()
                     log.debug(
                         "PubClient connected to %r %r:%r", self, self.host, self.port
@@ -1092,6 +1099,7 @@ class PubServer(tornado.tcpserver.TCPServer):
         else:
             self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
         self.opts = opts
+        self.ssl = ssl  # Store SSL context for later use
         self._closing = False
         self.clients = set()
         self.presence_events = False
@@ -1146,18 +1154,76 @@ class PubServer(tornado.tcpserver.TCPServer):
                 continue
 
     def handle_stream(self, stream, address):
+        cert = None
         try:
             cert = stream.socket.getpeercert()
-        except AttributeError:
-            pass
-        else:
-            if cert:
-                name = salt.transport.base.common_name(cert)
-                log.error("Request client cert %r", name)
-        log.debug("Subscriber at %s connected", address)
+        except AttributeError as exc:
+            # AttributeError: socket has no SSL
+            if self.ssl is not None:
+                # Server requires SSL but client didn't provide it
+                stream.close()
+                return
+        except ValueError as exc:
+            # ValueError: SSL handshake not done yet
+            # When SSL is required, we need to wait for the handshake to complete
+            # to verify the client provided a valid certificate
+            if self.ssl is not None:
+                # Schedule async validation after handshake completes
+                self.io_loop.create_task(
+                    self._validate_ssl_and_add_client(stream, address)
+                )
+                return
         client = Subscriber(stream, address)
         self.clients.add(client)
         self.io_loop.create_task(self._stream_read(client))
+
+    async def _validate_ssl_and_add_client(self, stream, address):
+        """
+        Validate SSL handshake completed successfully before accepting client.
+        Called when handle_stream receives a connection before SSL handshake completes.
+        """
+        # Try multiple times with small delays to allow SSL handshake to complete
+        for attempt in range(10):
+            try:
+                # Check if stream is still open
+                if stream.closed():
+                    return
+
+                cert = stream.socket.getpeercert()
+
+                # If server requires client cert but none provided, reject
+                if not cert:
+                    stream.close()
+                    return
+
+                # Successfully got cert - add client
+                client = Subscriber(stream, address)
+                self.clients.add(client)
+                self.io_loop.create_task(self._stream_read(client))
+                return
+            except AttributeError as exc:
+                # Socket has no SSL - this shouldn't happen here but reject just in case
+                stream.close()
+                return
+            except ValueError as exc:
+                # SSL handshake not done yet - wait a bit and retry
+                if attempt < 9:  # Don't sleep on last attempt
+                    await asyncio.sleep(0.05)  # Short delay
+                continue
+            except ssl.SSLError as exc:
+                # SSL handshake failed
+                stream.close()
+                return
+            except Exception as exc:  # pylint: disable=broad-except
+                # Catch any unexpected errors during SSL validation
+                log.error(
+                    "Unexpected error during SSL validation for %s: %s", address, exc
+                )
+                stream.close()
+                return
+
+        # Handshake didn't complete after retries - reject
+        stream.close()
 
     # TODO: ACK the publish through IPC
     async def publish_payload(self, package, topic_list=None):

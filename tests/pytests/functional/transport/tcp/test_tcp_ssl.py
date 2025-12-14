@@ -6,10 +6,12 @@ and CERT_REQUIRED validation.
 """
 
 import asyncio
+import ssl
 
 import pytest
 
 import salt.transport
+import salt.utils.process
 
 pytestmark = [
     pytest.mark.core_test,
@@ -79,6 +81,7 @@ async def test_tcp_pub_server_with_ssl(
     finally:
         pub_server.close()
         pub_client.close()
+        process_manager.terminate()
 
     # Yield to loop to allow cleanup
     await asyncio.sleep(0.3)
@@ -142,6 +145,8 @@ async def test_tcp_ssl_connection_refused_without_client_cert(
     master_opts["ssl"] = ssl_master_config
 
     minion_opts["transport"] = "tcp"
+    # Remove any SSL config from previous tests - minion should NOT have SSL
+    minion_opts.pop("ssl", None)
     # Note: minion_opts does NOT have ssl config - connection should fail
 
     # Create publish server with SSL
@@ -158,11 +163,16 @@ async def test_tcp_ssl_connection_refused_without_client_cert(
         # Connection should fail or timeout
         try:
             await asyncio.wait_for(pub_client.connect(), timeout=5)
-            # If we get here, connection succeeded when it shouldn't have
-            pytest.fail(
-                "Client connected without SSL certificate when it should have been rejected"
-            )
-        except (asyncio.TimeoutError, OSError, ConnectionError):
+            # Connection succeeded - but wait to see if it closes due to SSL handshake failure
+            await asyncio.sleep(1)
+            # Try to check if stream is still open
+            if pub_client._stream and not pub_client._stream.closed():
+                # If we get here, connection succeeded when it shouldn't have
+                pytest.fail(
+                    "Client connected without SSL certificate when it should have been rejected"
+                )
+            # Else connection closed as expected
+        except (asyncio.TimeoutError, OSError, ConnectionError, ssl.SSLError):
             # Expected - connection should fail with timeout or connection error
             pass
         finally:
