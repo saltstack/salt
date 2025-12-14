@@ -318,6 +318,7 @@ class PublishClient(salt.transport.base.PublishClient):
                     if stream and self.ssl:
                         await asyncio.sleep(0.1)
                         if stream.closed():
+                            log.debug("TCP stream closed after SSL handshake")
                             stream = None
                             continue
                     self.unpacker = salt.utils.msgpack.Unpacker()
