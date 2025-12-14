@@ -694,3 +694,62 @@ def test_issue_61121_extend_is_to_strict(state, state_tree):
         ret = state.sls("requisite")
         result = normalize_ret(ret.raw)
         assert result == expected_result
+
+
+def test_issue_30971_sls_empty_output_requisite_not_found(state, state_tree):
+    """
+    Test that requiring an SLS file that produces no output (empty) should
+    not result in "requisites were not found" error.
+
+    Issue #30971: When an SLS file has conditional logic that results in no states
+    being generated (e.g., empty pillar data), a state that requires that SLS
+    file fails with "The following requisites were not found: require: sls:"
+
+    Expected behavior: The SLS file should be considered "satisfied" even if
+    it produces no output, and the requiring state should run successfully.
+    """
+    # First SLS file that produces no output (empty due to conditional)
+    # This simulates the repos.custom file that produces no states when
+    # pillar data is empty
+    empty_sls_contents = """
+    {% if False %}
+    # This will never execute, so this SLS file produces no states
+    test_state:
+      test.succeed_without_changes:
+        - name: test
+    {% endif %}
+    """
+
+    # Second SLS file that requires the first one
+    requiring_sls_contents = """
+    include:
+      - empty_sls
+
+    test_requiring_state:
+      test.succeed_without_changes:
+        - name: test_requiring
+        - require:
+          - sls: empty_sls
+    """
+
+    with pytest.helpers.temp_file(
+        "empty_sls.sls", empty_sls_contents, state_tree
+    ), pytest.helpers.temp_file("requiring.sls", requiring_sls_contents, state_tree):
+        ret = state.sls("requiring")
+
+        # The bug: This will fail with "The following requisites were not found"
+        # Expected: The state should succeed even though empty_sls produced no output
+        for state_return in ret:
+            # This assertion will fail with the bug - the state will have result=False
+            # and comment containing "The following requisites were not found"
+            assert state_return.result is True, (
+                f"State {state_return.name} failed: {state_return.comment}. "
+                "This is the bug: SLS files that produce no output should still "
+                "satisfy requisites."
+            )
+            assert (
+                "The following requisites were not found" not in state_return.comment
+            ), (
+                f"State {state_return.name} incorrectly reports requisites not found. "
+                "This is the bug: requiring an empty SLS file should not fail."
+            )
