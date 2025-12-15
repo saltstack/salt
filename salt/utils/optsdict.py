@@ -686,6 +686,38 @@ class OptsDict(MutableMapping):
             local_keys = self.get_local_keys()
             return all_keys - local_keys
 
+    def get_root(self) -> "OptsDict":
+        """
+        Get the root OptsDict instance.
+
+        Walks up the parent chain to find the root (the OptsDict with no parent).
+        Useful when you need to set a value that should be visible to all children.
+
+        Returns:
+            The root OptsDict instance
+        """
+        root = self
+        while root._parent is not None:
+            root = root._parent
+        return root
+
+    def set_shared(self, key: str, value: Any):
+        """
+        Set a value on the root OptsDict so all children can see it.
+
+        This is useful for setting shared configuration values (like grains, pillar)
+        that need to be visible to all loaders/children, not just the current instance.
+
+        Args:
+            key: The configuration key to set
+            value: The value to set
+
+        Example:
+            opts.set_shared("grains", grains_data)  # All children can now see grains
+        """
+        root = self.get_root()
+        root[key] = value
+
     def get_memory_stats(self) -> dict[str, Any]:
         """
         Estimate memory usage statistics.

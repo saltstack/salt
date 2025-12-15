@@ -357,8 +357,26 @@ def load_states():
     states = {}
 
     # the loader expects to find pillar & grain data
-    __opts__["grains"] = salt.loader.grains(__opts__)
-    __opts__["pillar"] = __pillar__.value()
+    # Use set_shared() if __opts__ is an OptsDict to ensure all children can see these values
+    # Prefer __grains__ if available, then check __opts__, finally load fresh
+    if __grains__:
+        grains = __grains__
+    elif "grains" in __opts__:
+        grains = __opts__["grains"]
+    else:
+        grains = salt.loader.grains(__opts__)
+
+    pillar = __pillar__.value()
+
+    if hasattr(__opts__, "set_shared"):
+        # OptsDict - set on root so all children can see
+        __opts__.set_shared("grains", grains)
+        __opts__.set_shared("pillar", pillar)
+    else:
+        # Regular dict - set normally
+        __opts__["grains"] = grains
+        __opts__["pillar"] = pillar
+
     lazy_utils = salt.loader.utils(__opts__)
     lazy_funcs = salt.loader.minion_mods(__opts__, utils=lazy_utils)
     lazy_serializers = salt.loader.serializers(__opts__)
