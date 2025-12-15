@@ -151,6 +151,11 @@ def present(
             ret["comment"] = f"ssh.check_known_host error: {err}"
             return ret
 
+        if isinstance(result, dict) and "error" in result:
+            ret["result"] = False
+            if "error" in result:
+                ret["comment"] = result["error"]
+            return ret
         if result == "exists":
             comment = f"Host {name} is already in {config}"
             ret["result"] = True

@@ -98,12 +98,22 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
     @pytest.mark.slow_test
     def test_present_fail(self):
         # save something wrong
+        kwargs = {
+            "name": "github.com",
+            "user": "root",
+            "enc": "ssh-rsa",
+            "fingerprint": "aa:bb:cc:dd",
+            "config": self.known_hosts,
+        }
+        ret = self.run_state("ssh_known_hosts.present", **kwargs)
+        self.assertSaltFalseReturn(ret)
+        # Missing user.
+        kwargs["user"] = "baduser"
+        kwargs["fingerprint"] = GITHUB_FINGERPRINT
+        del kwargs["config"]
         ret = self.run_state(
             "ssh_known_hosts.present",
-            name="github.com",
-            user="root",
-            fingerprint="aa:bb:cc:dd",
-            config=self.known_hosts,
+            **kwargs,
         )
         self.assertSaltFalseReturn(ret)
 
