@@ -972,6 +972,8 @@ def check_known_host(
         port=port,
         fingerprint_hash_type=fingerprint_hash_type,
     )
+    if known_host_entries and "error" in known_host_entries:
+        return known_host_entries
     known_keys = [h["key"] for h in known_host_entries] if known_host_entries else []
     known_fingerprints = (
         [h["fingerprint"] for h in known_host_entries] if known_host_entries else []
@@ -1117,6 +1119,9 @@ def set_known_host(
         port=port,
         fingerprint_hash_type=fingerprint_hash_type,
     )
+    if stored_host_entries and "error" in stored_host_entries:
+        return stored_host_entries
+
     stored_keys = (
         [h["key"] for h in stored_host_entries if enc is None or h["enc"] == enc]
         if stored_host_entries
