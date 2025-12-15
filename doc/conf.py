@@ -165,6 +165,7 @@ extensions = [
 # This is optional for package builds but useful during development
 try:
     import enchant
+
     extensions.append("sphinxcontrib.spelling")
 except ImportError:
     log.info("Spell-checking disabled: enchant library not available")
@@ -209,7 +210,7 @@ if _missing_deps:
         # For man pages, this is expected - they don't need Salt modules
         log.info(
             "Building man pages with mocked dependencies: %s (this is normal for man pages)",
-            ", ".join(_missing_deps)
+            ", ".join(_missing_deps),
         )
     else:
         # For HTML/full builds, warn that docs may be incomplete
@@ -221,10 +222,9 @@ if _missing_deps:
             "Autodoc will use mocked modules. Documentation will be generated but\n"
             "may be incomplete or show incorrect type hints.\n\n"
             "For complete documentation, install with:\n"
-            "  pip install %s\n"
-            + "=" * 70,
+            "  pip install %s\n" + "=" * 70,
             ", ".join(_missing_deps),
-            " ".join(_missing_deps)
+            " ".join(_missing_deps),
         )
 
 # strip git rev as there won't necessarily be a release based on it
