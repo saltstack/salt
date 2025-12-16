@@ -362,14 +362,13 @@ def load_states():
     if "grains" not in __opts__:
         # No grains at all - load fresh (non-test scenario)
         grains = salt.loader.grains(__opts__)
-        if hasattr(__opts__, "set_shared"):
-            __opts__.set_shared("grains", grains)
-        else:
-            __opts__["grains"] = grains
+        __opts__["grains"] = grains
     else:
         # Ensure minimal required grain keys exist for module loading
-        grains = __opts__["grains"]
-        if "kernel" not in grains:
+        # IMPORTANT: Mutate the existing dict in place so that loaders that
+        # already have references to __opts__["grains"] will see the updates.
+        # Do NOT replace the dict with a new one.
+        if "kernel" not in __opts__["grains"]:
             # Add minimal grains needed for modules to load
             # Use defaults that work on most systems
             defaults = {
@@ -379,21 +378,13 @@ def load_states():
                 "cpuarch": "x86_64",
             }
             for key, value in defaults.items():
-                if key not in grains:
-                    grains[key] = value
-            # Update in opts
-            if hasattr(__opts__, "set_shared"):
-                __opts__.set_shared("grains", grains)
-            else:
-                __opts__["grains"] = grains
+                if key not in __opts__["grains"]:
+                    __opts__["grains"][key] = value
 
     # Ensure pillar is set if needed
     if "pillar" not in __opts__ and __pillar__:
         pillar = __pillar__.value()
-        if hasattr(__opts__, "set_shared"):
-            __opts__.set_shared("pillar", pillar)
-        else:
-            __opts__["pillar"] = pillar
+        __opts__["pillar"] = pillar
 
     lazy_utils = salt.loader.utils(__opts__)
     lazy_funcs = salt.loader.minion_mods(__opts__, utils=lazy_utils)
