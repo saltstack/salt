@@ -1,9 +1,9 @@
 import logging
+from collections import OrderedDict
 
 import pytest
 
 import salt.renderers.pyobjects as pyobjects
-from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock
 
 log = logging.getLogger(__name__)

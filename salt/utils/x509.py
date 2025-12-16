@@ -4,6 +4,7 @@ import ipaddress
 import logging
 import os.path
 import re
+from collections import OrderedDict
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from urllib.parse import urlparse, urlunparse
@@ -21,7 +22,6 @@ import salt.utils.immutabletypes as immutabletypes
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.utils.odict import OrderedDict
 
 try:
     import idna

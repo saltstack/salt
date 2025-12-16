@@ -42,12 +42,18 @@ def test_adding_repo_file(pkgrepo, repo_uri, tmp_path):
     """
     test adding a repo file using pkgrepo.managed
     """
+    aptkey = True if salt.utils.path.which("apt-key") else False
+    signedby = ""
+    if not aptkey:
+        signedby = " [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg]"
     repo_file = str(tmp_path / "stable-binary.list")
-    repo_content = f"deb {repo_uri} stable main"
-    ret = pkgrepo.managed(name=repo_content, file=repo_file, clean_file=True)
+    repo_content = f"deb{signedby} {repo_uri} stable main"
+    ret = pkgrepo.managed(
+        name=repo_content, file=repo_file, clean_file=True, aptkey=aptkey
+    )
     with salt.utils.files.fopen(repo_file, "r") as fp:
-        file_content = fp.read()
-    assert file_content.strip() == repo_content
+        file_content = fp.read().strip()
+    assert file_content == repo_content
 
 
 @pytest.mark.requires_salt_states("pkgrepo.managed")
@@ -56,19 +62,24 @@ def test_adding_repo_file_arch(pkgrepo, repo_uri, tmp_path, subtests):
     test adding a repo file using pkgrepo.managed
     and setting architecture
     """
+    aptkey = True if salt.utils.path.which("apt-key") else False
+    signedby = ""
+    if not aptkey:
+        signedby = " signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg"
     repo_file = str(tmp_path / "stable-binary.list")
-    repo_content = f"deb [arch=amd64  ] {repo_uri} stable main"
-    pkgrepo.managed(name=repo_content, file=repo_file, clean_file=True)
+    repo_content = f"deb [arch=amd64{signedby} ] {repo_uri} stable main"
+    ret = pkgrepo.managed(name=repo_content, file=repo_file, clean_file=True)
     with salt.utils.files.fopen(repo_file, "r") as fp:
-        file_content = fp.read()
-        assert file_content.strip() == f"deb [arch=amd64] {repo_uri} stable main"
+        file_content = fp.read().strip()
+        assert file_content == f"deb [arch=amd64{signedby}] {repo_uri} stable main"
     with subtests.test("With multiple archs"):
-        repo_content = f"deb [arch=amd64,i386  ] {repo_uri} stable main"
+        repo_content = f"deb [arch=amd64,i386{signedby}  ] {repo_uri} stable main"
         pkgrepo.managed(name=repo_content, file=repo_file, clean_file=True)
         with salt.utils.files.fopen(repo_file, "r") as fp:
-            file_content = fp.read()
+            file_content = fp.read().strip()
             assert (
-                file_content.strip() == f"deb [arch=amd64,i386] {repo_uri} stable main"
+                file_content
+                == f"deb [arch=amd64,i386{signedby}] {repo_uri} stable main"
             )
 
 
@@ -79,14 +90,18 @@ def test_adding_repo_file_cdrom(pkgrepo, tmp_path):
     The issue is that CDROM installs often have [] in the line, and we
     should still add the repo even though it's not setting arch(for example)
     """
+    aptkey = True if salt.utils.path.which("apt-key") else False
+    signedby = ""
+    if not aptkey:
+        signedby = " [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg]"
     repo_file = str(tmp_path / "cdrom.list")
-    repo_content = "deb cdrom:[Debian GNU/Linux 11.4.0 _Bullseye_ - Official amd64 NETINST 20220709-10:31]/ stable main"
-    pkgrepo.managed(name=repo_content, file=repo_file, clean_file=True)
+    repo_content = f"deb{signedby} cdrom:[Debian GNU/Linux 11.4.0 _Bullseye_ - Official amd64 NETINST 20220709-10:31]/ stable main"
+    ret = pkgrepo.managed(name=repo_content, file=repo_file, clean_file=True)
     with salt.utils.files.fopen(repo_file, "r") as fp:
-        file_content = fp.read()
+        file_content = fp.read().strip()
         assert (
-            file_content.strip()
-            == "deb cdrom:[Debian GNU/Linux 11.4.0 _Bullseye_ - Official amd64 NETINST 20220709-10:31]/ stable main"
+            file_content
+            == f"deb{signedby} cdrom:[Debian GNU/Linux 11.4.0 _Bullseye_ - Official amd64 NETINST 20220709-10:31]/ stable main"
         )
 
 
@@ -364,12 +379,19 @@ def test_pkgrepo_with_architectures(pkgrepo, grains, sources_list_file, subtests
     """
     Test managing a repo with architectures specified
     """
+    aptkey = True if salt.utils.path.which("apt-key") else False
+    signedby = ""
+    if not aptkey:
+        signedby = "signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg"
     name = "deb {{arch}}http://foo.com/bar/latest {oscodename} main".format(
         oscodename=grains["oscodename"]
     )
 
     def _get_arch(arch):
-        return f"[arch={arch}] " if arch else ""
+        if signedby:
+            return f"[arch={arch} {signedby}] " if arch else f"[{signedby}] "
+        else:
+            return f"[arch={arch}] " if arch else ""
 
     def _run(arch=None, test=False):
         return pkgrepo.managed(
@@ -382,14 +404,14 @@ def test_pkgrepo_with_architectures(pkgrepo, grains, sources_list_file, subtests
     with subtests.test("test=True"):
         # Run with test=True
         ret = _run(test=True)
-        assert ret.changes == {"repo": name.format(arch="")}
+        assert ret.changes == {"repo": name.format(arch=_get_arch(""))}
         assert "would be" in ret.comment
         assert ret.result is None
 
     with subtests.test("test=False"):
         # Run for real
         ret = _run()
-        assert ret.changes == {"repo": name.format(arch="")}
+        assert ret.changes == {"repo": name.format(arch=_get_arch(""))}
         assert ret.comment.startswith("Configured")
         assert ret.result is True
 
@@ -412,7 +434,7 @@ def test_pkgrepo_with_architectures(pkgrepo, grains, sources_list_file, subtests
     expected_changes = {
         "line": {
             "new": name.format(arch=_get_arch("amd64")),
-            "old": name.format(arch=""),
+            "old": name.format(arch=_get_arch("")),
         },
         "architectures": {"new": ["amd64"], "old": []},
     }
@@ -450,7 +472,7 @@ def test_pkgrepo_with_architectures(pkgrepo, grains, sources_list_file, subtests
 
     expected_changes = {
         "line": {
-            "new": name.format(arch=""),
+            "new": name.format(arch=_get_arch("")),
             "old": name.format(arch=_get_arch("amd64")),
         },
         "architectures": {"new": [], "old": ["amd64"]},
@@ -519,15 +541,19 @@ def test_repo_present_absent_trailing_slash_uri(
     """
     test adding and then removing a repo with a trailing slash in the uri
     """
+    aptkey = True if salt.utils.path.which("apt-key") else False
+    signedby = ""
+    if not aptkey:
+        signedby = " [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg]"
     # with the trailing slash
-    repo_content = f"deb {repo_uri}/ stable main"
+    repo_content = f"deb{signedby} {repo_uri}/ stable main"
     # initial creation
     ret = pkgrepo.managed(
         name=repo_content, file=trailing_slash_repo_file, refresh=False, clean_file=True
     )
     with salt.utils.files.fopen(trailing_slash_repo_file, "r") as fp:
         file_content = fp.read()
-    assert file_content.strip() == f"deb {repo_uri}/ stable main"
+    assert file_content.strip() == f"deb{signedby} {repo_uri}/ stable main"
     assert ret.changes
     # no changes
     ret = pkgrepo.managed(
@@ -546,8 +572,12 @@ def test_repo_present_absent_no_trailing_slash_uri(
     """
     test adding a repo with a trailing slash in the uri
     """
+    aptkey = True if salt.utils.path.which("apt-key") else False
+    signedby = ""
+    if not aptkey:
+        signedby = " [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg]"
     # without the trailing slash
-    repo_content = f"deb {repo_uri} stable main"
+    repo_content = f"deb{signedby} {repo_uri} stable main"
     # initial creation
     ret = pkgrepo.managed(
         name=repo_content, file=trailing_slash_repo_file, refresh=False, clean_file=True
@@ -574,8 +604,12 @@ def test_repo_present_absent_no_trailing_slash_uri_add_slash(
     test adding a repo without a trailing slash, and then running it
     again with a trailing slash.
     """
+    aptkey = True if salt.utils.path.which("apt-key") else False
+    signedby = ""
+    if not aptkey:
+        signedby = " [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg]"
     # without the trailing slash
-    repo_content = f"deb {repo_uri} stable main"
+    repo_content = f"deb{signedby} {repo_uri} stable main"
     # initial creation
     ret = pkgrepo.managed(
         name=repo_content, file=trailing_slash_repo_file, refresh=False, clean_file=True
@@ -585,7 +619,7 @@ def test_repo_present_absent_no_trailing_slash_uri_add_slash(
     assert file_content.strip() == repo_content
     assert ret.changes
     # now add a trailing slash in the name
-    repo_content = f"deb {repo_uri}/ stable main"
+    repo_content = f"deb{signedby} {repo_uri}/ stable main"
     ret = pkgrepo.managed(
         name=repo_content, file=trailing_slash_repo_file, refresh=False
     )

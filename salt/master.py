@@ -16,8 +16,7 @@ import stat
 import sys
 import threading
 import time
-
-import tornado.gen
+from collections import OrderedDict
 
 import salt.acl
 import salt.auth
@@ -62,7 +61,6 @@ from salt.transport import TRANSPORTS
 from salt.utils.channel import iter_transport_opts
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler
 from salt.utils.event import tagify
-from salt.utils.odict import OrderedDict
 from salt.utils.zeromq import ZMQ_VERSION_INFO, zmq
 
 try:
@@ -951,7 +949,7 @@ class Master(SMaster):
         if self.opts.get("cluster_id", None):
             # Notify the rest of the cluster we're starting.
             ipc_publisher.send_aes_key_event()
-        self.process_manager.run()
+        asyncio.run(self.process_manager.run())
 
     def _handle_signals(self, signum, sigframe):
         # escalate the signals to the process manager
@@ -1008,13 +1006,19 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
             log.trace("Ignore tag %s", tag)
 
     def run(self):
-        io_loop = tornado.ioloop.IOLoop()
+        io_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(io_loop)
         with salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], io_loop=io_loop, listen=True
         ) as event_bus:
             event_bus.subscribe("")
             event_bus.set_event_handler(self.handle_event)
-            io_loop.start()
+            try:
+                io_loop.run_forever()
+            except (KeyboardInterrupt, SystemExit):
+                pass
+            finally:
+                io_loop.close()
 
 
 class ReqServer(salt.utils.process.SignalHandlingProcess):
@@ -1175,16 +1179,18 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         Bind to the local port
         """
-        self.io_loop = tornado.ioloop.IOLoop()
+        self.io_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.io_loop)
         for req_channel in self.req_channels:
             req_channel.post_fork(
                 self._handle_payload, io_loop=self.io_loop
             )  # TODO: cleaner? Maybe lazily?
         try:
-            self.io_loop.start()
+            self.io_loop.run_forever()
         except (KeyboardInterrupt, SystemExit):
-            # Tornado knows what to do
             pass
+        finally:
+            self.io_loop.close()
 
     async def _handle_payload(self, payload):
         """

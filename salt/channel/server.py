@@ -143,7 +143,22 @@ class ReqServerChannel:
         ):
             log.warn("bad load received on socket")
             return "bad load"
-        version = payload.get("version", 0)
+        try:
+            version = int(payload.get("version", 0))
+        except ValueError:
+            version = 0
+
+        # Enforce minimum authentication protocol version to prevent downgrade attacks
+        minimum_version = self.opts.get("minimum_auth_version", 0)
+        if minimum_version > 0 and version < minimum_version:
+            log.warning(
+                "Rejected authentication attempt using protocol version %d "
+                "(minimum required: %d)",
+                version,
+                minimum_version,
+            )
+            return "bad load"
+
         try:
             payload = self._decode_payload(payload, version)
         except Exception as exc:  # pylint: disable=broad-except
@@ -1156,10 +1171,13 @@ class MasterPubServerChannel:
                 payload_handler=self.handle_pool_publish,
             )
             self.pool_puller.start()
-        self.io_loop.add_callback(
-            self.transport.publisher,
-            self.publish_payload,
-            io_loop=self.io_loop,
+        # Extract asyncio loop for create_task
+        aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
+        aio_loop.create_task(
+            self.transport.publisher(
+                self.publish_payload,
+                io_loop=self.io_loop,
+            )
         )
         # run forever
         try:

@@ -302,6 +302,7 @@ import logging
 import multiprocessing
 import os
 import time
+from collections import OrderedDict
 
 import salt.client
 import salt.exceptions
@@ -314,7 +315,6 @@ import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.decorators import memoize
 from salt.utils.json import dumps, loads
-from salt.utils.odict import OrderedDict
 
 try:
     from junit_xml import TestCase, TestSuite

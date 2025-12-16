@@ -21,7 +21,7 @@ import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.verify
 import salt.utils.versions
-from salt.utils.asynchronous import SyncWrapper
+from salt.utils.asynchronous import SyncWrapper, aioloop
 
 log = logging.getLogger(__name__)
 
@@ -422,7 +422,7 @@ class AsyncPubChannel:
 
     def __init__(self, opts, transport, auth, io_loop=None):
         self.opts = opts
-        self.io_loop = io_loop
+        self.io_loop = aioloop(io_loop)
         self.auth = auth
         try:
             # This loads or generates the minion's public key.
@@ -636,7 +636,7 @@ class AsyncPubChannel:
         return self
 
     def __exit__(self, *args):
-        self.io_loop.spawn_callback(self.close)
+        self.io_loop.call_soon(self.close)
 
     async def __aenter__(self):
         return self

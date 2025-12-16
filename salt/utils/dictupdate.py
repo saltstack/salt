@@ -5,13 +5,13 @@ http://stackoverflow.com/a/3233356
 
 import copy
 import logging
+from collections import OrderedDict
 from collections.abc import Mapping
 
 import salt.utils.data
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltInvocationError
 from salt.utils.decorators.jinja import jinja_filter
-from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 

@@ -25,22 +25,25 @@ runs:
   using: composite
 
   steps:
+    - name: Get Hash For Onedir Deps Cache
+      id: onedir-deps-hash
+      shell: bash
+      run: |
+        HASH=$(python3 .github/scripts/hash-files.py \
+          '.relenv/**/*.xz' \
+          'requirements/static/pkg/*/*.txt' \
+          'tools/pkg/build.py' \
+          '.github/actions/build-onedir-deps/action.yml' \
+          '.github/workflows/build-deps-onedir-*.yml' \
+          'cicd/shared-gh-workflows-context.yml')
+        echo "hash=${HASH}" | tee -a "$GITHUB_OUTPUT"
+
     - name: Cache Deps Onedir Package Directory
       id: onedir-pkg-cache
       uses: ./.github/actions/cache
       with:
         path: artifacts/${{ inputs.package-name }}
-        key: >
-          ${{ inputs.cache-prefix }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{
-            hashFiles(
-              format('{0}/.relenv/**/*.xz', github.workspace),
-              'requirements/static/pkg/*/*.txt',
-              'tools/pkg/build.py',
-              '.github/actions/build-onedir-deps/action.yml',
-              '.github/workflows/build-deps-onedir-*.yml',
-              'cicd/shared-gh-workflows-context.yml'
-            )
-          }}
+        key: ${{ inputs.cache-prefix }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ steps.onedir-deps-hash.outputs.hash }}
 
     - name: Install Salt Onedir Package Dependencies
       shell: bash

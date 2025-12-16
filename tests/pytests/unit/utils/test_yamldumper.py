@@ -6,7 +6,7 @@ from collections import OrderedDict, defaultdict
 
 import salt.utils.yamldumper
 from salt.utils.context import NamespacedDictWrapper
-from salt.utils.odict import HashableOrderedDict
+from salt.utils.datastructures import HashableOrderedDict
 
 
 def test_yaml_dump():

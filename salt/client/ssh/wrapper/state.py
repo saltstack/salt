@@ -28,6 +28,20 @@ __func_alias__ = {"apply_": "apply"}
 log = logging.getLogger(__name__)
 
 
+def _set_grains_shared():
+    """
+    Set grains on __opts__ in a way that's visible to all loaders.
+
+    If __opts__ is an OptsDict, use set_shared() to set grains on the root
+    so all children/loaders can see it. Otherwise, use direct assignment.
+    """
+    grains = __grains__.value() if hasattr(__grains__, "value") else __grains__
+    if hasattr(__opts__, "set_shared"):
+        __opts__.set_shared("grains", grains)
+    else:
+        __opts__["grains"] = grains
+
+
 def _ssh_state(chunks, st_kwargs, kwargs, pillar, test=False):
     """
     Function to run a state with the given chunk via salt-ssh
@@ -148,7 +162,7 @@ def sls(mods, saltenv="base", test=None, exclude=None, **kwargs):
     Create the seed file for a state.sls run
     """
     st_kwargs = __salt__.kwargs
-    __opts__["grains"] = __grains__.value()
+    _set_grains_shared()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     opts["test"] = _get_test_value(test, **kwargs)
     initial_pillar = _get_initial_pillar(opts)
@@ -326,7 +340,7 @@ def low(data, **kwargs):
         salt '*' state.low '{"state": "pkg", "fun": "installed", "name": "vi"}'
     """
     st_kwargs = __salt__.kwargs
-    __opts__["grains"] = __grains__.value()
+    _set_grains_shared()
     chunks = [data]
     with salt.client.ssh.state.SSHHighState(
         __opts__,
@@ -413,7 +427,7 @@ def high(data, **kwargs):
         salt '*' state.high '{"vim": {"pkg": ["installed"]}}'
     """
     st_kwargs = __salt__.kwargs
-    __opts__["grains"] = __grains__.value()
+    _set_grains_shared()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     pillar_override = kwargs.get("pillar")
     initial_pillar = _get_initial_pillar(opts)
@@ -656,7 +670,7 @@ def highstate(test=None, **kwargs):
         salt '*' state.highstate exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     """
     st_kwargs = __salt__.kwargs
-    __opts__["grains"] = __grains__.value()
+    _set_grains_shared()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     opts["test"] = _get_test_value(test, **kwargs)
     pillar_override = kwargs.get("pillar")
@@ -746,7 +760,7 @@ def top(topfn, test=None, **kwargs):
         salt '*' state.top reverse_top.sls exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     """
     st_kwargs = __salt__.kwargs
-    __opts__["grains"] = __grains__.value()
+    _set_grains_shared()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     opts["test"] = _get_test_value(test, **kwargs)
     pillar_override = kwargs.get("pillar")
@@ -834,7 +848,7 @@ def show_highstate(**kwargs):
 
         salt '*' state.show_highstate
     """
-    __opts__["grains"] = __grains__.value()
+    _set_grains_shared()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     pillar_override = kwargs.get("pillar")
     initial_pillar = _get_initial_pillar(opts)
@@ -878,7 +892,7 @@ def show_lowstate(**kwargs):
 
         salt '*' state.show_lowstate
     """
-    __opts__["grains"] = __grains__.value()
+    _set_grains_shared()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     with salt.client.ssh.state.SSHHighState(
         opts,
@@ -1014,7 +1028,7 @@ def show_sls(mods, saltenv="base", test=None, **kwargs):
 
         salt '*' state.show_sls core,edit.vim dev
     """
-    __opts__["grains"] = __grains__.value()
+    _set_grains_shared()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     opts["test"] = _get_test_value(test, **kwargs)
     pillar_override = kwargs.get("pillar")
@@ -1074,7 +1088,7 @@ def show_low_sls(mods, saltenv="base", test=None, **kwargs):
 
         salt '*' state.show_low_sls core,edit.vim dev
     """
-    __opts__["grains"] = __grains__.value()
+    _set_grains_shared()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     opts["test"] = _get_test_value(test, **kwargs)
     pillar_override = kwargs.get("pillar")
@@ -1157,7 +1171,7 @@ def show_top(**kwargs):
 
         salt '*' state.show_top
     """
-    __opts__["grains"] = __grains__
+    _set_grains_shared()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     with salt.client.ssh.state.SSHHighState(
         opts,
@@ -1197,7 +1211,7 @@ def single(fun, name, test=None, **kwargs):
 
     """
     st_kwargs = __salt__.kwargs
-    __opts__["grains"] = __grains__.value()
+    _set_grains_shared()
 
     # state.fun -> [state, fun]
     comps = fun.split(".")
