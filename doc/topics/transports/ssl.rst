@@ -75,7 +75,7 @@ Specific options can be sent to the minion also, as defined in the Python
 .. _tls-encryption-optimization:
 
 TLS Encryption Optimization
-============================
+===========================
 
 .. versionadded:: 3008.0
 
@@ -149,7 +149,7 @@ The TLS optimization requires all of the following conditions:
 If any requirement is not met, Salt automatically falls back to standard AES encryption.
 
 Certificate Identity Requirement
----------------------------------
+--------------------------------
 
 To prevent minion impersonation attacks, minion certificates must contain the
 minion ID. This can be done in two ways:
