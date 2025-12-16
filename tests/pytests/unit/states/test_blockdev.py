@@ -1,5 +1,5 @@
 """
-    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
+:codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
 import os
@@ -24,13 +24,17 @@ def test_tuned():
 
     ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
-    comt = ("Changes to {} cannot be applied. Not a block device. ").format(name)
-    with patch.dict(blockdev.__salt__, {"file.is_blkdev": False}):
-        ret.update({"comment": comt})
+    comt = ("Changes to {} cannot be applied. Not a block device.").format(name)
+    with patch.dict(
+        blockdev.__salt__, {"file.is_blkdev": MagicMock(return_value=False)}
+    ):
+        ret.update({"comment": comt, "result": False})
         assert blockdev.tuned(name) == ret
 
     comt = f"Changes to {name} will be applied "
-    with patch.dict(blockdev.__salt__, {"file.is_blkdev": True}):
+    with patch.dict(
+        blockdev.__salt__, {"file.is_blkdev": MagicMock(return_value=True)}
+    ):
         ret.update({"comment": comt, "result": None})
         with patch.dict(blockdev.__opts__, {"test": True}):
             assert blockdev.tuned(name) == ret

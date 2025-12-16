@@ -3309,7 +3309,7 @@ def test_bsd_osfullname():
             os_grains = core.os_data()
 
     assert "osfullname" in os_grains
-    assert os_grains.get("osfullname") == "FreeBSD"
+    assert os_grains.get("osfullname") == "FreeBSD 10.3"
 
 
 def test_saltversioninfo():

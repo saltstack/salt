@@ -30,7 +30,9 @@ IMCAC - Immediate Custom Action - It's immediate
     />
 
     <!-- Prevent downgrade -->
-    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <MajorUpgrade
+      DowngradeErrorMessage="A newer version of [ProductName] is already installed."
+      AllowSameVersionUpgrades="yes" />
 
     <!-- Do not create cab files -->
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
