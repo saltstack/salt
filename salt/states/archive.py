@@ -165,73 +165,6 @@ def _cleanup_destdir(name):
         pass
 
 
-def _check_sig(
-    on_file,
-    signature,
-    signed_by_any=None,
-    signed_by_all=None,
-    keyring=None,
-    gnupghome=None,
-    sig_backend="gpg",
-):
-    try:
-        verify = __salt__[f"{sig_backend}.verify"]
-    except KeyError:
-        raise CommandExecutionError(
-            f"Signature verification requires the {sig_backend} module, "
-            "which could not be found. Make sure you have the "
-            "necessary tools and libraries intalled"
-        )
-    # The GPG module does not understand URLs as signatures currently.
-    # Also, we want to ensure that, when verification fails, we get rid
-    # of the cached signatures.
-    final_sigs = None
-    if signature is not None:
-        sigs = [signature] if isinstance(signature, str) else signature
-        sigs_cached = []
-        final_sigs = []
-        for sig in sigs:
-            cached_sig = None
-            try:
-                urlparse(sig)
-            except (TypeError, ValueError):
-                pass
-            else:
-                cached_sig = __salt__["cp.cache_file"](sig, __env__)
-            if not cached_sig:
-                # The GPG module expects signatures as a single file path currently
-                if sig_backend == "gpg":
-                    raise CommandExecutionError(
-                        f"Detached signature file {sig} not found"
-                    )
-            else:
-                sigs_cached.append(cached_sig)
-            final_sigs.append(cached_sig or sig)
-        if isinstance(signature, str):
-            final_sigs = final_sigs[0]
-
-    res = verify(
-        filename=on_file,
-        signature=final_sigs,
-        keyring=keyring,
-        gnupghome=gnupghome,
-        signed_by_any=signed_by_any,
-        signed_by_all=signed_by_all,
-    )
-
-    if res["res"] is True:
-        return
-    # Ensure detached signature and file are deleted from cache
-    # on signature verification failure.
-    if signature is not None:
-        for sig in sigs_cached:
-            salt.utils.files.safe_rm(sig)
-    salt.utils.files.safe_rm(on_file)
-    raise CommandExecutionError(
-        f"The file's signature could not be verified: {res['message']}"
-    )
-
-
 def extracted(
     name,
     source,
@@ -257,13 +190,6 @@ def extracted(
     enforce_ownership_on=None,
     archive_format=None,
     use_etag=False,
-    signature=None,
-    source_hash_sig=None,
-    signed_by_any=None,
-    signed_by_all=None,
-    keyring=None,
-    gnupghome=None,
-    sig_backend="gpg",
     **kwargs,
 ):
     """
@@ -516,7 +442,7 @@ def extracted(
         .. warning::
             With this argument set to ``True`` Salt will only check for the ``source_hash``
             against the local hash of the ``sourse``. So if you, for example, remove extracted
-            files without clearing the Salt Minion cache next time you execute the state Salt
+            files without clearing the Salt Minion cache next time you execute
             will not notice that extraction is required if the hashes are still match.
 
         .. versionadded:: 3000
@@ -745,71 +671,6 @@ def extracted(
 
         .. versionadded:: 3005
 
-    signature
-        Ensure a valid GPG signature exists on the selected ``source`` file.
-        This needs to be a file URI retrievable by
-        `:py:func:`cp.cache_file <salt.modules.cp.cache_file>` which
-        identifies a detached signature.
-
-        .. note::
-
-            A signature is only enforced directly after caching the file,
-            before it is extracted to its final destination. Existing files
-            at the target will never be modified.
-
-            It will be enforced regardless of source type.
-
-        .. versionadded:: 3007.0
-
-    source_hash_sig
-        When ``source`` is a remote file source, ``source_hash`` is a file,
-        ``skip_verify`` is not true and ``use_etag`` is not true, ensure a
-        valid GPG signature exists on the source hash file.
-        Set this to ``true`` for an inline (clearsigned) signature, or to a
-        file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
-        for a detached one.
-
-        .. note::
-
-            A signature on the ``source_hash`` file is enforced regardless of
-            changes since its contents are used to check if an existing file
-            is in the correct state - but only for remote sources!
-            As for ``signature``, existing target files will not be modified,
-            only the cached source_hash and source_hash_sig files will be removed.
-
-        .. versionadded:: 3007.0
-
-    signed_by_any
-        When verifying signatures either on the managed file or its source hash file,
-        require at least one valid signature from one of a list of key fingerprints.
-        This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
-
-        .. versionadded:: 3007.0
-
-    signed_by_all
-        When verifying signatures either on the managed file or its source hash file,
-        require a valid signature from each of the key fingerprints in this list.
-        This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
-
-        .. versionadded:: 3007.0
-
-    keyring
-        When verifying signatures, use this keyring.
-
-        .. versionadded:: 3007.0
-
-    gnupghome
-        When verifying signatures, use this GnuPG home.
-
-        .. versionadded:: 3007.0
-
-    sig_backend
-        When verifying signatures, use this execution module as a backend.
-        It must be compatible with the :py:func:`gpg.verify <salt.modules.gpg.verify>` API.
-        Defaults to ``gpg``. All signature-related parameters are passed through.
-
-        .. versionadded:: 3008.0
-
     **Examples**
 
     1. tar with lmza (i.e. xz) compression:
@@ -962,16 +823,6 @@ def extracted(
             "The 'source_hash_update' argument is ignored when "
             "'source_hash' is not also specified."
         )
-
-    if signature or source_hash_sig:
-        # Fail early in case the signature verification backend is not present
-        try:
-            __salt__[f"{sig_backend}.verify"]
-        except KeyError:
-            ret["comment"] = (
-                f"Cannot verify signatures because the {sig_backend} module was not loaded"
-            )
-            return ret
 
     try:
         source_match = __salt__["file.source_list"](source, source_hash, __env__)[0]
@@ -1132,12 +983,6 @@ def extracted(
                 source_hash=source_hash,
                 source_hash_name=source_hash_name,
                 saltenv=__env__,
-                source_hash_sig=source_hash_sig,
-                signed_by_any=signed_by_any,
-                signed_by_all=signed_by_all,
-                keyring=keyring,
-                gnupghome=gnupghome,
-                sig_backend=sig_backend,
             )
         except CommandExecutionError as exc:
             ret["comment"] = exc.strerror
@@ -1218,12 +1063,6 @@ def extracted(
                 skip_verify=skip_verify,
                 saltenv=__env__,
                 use_etag=use_etag,
-                source_hash_sig=source_hash_sig,
-                signed_by_any=signed_by_any,
-                signed_by_all=signed_by_all,
-                keyring=keyring,
-                gnupghome=gnupghome,
-                sig_backend=sig_backend,
             )
         except Exception as exc:  # pylint: disable=broad-except
             msg = "Failed to cache {}: {}".format(
@@ -1244,21 +1083,6 @@ def extracted(
                 salt.utils.url.redact_http_basic_auth(source_match),
             )
             return result
-
-    if signature:
-        try:
-            _check_sig(
-                cached,
-                signature,
-                signed_by_any=signed_by_any,
-                signed_by_all=signed_by_all,
-                keyring=keyring,
-                gnupghome=gnupghome,
-                sig_backend=sig_backend,
-            )
-        except CommandExecutionError as err:
-            ret["comment"] = f"Failed verifying the source file's signature: {err}"
-            return ret
 
     existing_cached_source_sum = _read_cached_checksum(cached)
 
@@ -1881,5 +1705,229 @@ def extracted(
                 # Don't let failure to delete cached file cause the state
                 # itself to fail, just drop it in the warnings.
                 ret.setdefault("warnings", []).append(result["comment"])
+
+    return ret
+
+
+def compressed(
+    name,
+    sources,
+    archive_format="zip",
+    compression=None,
+    options=None,
+    user=None,
+    group=None,
+    mode=None,
+    overwrite=False,
+    **kwargs,
+):
+    """
+    Ensure that specified files/directories are compressed into an archive.
+
+    .. versionadded:: TBD
+
+    name
+        Full path to the archive file to create (e.g., /path/to/archive.zip)
+
+    sources
+        List of files and/or directories to include in the archive.
+        Can be a string (single path) or list of paths.
+
+    archive_format : zip
+        Format of the archive to create. Supported: 'zip', 'tar', 'tar.gz', 'tar.bz2', 'tar.xz'
+
+    compression
+        Compression level (for zip: 0-9, where 9 is maximum compression)
+
+    options
+        Additional command-line options to pass to the archiving tool
+
+    user
+        Owner of the created archive file
+
+    group
+        Group owner of the created archive file
+
+    mode
+        Permissions mode for the created archive file (e.g., '0644')
+
+    overwrite : False
+        If True, recreate the archive even if it already exists
+
+    **Examples**
+
+    Basic zip creation:
+
+    .. code-block:: yaml
+
+        create_backup_archive:
+          archive.compressed:
+            - name: /backup/myfiles.zip
+            - sources:
+              - /var/www/html
+              - /etc/nginx/nginx.conf
+            - user: backup
+            - group: backup
+
+    Tar with gzip compression:
+
+    .. code-block:: yaml
+
+        compress_config_files:
+          archive.compressed:
+            - name: /backup/configs.tar.gz
+            - sources:
+              - /etc/
+            - archive_format: tar.gz
+            - user: root
+            - group: root
+
+    Create zip with maximum compression:
+
+    .. code-block:: yaml
+
+        create_compressed_backup:
+          archive.compressed:
+            - name: /backups/website-backup.zip
+            - sources:
+              - /var/www/mysite
+            - compression: 9
+            - user: www-data
+            - group: www-data
+            - mode: '0640'
+
+    Overwrite existing archive:
+
+    .. code-block:: yaml
+
+        daily_backup:
+          archive.compressed:
+            - name: /backups/daily.tar.gz
+            - sources:
+              - /home/user/documents
+              - /home/user/projects
+            - archive_format: tar.gz
+            - overwrite: True
+    """
+    ret = {"name": name, "result": False, "changes": {}, "comment": ""}
+
+    # Clean kwargs
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+
+    # Validate name path
+    if not _path_is_abs(name):
+        ret["comment"] = f"{name} is not an absolute path"
+        return ret
+
+    # Normalize sources to list
+    if isinstance(sources, str):
+        sources = [sources]
+    elif not isinstance(sources, list):
+        ret["comment"] = "'sources' must be a string or list of paths"
+        return ret
+
+    # Validate sources exist
+    missing_sources = []
+    for source in sources:
+        if not os.path.exists(source):
+            missing_sources.append(source)
+
+    if missing_sources:
+        ret["comment"] = "The following source paths do not exist:\n"
+        ret["comment"] += "\n".join([f"- {s}" for s in missing_sources])
+        return ret
+
+    # Check if archive already exists
+    archive_exists = os.path.isfile(name)
+
+    if archive_exists and not overwrite:
+        ret["result"] = True
+        ret["comment"] = f"Archive {name} already exists"
+        return ret
+
+    # Test mode
+    if __opts__["test"]:
+        ret["result"] = None
+        if archive_exists:
+            ret["comment"] = f"Archive {name} would be recreated"
+        else:
+            ret["comment"] = f"Archive {name} would be created from {len(sources)} source(s)"
+        return ret
+
+    # Create archive directory if needed
+    archive_dir = os.path.dirname(name)
+    if archive_dir and not os.path.exists(archive_dir):
+        try:
+            os.makedirs(archive_dir)
+            ret["changes"]["directories_created"] = [archive_dir]
+        except OSError as exc:
+            ret["comment"] = f"Failed to create directory {archive_dir}: {exc}"
+            return ret
+
+    # Create the archive using the execution module
+    try:
+        if archive_format == "zip":
+            # Call archive.zip execution module
+            # Standard signature: archive.zip(zip_file, *sources, template=None, cwd=None, runas=None)
+            result = __salt__["archive.zip"](
+                name,
+                *sources,
+            )
+        elif archive_format in ["tar", "tar.gz", "tar.bz2", "tar.xz"]:
+            # Determine tar options
+            if archive_format == "tar.gz":
+                tar_options = "czf"
+            elif archive_format == "tar.bz2":
+                tar_options = "cjf"
+            elif archive_format == "tar.xz":
+                tar_options = "cJf"
+            else:
+                tar_options = "cf"
+            
+            # Call archive.tar execution module
+            # Standard signature: archive.tar(options, tarfile, sources, ...)
+            result = __salt__["archive.tar"](
+                tar_options,
+                name,
+                sources,
+            )
+        else:
+            ret["comment"] = f"Unsupported archive format: {archive_format}"
+            return ret
+
+        # Check result from execution module
+        if result:
+            ret["changes"]["created"] = name
+            ret["changes"]["sources_added"] = sources
+            ret["comment"] = f"Successfully created archive {name}"
+            ret["result"] = True
+        else:
+            ret["comment"] = f"Failed to create archive {name}"
+            return ret
+
+    except (CommandExecutionError, CommandNotFoundError) as exc:
+        ret["comment"] = f"Error creating archive: {exc}"
+        return ret
+    except Exception as exc:
+        ret["comment"] = f"Unexpected error creating archive: {exc}"
+        return ret
+
+    # Set ownership and permissions if requested
+    if user or group or mode:
+        try:
+            ownership_result = __states__["file.managed"](
+                name,
+                user=user,
+                group=group,
+                mode=mode,
+                replace=False,
+            )
+            
+            if ownership_result.get("changes"):
+                ret["changes"]["ownership"] = ownership_result["changes"]
+        except Exception as exc:
+            ret.setdefault("warnings", []).append(
+                f"Failed to set ownership/permissions: {exc}"
+            )
 
     return ret
