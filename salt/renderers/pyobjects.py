@@ -356,30 +356,17 @@ def load_states():
     """
     states = {}
 
-    # the loader expects to find pillar & grain data
     # Grains should already be in __opts__ from the State object.
-    # For tests with minimal grains, add required keys so modules can load.
+    # State.__init__() ensures grains exist before creating loaders.
+    # We should NOT try to add/modify grains here because:
+    # 1. With OptsDict, mutations after loaders are created don't affect __grains__
+    # 2. Loaders capture __grains__ at creation time from opts.get("grains", {})
+    # 3. Any mutations to __opts__["grains"] after that won't be seen by existing loaders
+    #
+    # If grains are truly missing (shouldn't happen in normal flow), load them.
     if "grains" not in __opts__:
-        # No grains at all - load fresh (non-test scenario)
         grains = salt.loader.grains(__opts__)
         __opts__["grains"] = grains
-    else:
-        # Ensure minimal required grain keys exist for module loading
-        # IMPORTANT: Mutate the existing dict in place so that loaders that
-        # already have references to __opts__["grains"] will see the updates.
-        # Do NOT replace the dict with a new one.
-        if "kernel" not in __opts__["grains"]:
-            # Add minimal grains needed for modules to load
-            # Use defaults that work on most systems
-            defaults = {
-                "kernel": "Linux",
-                "kernelrelease": "5.0.0",
-                "osarch": "x86_64",
-                "cpuarch": "x86_64",
-            }
-            for key, value in defaults.items():
-                if key not in __opts__["grains"]:
-                    __opts__["grains"][key] = value
 
     # Ensure pillar is set if needed
     if "pillar" not in __opts__ and __pillar__:
