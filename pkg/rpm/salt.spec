@@ -172,6 +172,7 @@ mkdir -p $RPM_BUILD_DIR/build
 cd $RPM_BUILD_DIR
 
 %if "%{getenv:SALT_ONEDIR_ARCHIVE}" == ""
+  export RELENV_DATA=${HOME:-%{getenv:HOME}}/.local/relenv
   export PIP_CONSTRAINT=%{_salt_src}/requirements/constraints.txt
   export FETCH_RELENV_VERSION=${SALT_RELENV_VERSION}
   python3 -m venv --clear --copies build/venv
