@@ -139,7 +139,7 @@ timelib==0.2.5 ; python_version < "3.11"
     # via
     #   -r requirements/base.txt
     #   -r requirements/darwin.txt
-urllib3==2.5.0 ; python_version >= "3.10"
+urllib3==2.6.2 ; python_version >= "3.10"
     # via
     #   -r requirements/base.txt
     #   requests
