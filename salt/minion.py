@@ -2605,7 +2605,13 @@ class Minion(MinionBase):
         if not self.beacons_leader:
             return
         log.debug("Refreshing beacons.")
-        self.beacons = salt.beacons.Beacon(self.opts, self.functions)
+        # Preserve the interval_map so beacon intervals aren't reset on refresh
+        prev_interval_map = {}
+        if hasattr(self, "beacons") and hasattr(self.beacons, "interval_map"):
+            prev_interval_map = self.beacons.interval_map
+        self.beacons = salt.beacons.Beacon(
+            self.opts, self.functions, interval_map=prev_interval_map
+        )
 
     def matchers_refresh(self):
         """
