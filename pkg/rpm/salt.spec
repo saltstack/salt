@@ -49,6 +49,7 @@ URL:     https://saltproject.io/
 
 Provides:  salt = %{version}
 Obsoletes: salt3 < 3006
+Obsoletes: salt3006
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -94,6 +95,7 @@ Group:      System Environment/Daemons
 Requires:   %{name} = %{version}-%{release}
 Provides:   salt-master = %{version}
 Obsoletes:  salt3-master < 3006
+Obsoletes:  salt3006-master
 
 %description master
 The Salt master is the central server to which all minions connect.
@@ -105,6 +107,7 @@ Group:      System Environment/Daemons
 Requires:   %{name} = %{version}-%{release}
 Provides:   salt-minion = %{version}
 Obsoletes:  salt3-minion < 3006
+Obsoletes:  salt3006-minion
 
 %description minion
 The Salt minion is the agent component of Salt. It listens for instructions
@@ -117,6 +120,7 @@ Group:      System Environment/Daemons
 Requires:   %{name}-master = %{version}-%{release}
 Provides:   salt-syndic = %{version}
 Obsoletes:  salt3-syndic < 3006
+Obsoletes:  salt3006-syndic
 
 %description syndic
 The Salt syndic is a master daemon which can receive instruction from a
@@ -130,6 +134,7 @@ Group:      Applications/System
 Requires:   %{name}-master = %{version}-%{release}
 Provides:   salt-api = %{version}
 Obsoletes:  salt3-api < 3006
+Obsoletes:  salt3006-api
 
 %description api
 salt-api provides a REST interface to the Salt master.
@@ -141,6 +146,7 @@ Group:      Applications/System
 Requires:   %{name}-master = %{version}-%{release}
 Provides:   salt-cloud = %{version}
 Obsoletes:  salt3-cloud < 3006
+Obsoletes:  salt3006-cloud
 
 %description cloud
 The salt-cloud tool provisions new cloud VMs, installs salt-minion on them, and
@@ -153,6 +159,7 @@ Group:      Applications/System
 Requires:   %{name} = %{version}-%{release}
 Provides:   salt-ssh = %{version}
 Obsoletes:  salt3-ssh < 3006
+Obsoletes:  salt3006-ssh
 
 %description ssh
 The salt-ssh tool can run remote execution functions and states without the use
