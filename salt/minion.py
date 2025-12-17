@@ -65,7 +65,6 @@ import salt.utils.state
 import salt.utils.user
 import salt.utils.zeromq
 from salt._compat import ipaddress
-from salt.utils.optsdict import mutate_opts_key
 from salt.config import DEFAULT_MINION_OPTS
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import (
@@ -83,6 +82,7 @@ from salt.template import SLS_ENCODING
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 from salt.utils.network import parse_host_port
+from salt.utils.optsdict import mutate_opts_key
 from salt.utils.process import ProcessManager, SignalHandlingProcess, default_signals
 from salt.utils.zeromq import ZMQ_VERSION_INFO, zmq
 
@@ -1934,9 +1934,7 @@ class Minion(MinionBase):
                 proxy = self.proxy
             else:
                 proxy = None
-            new_grains = salt.loader.grains(
-                self.opts, force_refresh=True, proxy=proxy
-            )
+            new_grains = salt.loader.grains(self.opts, force_refresh=True, proxy=proxy)
             mutate_opts_key(self.opts, "grains", new_grains)
 
         # Check if we should bypass the process_count_max check
