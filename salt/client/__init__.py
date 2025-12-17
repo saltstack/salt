@@ -1679,13 +1679,10 @@ class LocalClient:
                         ).connected_ids()
                     if (
                         self.opts["minion_data_cache"]
-                        and salt.cache.factory(self.opts).contains(
-                            f"minions/{id_}", "data"
-                        )
+                        and salt.cache.factory(self.opts).contains("grains", id_)
                         and connected_minions
                         and id_ not in connected_minions
                     ):
-
                         yield {
                             id_: {
                                 "out": "no_return",
