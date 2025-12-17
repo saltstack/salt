@@ -1,6 +1,8 @@
 #!/usr/bin/make -f
 DH_VERBOSE = 1
 
+unexport RUSTFLAGS
+
 .PHONY: override_dh_strip
 
 %:

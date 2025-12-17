@@ -166,6 +166,7 @@ unset CPPFLAGS
 unset CXXFLAGS
 unset CFLAGS
 unset LDFLAGS
+unset RUSTFLAGS
 rm -rf $RPM_BUILD_DIR
 mkdir -p $RPM_BUILD_DIR/build
 cd $RPM_BUILD_DIR
