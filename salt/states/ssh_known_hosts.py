@@ -153,8 +153,7 @@ def present(
 
         if isinstance(result, dict) and "error" in result:
             ret["result"] = False
-            if "error" in result:
-                ret["comment"] = result["error"]
+            ret["comment"] = result["error"]
             return ret
         if result == "exists":
             comment = f"Host {name} is already in {config}"
