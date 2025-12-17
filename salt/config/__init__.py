@@ -1024,6 +1024,41 @@ VALID_OPTS = immutabletypes.freeze(
         "request_server_aes_session": int,
         # Minimum authentication protocol version to accept from minions
         "minimum_auth_version": int,
+        "ipc_write_timeout": int,
+        # optional cache driver for pillar cache
+        "pillar.cache_driver": (type(None), str),
+        # optional cache driver for eauth_tokens cache
+        "eauth_tokens.cache_driver": (type(None), str),
+        # eauth tokens cluster id override
+        "eauth_tokens.cluster_id": (type(None), str),
+        # sqlalchemy settings
+        "sqlalchemy.dsn": (type(None), str),
+        "sqlalchemy.driver": (type(None), str),
+        "sqlalchemy.host": (type(None), str),
+        "sqlalchemy.port": (type(None), str),
+        "sqlalchemy.user": (type(None), str),
+        "sqlalchemy.password": (type(None), str),
+        "sqlalchemy.db": (type(None), str),
+        "sqlalchemy.engine_opts": (type(None), str),
+        "sqlalchemy.disable_connection_pool": bool,
+        "sqlalchemy.ro_dsn": (type(None), str),
+        "sqlalchemy.ro_host": (type(None), str),
+        "sqlalchemy.ro_port": (type(None), str),
+        "sqlalchemy.ro_user": (type(None), str),
+        "sqlalchemy.ro_password": (type(None), str),
+        "sqlalchemy.ro_db": (type(None), str),
+        "sqlalchemy.echo": (type(None), bool),
+        "sqlalchemy.slow_query_threshold": (type(None), int, float),
+        "sqlalchemy.slow_connect_threshold": (type(None), int, float),
+        "sqlalchemy.ro_engine_opts": (type(None), str),
+        "sqlalchemy.ro_disable_connection_pool": bool,
+        "sqlalchemy.partman.enabled": bool,
+        "sqlalchemy.partman.schema": (type(None), str),
+        "sqlalchemy.partman.interval": str,
+        "sqlalchemy.partman.jobmon": bool,
+        "sqlalchemy.partman.retention": (type(None), str),
+        "returner.sqlalchemy.max_retries": (type(None), int),
+        "returner.sqlalchemy.retry_delay": (type(None), int),
     }
 )
 
@@ -1335,6 +1370,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "encryption_algorithm": "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA1",
         "keys.cache_driver": "localfs_key",
+        "pillar.cache_driver": None,
     }
 )
 
@@ -1693,6 +1729,36 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "request_server_aes_session": 0,
         "request_server_ttl": 0,
         "minimum_auth_version": 3,
+        "ipc_write_timeout": salt.defaults.IPC_WRITE_TIMEOUT,
+        "pillar.cache_driver": None,
+        "eauth_tokens.cache_driver": None,
+        "eauth_tokens.cluster_id": None,
+        "sqlalchemy.driver": None,
+        "sqlalchemy.dsn": None,
+        "sqlalchemy.host": None,
+        "sqlalchemy.port": None,
+        "sqlalchemy.user": None,
+        "sqlalchemy.password": None,
+        "sqlalchemy.database": None,
+        "sqlalchemy.engine_opts": None,
+        "sqlalchemy.disable_connection_pool": False,
+        "sqlalchemy.slow_connect_threshold": 1,
+        "sqlalchemy.slow_query_threshold": 1,
+        "sqlalchemy.ro_dsn": None,
+        "sqlalchemy.ro_host": None,
+        "sqlalchemy.ro_port": None,
+        "sqlalchemy.ro_user": None,
+        "sqlalchemy.ro_password": None,
+        "sqlalchemy.ro_database": None,
+        "sqlalchemy.ro_engine_opts": None,
+        "sqlalchemy.ro_disable_connection_pool": False,
+        "sqlalchemy.partman.enabled": False,
+        "sqlalchemy.partman.retention": None,
+        "sqlalchemy.partman.schema": "pgpartman",
+        "sqlalchemy.partman.interval": "weekly",
+        "sqlalchemy.partman.jobmon": True,
+        "returner.sqlalchemy.max_retries": 15,
+        "returner.sqlalchemy.retry_delay": 5,
     }
 )
 
