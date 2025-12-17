@@ -2,6 +2,7 @@
 DH_VERBOSE = 1
 
 unexport RUSTFLAGS
+export RELENV_DATA ?= $(HOME)/.local/relenv
 
 .PHONY: override_dh_strip
 

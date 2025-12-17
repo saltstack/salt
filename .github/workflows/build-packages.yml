@@ -77,6 +77,9 @@ jobs:
     container:
       image: ghcr.io/saltstack/salt-ci-containers/testing:debian-13
 
+    env:
+      RELENV_DATA: "${{ github.workspace }}/.relenv"
+
     steps:
       # Checkout here so we can easily use custom actions
       - uses: actions/checkout@v4
@@ -194,6 +197,9 @@ jobs:
 
     container:
       image: ghcr.io/saltstack/salt-ci-containers/testing:fedora-42
+
+    env:
+      RELENV_DATA: "${{ github.workspace }}/.relenv"
 
     steps:
       - uses: actions/checkout@v4
