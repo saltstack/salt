@@ -52,6 +52,7 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.url
 import salt.utils.verify
+from salt.utils.optsdict import mutate_opts_key
 
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
@@ -1307,12 +1308,14 @@ class State:
         _reload_modules = False
         if data.get("reload_grains", False):
             log.debug("Refreshing grains...")
-            self.opts["grains"] = salt.loader.grains(self.opts)
+            new_grains = salt.loader.grains(self.opts)
+            mutate_opts_key(self.opts, "grains", new_grains)
             _reload_modules = True
 
         if data.get("reload_pillar", False):
             log.debug("Refreshing pillar...")
-            self.opts["pillar"] = self._gather_pillar()
+            new_pillar = self._gather_pillar()
+            mutate_opts_key(self.opts, "pillar", new_pillar)
             _reload_modules = True
 
         if not ret["changes"]:
