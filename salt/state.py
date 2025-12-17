@@ -52,7 +52,6 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.url
 import salt.utils.verify
-from salt.utils.optsdict import mutate_opts_key
 
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
@@ -61,6 +60,7 @@ from salt.serializers.msgpack import deserialize as msgpack_deserialize
 from salt.serializers.msgpack import serialize as msgpack_serialize
 from salt.template import compile_template, compile_template_str
 from salt.utils.datastructures import DefaultOrderedDict, HashableOrderedDict
+from salt.utils.optsdict import mutate_opts_key
 from salt.utils.requisite import DependencyGraph, RequisiteType
 
 log = logging.getLogger(__name__)
