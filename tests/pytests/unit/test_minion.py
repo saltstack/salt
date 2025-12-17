@@ -614,6 +614,48 @@ def test_minion_module_refresh_beacons_refresh(minion_opts):
             minion.destroy()
 
 
+def test_beacons_refresh_preserves_interval_map(minion_opts):
+    """
+    Tests that 'beacons_refresh' preserves the interval_map so that
+    beacon intervals are not reset during module refresh.
+    """
+    with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
+        "salt.utils.process.SignalHandlingProcess.start",
+        MagicMock(return_value=True),
+    ), patch(
+        "salt.utils.process.SignalHandlingProcess.join",
+        MagicMock(return_value=True),
+    ):
+        try:
+            minion = salt.minion.Minion(
+                minion_opts,
+                io_loop=salt.ext.tornado.ioloop.IOLoop(),
+            )
+            minion.schedule = salt.utils.schedule.Schedule(
+                minion_opts, {}, returners={}
+            )
+
+            minion.module_refresh()
+            assert hasattr(minion, "beacons")
+            assert hasattr(minion.beacons, "interval_map")
+
+            test_interval_map = {"status": 50, "diskusage": 30}
+            minion.beacons.interval_map = test_interval_map.copy()
+
+            old_beacons = minion.beacons
+
+            minion.beacons_refresh()
+
+            assert minion.beacons is not old_beacons
+
+            assert minion.beacons.interval_map == test_interval_map
+            assert minion.beacons.interval_map["status"] == 50
+            assert minion.beacons.interval_map["diskusage"] == 30
+
+        finally:
+            minion.destroy()
+
+
 @pytest.mark.slow_test
 async def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodic_callbacks(
     minion_opts,
