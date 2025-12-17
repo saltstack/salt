@@ -2024,7 +2024,8 @@ class Minion(MinionBase):
         minion_instance.gen_modules()
         fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
-        salt.utils.process.appendproctitle(f"{cls.__name__}._thread_return")
+        if opts.get("multiprocessing", True):
+            salt.utils.process.appendproctitle(f"{cls.__name__}._thread_return")
 
         sdata = {"pid": os.getpid()}
         sdata.update(data)
@@ -2229,7 +2230,8 @@ class Minion(MinionBase):
         minion_instance.gen_modules()
         fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
-        salt.utils.process.appendproctitle(f"{cls.__name__}._thread_multi_return")
+        if opts.get("multiprocessing", True):
+            salt.utils.process.appendproctitle(f"{cls.__name__}._thread_multi_return")
 
         sdata = {"pid": os.getpid()}
         sdata.update(data)
