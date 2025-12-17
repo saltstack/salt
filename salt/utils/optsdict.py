@@ -826,6 +826,46 @@ class OptsDict(MutableMapping):
             )
 
 
+def mutate_opts_key(opts, key, new_value):
+    """
+    Update an opts key in place to preserve cached references.
+
+    This function replaces the pattern of:
+        opts[key] = new_dict  # Creates NEW dict, breaks cached references
+
+    With:
+        new_dict = ...
+        mutate_opts_key(opts, key, new_dict)  # Mutates SAME dict, preserves references
+
+    Why this matters:
+    - Loaders cache references to opts["grains"], opts["pillar"], etc.
+    - When we replace opts[key] = new_dict, cached refs become stale
+    - By mutating in place (clear + update), we preserve object identity
+    - Cached references continue to see updates
+
+    Args:
+        opts: The opts dict (can be OptsDict or regular dict)
+        key: The key to update (e.g., "grains", "pillar")
+        new_value: The new value to set
+
+    Example:
+        # Instead of:
+        opts["grains"] = salt.loader.grains(opts)  # BREAKS cached refs
+
+        # Use:
+        new_grains = salt.loader.grains(opts)
+        mutate_opts_key(opts, "grains", new_grains)  # PRESERVES cached refs
+    """
+    # Check if key exists and both old and new values are dicts
+    if key in opts and isinstance(opts[key], dict) and isinstance(new_value, dict):
+        # Mutate in place to preserve object identity
+        opts[key].clear()
+        opts[key].update(new_value)
+    else:
+        # Initial creation or non-dict value - regular assignment is fine
+        opts[key] = new_value
+
+
 def generate_global_mutation_report(include_locations: bool = True) -> str:
     """
     Generate a global report of all mutations across all OptsDict instances.
