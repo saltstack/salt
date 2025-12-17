@@ -856,8 +856,19 @@ def mutate_opts_key(opts, key, new_value):
         new_grains = salt.loader.grains(opts)
         mutate_opts_key(opts, "grains", new_grains)  # PRESERVES cached refs
     """
+    # Ensure opts is a mutable mapping
+    if not isinstance(opts, (dict, type(opts))) or opts is None:
+        raise TypeError(f"opts must be a dict, got {type(opts)}")
+
+    # Ensure new_value is not None
+    if new_value is None:
+        # If setting to None, just use regular assignment
+        opts[key] = new_value
+        return
+
     # Check if key exists and both old and new values are dicts
     if key in opts and isinstance(opts[key], dict) and isinstance(new_value, dict):
+        # Ensure old value is not empty or we're not just replacing with empty
         # Mutate in place to preserve object identity
         opts[key].clear()
         opts[key].update(new_value)
