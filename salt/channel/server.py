@@ -129,7 +129,7 @@ class ReqServerChannel:
         else:
             self.cache_cli = False
             # Make an minion checker object
-            self.ckminions = salt.utils.minions.CkMinions(self.opts)
+            self.ckminions = salt.utils.minions.CkMinions.factory(self.opts)
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.payload_handler = payload_handler
         if hasattr(self.transport, "post_fork"):
@@ -885,7 +885,7 @@ class PubServerChannel:
 
     def __init__(self, opts, transport, presence_events=False):
         self.opts = opts
-        self.ckminions = salt.utils.minions.CkMinions(self.opts)
+        self.ckminions = salt.utils.minions.CkMinions.factory(self.opts)
         self.transport = transport
         self.aes_funcs = salt.master.AESFuncs(self.opts)
         self.present = {}
@@ -910,7 +910,7 @@ class PubServerChannel:
         self.state = state["presence_events"]
         self.transport = state["transport"]
         self.event = salt.utils.event.get_event("master", opts=self.opts, listen=False)
-        self.ckminions = salt.utils.minions.CkMinions(self.opts)
+        self.ckminions = salt.utils.minions.CkMinions.factory(self.opts)
         self.present = {}
         self.master_key = salt.crypt.MasterKeys(self.opts)
 
@@ -1025,6 +1025,19 @@ class PubServerChannel:
             ret = await self.transport.publish_payload(payload)
         return ret
 
+    # If topics are ssupported, target matching has to happen master side
+    def match_target(self, tgt_type):
+        if not self.transport.topic_support():
+            return False
+
+        match_targets = ["pcre", "glob", "list"]
+
+        if self.opts.get("minion_data_cache") and self.opts["cache"] == "sqlalchemy":
+            if getattr(self, "dialect_name", None) == "postgresql":
+                return True
+
+        return tgt_type in match_targets
+
     def wrap_payload(self, load):
         payload = {"enc": "aes"}
         if not self.opts.get("cluster_id", None):
@@ -1040,9 +1053,7 @@ class PubServerChannel:
 
         int_payload = {"payload": salt.payload.dumps(payload)}
 
-        # If topics are upported, target matching has to happen master side
-        match_targets = ["pcre", "glob", "list"]
-        if self.transport.topic_support() and load["tgt_type"] in match_targets:
+        if self.match_target(load["tgt_type"]):
             # add some targeting stuff for lists only (for now)
             if load["tgt_type"] == "list":
                 int_payload["topic_lst"] = load["tgt"]

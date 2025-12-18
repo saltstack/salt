@@ -275,7 +275,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         self.schedule = salt.utils.schedule.Schedule(
             self.opts, runner_client.functions_dict(), returners=self.returners
         )
-        self.ckminions = salt.utils.minions.CkMinions(self.opts)
+        self.ckminions = salt.utils.minions.CkMinions.factory(self.opts)
         # Make Event bus for firing
         self.event = salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
@@ -723,16 +723,6 @@ class Master(SMaster):
 
         if not self.opts["fileserver_backend"]:
             errors.append("No fileserver backends are configured")
-
-        # Check to see if we need to create a pillar cache dir
-        if self.opts["pillar_cache"] and not os.path.isdir(
-            os.path.join(self.opts["cachedir"], "pillar_cache")
-        ):
-            try:
-                with salt.utils.files.set_umask(0o077):
-                    os.mkdir(os.path.join(self.opts["cachedir"], "pillar_cache"))
-            except OSError:
-                pass
 
         if self.opts.get("git_pillar_verify_config", True):
             try:
@@ -1403,7 +1393,7 @@ class AESFuncs(TransportMethods):
         self.event = salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
         )
-        self.ckminions = salt.utils.minions.CkMinions(opts)
+        self.ckminions = salt.utils.minions.CkMinions.factory(opts)
         # Make a client
         self.local = salt.client.get_local_client(self.opts["conf_file"])
         # Create the master minion to access the external job cache
@@ -1765,11 +1755,8 @@ class AESFuncs(TransportMethods):
         data = pillar.compile_pillar()
         self.fs_.update_opts()
         if self.opts.get("minion_data_cache", False):
-            self.masterapi.cache.store(
-                "minions/{}".format(load["id"]),
-                "data",
-                {"grains": load["grains"], "pillar": data},
-            )
+            self.masterapi.cache.store("grains", load["id"], load["grains"])
+
             if self.opts.get("minion_data_cache_events") is True:
                 self.event.fire_event(
                     {"Minion data cache refresh": load["id"]},
@@ -2138,7 +2125,7 @@ class ClearFuncs(TransportMethods):
         # Make a client
         self.local = salt.client.get_local_client(self.opts["conf_file"])
         # Make an minion checker object
-        self.ckminions = salt.utils.minions.CkMinions(opts)
+        self.ckminions = salt.utils.minions.CkMinions.factory(opts)
         # Make an Auth object
         self.loadauth = salt.auth.LoadAuth(opts)
         # Stand up the master Minion to access returner data

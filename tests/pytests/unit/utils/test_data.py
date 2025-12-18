@@ -163,13 +163,18 @@ def test_subdict_match():
         ("a:b:*:j:k"),
         ("a:b:*:*:k"),
         ("a:b:*:*:*"),
+        ("a:b:*:*:*:foo:8080"),
     ],
 )
 def test_subdict_match_with_wildcards(wildcard):
     """
     Tests subdict matching when wildcards are used in the expression
     """
-    data = {"a": {"b": {"ç": "d", "é": ["eff", "gee", "8ch"], "ĩ": {"j": "k"}}}}
+    data = {
+        "a": {
+            "b": {"ç": "d", "é": ["eff", "gee", "8ch", {"foo": 8080}], "ĩ": {"j": "k"}}
+        }
+    }
     assert salt.utils.data.subdict_match(data, wildcard)
 
 

@@ -941,7 +941,15 @@ def subdict_match(
                         return True
                 elif isinstance(target[key], list):
                     for item in target[key]:
-                        if _match(
+                        # recurse to handle list of dict or list of list
+                        if type(item) in (tuple, list, dict) and subdict_match(
+                            item,
+                            pattern,
+                            regex_match=regex_match,
+                            exact_match=exact_match,
+                        ):
+                            return True
+                        elif _match(
                             item,
                             pattern,
                             regex_match=regex_match,

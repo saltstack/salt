@@ -37,7 +37,13 @@ def load_auth():
         patcher = patch(mod, mock)
         patcher.start()
         patchers.append(patcher)
-    lauth = salt.auth.LoadAuth({})  # Load with empty opts
+    lauth = salt.auth.LoadAuth(
+        {
+            "eauth_tokens.cache_driver": None,
+            "eauth_tokens.cluster_id": None,
+            "cluster_id": None,
+        }
+    )  # Load with empty opts
     try:
         yield lauth
     finally:
@@ -213,14 +219,10 @@ def test_get_tok_with_broken_file_will_remove_bad_token(load_auth):
     fake_get_token = MagicMock(
         side_effect=salt.exceptions.SaltDeserializationError("hi")
     )
-    patch_opts = patch.dict(load_auth.opts, {"eauth_tokens": "testfs"})
-    patch_get_token = patch.dict(
-        load_auth.tokens,
-        {"testfs.get_token": fake_get_token},
-    )
+    patch_get_token = patch.object(load_auth.cache, "fetch", fake_get_token)
     mock_rm_token = MagicMock()
     patch_rm_token = patch.object(load_auth, "rm_token", mock_rm_token)
-    with patch_opts, patch_get_token, patch_rm_token:
+    with patch_get_token, patch_rm_token:
         expected_token = "fnord"
         load_auth.get_tok(expected_token)
         mock_rm_token.assert_called_with(expected_token)
@@ -228,14 +230,10 @@ def test_get_tok_with_broken_file_will_remove_bad_token(load_auth):
 
 def test_get_tok_with_no_expiration_should_remove_bad_token(load_auth):
     fake_get_token = MagicMock(return_value={"no_expire_here": "Nope"})
-    patch_opts = patch.dict(load_auth.opts, {"eauth_tokens": "testfs"})
-    patch_get_token = patch.dict(
-        load_auth.tokens,
-        {"testfs.get_token": fake_get_token},
-    )
+    patch_get_token = patch.object(load_auth.cache, "fetch", fake_get_token)
     mock_rm_token = MagicMock()
     patch_rm_token = patch.object(load_auth, "rm_token", mock_rm_token)
-    with patch_opts, patch_get_token, patch_rm_token:
+    with patch_get_token, patch_rm_token:
         expected_token = "fnord"
         load_auth.get_tok(expected_token)
         mock_rm_token.assert_called_with(expected_token)
@@ -243,14 +241,10 @@ def test_get_tok_with_no_expiration_should_remove_bad_token(load_auth):
 
 def test_get_tok_with_expire_before_current_time_should_remove_token(load_auth):
     fake_get_token = MagicMock(return_value={"expire": time.time() - 1})
-    patch_opts = patch.dict(load_auth.opts, {"eauth_tokens": "testfs"})
-    patch_get_token = patch.dict(
-        load_auth.tokens,
-        {"testfs.get_token": fake_get_token},
-    )
+    patch_get_token = patch.object(load_auth.cache, "fetch", fake_get_token)
     mock_rm_token = MagicMock()
     patch_rm_token = patch.object(load_auth, "rm_token", mock_rm_token)
-    with patch_opts, patch_get_token, patch_rm_token:
+    with patch_get_token, patch_rm_token:
         expected_token = "fnord"
         load_auth.get_tok(expected_token)
         mock_rm_token.assert_called_with(expected_token)
@@ -259,14 +253,10 @@ def test_get_tok_with_expire_before_current_time_should_remove_token(load_auth):
 def test_get_tok_with_valid_expiration_should_return_token(load_auth):
     expected_token = {"expire": time.time() + 1}
     fake_get_token = MagicMock(return_value=expected_token)
-    patch_opts = patch.dict(load_auth.opts, {"eauth_tokens": "testfs"})
-    patch_get_token = patch.dict(
-        load_auth.tokens,
-        {"testfs.get_token": fake_get_token},
-    )
+    patch_get_token = patch.object(load_auth.cache, "fetch", fake_get_token)
     mock_rm_token = MagicMock()
     patch_rm_token = patch.object(load_auth, "rm_token", mock_rm_token)
-    with patch_opts, patch_get_token, patch_rm_token:
+    with patch_get_token, patch_rm_token:
         token_name = "fnord"
         actual_token = load_auth.get_tok(token_name)
         mock_rm_token.assert_not_called()
@@ -893,3 +883,38 @@ async def test_acl_simple_deny(auth_acl_clear_funcs, auth_acl_valid_load):
         assert auth_acl_clear_funcs.ckminions.auth_check.call_args[0][0] == [
             {"beta_minion": ["test.ping"]}
         ]
+
+
+def test_cve_2021_3244(tmp_path):
+    token_dir = tmp_path
+    opts = {
+        "extension_modules": "",
+        "optimization_order": [0, 1, 2],
+        "token_expire": 1,
+        "keep_acl_in_token": False,
+        "eauth_tokens": "localfs",
+        "cachedir": str(token_dir),
+        "token_expire_user_override": True,
+        "external_auth": {"auto": {"foo": []}},
+        "eauth_tokens.cache_driver": None,
+        "eauth_tokens.cluster_id": None,
+        "cluster_id": None,
+    }
+    auth = salt.auth.LoadAuth(opts)
+    load = {
+        "eauth": "auto",
+        "username": "foo",
+        "password": "foo",
+        "token_expire": -1,
+    }
+    fake_get_token = MagicMock(
+        side_effect=salt.exceptions.SaltDeserializationError("hi")
+    )
+    with patch.object(auth.cache, "fetch", fake_get_token):
+        t_data = auth.mk_token(load)
+        assert t_data["expire"] < time.time()
+        token_file = token_dir / "tokens" / f'{t_data["token"]}.p'
+        assert token_file.exists()
+        t_data = auth.get_tok(t_data["token"])
+        assert not t_data
+        assert not token_file.exists()
