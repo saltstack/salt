@@ -277,6 +277,46 @@ def test_add_source(choco_path):
         cmd_run_all_mock.assert_called_with(expected_call, python_shell=False)
 
 
+def test_install_viruscheck_true():
+    mock_version = MagicMock(return_value="2.0.1")
+    mock_find = MagicMock(return_value=choco_path)
+    mock_run = MagicMock(return_value={"stdout": "No packages", "retcode": 0})
+    with patch.object(chocolatey, "chocolatey_version", mock_version), patch.object(
+        chocolatey, "_find_chocolatey", mock_find
+    ), patch.dict(chocolatey.__salt__, {"cmd.run_all": mock_run}):
+        chocolatey.install("busybox", viruscheck=True)
+        # --no-progress and --yes populated from separate functions within the module.
+        expected_call = [
+            choco_path,
+            "install",
+            "busybox",
+            "--viruscheck",
+            "--no-progress",
+            "--yes",
+        ]
+        mock_run.assert_called_with(expected_call, python_shell=False)
+
+
+def test_install_viruscheck_false():
+    mock_version = MagicMock(return_value="2.0.1")
+    mock_find = MagicMock(return_value=choco_path)
+    mock_run = MagicMock(return_value={"stdout": "No packages", "retcode": 0})
+    with patch.object(chocolatey, "chocolatey_version", mock_version), patch.object(
+        chocolatey, "_find_chocolatey", mock_find
+    ), patch.dict(chocolatey.__salt__, {"cmd.run_all": mock_run}):
+        chocolatey.install("busybox", viruscheck=False)
+        # --no-progress and --yes populated from separate functions within the module.
+        expected_call = [
+            choco_path,
+            "install",
+            "busybox",
+            "--skipviruscheck",
+            "--no-progress",
+            "--yes",
+        ]
+        mock_run.assert_called_with(expected_call, python_shell=False)
+
+
 def test_list_pre_2_0_0():
     mock_version = MagicMock(return_value="1.2.1")
     mock_find = MagicMock(return_value=choco_path)
