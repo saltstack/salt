@@ -170,6 +170,12 @@ try:
 except ImportError:
     log.info("Spell-checking disabled: enchant library not available")
 
+# Vault policy lexer is only needed for HTML builds (syntax highlighting)
+# Man pages don't use syntax highlighting, so skip it for lightweight builds
+building_man_only = "man" in sys.argv and "html" not in sys.argv
+if not building_man_only:
+    extensions.append("vaultpolicylexer")
+
 modindex_common_prefix = ["salt."]
 
 autosummary_generate = True
