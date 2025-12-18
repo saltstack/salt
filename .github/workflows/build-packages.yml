@@ -204,6 +204,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install rpmsign
+        run: |
+          dnf install -y rpmsign
+
       - name: Download Onedir Tarball as an Artifact
         if:  inputs.source == 'onedir'
         uses: actions/download-artifact@v4
