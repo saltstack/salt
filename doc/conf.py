@@ -174,8 +174,8 @@ except ImportError:
 # Man pages don't use syntax highlighting, so we only add it for non-man builds
 # Check if we're building man pages by looking for 'man' builder in sys.argv
 building_man_only = any(
-    "-b" in sys.argv and i + 1 < len(sys.argv) and sys.argv[i + 1] == "man"
-    for i, _ in enumerate(sys.argv)
+    sys.argv[i] == "-b" and i + 1 < len(sys.argv) and sys.argv[i + 1] == "man"
+    for i in range(len(sys.argv))
 )
 if not building_man_only:
     extensions.append("vaultpolicylexer")
