@@ -88,9 +88,9 @@ def override(base):
         (("state.top", "top.sls"), {}),
     ),
 )
-def test_it(salt_ssh_cli, args, kwargs, override, _write_pillar_state):
+def test_it(salt_ssh_cli_parameterized, args, kwargs, override, _write_pillar_state):
     expected, override = override
-    ret = salt_ssh_cli.run(*args, **kwargs, pillar=override)
+    ret = salt_ssh_cli_parameterized.run(*args, **kwargs, pillar=override)
     assert ret.returncode == 0
     assert isinstance(ret.data, dict)
     assert ret.data

@@ -178,6 +178,18 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
     name = re.sub(delimiter, DEFAULT_TARGET_DELIM, name)
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     grain = __salt__["grains.get"](name)
+
+    # Check pending_grains first to avoid duplicates within the same state run
+    pending_grains = __context__.get("pending_grains", {})
+    if name in pending_grains:
+        # Combine current grain with pending grains for duplicate checking
+        if grain and isinstance(grain, list):
+            combined_grain = set(grain) | pending_grains[name]
+        else:
+            combined_grain = pending_grains[name]
+    else:
+        combined_grain = set(grain) if grain and isinstance(grain, list) else set()
+
     if grain:
         # check whether grain is a list
         if not isinstance(grain, list):
@@ -185,23 +197,25 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
             ret["comment"] = f"Grain {name} is not a valid list"
             return ret
         if isinstance(value, list):
-            if make_hashable(value).issubset(
-                make_hashable(__salt__["grains.get"](name))
-            ):
-                ret["comment"] = f"Value {value} is already in grain {name}"
-                return ret
-            elif name in __context__.get("pending_grains", {}):
-                # elements common to both
-                intersection = set(value).intersection(
-                    __context__.get("pending_grains", {})[name]
+            # Check against combined grain (actual + pending) to avoid duplicates
+            if make_hashable(value).issubset(make_hashable(list(combined_grain))):
+                ret["comment"] = (
+                    f"Value {value} is already in grain {name} (or pending)"
                 )
+                return ret
+            # Check for intersection with pending grains
+            if name in pending_grains:
+                intersection = set(value).intersection(pending_grains[name])
                 if intersection:
-                    value = list(
-                        set(value).difference(__context__["pending_grains"][name])
-                    )
+                    value = list(set(value).difference(pending_grains[name]))
+                    if not value:
+                        ret["comment"] = (
+                            f'All values already pending in grain "{name}".\n'
+                        )
+                        return ret
                     ret["comment"] = (
                         'Removed value {} from update due to context found in "{}".\n'.format(
-                            value, name
+                            intersection, name
                         )
                     )
             if "pending_grains" not in __context__:
@@ -210,9 +224,18 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
                 __context__["pending_grains"][name] = set()
             __context__["pending_grains"][name].update(value)
         else:
-            if value in grain:
-                ret["comment"] = f"Value {value} is already in grain {name}"
+            # For single value, check against combined grain
+            if value in combined_grain:
+                ret["comment"] = (
+                    f"Value {value} is already in grain {name} (or pending)"
+                )
                 return ret
+            # Add single value to pending_grains to avoid duplicates
+            if "pending_grains" not in __context__:
+                __context__["pending_grains"] = {}
+            if name not in __context__["pending_grains"]:
+                __context__["pending_grains"][name] = set()
+            __context__["pending_grains"][name].add(value)
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"] = "Value {1} is set to be appended to grain {0}".format(
@@ -220,6 +243,39 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
             )
             ret["changes"] = {"new": grain}
             return ret
+
+    # Handle case where grain doesn't exist yet
+    if not grain:
+        # Check if values are already pending
+        if name in pending_grains:
+            if isinstance(value, list):
+                if make_hashable(value).issubset(
+                    make_hashable(list(pending_grains[name]))
+                ):
+                    ret["comment"] = f"Value {value} is already pending in grain {name}"
+                    return ret
+                # Remove already pending values
+                intersection = set(value).intersection(pending_grains[name])
+                if intersection:
+                    value = list(set(value).difference(pending_grains[name]))
+                    if not value:
+                        ret["comment"] = (
+                            f'All values already pending in grain "{name}".\n'
+                        )
+                        return ret
+            else:
+                if value in pending_grains[name]:
+                    ret["comment"] = f"Value {value} is already pending in grain {name}"
+                    return ret
+        # Initialize pending_grains if needed
+        if "pending_grains" not in __context__:
+            __context__["pending_grains"] = {}
+        if name not in __context__["pending_grains"]:
+            __context__["pending_grains"][name] = set()
+        if isinstance(value, list):
+            __context__["pending_grains"][name].update(value)
+        else:
+            __context__["pending_grains"][name].add(value)
 
     if __opts__["test"]:
         ret["result"] = None

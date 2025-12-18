@@ -87,8 +87,8 @@ def state_tree_remote_exception(
         ("state.single", "whoops.do_stuff", "now"),
     ),
 )
-def test_it(salt_ssh_cli, args):
-    ret = salt_ssh_cli.run(*args)
+def test_it(salt_ssh_cli_parameterized, ssh_deployment_type, args):
+    ret = salt_ssh_cli_parameterized.run(*args)
 
     assert ret.returncode == EX_AGGREGATE
     assert ret.data
