@@ -81,6 +81,220 @@ def test_local_sls_call(salt_master, salt_call_cli):
         assert state_run_dict["changes"]["ret"] == "hello"
 
 
+def test_local_sls_call_multiple_file_roots(salt_master, salt_call_cli):
+    """
+    Test that multiple file-root arguments work correctly
+    """
+    sls_contents1 = """
+    regular-module1:
+      module.run:
+        - name: test.echo
+        - text: hello
+    """
+    sls_contents2 = """
+    regular-module2:
+      module.run:
+        - name: test.echo
+        - text: world
+    """
+    with salt_master.state_tree.base.temp_file(
+        "saltcalllocal1.sls", sls_contents1
+    ), salt_master.state_tree.prod.temp_file("saltcalllocal2.sls", sls_contents2):
+        ret = salt_call_cli.run(
+            "--local",
+            "--file-root",
+            str(salt_master.state_tree.base.paths[0]),
+            "--file-root",
+            str(salt_master.state_tree.prod.paths[0]),
+            "state.sls",
+            "saltcalllocal1",
+        )
+        assert ret.returncode == 0
+        state_run_dict = next(iter(ret.data.values()))
+        assert state_run_dict["name"] == "test.echo"
+        assert state_run_dict["result"] is True
+        assert state_run_dict["changes"]["ret"] == "hello"
+
+        ret = salt_call_cli.run(
+            "--local",
+            "--file-root",
+            str(salt_master.state_tree.base.paths[0]),
+            "--file-root",
+            str(salt_master.state_tree.prod.paths[0]),
+            "state.sls",
+            "saltcalllocal2",
+        )
+        assert ret.returncode == 0
+        state_run_dict = next(iter(ret.data.values()))
+        assert state_run_dict["name"] == "test.echo"
+        assert state_run_dict["result"] is True
+        assert state_run_dict["changes"]["ret"] == "world"
+
+
+def test_local_sls_call_multiple_pillar_roots(salt_master, salt_call_cli):
+    """
+    Test that multiple pillar-root arguments work correctly
+    """
+    top_file = """
+    base:
+      '*':
+        - basic1
+        - basic2
+    """
+    basic_pillar_file1 = """
+    some_dict:
+      some_key1: True
+    """
+    basic_pillar_file2 = """
+    some_dict:
+      some_key2: False
+    """
+    with salt_master.pillar_tree.base.temp_file(
+        "top.sls", top_file
+    ), salt_master.pillar_tree.base.temp_file(
+        "basic1.sls", basic_pillar_file1
+    ), salt_master.pillar_tree.prod.temp_file(
+        "basic2.sls", basic_pillar_file2
+    ):
+        ret = salt_call_cli.run(
+            "--local",
+            "--pillar-root",
+            str(salt_master.pillar_tree.base.paths[0]),
+            "--pillar-root",
+            str(salt_master.pillar_tree.prod.paths[0]),
+            "pillar.get",
+            "some_dict",
+        )
+        assert ret.returncode == 0
+        assert "some_key1" in ret.data
+        assert "some_key2" in ret.data
+        assert ret.data["some_key1"] is True
+        assert ret.data["some_key2"] is False
+
+
+def test_local_sls_call_multiple_states_dirs(salt_master, salt_call_cli, tmp_path):
+    """
+    Test that multiple states-dir arguments work correctly
+    """
+    states_dir1 = tmp_path / "states1"
+    states_dir2 = tmp_path / "states2"
+    states_dir1.mkdir()
+    states_dir2.mkdir()
+
+    teststate1_content = '''
+"""
+Test state module 1
+"""
+
+__virtualname__ = "teststate1"
+
+
+def __virtual__():
+    return __virtualname__
+
+
+def managed(name, content="default1"):
+    """
+    Test state function from states dir 1
+    """
+    ret = {
+        "name": name,
+        "result": True,
+        "comment": f"teststate1.managed: {content}",
+        "changes": {"content": content}
+    }
+    return ret
+'''
+
+    teststate2_content = '''
+"""
+Test state module 2
+"""
+
+__virtualname__ = "teststate2"
+
+
+def __virtual__():
+    return __virtualname__
+
+
+def configured(name, setting="default2"):
+    """
+    Test state function from states dir 2
+    """
+    ret = {
+        "name": name,
+        "result": True,
+        "comment": f"teststate2.configured: {setting}",
+        "changes": {"setting": setting}
+    }
+    return ret
+'''
+
+    (states_dir1 / "teststate1.py").write_text(teststate1_content)
+    (states_dir2 / "teststate2.py").write_text(teststate2_content)
+
+    sls_contents = """
+test_from_states_dir1:
+  teststate1.managed:
+    - name: /tmp/test1
+    - content: hello from dir1
+
+test_from_states_dir2:
+  teststate2.configured:
+    - name: /tmp/test2
+    - setting: hello from dir2
+"""
+
+    with salt_master.state_tree.base.temp_file("teststates.sls", sls_contents):
+        # First test: verify both state modules are available
+        ret = salt_call_cli.run(
+            "--local",
+            "--states-dir",
+            str(states_dir1),
+            "--states-dir",
+            str(states_dir2),
+            "--file-root",
+            str(salt_master.state_tree.base.paths[0]),
+            "sys.list_state_modules",
+        )
+        assert ret.returncode == 0
+        assert "teststate1" in ret.data
+        assert "teststate2" in ret.data
+
+        # Second test: run the SLS that uses both custom states
+        ret = salt_call_cli.run(
+            "--local",
+            "--states-dir",
+            str(states_dir1),
+            "--states-dir",
+            str(states_dir2),
+            "--file-root",
+            str(salt_master.state_tree.base.paths[0]),
+            "state.sls",
+            "teststates",
+        )
+        assert ret.returncode == 0
+
+        # Verify results from both states
+        states_results = list(ret.data.values())
+        assert len(states_results) == 2
+
+        # Find the results by name
+        state1_result = next(s for s in states_results if s["name"] == "/tmp/test1")
+        state2_result = next(s for s in states_results if s["name"] == "/tmp/test2")
+
+        # Verify teststate1 result
+        assert state1_result["result"] is True
+        assert "teststate1.managed: hello from dir1" in state1_result["comment"]
+        assert state1_result["changes"]["content"] == "hello from dir1"
+
+        # Verify teststate2 result
+        assert state2_result["result"] is True
+        assert "teststate2.configured: hello from dir2" in state2_result["comment"]
+        assert state2_result["changes"]["setting"] == "hello from dir2"
+
+
 def test_local_salt_call(salt_call_cli):
     """
     This tests to make sure that salt-call does not execute the
