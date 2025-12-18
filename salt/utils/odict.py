@@ -18,12 +18,6 @@ from collections.abc import Callable
 
 from salt.utils.versions import warn_until
 
-warn_until(
-    3009,
-    "This module is deprecated. Use the standard library's collections.OrderedDict "
-    "or salt.utils.datastructures instead.",
-)
-
 
 class DefaultOrderedDict(OrderedDict):
     """
@@ -31,6 +25,11 @@ class DefaultOrderedDict(OrderedDict):
     """
 
     def __init__(self, default_factory=None, *a, **kw):
+        warn_until(
+            3009,
+            "This module is deprecated. Use the standard library's collections.OrderedDict "
+            "or salt.utils.datastructures instead.",
+        )
         if default_factory is not None and not isinstance(default_factory, Callable):
             raise TypeError("first argument must be callable")
         super().__init__(*a, **kw)
@@ -73,5 +72,13 @@ class DefaultOrderedDict(OrderedDict):
 
 
 class HashableOrderedDict(OrderedDict):
+    def __init__(self):
+        warn_until(
+            3009,
+            "This module is deprecated. Use the standard library's collections.OrderedDict "
+            "or salt.utils.datastructures instead.",
+        )
+        super().__init__()
+
     def __hash__(self):
         return id(self)

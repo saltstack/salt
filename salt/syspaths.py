@@ -26,7 +26,7 @@ if salt.utils.platform.is_junos():
 else:
     __PLATFORM = sys.platform.lower()
 
-typo_warning = True
+missing_vars_warning = True
 log = logging.getLogger(__name__)
 EXPECTED_VARIABLES = (
     "ROOT_DIR",
@@ -64,12 +64,12 @@ else:
         if hasattr(__generated_syspaths, key):
             continue
         else:
-            if typo_warning:
-                log.warning("Possible Typo?")
+            if missing_vars_warning:
+                log.warning("Missing variable in _syspaths.py")
                 log.warning(
-                    "To dissolve this warning add `[variable] = None` to _syspaths.py"
+                    "To resolve this warning add `[variable] = None` to _syspaths.py"
                 )
-            typo_warning = False
+            missing_vars_warning = False
             log.warning("Variable %s is missing, value set to None", key)
             setattr(
                 __generated_syspaths, key, None

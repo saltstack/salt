@@ -49,6 +49,7 @@ URL:     https://saltproject.io/
 
 Provides:  salt = %{version}
 Obsoletes: salt3 < 3006
+Obsoletes: salt3006
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -94,6 +95,7 @@ Group:      System Environment/Daemons
 Requires:   %{name} = %{version}-%{release}
 Provides:   salt-master = %{version}
 Obsoletes:  salt3-master < 3006
+Obsoletes:  salt3006-master
 
 %description master
 The Salt master is the central server to which all minions connect.
@@ -105,6 +107,7 @@ Group:      System Environment/Daemons
 Requires:   %{name} = %{version}-%{release}
 Provides:   salt-minion = %{version}
 Obsoletes:  salt3-minion < 3006
+Obsoletes:  salt3006-minion
 
 %description minion
 The Salt minion is the agent component of Salt. It listens for instructions
@@ -117,6 +120,7 @@ Group:      System Environment/Daemons
 Requires:   %{name}-master = %{version}-%{release}
 Provides:   salt-syndic = %{version}
 Obsoletes:  salt3-syndic < 3006
+Obsoletes:  salt3006-syndic
 
 %description syndic
 The Salt syndic is a master daemon which can receive instruction from a
@@ -130,6 +134,7 @@ Group:      Applications/System
 Requires:   %{name}-master = %{version}-%{release}
 Provides:   salt-api = %{version}
 Obsoletes:  salt3-api < 3006
+Obsoletes:  salt3006-api
 
 %description api
 salt-api provides a REST interface to the Salt master.
@@ -141,6 +146,7 @@ Group:      Applications/System
 Requires:   %{name}-master = %{version}-%{release}
 Provides:   salt-cloud = %{version}
 Obsoletes:  salt3-cloud < 3006
+Obsoletes:  salt3006-cloud
 
 %description cloud
 The salt-cloud tool provisions new cloud VMs, installs salt-minion on them, and
@@ -153,6 +159,7 @@ Group:      Applications/System
 Requires:   %{name} = %{version}-%{release}
 Provides:   salt-ssh = %{version}
 Obsoletes:  salt3-ssh < 3006
+Obsoletes:  salt3006-ssh
 
 %description ssh
 The salt-ssh tool can run remote execution functions and states without the use
@@ -166,11 +173,13 @@ unset CPPFLAGS
 unset CXXFLAGS
 unset CFLAGS
 unset LDFLAGS
+unset RUSTFLAGS
 rm -rf $RPM_BUILD_DIR
 mkdir -p $RPM_BUILD_DIR/build
 cd $RPM_BUILD_DIR
 
 %if "%{getenv:SALT_ONEDIR_ARCHIVE}" == ""
+  export RELENV_DATA=${HOME:-%{getenv:HOME}}/.local/relenv
   export PIP_CONSTRAINT=%{_salt_src}/requirements/constraints.txt
   export FETCH_RELENV_VERSION=${SALT_RELENV_VERSION}
   python3 -m venv --clear --copies build/venv
@@ -191,6 +200,18 @@ cd $RPM_BUILD_DIR
   $RPM_BUILD_DIR/build/venv/bin/tools pkg pre-archive-cleanup --pkg $RPM_BUILD_DIR/build/salt
   popd
   build/venv/bin/python3 -m pip uninstall -y ppbt
+
+  # Generate man pages for source builds
+  pushd %{_salt_src}
+  export PY=$($RPM_BUILD_DIR/build/venv/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()')
+  $RPM_BUILD_DIR/build/venv/bin/python3 -m pip install -r requirements/static/ci/py${PY}/docs.txt
+  export LATEST_RELEASE=%{version}
+  export SALT_ON_SALTSTACK=1
+  make -C doc man SPHINXBUILD=$RPM_BUILD_DIR/build/venv/bin/sphinx-build
+  # Copy generated man pages to doc/man
+  mkdir -p doc/man
+  cp -f doc/_build/man/*.1 doc/_build/man/*.7 doc/man/ 2>/dev/null || true
+  popd
 
   # Generate master config
   sed 's/#user: root/user: salt/g' %{_salt_src}/conf/master > $RPM_BUILD_DIR/build/master
@@ -297,7 +318,6 @@ mkdir -p %{buildroot}%{_mandir}/man7
 install -p -m 0644 %{_salt_src}/doc/man/spm.1 %{buildroot}%{_mandir}/man1/spm.1
 install -p -m 0644 %{_salt_src}/doc/man/spm.1 %{buildroot}%{_mandir}/man1/spm.1
 install -p -m 0644 %{_salt_src}/doc/man/salt.1 %{buildroot}%{_mandir}/man1/salt.1
-install -p -m 0644 %{_salt_src}/doc/man/salt.7 %{buildroot}%{_mandir}/man7/salt.7
 install -p -m 0644 %{_salt_src}/doc/man/salt-cp.1 %{buildroot}%{_mandir}/man1/salt-cp.1
 install -p -m 0644 %{_salt_src}/doc/man/salt-key.1 %{buildroot}%{_mandir}/man1/salt-key.1
 install -p -m 0644 %{_salt_src}/doc/man/salt-master.1 %{buildroot}%{_mandir}/man1/salt-master.1
@@ -333,7 +353,6 @@ rm -rf %{buildroot}
 
 %files master
 %defattr(-,root,root)
-%doc %{_mandir}/man7/salt.7*
 %doc %{_mandir}/man1/salt.1*
 %doc %{_mandir}/man1/salt-cp.1*
 %doc %{_mandir}/man1/salt-key.1*
