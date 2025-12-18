@@ -171,8 +171,12 @@ except ImportError:
     log.info("Spell-checking disabled: enchant library not available")
 
 # Vault policy lexer is only needed for HTML builds (syntax highlighting)
-# Man pages don't use syntax highlighting, so skip it for lightweight builds
-building_man_only = "man" in sys.argv and "html" not in sys.argv
+# Man pages don't use syntax highlighting, so we only add it for non-man builds
+# Check if we're building man pages by looking for 'man' builder in sys.argv
+building_man_only = any(
+    "-b" in sys.argv and i + 1 < len(sys.argv) and sys.argv[i + 1] == "man"
+    for i, _ in enumerate(sys.argv)
+)
 if not building_man_only:
     extensions.append("vaultpolicylexer")
 
@@ -185,10 +189,6 @@ autosummary_generate_overwrite = False
 # For man pages (lightweight CLI docs), we auto-mock missing dependencies
 # For full HTML docs, we fail with helpful errors about what's missing
 autodoc_mock_imports = []
-
-# Detect if we're building man pages only (lightweight build)
-# Man pages only document CLI tools and don't need full Salt imports
-building_man_only = "man" in sys.argv and "html" not in sys.argv
 
 # External dependencies that Salt imports at module level
 # These need to be available for full HTML docs (autodoc) but can be mocked for man pages
