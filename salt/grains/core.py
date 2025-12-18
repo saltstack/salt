@@ -2808,11 +2808,13 @@ def os_data():
             # freebsd-version was introduced in 10.0.
             # derive osrelease from kernelversion prior to that
             grains["osrelease"] = grains["kernelrelease"].split("-")[0]
+        grains["osfullname"] = "{} {}".format(grains["kernel"], grains["osrelease"])
         grains.update(_bsd_cpudata(grains))
     elif grains["kernel"] in ("OpenBSD", "NetBSD"):
         grains["os_family"] = grains["os"] = grains["kernel"]
         grains.update(_bsd_cpudata(grains))
         grains["osrelease"] = grains["kernelrelease"].split("-")[0]
+        grains["osfullname"] = "{} {}".format(grains["kernel"], grains["osrelease"])
         if grains["kernel"] == "NetBSD":
             grains.update(_netbsd_gpu_data())
     else:

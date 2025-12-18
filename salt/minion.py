@@ -2026,7 +2026,8 @@ class Minion(MinionBase):
         minion_instance.gen_modules()
         fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
-        salt.utils.process.appendproctitle(f"{cls.__name__}._thread_return")
+        if opts.get("multiprocessing", True):
+            salt.utils.process.appendproctitle(f"{cls.__name__}._thread_return")
 
         sdata = {"pid": os.getpid()}
         sdata.update(data)
@@ -2234,7 +2235,8 @@ class Minion(MinionBase):
         minion_instance.gen_modules()
         fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
-        salt.utils.process.appendproctitle(f"{cls.__name__}._thread_multi_return")
+        if opts.get("multiprocessing", True):
+            salt.utils.process.appendproctitle(f"{cls.__name__}._thread_multi_return")
 
         sdata = {"pid": os.getpid()}
         sdata.update(data)
@@ -3888,21 +3890,27 @@ class SyndicManager(MinionBase):
         # TODO: cleanup: Move down into event class
         mtag, data = self.local.event.unpack(raw)
         log.trace("Got event %s", mtag)  # pylint: disable=no-member
+        job_event = False
+        return_event = True
 
         tag_parts = mtag.split("/")
         if (
             len(tag_parts) >= 4
             and tag_parts[1] == "job"
             and salt.utils.jid.is_jid(tag_parts[2])
-            and tag_parts[3] == "ret"
-            and "return" in data
         ):
+            job_event = True
+
+        if self.syndic_mode == "cluster" and data.get("master_id", 0) == self.opts.get(
+            "master_id", 1
+        ):
+            return_event = False
+
+        if job_event and tag_parts[3] == "ret" and "return" in data:
             if "jid" not in data:
                 # Not a job return
                 return
-            if self.syndic_mode == "cluster" and data.get(
-                "master_id", 0
-            ) == self.opts.get("master_id", 1):
+            if not return_event:
                 log.debug("Return received with matching master_id, not forwarding")
                 return
 
@@ -3938,7 +3946,15 @@ class SyndicManager(MinionBase):
             # TODO: config to forward these? If so we'll have to keep track of who
             # has seen them
             # if we are the top level masters-- don't forward all the minion events
-            if self.syndic_mode == "sync":
+
+            if (
+                self.syndic_mode == "sync"
+                # Even in cluster mode we need to forward the raw event with the minions
+                # list to determine which minions we expect to return on the master of masters.
+                or (
+                    return_event and (salt.utils.jid.is_jid(mtag) and "minions" in data)
+                )
+            ):
                 # Add generic event aggregation here
                 if "retcode" not in data:
                     self.raw_events.append({"data": data, "tag": mtag})

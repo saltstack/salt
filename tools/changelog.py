@@ -26,6 +26,7 @@ changelog = command_group(
     help="Changelog tools",
     description=__doc__,
     venv_config=VirtualEnvPipConfig(
+        pip_requirement="pip>=24.2",
         requirements_files=[
             REPO_ROOT
             / "requirements"

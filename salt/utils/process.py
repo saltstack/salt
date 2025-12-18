@@ -612,7 +612,12 @@ class ProcessManager:
         Load and start all available api modules
         """
         log.debug("Process Manager starting!")
-        if multiprocessing.current_process().name != "MainProcess":
+        # Always append for minion process managers, even in MainProcess
+        # (e.g., when running with --disable-keepalive)
+        if (
+            multiprocessing.current_process().name != "MainProcess"
+            or "Minion" in self.name
+        ):
             appendproctitle(self.name)
 
         # make sure to kill the subprocesses if the parent is killed

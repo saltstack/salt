@@ -51,6 +51,7 @@ on:
 
 env:
   COLUMNS: 190
+  RELENV_DATA: "${{ github.workspace }}/.relenv"
   AWS_MAX_ATTEMPTS: "10"
   AWS_RETRY_MODE: "adaptive"
   PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
