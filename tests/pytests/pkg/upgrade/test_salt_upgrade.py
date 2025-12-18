@@ -131,7 +131,43 @@ def _get_running_named_salt_pid(process_name):
     return pids
 
 
-def test_salt_upgrade(salt_call_cli, install_salt):
+def _get_installed_salt_packages():
+    """
+    Get list of installed Salt packages on Windows via registry.
+    Returns list of tuples: (name, version)
+    """
+    if not platform.is_windows():
+        return []
+
+    import subprocess
+
+    cmd = [
+        "powershell",
+        "-Command",
+        (
+            "Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | "
+            "Where-Object { $_.DisplayName -like '*Salt*' } | "
+            "Select-Object DisplayName, DisplayVersion | "
+            'ForEach-Object { "$($_.DisplayName)|$($_.DisplayVersion)" }'
+        ),
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    if result.returncode != 0:
+        log.warning("Failed to query installed packages: %s", result.stderr)
+        return []
+
+    packages = []
+    for line in result.stdout.strip().split("\n"):
+        line = line.strip()
+        if line and "|" in line:
+            name, version = line.split("|", 1)
+            packages.append((name.strip(), version.strip()))
+
+    return packages
+
+
+def test_salt_upgrade(salt_call_cli, install_salt, debian_disable_policy_rcd):
     """
     Test an upgrade of Salt, Minion and Master
     """
@@ -164,6 +200,19 @@ def test_salt_upgrade(salt_call_cli, install_salt):
 
     # perform Salt package upgrade test
     salt_test_upgrade(salt_call_cli, install_salt)
+
+    # Verify only one Salt package is installed after upgrade (Windows)
+    if platform.is_windows():
+        installed_packages = _get_installed_salt_packages()
+        log.info("Installed Salt packages after upgrade: %s", installed_packages)
+        assert len(installed_packages) == 1, (
+            f"Expected 1 Salt package after upgrade, found {len(installed_packages)}: "
+            f"{installed_packages}"
+        )
+        package_name, package_version = installed_packages[0]
+        log.info(
+            "Verified single package: %s version %s", package_name, package_version
+        )
 
     new_py_version = install_salt.package_python_version()
     if new_py_version == original_py_version:
