@@ -107,6 +107,7 @@ def add_job(tmp_cache_dir, job_cache_dir_files, pki_dir, tmp_path):
             "pki_dir": str(pki_dir),
             "conf_file": str(tmp_path / "conf"),
             "job_cache": True,
+            "keys.cache_driver": "localfs_key",
         }
         load = {
             "fun_args": [],
@@ -258,6 +259,7 @@ def test_save_load_concurrent_writes(tmp_cache_dir):
         "hash_type": "sha256",
         "pki_dir": str(tmp_cache_dir / "pki"),
         "key_cache": False,
+        "keys.cache_driver": "localfs_key",
     }
 
     num_procs = 15
