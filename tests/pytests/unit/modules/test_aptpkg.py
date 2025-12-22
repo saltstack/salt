@@ -1634,9 +1634,8 @@ def test_sourceslist_multiple_comps():
             assert source.dist == "focal-updates"
 
 
-@pytest.mark.parametrize(
-    "repo_line",
-    [
+@pytest.fixture(
+    params=(
         "deb [ arch=amd64 ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
         "deb [arch=amd64 ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
         "deb [arch=amd64 test=one ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
@@ -1644,8 +1643,14 @@ def test_sourceslist_multiple_comps():
         "deb [ arch=amd64,armel test=one ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
         "deb [ arch=amd64,armel test=one] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
         "deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
-    ],
+    )
 )
+def repo_line(request, fs):
+    fs.create_dir("/etc/apt/sources.list.d")
+    fs.create_file("/etc/apt/sources.list", contents=request.param)
+    yield request.param
+
+
 def test_sourceslist_architectures(repo_line):
     """
     Test SourcesList when architectures is in repo
