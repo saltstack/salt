@@ -939,14 +939,10 @@ def safe_opts_copy(opts: Any, name: str | None = None) -> OptsDict:
         opts = safe_opts_copy(opts, name="loader:states")
     """
     if isinstance(opts, OptsDict):
-        # Find the root of this OptsDict tree
-        root = opts
-        while root._parent is not None:
-            root = root._parent
-
-        # Always create children from the root to ensure all children are siblings
-        # This allows them to see each other's mutations through the root's _local
-        return OptsDict.from_parent(root, name=name)
+        # Create child from current opts, not root
+        # This ensures the child can see all values in the current opts,
+        # including any values set in the current opts' _local dict
+        return OptsDict.from_parent(opts, name=name)
 
     # Converting from regular dict
     # Check if we've already created a root for this specific dict object
