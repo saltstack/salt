@@ -243,16 +243,12 @@ class Deb822SourceEntry:
 
     @trusted.setter
     def trusted(self, value):
-        import traceback
-        log.critical("ST822: %s: %s | %s", type(value), value, "".join(traceback.format_stack()))
         if isinstance(value, bool):
             self.section["Trusted"] = "yes" if value else "no"
         elif isinstance(value, int) and value in (0, 1):
             self.section["Trusted"] = "yes" if value == 1 else "no"
         elif isinstance(value, str):
-            self.section["Trusted"] = (
-                "yes" if string_to_bool(value) else "no"
-            )
+            self.section["Trusted"] = "yes" if string_to_bool(value) else "no"
         else:
             try:
                 del self.section["Trusted"]
