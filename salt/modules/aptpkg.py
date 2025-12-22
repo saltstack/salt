@@ -49,7 +49,7 @@ from salt.utils.pkg.deb import (
     Deb822Section,
     SourceEntry,
     SourcesList,
-    string_to_bool_int,
+    string_to_bool,
     _invalid,
 )
 
@@ -2709,7 +2709,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     repo_source_entry = SourceEntry(repo)
     if not mod_source:
         if not aptkey and not (
-            kwargs["signedby"] or string_to_bool_int(kwargs.get("trusted", "no")) == 1
+            kwargs["signedby"] or string_to_bool(kwargs.get("trusted", "no"))
         ):
             raise SaltInvocationError(
                 "missing 'signedby' or 'trusted' option when apt-key is missing"

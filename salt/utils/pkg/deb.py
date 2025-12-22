@@ -16,18 +16,18 @@ _APT_SOURCES_LIST = "/etc/apt/sources.list"
 _APT_SOURCES_PARTSDIR = "/etc/apt/sources.list.d/"
 
 
-def string_to_bool_int(s):
+def string_to_bool(s):
     """
     Convert string representation of bool values to integer
     """
     if isinstance(s, bool):
-        s = "yes" if s else "no"
+        return s
     s = s.lower()
     if s in ("no", "false", "without", "off", "disable"):
-        return 0
+        return False
     elif s in ("yes", "true", "with", "on", "enable"):
-        return 1
-    return -1
+        return True
+    raise ValueError(f"Unable to convert to boolean: {s}")
 
 
 class Deb822Section:
@@ -237,7 +237,7 @@ class Deb822SourceEntry:
         Return the value of the Trusted field
         """
         try:
-            return string_to_bool_int(self.section["Trusted"]) == 1
+            return string_to_bool(self.section["Trusted"])
         except KeyError:
             return None
 
@@ -251,7 +251,7 @@ class Deb822SourceEntry:
             self.section["Trusted"] = "yes" if value == 1 else "no"
         elif isinstance(value, str):
             self.section["Trusted"] = (
-                "yes" if string_to_bool_int(value) == 1 else "no"
+                "yes" if string_to_bool(value) else "no"
             )
         else:
             try:
@@ -264,7 +264,7 @@ class Deb822SourceEntry:
         """
         Return True if the source is enabled
         """
-        return not string_to_bool_int(self.section.get("Enabled", "yes"))
+        return not string_to_bool(self.section.get("Enabled", "yes"))
 
     @disabled.setter
     def disabled(self, value):
@@ -525,7 +525,7 @@ class SourceEntry:
         elif isinstance(trusted, int) and trusted in (0, 1):
             self._trusted = trusted == 1
         elif isinstance(trusted, str):
-            self._trusted = string_to_bool_int(trusted) == 1
+            self._trusted = string_to_bool(trusted)
         else:
             self._trusted = None
 
