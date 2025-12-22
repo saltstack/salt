@@ -1238,6 +1238,150 @@ def site_prefixes():
         },
     ]
 
+@pytest.fixture
+def site_prefixes_results_nb_420():
+    return {
+        "dict": {
+            "count": 2,
+            "next": None,
+            "previous": None,
+            "results": [
+                {
+                    "id": 50,
+                    "url": "https://netbox.example.com/api/ipam/prefixes/50/",
+                    "display_url": "https://netbox.example.com/ipam/prefixes/50/",
+                    "display": "198.51.100.0/24",
+                    "family": {
+                        "value": 4,
+                        "label": "IPv4"
+                    },
+                    "prefix": "198.51.100.0/24",
+                    "vrf": None,
+                    "scope_type": "dcim.site",
+                    "scope_id": 1,
+                    "scope": {
+                        "id": 1,
+                        "url": "https://netbox.example.com/api/dcim/sites/1/",
+                        "display": "Site 1",
+                        "name": "Site 1",
+                        "slug": "site1",
+                        "description": ""
+                    },
+                    "tenant": None,
+                    "vlan": None,
+                    "status": {
+                        "value": "active",
+                        "label": "Active"
+                    },
+                    "role": None,
+                    "is_pool": False,
+                    "mark_utilized": False,
+                    "description": "",
+                    "comments": "",
+                    "tags": [],
+                    "custom_fields": {},
+                    "created": "2025-12-13T15:01:28.282368Z",
+                    "last_updated": "2025-12-22T21:44:22.907412Z",
+                    "children": 0,
+                    "_depth": 1
+                },
+                {
+                    "id": 43,
+                    "url": "https://netbox.example.com/api/ipam/prefixes/43/",
+                    "display_url": "https://netbox.example.com/ipam/prefixes/43/",
+                    "display": "2001:db8::/48",
+                    "family": {
+                        "value": 6,
+                        "label": "IPv6"
+                    },
+                    "prefix": "2001:db8::/48",
+                    "vrf": None,
+                    "scope_type": "dcim.site",
+                    "scope_id": 1,
+                    "scope": {
+                        "id": 1,
+                        "url": "https://netbox.example.com/api/dcim/sites/1/",
+                        "display": "Site 1",
+                        "name": "Site 1",
+                        "slug": "site1",
+                        "description": ""
+                    },
+                    "tenant": None,
+                    "vlan": None,
+                    "status": {
+                        "value": "active",
+                        "label": "Active"
+                    },
+                    "role": None,
+                    "is_pool": False,
+                    "mark_utilized": False,
+                    "description": "IPv6 addresses for Site 1",
+                    "comments": "",
+                    "tags": [],
+                    "custom_fields": {},
+                    "created": "2025-12-12T20:42:27.011531Z",
+                    "last_updated": "2025-12-12T20:42:27.011555Z",
+                    "children": 3,
+                    "_depth": 1
+                },
+            ],
+        }
+    }
+
+@pytest.fixture
+def site_prefixes_nb_420():
+    return [
+        {
+            '_depth': 1,
+            'children': 0,
+            'comments': '',
+            'created': '2025-12-13T15:01:28.282368Z',
+            'custom_fields': {},
+            'description': '',
+            'display': '198.51.100.0/24',
+            'display_url': 'https://netbox.example.com/ipam/prefixes/50/',
+            'family': {'label': 'IPv4', 'value': 4},
+            'id': 50,
+            'is_pool': False,
+            'last_updated': '2025-12-22T21:44:22.907412Z',
+            'mark_utilized': False,
+            'prefix': '198.51.100.0/24',
+            'role': None,
+            'scope_id': 1,
+            'scope_type': 'dcim.site',
+            'status': {'label': 'Active', 'value': 'active'},
+            'tags': [],
+            'tenant': None,
+            'url': 'https://netbox.example.com/api/ipam/prefixes/50/',
+            'vlan': None,
+            'vrf': None
+        },
+        {
+            '_depth': 1,
+            'children': 3,
+            'comments': '',
+            'created': '2025-12-12T20:42:27.011531Z',
+            'custom_fields': {},
+            'description': 'IPv6 addresses for Site 1',
+            'display': '2001:db8::/48',
+            'display_url': 'https://netbox.example.com/ipam/prefixes/43/',
+            'family': {'label': 'IPv6', 'value': 6},
+            'id': 43,
+            'is_pool': False,
+            'last_updated': '2025-12-12T20:42:27.011555Z',
+            'mark_utilized': False,
+            'prefix': '2001:db8::/48',
+            'role': None,
+            'scope_id': 1,
+            'scope_type': 'dcim.site',
+            'status': {'label': 'Active', 'value': 'active'},
+            'tags': [],
+            'tenant': None,
+            'url': 'https://netbox.example.com/api/ipam/prefixes/43/',
+            'vlan': None,
+            'vrf': None
+        }
+    ]
 
 @pytest.fixture
 def proxy_details_results():
@@ -2096,6 +2240,25 @@ def test_when_we_retrieve_site_prefixes_then_return_list(
             default_kwargs["api_query_result_limit"],
         )
 
+        assert actual_result == expected_result
+
+def test_when_we_retrieve_site_prefixes_nb_420_then_return_list(
+    default_kwargs, headers, site_prefixes_results_nb_420, site_prefixes_nb_420
+):
+
+    expected_result = site_prefixes_nb_420
+
+    with patch("salt.utils.http.query", autospec=True) as query:
+        query.return_value = site_prefixes_results_nb_420
+
+        actual_result = netbox._get_site_prefixes(
+            default_kwargs["api_url"],
+            default_kwargs["minion_id"],
+            "Site 1",
+            1,
+            headers,
+            default_kwargs["api_query_result_limit"],
+        )
         assert actual_result == expected_result
 
 
