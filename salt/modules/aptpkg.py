@@ -1690,25 +1690,24 @@ def list_repos(**kwargs):
             # to get separate entries for each type and suite
             for suite in source.suites:
                 for source_type in source.types:
-                    repo = {}
-                    repo["file"] = source.file
-                    repo["comps"] = getattr(source, "comps", [])
-                    repo["disabled"] = source.disabled
-                    repo["enabled"] = not repo[
-                        "disabled"
-                    ]  # This is for compatibility with the other modules
-                    repo["dist"] = suite
-                    repo["suites"] = source.suites
-                    repo["type"] = source_type
-                    repo["uri"] = source.uri
                     compat_source = SourceEntry(
                         f"{source_type} {source.uri} {suite} {' '.join(getattr(source, 'comps', []))}"
                     )
                     for attr in ("disabled", "architectures", "signedby", "trusted"):
                         setattr(compat_source, attr, getattr(source, attr))
-                    repo["line"] = str(compat_source)
-                    repo["architectures"] = getattr(source, "architectures", [])
-                    repo["signedby"] = source.signedby
+                    repo = {
+                        "file": source.file,
+                        "comps": getattr(source, "comps", []),
+                        "disabled": source.disabled,
+                        "enabled": not source.disabled,  # This is for compatibility with the other modules
+                        "dist": suite,
+                        "suites": source.suites,
+                        "type": source_type,
+                        "uri": source.uri,
+                        "line": str(compat_source),
+                        "architectures": getattr(source, "architectures", []),
+                        "signedby": source.signedby,
+                    }
                     repos.setdefault(source.uri, []).append(repo)
             continue
         repo = {}
@@ -2758,9 +2757,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     if refresh:
         refresh_db()
 
-    return {
-        repo: get_repo(repo)
-    }
+    return {repo: get_repo(repo)}
 
 
 def file_list(*packages, **kwargs):
