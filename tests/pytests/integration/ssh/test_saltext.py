@@ -1,9 +1,9 @@
-import json
 import shutil
 from pathlib import Path
 
 import pytest
 
+import salt.utils.yaml
 from tests.support.helpers import SaltVirtualEnv, system_python_version
 from tests.support.pytest.helpers import FakeSaltExtension
 
@@ -69,7 +69,7 @@ def venv(
 def saltext_conf(request, salt_master):
     with pytest.helpers.temp_file(
         "saltext_ssh.conf",
-        json.dumps(request.param),
+        salt.utils.yaml.safe_dump(request.param, default_flow_style=False),
         Path(salt_master.config_dir) / "master.d",
     ):
         yield request.param

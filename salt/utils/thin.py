@@ -94,12 +94,6 @@ except ImportError:
     except ImportError:
         ssl_match_hostname = None
 
-try:
-    import backports
-except ImportError:
-    # Python 3.13+ doesn't have backports package
-    backports = None
-
 concurrent = None
 
 
@@ -304,9 +298,6 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
         "looseversion",
         "packaging",
     ]
-    # backports package doesn't exist in Python 3.13+
-    if sys.version_info < (3, 13):
-        mods.append("backports")
     if ext_py_ver and tuple(ext_py_ver) >= (3, 0):
         mods.append("distro")
 
@@ -456,7 +447,6 @@ def get_tops(extra_mods="", so_mods=""):
         backports_abc,
         looseversion,
         packaging,
-        backports,
         requests,
         idna,
         urllib3,
