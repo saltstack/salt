@@ -204,6 +204,16 @@ class SSHModuleTest(ModuleCase):
         self.assertEqual(ret, "exists")
 
     @pytest.mark.slow_test
+    def test_check_known_host_get_known_host_entries_error(self):
+        """
+        Return the error from get_known_host_entries, if supplied
+        """
+        arg = ["baduser", "github.com"]
+        ret = self.run_function("ssh.check_known_host", arg)
+        assert "error" in ret
+        assert "User baduser does not exist" in ret["error"]
+
+    @pytest.mark.slow_test
     def test_rm_known_host(self):
         """
         ssh.rm_known_host

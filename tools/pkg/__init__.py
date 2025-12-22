@@ -140,9 +140,10 @@ def set_salt_version(
         with ctx.virtualenv(
             name="set-salt-version",
             config=VirtualEnvPipConfig(
+                pip_requirement="pip>=24.2",
                 requirements_files=[
                     tools.utils.REPO_ROOT / "requirements" / "base.txt",
-                ]
+                ],
             ),
         ) as venv:
             code = f"""
@@ -375,6 +376,7 @@ def generate_hashes(ctx: Context, files: list[pathlib.Path]):
 @pkg.command(
     name="source-tarball",
     venv_config=VirtualEnvPipConfig(
+        pip_requirement="pip>=24.2",
         requirements_files=[
             tools.utils.REPO_ROOT / "requirements" / "build.txt",
         ],
@@ -423,6 +425,7 @@ def source_tarball(ctx: Context):
 @pkg.command(
     name="pypi-upload",
     venv_config=VirtualEnvPipConfig(
+        pip_requirement="pip>=24.2",
         requirements_files=[
             tools.utils.REPO_ROOT / "requirements" / "build.txt",
         ],

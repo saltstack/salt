@@ -40,7 +40,7 @@
 %define fish_dir %{_datadir}/fish/vendor_functions.d
 
 Name:    salt
-Version: 3006.17
+Version: 3006.18
 Release: 0
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
@@ -49,6 +49,7 @@ URL:     https://saltproject.io/
 
 Provides:  salt = %{version}
 Obsoletes: salt3 < 3006
+Obsoletes: salt3006
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -94,6 +95,7 @@ Group:      System Environment/Daemons
 Requires:   %{name} = %{version}-%{release}
 Provides:   salt-master = %{version}
 Obsoletes:  salt3-master < 3006
+Obsoletes:  salt3006-master
 
 %description master
 The Salt master is the central server to which all minions connect.
@@ -105,6 +107,7 @@ Group:      System Environment/Daemons
 Requires:   %{name} = %{version}-%{release}
 Provides:   salt-minion = %{version}
 Obsoletes:  salt3-minion < 3006
+Obsoletes:  salt3006-minion
 
 %description minion
 The Salt minion is the agent component of Salt. It listens for instructions
@@ -117,6 +120,7 @@ Group:      System Environment/Daemons
 Requires:   %{name}-master = %{version}-%{release}
 Provides:   salt-syndic = %{version}
 Obsoletes:  salt3-syndic < 3006
+Obsoletes:  salt3006-syndic
 
 %description syndic
 The Salt syndic is a master daemon which can receive instruction from a
@@ -130,6 +134,7 @@ Group:      Applications/System
 Requires:   %{name}-master = %{version}-%{release}
 Provides:   salt-api = %{version}
 Obsoletes:  salt3-api < 3006
+Obsoletes:  salt3006-api
 
 %description api
 salt-api provides a REST interface to the Salt master.
@@ -141,6 +146,7 @@ Group:      Applications/System
 Requires:   %{name}-master = %{version}-%{release}
 Provides:   salt-cloud = %{version}
 Obsoletes:  salt3-cloud < 3006
+Obsoletes:  salt3006-cloud
 
 %description cloud
 The salt-cloud tool provisions new cloud VMs, installs salt-minion on them, and
@@ -153,6 +159,7 @@ Group:      Applications/System
 Requires:   %{name} = %{version}-%{release}
 Provides:   salt-ssh = %{version}
 Obsoletes:  salt3-ssh < 3006
+Obsoletes:  salt3006-ssh
 
 %description ssh
 The salt-ssh tool can run remote execution functions and states without the use
@@ -166,11 +173,13 @@ unset CPPFLAGS
 unset CXXFLAGS
 unset CFLAGS
 unset LDFLAGS
+unset RUSTFLAGS
 rm -rf $RPM_BUILD_DIR
 mkdir -p $RPM_BUILD_DIR/build
 cd $RPM_BUILD_DIR
 
 %if "%{getenv:SALT_ONEDIR_ARCHIVE}" == ""
+  export RELENV_DATA=${HOME:-%{getenv:HOME}}/.local/relenv
   export PIP_CONSTRAINT=%{_salt_src}/requirements/constraints.txt
   export FETCH_RELENV_VERSION=${SALT_RELENV_VERSION}
   python3 -m venv --clear --copies build/venv
@@ -191,6 +200,18 @@ cd $RPM_BUILD_DIR
   $RPM_BUILD_DIR/build/venv/bin/tools pkg pre-archive-cleanup --pkg $RPM_BUILD_DIR/build/salt
   popd
   build/venv/bin/python3 -m pip uninstall -y ppbt
+
+  # Generate man pages for source builds
+  pushd %{_salt_src}
+  export PY=$($RPM_BUILD_DIR/build/venv/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()')
+  $RPM_BUILD_DIR/build/venv/bin/python3 -m pip install -r requirements/static/ci/py${PY}/docs.txt
+  export LATEST_RELEASE=%{version}
+  export SALT_ON_SALTSTACK=1
+  make -C doc man SPHINXBUILD=$RPM_BUILD_DIR/build/venv/bin/sphinx-build
+  # Copy generated man pages to doc/man
+  mkdir -p doc/man
+  cp -f doc/_build/man/*.1 doc/_build/man/*.7 doc/man/ 2>/dev/null || true
+  popd
 
   # Generate master config
   sed 's/#user: root/user: salt/g' %{_salt_src}/conf/master > $RPM_BUILD_DIR/build/master
@@ -297,7 +318,6 @@ mkdir -p %{buildroot}%{_mandir}/man7
 install -p -m 0644 %{_salt_src}/doc/man/spm.1 %{buildroot}%{_mandir}/man1/spm.1
 install -p -m 0644 %{_salt_src}/doc/man/spm.1 %{buildroot}%{_mandir}/man1/spm.1
 install -p -m 0644 %{_salt_src}/doc/man/salt.1 %{buildroot}%{_mandir}/man1/salt.1
-install -p -m 0644 %{_salt_src}/doc/man/salt.7 %{buildroot}%{_mandir}/man7/salt.7
 install -p -m 0644 %{_salt_src}/doc/man/salt-cp.1 %{buildroot}%{_mandir}/man1/salt-cp.1
 install -p -m 0644 %{_salt_src}/doc/man/salt-key.1 %{buildroot}%{_mandir}/man1/salt-key.1
 install -p -m 0644 %{_salt_src}/doc/man/salt-master.1 %{buildroot}%{_mandir}/man1/salt-master.1
@@ -333,7 +353,6 @@ rm -rf %{buildroot}
 
 %files master
 %defattr(-,root,root)
-%doc %{_mandir}/man7/salt.7*
 %doc %{_mandir}/man1/salt.1*
 %doc %{_mandir}/man1/salt-cp.1*
 %doc %{_mandir}/man1/salt-key.1*
@@ -735,6 +754,49 @@ if [ $1 -ge 1 ] ; then
 fi
 
 %changelog
+* Thu Dec 18 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.18
+
+# Fixed
+
+- Fixed ssh_auth.present to respect provided `options` when read keys from source file [#60769](https://github.com/saltstack/salt/issues/60769)
+- Fixed ssh_auth regexp to handle key types with @ or . [#61299](https://github.com/saltstack/salt/issues/61299)
+- Fixed a TypeError exception thrown by ssh_known_hosts.present when the specified user account does not exist [#62049](https://github.com/saltstack/salt/issues/62049)
+- Fix runtime error on OpenBSD by adding support for the osfullname grain [#64189](https://github.com/saltstack/salt/issues/64189)
+- Forward minion list events in Syndic cluster mode to enable proper job completion detection [#68319](https://github.com/saltstack/salt/issues/68319)
+- Fixed ssh_auth.present and ssh.absent to report changes if some key was added or removed when reading keys from a source file [#68403](https://github.com/saltstack/salt/issues/68403)
+- Test loader now prevents .pyc files from being written during test run using
+  sys.dont_write_bytecode = True. This results in 3x faster test execution and
+  reduced IO operations [#68412](https://github.com/saltstack/salt/issues/68412)
+- Fixes a issue where variable names were reversed when detecting domain and
+  username from a username. [#68450](https://github.com/saltstack/salt/issues/68450)
+- Changed the glob pattern for APT sources from `**/*.list` to `*.list`, in line
+  with APT's default pattern in sources.list.d [#68475](https://github.com/saltstack/salt/issues/68475)
+- Remove unwanted error log from aptpkg [#68485](https://github.com/saltstack/salt/issues/68485)
+- Use the packaging library instead of the deprecated pkg_resources library for
+  working with version to avoid a deprecation warning when running salt
+  commands [#68487](https://github.com/saltstack/salt/issues/68487)
+- Fixes issue with disk.tune passing incorrect args for read-only and read-write
+  to blockdev.
+  Improves argument and error handling in blockdev. [#68490](https://github.com/saltstack/salt/issues/68490)
+- Enhance mod_data to Use Global Loader Extensions in salt-ssh [#68496](https://github.com/saltstack/salt/issues/68496)
+- Fix race condition in Salt Syndic when multiple Syndic Masters return at the same time and the Master of Masters tries to write to the same file in the job cache. [#68508](https://github.com/saltstack/salt/issues/68508)
+- Patch tornado for CVE-2023-28370 [#68529](https://github.com/saltstack/salt/issues/68529)
+- Fixed some of the commands in the Contributing guide. [#68538](https://github.com/saltstack/salt/issues/68538)
+- Fix check for non-blockdev devices in blockdev.tuned. Check always returned True
+  previously, now actually checks with file.is_blkdev. [#68541](https://github.com/saltstack/salt/issues/68541)
+- Added documentation and CLI help text for the --disable-keepalive option for
+  salt-minion and salt-proxy, which disables the automatic restart mechanism
+  when external process managers like systemd handle daemon restarts. [#68544](https://github.com/saltstack/salt/issues/68544)
+- Upgrade relenv to 0.22.1 and fix Python 3.13 support
+
+  - Updated relenv from 0.21.2 to 0.22.1
+  - Fixed backports module import for Python 3.13 compatibility
+  - Fixed RUSTFLAGS conflicts when compiling cryptography package
+  - Fixed toolchain cache location for relenv 0.22.1
+  - Added Obsoletes directives to prevent EPEL salt3006 package conflicts on Rocky 9 [#68552](https://github.com/saltstack/salt/issues/68552)
+- Fixed minion process name pollution when multiprocessing is disabled [#68553](https://github.com/saltstack/salt/issues/68553)
+
+
 * Thu Nov 20 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.17
 
 # Fixed

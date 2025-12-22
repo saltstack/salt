@@ -1575,6 +1575,16 @@ def test_sourceslist_multiple_comps():
             assert source.dist == "focal-updates"
 
 
+def test_sourceslist_subdirectory_no_exception(fs):
+    fs.create_dir("/etc/apt/sources.list.d/backup.list")
+    fs.create_file(
+        "/etc/apt/sources.list.d/backup/test.list",
+        contents="deb http://archive.ubuntu.com/ubuntu/ focal main",
+    )
+    sources = aptpkg.SourcesList()
+    assert list(sources) == []
+
+
 @pytest.fixture(
     params=(
         "deb [ arch=amd64 ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",

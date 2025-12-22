@@ -22,6 +22,7 @@ DEFAULT_REQS_CONFIG = DefaultPipConfig(
     ],
 )
 RELEASE_VENV_CONFIG = VirtualEnvPipConfig(
+    pip_requirement="pip>=24.2",
     install_args=[
         f"--constraint={REQUIREMENTS_FILES_PATH / 'constraints.txt'}",
     ],
