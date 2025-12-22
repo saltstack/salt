@@ -3525,6 +3525,7 @@ class BaseHighState:
 
     def __init__(self, opts):
         self.opts = self.__gen_opts(opts)
+
         self.iorder = 10000
         self.avail = self.__gather_avail()
         self.building_highstate = HashableOrderedDict()
