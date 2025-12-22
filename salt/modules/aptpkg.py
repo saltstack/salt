@@ -2717,12 +2717,8 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
             )
 
         apt_source_file = kwargs.get("file")
-        if not apt_source_file:
-            raise SaltInvocationError(
-                "missing 'file' argument when defining a new repository"
-            )
 
-        if not apt_source_file.endswith(".list"):
+        if apt_source_file and apt_source_file.endswith(".sources"):
             section = Deb822Section("")
             section["Types"] = repo_entry["type"]
             section["URIs"] = repo_entry["uri"]
@@ -2732,7 +2728,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
                 section["Trusted"] = "yes"
             mod_source = Deb822SourceEntry(section, apt_source_file)
         else:
-            mod_source = SourceEntry(repo)
+            mod_source = SourceEntry(repo, apt_source_file)
         if "comments" in kwargs:
             mod_source.comment = kwargs["comments"]
         sources.list.append(mod_source)
