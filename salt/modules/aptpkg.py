@@ -2735,8 +2735,10 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     elif "comments" in kwargs:
         mod_source.comment = kwargs["comments"]
 
-    if not mod_source.line.endswith("\n"):
-        mod_source.line = mod_source.line + "\n"
+    if not isinstance(mod_source, Deb822SourceEntry):
+        mod_source.line = repo_source_entry.line
+        if not mod_source.line.endswith("\n"):
+            mod_source.line = mod_source.line + "\n"
 
     if not kwargs["architectures"] and not mod_source.architectures:
         kwargs.pop("architectures")
