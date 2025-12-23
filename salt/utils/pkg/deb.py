@@ -617,7 +617,7 @@ class SourcesList:
             if signedby:
                 if ext_attrs:
                     ext_attrs = f"{ext_attrs} "
-                ext_attrs = f"{ext_attrs}signedby={signedby}"
+                ext_attrs = f"{ext_attrs}signed-by={signedby}"
             if trusted:
                 if ext_attrs:
                     ext_attrs = f"{ext_attrs} "
