@@ -1203,7 +1203,6 @@ def test_get_tops_python(thin_ctx):
                 (bts(""), bts("")),  # backports_abc
                 (bts("looseversion.py"), bts("")),
                 (bts("packaging/__init__.py"), bts("")),
-                (bts(""), bts("")),  # backports
                 (bts("distro.py"), bts("")),
             ],
         ),
@@ -1252,7 +1251,6 @@ def test_get_tops_python_exclude(thin_ctx):
                 (bts(""), bts("")),  # backports_abc
                 (bts("looseversion.py"), bts("")),
                 (bts("packaging/__init__.py"), bts("")),
-                (bts(""), bts("")),  # backports
                 (bts("distro.py"), bts("")),
             ],
         ),

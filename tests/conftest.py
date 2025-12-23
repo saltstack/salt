@@ -1002,7 +1002,6 @@ def salt_syndic_master_factory(
         "publish_signing_algorithm": (
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
-        "keys.cache_driver": "localfs_key",
     }
     ext_pillar = []
     if salt.utils.platform.is_windows():
@@ -1122,7 +1121,6 @@ def salt_master_factory(
         "publish_signing_algorithm": (
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
-        "keys.cache_driver": "localfs_key",
     }
     ext_pillar = []
     if salt.utils.platform.is_windows():

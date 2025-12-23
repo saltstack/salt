@@ -172,9 +172,7 @@ def _get_installed_salt_packages():
     return packages
 
 
-def test_salt_upgrade(
-    salt_call_cli, install_salt, debian_disable_policy_rcd, salt_master
-):
+def test_salt_upgrade(salt_call_cli, install_salt, debian_disable_policy_rcd, salt_master):
     """
     Test an upgrade of Salt, Minion and Master
     """
