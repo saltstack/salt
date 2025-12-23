@@ -1972,8 +1972,11 @@ def mod_data(fsclient):
     opts = fsclient.opts
     for ref in sync_refs:
         try:
-            # Use salt.loader._module_dirs to get all module paths (including entry-points)
-            module_dirs = salt.loader._module_dirs(opts, ref, tag=ref.rstrip("s"))
+            # Use salt.loader._module_dirs but skip entry-points (saltexts handled by gen_thin)
+            # This still discovers extension_modules from config and module_dirs from CLI
+            module_dirs = salt.loader._module_dirs(
+                opts, ref, tag=ref.rstrip("s"), load_extensions=False
+            )
 
             for mod_dir in module_dirs:
                 if not os.path.isdir(mod_dir):
