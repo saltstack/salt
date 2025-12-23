@@ -16,7 +16,7 @@ from salt.exceptions import (
     CommandNotFoundError,
     SaltInvocationError,
 )
-from tests.support.mock import MagicMock, Mock, call, mock_open, patch
+from tests.support.mock import MagicMock, Mock, call, patch
 
 log = logging.getLogger(__name__)
 
@@ -1618,20 +1618,27 @@ SERVICE:cups-daemon,390,/usr/sbin/cupsd
         ]
 
 
+@pytest.fixture
+def _test_sourceslist_multiple_comps_fs(fs):
+    fs.create_dir("/etc/apt/sources.list.d")
+    fs.create_file(
+        "/etc/apt/sources.list",
+        contents="deb http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+    )
+    yield
+
+
+@pytest.mark.usefixtures("_test_sourceslist_multiple_comps_fs")
 def test_sourceslist_multiple_comps():
     """
     Test SourcesList when repo has multiple comps
     """
-    repo_line = "deb http://archive.ubuntu.com/ubuntu/ focal-updates main restricted"
-    with patch("salt.utils.files.fopen", mock_open(read_data=repo_line)), patch(
-        "pathlib.Path.is_file", side_effect=[True, False]
-    ):
-        sources = aptpkg.SourcesList()
-        for source in sources:
-            assert source.type == "deb"
-            assert source.uri == "http://archive.ubuntu.com/ubuntu/"
-            assert source.comps == ["main", "restricted"]
-            assert source.dist == "focal-updates"
+    sources = aptpkg.SourcesList()
+    for source in sources:
+        assert source.type == "deb"
+        assert source.uri == "http://archive.ubuntu.com/ubuntu/"
+        assert source.comps == ["main", "restricted"]
+        assert source.dist == "focal-updates"
 
 
 @pytest.fixture(
