@@ -3467,6 +3467,7 @@ class BaseHighState:
         mopts = self.client.master_opts()
         # OptsDict is a MutableMapping, not a dict subclass, so check for both
         from collections.abc import Mapping
+
         if not isinstance(mopts, (dict, Mapping)):
             # An error happened on the master
             opts["renderer"] = "jinja|yaml"

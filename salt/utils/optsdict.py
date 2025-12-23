@@ -32,6 +32,7 @@ import logging
 import sys
 import threading
 import traceback
+import weakref
 from collections.abc import MutableMapping
 from typing import Any, Optional
 
@@ -277,9 +278,14 @@ class MutationTracker:
     def __init__(self, track_mutations: bool = True, max_stack_depth: int = 10):
         self.track_mutations = track_mutations
         self.max_stack_depth = max_stack_depth
-        self._mutations: dict[str, dict[str, Any]] = {}
-        self._mutation_order: list[str] = []
         self._lock = threading.RLock()
+        if track_mutations:
+            self._mutations: dict[str, dict[str, Any]] = {}
+            self._mutation_order: list[str] = []
+        else:
+            # Don't allocate data structures if tracking is disabled
+            self._mutations = None
+            self._mutation_order = None
 
     def record_mutation(self, key: str, original_value: Any, new_value: Any):
         """
@@ -332,6 +338,9 @@ class MutationTracker:
         Returns:
             Dictionary containing mutation statistics and details
         """
+        if not self.track_mutations:
+            return {}
+
         with self._lock:
             if not verbose:
                 # Concise report
@@ -413,7 +422,7 @@ class OptsDict(MutableMapping):
         self,
         base_dict: dict[str, Any] | None = None,
         parent: Optional["OptsDict"] = None,
-        track_mutations: bool = True,
+        track_mutations: bool = False,
         name: str | None = None,
     ):
         """
@@ -422,7 +431,7 @@ class OptsDict(MutableMapping):
         Args:
             base_dict: Initial dictionary (for root instance)
             parent: Parent OptsDict to inherit from (for child instances)
-            track_mutations: Enable mutation tracking
+            track_mutations: Enable mutation tracking (disabled by default to save memory)
             name: Optional name for debugging (e.g., "loader:states", "state:highstate")
         """
         self._parent = parent
@@ -457,7 +466,7 @@ class OptsDict(MutableMapping):
     def from_dict(
         cls,
         base_dict: dict[str, Any],
-        track_mutations: bool = True,
+        track_mutations: bool = False,
         name: str | None = None,
     ) -> "OptsDict":
         """
@@ -465,7 +474,7 @@ class OptsDict(MutableMapping):
 
         Args:
             base_dict: Dictionary to wrap
-            track_mutations: Enable mutation tracking
+            track_mutations: Enable mutation tracking (disabled by default to save memory)
             name: Optional name for debugging
 
         Returns:
@@ -913,7 +922,8 @@ def generate_global_mutation_report(include_locations: bool = True) -> str:
 
 # Global mapping from source dict id() to its OptsDict root
 # Keyed by id(source_dict), value is the root OptsDict that wraps it
-_dict_to_root = {}
+# Use WeakValueDictionary to allow garbage collection when no longer referenced
+_dict_to_root = weakref.WeakValueDictionary()
 
 
 # Convenience function for backward compatibility
