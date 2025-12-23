@@ -29,7 +29,7 @@ import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.files
 import salt.utils.lazy
-import salt.utils.optsdict
+# Lazy import: salt.utils.optsdict imported only when creating loaders
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
@@ -304,6 +304,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         In pack, if any of the values are None they will be replaced with an
         empty context-specific dict
         """
+        import salt.utils.optsdict
 
         self.parent_loader = None
         self.inject_globals = {}
