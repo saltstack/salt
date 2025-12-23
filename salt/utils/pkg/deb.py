@@ -435,11 +435,9 @@ class SourceEntry:
             del opts["trusted"]
 
         ordered_opts = []
-        for opt in ("arch", "signedby", "trusted"):
-            if opt not in opts:
-                continue
-            if opts[opt]["full"] != "":
-                ordered_opts.append(opts[opt]["full"])
+        for opt in opts.values():
+            if opt["full"] != "":
+                ordered_opts.append(opt["full"])
 
         if ordered_opts:
             repo_line.append(f"[{' '.join(ordered_opts)}]")
