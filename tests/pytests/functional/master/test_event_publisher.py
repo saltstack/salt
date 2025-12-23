@@ -34,6 +34,10 @@ def opts(tmp_path):
     sock_dir = tmp_path / "sock"
     sock_dir.mkdir()
     opts["sock_dir"] = str(sock_dir)
+    # Use TCP transport instead of deprecated IPC
+    opts["ipc_mode"] = "tcp"
+    opts["tcp_master_pub_port"] = 45050
+    opts["tcp_master_pull_port"] = 45051
     return opts
 
 
