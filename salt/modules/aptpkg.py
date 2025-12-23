@@ -2841,11 +2841,8 @@ def _expand_repo_def(os_name, os_codename=None, **kwargs):
         architectures=getattr(source_entry, "architectures", []),
         **kwargs,
     )
-    if hasattr(_source_entry, "set_enabled"):
-        _source_entry.set_enabled(not source_entry.disabled)
-    else:
-        _source_entry.disabled = source_entry.disabled
-        _source_entry.line = _source_entry.repo_line()
+    _source_entry.disabled = source_entry.disabled
+    _source_entry.line = _source_entry.repo_line()
 
     sanitized["file"] = _source_entry.file
     sanitized["comps"] = getattr(_source_entry, "comps", [])
@@ -2853,7 +2850,7 @@ def _expand_repo_def(os_name, os_codename=None, **kwargs):
     sanitized["dist"] = _source_entry.dist
     sanitized["type"] = _source_entry.type
     sanitized["uri"] = _source_entry.uri
-    sanitized["line"] = getattr(_source_entry, "line", "").strip()
+    sanitized["line"] = str(_source_entry)
     sanitized["architectures"] = getattr(_source_entry, "architectures", [])
     sanitized["signedby"] = signedby
 
