@@ -17,7 +17,6 @@ import pathlib
 import re
 import shutil
 import time
-from collections import OrderedDict
 from urllib.error import HTTPError
 from urllib.request import Request as _Request
 from urllib.request import urlopen as _urlopen
@@ -45,7 +44,14 @@ from salt.exceptions import (
     SaltInvocationError,
 )
 from salt.modules.cmdmod import _parse_env
-from salt.utils.pkg.deb import SourceEntry, SourcesList
+from salt.utils.pkg.deb import (
+    Deb822Section,
+    Deb822SourceEntry,
+    SourceEntry,
+    SourcesList,
+    _invalid,
+    string_to_bool,
+)
 
 log = logging.getLogger(__name__)
 
@@ -57,7 +63,7 @@ LP_SRC_FORMAT = "deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main"
 LP_PVT_SRC_FORMAT = "deb https://{0}private-ppa.launchpad.net/{1}/{2}/ubuntu {3} main"
 
 _MODIFY_OK = frozenset(
-    ["uri", "comps", "architectures", "disabled", "file", "dist", "signedby"]
+    ["uri", "comps", "architectures", "disabled", "file", "dist", "signedby", "trusted"]
 )
 DPKG_ENV_VARS = {
     "APT_LISTBUGS_FRONTEND": "none",
@@ -384,7 +390,14 @@ def refresh_db(cache_valid_time=0, failhard=False, **kwargs):
         except OSError as exp:
             log.warning("could not stat cache directory due to: %s", exp)
 
-    call = _call_apt(["apt-get", "-q", "update"], scope=False)
+    call = _call_apt(
+        ["apt-get", "-q", "update"],
+        scope=False,
+        timeout=kwargs.get("timeout", __opts__.get("aptpkg_refresh_db_timeout", 30)),
+    )
+    if "Timed out" in call["stdout"]:
+        _call_apt(["apt-get", "-q", "clean"], scope=False)
+        call = _call_apt(["apt-get", "-q", "update"], scope=False)
     if call["retcode"] != 0:
         comment = ""
         if "stderr" in call:
@@ -1505,35 +1518,6 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):
     return None
 
 
-def _get_opts(line):
-    """
-    Return all opts in [] for a repo line
-    """
-    get_opts = re.search(r"\[(.*=.*?)\]", line)
-
-    ret = OrderedDict()
-    if not get_opts:
-        return ret
-    opts = get_opts.group(0).strip("[]")
-    architectures = []
-    for opt in opts.split():
-        if opt.startswith("arch"):
-            architectures.extend(opt.split("=", 1)[1].split(","))
-            ret["arch"] = {}
-            ret["arch"]["full"] = opt
-            ret["arch"]["value"] = architectures
-        elif opt.startswith("signed-by"):
-            ret["signedby"] = {}
-            ret["signedby"]["full"] = opt
-            ret["signedby"]["value"] = opt.split("=", 1)[1]
-        else:
-            other_opt = opt.split("=", 1)[0]
-            ret[other_opt] = {}
-            ret[other_opt]["full"] = opt
-            ret[other_opt]["value"] = opt.split("=", 1)[1]
-    return ret
-
-
 def _split_repo_str(repo):
     """
     Return APT source entry as a dictionary
@@ -1697,20 +1681,49 @@ def list_repos(**kwargs):
     """
     repos = {}
     sources = SourcesList()
-    for source in sources.list:
+    for source in sources:
         if _skip_source(source):
             continue
-        signedby = source.signedby
+        if isinstance(source, Deb822SourceEntry):
+            # deb822 could contain multiple types and suites
+            # for backward compatibility we need to expand it
+            # to get separate entries for each type and suite
+            for suite in source.suites:
+                for source_type in source.types:
+                    compat_source = SourceEntry(
+                        f"{source_type} {source.uri} {suite} {' '.join(getattr(source, 'comps', []))}"
+                    )
+                    for attr in ("disabled", "architectures", "signedby", "trusted"):
+                        setattr(compat_source, attr, getattr(source, attr))
+                    repo = {
+                        "file": source.file,
+                        "comps": getattr(source, "comps", []),
+                        "disabled": source.disabled,
+                        "enabled": not source.disabled,  # This is for compatibility with the other modules
+                        "dist": suite,
+                        "suites": source.suites,
+                        "type": source_type,
+                        "uri": source.uri,
+                        "line": str(compat_source),
+                        "architectures": getattr(source, "architectures", []),
+                        "signedby": source.signedby,
+                    }
+                    repos.setdefault(source.uri, []).append(repo)
+            continue
         repo = {}
         repo["file"] = source.file
         repo["comps"] = getattr(source, "comps", [])
         repo["disabled"] = source.disabled
+        repo["enabled"] = not repo[
+            "disabled"
+        ]  # This is for compatibility with the other modules
         repo["dist"] = source.dist
+        repo["suites"] = list(source.suites)
         repo["type"] = source.type
         repo["uri"] = source.uri
         repo["line"] = source.line.strip()
         repo["architectures"] = getattr(source, "architectures", [])
-        repo["signedby"] = signedby
+        repo["signedby"] = source.signedby
         repos.setdefault(source.uri, []).append(repo)
     return repos
 
@@ -1720,12 +1733,17 @@ def get_repo(repo, **kwargs):
     Display a repo from the sources.list / sources.list.d
 
     The repo passed in needs to be a complete repo entry.
+    When system uses repository in the deb822 format,
+    get_repo uses a partial match of distributions.
+
+    In that case, include any distribution of the deb822
+    repository in the repo name to match that repo.
 
     CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' pkg.get_repo "myrepo definition"
+        salt '*' pkg.get_repo "deb URL noble main"
     """
     ppa_auth = kwargs.get("ppa_auth", None)
     # we have to be clever about this since the repo definition formats
@@ -1784,11 +1802,17 @@ def del_repo(repo, **kwargs):
     The repo passed in must be a fully formed repository definition
     string.
 
+    When system uses repository in the deb822 format,
+    del_repo uses a partial match of distributions.
+
+    In that case, include any distribution of the deb822
+    repository in the repo name to match that repo.
+
     CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' pkg.del_repo "myrepo definition"
+        salt '*' pkg.del_repo "deb URL noble main"
     """
     is_ppa = False
     if repo.startswith("ppa:") and __grains__["os"] in ("Ubuntu", "Mint", "neon"):
@@ -1816,14 +1840,25 @@ def del_repo(repo, **kwargs):
 
         for source in repos:
             if (
-                source.type == repo_entry["type"]
+                repo_entry["type"] in source.type.split()
                 and source.architectures == repo_entry["architectures"]
                 and source.uri.rstrip("/") == repo_entry["uri"].rstrip("/")
-                and source.dist == repo_entry["dist"]
+                and repo_entry["dist"] in source.suites
             ):
-
                 s_comps = set(source.comps)
                 r_comps = set(repo_entry["comps"])
+                if s_comps == r_comps:
+                    r_suites = list(source.suites)
+                    r_suites.remove(repo_entry["dist"])
+                    source.suites = r_suites
+                    deleted_from[source.file] = 0
+                    if not source.suites:
+                        try:
+                            sources.remove(source)
+                        except ValueError:
+                            pass
+                    sources.save()
+                    continue
                 if s_comps.intersection(r_comps) or (not s_comps and not r_comps):
                     deleted_from[source.file] = 0
                     source.comps = list(s_comps.difference(r_comps))
@@ -1840,11 +1875,23 @@ def del_repo(repo, **kwargs):
                 and repo_entry["type"] == "deb"
                 and source.type == "deb-src"
                 and source.uri == repo_entry["uri"]
-                and source.dist == repo_entry["dist"]
+                and repo_entry["dist"] in source.suites
             ):
 
                 s_comps = set(source.comps)
                 r_comps = set(repo_entry["comps"])
+                if s_comps == r_comps:
+                    r_suites = list(source.suites)
+                    r_suites.remove(repo_entry["dist"])
+                    source.suites = r_suites
+                    deleted_from[source.file] = 0
+                    if not source.suites:
+                        try:
+                            sources.remove(source)
+                        except ValueError:
+                            pass
+                    sources.save()
+                    continue
                 if s_comps.intersection(r_comps) or (not s_comps and not r_comps):
                     deleted_from[source.file] = 0
                     source.comps = list(s_comps.difference(r_comps))
@@ -1857,6 +1904,8 @@ def del_repo(repo, **kwargs):
         if deleted_from:
             ret = ""
             for source in sources:
+                if source.invalid:
+                    continue
                 if source.file in deleted_from:
                     deleted_from[source.file] += 1
             for repo_file, count in deleted_from.items():
@@ -2296,6 +2345,12 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     ``ppa:<project>/repo`` format is acceptable. ``ppa:`` format can only be
     used to create a new repository.
 
+    When system uses repository in the deb822 format, mod_repo uses a partial
+    match of distributions.
+
+    In that case, include any distribution of the deb822 repository in the
+    repo definition to match that repo.
+
     The following options are available to modify a repo definition:
 
     architectures
@@ -2350,8 +2405,8 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' pkg.mod_repo 'myrepo definition' uri=http://new/uri
-        salt '*' pkg.mod_repo 'myrepo definition' comps=main,universe
+        salt '*' pkg.mod_repo 'deb URL noble main' uri=http://new/uri
+        salt '*' pkg.mod_repo 'deb URL noble main' comps=main,universe
     """
     if "refresh_db" in kwargs:
         refresh = kwargs["refresh_db"]
@@ -2471,6 +2526,13 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     repos = []
     for source in sources:
+        if isinstance(source, Deb822SourceEntry):
+            if source.types == [""] or not bool(source.types) or not source.type:
+                continue
+        else:
+            _, invalid, _, _ = _invalid(source.line)
+            if invalid:
+                continue
         repos.append(source)
 
     mod_source = None
@@ -2483,15 +2545,12 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     except SyntaxError:
         raise SyntaxError(f"Error: repo '{repo}' not a well formatted definition")
 
-    full_comp_list = {comp.strip() for comp in repo_entry["comps"]}
+    full_comp_list = [comp.strip() for comp in repo_entry["comps"]]
     no_proxy = __salt__["config.option"]("no_proxy")
 
     kwargs["signedby"] = (
         pathlib.Path(repo_entry["signedby"]) if repo_entry["signedby"] else ""
     )
-
-    if not aptkey and not kwargs["signedby"]:
-        raise SaltInvocationError("missing 'signedby' option when apt-key is missing")
 
     if "keyid" in kwargs:
         keyid = kwargs.pop("keyid", None)
@@ -2602,7 +2661,9 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     if "comps" in kwargs:
         kwargs["comps"] = [comp.strip() for comp in kwargs["comps"].split(",")]
-        full_comp_list |= set(kwargs["comps"])
+        for comp in kwargs["comps"]:
+            if comp not in full_comp_list:
+                full_comp_list.append(comp)
     else:
         kwargs["comps"] = list(full_comp_list)
 
@@ -2625,11 +2686,11 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         # we are not returning bogus data because the source line
         # has already been modified on a previous run.
         repo_matches = (
-            apt_source.type == repo_entry["type"]
+            repo_entry["type"] in apt_source.type.split()
             and apt_source.uri.rstrip("/") == repo_entry["uri"].rstrip("/")
-            and apt_source.dist == repo_entry["dist"]
+            and repo_entry["dist"] in apt_source.suites
         )
-        kw_matches = apt_source.dist == kw_dist and apt_source.type == kw_type
+        kw_matches = kw_dist in apt_source.suites and kw_type in apt_source.type.split()
 
         if repo_matches or kw_matches:
             for comp in full_comp_list:
@@ -2647,16 +2708,39 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     repo_source_entry = SourceEntry(repo)
     if not mod_source:
-        mod_source = SourceEntry(repo)
+        if not aptkey and not (
+            kwargs["signedby"] or string_to_bool(kwargs.get("trusted", "no"))
+        ):
+            raise SaltInvocationError(
+                "missing 'signedby' or 'trusted' option when apt-key is missing"
+            )
+
+        apt_source_file = kwargs.get("file")
+
+        if apt_source_file and apt_source_file.endswith(".sources"):
+            section = Deb822Section("")
+            section["Types"] = repo_entry["type"]
+            section["URIs"] = repo_entry["uri"]
+            section["Suites"] = repo_entry["dist"]
+            section["Components"] = " ".join(repo_entry["comps"])
+            if kwargs.get("trusted") is True or kwargs.get("Trusted") is True:
+                section["Trusted"] = "yes"
+            mod_source = Deb822SourceEntry(section, apt_source_file)
+        else:
+            mod_source = SourceEntry(repo, apt_source_file)
         if "comments" in kwargs:
             mod_source.comment = kwargs["comments"]
         sources.list.append(mod_source)
     elif "comments" in kwargs:
         mod_source.comment = kwargs["comments"]
 
-    mod_source.line = repo_source_entry.line
-    if not mod_source.line.endswith("\n"):
-        mod_source.line = mod_source.line + "\n"
+    if not isinstance(mod_source, Deb822SourceEntry):
+        mod_source.line = repo_source_entry.line
+        if not mod_source.line.endswith("\n"):
+            mod_source.line = mod_source.line + "\n"
+
+    if not kwargs["architectures"] and not mod_source.architectures:
+        kwargs.pop("architectures")
 
     for key in kwargs:
         if key in _MODIFY_OK and hasattr(mod_source, key):
@@ -2664,27 +2748,14 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     if mod_source.uri != repo_entry["uri"]:
         mod_source.uri = repo_entry["uri"]
-        mod_source.line = mod_source.str()
+        mod_source.line = str(mod_source)
 
     sources.save()
     # on changes, explicitly refresh
     if refresh:
         refresh_db()
 
-    signedby = mod_source.signedby
-
-    return {
-        repo: {
-            "architectures": getattr(mod_source, "architectures", []),
-            "comps": mod_source.comps,
-            "disabled": mod_source.disabled,
-            "file": mod_source.file,
-            "type": mod_source.type,
-            "uri": mod_source.uri,
-            "line": mod_source.line,
-            "signedby": signedby,
-        }
-    }
+    return {repo: get_repo(repo)}
 
 
 def file_list(*packages, **kwargs):
@@ -2772,11 +2843,8 @@ def _expand_repo_def(os_name, os_codename=None, **kwargs):
         architectures=getattr(source_entry, "architectures", []),
         **kwargs,
     )
-    if hasattr(_source_entry, "set_enabled"):
-        _source_entry.set_enabled(not source_entry.disabled)
-    else:
-        _source_entry.disabled = source_entry.disabled
-        _source_entry.line = _source_entry.repo_line()
+    _source_entry.disabled = source_entry.disabled
+    _source_entry.line = _source_entry.repo_line()
 
     sanitized["file"] = _source_entry.file
     sanitized["comps"] = getattr(_source_entry, "comps", [])
@@ -2784,7 +2852,7 @@ def _expand_repo_def(os_name, os_codename=None, **kwargs):
     sanitized["dist"] = _source_entry.dist
     sanitized["type"] = _source_entry.type
     sanitized["uri"] = _source_entry.uri
-    sanitized["line"] = _source_entry.line.strip()
+    sanitized["line"] = str(_source_entry)
     sanitized["architectures"] = getattr(_source_entry, "architectures", [])
     sanitized["signedby"] = signedby
 
