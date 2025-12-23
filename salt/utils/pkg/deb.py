@@ -558,16 +558,6 @@ class SourcesList:
         """
         yield from self.list
 
-    def __find(self, *predicates, **attrs):
-        uri = attrs.pop("uri", None)
-        for source in self.list:
-            if uri and source.uri and uri.rstrip("/") != source.uri.rstrip("/"):
-                continue
-            if all(getattr(source, key) == attrs[key] for key in attrs) and all(
-                predicate(source) for predicate in predicates
-            ):
-                yield source
-
     def add(
         self,
         type,
@@ -579,6 +569,7 @@ class SourcesList:
         file=None,
         architectures=None,
         signedby="",
+        trusted=False,
         parent=None,
     ):
         """
@@ -593,47 +584,9 @@ class SourcesList:
             type = type[1:].lstrip()
         if architectures is None:
             architectures = []
-        architectures = set(architectures)
         # create a working copy of the component list so that
         # we can modify it later
         comps = orig_comps[:]
-        sources = self.__find(
-            lambda s: set(s.architectures) == architectures,
-            disabled=disabled,
-            invalid=False,
-            type=type,
-            uri=uri,
-            dist=dist,
-        )
-        # check if we have this source already in the sources.list
-        for source in sources:
-            for new_comp in comps:
-                if new_comp in source.comps:
-                    # we have this component already, delete it
-                    # from the new_comps list
-                    del comps[comps.index(new_comp)]
-                    if len(comps) == 0:
-                        return source
-
-        sources = self.__find(
-            lambda s: set(s.architectures) == architectures,
-            invalid=False,
-            type=type,
-            uri=uri,
-            dist=dist,
-        )
-        for source in sources:
-            if source.disabled == disabled:
-                # if there is a repo with the same (disabled, type, uri, dist)
-                # just add the components
-                if set(source.comps) != set(comps):
-                    source.comps = list(set(source.comps + comps))
-                return source
-            elif source.disabled and not disabled:
-                # enable any matching (type, uri, dist), but disabled repo
-                if set(source.comps) == set(comps):
-                    source.disabled = False
-                    return source
 
         new_entry = None
         if file is None:
@@ -653,12 +606,26 @@ class SourcesList:
                 new_entry.architectures = list(architectures)
             new_entry.section.header = comment
             new_entry.disabled = disabled
+            if signedby:
+                new_entry.signedby = signedby
+            if trusted is not False:
+                new_entry.trusted = trusted
         else:
-            # there isn't any matching source, so create a new line and parse it
+            ext_attrs = ""
+            if architectures:
+                ext_attrs = f"arch={','.join(architectures)}"
+            if signedby:
+                if ext_attrs:
+                    ext_attrs = f"{ext_attrs} "
+                ext_attrs = f"{ext_attrs}signedby={signedby}"
+            if trusted:
+                if ext_attrs:
+                    ext_attrs = f"{ext_attrs} "
+                ext_attrs = f"{ext_attrs}trusted=yes"
             parts = [
                 "#" if disabled else "",
                 type,
-                ("[arch=%s]" % ",".join(architectures)) if architectures else "",
+                f"[{ext_attrs}]" if ext_attrs else "",
                 uri,
                 dist,
             ]
