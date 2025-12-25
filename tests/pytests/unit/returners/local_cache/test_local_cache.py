@@ -260,6 +260,7 @@ def test_save_load_concurrent_writes(tmp_cache_dir):
         "pki_dir": str(tmp_cache_dir / "pki"),
         "key_cache": False,
         "keys.cache_driver": "localfs_key",
+        "__role": "master",
     }
 
     num_procs = 15
