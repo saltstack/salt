@@ -273,7 +273,7 @@ class TestOptsDictMutationTracking:
 
     def test_mutation_recorded(self):
         """Test that mutations are recorded."""
-        opts = OptsDict.from_dict({"test": False}, name="test")
+        opts = OptsDict.from_dict({"test": False}, track_mutations=True, name="test")
 
         opts["test"] = True
 
@@ -283,7 +283,7 @@ class TestOptsDictMutationTracking:
 
     def test_mutation_stack_trace(self):
         """Test that stack trace is captured."""
-        opts = OptsDict.from_dict({"test": False}, name="test")
+        opts = OptsDict.from_dict({"test": False}, track_mutations=True, name="test")
 
         opts["test"] = True
 
@@ -293,7 +293,7 @@ class TestOptsDictMutationTracking:
 
     def test_multiple_mutations_tracked(self):
         """Test tracking multiple mutations."""
-        opts = OptsDict.from_dict({"test": False}, name="test")
+        opts = OptsDict.from_dict({"test": False}, track_mutations=True, name="test")
 
         opts["test"] = True
         opts["test"] = False
@@ -305,7 +305,7 @@ class TestOptsDictMutationTracking:
 
     def test_shared_tracker_across_hierarchy(self):
         """Test that child opts share parent's tracker."""
-        parent = OptsDict.from_dict({"test": False, "saltenv": "base"}, name="parent")
+        parent = OptsDict.from_dict({"test": False, "saltenv": "base"}, track_mutations=True, name="parent")
         child = OptsDict.from_parent(parent, name="child")
 
         parent["test"] = True
