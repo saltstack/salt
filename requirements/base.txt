@@ -38,10 +38,10 @@ python-dateutil>=2.8.1
 python-gnupg>=0.4.7
 cherrypy>=18.6.1
 
-# We need contextvars for salt-ssh
-contextvars
-# immutables is a requirement of contextvars
-immutables>=0.21
+# We need contextvars for salt-ssh (Python < 3.7 only, it's built-in to 3.7+)
+contextvars; python_version < '3.7'
+# immutables is a requirement of contextvars backport
+immutables>=0.21; python_version < '3.7'
 importlib-metadata>=3.3.0
 cryptography>=42.0.0; python_version < '3.13'
 cryptography==42.0.2; python_version >= '3.13'
