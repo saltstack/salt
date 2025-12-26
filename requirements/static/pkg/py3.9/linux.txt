@@ -30,8 +30,6 @@ cheroot==10.0.0
     # via cherrypy
 cherrypy==18.8.0
     # via -r requirements/base.txt
-contextvars==2.4
-    # via -r requirements/base.txt
 croniter==2.0.5 ; sys_platform != "win32"
     # via -r requirements/base.txt
 cryptography==42.0.5 ; python_version < "3.13"
@@ -49,10 +47,6 @@ idna==3.7
     # via
     #   requests
     #   yarl
-immutables==0.21
-    # via
-    #   -r requirements/base.txt
-    #   contextvars
 importlib-metadata==8.7.0
     # via -r requirements/base.txt
 jaraco.collections==4.1.0

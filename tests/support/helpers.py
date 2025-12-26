@@ -1782,6 +1782,7 @@ class SaltVirtualEnv(VirtualEnv):
         code_dir = pathlib.Path(RUNTIME_VARS.CODE_DIR)
         py_version = f"py{sys.version_info.major}.{sys.version_info.minor}"
         self.install(
+            "--prefer-binary",
             "-r", code_dir / "requirements" / "static" / "pkg" / py_version / "linux.txt"
         )
         self.install(RUNTIME_VARS.CODE_DIR)
