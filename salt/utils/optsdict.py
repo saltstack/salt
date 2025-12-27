@@ -821,9 +821,19 @@ class OptsDict(MutableMapping):
         self.__dict__.update(state)
         # Recreate the lock
         self._lock = threading.RLock()
-        # Recreate the tracker's lock if it has one
-        if hasattr(self, "_tracker") and not hasattr(self._tracker, "_lock"):
-            self._tracker._lock = threading.RLock()
+        # Recreate the tracker from dict state if needed
+        if hasattr(self, "_tracker") and isinstance(self._tracker, dict):
+            # The tracker was serialized as a dict, need to reconstruct it
+            tracker_state = self._tracker
+            tracker = MutationTracker(
+                track_mutations=tracker_state.get("track_mutations", False),
+                max_stack_depth=tracker_state.get("max_stack_depth", 10),
+            )
+            # Restore the mutation data if tracking was enabled
+            if tracker.track_mutations:
+                tracker._mutations = tracker_state.get("_mutations", {})
+                tracker._mutation_order = tracker_state.get("_mutation_order", [])
+            self._tracker = tracker
 
     def __repr__(self) -> str:
         """String representation."""
