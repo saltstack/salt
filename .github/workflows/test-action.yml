@@ -59,6 +59,7 @@ on:
 
 env:
   COLUMNS: 190
+  RELENV_DATA: "${{ github.workspace }}/.relenv"
   PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
   PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
   PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
@@ -147,7 +148,22 @@ jobs:
 
       - name: "Create docker network"
         run: |
-           docker network create -o "com.docker.network.driver.mtu=1500" --ipv6 --subnet 2001:db8::/64 ip6net
+           # Use ULA prefix (fd00::/8) for proper IPv6 support with NAT
+           docker network create --ipv6 \
+             --subnet="fd00:db8::/64" \
+             -o "com.docker.network.driver.mtu=1500" \
+             ip6net
+
+           # Enable IPv6 forwarding and NAT for internet connectivity
+           sudo sysctl -w net.ipv6.conf.all.forwarding=1
+           sudo sysctl -w net.ipv6.conf.default.forwarding=1
+
+           # Accept router advertisements even with forwarding enabled
+           sudo sysctl -w net.ipv6.conf.all.accept_ra=2
+           sudo sysctl -w net.ipv6.conf.default.accept_ra=2
+
+           # Add masquerading for ULA to reach internet (fixes Python 3.11+ IPv6 timeouts)
+           sudo ip6tables -t nat -A POSTROUTING -s fd00:db8::/64 ! -d fd00:db8::/64 -j MASQUERADE
 
       - name: "Host network config"
         run: |
@@ -466,7 +482,22 @@ jobs:
 
       - name: "Create docker network"
         run: |
-           docker network create -o "com.docker.network.driver.mtu=1500" --ipv6 --subnet 2001:db8::/64 ip6net
+           # Use ULA prefix (fd00::/8) for proper IPv6 support with NAT
+           docker network create --ipv6 \
+             --subnet="fd00:db8::/64" \
+             -o "com.docker.network.driver.mtu=1500" \
+             ip6net
+
+           # Enable IPv6 forwarding and NAT for internet connectivity
+           sudo sysctl -w net.ipv6.conf.all.forwarding=1
+           sudo sysctl -w net.ipv6.conf.default.forwarding=1
+
+           # Accept router advertisements even with forwarding enabled
+           sudo sysctl -w net.ipv6.conf.all.accept_ra=2
+           sudo sysctl -w net.ipv6.conf.default.accept_ra=2
+
+           # Add masquerading for ULA to reach internet (fixes Python 3.11+ IPv6 timeouts)
+           sudo ip6tables -t nat -A POSTROUTING -s fd00:db8::/64 ! -d fd00:db8::/64 -j MASQUERADE
 
       - name: "Host network config"
         run: |

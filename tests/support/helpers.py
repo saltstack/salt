@@ -1748,9 +1748,9 @@ class VirtualEnv:
         return data
 
     def _create_virtualenv(self):
-        pyexec = shutil.which("python")
+        pyexec = shutil.which("python3") or shutil.which("python")
         if not pyexec:
-            pytest.fail("'python' binary not found for virtualenv")
+            pytest.fail("'python' or 'python3' binary not found for virtualenv")
         cmd = [
             pyexec,
             "-m",
@@ -1783,14 +1783,29 @@ class SaltVirtualEnv(VirtualEnv):
         py_version = f"py{sys.version_info.major}.{sys.version_info.minor}"
         self.install(
             "--prefer-binary",
-            "-r", code_dir / "requirements" / "static" / "pkg" / py_version / "linux.txt"
+            "-r",
+            code_dir / "requirements" / "static" / "pkg" / py_version / "linux.txt",
         )
         self.install(RUNTIME_VARS.CODE_DIR)
 
     def install(self, *args, **kwargs):
         env = kwargs.pop("env", None) or {}
         env["USE_STATIC_REQUIREMENTS"] = "1"
+        # Add relenv toolchain to PATH if it exists
+        toolchains_dir = pathlib.Path.home() / ".cache" / "relenv" / "toolchains"
+        if toolchains_dir.exists():
+            # Find any toolchain subdirectory (e.g., x86_64-linux-gnu, aarch64-linux-gnu)
+            for toolchain in toolchains_dir.iterdir():
+                if toolchain.is_dir():
+                    toolchain_bin = toolchain / "bin"
+                    if toolchain_bin.exists():
+                        current_path = env.get("PATH", os.environ.get("PATH", ""))
+                        env["PATH"] = f"{toolchain_bin}:{current_path}"
+                        break
         kwargs["env"] = env
+        # Add --prefer-binary to avoid building from source when possible
+        if "--prefer-binary" not in args:
+            args = ("--prefer-binary",) + args
         return super().install(*args, **kwargs)
 
 
