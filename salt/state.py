@@ -60,6 +60,7 @@ from salt.serializers.msgpack import deserialize as msgpack_deserialize
 from salt.serializers.msgpack import serialize as msgpack_serialize
 from salt.template import compile_template, compile_template_str
 from salt.utils.datastructures import DefaultOrderedDict, HashableOrderedDict
+from salt.utils.optsdict import mutate_opts_key
 from salt.utils.requisite import DependencyGraph, RequisiteType
 
 log = logging.getLogger(__name__)
@@ -1307,12 +1308,14 @@ class State:
         _reload_modules = False
         if data.get("reload_grains", False):
             log.debug("Refreshing grains...")
-            self.opts["grains"] = salt.loader.grains(self.opts)
+            new_grains = salt.loader.grains(self.opts)
+            mutate_opts_key(self.opts, "grains", new_grains)
             _reload_modules = True
 
         if data.get("reload_pillar", False):
             log.debug("Refreshing pillar...")
-            self.opts["pillar"] = self._gather_pillar()
+            new_pillar = self._gather_pillar()
+            mutate_opts_key(self.opts, "pillar", new_pillar)
             _reload_modules = True
 
         if not ret["changes"]:
@@ -3438,6 +3441,7 @@ class BaseHighState:
 
     def __init__(self, opts):
         self.opts = self.__gen_opts(opts)
+
         self.iorder = 10000
         self.avail = self.__gather_avail()
         self.building_highstate = HashableOrderedDict()
@@ -3461,7 +3465,10 @@ class BaseHighState:
             if opts["local_state"]:
                 return opts
         mopts = self.client.master_opts()
-        if not isinstance(mopts, dict):
+        # OptsDict is a MutableMapping, not a dict subclass, so check for both
+        from collections.abc import Mapping
+
+        if not isinstance(mopts, (dict, Mapping)):
             # An error happened on the master
             opts["renderer"] = "jinja|yaml"
             opts["failhard"] = False
