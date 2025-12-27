@@ -1,6 +1,9 @@
 #!/usr/bin/make -f
 DH_VERBOSE = 1
 
+unexport RUSTFLAGS
+export RELENV_DATA ?= $(HOME)/.local/relenv
+
 .PHONY: override_dh_strip
 
 %:
@@ -35,6 +38,14 @@ override_dh_auto_build:
 	build/onedir/venv/bin/tools pkg build salt-onedir . --package-name build/onedir/salt --platform linux
 	build/onedir/venv/bin/tools pkg pre-archive-cleanup --pkg build/onedir/salt
 	build/onedir/venv/bin/pip uninstall -y ppbt
+
+	# Generate man pages for source builds
+	export PY=$$(build/onedir/venv/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()') \
+		&& build/onedir/venv/bin/python3 -m pip install --no-deps -r requirements/static/ci/py$${PY}/docs.txt
+	export LATEST_RELEASE=$$(dpkg-parsechangelog -S Version) && export SALT_ON_SALTSTACK=1 && $(MAKE) -C doc man SPHINXBUILD=../build/onedir/venv/bin/sphinx-build
+	# Copy generated man pages to doc/man
+	mkdir -p doc/man
+	cp -f doc/_build/man/*.1 doc/_build/man/*.7 doc/man/ 2>/dev/null || true
 
 else
 override_dh_auto_build:

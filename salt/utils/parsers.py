@@ -940,6 +940,18 @@ class DaemonMixIn(metaclass=MixInMeta):
             default=os.path.join(syspaths.PIDFILE_DIR, f"{self.get_prog_name()}.pid"),
             help="Specify the location of the pidfile. Default: '%default'.",
         )
+        self.add_option(
+            "--disable-keepalive",
+            dest="disable_keepalive",
+            default=False,
+            action="store_true",
+            help=(
+                "Disable the automatic restart mechanism. By default, the daemon "
+                "runs in a subprocess with automatic restart capabilities. This "
+                "option disables that behavior and runs the daemon directly. "
+                "Useful when an external process manager like systemd handles restarts."
+            ),
+        )
 
     def _mixin_before_exit(self):
         if hasattr(self, "config") and self.config.get("pidfile"):

@@ -189,7 +189,6 @@ def salt_minion():
         return
 
     if "--disable-keepalive" in sys.argv:
-        sys.argv.remove("--disable-keepalive")
         minion = salt.cli.daemons.Minion()
         minion.start()
         return
@@ -344,7 +343,6 @@ def salt_proxy():
         return
 
     if "--disable-keepalive" in sys.argv:
-        sys.argv.remove("--disable-keepalive")
         proxyminion = salt.cli.daemons.ProxyMinion()
         proxyminion.start()
         return

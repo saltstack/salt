@@ -32,9 +32,9 @@ def salt_systemd_setup(
 
 
 def salt_test_upgrade(
-    salt_master,
     salt_call_cli,
     install_salt,
+    salt_master=None,
 ):
     """
     Test upgrade of Salt packages for Minion and Master
@@ -72,7 +72,7 @@ def salt_test_upgrade(
     assert old_master_pids
 
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
-    if sys.platform == "win32":
+    if sys.platform == "win32" and salt_master:
         with salt_master.stopped():
             install_salt.install(upgrade=True)
     else:
@@ -149,10 +149,12 @@ def _get_installed_salt_packages():
     cmd = [
         "powershell",
         "-Command",
-        "Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | "
-        "Where-Object { $_.DisplayName -like '*Salt*' } | "
-        "Select-Object DisplayName, DisplayVersion | "
-        'ForEach-Object { "$($_.DisplayName)|$($_.DisplayVersion)" }',
+        (
+            "Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | "
+            "Where-Object { $_.DisplayName -like '*Salt*' } | "
+            "Select-Object DisplayName, DisplayVersion | "
+            'ForEach-Object { "$($_.DisplayName)|$($_.DisplayVersion)" }'
+        ),
     ]
 
     result = subprocess.run(cmd, capture_output=True, text=True, check=False)
@@ -170,7 +172,9 @@ def _get_installed_salt_packages():
     return packages
 
 
-def test_salt_upgrade(salt_master, salt_call_cli, install_salt):
+def test_salt_upgrade(
+    salt_call_cli, install_salt, debian_disable_policy_rcd, salt_master
+):
     """
     Test an upgrade of Salt, Minion and Master
     """
@@ -202,7 +206,7 @@ def test_salt_upgrade(salt_master, salt_call_cli, install_salt):
         assert ret.returncode == 0
 
     # perform Salt package upgrade test
-    salt_test_upgrade(salt_master, salt_call_cli, install_salt)
+    salt_test_upgrade(salt_call_cli, install_salt, salt_master)
 
     # Verify only one Salt package is installed after upgrade (Windows)
     if platform.is_windows():

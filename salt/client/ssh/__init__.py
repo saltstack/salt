@@ -1958,7 +1958,6 @@ def mod_data(fsclient):
     """
     Generate the module arguments for the shim data
     """
-    # TODO, change out for a fileserver backend
     sync_refs = [
         "modules",
         "states",
@@ -1968,49 +1967,111 @@ def mod_data(fsclient):
         "utils",
     ]
     ret = {}
-    with fsclient:
-        envs = fsclient.envs()
-        ver_base = ""
-        for env in envs:
-            files = fsclient.file_list(env)
-            for ref in sync_refs:
-                mods_data = {}
-                pref = f"_{ref}"
-                for fn_ in sorted(files):
-                    if fn_.startswith(pref):
-                        if fn_.endswith((".py", ".so", ".pyx")):
-                            full = salt.utils.url.create(fn_)
-                            mod_path = fsclient.cache_file(full, env)
-                            if not os.path.isfile(mod_path):
-                                continue
-                            mods_data[os.path.basename(fn_)] = mod_path
-                            chunk = salt.utils.hashutils.get_hash(mod_path)
-                            ver_base += chunk
-                if mods_data:
-                    if ref in ret:
-                        ret[ref].update(mods_data)
-                    else:
-                        ret[ref] = mods_data
-        if not ret:
-            return {}
 
-        ver_base = salt.utils.stringutils.to_bytes(ver_base)
+    # Get module directories from global loader (includes entry-points, extension_modules, etc.)
+    opts = fsclient.opts
+    for ref in sync_refs:
+        try:
+            # Use salt.loader._module_dirs but skip entry-points (saltexts handled by gen_thin)
+            # This still discovers extension_modules from config and module_dirs from CLI
+            module_dirs = salt.loader._module_dirs(
+                opts, ref, tag=ref.rstrip("s"), load_extensions=False
+            )
 
-        ver = hashlib.sha1(ver_base).hexdigest()
-        ext_tar_path = os.path.join(fsclient.opts["cachedir"], f"ext_mods.{ver}.tgz")
-        mods = {"version": ver, "file": ext_tar_path}
-        if os.path.isfile(ext_tar_path):
-            return mods
-        tfp = tarfile.open(ext_tar_path, "w:gz")
-        verfile = os.path.join(fsclient.opts["cachedir"], "ext_mods.ver")
-        with salt.utils.files.fopen(verfile, "w+") as fp_:
-            fp_.write(ver)
-        tfp.add(verfile, "ext_version")
-        for ref in ret:
-            for fn_ in ret[ref]:
-                tfp.add(ret[ref][fn_], os.path.join(ref, fn_))
-        tfp.close()
+            for mod_dir in module_dirs:
+                if not os.path.isdir(mod_dir):
+                    continue
+
+                for fn_ in os.listdir(mod_dir):
+                    if fn_.endswith((".py", ".so", ".pyx")) and not fn_.startswith(
+                        "__"
+                    ):
+                        mod_path = os.path.join(mod_dir, fn_)
+                        if not os.path.isfile(mod_path):
+                            continue
+
+                        if ref not in ret:
+                            ret[ref] = {}
+                        ret[ref][fn_] = mod_path
+        except Exception as exc:  # pylint: disable=broad-except
+            log.debug(
+                "Failed to load %s modules from global loader: %s",
+                ref,
+                exc,
+            )
+
+    # Also scan file_roots directly to find modules (avoids fsclient.cache_file issues)
+    try:
+        file_roots = opts.get("file_roots", {})
+        for saltenv, roots in file_roots.items():
+            for root in roots:
+                if not os.path.isdir(root):
+                    continue
+
+                for ref in sync_refs:
+                    # Check for _modules, _states, etc. directories in file_roots
+                    mod_dir = os.path.join(root, f"_{ref}")
+                    if not os.path.isdir(mod_dir):
+                        continue
+
+                    try:
+                        for fn_ in os.listdir(mod_dir):
+                            if fn_.endswith(
+                                (".py", ".so", ".pyx")
+                            ) and not fn_.startswith("__"):
+                                mod_path = os.path.join(mod_dir, fn_)
+                                if not os.path.isfile(mod_path):
+                                    continue
+
+                                if ref not in ret:
+                                    ret[ref] = {}
+                                # Use basename to avoid duplicates
+                                ret[ref][fn_] = mod_path
+                    except Exception as exc:  # pylint: disable=broad-except
+                        log.debug(
+                            "Failed to scan directory %s: %s",
+                            mod_dir,
+                            exc,
+                        )
+    except Exception as exc:  # pylint: disable=broad-except
+        log.debug(
+            "Failed to load modules from file_roots: %s",
+            exc,
+        )
+
+    # Calculate version hash from all collected modules
+    ver_base = ""
+    for ref in ret:
+        for fn_ in sorted(ret[ref].keys()):
+            chunk = salt.utils.hashutils.get_hash(ret[ref][fn_])
+            ver_base += chunk
+
+    if not ret:
+        return {}
+
+    ver_base = salt.utils.stringutils.to_bytes(ver_base)
+
+    ver = hashlib.sha1(ver_base).hexdigest()
+    ext_tar_path = os.path.join(fsclient.opts["cachedir"], f"ext_mods.{ver}.tgz")
+    mods = {"version": ver, "file": ext_tar_path}
+    if os.path.isfile(ext_tar_path):
         return mods
+
+    # Ensure cache directory exists
+    cache_dir = fsclient.opts["cachedir"]
+    if not os.path.isdir(cache_dir):
+        os.makedirs(cache_dir)
+
+    tfp = tarfile.open(ext_tar_path, "w:gz")
+    verfile = os.path.join(fsclient.opts["cachedir"], "ext_mods.ver")
+    with salt.utils.files.fopen(verfile, "w+") as fp_:
+        fp_.write(ver)
+    tfp.add(verfile, "ext_version")
+    for ref in ret:
+        for fn_ in ret[ref]:
+            tfp.add(ret[ref][fn_], os.path.join(ref, fn_))
+    tfp.close()
+    return mods
 
 
 def ssh_version():

@@ -90,6 +90,7 @@ class ThinTestContext:
             "singledispatch": str(code_dir / "singledispatch.py"),
             "looseversion": str(code_dir / "looseversion.py"),
             "packaging": str(code_dir / "packaging"),
+            "backports": str(code_dir / "backports"),
             "requests": str(code_dir / "requests"),
             "idna": str(code_dir / "idna"),
             "urllib3": str(code_dir / "urllib3"),
@@ -1203,6 +1204,7 @@ def test_get_tops_python(thin_ctx):
                 (bts(""), bts("")),  # backports_abc
                 (bts("looseversion.py"), bts("")),
                 (bts("packaging/__init__.py"), bts("")),
+                (bts("backports/__init__.py"), bts("")),  # backports
                 (bts("distro.py"), bts("")),
             ],
         ),
@@ -1251,6 +1253,7 @@ def test_get_tops_python_exclude(thin_ctx):
                 (bts(""), bts("")),  # backports_abc
                 (bts("looseversion.py"), bts("")),
                 (bts("packaging/__init__.py"), bts("")),
+                (bts("backports/__init__.py"), bts("")),  # backports
                 (bts("distro.py"), bts("")),
             ],
         ),
@@ -1301,6 +1304,7 @@ def test_pack_alternatives_exclude(thin_ctx):
                 (bts(""), bts("")),  # backports_abc
                 (bts("looseversion.py"), bts("")),
                 (bts("packaging/__init__.py"), bts("")),
+                (bts("backports/__init__.py"), bts("")),  # backports
                 (bts(thin_ctx.fake_libs["distro"]), bts("")),
             ],
         ),

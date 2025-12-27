@@ -84,8 +84,6 @@ import shutil
 import sys
 import tempfile
 
-import pkg_resources  # pylint: disable=3rd-party-module-not-gated
-
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
@@ -1716,7 +1714,7 @@ def list_all_versions(
             versions = [
                 v for v in match.group(1).split(", ") if v and excludes.match(v)
             ]
-            versions.sort(key=pkg_resources.parse_version)
+            versions.sort(key=salt.utils.versions.parse)
             break
     if not versions:
         return None

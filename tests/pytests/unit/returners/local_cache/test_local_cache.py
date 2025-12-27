@@ -5,9 +5,11 @@ Unit tests for the Default Job Cache (local_cache).
 import logging
 import os
 import time
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import pytest
 
+import salt.payload
 import salt.returners.local_cache as local_cache
 import salt.utils.files
 import salt.utils.jid
@@ -16,6 +18,19 @@ import salt.utils.platform
 from tests.support.mock import patch
 
 log = logging.getLogger(__name__)
+
+
+def _concurrent_save_and_read(args):
+    """
+    Writes to job cache then immediately reads back to verify no corruption.
+    """
+    jid, clear_load, opts = args
+    with patch.object(local_cache, "__opts__", opts, create=True):
+        local_cache.save_load(jid, clear_load)
+        result = local_cache.get_load(jid)
+        if result is None or "jid" not in result:
+            raise AssertionError(f"get_load failed: {result}")
+    return True
 
 
 @pytest.fixture
@@ -92,6 +107,7 @@ def add_job(tmp_cache_dir, job_cache_dir_files, pki_dir, tmp_path):
             "pki_dir": str(pki_dir),
             "conf_file": str(tmp_path / "conf"),
             "job_cache": True,
+            "keys.cache_driver": "localfs_key",
         }
         load = {
             "fun_args": [],
@@ -221,3 +237,74 @@ def test_empty_jid_dir(jobs_dir):
 
     # check jid dir is removed
     _check_dir_files("new_jid_dir was not removed", empty_jid_dir, status="removed")
+
+
+def test_save_load_concurrent_writes(tmp_cache_dir):
+    """
+    Test that save_load can handle concurrent writes without failing.
+    This tests the scenario when multiple Salt Syndic masters are writing
+    to the same .load.p file simultaneously on return.
+    """
+    jid = "20160603132323715452"
+    clear_load = {
+        "fun": "test.ping",
+        "jid": jid,
+        "tgt": "*",
+        "tgt_type": "glob",
+        "user": "root",
+    }
+
+    opts = {
+        "cachedir": str(tmp_cache_dir),
+        "hash_type": "sha256",
+        "pki_dir": str(tmp_cache_dir / "pki"),
+        "key_cache": False,
+        "keys.cache_driver": "localfs_key",
+        "__role": "master",
+    }
+
+    num_procs = 15
+    args = [(jid, clear_load, opts) for _ in range(num_procs)]
+
+    with ProcessPoolExecutor(max_workers=num_procs) as executor:
+        futures = [executor.submit(_concurrent_save_and_read, arg) for arg in args]
+        for future in as_completed(futures):
+            future.result()
+
+
+def test_get_load_minions_data_invalid_no_exception(tmp_cache_dir, caplog):
+    """
+    Test that get_load handles invalid minions data gracefully without raising exception.
+    """
+    jid = "20160603132323715452"
+
+    with patch.dict(
+        local_cache.__opts__, {"cachedir": str(tmp_cache_dir), "hash_type": "sha256"}
+    ):
+        jid_dir = salt.utils.jid.jid_dir(
+            jid, os.path.join(str(tmp_cache_dir), "jobs"), "sha256"
+        )
+        os.makedirs(jid_dir, exist_ok=True)
+
+        load_file = os.path.join(jid_dir, ".load.p")
+        test_load = {"jid": jid, "fun": "test.ping"}
+        with salt.utils.files.fopen(load_file, "wb") as f:
+            salt.payload.dump(test_load, f)
+
+        # Create minions file with invalid data
+        minions_file = os.path.join(jid_dir, ".minions.p")
+        invalid_minions_data = 1234
+        with salt.utils.files.fopen(minions_file, "wb") as f:
+            salt.payload.dump(invalid_minions_data, f)
+
+        with caplog.at_level(logging.WARNING):
+            result = local_cache.get_load(jid)
+
+        assert result is not None
+        assert result["jid"] == jid
+        assert result["fun"] == "test.ping"
+        assert "Minions" not in result
+        assert any(
+            "contains invalid minion data" in record.message
+            for record in caplog.records
+        )
