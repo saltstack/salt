@@ -1,8 +1,9 @@
+from collections.abc import MutableMapping
+
 import salt.loader.context
 import salt.loader.lazy
 import salt.utils.files
 import tests.support.helpers
-from collections.abc import MutableMapping
 
 
 def test_opts_dunder_opts_without_import(tmp_path):
