@@ -29,6 +29,7 @@ import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.files
 import salt.utils.lazy
+
 # Lazy import: salt.utils.optsdict imported only when creating loaders
 import salt.utils.platform
 import salt.utils.stringutils
