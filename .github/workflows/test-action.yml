@@ -221,6 +221,13 @@ jobs:
         run: |
           docker exec ${{ github.run_id}}_salt-test python3 -m nox --force-color -e decompress-dependencies -- linux ${{ matrix.arch }}
 
+      - name: Create relenv toolchain symlink
+        run: |
+          # Python's sysconfig expects toolchain at ~/.local/relenv/toolchain but
+          # relenv extracts to ~/.cache/relenv/toolchains - create symlink
+          docker exec ${{ github.run_id}}_salt-test bash -c \
+            'mkdir -p ~/.local/relenv && ln -sf ~/.cache/relenv/toolchains ~/.local/relenv/toolchain'
+
       - name: Download testrun-changed-files.txt
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
         uses: actions/download-artifact@v4
@@ -554,6 +561,13 @@ jobs:
       - name: Decompress .nox Directory
         run: |
           docker exec ${{ github.run_id}}_salt-test python3 -m nox --force-color -e decompress-dependencies -- linux ${{ matrix.arch }}
+
+      - name: Create relenv toolchain symlink
+        run: |
+          # Python's sysconfig expects toolchain at ~/.local/relenv/toolchain but
+          # relenv extracts to ~/.cache/relenv/toolchains - create symlink
+          docker exec ${{ github.run_id}}_salt-test bash -c \
+            'mkdir -p ~/.local/relenv && ln -sf ~/.cache/relenv/toolchains ~/.local/relenv/toolchain'
 
       - name: Download testrun-changed-files.txt
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
