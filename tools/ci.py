@@ -342,10 +342,14 @@ def get_testing_releases(
         )
     )[-num_major_versions:]
     testing_releases = []
-    # Append the latest minor for each major
+    # Append the latest minor for each major that is older than the current version
     for major in majors:
         minors_of_major = [version for version in releases if version.major == major]
-        testing_releases.append(minors_of_major[-1])
+        latest_minor = minors_of_major[-1]
+        # Only include versions older than current to prevent version paradox
+        # (e.g., don't test upgrading FROM 3007.10 TO 3007.9+dev)
+        if latest_minor < parsed_salt_version:
+            testing_releases.append(latest_minor)
 
     str_releases = [str(version) for version in testing_releases]
 
@@ -910,10 +914,14 @@ def workflow_config(
         )
     )[-num_major_versions:]
     testing_releases = []
-    # Append the latest minor for each major
+    # Append the latest minor for each major that is older than the current version
     for major in majors:
         minors_of_major = [version for version in releases if version.major == major]
-        testing_releases.append(minors_of_major[-1])
+        latest_minor = minors_of_major[-1]
+        # Only include versions older than current to prevent version paradox
+        # (e.g., don't test upgrading FROM 3007.10 TO 3007.9+dev)
+        if latest_minor < parsed_salt_version:
+            testing_releases.append(latest_minor)
     str_releases = [str(version) for version in testing_releases]
     ctx.info(f"str_releases {str_releases}")
 
