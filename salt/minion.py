@@ -3901,8 +3901,14 @@ class SyndicManager(MinionBase):
         ):
             job_event = True
 
-        if self.syndic_mode == "cluster" and data.get("master_id", 0) == self.opts.get(
-            "master_id", 1
+        # Only skip forwarding job RETURN events with matching master_id
+        # We must still forward /new events with minion lists so the master
+        # of masters knows which minions to expect returns from
+        if (
+            job_event
+            and tag_parts[3] == "ret"
+            and self.syndic_mode == "cluster"
+            and data.get("master_id", 0) == self.opts.get("master_id", 1)
         ):
             return_event = False
 
@@ -3952,7 +3958,7 @@ class SyndicManager(MinionBase):
                 # Even in cluster mode we need to forward the raw event with the minions
                 # list to determine which minions we expect to return on the master of masters.
                 or (
-                    return_event and (salt.utils.jid.is_jid(mtag) and "minions" in data)
+                    return_event and job_event and "minions" in data
                 )
             ):
                 # Add generic event aggregation here
