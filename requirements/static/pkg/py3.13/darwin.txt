@@ -28,8 +28,6 @@ cheroot==10.0.1
     # via cherrypy
 cherrypy==18.10.0
     # via -r requirements/base.txt
-contextvars==2.4
-    # via -r requirements/base.txt
 croniter==3.0.3 ; sys_platform != "win32"
     # via -r requirements/base.txt
 cryptography==42.0.2 ; python_version >= "3.13"
@@ -47,10 +45,6 @@ idna==3.10
     # via
     #   requests
     #   yarl
-immutables==0.21
-    # via
-    #   -r requirements/base.txt
-    #   contextvars
 importlib-metadata==8.7.0
     # via -r requirements/base.txt
 jaraco.collections==5.1.0
@@ -133,7 +127,7 @@ timelib==0.3.0 ; python_version >= "3.11"
     # via -r requirements/base.txt
 tornado==6.5.2
     # via -r requirements/base.txt
-urllib3==2.5.0 ; python_version >= "3.10"
+urllib3==2.6.2 ; python_version >= "3.10"
     # via
     #   -r requirements/base.txt
     #   requests

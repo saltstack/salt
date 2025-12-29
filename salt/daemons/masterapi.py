@@ -816,15 +816,19 @@ class RemoteFuncs:
                     event_data = event["data"]
                 else:
                     event_data = event
-                if not valid_minion_tag(event["tag"]):
-                    log.warning("Filtering blacklisted event tag %s", event["tag"])
-                    continue
-                self.event.fire_event(event_data, event["tag"])  # old dup event
+                # Fire pretagged event first (for syndics) before blacklist check
+                # This allows syndics to forward events like salt/job/*/new with
+                # the syndic/ prefix, bypassing the minion event blacklist
                 if load.get("pretag") is not None:
                     self.event.fire_event(
                         event_data,
                         salt.utils.event.tagify(event["tag"], base=load["pretag"]),
                     )
+                # Check blacklist for original tag
+                if not valid_minion_tag(event["tag"]):
+                    log.warning("Filtering blacklisted event tag %s", event["tag"])
+                    continue
+                self.event.fire_event(event_data, event["tag"])  # old dup event
         else:
             tag = load["tag"]
             self.event.fire_event(load, tag)

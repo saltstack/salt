@@ -75,7 +75,10 @@ jobs:
         include: ${{ fromJSON(inputs.matrix)['linux'] }}
 
     container:
-      image: ghcr.io/saltstack/salt-ci-containers/packaging:debian-12
+      image: ghcr.io/saltstack/salt-ci-containers/testing:debian-13
+
+    env:
+      RELENV_DATA: "${{ github.workspace }}/.relenv"
 
     steps:
       # Checkout here so we can easily use custom actions
@@ -101,6 +104,15 @@ jobs:
           path:
             pkgs/checkout/
 
+      - name: Install build dependencies
+        run: |
+          # Installing python3.13-venv for Python 3.13 support
+          apt-get install -y python3.13-venv
+          # Installing devscripts for source package builds (provides debuild)
+          apt-get install -y devscripts
+          # Installing patchelf for relenv ELF binary patching
+          apt-get install -y patchelf
+
       - name: Download Onedir Tarball as an Artifact
         if:  inputs.source == 'onedir'
         uses: actions/download-artifact@v4
@@ -122,6 +134,12 @@ jobs:
         with:
           name: salt-${{ inputs.salt-version }}.patch
           path: pkgs/checkout/
+
+      - name: Download MAN Pages
+        uses: actions/download-artifact@v4
+        with:
+          name: man-pages-${{ inputs.salt-version }}
+          path: pkgs/checkout/doc/man/
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -191,10 +209,17 @@ jobs:
         include: ${{ fromJSON(inputs.matrix)['linux'] }}
 
     container:
-      image: ghcr.io/saltstack/salt-ci-containers/packaging:rockylinux-9
+      image: ghcr.io/saltstack/salt-ci-containers/testing:fedora-42
+
+    env:
+      RELENV_DATA: "${{ github.workspace }}/.relenv"
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install rpmsign
+        run: |
+          dnf install -y rpmsign
 
       - name: Download Onedir Tarball as an Artifact
         if:  inputs.source == 'onedir'
@@ -216,6 +241,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: salt-${{ inputs.salt-version }}.patch
+
+      - name: Download MAN Pages
+        uses: actions/download-artifact@v4
+        with:
+          name: man-pages-${{ inputs.salt-version }}
+          path: doc/man/
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -342,6 +373,12 @@ jobs:
         with:
           name: salt-${{ inputs.salt-version }}-onedir-macos-${{ matrix.arch }}.tar.xz
           path: artifacts/
+
+      - name: Download MAN Pages
+        uses: actions/download-artifact@v4
+        with:
+          name: man-pages-${{ inputs.salt-version }}
+          path: doc/man/
 
       - name: Setup Keychain
         if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
@@ -494,6 +531,12 @@ jobs:
         with:
           name: salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip
           path: artifacts/
+
+      - name: Download MAN Pages
+        uses: actions/download-artifact@v4
+        with:
+          name: man-pages-${{ inputs.salt-version }}
+          path: doc/man/
 
       - name: Setup Certificate
         if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
