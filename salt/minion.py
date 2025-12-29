@@ -3957,9 +3957,7 @@ class SyndicManager(MinionBase):
                 self.syndic_mode == "sync"
                 # Even in cluster mode we need to forward the raw event with the minions
                 # list to determine which minions we expect to return on the master of masters.
-                or (
-                    return_event and job_event and "minions" in data
-                )
+                or (return_event and job_event and "minions" in data)
             ):
                 # Add generic event aggregation here
                 if "retcode" not in data:
