@@ -3081,6 +3081,7 @@ class SaltRunOptionParser(
 
 class SaltSSHOptionParser(
     OptionParser,
+    ExecutorsMixIn,
     ConfigDirMixIn,
     MergeConfigMixIn,
     LogLevelMixIn,
