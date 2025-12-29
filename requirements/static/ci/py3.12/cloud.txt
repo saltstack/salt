@@ -412,6 +412,10 @@ psutil==5.9.6 ; python_version >= "3.10"
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
+psycopg2-binary==2.9.10
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/static/ci/common.in
 pyasn1-modules==0.3.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
