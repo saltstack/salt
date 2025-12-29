@@ -28,6 +28,7 @@ import salt.exceptions
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
+import salt.modules.file as file
 import salt.modules.network
 import salt.modules.smbios
 import salt.utils.args
@@ -3627,3 +3628,13 @@ def kernelparams():
             log.debug("Failed to read /proc/cmdline: %s", exc)
 
         return grains
+
+
+def fibre_channel_host():
+    """
+    Determine whether the minion is a fibre channel host
+    """
+    grains = {"fibre_channel_host": False}
+    if file.directory_exists("/sys/class/fc_host"):
+        grains["fibre_channel_host"] = True
+    return grains
