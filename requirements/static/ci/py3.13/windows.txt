@@ -465,7 +465,7 @@ trustme==1.2.0
     # via -r requirements/pytest.txt
 typing-extensions==4.12.2
     # via pytest-system-statistics
-urllib3==2.6.2 ; python_version >= "3.10"
+urllib3==2.6.0 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/windows.txt
     #   -r requirements/base.txt
