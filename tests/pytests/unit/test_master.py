@@ -1168,6 +1168,7 @@ def _git_pillar_base_config(tmp_path):
         "git_pillar_root": "",
         "git_pillar_env": "",
         "git_pillar_fallback": "",
+        "git_pillar_proxy": "",
     }
 
 
