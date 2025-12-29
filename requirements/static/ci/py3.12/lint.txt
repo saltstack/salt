@@ -31,7 +31,7 @@ ansible-core==2.19.2
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   ansible
-ansible==12.0.0 ; python_version >= "3.10"
+ansible==12.2.0 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/linux.in
