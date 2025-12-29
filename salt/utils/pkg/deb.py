@@ -597,7 +597,9 @@ class SourcesList:
             new_entry.comps = comps
             if architectures:
                 new_entry.architectures = list(architectures)
-            new_entry.section.header = comment
+            new_entry.section.header = (
+                comment if isinstance(comment, list) else [comment]
+            )
             new_entry.disabled = disabled
             if signedby:
                 new_entry.signedby = signedby
