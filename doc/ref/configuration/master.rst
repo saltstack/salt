@@ -1221,6 +1221,22 @@ a minion performs an authentication check with the master.
 
     auth_events: True
 
+.. conf_master:: auth_events_autosign_grains
+
+``auth_events_autosign_grains``
+-------------------------------
+
+.. versionadded:: 3008
+
+Default: ``[]``
+
+Determines which actions the master will include autosign_grains for when
+firing authentication events.
+
+.. code-block:: yaml
+
+    auth_events_autosign_grains: ["accept", "pend", "reject", "full", "denied", "error"]
+
 .. conf_master:: minion_data_cache_events
 
 ``minion_data_cache_events``

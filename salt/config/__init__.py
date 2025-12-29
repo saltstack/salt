@@ -974,6 +974,8 @@ VALID_OPTS = immutabletypes.freeze(
         "schedule": dict,
         # Whether to fire auth events
         "auth_events": bool,
+        # Specify auth events to add autosign_grains to
+        "auth_events_autosign_grains": list,
         # Whether to fire Minion data cache refresh events
         "minion_data_cache_events": bool,
         # Enable calling ssh minions from the salt master
@@ -1670,6 +1672,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "discovery": False,
         "schedule": {},
         "auth_events": True,
+        "auth_events_pend_autosign_grains": False,
         "minion_data_cache_events": True,
         "enable_ssh_minions": False,
         "netapi_allow_raw_shell": False,
