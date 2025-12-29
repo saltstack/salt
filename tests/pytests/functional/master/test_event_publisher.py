@@ -190,6 +190,8 @@ def test_publisher_mem(publisher, publish, listeners, stop_event):
     # except Exception as exc:
     #    log.exception("WTF")
     finally:
-        print(f"*** PEAK MEMORY: {max_mem:.2f} MB (increase: {max_mem - baseline:.2f} MB) ***\n")
+        print(
+            f"*** PEAK MEMORY: {max_mem:.2f} MB (increase: {max_mem - baseline:.2f} MB) ***\n"
+        )
         log.info("test_publisher_mem finished succesfully")
         stop_event.clear()

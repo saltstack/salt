@@ -305,7 +305,9 @@ class TestOptsDictMutationTracking:
 
     def test_shared_tracker_across_hierarchy(self):
         """Test that child opts share parent's tracker."""
-        parent = OptsDict.from_dict({"test": False, "saltenv": "base"}, track_mutations=True, name="parent")
+        parent = OptsDict.from_dict(
+            {"test": False, "saltenv": "base"}, track_mutations=True, name="parent"
+        )
         child = OptsDict.from_parent(parent, name="child")
 
         parent["test"] = True
