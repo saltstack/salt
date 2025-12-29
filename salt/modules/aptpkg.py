@@ -63,7 +63,17 @@ LP_SRC_FORMAT = "deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main"
 LP_PVT_SRC_FORMAT = "deb https://{0}private-ppa.launchpad.net/{1}/{2}/ubuntu {3} main"
 
 _MODIFY_OK = frozenset(
-    ["uri", "comps", "architectures", "disabled", "file", "dist", "signedby", "trusted"]
+    [
+        "uri",
+        "uris",
+        "comps",
+        "architectures",
+        "disabled",
+        "file",
+        "dist",
+        "signedby",
+        "trusted",
+    ]
 )
 DPKG_ENV_VARS = {
     "APT_LISTBUGS_FRONTEND": "none",
@@ -1689,31 +1699,39 @@ def list_repos(**kwargs):
         if _skip_source(source):
             continue
         if isinstance(source, Deb822SourceEntry):
-            # deb822 could contain multiple types and suites
+            # deb822 could contain multiple URIs, types and suites
             # for backward compatibility we need to expand it
             # to get separate entries for each type and suite
-            for suite in source.suites:
-                for source_type in source.types:
-                    compat_source = SourceEntry(
-                        f"{source_type} {source.uri} {suite} {' '.join(getattr(source, 'comps', []))}"
-                    )
-                    for attr in ("disabled", "architectures", "signedby", "trusted"):
-                        setattr(compat_source, attr, getattr(source, attr))
-                    repo = {
-                        "file": source.file,
-                        "comps": getattr(source, "comps", []),
-                        "disabled": source.disabled,
-                        "enabled": not source.disabled,  # This is for compatibility with the other modules
-                        "dist": suite,
-                        "suites": source.suites,
-                        "type": source_type,
-                        "uri": source.uri,
-                        "line": str(compat_source),
-                        "architectures": getattr(source, "architectures", []),
-                        "signedby": source.signedby,
-                    }
-                    repos.setdefault(source.uri, []).append(repo)
+            for uri in source.uris:
+                for suite in source.suites:
+                    for source_type in source.types:
+                        compat_source = SourceEntry(
+                            f"{source_type} {uri} {suite} {' '.join(getattr(source, 'comps', []))}"
+                        )
+                        for attr in (
+                            "disabled",
+                            "architectures",
+                            "signedby",
+                            "trusted",
+                        ):
+                            setattr(compat_source, attr, getattr(source, attr))
+                        repo = {
+                            "file": source.file,
+                            "comps": getattr(source, "comps", []),
+                            "disabled": source.disabled,
+                            "enabled": not source.disabled,  # This is for compatibility with the other modules
+                            "dist": suite,
+                            "suites": source.suites,
+                            "type": source_type,
+                            "uri": uri,
+                            "line": str(compat_source),
+                            "architectures": getattr(source, "architectures", []),
+                            "signedby": source.signedby,
+                        }
+                        repos.setdefault(uri, []).append(repo)
+            # Continue with next source entry
             continue
+        # Works only for legacy source entries
         repo = {}
         repo["file"] = source.file
         repo["comps"] = getattr(source, "comps", [])
@@ -1846,7 +1864,8 @@ def del_repo(repo, **kwargs):
             if (
                 repo_entry["type"] in source.type.split()
                 and source.architectures == repo_entry["architectures"]
-                and source.uri.rstrip("/") == repo_entry["uri"].rstrip("/")
+                and repo_entry["uri"].rstrip("/")
+                in [uri.rstrip("/") for uri in source.uris]
                 and repo_entry["dist"] in source.suites
             ):
                 s_comps = set(source.comps)
@@ -2692,7 +2711,8 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         # has already been modified on a previous run.
         repo_matches = (
             repo_entry["type"] in apt_source.type.split()
-            and apt_source.uri.rstrip("/") == repo_entry["uri"].rstrip("/")
+            and repo_entry["uri"].rstrip("/")
+            in [uri.rstrip("/") for uri in apt_source.uris]
             and repo_entry["dist"] in apt_source.suites
         )
         kw_matches = kw_dist in apt_source.suites and kw_type in apt_source.type.split()
@@ -2751,7 +2771,10 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         if key in _MODIFY_OK and hasattr(mod_source, key):
             setattr(mod_source, key, kwargs[key])
 
-    if mod_source.uri != repo_entry["uri"]:
+    if (
+        not isinstance(mod_source, Deb822SourceEntry)
+        and mod_source.uri != repo_entry["uri"]
+    ):
         mod_source.uri = repo_entry["uri"]
         mod_source.line = str(mod_source)
 
