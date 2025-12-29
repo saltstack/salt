@@ -120,8 +120,16 @@ def generate_sls_context(tmplpath, sls):
         elif template.endswith(f"{slspath}/init.sls"):
             template = template[-(9 + len(slspath)) :]
         else:
-            # Something went wrong
-            log.warning("Failed to determine proper template path")
+            # It is not an SLS file being processed,
+            template = sls
+            sls_context.update(
+                dict(
+                    tplpath=tmplpath,
+                    tplfile=template,
+                    tpldir=str(pathlib.Path(sls).parents[0]),
+                )
+            )
+            return sls_context
 
         slspath = template.rsplit("/", 1)[0] if "/" in template else ""
 
