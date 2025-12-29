@@ -179,6 +179,7 @@ class Client:
         source_hash=None,
         verify_ssl=True,
         use_etag=False,
+        http_params=None,
     ):
         """
         Pull a file down from the file server and store it in the minion
@@ -193,6 +194,7 @@ class Client:
             source_hash=source_hash,
             verify_ssl=verify_ssl,
             use_etag=use_etag,
+            http_params=http_params,
         )
 
     def cache_files(self, paths, saltenv="base", cachedir=None):
@@ -474,6 +476,7 @@ class Client:
         source_hash=None,
         verify_ssl=True,
         use_etag=False,
+        http_params=None,
     ):
         """
         Get a single file from a URL.
@@ -627,6 +630,9 @@ class Client:
                 raise MinionError(f"Could not fetch from {url}")
 
         get_kwargs = {}
+        if http_params is not None:
+            get_kwargs.update(http_params)
+
         if url_data.username is not None and url_data.scheme in ("http", "https"):
             netloc = url_data.netloc
             at_sign_pos = netloc.rfind("@")
