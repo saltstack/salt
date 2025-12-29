@@ -396,6 +396,10 @@ def refresh_db(cache_valid_time=0, failhard=False, **kwargs):
         timeout=kwargs.get("timeout", __opts__.get("aptpkg_refresh_db_timeout", 30)),
     )
     if "Timed out" in call["stdout"]:
+        # In some cases with inconsistent configuration of sources apt-get could
+        # got stuck on calling apt-get update for a long time.
+        # In most cases cleaning up the cache could help,
+        # but update should be triggered again.
         _call_apt(["apt-get", "-q", "clean"], scope=False)
         call = _call_apt(["apt-get", "-q", "update"], scope=False)
     if call["retcode"] != 0:
