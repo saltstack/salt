@@ -143,7 +143,7 @@ exceptiongroup==1.1.1
     # via
     #   anyio
     #   pytest
-filelock==3.13.1
+filelock==3.20.1
     # via virtualenv
 flaky==3.8.1
     # via -r requirements/pytest.txt
