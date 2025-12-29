@@ -1447,13 +1447,15 @@ class Single:
         opts = data.get("opts", {})
         opts["grains"] = data.get("grains")
 
-        # Restore master grains
-        for grain in conf_grains:
-            opts["grains"][grain] = conf_grains[grain]
-        # Enable roster grains support
+        # Restore master grains and roster grains
+        # Use dict merge instead of nested mutations to avoid OptsDict deepcopy
+        grains_updates = {}
+        grains_updates.update(conf_grains)
         if "grains" in self.target:
-            for grain in self.target["grains"]:
-                opts["grains"][grain] = self.target["grains"][grain]
+            grains_updates.update(self.target["grains"])
+
+        if grains_updates:
+            opts["grains"] = {**opts["grains"], **grains_updates}
 
         opts["pillar"] = data.get("pillar")
 
