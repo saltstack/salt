@@ -881,3 +881,214 @@ def test_adding_repo_file_signedby_fail_key_keyurl(
     ret = _run()
     assert "Failed to configure repo" in ret.comment
     assert "Could not add key" in ret.comment
+
+
+@pytest.fixture
+def deb822_repo_file(grains):
+    if grains["os_family"] != "Debian":
+        pytest.skip(
+            "Test only applicable to Debian flavors, not '{}'".format(
+                grains["osfinger"]
+            )
+        )
+    repo_file_path = "/etc/apt/sources.list.d/deb822-test.sources"
+    try:
+        yield repo_file_path
+    finally:
+        try:
+            os.unlink(repo_file_path)
+        except OSError:
+            pass
+
+
+@pytest.mark.requires_salt_states("pkgrepo.managed", "pkgrepo.absent")
+def test_repo_present_absent_deb822_repo_file(
+    pkgrepo, grains, deb822_repo_file, subtests
+):
+    """
+    test adding and managing a deb822 repo.
+    """
+    codename = grains["oscodename"]
+    repo_uri_main = "http://ftp.es.debian.org/debian"
+    repo_uri_alt = "http://ftp.cz.debian.org/debian"
+    aptkey = True if salt.utils.path.which("apt-key") else False
+    ext_attrs = ""
+    expected_ext_attrs = ""
+    if not aptkey:
+        ext_attrs = " [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg]"
+        expected_ext_attrs = (
+            "\nSigned-By: /usr/share/keyrings/elasticsearch-keyring.gpg"
+        )
+
+    # without the trailing slash
+    repo_content = f"deb{ext_attrs} {repo_uri_main} {codename} main"
+    expected_content = f"""Types: deb
+URIs: {repo_uri_main}
+Suites: {codename}
+Components: main{expected_ext_attrs}"""
+    with subtests.test("Create new deb822 repo source"):
+        # initial creation
+        ret = pkgrepo.managed(
+            name=repo_content, file=deb822_repo_file, refresh=False, clean_file=True
+        )
+        with salt.utils.files.fopen(deb822_repo_file, "r") as fp:
+            file_content = fp.read()
+        assert file_content.strip() == expected_content
+        assert ret.changes
+
+    # use trailing slash in the URI and add extra suites
+    repo_content = f"deb{ext_attrs} {repo_uri_main}/ {codename} main"
+    expected_content = f"""Types: deb
+URIs: {repo_uri_main}/
+Suites: {codename} {codename}-updates {codename}-backports
+Components: main{expected_ext_attrs}"""
+    with subtests.test("Add suites to deb822 repo source"):
+        ret = pkgrepo.managed(
+            name=repo_content,
+            file=deb822_repo_file,
+            refresh=False,
+            suites=[codename, f"{codename}-updates", f"{codename}-backports"],
+        )
+        with salt.utils.files.fopen(deb822_repo_file, "r") as fp:
+            file_content = fp.read()
+        assert file_content.strip() == expected_content
+        assert ret.changes
+
+    # use trailing slash in the URI and add extra components
+    repo_content = f"deb{ext_attrs} {repo_uri_main}/ {codename} main"
+    expected_content = f"""Types: deb
+URIs: {repo_uri_main}/
+Suites: {codename} {codename}-updates {codename}-backports
+Components: main contrib{expected_ext_attrs}"""
+    with subtests.test("Add comps to deb822 repo source"):
+        ret = pkgrepo.managed(
+            name=repo_content,
+            file=deb822_repo_file,
+            refresh=False,
+            comps="main,contrib",
+        )
+        with salt.utils.files.fopen(deb822_repo_file, "r") as fp:
+            file_content = fp.read()
+        assert file_content.strip() == expected_content
+        assert ret.changes
+
+    # use trailing slash in the URI and add extra type
+    repo_content = f"deb{ext_attrs} {repo_uri_main}/ {codename} main contrib"
+    expected_content = f"""Types: deb deb-src
+URIs: {repo_uri_main}/
+Suites: {codename} {codename}-updates {codename}-backports
+Components: main contrib{expected_ext_attrs}"""
+    with subtests.test("Add type to deb822 repo source"):
+        ret = pkgrepo.managed(
+            name=repo_content,
+            file=deb822_repo_file,
+            refresh=False,
+            types=["deb", "deb-src"],
+        )
+        with salt.utils.files.fopen(deb822_repo_file, "r") as fp:
+            file_content = fp.read()
+        assert file_content.strip() == expected_content
+        assert ret.changes
+
+    # do not use trailing slash in the URI and add extra URI
+    repo_content = f"deb{ext_attrs} {repo_uri_main} {codename} main contrib"
+    expected_content = f"""Types: deb deb-src
+URIs: {repo_uri_main} {repo_uri_alt}
+Suites: {codename} {codename}-updates {codename}-backports
+Components: main contrib{expected_ext_attrs}"""
+    with subtests.test("Add extra URI to deb822 repo source"):
+        ret = pkgrepo.managed(
+            name=repo_content,
+            file=deb822_repo_file,
+            refresh=False,
+            uris=[repo_uri_main, repo_uri_alt],
+        )
+        with salt.utils.files.fopen(deb822_repo_file, "r") as fp:
+            file_content = fp.read()
+        assert file_content.strip() == expected_content
+        assert ret.changes
+
+    # do not use trailing slash in the URI and remove suites
+    repo_content = f"deb{ext_attrs} {repo_uri_main} {codename} main contrib"
+    expected_content = f"""Types: deb deb-src
+URIs: {repo_uri_main} {repo_uri_alt}
+Suites: {codename}
+Components: main contrib{expected_ext_attrs}"""
+    with subtests.test("Remove suites from deb822 repo source"):
+        ret = pkgrepo.managed(
+            name=repo_content,
+            file=deb822_repo_file,
+            refresh=False,
+            suites=[codename],
+        )
+        with salt.utils.files.fopen(deb822_repo_file, "r") as fp:
+            file_content = fp.read()
+        assert file_content.strip() == expected_content
+        assert ret.changes
+
+    # Add one more repo source to the existing source file
+    repo_uri_main_sec = "http://ftp.cz.debian.org/debian-security"
+    repo_uri_alt_sec = "http://ftp.es.debian.org/debian-security"
+    repo_content_sec = (
+        f"deb{ext_attrs} {repo_uri_main_sec} {codename}-security main updates"
+    )
+    expected_content = f"""Types: deb deb-src
+URIs: {repo_uri_main} {repo_uri_alt}
+Suites: {codename}
+Components: main contrib{expected_ext_attrs}
+
+Types: deb
+URIs: {repo_uri_main_sec} {repo_uri_alt_sec}
+Suites: {codename}-security
+Components: main updates{expected_ext_attrs}"""
+    with subtests.test("Add extra deb822 repo source"):
+        ret = pkgrepo.managed(
+            name=repo_content_sec,
+            file=deb822_repo_file,
+            refresh=False,
+            uris=[repo_uri_main_sec, repo_uri_alt_sec],
+        )
+        with salt.utils.files.fopen(deb822_repo_file, "r") as fp:
+            file_content = fp.read()
+        assert file_content.strip() == expected_content
+        assert ret.changes
+
+    # Disable repo source and leave just alternative URI
+    repo_content_sec = (
+        f"deb{ext_attrs} {repo_uri_main_sec} {codename}-security main updates"
+    )
+    expected_content = f"""Types: deb deb-src
+URIs: {repo_uri_main} {repo_uri_alt}
+Suites: {codename}
+Components: main contrib{expected_ext_attrs}
+
+Types: deb
+URIs: {repo_uri_alt_sec}
+Suites: {codename}-security
+Components: main updates{expected_ext_attrs}
+Enabled: no"""
+    with subtests.test("Disable extra deb822 repo source"):
+        ret = pkgrepo.managed(
+            name=repo_content_sec,
+            file=deb822_repo_file,
+            refresh=False,
+            uris=[repo_uri_alt_sec],
+            disabled=True,
+        )
+        with salt.utils.files.fopen(deb822_repo_file, "r") as fp:
+            file_content = fp.read()
+        assert file_content.strip() == expected_content
+        assert ret.changes
+
+    # Remove repo source
+    expected_content = f"""Types: deb
+URIs: {repo_uri_alt_sec}
+Suites: {codename}-security
+Components: main updates{expected_ext_attrs}
+Enabled: no"""
+    with subtests.test("Remove deb822 repo source"):
+        ret = pkgrepo.absent(name=repo_content)
+        with salt.utils.files.fopen(deb822_repo_file, "r") as fp:
+            file_content = fp.read()
+        assert ret.result
+        assert file_content.strip() == expected_content
