@@ -105,8 +105,9 @@ def generate_sls_context(tmplpath, sls):
 
     sls_context = {}
 
-    # Normalize SLS as path.
-    slspath = sls.replace(".", "/")
+    # Normalize SLS as path and remove possible trailing slashes
+    # to prevent matching issues and wrong vars calculation
+    slspath = sls.replace(".", "/").rstrip("/")
 
     if tmplpath:
         # Normalize template path
