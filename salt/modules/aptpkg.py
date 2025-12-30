@@ -1698,13 +1698,13 @@ def list_repos(**kwargs):
     for source in sources:
         if _skip_source(source):
             continue
-        if isinstance(source, Deb822SourceEntry):
-            # deb822 could contain multiple URIs, types and suites
-            # for backward compatibility we need to expand it
-            # to get separate entries for each type and suite
-            for uri in source.uris:
-                for suite in source.suites:
-                    for source_type in source.types:
+        # deb822 could contain multiple URIs, types and suites
+        # for backward compatibility we need to expand it
+        # to get separate entries for each URI, type and suite
+        for uri in source.uris:
+            for suite in source.suites:
+                for source_type in source.types:
+                    if isinstance(source, Deb822SourceEntry):
                         compat_source = SourceEntry(
                             f"{source_type} {uri} {suite} {' '.join(getattr(source, 'comps', []))}"
                         )
@@ -1715,38 +1715,23 @@ def list_repos(**kwargs):
                             "trusted",
                         ):
                             setattr(compat_source, attr, getattr(source, attr))
-                        repo = {
-                            "file": source.file,
-                            "comps": getattr(source, "comps", []),
-                            "disabled": source.disabled,
-                            "enabled": not source.disabled,  # This is for compatibility with the other modules
-                            "dist": suite,
-                            "suites": source.suites,
-                            "type": source_type,
-                            "uri": uri,
-                            "line": str(compat_source),
-                            "architectures": getattr(source, "architectures", []),
-                            "signedby": source.signedby,
-                        }
-                        repos.setdefault(uri, []).append(repo)
-            # Continue with next source entry
-            continue
-        # Works only for legacy source entries
-        repo = {}
-        repo["file"] = source.file
-        repo["comps"] = getattr(source, "comps", [])
-        repo["disabled"] = source.disabled
-        repo["enabled"] = not repo[
-            "disabled"
-        ]  # This is for compatibility with the other modules
-        repo["dist"] = source.dist
-        repo["suites"] = list(source.suites)
-        repo["type"] = source.type
-        repo["uri"] = source.uri
-        repo["line"] = source.line.strip()
-        repo["architectures"] = getattr(source, "architectures", [])
-        repo["signedby"] = source.signedby
-        repos.setdefault(source.uri, []).append(repo)
+                        compat_source_line = str(compat_source)
+                    else:
+                        compat_source_line = source.line.strip()
+                    repo = {
+                        "file": source.file,
+                        "comps": getattr(source, "comps", []),
+                        "disabled": source.disabled,
+                        "enabled": not source.disabled,  # This is for compatibility with the other modules
+                        "dist": suite,
+                        "suites": source.suites,
+                        "type": source_type,
+                        "uri": uri,
+                        "line": compat_source_line,
+                        "architectures": getattr(source, "architectures", []),
+                        "signedby": source.signedby,
+                    }
+                    repos.setdefault(uri, []).append(repo)
     return repos
 
 
