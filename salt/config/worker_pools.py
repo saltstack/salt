@@ -108,6 +108,40 @@ def validate_worker_pools_config(opts):
     catchall_pool = None
 
     for pool_name, pool_config in worker_pools.items():
+        # Validate pool name format (security-focused: block path traversal only)
+        if not isinstance(pool_name, str):
+            errors.append(f"Pool name must be a string, got {type(pool_name).__name__}")
+            continue
+
+        if not pool_name:
+            errors.append("Pool name cannot be empty")
+            continue
+
+        # Security: block path traversal attempts
+        if "/" in pool_name or "\\" in pool_name:
+            errors.append(
+                f"Pool name '{pool_name}' is invalid. Pool names cannot contain "
+                "path separators (/ or \\) to prevent path traversal attacks."
+            )
+            continue
+
+        # Security: block relative path components
+        if (
+            pool_name == ".."
+            or pool_name.startswith("../")
+            or pool_name.startswith("..\\")
+        ):
+            errors.append(
+                f"Pool name '{pool_name}' is invalid. Pool names cannot be or start with "
+                "'../' to prevent path traversal attacks."
+            )
+            continue
+
+        # Security: block null bytes
+        if "\x00" in pool_name:
+            errors.append("Pool name contains null byte, which is not allowed.")
+            continue
+
         if not isinstance(pool_config, dict):
             errors.append(f"Pool '{pool_name}': configuration must be a dictionary")
             continue
