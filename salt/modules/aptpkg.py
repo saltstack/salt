@@ -71,9 +71,14 @@ _MODIFY_OK = frozenset(
         "disabled",
         "file",
         "dist",
+        "suites",
         "signedby",
         "trusted",
+        "types",
     ]
+)
+_MODIFY_OK_LEGACY = frozenset(
+    ["uri", "comps", "architectures", "disabled", "file", "dist", "signedby", "trusted"]
 )
 DPKG_ENV_VARS = {
     "APT_LISTBUGS_FRONTEND": "none",
@@ -1726,7 +1731,9 @@ def list_repos(**kwargs):
                         "dist": suite,
                         "suites": source.suites,
                         "type": source_type,
+                        "types": source.types,
                         "uri": uri,
+                        "uris": source.uris,
                         "line": compat_source_line,
                         "architectures": getattr(source, "architectures", []),
                         "signedby": source.signedby,
@@ -2753,7 +2760,10 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         kwargs.pop("architectures")
 
     for key in kwargs:
-        if key in _MODIFY_OK and hasattr(mod_source, key):
+        if (
+            (isinstance(mod_source, Deb822SourceEntry) and key in _MODIFY_OK)
+            or key in _MODIFY_OK_LEGACY
+        ) and hasattr(mod_source, key):
             setattr(mod_source, key, kwargs[key])
 
     if (
@@ -2839,34 +2849,43 @@ def _expand_repo_def(os_name, os_codename=None, **kwargs):
             kwargs[list_args] = [
                 kwarg.strip() for kwarg in kwargs[list_args].split(",")
             ]
-    for kwarg in _MODIFY_OK:
+    for kwarg in _MODIFY_OK_LEGACY:
         if kwarg in kwargs:
             setattr(source_entry, kwarg, kwargs[kwarg])
 
     source_list = SourcesList()
-    kwargs = {}
+
+    new_kwargs = {}
+    for arg in ("file", "suites", "trusted", "types", "uris"):
+        if arg in kwargs:
+            new_kwargs[arg] = kwargs[arg]
+
     signedby = source_entry.signedby
-    kwargs["signedby"] = signedby
+    new_kwargs["signedby"] = signedby
 
     _source_entry = source_list.add(
         type=source_entry.type,
         uri=source_entry.uri,
         dist=source_entry.dist,
-        orig_comps=getattr(source_entry, "comps", []),
-        architectures=getattr(source_entry, "architectures", []),
-        **kwargs,
+        orig_comps=source_entry.comps,
+        architectures=source_entry.architectures,
+        **new_kwargs,
     )
     _source_entry.disabled = source_entry.disabled
-    _source_entry.line = _source_entry.repo_line()
+    if not isinstance(_source_entry, Deb822SourceEntry):
+        _source_entry.line = _source_entry.repo_line()
 
     sanitized["file"] = _source_entry.file
-    sanitized["comps"] = getattr(_source_entry, "comps", [])
+    sanitized["comps"] = _source_entry.comps
     sanitized["disabled"] = _source_entry.disabled
     sanitized["dist"] = _source_entry.dist
+    sanitized["suites"] = _source_entry.suites
     sanitized["type"] = _source_entry.type
+    sanitized["types"] = _source_entry.types
     sanitized["uri"] = _source_entry.uri
+    sanitized["uris"] = _source_entry.uris
     sanitized["line"] = str(_source_entry)
-    sanitized["architectures"] = getattr(_source_entry, "architectures", [])
+    sanitized["architectures"] = _source_entry.architectures
     sanitized["signedby"] = signedby
 
     return sanitized
