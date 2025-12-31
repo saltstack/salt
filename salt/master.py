@@ -18,6 +18,8 @@ import threading
 import time
 from collections import OrderedDict
 
+import tornado.ioloop
+
 import salt.acl
 import salt.auth
 import salt.channel.server
@@ -1191,41 +1193,97 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
             name="ReqServer_ProcessManager", wait_for_kill=1
         )
 
-        req_channels = []
-        for transport, opts in iter_transport_opts(self.opts):
-            chan = salt.channel.server.ReqServerChannel.factory(opts)
-            chan.pre_fork(self.process_manager)
-            req_channels.append(chan)
+        if self.opts.get("worker_pools_enabled", True):
+            # Multi-pool mode with dispatcher architecture
+            from salt.config.worker_pools import get_worker_pools_config
 
-        if self.opts["req_server_niceness"] and not salt.utils.platform.is_windows():
-            log.info(
-                "setting ReqServer_ProcessManager niceness to %d",
-                self.opts["req_server_niceness"],
+            worker_pools = get_worker_pools_config(self.opts)
+
+            # Create front-end channel (receives from minions, dispatcher connects to this)
+            frontend_channels = []
+            for transport, opts in iter_transport_opts(self.opts):
+                chan = salt.channel.server.ReqServerChannel.factory(opts)
+                chan.pre_fork(self.process_manager)
+                frontend_channels.append(chan)
+
+            # Create pool-specific channels (dispatcher forwards to these, workers connect to these)
+            pool_channels = {}
+            for pool_name in worker_pools.keys():
+                pool_opts = self.opts.copy()
+                pool_opts["pool_name"] = pool_name
+
+                # Create channel for this pool
+                for transport, opts in iter_transport_opts(pool_opts):
+                    chan = salt.channel.server.ReqServerChannel.factory(opts)
+                    chan.pre_fork(self.process_manager)
+                    pool_channels[pool_name] = chan
+                    # Only use first transport for pools
+                    break
+
+            # Create dispatcher process (acts as worker to front-end, routes to pools)
+            dispatcher = salt.channel.server.PoolDispatcherChannel(
+                self.opts, pool_channels
             )
-            os.nice(self.opts["req_server_niceness"])
 
-        # Reset signals to default ones before adding processes to the process
-        # manager. We don't want the processes being started to inherit those
-        # signal handlers
-        with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-            if self.opts.get("worker_pools_enabled", True):
-                # Multi-pool mode: create workers according to pool configuration
-                from salt.config.worker_pools import DEFAULT_WORKER_POOLS
+            def dispatcher_process(io_loop=None):
+                """Dispatcher process function"""
+                if io_loop is None:
+                    io_loop = tornado.ioloop.IOLoop.current()
+                dispatcher.post_fork(io_loop)
+                io_loop.start()
 
-                worker_pools = self.opts.get("worker_pools", DEFAULT_WORKER_POOLS)
+            self.process_manager.add_process(dispatcher_process, name="PoolDispatcher")
 
+            if (
+                self.opts["req_server_niceness"]
+                and not salt.utils.platform.is_windows()
+            ):
+                log.info(
+                    "setting ReqServer_ProcessManager niceness to %d",
+                    self.opts["req_server_niceness"],
+                )
+                os.nice(self.opts["req_server_niceness"])
+
+            # Reset signals to default ones before adding processes to the process
+            # manager. We don't want the processes being started to inherit those
+            # signal handlers
+            with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                # Create workers for each pool (workers connect to pool-specific channels)
                 for pool_name, pool_config in worker_pools.items():
                     worker_count = pool_config.get("worker_count", 1)
+                    pool_chan = pool_channels[pool_name]
 
                     for pool_index in range(worker_count):
                         name = f"MWorker-{pool_name}-{pool_index}"
+                        # Workers connect to their pool's channel
                         self.process_manager.add_process(
                             MWorker,
-                            args=(self.opts, self.master_key, self.key, req_channels),
+                            args=(self.opts, self.master_key, self.key, [pool_chan]),
                             kwargs={"pool_name": pool_name, "pool_index": pool_index},
                             name=name,
                         )
-            else:
+        else:
+            # Legacy single-pool mode
+            req_channels = []
+            for transport, opts in iter_transport_opts(self.opts):
+                chan = salt.channel.server.ReqServerChannel.factory(opts)
+                chan.pre_fork(self.process_manager)
+                req_channels.append(chan)
+
+            if (
+                self.opts["req_server_niceness"]
+                and not salt.utils.platform.is_windows()
+            ):
+                log.info(
+                    "setting ReqServer_ProcessManager niceness to %d",
+                    self.opts["req_server_niceness"],
+                )
+                os.nice(self.opts["req_server_niceness"])
+
+            # Reset signals to default ones before adding processes to the process
+            # manager. We don't want the processes being started to inherit those
+            # signal handlers
+            with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
                 # Legacy mode: create workers using worker_threads
                 for ind in range(int(self.opts["worker_threads"])):
                     name = f"MWorker-{ind}"
@@ -1234,6 +1292,7 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
                         args=(self.opts, self.master_key, self.key, req_channels),
                         name=name,
                     )
+
         self.process_manager.run()
 
     def run(self):
@@ -1277,7 +1336,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         :return: Master worker
         """
         super().__init__(**kwargs)
-        self.opts = opts
+        self.opts = opts.copy()  # Copy opts to avoid modifying the shared instance
         self.req_channels = req_channels
 
         self.mkey = mkey
@@ -1289,6 +1348,10 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         # Pool-specific attributes
         self.pool_name = pool_name or "default"
         self.pool_index = pool_index if pool_index is not None else 0
+
+        # Add pool_name to opts so transport can use it for URI construction
+        if pool_name:
+            self.opts["pool_name"] = pool_name
 
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
     # Otherwise, 'SMaster.secrets' won't be copied over to the spawned process
