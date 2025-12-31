@@ -562,8 +562,11 @@ class SourcesList:
         file=None,
         architectures=None,
         signedby="",
+        suites=None,
         trusted=False,
+        types=None,
         parent=None,
+        uris=None,
     ):
         """
         Add a new source to the sources.list.
@@ -591,9 +594,9 @@ class SourcesList:
                 assert isinstance(parent, Deb822SourceEntry)
                 for k in parent.section.tags:
                     new_entry.section[k] = parent.section[k]
-            new_entry.types = [type]
-            new_entry.uris = [uri]
-            new_entry.suites = [dist]
+            new_entry.types = types if types and isinstance(types, list) else [type]
+            new_entry.uris = uris if uris and isinstance(uris, list) else [uri]
+            new_entry.suites = suites if suites and isinstance(suites, list) else [dist]
             new_entry.comps = comps
             if architectures:
                 new_entry.architectures = list(architectures)
