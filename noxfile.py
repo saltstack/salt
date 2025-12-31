@@ -1957,7 +1957,8 @@ def ci_test_onedir_pkgs(session):
     for arg in session.posargs:
         if arg.startswith("tests/pytests/pkg/"):
             # The user is passing test paths
-            cmd_args.pop()
+            if cmd_args:
+                cmd_args.pop()
             break
 
     if IS_LINUX:

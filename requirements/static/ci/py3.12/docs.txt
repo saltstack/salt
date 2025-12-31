@@ -8,7 +8,7 @@ aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   aiohttp
-aiohttp==3.12.15
+aiohttp==3.13.3
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -263,7 +263,7 @@ timelib==0.3.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
-tornado==6.5.2
+tornado==6.5.4
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt

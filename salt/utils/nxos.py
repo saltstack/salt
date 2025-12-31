@@ -212,7 +212,8 @@ class NxapiClient:
             body = response
 
         if self.nxargs["connect_over_uds"]:
-            body = json.loads(response.read().decode("utf-8"))
+            max_safe_read = 10 * 1024 * 1024
+            body = json.loads(response.read(max_safe_read).decode("utf-8"))
 
         # Proceed with caution.  The JSON may not be complete.
         # Don't just return body['ins_api']['outputs']['output'] directly.

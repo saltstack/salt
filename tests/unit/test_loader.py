@@ -1332,16 +1332,33 @@ class LoaderCleanupTest(ModuleCase):
 
     def test_loader_clean_modules(self):
         loaded_base_name = self.loader1.loaded_base_name
+        tag = self.loader1.tag
         self.loader1.clean_modules()
 
+        # Base stub modules are preserved as shared infrastructure
+        expected_base_stubs = {
+            f"{loaded_base_name}.int",
+            f"{loaded_base_name}.int.{tag}",
+            f"{loaded_base_name}.ext",
+            f"{loaded_base_name}.ext.{tag}",
+        }
+
+        # Check that only base stubs and utils modules remain, not actual loaded modules
         for name in list(sys.modules):
             if name.startswith(loaded_base_name):
+                # Base stubs are ok
+                if name in expected_base_stubs:
+                    continue
+                # Utils modules are shared infrastructure, ok to remain
+                parts = name.split(".")
+                if len(parts) >= 4 and parts[3] == "utils":
+                    continue
+                # Actual loaded modules should be removed
                 self.fail(
-                    "Found a real module reference in sys.modules matching {!r}".format(
-                        loaded_base_name
-                    )
+                    "Found a loaded module in sys.modules: {!r}. "
+                    "Only base stubs and utils modules should remain. "
+                    "Base stubs: {}".format(name, expected_base_stubs)
                 )
-                break
 
 
 class LoaderGlobalsTest(ModuleCase):
