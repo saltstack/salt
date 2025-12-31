@@ -360,6 +360,15 @@ class DaemonizedRequestServer(RequestServer):
         """
         raise NotImplementedError
 
+    async def forward_message(self, payload):
+        """
+        Forward a message into this transport's worker queue.
+        Used by the pool dispatcher to route messages to pool-specific transports.
+
+        :param payload: The message payload to forward
+        """
+        raise NotImplementedError
+
 
 class PublishServer(ABC):
     """
