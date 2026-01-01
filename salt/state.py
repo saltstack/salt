@@ -26,8 +26,8 @@ import re
 import site
 import time
 import traceback
-from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
-from typing import Any, Union
+from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
+from typing import Any, TypeVar
 
 import networkx as nx
 
@@ -69,12 +69,16 @@ log = logging.getLogger(__name__)
 # that have dict values. This could be cleaned up some by making
 # exclude and extend into dicts instead of lists so the type of all the values are
 # homogeneous.
-HighData = dict[str, Union[Mapping[str, Any], list[Union[Mapping[str, Any], str]]]]
+HighData = dict[str, Mapping[str, Any] | list[Mapping[str, Any] | str]]
 LowChunk = dict[str, Any]
 
+K = TypeVar("K")
+V = TypeVar("V")
+Pair = tuple[K, V]
+HighDataStateArgsDef = Mapping[K, V] | Iterable[Mapping[K, V] | str]
 
 # These are keywords passed to state module functions which are to be used
-# by salt in this state module and not on the actual state module function
+# by salt in this state module and not by the actual state module function
 STATE_REQUISITE_KEYWORDS = frozenset(
     [req_type.value for req_type in RequisiteType]
     + [
@@ -97,8 +101,6 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "retry",
         "order",
         "parallel",
-        "prereq",
-        "prereq_in",
         "reload_modules",
         "reload_grains",
         "reload_pillar",
@@ -127,7 +129,6 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "__umask__",
     ]
 )
-
 STATE_INTERNAL_KEYWORDS = STATE_REQUISITE_KEYWORDS.union(
     STATE_REQUISITE_IN_KEYWORDS
 ).union(STATE_RUNTIME_KEYWORDS)
@@ -189,21 +190,19 @@ def get_accumulator_dir(cachedir):
     return fn_
 
 
-def state_args(id_: Hashable, state: Hashable, high: HighData) -> set[Any]:
+def state_args(id_: str, state: str, high: HighData) -> set[Any]:
     """
-    Return a set of the arguments passed to the named state
+    Return a set of the argument names passed to the named state
     """
     args = set()
     if id_ not in high:
         return args
-    if state not in high[id_]:
+    body = high[id_]
+    if not isinstance(body, Mapping) or state not in body:
         return args
-    for item in high[id_][state]:
-        if not isinstance(item, dict):
-            continue
-        if len(item) != 1:
-            continue
-        args.add(next(iter(item)))
+    for key, _ in _state_args_kv_iter(body[state], id_):
+        if key != "fun":
+            args.add(key)
     return args
 
 
@@ -251,7 +250,7 @@ def find_sls_ids(sls: Any, high: HighData) -> list[tuple[str, str]]:
     ret = []
     for nid, item in high.items():
         try:
-            sls_tgt = item["__sls__"]
+            sls_tgt = item["__sls__"]  # type: ignore (except case handles invalid type)
         except TypeError:
             if nid != "__exclude__":
                 log.error(
@@ -281,11 +280,11 @@ def format_log(ret: Any) -> None:
                 if ret["comment"]:
                     msg = ret["comment"]
                 else:
-                    msg = "No changes made for {0[name]}".format(ret)
+                    msg = f"No changes made for {ret['name']}"
             elif isinstance(chg, dict):
                 if "diff" in chg:
                     if isinstance(chg["diff"], str):
-                        msg = "File changed:\n{}".format(chg["diff"])
+                        msg = f"File changed:\n{chg['diff']}"
                 if all([isinstance(x, dict) for x in chg.values()]):
                     if all([("old" in x and "new" in x) for x in chg.values()]):
                         msg = "Made the following changes:\n"
@@ -298,9 +297,7 @@ def format_log(ret: Any) -> None:
                                 new = "absent"
                             # This must be able to handle unicode as some package names contain
                             # non-ascii characters like "Français" or "Español". See Issue #33605.
-                            msg += "'{}' changed from '{}' to '{}'\n".format(
-                                pkg, old, new
-                            )
+                            msg += f"'{pkg}' changed from '{old}' to '{new}'\n"
             if not msg:
                 msg = str(ret["changes"])
             if ret["result"] is True or ret["result"] is None:
@@ -388,6 +385,37 @@ def _apply_exclude(high: HighData) -> HighData:
     return high
 
 
+def _state_args_kv_iter(
+    obj: HighDataStateArgsDef,
+    id_: Hashable,
+) -> Iterator[Pair]:
+    """
+    Yield (key, value) pairs from either:
+      - Mapping[K, V] -> yields its .items()
+      - Iterable of elements where each element is either:
+          * Mapping[K, V]
+          * str -> yields Mapping["fun", V]
+    """
+    if isinstance(obj, Mapping):
+        yield from obj.items()
+        return
+
+    if not isinstance(obj, Iterable):
+        raise TypeError(
+            f"expected a mapping or a list of str/mapping for state arguments of state {id_} instead of {type(obj)!r} {obj}"
+        )
+
+    for i, item in enumerate(obj):
+        if isinstance(item, Mapping):
+            yield from item.items()
+        elif isinstance(item, str):
+            yield ("fun", item)
+        else:
+            raise TypeError(
+                f"unsupported element type {type(item)!r} at index {i} of {obj} of state {id_}"
+            )
+
+
 def _verify_high(high: dict) -> list[str]:
     """
     Verify that the high data is viable and follows the data structure
@@ -407,27 +435,34 @@ def _verify_high(high: dict) -> list[str]:
             err = f"The type {id_} in {body} is not formatted as a dictionary"
             errors.append(err)
             continue
-        for state in body:
+        for state, args in body.items():
             if state.startswith("__"):
                 continue
-            if body[state] is None:
+            if args is None:
                 errors.append(
                     f"ID '{id_}' in SLS '{body['__sls__']}' contains a short declaration "
                     f"({state}) with a trailing colon. When not passing any "
                     "arguments to a state, the colon must be omitted."
                 )
                 continue
-            if not isinstance(body[state], list):
+            if not isinstance(args, list) and not isinstance(args, dict):
                 errors.append(
-                    f"State '{id_}' in SLS '{body['__sls__']}' is not formed as a list"
+                    f"State '{id_}' in SLS '{body['__sls__']}' is not formed as a list or dict"
                 )
+                continue
+            fun_count = 0
+            if "." in state:
+                # This should not happen usually since `_handle_state_decls` or
+                # `pad_funcs` is run on rendered templates
+                fun_count += 1
+            if isinstance(args, dict):
+                for key, value in args.items():
+                    if key == "fun":
+                        fun_count += 1
+                    else:
+                        _verify_high_state_key_value_arg(id_, key, value, body, errors)
             else:
-                fun_count = 0
-                if "." in state:
-                    # This should not happen usually since `_handle_state_decls` or
-                    # `pad_funcs` is run on rendered templates
-                    fun_count += 1
-                for arg in body[state]:
+                for arg in args:
                     if isinstance(arg, str):
                         fun_count += 1
                         if " " in arg.strip():
@@ -440,75 +475,76 @@ def _verify_high(high: dict) -> list[str]:
                             )
 
                     elif isinstance(arg, dict):
-                        # The arg is a dict, if the arg is require or
-                        # watch, it must be a list.
-                        argfirst = next(iter(arg))
-                        if argfirst == "names":
-                            if not isinstance(arg[argfirst], list):
-                                errors.append(
-                                    "The 'names' argument in state "
-                                    f"'{id_}' in SLS '{body['__sls__']}' needs to be "
-                                    "formed as a list"
-                                )
-                        if argfirst in STATE_REQUISITE_KEYWORDS:
-                            if not isinstance(arg[argfirst], list):
-                                errors.append(
-                                    f"The {argfirst} statement in state '{id_}' in "
-                                    f"SLS '{body['__sls__']}' needs to be formed as a "
-                                    "list"
-                                )
-                            # It is a list, verify that the members of the
-                            # list are all single key dicts.
-                            else:
-                                for req in arg[argfirst]:
-                                    if isinstance(req, str):
-                                        req = {"id": req}
-                                    if not isinstance(req, dict) or len(req) != 1:
-                                        errors.append(
-                                            f"Requisite declaration {req} in "
-                                            f"state {id_} in SLS {body['__sls__']} "
-                                            "is not formed as a single key dictionary"
-                                        )
-                                        continue
-                                    # req_key: the name or id of the required state; the requisite will match both
-                                    # req_val: the type of requirement i.e. id, sls, name of state module like file
-                                    req_key, req_val = next(iter(req.items()))
-                                    if "." in req_key:
-                                        errors.append(
-                                            f"Invalid requisite type '{req_key}' "
-                                            f"in state '{id_}', in SLS "
-                                            f"'{ body['__sls__']}'. Requisite types must "
-                                            "not contain dots, did you "
-                                            f"mean '{req_key[: req_key.find('.')]}'?"
-                                        )
-                                    if not ishashable(req_val):
-                                        errors.append(
-                                            f'Illegal requisite "{req_val}" '
-                                            f'in SLS "{body["__sls__"]}", '
-                                            "please check your syntax.\n"
-                                        )
-                                        continue
-                            # Make sure that there is only one key in the
-                            # dict
-                            if len(list(arg)) != 1:
-                                errors.append(
-                                    "Multiple dictionaries defined in "
-                                    f"argument of state '{id_}' in SLS '{body['__sls__']}'"
-                                )
-                if not fun_count:
-                    errors.append(
-                        f"No function declared in state '{id_}' in SLS "
-                        f"'{body['__sls__']}'"
-                    )
-                elif fun_count > 1:
-                    funs = [state.split(".", maxsplit=1)[1]] if "." in state else []
-                    funs.extend(arg for arg in body[state] if isinstance(arg, str))
-                    errors.append(
-                        f"Too many functions declared in state '{id_}' in "
-                        f"SLS '{body['__sls__']}'. Please choose one of "
-                        "the following: " + ", ".join(funs)
-                    )
+                        first_key, first_value = next(iter(arg.items()))
+                        _verify_high_state_key_value_arg(
+                            id_, first_key, first_value, body, errors
+                        )
+            if not fun_count:
+                errors.append(
+                    f"No function declared in state '{id_}' in SLS "
+                    f"'{body['__sls__']}'"
+                )
+            elif fun_count > 1:
+                funs = [state.split(".", maxsplit=1)[1]] if "." in state else []
+                funs.extend(arg for arg in body[state] if isinstance(arg, str))
+                errors.append(
+                    f"Too many functions declared in state '{id_}' in "
+                    f"SLS '{body['__sls__']}'. Please choose one of "
+                    "the following: " + ", ".join(funs)
+                )
     return errors
+
+
+def _verify_high_state_key_value_arg(
+    id_: str, arg_name: str, value, body: dict, errors: list[str]
+):
+    if arg_name == "names":
+        if not isinstance(value, list):
+            errors.append(
+                "The 'names' argument in state "
+                f"'{id_}' in SLS '{body['__sls__']}' needs to be "
+                "formed as a list"
+            )
+    elif arg_name in STATE_REQUISITE_KEYWORDS:
+        # if the arg is a requisite,
+        # it must be a list.
+        if not isinstance(value, list):
+            errors.append(
+                f"The {arg_name} statement in state '{id_}' in "
+                f"SLS '{body['__sls__']}' needs to be formed as a "
+                "list"
+            )
+        # It is a list, verify that the members of the
+        # list are all single key dicts.
+        else:
+            for req in value:
+                if isinstance(req, str):
+                    req = {"id": req}
+                if not isinstance(req, dict) or len(req) != 1:
+                    errors.append(
+                        f"Requisite declaration {req} in "
+                        f"state {id_} in SLS {body['__sls__']} "
+                        "is not formed as a single key dictionary"
+                    )
+                    continue
+                # req_key: the name or id of the required state; the requisite will match both
+                # req_val: the type of requirement i.e. id, sls, name of state module like file
+                req_key, req_val = next(iter(req.items()))
+                if "." in req_key:
+                    errors.append(
+                        f"Invalid requisite type '{req_key}' "
+                        f"in state '{id_}', in SLS "
+                        f"'{ body['__sls__']}'. Requisite types must "
+                        "not contain dots, did you "
+                        f"mean '{req_key[: req_key.find('.')]}'?"
+                    )
+                if not ishashable(req_val):
+                    errors.append(
+                        f'Illegal requisite "{req_val}" '
+                        f'in SLS "{body["__sls__"]}", '
+                        "please check your syntax.\n"
+                    )
+                    continue
 
 
 class StateError(Exception):
@@ -547,33 +583,27 @@ class Compiler:
         """
         Turns dot delimited function refs into function strings
         """
-        for name in high:
-            if not isinstance(high[name], dict):
-                if isinstance(high[name], str):
+        for id_, body in high.items():
+            if not isinstance(body, dict):
+                if isinstance(body, str):
                     # Is this is a short state? It needs to be padded!
-                    if "." in high[name]:
-                        comps = high[name].split(".")
-                        if len(comps) >= 2:
-                            # Merge the comps
-                            comps[1] = ".".join(comps[1 : len(comps)])
-                        high[name] = {
+                    if "." in body:
+                        state, function_name = body.split(".", maxsplit=1)
+                        high[id_] = {
                             # '__sls__': template,
                             # '__env__': None,
-                            comps[0]: [comps[1]]
+                            state: [function_name]
                         }
                         continue
                     continue
-            skeys = set()
-            for key in sorted(high[name]):
+            state_keys = set()
+            for key, value in sorted(body.items()):
                 if key.startswith("_"):
                     continue
-                if not isinstance(high[name][key], list):
+                if not isinstance(value, (list, dict)):
                     continue
                 if "." in key:
-                    comps = key.split(".")
-                    if len(comps) >= 2:
-                        # Merge the comps
-                        comps[1] = ".".join(comps[1 : len(comps)])
+                    state, function_name = key.split(".", maxsplit=1)
                     # Salt doesn't support state files such as:
                     #
                     # /etc/redis/redis.conf:
@@ -583,13 +613,16 @@ class Compiler:
                     #     - mode: 644
                     #   file.comment:
                     #     - regex: ^requirepass
-                    if comps[0] in skeys:
+                    if state in state_keys:
                         continue
-                    high[name][comps[0]] = high[name].pop(key)
-                    high[name][comps[0]].append(comps[1])
-                    skeys.add(comps[0])
+                    high[id_][state] = high[id_].pop(key)
+                    if isinstance(value, dict):
+                        high[id_][state][function_name] = None
+                    else:
+                        high[id_][state].append(function_name)
+                    state_keys.add(state)
                     continue
-                skeys.add(key)
+                state_keys.add(key)
         return high
 
     def verify_high(self, high):
@@ -892,12 +925,10 @@ class State:
         """
         # ensure that the module is loaded
         try:
-            self.states[
-                "{}.{}".format(low["state"], low["fun"])
-            ]  # pylint: disable=W0106
+            self.states[f"{low['state']}.{low['fun']}"]
         except KeyError:
             return
-        minit = "{}.mod_init".format(low["state"])
+        minit = f"{low['state']}.mod_init"
         if low["state"] not in self.mod_init:
             if minit in self.states._dict:
                 mret = self.states[minit](low)
@@ -1192,7 +1223,7 @@ class State:
             ret[key] = low.get(key)
 
         if isinstance(low["creates"], str) and os.path.exists(low["creates"]):
-            ret["comment"] = "{} exists".format(low["creates"])
+            ret["comment"] = f"{low['creates']} exists"
             ret["result"] = True
             ret["skip_watch"] = True
         elif isinstance(low["creates"], list) and all(
@@ -1260,7 +1291,7 @@ class State:
                         )
                         if funcs:
                             for func in funcs:
-                                f_key = "{}{}".format(mod, func[func.rindex(".") :])
+                                f_key = f"{mod}{func[func.rindex('.') :]}"
                                 self.functions[f_key] = funcs[func]
         self.serializers = salt.loader.serializers(self.opts)
         self._load_states()
@@ -1368,7 +1399,7 @@ class State:
         if full not in self.states:
             if "__sls__" in data:
                 errors.append(
-                    "State '{}' was not found in SLS '{}'".format(full, data["__sls__"])
+                    f"State '{full}' was not found in SLS '{data['__sls__']}'"
                 )
                 reason = self.states.missing_fun_string(full)
                 if reason:
@@ -1387,9 +1418,7 @@ class State:
             for ind in range(arglen - deflen):
                 if aspec.args[ind] not in data:
                     errors.append(
-                        "Missing parameter {} for state {}".format(
-                            aspec.args[ind], full
-                        )
+                        f"Missing parameter {aspec.args[ind]} for state {full}"
                     )
         return errors
 
@@ -1475,7 +1504,7 @@ class State:
         for id_, body in high.items():
             if id_.startswith("__"):
                 continue
-            for state, run in body.items():
+            for state, args in body.items():
                 # This should be a single value instead of a set
                 # because multiple functions of the same state
                 # type are not allowed in the same state
@@ -1493,24 +1522,21 @@ class State:
                 if "__sls_included_from__" in body:
                     chunk["__sls_included_from__"] = body["__sls_included_from__"]
                 chunk["__id__"] = id_
-                for arg in run:
-                    if isinstance(arg, str):
-                        funcs.add(arg)
+                for key, val in _state_args_kv_iter(args, id_):
+                    if key == "fun":
+                        funcs.add(val)
+                    elif key == "names":
+                        for _name in val:
+                            if _name not in names:
+                                names.append(_name)
+                    elif key == "state":
+                        # Don't pass down a state override
                         continue
-                    if isinstance(arg, dict):
-                        for key, val in arg.items():
-                            if key == "names":
-                                for _name in val:
-                                    if _name not in names:
-                                        names.append(_name)
-                            elif key == "state":
-                                # Don't pass down a state override
-                                continue
-                            elif key == "name" and not isinstance(val, str):
-                                # Invalid name, fall back to ID
-                                chunk[key] = id_
-                            else:
-                                chunk[key] = val
+                    elif key == "name" and not isinstance(val, str):
+                        # Invalid name, fall back to ID
+                        chunk[key] = id_
+                    else:
+                        chunk[key] = val
                 if names:
                     name_order = 1
                     for entry in names:
@@ -1593,7 +1619,7 @@ class State:
         errors = []
         if "__extend__" not in high:
             return high, errors
-        ext = high.pop("__extend__")
+        ext: list[Mapping[str, Any]] = high.pop("__extend__")
         for ext_chunk in ext:
             for name, body in ext_chunk.items():
                 state_type = next(x for x in body if not x.startswith("__"))
@@ -1746,15 +1772,9 @@ class State:
                                     extend[name] = HashableOrderedDict()
                                 if "." in _state:
                                     errors.append(
-                                        "Invalid requisite in {}: {} for "
-                                        "{} in SLS '{}'. Requisites must "
-                                        "not contain dots, did you mean '{}'?".format(
-                                            rkey,
-                                            _state,
-                                            name,
-                                            body["__sls__"],
-                                            _state[: _state.find(".")],
-                                        )
+                                        f"Invalid requisite in {rkey}: {_state} for "
+                                        f"{name} in SLS '{body['__sls__']}'. Requisites must "
+                                        f"not contain dots, did you mean '{_state[: _state.find('.')]}'?"
                                     )
                                     _state = _state.split(".")[0]
                                 if _state not in extend[name]:
@@ -1983,10 +2003,8 @@ class State:
                         _comment = ""
                     else:
                         _comment = (
-                            'Attempt {}: Returned a result of "{}", '
-                            'with the following comment: "{}"'.format(
-                                retries, ret["result"], ret["comment"]
-                            )
+                            f'Attempt {retries}: Returned a result of "{ret["result"]}", '
+                            f'with the following comment: "{ret["comment"]}"'
                         )
 
                     ret["comment"] = "\n".join([orig_ret["comment"], _comment])
@@ -2141,7 +2159,7 @@ class State:
         if "provider" in low:
             self.load_modules(low)
 
-        state_func_name = "{0[state]}.{0[fun]}".format(low)
+        state_func_name = f"{low['state']}.{low['fun']}"
         cdata = salt.utils.args.format_call(
             self.states[state_func_name],
             low,
@@ -2182,7 +2200,7 @@ class State:
             req_list = ("unless", "onlyif", "creates")
             if (
                 any(req in low for req in req_list)
-                and "{0[state]}.mod_run_check".format(low) not in self.states
+                and f"{low['state']}.mod_run_check" not in self.states
             ):
                 ret.update(self._run_check(low))
 
@@ -2233,8 +2251,8 @@ class State:
                             )
                 self.states.inject_globals = {}
             if "check_cmd" in low:
-                state_check_cmd = "{0[state]}.mod_run_check_cmd".format(low)
-                state_func = "{0[state]}.{0[fun]}".format(low)
+                state_check_cmd = f"{low['state']}.mod_run_check_cmd"
+                state_func = f"{low['state']}.{low['fun']}"
                 state_func_sig = inspect.signature(self.states[state_func])
                 if state_check_cmd not in self.states:
                     ret.update(self._run_check_cmd(low))
@@ -2325,10 +2343,8 @@ class State:
                         ret = retry_ret
                         ret["comment"] = "\n".join(
                             [
-                                'Attempt {}: Returned a result of "{}", '
-                                'with the following comment: "{}"'.format(
-                                    retries, orig_ret["result"], orig_ret["comment"]
-                                ),
+                                f'Attempt {retries}: Returned a result of "{orig_ret["result"]}", '
+                                f'with the following comment: "{orig_ret["comment"]}"',
                                 "" if not ret["comment"] else ret["comment"],
                             ]
                         )
@@ -2934,9 +2950,7 @@ class State:
                         # If the result was False (not None) it was a failure
                         if req_ret["result"] is False:
                             # use SLS.ID for the key-- so its easier to find
-                            key = "{sls}.{_id}".format(
-                                sls=req_low["__sls__"], _id=req_low["__id__"]
-                            )
+                            key = f"{req_low['__sls__']}.{req_low['__id__']}"
                             failed_requisites.add(key)
 
                 _cmt = "One or more requisite failed: {}".format(
@@ -3140,9 +3154,7 @@ class State:
                             rerror = {
                                 _l_tag(lkey, lval): {
                                     "comment": (
-                                        "Referenced state {}: {} does not exist".format(
-                                            lkey, lval
-                                        )
+                                        f"Referenced state {lkey}: {lval} does not exist"
                                     ),
                                     "name": f"listen_{lkey}:{lval}",
                                     "result": False,
@@ -3167,13 +3179,9 @@ class State:
                                     rerror = {
                                         _l_tag(key[0], key[1]): {
                                             "comment": (
-                                                "Referenced state {}: {} does not exist".format(
-                                                    key[0], key[1]
-                                                )
+                                                f"Referenced state {key[0]}: {key[1]} does not exist"
                                             ),
-                                            "name": "listen_{}:{}".format(
-                                                key[0], key[1]
-                                            ),
+                                            "name": f"listen_{key[0]}:{key[1]}",
                                             "result": False,
                                             "changes": {},
                                         }
@@ -3190,7 +3198,7 @@ class State:
                                     low = chunk.copy()
                                     low["sfun"] = chunk["fun"]
                                     low["fun"] = "mod_watch"
-                                    low["__id__"] = "listener_{}".format(low["__id__"])
+                                    low["__id__"] = f"listener_{low['__id__']}"
                                     for req in STATE_REQUISITE_KEYWORDS:
                                         if req in low:
                                             low.pop(req)
@@ -3231,7 +3239,6 @@ class State:
             return errors
         # If there are extensions in the highstate, process them and update
         # the low data chunks
-
         ret = self.call_chunks(chunks, disabled_states=self.disabled_states)
         ret = self.call_listen(chunks, ret)
         ret = self.call_beacons(chunks, ret)
@@ -3271,8 +3278,8 @@ class State:
         for item in invalid_items:
             if item in high:
                 errors.append(
-                    "The '{}' declaration found on '{}' is invalid when "
-                    "rendering single templates".format(item, template)
+                    f"The '{item}' declaration found on '{template}' is invalid when "
+                    "rendering single templates"
                 )
                 return high, errors
 
@@ -3290,9 +3297,7 @@ class State:
                         continue
 
                     errors.append(
-                        "ID {} in template {} is not a dictionary".format(
-                            name, template
-                        )
+                        f"ID {name} in template {template} is not a dictionary"
                     )
                     continue
             skeys = set()
@@ -3301,10 +3306,10 @@ class State:
                     continue
                 if high[name][key] is None:
                     errors.append(
-                        "ID '{}' in template {} contains a short "
-                        "declaration ({}) with a trailing colon. When not "
+                        f"ID '{name}' in template {template} contains a short "
+                        f"declaration ({key}) with a trailing colon. When not "
                         "passing any arguments to a state, the colon must be "
-                        "omitted.".format(name, template, key)
+                        "omitted."
                     )
                     continue
                 if not isinstance(high[name][key], list):
@@ -3322,8 +3327,8 @@ class State:
                     #     - regex: ^requirepass
                     if comps[0] in skeys:
                         errors.append(
-                            "ID '{}' in template '{}' contains multiple "
-                            "state declarations of the same type".format(name, template)
+                            f"ID '{name}' in template '{template}' contains multiple "
+                            "state declarations of the same type"
                         )
                         continue
                     high[name][comps[0]] = high[name].pop(key)
@@ -3851,16 +3856,14 @@ class BaseHighState:
                 continue
             if not isinstance(saltenv, str):
                 errors.append(
-                    "Environment {} in top file is not formed as a string".format(
-                        saltenv
-                    )
+                    f"Environment {saltenv} in top file is not formed as a string"
                 )
             if saltenv == "":
                 errors.append("Empty saltenv statement in top file")
             if not isinstance(matches, dict):
                 errors.append(
-                    "The top file matches for saltenv {} are not "
-                    "formatted as a dict".format(saltenv)
+                    f"The top file matches for saltenv {saltenv} are not "
+                    "formatted as a dict"
                 )
             for slsmods in matches.values():
                 if not isinstance(slsmods, list):
@@ -3875,15 +3878,13 @@ class BaseHighState:
                             if not val:
                                 errors.append(
                                     "Improperly formatted top file matcher "
-                                    "in saltenv {}: {} file".format(slsmod, val)
+                                    f"in saltenv {slsmod}: {val} file"
                                 )
                     elif isinstance(slsmod, str):
                         # This is a sls module
                         if not slsmod:
                             errors.append(
-                                "Environment {} contains an empty sls index".format(
-                                    saltenv
-                                )
+                                f"Environment {saltenv} contains an empty sls index"
                             )
 
         return errors
@@ -4023,9 +4024,9 @@ class BaseHighState:
         state = None
         if not fn_:
             errors.append(
-                "Specified SLS {} in saltenv {} is not "
+                f"Specified SLS {sls} in saltenv {saltenv} is not "
                 "available on the salt master or through a configured "
-                "fileserver".format(sls, saltenv)
+                "fileserver"
             )
         else:
             try:
@@ -4065,8 +4066,8 @@ class BaseHighState:
                 if "include" in state:
                     if not isinstance(state["include"], list):
                         err = (
-                            "Include Declaration in SLS {} is not formed "
-                            "as a list".format(sls)
+                            f"Include Declaration in SLS {sls} is not formed "
+                            "as a list"
                         )
                         errors.append(err)
                     else:
@@ -4090,10 +4091,8 @@ class BaseHighState:
 
                     if env_key not in self.avail and "__env__" not in self.avail:
                         msg = (
-                            "Nonexistent saltenv '{}' found in include "
-                            "of '{}' within SLS '{}:{}'".format(
-                                env_key, inc_sls, saltenv, sls
-                            )
+                            f"Nonexistent saltenv '{env_key}' found in include "
+                            f"of '{inc_sls}' within SLS '{saltenv}:{sls}'"
                         )
                         log.error(msg)
                         errors.append(msg)
@@ -4105,8 +4104,8 @@ class BaseHighState:
                             levels, include = match.groups()
                         else:
                             msg = (
-                                "Badly formatted include {} found in include "
-                                "in SLS '{}:{}'".format(inc_sls, saltenv, sls)
+                                f"Badly formatted include {inc_sls} found in include "
+                                f"in SLS '{saltenv}:{sls}'"
                             )
                             log.error(msg)
                             errors.append(msg)
@@ -4117,11 +4116,9 @@ class BaseHighState:
                             p_comps.append("init")
                         if level_count > len(p_comps):
                             msg = (
-                                "Attempted relative include of '{}' "
-                                "within SLS '{}:{}' "
-                                "goes beyond top level package ".format(
-                                    inc_sls, saltenv, sls
-                                )
+                                f"Attempted relative include of '{inc_sls}' "
+                                f"within SLS '{saltenv}:{sls}' "
+                                "goes beyond top level package "
                             )
                             log.error(msg)
                             errors.append(msg)
@@ -4203,10 +4200,8 @@ class BaseHighState:
                             )
                         elif len(resolved_envs) > 1:
                             msg = (
-                                "Ambiguous include: Specified SLS {}: {} is available"
-                                " on the salt master in multiple available saltenvs: {}".format(
-                                    env_key, inc_sls, ", ".join(resolved_envs)
-                                )
+                                f"Ambiguous include: Specified SLS {env_key}: {inc_sls} is available"
+                                f" on the salt master in multiple available saltenvs: {', '.join(resolved_envs)}"
                             )
                         log.critical(msg)
                         errors.append(msg)
@@ -4257,33 +4252,33 @@ class BaseHighState:
         """
         Add sls and saltenv components to the state
         """
-        for name in state:
-            if not isinstance(state[name], dict):
-                if name == "__extend__":
+        for id_, body in state.items():
+            if not isinstance(body, dict):
+                if id_ == "__extend__":
                     continue
-                if name == "__exclude__":
+                if id_ == "__exclude__":
                     continue
 
-                if isinstance(state[name], str):
+                if isinstance(body, str):
                     # Is this is a short state, it needs to be padded
-                    if "." in state[name]:
-                        comps = state[name].split(".")
-                        state[name] = {
+                    if "." in body:
+                        state_name, function_name = body.split(".", maxsplit=1)
+                        state[id_] = {
                             "__sls__": sls,
                             "__env__": saltenv,
-                            comps[0]: [comps[1]],
+                            state_name: [function_name],
                         }
                         continue
-                errors.append(f"ID {name} in SLS {sls} is not a dictionary")
+                errors.append(f"ID {id_} in SLS {sls} is not a dictionary")
                 continue
-            skeys = set()
-            for key in list(state[name]):
+            state_keys = set()
+            for key, value in list(body.items()):
                 if key.startswith("_"):
                     continue
-                if not isinstance(state[name][key], list):
+                if not isinstance(value, (list, dict)):
                     continue
                 if "." in key:
-                    comps = key.split(".")
+                    state_name, function_name = key.split(".", maxsplit=1)
                     # Salt doesn't support state files such as:
                     #
                     #     /etc/redis/redis.conf:
@@ -4294,21 +4289,24 @@ class BaseHighState:
                     #         - mode: 644
                     #       file.comment:
                     #           - regex: ^requirepass
-                    if comps[0] in skeys:
+                    if state_name in state_keys:
                         errors.append(
-                            "ID '{}' in SLS '{}' contains multiple state "
-                            "declarations of the same type".format(name, sls)
+                            f"ID '{id_}' in SLS '{sls}' contains multiple state "
+                            "declarations of the same type"
                         )
                         continue
-                    state[name][comps[0]] = state[name].pop(key)
-                    state[name][comps[0]].append(comps[1])
-                    skeys.add(comps[0])
+                    state[id_][state_name] = state[id_].pop(key)
+                    if isinstance(value, dict):
+                        state[id_][state_name]["fun"] = function_name
+                    else:
+                        state[id_][state_name].append(function_name)
+                    state_keys.add(state_name)
                     continue
-                skeys.add(key)
-            if "__sls__" not in state[name]:
-                state[name]["__sls__"] = sls
-            if "__env__" not in state[name]:
-                state[name]["__env__"] = saltenv
+                state_keys.add(key)
+            if "__sls__" not in body:
+                state[id_]["__sls__"] = sls
+            if "__env__" not in body:
+                state[id_]["__env__"] = saltenv
 
     def _handle_extend(self, state, sls, saltenv, errors):
         """
@@ -4323,9 +4321,7 @@ class BaseHighState:
             for name in ext:
                 if not isinstance(ext[name], dict):
                     errors.append(
-                        "Extension name '{}' in SLS '{}' is not a dictionary".format(
-                            name, sls
-                        )
+                        f"Extension name '{name}' in SLS '{sls}' is not a dictionary"
                     )
                     continue
                 if "__sls__" not in ext[name]:
@@ -4351,9 +4347,7 @@ class BaseHighState:
         if "exclude" in state:
             exc = state.pop("exclude")
             if not isinstance(exc, list):
-                err = "Exclude Declaration in SLS {} is not formed as a list".format(
-                    sls
-                )
+                err = f"Exclude Declaration in SLS {sls} is not formed as a list"
                 errors.append(err)
             state.setdefault("__exclude__", []).extend(exc)
 
@@ -4375,7 +4369,7 @@ class BaseHighState:
                 else:
                     all_errors.append(
                         "No matching salt environment for environment "
-                        "'{}' found".format(saltenv)
+                        f"'{saltenv}' found"
                     )
                 # if we did not found any sls in the fileserver listing, this
                 # may be because the sls was generated or added later, we can
