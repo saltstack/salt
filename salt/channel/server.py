@@ -1392,12 +1392,12 @@ class MasterPubServerChannel:
                 aes_key = salted_aes[len(token):]
 
                 # XXX needs safe join
-                peer_pub = (
+                peer_pub_path = (
                     pathlib.Path(self.opts["cluster_pki_dir"])
                     / "peers"
                     / f"{payload['peer_id']}.pub"
                 )
-                with salt.utils.files.fopen(peer_pub, "w") as fp:
+                with salt.utils.files.fopen(peer_pub_path, "w") as fp:
                     fp.write(payload["pub"])
 
                 self.cluster_peers.append(payload["peer_id"])
@@ -1428,11 +1428,13 @@ class MasterPubServerChannel:
 
                 self.send_aes_key_event()
 
+                # Load the peer's public key to encrypt the reply
+                peer_pub = salt.crypt.PublicKey(peer_pub_path)
                 tosign = salt.payload.package({
                     "return_token": payload["token"],
                     "peer_id": self.opts["id"],
-                    "cluster_key": peer_pub.encrypt(paylaod["token"] + self.cluster_key()),
-                    "aes": peer_pub.encrypt(payload["token"] + salt.master.SMaster.secrets[key]["secret"].value),
+                    "cluster_key": peer_pub.encrypt(payload["token"] + self.cluster_key()),
+                    "aes": peer_pub.encrypt(payload["token"] + salt.master.SMaster.secrets["aes"]["secret"].value),
                     #"peers": {},
                     #"minions": {},
                 })
