@@ -28,7 +28,8 @@ import salt.utils.event
 import salt.utils.minions
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.exceptions import SaltDeserializationError, UnsupportedAlgorithm
+import salt.utils.verify
+from salt.exceptions import SaltDeserializationError, SaltValidationError, UnsupportedAlgorithm
 from salt.utils.cache import CacheCli
 
 log = logging.getLogger(__name__)
@@ -1305,31 +1306,29 @@ class MasterPubServerChannel:
             tag, data = salt.utils.event.SaltEvent.unpack(payload)
             log.debug("Incomming from peer %s %r", tag, data)
             if tag.startswith("cluster/peer/join-notify"):
-                # Validate peer IDs to prevent path traversal
-                if (
-                    ".." in data.get("peer_id", "")
-                    or "/" in data.get("peer_id", "")
-                    or ".." in data.get("join_peer_id", "")
-                    or "/" in data.get("join_peer_id", "")
-                ):
+                log.info(
+                    "Cluster join notify from %s for %s",
+                    data.get("peer_id", "unknown"),
+                    data.get("join_peer_id", "unknown"),
+                )
+
+                # Use clean_join to validate and construct path safely
+                try:
+                    peer_pub_path = salt.utils.verify.clean_join(
+                        self.opts["cluster_pki_dir"],
+                        "peers",
+                        f"{data['join_peer_id']}.pub",
+                        subdir=True,
+                    )
+                except (SaltValidationError, KeyError) as e:
                     log.error(
-                        "Invalid peer_id in join-notify (path traversal attempt): %s / %s",
+                        "Invalid peer_id in join-notify from %s: %s",
                         data.get("peer_id"),
-                        data.get("join_peer_id"),
+                        e,
                     )
                     return
 
-                log.info(
-                    "Cluster join notify from %s for %s",
-                    data["peer_id"],
-                    data["join_peer_id"],
-                )
-                peer_pub = (
-                    pathlib.Path(self.opts["cluster_pki_dir"])
-                    / "peers"
-                    / f"{data['join_peer_id']}.pub"
-                )
-                with salt.utils.files.fopen(peer_pub, "w") as fp:
+                with salt.utils.files.fopen(peer_pub_path, "w") as fp:
                     fp.write(data["pub"])
             elif tag.startswith("cluster/peer/join-reply"):
                 # Verify this is a properly signed response
@@ -1421,15 +1420,18 @@ class MasterPubServerChannel:
 
                 # Process peer keys from verified payload
                 for peer in payload.get("peers", {}):
-                    # Validate peer_id before writing (prevent path traversal)
-                    if ".." in peer or "/" in peer or not peer:
-                        log.error("Invalid peer_id in join-reply: %s", peer)
+                    try:
+                        peer_pub_path = salt.utils.verify.clean_join(
+                            self.opts["cluster_pki_dir"],
+                            "peers",
+                            f"{peer}.pub",
+                            subdir=True,
+                        )
+                    except SaltValidationError as e:
+                        log.error("Invalid peer_id in join-reply %s: %s", peer, e)
                         continue
                     log.info("Installing peer key: %s", peer)
-                    peer_pub_path = (
-                        pathlib.Path(self.opts["cluster_pki_dir"]) / "peers" / f"{peer}.pub"
-                    )
-                    peer_pub_path.write_text(payload["peers"][peer])
+                    pathlib.Path(peer_pub_path).write_text(payload["peers"][peer])
 
                 # Process minion keys from verified payload
                 allowed_kinds = [
@@ -1445,12 +1447,22 @@ class MasterPubServerChannel:
                         log.error("Invalid minion key type in join-reply: %s", kind)
                         continue
 
-                    kind_path = pathlib.Path(self.opts["cluster_pki_dir"]) / kind
-                    if not kind_path.exists():
-                        kind_path.mkdir(parents=True, exist_ok=True)
+                    try:
+                        kind_path = salt.utils.verify.clean_join(
+                            self.opts["cluster_pki_dir"],
+                            kind,
+                            subdir=True,
+                        )
+                    except SaltValidationError as e:
+                        log.error("Invalid kind path in join-reply %s: %s", kind, e)
+                        continue
+
+                    kind_path_obj = pathlib.Path(kind_path)
+                    if not kind_path_obj.exists():
+                        kind_path_obj.mkdir(parents=True, exist_ok=True)
 
                     # Remove keys not in the cluster
-                    for minion_path in kind_path.glob("*"):
+                    for minion_path in kind_path_obj.glob("*"):
                         if minion_path.name not in payload["minions"][kind]:
                             log.info(
                                 "Removing stale minion key: %s/%s", kind, minion_path.name
@@ -1459,13 +1471,17 @@ class MasterPubServerChannel:
 
                     # Install keys from cluster
                     for minion in payload["minions"][kind]:
-                        # Validate minion_id before writing (prevent path traversal)
-                        if ".." in minion or "/" in minion or not minion:
-                            log.error("Invalid minion_id in join-reply: %s", minion)
+                        try:
+                            minion_pub_path = salt.utils.verify.clean_join(
+                                kind_path,
+                                minion,
+                                subdir=True,
+                            )
+                        except SaltValidationError as e:
+                            log.error("Invalid minion_id in join-reply %s: %s", minion, e)
                             continue
                         log.info("Installing minion key: %s/%s", kind, minion)
-                        minion_pub_path = kind_path / minion
-                        minion_pub_path.write_text(payload["minions"][kind][minion])
+                        pathlib.Path(minion_pub_path).write_text(payload["minions"][kind][minion])
 
                 # Signal completion
                 event = self._discover_event
@@ -1519,19 +1535,18 @@ class MasterPubServerChannel:
 
                 aes_key = salted_aes[len(token):]
 
-                # Validate peer_id to prevent path traversal
-                if ".." in payload["peer_id"] or "/" in payload["peer_id"]:
-                    log.error(
-                        "Invalid peer_id in join request (path traversal attempt): %s",
-                        payload["peer_id"],
+                # Use clean_join to validate and construct path safely
+                try:
+                    peer_pub_path = salt.utils.verify.clean_join(
+                        self.opts["cluster_pki_dir"],
+                        "peers",
+                        f"{payload['peer_id']}.pub",
+                        subdir=True,
                     )
+                except SaltValidationError as e:
+                    log.error("Invalid peer_id in join request %s: %s", payload["peer_id"], e)
                     return
 
-                peer_pub_path = (
-                    pathlib.Path(self.opts["cluster_pki_dir"])
-                    / "peers"
-                    / f"{payload['peer_id']}.pub"
-                )
                 with salt.utils.files.fopen(peer_pub_path, "w") as fp:
                     fp.write(payload["pub"])
 
@@ -1667,12 +1682,17 @@ class MasterPubServerChannel:
                     "pub": self.public_key(),
                 })
                 sig = salt.crypt.PrivateKeyString(self.private_key()).sign(tosign)
-                # Validate peer_id to prevent path traversal
-                if ".." in payload["peer_id"] or "/" in payload["peer_id"]:
-                    log.error(
-                        "Invalid peer_id in discover-reply (path traversal attempt): %s",
-                        payload["peer_id"],
+
+                # Use clean_join to validate and construct path safely
+                try:
+                    peer_pub_path = salt.utils.verify.clean_join(
+                        self.opts["cluster_pki_dir"],
+                        "peers",
+                        f"{payload['peer_id']}.pub",
+                        subdir=True,
                     )
+                except SaltValidationError as e:
+                    log.error("Invalid peer_id in discover-reply %s: %s", payload["peer_id"], e)
                     return
 
                 self.cluster_peers.append(payload["peer_id"])
@@ -1680,12 +1700,7 @@ class MasterPubServerChannel:
                     salt.utils.event.tagify("join", "peer", "cluster"),
                     {"sig": sig, "payload": tosign},
                 )
-                peer_pub = (
-                    pathlib.Path(self.opts["cluster_pki_dir"])
-                    / "peers"
-                    / f"{payload['peer_id']}.pub"
-                )
-                with salt.utils.files.fopen(peer_pub, "w") as fp:
+                with salt.utils.files.fopen(peer_pub_path, "w") as fp:
                     fp.write(payload["pub"])
                 pusher = self.pusher(payload["peer_id"])
                 self.pushers.append(pusher)
@@ -1693,12 +1708,18 @@ class MasterPubServerChannel:
             elif tag.startswith("cluster/peer/discover"):
                 payload = salt.payload.loads(data["payload"])
 
-                # Validate peer_id to prevent path traversal
-                if ".." in payload.get("peer_id", "") or "/" in payload.get("peer_id", ""):
-                    log.error(
-                        "Invalid peer_id in discover (path traversal attempt): %s",
-                        payload.get("peer_id"),
+                # Validate peer_id early (before storing in candidates)
+                # Note: We don't construct a path yet, but validate the ID is safe
+                try:
+                    # Use clean_join just for validation (we don't use the result yet)
+                    _ = salt.utils.verify.clean_join(
+                        self.opts["cluster_pki_dir"],
+                        "peers",
+                        f"{payload.get('peer_id', '')}.pub",
+                        subdir=True,
                     )
+                except (SaltValidationError, KeyError) as e:
+                    log.error("Invalid peer_id in discover %s: %s", payload.get("peer_id"), e)
                     return
 
                 peer_key = salt.crypt.PublicKeyString(payload["pub"])
