@@ -1306,30 +1306,82 @@ class MasterPubServerChannel:
             tag, data = salt.utils.event.SaltEvent.unpack(payload)
             log.debug("Incomming from peer %s %r", tag, data)
             if tag.startswith("cluster/peer/join-notify"):
+                # Verify this is a properly signed notification
+                if "payload" not in data or "sig" not in data:
+                    log.error("Join-notify missing payload or signature")
+                    return
+
+                try:
+                    notify_data = salt.payload.loads(data["payload"])
+                except Exception as e:
+                    log.error("Failed to load join-notify payload: %s", e)
+                    return
+
+                sender_id = notify_data.get("peer_id")
+                join_peer_id = notify_data.get("join_peer_id")
+
                 log.info(
                     "Cluster join notify from %s for %s",
-                    data.get("peer_id", "unknown"),
-                    data.get("join_peer_id", "unknown"),
+                    sender_id,
+                    join_peer_id,
                 )
 
+                # Load sender's public key to verify signature
+                try:
+                    sender_pub_path = salt.utils.verify.clean_join(
+                        self.opts["cluster_pki_dir"],
+                        "peers",
+                        f"{sender_id}.pub",
+                        subdir=True,
+                    )
+                except (SaltValidationError, KeyError) as e:
+                    log.error(
+                        "Invalid sender peer_id in join-notify: %s: %s",
+                        sender_id,
+                        e,
+                    )
+                    return
+
+                sender_pub_path = pathlib.Path(sender_pub_path)
+                if not sender_pub_path.exists():
+                    log.error(
+                        "Join-notify from unknown peer (no public key): %s",
+                        sender_id,
+                    )
+                    return
+
+                # Verify the signature
+                try:
+                    sender_pub = salt.crypt.PublicKey(sender_pub_path)
+                    if not sender_pub.verify(data["payload"], data["sig"]):
+                        log.error(
+                            "Join-notify signature verification failed from %s",
+                            sender_id,
+                        )
+                        return
+                except Exception as e:
+                    log.error("Error verifying join-notify signature: %s", e)
+                    return
+
+                # Signature verified - now we can trust the notification
                 # Use clean_join to validate and construct path safely
                 try:
                     peer_pub_path = salt.utils.verify.clean_join(
                         self.opts["cluster_pki_dir"],
                         "peers",
-                        f"{data['join_peer_id']}.pub",
+                        f"{join_peer_id}.pub",
                         subdir=True,
                     )
                 except (SaltValidationError, KeyError) as e:
                     log.error(
-                        "Invalid peer_id in join-notify from %s: %s",
-                        data.get("peer_id"),
+                        "Invalid join_peer_id in join-notify from %s: %s",
+                        sender_id,
                         e,
                     )
                     return
 
                 with salt.utils.files.fopen(peer_pub_path, "w") as fp:
-                    fp.write(data["pub"])
+                    fp.write(notify_data["pub"])
             elif tag.startswith("cluster/peer/join-reply"):
                 # Verify this is a properly signed response
                 if "payload" not in data or "sig" not in data:
@@ -1554,20 +1606,29 @@ class MasterPubServerChannel:
                 self.pushers.append(self.pusher(payload["peer_id"]))
                 self.auth_errors[payload["peer_id"]] = collections.deque()
 
+                # Build and sign the join-notify payload
+                notify_payload = salt.payload.package({
+                    "peer_id": self.opts["id"],
+                    "join_peer_id": payload["peer_id"],
+                    "pub": payload["pub"],
+                    "aes": aes_key,
+                })
+                notify_sig = salt.crypt.PrivateKeyString(self.private_key()).sign(
+                    notify_payload
+                )
+
+                # Encrypt the signed payload with cluster AES key
+                crypticle = salt.crypt.Crypticle(
+                    self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
+                )
+
                 for pusher in self.pushers:
-                    # XXX Send new peer id and public key to other nodes
-                    # XXX This needs to be able to be validated by receiveing peers
-                    # XXX Send other nodes pub (and aes?) keys to new node
-                    crypticle = salt.crypt.Crypticle(
-                        self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
-                    )
+                    # Send signed and encrypted join notification to all cluster members
                     event_data = salt.utils.event.SaltEvent.pack(
                         salt.utils.event.tagify("join-notify", "peer", "cluster"),
                         crypticle.dumps({
-                            "peer_id": self.opts["id"],
-                            "join_peer_id": payload["peer_id"],
-                            "pub": payload["pub"],
-                            "aes": aes_key,
+                            "payload": notify_payload,
+                            "sig": notify_sig,
                         }),
                     )
 
