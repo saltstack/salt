@@ -487,6 +487,199 @@ def test_autoscale_cluster_pub_signature_validation(
 # ============================================================================
 
 
+@pytest.mark.slow_test
+def test_autoscale_rejects_join_without_cluster_pub_signature(
+    salt_factories,
+    autoscale_bootstrap_master,
+    autoscale_cluster_secret,
+):
+    """
+    Test that autoscale join is rejected when cluster_pub_signature is required but not configured.
+
+    Security: cluster_pub_signature_required defaults to True (secure by default).
+    Without cluster_pub_signature configured, join should be rejected to prevent TOFU attacks.
+    """
+    import hashlib
+
+    # Create joining master WITHOUT cluster_pub_signature (default: required=True)
+    config_defaults, config_overrides = {
+        "master_port": autoscale_bootstrap_master.config["ret_port"] + 1,
+        "publish_port": autoscale_bootstrap_master.config["publish_port"] + 1,
+        "cluster_pool_port": autoscale_bootstrap_master.config["cluster_pool_port"] + 1,
+    }, {
+        "id": "joining-master-no-sig",
+        "cluster_id": autoscale_bootstrap_master.config["cluster_id"],
+        "cluster_secret": autoscale_cluster_secret,
+        "cluster_peers": [autoscale_bootstrap_master.config["id"]],
+        # cluster_pub_signature NOT configured
+        # cluster_pub_signature_required defaults to True
+    }
+
+    factory = salt_factories.salt_master_daemon(
+        "joining-master-no-sig",
+        defaults=config_defaults,
+        overrides=config_overrides,
+    )
+
+    # Master should fail to join (timeout or error)
+    with factory.started(start_timeout=30):
+        time.sleep(10)
+
+        # Check that cluster keys were NOT created (join failed)
+        cluster_pki_dir = pathlib.Path(factory.config["cluster_pki_dir"])
+        cluster_key = cluster_pki_dir / "cluster.pem"
+
+        assert not cluster_key.exists(), (
+            "Cluster key should NOT be created when join is rejected"
+        )
+
+
+@pytest.mark.slow_test
+def test_autoscale_accepts_join_with_valid_cluster_pub_signature(
+    salt_factories,
+    autoscale_bootstrap_master,
+    autoscale_cluster_secret,
+):
+    """
+    Test that autoscale join succeeds with correct cluster_pub_signature.
+
+    Security: When cluster_pub_signature matches the actual cluster public key,
+    join should proceed normally.
+    """
+    import hashlib
+
+    # Get the cluster public key from bootstrap master
+    cluster_pub_path = (
+        pathlib.Path(autoscale_bootstrap_master.config["cluster_pki_dir"])
+        / "cluster.pub"
+    )
+    cluster_pub = cluster_pub_path.read_text()
+
+    # Calculate SHA-256 digest
+    cluster_pub_signature = hashlib.sha256(cluster_pub.encode()).hexdigest()
+
+    # Create joining master WITH correct cluster_pub_signature
+    config_defaults, config_overrides = {
+        "master_port": autoscale_bootstrap_master.config["ret_port"] + 1,
+        "publish_port": autoscale_bootstrap_master.config["publish_port"] + 1,
+        "cluster_pool_port": autoscale_bootstrap_master.config["cluster_pool_port"] + 1,
+    }, {
+        "id": "joining-master-valid-sig",
+        "cluster_id": autoscale_bootstrap_master.config["cluster_id"],
+        "cluster_secret": autoscale_cluster_secret,
+        "cluster_peers": [autoscale_bootstrap_master.config["id"]],
+        "cluster_pub_signature": cluster_pub_signature,  # Correct signature
+    }
+
+    factory = salt_factories.salt_master_daemon(
+        "joining-master-valid-sig",
+        defaults=config_defaults,
+        overrides=config_overrides,
+    )
+
+    with factory.started(start_timeout=120):
+        time.sleep(15)
+
+        # Verify cluster keys were created (join succeeded)
+        cluster_pki_dir = pathlib.Path(factory.config["cluster_pki_dir"])
+        cluster_key = cluster_pki_dir / "cluster.pem"
+        cluster_pub_key = cluster_pki_dir / "cluster.pub"
+
+        assert cluster_key.exists(), "Cluster key should be created on successful join"
+        assert cluster_pub_key.exists(), "Cluster pub should be created on successful join"
+
+
+@pytest.mark.slow_test
+def test_autoscale_rejects_join_with_wrong_cluster_pub_signature(
+    salt_factories,
+    autoscale_bootstrap_master,
+    autoscale_cluster_secret,
+):
+    """
+    Test that autoscale join is rejected when cluster_pub_signature doesn't match.
+
+    Security: When cluster_pub_signature is configured but doesn't match the actual
+    cluster public key, join should be rejected (prevents MitM attacks).
+    """
+    # Use a wrong signature (64 hex chars but wrong value)
+    wrong_signature = "0" * 64
+
+    # Create joining master WITH wrong cluster_pub_signature
+    config_defaults, config_overrides = {
+        "master_port": autoscale_bootstrap_master.config["ret_port"] + 1,
+        "publish_port": autoscale_bootstrap_master.config["publish_port"] + 1,
+        "cluster_pool_port": autoscale_bootstrap_master.config["cluster_pool_port"] + 1,
+    }, {
+        "id": "joining-master-wrong-sig",
+        "cluster_id": autoscale_bootstrap_master.config["cluster_id"],
+        "cluster_secret": autoscale_cluster_secret,
+        "cluster_peers": [autoscale_bootstrap_master.config["id"]],
+        "cluster_pub_signature": wrong_signature,  # Wrong signature
+    }
+
+    factory = salt_factories.salt_master_daemon(
+        "joining-master-wrong-sig",
+        defaults=config_defaults,
+        overrides=config_overrides,
+    )
+
+    # Master should fail to join
+    with factory.started(start_timeout=30):
+        time.sleep(10)
+
+        # Check that cluster keys were NOT created (join failed)
+        cluster_pki_dir = pathlib.Path(factory.config["cluster_pki_dir"])
+        cluster_key = cluster_pki_dir / "cluster.pem"
+
+        assert not cluster_key.exists(), (
+            "Cluster key should NOT be created when signature doesn't match"
+        )
+
+
+@pytest.mark.slow_test
+def test_autoscale_tofu_mode_allows_join_without_signature(
+    salt_factories,
+    autoscale_bootstrap_master,
+    autoscale_cluster_secret,
+):
+    """
+    Test that autoscale join succeeds in TOFU mode without cluster_pub_signature.
+
+    Security: When cluster_pub_signature_required=False, join should proceed
+    with a security warning (Trust-On-First-Use mode).
+    """
+    # Create joining master in TOFU mode
+    config_defaults, config_overrides = {
+        "master_port": autoscale_bootstrap_master.config["ret_port"] + 1,
+        "publish_port": autoscale_bootstrap_master.config["publish_port"] + 1,
+        "cluster_pool_port": autoscale_bootstrap_master.config["cluster_pool_port"] + 1,
+    }, {
+        "id": "joining-master-tofu",
+        "cluster_id": autoscale_bootstrap_master.config["cluster_id"],
+        "cluster_secret": autoscale_cluster_secret,
+        "cluster_peers": [autoscale_bootstrap_master.config["id"]],
+        # cluster_pub_signature NOT configured
+        "cluster_pub_signature_required": False,  # TOFU mode
+    }
+
+    factory = salt_factories.salt_master_daemon(
+        "joining-master-tofu",
+        defaults=config_defaults,
+        overrides=config_overrides,
+    )
+
+    with factory.started(start_timeout=120):
+        time.sleep(15)
+
+        # Verify cluster keys were created (join succeeded in TOFU mode)
+        cluster_pki_dir = pathlib.Path(factory.config["cluster_pki_dir"])
+        cluster_key = cluster_pki_dir / "cluster.pem"
+        cluster_pub_key = cluster_pki_dir / "cluster.pub"
+
+        assert cluster_key.exists(), "TOFU mode should allow join without signature"
+        assert cluster_pub_key.exists(), "Cluster pub should be created in TOFU mode"
+
+
 def test_security_coverage_checklist():
     """
     Documentation test listing security issues and test coverage.
