@@ -627,12 +627,12 @@ def test_autoscale_rejects_join_with_wrong_cluster_pub_signature(
     with factory.started(start_timeout=30):
         time.sleep(10)
 
-        # Check that cluster keys were NOT created (join failed)
+        # Check that the bootstrap master's peer key was NOT written (join was rejected)
         cluster_pki_dir = pathlib.Path(factory.config["cluster_pki_dir"])
-        cluster_key = cluster_pki_dir / "cluster.pem"
+        bootstrap_peer_key = cluster_pki_dir / "peers" / f"{autoscale_bootstrap_master.config['id']}.pub"
 
-        assert not cluster_key.exists(), (
-            "Cluster key should NOT be created when signature doesn't match"
+        assert not bootstrap_peer_key.exists(), (
+            f"Bootstrap master peer key should NOT be created when signature doesn't match: {bootstrap_peer_key}"
         )
 
 
