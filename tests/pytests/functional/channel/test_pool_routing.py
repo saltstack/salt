@@ -88,7 +88,7 @@ class PoolReqServer(salt.utils.process.SignalHandlingProcess):
 
         # Create dispatcher
         dispatcher = salt.channel.server.PoolDispatcherChannel(
-            self.config, pool_channels
+            self.config, [frontend_channel], pool_channels
         )
 
         def start_dispatcher():
