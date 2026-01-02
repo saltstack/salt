@@ -1,10 +1,6 @@
-import glob
 import logging
 import os
 import pathlib
-import shutil
-import sys
-import sysconfig
 
 import attr
 import pytest
@@ -12,7 +8,6 @@ import requests
 
 import salt.modules.aptpkg
 import salt.utils.files
-from tests.conftest import CODE_DIR
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
