@@ -60,7 +60,6 @@ from salt.serializers.msgpack import deserialize as msgpack_deserialize
 from salt.serializers.msgpack import serialize as msgpack_serialize
 from salt.template import compile_template, compile_template_str
 from salt.utils.datastructures import DefaultOrderedDict, HashableOrderedDict
-from salt.utils.optsdict import mutate_opts_key
 from salt.utils.requisite import DependencyGraph, RequisiteType
 
 log = logging.getLogger(__name__)
@@ -1309,13 +1308,13 @@ class State:
         if data.get("reload_grains", False):
             log.debug("Refreshing grains...")
             new_grains = salt.loader.grains(self.opts)
-            mutate_opts_key(self.opts, "grains", new_grains)
+            self.opts.mutate_key("grains", new_grains)
             _reload_modules = True
 
         if data.get("reload_pillar", False):
             log.debug("Refreshing pillar...")
             new_pillar = self._gather_pillar()
-            mutate_opts_key(self.opts, "pillar", new_pillar)
+            self.opts.mutate_key("pillar", new_pillar)
             _reload_modules = True
 
         if not ret["changes"]:

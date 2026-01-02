@@ -41,7 +41,6 @@ from salt.exceptions import (
     SaltRenderError,
     SaltReqTimeoutError,
 )
-from salt.utils.optsdict import mutate_opts_key
 
 try:
     import esky
@@ -2017,7 +2016,7 @@ class _MMinion:
 
             # this assignment is so that fxns called by mminion have minion
             # context
-            mutate_opts_key(m.opts, "grains", grains)
+            m.opts.mutate_key("grains", grains)
 
             env_roots = m.opts["file_roots"][saltenv]
             m.opts["module_dirs"] = [fp + "/_modules" for fp in env_roots]

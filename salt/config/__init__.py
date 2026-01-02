@@ -2484,7 +2484,10 @@ def proxy_config(
     apply_sdb(opts)
     _validate_opts(opts)
     salt.features.setup_features(opts)
-    return opts
+
+    # Convert to OptsDict for memory efficiency
+    from salt.utils.optsdict import OptsDict
+    return OptsDict.from_dict(opts, name='minion_config')
 
 
 def syndic_config(
