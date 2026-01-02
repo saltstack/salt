@@ -1716,7 +1716,7 @@ class MasterPubServerChannel:
                 # Verify digest
                 digest = hashlib.sha1(payload["cluster_pub"].encode()).hexdigest()
                 if self.opts.get("cluster_pub_signature", None):
-                    if digest != self.opts["clsuter_pub_signature"]:
+                    if digest != self.opts["cluster_pub_signature"]:
                         log.warning("Invalid cluster public key")
                         return
                 else:
