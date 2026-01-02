@@ -755,6 +755,15 @@ class MasterKeys(dict):
         if not master_pub:
             master_pub = self.cache.fetch("master_keys", "master.pub")
 
+        # If master_pub is still None, the keys haven't been set up yet
+        # This can happen if check_master_shared_pub() is called before _setup_keys()
+        # Just return early and let the later call (after key setup) handle it
+        if not master_pub:
+            log.debug(
+                "Master public key not yet available, skipping shared key check"
+            )
+            return
+
         if shared_pub:
             if shared_pub != master_pub:
                 message = (

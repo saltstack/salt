@@ -72,7 +72,7 @@ def autoscale_bootstrap_master(
     # Pre-create cluster keys for bootstrap master
     cluster_key_path = cluster_pki_path / "cluster.pem"
     if not cluster_key_path.exists():
-        salt.crypt.gen_keys(
+        salt.crypt.write_keys(
             str(cluster_pki_path),
             "cluster",
             4096,
