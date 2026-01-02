@@ -28,7 +28,12 @@ import salt.utils.minions
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.verify
-from salt.exceptions import SaltDeserializationError, SaltValidationError, UnsupportedAlgorithm
+from salt.exceptions import (
+    InvalidKeyError,
+    SaltDeserializationError,
+    SaltValidationError,
+    UnsupportedAlgorithm,
+)
 from salt.utils.cache import CacheCli
 
 log = logging.getLogger(__name__)
@@ -1317,8 +1322,8 @@ class MasterPubServerChannel:
 
                 try:
                     notify_data = salt.payload.loads(data["payload"])
-                except Exception as e:  # pylint: disable=broad-except
-                    log.error("Failed to load join-notify payload: %s", e)
+                except SaltDeserializationError as e:
+                    log.error("Failed to deserialize join-notify payload: %s", e)
                     return
 
                 sender_id = notify_data.get("peer_id")
@@ -1363,8 +1368,8 @@ class MasterPubServerChannel:
                             sender_id,
                         )
                         return
-                except Exception as e:  # pylint: disable=broad-except
-                    log.error("Error verifying join-notify signature: %s", e)
+                except (OSError, InvalidKeyError) as e:
+                    log.error("Error loading sender public key for signature verification: %s", e)
                     return
 
                 # Signature verified - now we can trust the notification
@@ -1394,8 +1399,8 @@ class MasterPubServerChannel:
 
                 try:
                     payload = salt.payload.loads(data["payload"])
-                except Exception as e:  # pylint: disable=broad-except
-                    log.error("Failed to load join-reply payload: %s", e)
+                except SaltDeserializationError as e:
+                    log.error("Failed to deserialize join-reply payload: %s", e)
                     return
 
                 # Verify the peer_id matches who we're expecting (bootstrap peer)
@@ -1426,8 +1431,8 @@ class MasterPubServerChannel:
                             data["peer_id"],
                         )
                         return
-                except Exception as e:  # pylint: disable=broad-except
-                    log.error("Error verifying join-reply signature: %s", e)
+                except (OSError, InvalidKeyError) as e:
+                    log.error("Error loading bootstrap public key for signature verification: %s", e)
                     return
 
                 # Verify the return token matches what we sent
@@ -1466,7 +1471,7 @@ class MasterPubServerChannel:
                     # Load and validate it's a valid private key
                     cluster_key_obj = salt.crypt.PrivateKeyString(cluster_key_pem)
 
-                except Exception as e:  # pylint: disable=broad-except
+                except (OSError, InvalidKeyError, ValueError, UnicodeDecodeError) as e:
                     log.error("Error decrypting/validating cluster key: %s", e)
                     return
 
