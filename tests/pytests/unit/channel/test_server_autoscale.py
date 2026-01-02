@@ -11,13 +11,13 @@ import hashlib
 import pathlib
 import random
 import string
-from unittest.mock import MagicMock, Mock, patch, call
 
 import pytest
 
 import salt.channel.server
 import salt.crypt
 import salt.master
+from tests.support.mock import MagicMock, patch
 import salt.payload
 import salt.utils.event
 from salt.exceptions import SaltValidationError
