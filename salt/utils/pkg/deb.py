@@ -132,7 +132,9 @@ class Deb822Section:
         return (
             "\n".join(self.header)
             + ("\n" if self.header else "")
-            + "".join(f"{k}: {v}\n" for k, v in self.tags.items())
+            + "".join(
+                (f"{k}: {v}\n" if str(v) != "" else "") for k, v in self.tags.items()
+            )
             + "\n".join(self.footer)
             + ("\n" if self.footer else "")
         )
