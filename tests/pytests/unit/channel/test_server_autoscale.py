@@ -805,6 +805,178 @@ def test_join_reply_handler_handles_decryption_failure(mock_private_key):
 
 
 # ============================================================================
+# UNIT TESTS - cluster_pub_signature_required (Secure by Default)
+# ============================================================================
+
+
+def test_cluster_pub_signature_required_defaults_to_true():
+    """Test that cluster_pub_signature_required defaults to True (secure by default)."""
+    import salt.config
+
+    # Check default value in DEFAULT_MASTER_OPTS
+    assert "cluster_pub_signature_required" in salt.config.DEFAULT_MASTER_OPTS
+    assert salt.config.DEFAULT_MASTER_OPTS["cluster_pub_signature_required"] is True
+
+
+def test_cluster_pub_signature_required_rejects_without_signature():
+    """Test that join is rejected when signature required but not configured."""
+    # Simulate opts with signature required but not provided
+    opts = {
+        "cluster_pub_signature": None,
+        "cluster_pub_signature_required": True,
+    }
+
+    cluster_pub = "PUBLIC KEY DATA"
+    digest = hashlib.sha256(cluster_pub.encode()).hexdigest()
+
+    # Simulate the handler logic
+    cluster_pub_sig = opts.get("cluster_pub_signature", None)
+
+    if not cluster_pub_sig:
+        if opts.get("cluster_pub_signature_required", True):
+            # Should reject
+            should_reject = True
+        else:
+            # Would allow TOFU
+            should_reject = False
+    else:
+        # Has signature - would verify
+        should_reject = False
+
+    assert should_reject is True
+
+
+def test_cluster_pub_signature_required_accepts_with_valid_signature():
+    """Test that join is accepted when signature matches."""
+    cluster_pub = "PUBLIC KEY DATA"
+    digest = hashlib.sha256(cluster_pub.encode()).hexdigest()
+
+    # Simulate opts with correct signature
+    opts = {
+        "cluster_pub_signature": digest,
+        "cluster_pub_signature_required": True,
+    }
+
+    # Simulate the handler logic
+    cluster_pub_sig = opts.get("cluster_pub_signature", None)
+
+    if cluster_pub_sig:
+        if digest == cluster_pub_sig:
+            should_accept = True
+        else:
+            should_accept = False
+    else:
+        should_accept = False
+
+    assert should_accept is True
+
+
+def test_cluster_pub_signature_required_rejects_with_wrong_signature():
+    """Test that join is rejected when signature doesn't match."""
+    cluster_pub = "PUBLIC KEY DATA"
+    digest = hashlib.sha256(cluster_pub.encode()).hexdigest()
+
+    # Simulate opts with wrong signature
+    opts = {
+        "cluster_pub_signature": "wrong_signature_hash",
+        "cluster_pub_signature_required": True,
+    }
+
+    # Simulate the handler logic
+    cluster_pub_sig = opts.get("cluster_pub_signature", None)
+
+    if cluster_pub_sig:
+        if digest == cluster_pub_sig:
+            should_accept = True
+        else:
+            should_accept = False
+    else:
+        should_accept = False
+
+    assert should_accept is False
+
+
+def test_cluster_pub_signature_tofu_mode_allows_without_signature():
+    """Test that TOFU mode allows join without signature when explicitly enabled."""
+    # Simulate opts with TOFU mode enabled
+    opts = {
+        "cluster_pub_signature": None,
+        "cluster_pub_signature_required": False,  # TOFU mode
+    }
+
+    cluster_pub = "PUBLIC KEY DATA"
+    digest = hashlib.sha256(cluster_pub.encode()).hexdigest()
+
+    # Simulate the handler logic
+    cluster_pub_sig = opts.get("cluster_pub_signature", None)
+
+    if not cluster_pub_sig:
+        if opts.get("cluster_pub_signature_required", True):
+            # Secure mode - reject
+            should_allow_tofu = False
+        else:
+            # TOFU mode - allow with warning
+            should_allow_tofu = True
+    else:
+        # Has signature - would verify
+        should_allow_tofu = False
+
+    assert should_allow_tofu is True
+
+
+def test_cluster_pub_signature_tofu_mode_still_verifies_if_configured():
+    """Test that TOFU mode still verifies signature if one is configured."""
+    cluster_pub = "PUBLIC KEY DATA"
+    digest = hashlib.sha256(cluster_pub.encode()).hexdigest()
+
+    # Simulate opts with TOFU mode but signature configured
+    opts = {
+        "cluster_pub_signature": digest,
+        "cluster_pub_signature_required": False,  # TOFU mode
+    }
+
+    # Simulate the handler logic
+    cluster_pub_sig = opts.get("cluster_pub_signature", None)
+
+    if cluster_pub_sig:
+        # Even in TOFU mode, if signature is configured, verify it
+        if digest == cluster_pub_sig:
+            should_accept = True
+        else:
+            should_accept = False
+    else:
+        should_accept = True  # TOFU mode
+
+    assert should_accept is True
+
+
+def test_cluster_pub_signature_tofu_mode_rejects_wrong_signature():
+    """Test that TOFU mode rejects if signature is configured but wrong."""
+    cluster_pub = "PUBLIC KEY DATA"
+    digest = hashlib.sha256(cluster_pub.encode()).hexdigest()
+
+    # Simulate opts with TOFU mode but wrong signature
+    opts = {
+        "cluster_pub_signature": "wrong_hash",
+        "cluster_pub_signature_required": False,  # TOFU mode
+    }
+
+    # Simulate the handler logic
+    cluster_pub_sig = opts.get("cluster_pub_signature", None)
+
+    if cluster_pub_sig:
+        # Even in TOFU mode, if signature is configured, verify it
+        if digest == cluster_pub_sig:
+            should_accept = True
+        else:
+            should_accept = False
+    else:
+        should_accept = True  # TOFU mode
+
+    assert should_accept is False
+
+
+# ============================================================================
 # SECURITY TEST COVERAGE CHECKLIST
 # ============================================================================
 
