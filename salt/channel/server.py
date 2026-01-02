@@ -1105,14 +1105,19 @@ class MasterPubServerChannel:
         with salt.utils.files.fopen(path, "r") as fp:
             pub = fp.read()
 
-        self._discover_token = self.gen_token()
-
         for peer in self.cluster_peers:
             log.error("Discover cluster from %s", peer)
+            # Generate unique token for each peer we're discovering
+            discover_token = self.gen_token()
+
+            # Store token to validate discover-reply
+            # Key by peer_id so we can validate the response came from who we asked
+            self._discover_candidates[peer] = {"token": discover_token}
+
             tosign = salt.payload.package({
                 "peer_id": self.opts["id"],
                 "pub": pub,
-                "token": self._discover_token,
+                "token": discover_token,
             })
             key = salt.crypt.PrivateKeyString(self.private_key())
             sig = key.sign(tosign)
@@ -1722,12 +1727,26 @@ class MasterPubServerChannel:
                     log.warning("Invalid signature of cluster discover payload")
                     return
 
-                # XXX First token created in different process
-                #if payload.get("return_token", None) != self._discover_token:
-                #    log.warning("Invalid token in discover reply %s != %s",
-                #        payload.get("return_token", None), self._discover_token
-                #    )
-                #    return
+                # Validate return_token matches the token we sent to this peer
+                peer_id = payload.get("peer_id")
+                if peer_id not in self._discover_candidates:
+                    log.warning(
+                        "Discover-reply from unexpected peer: %s (not in candidates)",
+                        peer_id,
+                    )
+                    return
+
+                expected_token = self._discover_candidates[peer_id].get("token")
+                received_token = payload.get("return_token")
+
+                if received_token != expected_token:
+                    log.warning(
+                        "Invalid return_token in discover-reply from %s: %s != %s",
+                        peer_id,
+                        received_token,
+                        expected_token,
+                    )
+                    return
 
                 log.info("Cluster discover reply from %s", payload["peer_id"])
                 key = salt.crypt.PublicKeyString(payload["pub"])
