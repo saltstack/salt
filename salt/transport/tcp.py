@@ -625,6 +625,19 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
     def decode_payload(self, payload):
         return payload
 
+    async def forward_message(self, payload):
+        """
+        Forward a message into this transport's worker queue.
+
+        Not implemented for TCP transport. Worker pool routing is only
+        supported for ZeroMQ transport.
+        """
+        log.warning(
+            "Worker pool message forwarding is not supported for TCP transport. "
+            "Use ZeroMQ transport for worker pool routing."
+        )
+        return None
+
 
 class TCPReqServer(RequestServer):
     def __init__(self, *args, **kwargs):  # pylint: disable=W0231

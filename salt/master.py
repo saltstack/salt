@@ -1199,13 +1199,6 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
 
             worker_pools = get_worker_pools_config(self.opts)
 
-            # Create front-end channel (receives from minions, dispatcher connects to this)
-            frontend_channels = []
-            for transport, opts in iter_transport_opts(self.opts):
-                chan = salt.channel.server.ReqServerChannel.factory(opts)
-                chan.pre_fork(self.process_manager)
-                frontend_channels.append(chan)
-
             # Create pool-specific channels (dispatcher forwards to these, workers connect to these)
             pool_channels = {}
             for pool_name in worker_pools.keys():
