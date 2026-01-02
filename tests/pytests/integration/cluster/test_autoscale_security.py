@@ -370,7 +370,7 @@ def test_autoscale_rejects_missing_cluster_secret(
         # If it did start, check that join was rejected
         logs = factory.get_log_contents()
         assert "cluster_secret" in logs.lower()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         # Expected - configuration validation should catch this
         pass
 
@@ -499,8 +499,6 @@ def test_autoscale_rejects_join_without_cluster_pub_signature(
     Security: cluster_pub_signature_required defaults to True (secure by default).
     Without cluster_pub_signature configured, join should be rejected to prevent TOFU attacks.
     """
-    import hashlib
-
     # Create joining master WITHOUT cluster_pub_signature (default: required=True)
     config_defaults, config_overrides = {
         "master_port": autoscale_bootstrap_master.config["ret_port"] + 1,

@@ -8,6 +8,7 @@ import asyncio
 import base64
 import binascii
 import copy
+import getpass
 import hashlib
 import hmac
 import logging
@@ -383,20 +384,8 @@ class PrivateKey(BaseKey):
         return self.key.public_key()
 
 
-class PublicKey(BaseKey):
-    def __init__(self, key_bytes):
-        log.debug("Loading public key")
-        try:
-            self.key = serialization.load_pem_public_key(key_bytes)
-        except ValueError:
-            raise InvalidKeyError("Encountered bad RSA public key")
-        except cryptography.exceptions.UnsupportedAlgorithm:
-            raise InvalidKeyError("Unsupported key algorithm")
-
-
 class PrivateKeyString(PrivateKey):
-
-    def __init__(self, data, password=None):
+    def __init__(self, data, password=None):  # pylint: disable=super-init-not-called
         self.key = serialization.load_pem_private_key(
             data.encode(),
             password=password,
@@ -455,7 +444,7 @@ class PublicKey(BaseKey):
 
 
 class PublicKeyString(PublicKey):
-    def __init__(self, data):
+    def __init__(self, data):  # pylint: disable=super-init-not-called
         try:
             self.key = serialization.load_pem_public_key(data.encode())
         except ValueError as exc:
