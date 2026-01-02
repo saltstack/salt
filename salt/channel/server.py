@@ -12,7 +12,6 @@ import logging
 import os
 import pathlib
 import random
-import shutil
 import string
 import time
 
@@ -1436,7 +1435,7 @@ class MasterPubServerChannel:
 
                 try:
                     notify_data = salt.payload.loads(data["payload"])
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     log.error("Failed to load join-notify payload: %s", e)
                     return
 
@@ -1482,7 +1481,7 @@ class MasterPubServerChannel:
                             sender_id,
                         )
                         return
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     log.error("Error verifying join-notify signature: %s", e)
                     return
 
@@ -1513,7 +1512,7 @@ class MasterPubServerChannel:
 
                 try:
                     payload = salt.payload.loads(data["payload"])
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     log.error("Failed to load join-reply payload: %s", e)
                     return
 
@@ -1545,7 +1544,7 @@ class MasterPubServerChannel:
                             data["peer_id"],
                         )
                         return
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     log.error("Error verifying join-reply signature: %s", e)
                     return
 
@@ -1585,7 +1584,7 @@ class MasterPubServerChannel:
                     # Load and validate it's a valid private key
                     cluster_key_obj = salt.crypt.PrivateKeyString(cluster_key_pem)
 
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     log.error("Error decrypting/validating cluster key: %s", e)
                     return
 
@@ -1606,7 +1605,7 @@ class MasterPubServerChannel:
                         log.error("Invalid peer_id in join-reply %s: %s", peer, e)
                         continue
                     log.info("Installing peer key: %s", peer)
-                    pathlib.Path(peer_pub_path).write_text(payload["peers"][peer])
+                    pathlib.Path(peer_pub_path).write_text(payload["peers"][peer], encoding="utf-8")
 
                 # Process minion keys from verified payload
                 allowed_kinds = [
@@ -1656,7 +1655,7 @@ class MasterPubServerChannel:
                             log.error("Invalid minion_id in join-reply %s: %s", minion, e)
                             continue
                         log.info("Installing minion key: %s/%s", kind, minion)
-                        pathlib.Path(minion_pub_path).write_text(payload["minions"][kind][minion])
+                        pathlib.Path(minion_pub_path).write_text(payload["minions"][kind][minion], encoding="utf-8")
 
                 # Signal completion
                 event = self._discover_event
