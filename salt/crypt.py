@@ -544,17 +544,8 @@ class MasterKeys(dict):
                     "peers",
                     f"{self.opts['id']}.pub",
                 )
-            if not self.opts["cluster_peers"]:
-                if self.opts["cluster_pki_dir"] != self.opts["pki_dir"]:
-                    self.check_master_shared_pub()
-                key_pass = salt.utils.sdb.sdb_get(
-                    self.opts["cluster_key_pass"], self.opts
-                )
-                self.cluster_key = self.__get_keys(
-                    name="cluster",
-                    passphrase=key_pass,
-                    pki_dir=self.opts["cluster_pki_dir"],
-                )
+            # Note: cluster_key setup moved to _setup_keys() (line 614-620)
+            # to ensure it happens after master keys are initialized
         self.pub_signature = None
 
         # set names for the signing key-pairs
