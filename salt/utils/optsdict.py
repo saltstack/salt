@@ -835,6 +835,50 @@ class OptsDict(MutableMapping):
                 tracker._mutation_order = tracker_state.get("_mutation_order", [])
             self._tracker = tracker
 
+    def mutate_key(self, key, new_value):
+        """
+        Update a key in place to preserve cached references.
+
+        This method replaces the pattern of:
+            opts[key] = new_dict  # Creates NEW dict, breaks cached references
+
+        With:
+            new_dict = ...
+            opts.mutate_key(key, new_dict)  # Mutates SAME dict, preserves references
+
+        Why this matters:
+        - Loaders cache references to opts["grains"], opts["pillar"], etc.
+        - When we replace opts[key] = new_dict, cached refs become stale
+        - By mutating in place (clear + update), we preserve object identity
+        - Cached references continue to see updates
+
+        Args:
+            key: The key to update (e.g., "grains", "pillar")
+            new_value: The new value to set
+
+        Example:
+            # Instead of:
+            opts["grains"] = salt.loader.grains(opts)  # BREAKS cached refs
+
+            # Use:
+            new_grains = salt.loader.grains(opts)
+            opts.mutate_key("grains", new_grains)  # PRESERVES cached refs
+        """
+        # Ensure new_value is not None
+        if new_value is None:
+            # If setting to None, just use regular assignment
+            self[key] = new_value
+            return
+
+        # Check if key exists and both old and new values are dicts
+        if key in self and isinstance(self[key], dict) and isinstance(new_value, dict):
+            # Mutate in place to preserve object identity
+            self[key].clear()
+            self[key].update(new_value)
+        else:
+            # Initial creation or non-dict value - regular assignment is fine
+            self[key] = new_value
+
     def __repr__(self) -> str:
         """String representation."""
         with self._lock:
@@ -849,6 +893,10 @@ def mutate_opts_key(opts, key, new_value):
     """
     Update an opts key in place to preserve cached references.
 
+    .. deprecated:: 3008.0
+        Prefer using the instance method: ``opts.mutate_key(key, value)``
+        This function is maintained for backwards compatibility.
+
     This function replaces the pattern of:
         opts[key] = new_dict  # Creates NEW dict, breaks cached references
 
@@ -856,43 +904,31 @@ def mutate_opts_key(opts, key, new_value):
         new_dict = ...
         mutate_opts_key(opts, key, new_dict)  # Mutates SAME dict, preserves references
 
-    Why this matters:
-    - Loaders cache references to opts["grains"], opts["pillar"], etc.
-    - When we replace opts[key] = new_dict, cached refs become stale
-    - By mutating in place (clear + update), we preserve object identity
-    - Cached references continue to see updates
-
     Args:
         opts: The opts dict (can be OptsDict or regular dict)
         key: The key to update (e.g., "grains", "pillar")
         new_value: The new value to set
 
     Example:
-        # Instead of:
-        opts["grains"] = salt.loader.grains(opts)  # BREAKS cached refs
+        # Preferred (OptsDict instance method):
+        opts.mutate_key("grains", new_grains)
 
-        # Use:
-        new_grains = salt.loader.grains(opts)
-        mutate_opts_key(opts, "grains", new_grains)  # PRESERVES cached refs
+        # Still supported (old):
+        mutate_opts_key(opts, "grains", new_grains)
     """
-    # Ensure opts is a mutable mapping
-    if not isinstance(opts, (dict, type(opts))) or opts is None:
-        raise TypeError(f"opts must be a dict, got {type(opts)}")
+    if isinstance(opts, OptsDict):
+        # Use instance method
+        return opts.mutate_key(key, new_value)
 
-    # Ensure new_value is not None
+    # Fallback for regular dict (shouldn't happen with new config)
     if new_value is None:
-        # If setting to None, just use regular assignment
         opts[key] = new_value
         return
 
-    # Check if key exists and both old and new values are dicts
     if key in opts and isinstance(opts[key], dict) and isinstance(new_value, dict):
-        # Ensure old value is not empty or we're not just replacing with empty
-        # Mutate in place to preserve object identity
         opts[key].clear()
         opts[key].update(new_value)
     else:
-        # Initial creation or non-dict value - regular assignment is fine
         opts[key] = new_value
 
 
