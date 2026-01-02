@@ -1715,12 +1715,39 @@ class MasterPubServerChannel:
 
                 # Verify digest (using SHA-256 for security)
                 digest = hashlib.sha256(payload["cluster_pub"].encode()).hexdigest()
-                if self.opts.get("cluster_pub_signature", None):
-                    if digest != self.opts["cluster_pub_signature"]:
-                        log.warning("Invalid cluster public key")
+
+                # Check if cluster_pub_signature is configured
+                cluster_pub_sig = self.opts.get("cluster_pub_signature", None)
+
+                if cluster_pub_sig:
+                    # Signature is configured - verify it matches
+                    if digest != cluster_pub_sig:
+                        log.error(
+                            "Cluster public key verification failed: "
+                            "expected %s, got %s",
+                            cluster_pub_sig,
+                            digest,
+                        )
                         return
+                    log.info("Cluster public key signature verified: %s", digest)
                 else:
-                    log.warning("No cluster signature provided, trusting %s", digest)
+                    # No signature configured - check if it's required
+                    if self.opts.get("cluster_pub_signature_required", True):
+                        log.error(
+                            "cluster_pub_signature is required for autoscale join "
+                            "(set cluster_pub_signature_required=False to allow TOFU). "
+                            "Refusing to join cluster with unknown key: %s",
+                            digest,
+                        )
+                        return
+                    else:
+                        # TOFU mode - trust on first use
+                        log.warning(
+                            "SECURITY: No cluster_pub_signature configured, "
+                            "trusting cluster public key on first use: %s "
+                            "(vulnerable to man-in-the-middle attacks)",
+                            digest,
+                        )
 
                 cluster_pub = salt.crypt.PublicKeyString(payload["cluster_pub"])
                 if not cluster_pub.verify(data["payload"], data["sig"]):
