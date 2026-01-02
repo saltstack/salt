@@ -183,6 +183,7 @@ def _get_uri(repo):
 class MockSourceEntry:
     def __init__(self, uri, source_type, line, invalid, dist="", file=None):
         self.uri = uri
+        self.uris = [uri]
         self.type = source_type
         self.line = line
         self.invalid = invalid
