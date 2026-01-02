@@ -82,7 +82,6 @@ from salt.template import SLS_ENCODING
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 from salt.utils.network import parse_host_port
-from salt.utils.optsdict import mutate_opts_key
 from salt.utils.process import ProcessManager, SignalHandlingProcess, default_signals
 from salt.utils.zeromq import ZMQ_VERSION_INFO, zmq
 
@@ -932,7 +931,7 @@ class SMinion(MinionBase):
         import salt.loader
 
         new_grains = salt.loader.grains(opts)
-        mutate_opts_key(opts, "grains", new_grains)
+        opts.mutate_key("grains", new_grains)
         super().__init__(opts)
 
         # Clean out the proc directory (default /var/cache/salt/minion/proc)
@@ -1359,7 +1358,7 @@ class Minion(MinionBase):
         if not salt.utils.platform.is_proxy():
             if load_grains:
                 new_grains = salt.loader.grains(opts)
-                mutate_opts_key(self.opts, "grains", new_grains)
+                self.opts.mutate_key("grains", new_grains)
         else:
             if self.opts.get("beacons_before_connect", False):
                 log.warning(
@@ -1686,7 +1685,7 @@ class Minion(MinionBase):
             new_grains = salt.loader.grains(
                 opts, force_refresh, proxy=proxy, context=context
             )
-            mutate_opts_key(opts, "grains", new_grains)
+            opts.mutate_key("grains", new_grains)
         self.utils = salt.loader.utils(opts, proxy=proxy, context=context)
 
         if opts.get("multimaster", False):
@@ -1935,7 +1934,7 @@ class Minion(MinionBase):
             else:
                 proxy = None
             new_grains = salt.loader.grains(self.opts, force_refresh=True, proxy=proxy)
-            mutate_opts_key(self.opts, "grains", new_grains)
+            self.opts.mutate_key("grains", new_grains)
 
         # Check if we should bypass the process_count_max check
         # This is used for jobs that have been queued and are now being released
@@ -4999,7 +4998,7 @@ class SProxyMinion(SMinion):
         proxy_init_fn(self.opts)
 
         new_grains = salt.loader.grains(self.opts, proxy=self.proxy)
-        mutate_opts_key(self.opts, "grains", new_grains)
+        self.opts.mutate_key("grains", new_grains)
 
         #  Sync the grains here so the proxy can communicate them to the master
         self.functions["saltutil.sync_grains"](saltenv="base")
