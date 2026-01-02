@@ -866,12 +866,14 @@ class PoolDispatcherChannel:
     and routes them to pool-specific channels based on command classification.
     """
 
-    def __init__(self, opts, pool_channels):
+    def __init__(self, opts, frontend_channels, pool_channels):
         """
         :param opts: Master configuration options
+        :param frontend_channels: List of frontend ReqServerChannel instances (where minions connect)
         :param pool_channels: Dict mapping pool_name to ReqServerChannel instances
         """
         self.opts = opts
+        self.frontend_channels = frontend_channels
         self.pool_channels = pool_channels
         self.router = None  # Will be initialized in post_fork
         self.io_loop = None
@@ -888,9 +890,9 @@ class PoolDispatcherChannel:
         self.io_loop = io_loop
         self.router = salt.master.RequestRouter(self.opts)
 
-        # Create transport to connect to front-end as a worker
-        self.transport = salt.transport.request_server(self.opts)
-        self.transport.post_fork(self._dispatch_handler, io_loop)
+        # Connect to frontend channels as a worker
+        for channel in self.frontend_channels:
+            channel.post_fork(self._dispatch_handler, io_loop)
 
         log.info(
             "Pool dispatcher started, routing to pools: %s",
