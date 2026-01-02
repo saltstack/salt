@@ -1713,8 +1713,8 @@ class MasterPubServerChannel:
             elif tag.startswith("cluster/peer/discover-reply"):
                 payload = salt.payload.loads(data["payload"])
 
-                # Verify digest
-                digest = hashlib.sha1(payload["cluster_pub"].encode()).hexdigest()
+                # Verify digest (using SHA-256 for security)
+                digest = hashlib.sha256(payload["cluster_pub"].encode()).hexdigest()
                 if self.opts.get("cluster_pub_signature", None):
                     if digest != self.opts["cluster_pub_signature"]:
                         log.warning("Invalid cluster public key")
