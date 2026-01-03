@@ -398,9 +398,12 @@ class MutationTracker:
             return locations
 
 
-class OptsDict(MutableMapping):
+class OptsDict(dict):
     """
     Copy-on-write dictionary for Salt opts.
+
+    Inherits from dict for full compatibility with isinstance(opts, dict) checks
+    while providing copy-on-write semantics for memory efficiency.
 
     This class implements true copy-on-write semantics at the key level:
     - Keys are only copied when first mutated
@@ -416,6 +419,7 @@ class OptsDict(MutableMapping):
         >>> child['test'] = True  # Only copies 'test', not grains/pillar
         >>> 'grains' in child  # True (shared from parent)
         >>> child['test']  # True (local mutation)
+        >>> isinstance(child, dict)  # True (for compatibility)
     """
 
     def __init__(
@@ -434,6 +438,9 @@ class OptsDict(MutableMapping):
             track_mutations: Enable mutation tracking (disabled by default to save memory)
             name: Optional name for debugging (e.g., "loader:states", "state:highstate")
         """
+        # Initialize dict parent WITHOUT data (we handle storage ourselves)
+        super().__init__()
+
         self._parent = parent
         self._local = {}  # Keys that have been copied/mutated locally
         self._base = base_dict if base_dict is not None else {}
