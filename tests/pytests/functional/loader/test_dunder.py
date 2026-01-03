@@ -1,3 +1,5 @@
+from collections.abc import MutableMapping
+
 import salt.loader.context
 import salt.loader.lazy
 import salt.utils.files
@@ -9,7 +11,8 @@ def test_opts_dunder_opts_without_import(tmp_path):
     Test __opts__ without being imported.
 
     When a loaded module uses __opts__ but does not import it from
-    salt.loader.dunder the __opts__ object will be a dictionary.
+    salt.loader.dunder the __opts__ object will be a MutableMapping
+    (dict or OptsDict for memory optimization).
     """
     opts = {"optimization_order": [0, 1, 2]}
     with salt.utils.files.fopen(tmp_path / "mymod.py", "w") as fp:
@@ -22,7 +25,7 @@ def test_opts_dunder_opts_without_import(tmp_path):
             )
         )
     loader = salt.loader.lazy.LazyLoader([tmp_path], opts)
-    assert type(loader["mymod.mymethod"]()) == dict
+    assert isinstance(loader["mymod.mymethod"](), MutableMapping)
 
 
 def test_opts_dunder_opts_with_import(tmp_path):
