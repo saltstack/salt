@@ -394,12 +394,14 @@ class PrivateKeyString(PrivateKey):
 
 class PublicKey(BaseKey):
 
-    def __init__(self, path):
-        with salt.utils.files.fopen(path, "rb") as fp:
-            try:
-                self.key = serialization.load_pem_public_key(fp.read())
-            except ValueError as exc:
-                raise InvalidKeyError("Invalid key")
+    def __init__(self, key_bytes):
+        log.debug("Loading public key")
+        try:
+            self.key = serialization.load_pem_public_key(key_bytes)
+        except ValueError:
+            raise InvalidKeyError("Encountered bad RSA public key")
+        except cryptography.exceptions.UnsupportedAlgorithm:
+            raise InvalidKeyError("Unsupported key algorithm")
 
     def encrypt(self, data, algorithm=OAEP_SHA1):
         _padding = self.parse_padding_for_encryption(algorithm)
