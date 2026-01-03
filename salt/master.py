@@ -18,8 +18,6 @@ import threading
 import time
 from collections import OrderedDict
 
-import tornado.ioloop
-
 import salt.acl
 import salt.auth
 import salt.channel.server
@@ -1194,45 +1192,28 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         )
 
         if self.opts.get("worker_pools_enabled", True):
-            # Multi-pool mode with dispatcher architecture
+            # Multi-pool mode with pooled routing
             from salt.config.worker_pools import get_worker_pools_config
 
             worker_pools = get_worker_pools_config(self.opts)
 
-            # Create front-end channels (minions connect here on port 4506)
-            frontend_channels = []
+            # Create single request server transport with pooled routing
+            # Only ZeroMQ transport supports worker pools
+            req_channels = []
             for transport, opts in iter_transport_opts(self.opts):
                 chan = salt.channel.server.ReqServerChannel.factory(opts)
-                chan.pre_fork(self.process_manager)
-                frontend_channels.append(chan)
-
-            # Create pool-specific channels (dispatcher forwards to these, workers connect to these)
-            pool_channels = {}
-            for pool_name in worker_pools.keys():
-                pool_opts = self.opts.copy()
-                pool_opts["pool_name"] = pool_name
-
-                # Create channel for this pool
-                for transport, opts in iter_transport_opts(pool_opts):
-                    chan = salt.channel.server.ReqServerChannel.factory(opts)
+                # Pass worker_pools to pre_fork for ZeroMQ transport
+                if hasattr(chan.transport, "pre_fork"):
+                    chan.transport.pre_fork(self.process_manager, worker_pools)
+                else:
+                    # Non-ZeroMQ transports don't support worker pools
+                    log.warning(
+                        "Transport %s does not support worker pools. "
+                        "Falling back to single pool.",
+                        transport,
+                    )
                     chan.pre_fork(self.process_manager)
-                    pool_channels[pool_name] = chan
-                    # Only use first transport for pools
-                    break
-
-            # Create dispatcher process (acts as worker to front-end, routes to pools)
-            dispatcher = salt.channel.server.PoolDispatcherChannel(
-                self.opts, frontend_channels, pool_channels
-            )
-
-            def dispatcher_process(io_loop=None):
-                """Dispatcher process function"""
-                if io_loop is None:
-                    io_loop = tornado.ioloop.IOLoop.current()
-                dispatcher.post_fork(io_loop)
-                io_loop.start()
-
-            self.process_manager.add_process(dispatcher_process, name="PoolDispatcher")
+                req_channels.append(chan)
 
             if (
                 self.opts["req_server_niceness"]
@@ -1248,17 +1229,35 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
             # manager. We don't want the processes being started to inherit those
             # signal handlers
             with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-                # Create workers for each pool (workers connect to pool-specific channels)
+                # Create workers for each pool
+                # Workers connect to pool-specific IPC sockets (workers-{pool_name}.ipc)
                 for pool_name, pool_config in worker_pools.items():
                     worker_count = pool_config.get("worker_count", 1)
-                    pool_chan = pool_channels[pool_name]
 
                     for pool_index in range(worker_count):
+                        # Create pool-specific options for this worker
+                        pool_opts = self.opts.copy()
+                        pool_opts["pool_name"] = pool_name
+
+                        # Create pool-specific channel for worker to connect to
+                        worker_channels = []
+                        for transport, opts in iter_transport_opts(pool_opts):
+                            worker_chan = salt.channel.server.ReqServerChannel.factory(
+                                opts
+                            )
+                            worker_channels.append(worker_chan)
+                            # Only use first transport
+                            break
+
                         name = f"MWorker-{pool_name}-{pool_index}"
-                        # Workers connect to their pool's channel
                         self.process_manager.add_process(
                             MWorker,
-                            args=(self.opts, self.master_key, self.key, [pool_chan]),
+                            args=(
+                                pool_opts,
+                                self.master_key,
+                                self.key,
+                                worker_channels,
+                            ),
                             kwargs={"pool_name": pool_name, "pool_index": pool_index},
                             name=name,
                         )
