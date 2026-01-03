@@ -33,7 +33,11 @@ def autoscale_cluster_secret():
 
 @pytest.fixture
 def autoscale_bootstrap_master(
-    request, salt_factories, cluster_pki_path, cluster_cache_path, autoscale_cluster_secret
+    request,
+    salt_factories,
+    cluster_pki_path,
+    cluster_cache_path,
+    autoscale_cluster_secret,
 ):
     """
     Bootstrap master with cluster_secret configured for autoscale.
@@ -165,7 +169,9 @@ def test_autoscale_rejects_path_traversal_in_peer_id(
     assert not (cluster_pki_dir / ".." / ".." / "malicious.pub").exists()
 
     # Check bootstrap master logs for rejection
-    assert factory.is_running() is False or "Invalid peer_id" in factory.get_log_contents()
+    assert (
+        factory.is_running() is False or "Invalid peer_id" in factory.get_log_contents()
+    )
 
 
 @pytest.mark.slow_test
@@ -192,8 +198,8 @@ def test_autoscale_rejects_path_traversal_in_minion_keys(
     malicious_minion_id = "../../../etc/malicious"
 
     # The clean_join should prevent this - verify it does
-    from salt.exceptions import SaltValidationError
     import salt.utils.verify
+    from salt.exceptions import SaltValidationError
 
     with pytest.raises(SaltValidationError):
         salt.utils.verify.clean_join(
@@ -227,11 +233,13 @@ def test_autoscale_rejects_unsigned_discover_message(
     ) as event:
         # Missing signature
         malicious_data = {
-            "payload": salt.payload.dumps({
-                "peer_id": "attacker",
-                "pub": "fake-public-key",
-                "token": "fake-token",
-            }),
+            "payload": salt.payload.dumps(
+                {
+                    "peer_id": "attacker",
+                    "pub": "fake-public-key",
+                    "token": "fake-token",
+                }
+            ),
             # NO 'sig' field - should be rejected
         }
 
@@ -262,11 +270,13 @@ def test_autoscale_rejects_invalid_signature_on_discover(
     Expected: Signature verification fails, peer rejected
     """
     # Create a discover message with mismatched signature
-    fake_payload = salt.payload.dumps({
-        "peer_id": "attacker",
-        "pub": "fake-public-key",
-        "token": "fake-token",
-    })
+    fake_payload = salt.payload.dumps(
+        {
+            "peer_id": "attacker",
+            "pub": "fake-public-key",
+            "token": "fake-token",
+        }
+    )
 
     with salt.utils.event.get_master_event(
         autoscale_bootstrap_master.config,
@@ -325,8 +335,7 @@ def test_autoscale_rejects_wrong_cluster_secret(
     # Check bootstrap master logs for secret validation failure
     bootstrap_logs = autoscale_bootstrap_master.get_log_contents()
     assert (
-        "Cluster secret invalid" in bootstrap_logs
-        or "secret" in bootstrap_logs.lower()
+        "Cluster secret invalid" in bootstrap_logs or "secret" in bootstrap_logs.lower()
     )
 
     # Verify joining master was NOT added to cluster_peers
@@ -401,11 +410,11 @@ def test_autoscale_token_prevents_replay_attacks(
     # because each discover generates a new random token
 
     # For now, we verify tokens are being generated
-    import string
     import random
+    import string
 
     def gen_token():
-        return ''.join(random.choices(string.ascii_letters + string.digits, k=32))
+        return "".join(random.choices(string.ascii_letters + string.digits, k=32))
 
     token1 = gen_token()
     token2 = gen_token()
@@ -437,8 +446,9 @@ def test_autoscale_join_reply_signature_verification(
     # The join-reply handler should verify signatures
     # This is integration-tested by verifying signature verification is in code
 
-    from salt.channel.server import MasterPubServerChannel
     import inspect
+
+    from salt.channel.server import MasterPubServerChannel
 
     # Get the handle_pool_publish method
     source = inspect.getsource(MasterPubServerChannel.handle_pool_publish)
@@ -468,7 +478,10 @@ def test_autoscale_cluster_pub_signature_validation(
     import hashlib
 
     # Get the actual cluster public key
-    cluster_pub_path = pathlib.Path(autoscale_bootstrap_master.config["cluster_pki_dir"]) / "cluster.pub"
+    cluster_pub_path = (
+        pathlib.Path(autoscale_bootstrap_master.config["cluster_pki_dir"])
+        / "cluster.pub"
+    )
 
     if cluster_pub_path.exists():
         cluster_pub = cluster_pub_path.read_text()
@@ -525,11 +538,13 @@ def test_autoscale_rejects_join_without_cluster_pub_signature(
 
         # Check that the bootstrap master's peer key was NOT written (join was rejected)
         cluster_pki_dir = pathlib.Path(factory.config["cluster_pki_dir"])
-        bootstrap_peer_key = cluster_pki_dir / "peers" / f"{autoscale_bootstrap_master.config['id']}.pub"
-
-        assert not bootstrap_peer_key.exists(), (
-            f"Bootstrap master peer key should NOT be created when join is rejected: {bootstrap_peer_key}"
+        bootstrap_peer_key = (
+            cluster_pki_dir / "peers" / f"{autoscale_bootstrap_master.config['id']}.pub"
         )
+
+        assert (
+            not bootstrap_peer_key.exists()
+        ), f"Bootstrap master peer key should NOT be created when join is rejected: {bootstrap_peer_key}"
 
 
 @pytest.mark.slow_test
@@ -584,7 +599,9 @@ def test_autoscale_accepts_join_with_valid_cluster_pub_signature(
         cluster_pub_key = cluster_pki_dir / "cluster.pub"
 
         assert cluster_key.exists(), "Cluster key should be created on successful join"
-        assert cluster_pub_key.exists(), "Cluster pub should be created on successful join"
+        assert (
+            cluster_pub_key.exists()
+        ), "Cluster pub should be created on successful join"
 
 
 @pytest.mark.slow_test
@@ -627,11 +644,13 @@ def test_autoscale_rejects_join_with_wrong_cluster_pub_signature(
 
         # Check that the bootstrap master's peer key was NOT written (join was rejected)
         cluster_pki_dir = pathlib.Path(factory.config["cluster_pki_dir"])
-        bootstrap_peer_key = cluster_pki_dir / "peers" / f"{autoscale_bootstrap_master.config['id']}.pub"
-
-        assert not bootstrap_peer_key.exists(), (
-            f"Bootstrap master peer key should NOT be created when signature doesn't match: {bootstrap_peer_key}"
+        bootstrap_peer_key = (
+            cluster_pki_dir / "peers" / f"{autoscale_bootstrap_master.config['id']}.pub"
         )
+
+        assert (
+            not bootstrap_peer_key.exists()
+        ), f"Bootstrap master peer key should NOT be created when signature doesn't match: {bootstrap_peer_key}"
 
 
 @pytest.mark.slow_test
