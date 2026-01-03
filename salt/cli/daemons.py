@@ -147,7 +147,7 @@ class Master(
         if (
             self.config["cluster_id"]
             and self.config["cluster_pki_dir"]
-            #and self.config["cluster_pki_dir"] != self.config["pki_dir"]
+            # and self.config["cluster_pki_dir"] != self.config["pki_dir"]
         ):
             v_dirs.extend(
                 [
