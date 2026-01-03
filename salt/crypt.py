@@ -739,9 +739,7 @@ class MasterKeys(dict):
         # This can happen if check_master_shared_pub() is called before _setup_keys()
         # Just return early and let the later call (after key setup) handle it
         if not master_pub:
-            log.debug(
-                "Master public key not yet available, skipping shared key check"
-            )
+            log.debug("Master public key not yet available, skipping shared key check")
             return
 
         if shared_pub:
