@@ -455,6 +455,17 @@ class OptsDict(dict):
             # Root instance - create new tracker
             self._tracker = MutationTracker(track_mutations=track_mutations)
 
+    def _ensure_lock(self) -> threading.RLock:
+        """
+        Ensure _lock exists and return it.
+
+        This is needed for unpickling, where dict restoration may call
+        methods before our attributes are fully initialized.
+        """
+        if not hasattr(self, "_lock") or self._lock is None:
+            object.__setattr__(self, "_lock", threading.RLock())
+        return self._lock
+
     @classmethod
     def from_parent(cls, parent: "OptsDict", name: str | None = None) -> "OptsDict":
         """
@@ -516,7 +527,7 @@ class OptsDict(dict):
         that triggers copy-on-write on first mutation. This provides isolation
         without copying until actually needed.
         """
-        with self._lock:
+        with self._ensure_lock():
             # Check local first - if already copied, return direct reference
             if key in self._local:
                 return self._local[key]
@@ -555,7 +566,7 @@ class OptsDict(dict):
         2. Copy only that key's value to local dict
         3. Store new value
         """
-        with self._lock:
+        with self._ensure_lock():
             # Get original value for tracking
             try:
                 original_value = self[key]
@@ -584,7 +595,7 @@ class OptsDict(dict):
 
     def __delitem__(self, key: str):
         """Delete item (only from local dict)."""
-        with self._lock:
+        with self._ensure_lock():
             if key in self._local:
                 del self._local[key]
             else:
@@ -594,7 +605,7 @@ class OptsDict(dict):
 
     def __iter__(self):
         """Iterate over all keys (local + parent chain + base)."""
-        with self._lock:
+        with self._ensure_lock():
             # Collect all keys from the chain
             keys = set(self._local.keys())
 
@@ -615,12 +626,12 @@ class OptsDict(dict):
 
     def __len__(self) -> int:
         """Return total number of keys."""
-        with self._lock:
+        with self._ensure_lock():
             return len(set(self))
 
     def __contains__(self, key: str) -> bool:
         """Check if key exists in local, parent chain, or base."""
-        with self._lock:
+        with self._ensure_lock():
             if key in self._local:
                 return True
 
@@ -647,17 +658,17 @@ class OptsDict(dict):
 
     def values(self):
         """Return all values."""
-        with self._lock:
+        with self._ensure_lock():
             return [self[k] for k in self]
 
     def items(self):
         """Return all items."""
-        with self._lock:
+        with self._ensure_lock():
             return [(k, self[k]) for k in self]
 
     def copy(self) -> dict[str, Any]:
         """Return a regular dict copy of all data."""
-        with self._lock:
+        with self._ensure_lock():
             return {k: v for k, v in self.items()}
 
     def to_dict(self) -> dict[str, Any]:
@@ -669,7 +680,7 @@ class OptsDict(dict):
 
         Compatible with MutableMapping.update() signature.
         """
-        with self._lock:
+        with self._ensure_lock():
             if other:
                 for key, value in other.items():
                     self[key] = value
@@ -692,12 +703,12 @@ class OptsDict(dict):
 
     def get_local_keys(self) -> set[str]:
         """Return set of keys that have been mutated locally."""
-        with self._lock:
+        with self._ensure_lock():
             return set(self._local.keys())
 
     def get_shared_keys(self) -> set[str]:
         """Return set of keys that are shared from parent/base."""
-        with self._lock:
+        with self._ensure_lock():
             all_keys = set(self)
             local_keys = self.get_local_keys()
             return all_keys - local_keys
@@ -741,7 +752,7 @@ class OptsDict(dict):
         Returns:
             Dict with local size, shared size, etc.
         """
-        with self._lock:
+        with self._ensure_lock():
             import sys
 
             local_size = sum(
@@ -799,48 +810,25 @@ class OptsDict(dict):
         unpicklable locks. This matches the behavior expected by code
         that does copy.deepcopy(opts).
         """
-        with self._lock:
+        with self._ensure_lock():
             # Return a deep copy as a regular dict
             return copy.deepcopy(dict(self), memo)
 
-    def __getstate__(self):
+    def __reduce_ex__(self, protocol):
         """
-        Support for pickling.
+        Custom pickle support for dict subclass.
 
-        Excludes the lock since it can't be pickled.
+        When pickling, convert to regular dict and reconstruct via from_dict.
+        This avoids issues with dict's unpickling mechanism calling __setitem__
+        before __init__ has run.
         """
-        state = self.__dict__.copy()
-        # Remove the unpicklable lock
-        state.pop("_lock", None)
-        # Also remove the tracker's lock
-        if "_tracker" in state and hasattr(state["_tracker"], "_lock"):
-            tracker_state = state["_tracker"].__dict__.copy()
-            tracker_state.pop("_lock", None)
-            state["_tracker"] = tracker_state
-        return state
-
-    def __setstate__(self, state):
-        """
-        Support for unpickling.
-
-        Recreates the lock after unpickling.
-        """
-        self.__dict__.update(state)
-        # Recreate the lock
-        self._lock = threading.RLock()
-        # Recreate the tracker from dict state if needed
-        if hasattr(self, "_tracker") and isinstance(self._tracker, dict):
-            # The tracker was serialized as a dict, need to reconstruct it
-            tracker_state = self._tracker
-            tracker = MutationTracker(
-                track_mutations=tracker_state.get("track_mutations", False),
-                max_stack_depth=tracker_state.get("max_stack_depth", 10),
-            )
-            # Restore the mutation data if tracking was enabled
-            if tracker.track_mutations:
-                tracker._mutations = tracker_state.get("_mutations", {})
-                tracker._mutation_order = tracker_state.get("_mutation_order", [])
-            self._tracker = tracker
+        # Convert to regular dict
+        data = self.to_dict()
+        # Return (callable, args) to reconstruct
+        return (
+            self.__class__.from_dict,
+            (data, getattr(self, "_name", None)),
+        )
 
     def mutate_key(self, key, new_value):
         """
@@ -888,7 +876,7 @@ class OptsDict(dict):
 
     def __repr__(self) -> str:
         """String representation."""
-        with self._lock:
+        with self._ensure_lock():
             return (
                 f"OptsDict(name={self._name!r}, "
                 f"local_keys={len(self._local)}, "
