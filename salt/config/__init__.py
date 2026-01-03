@@ -23,6 +23,7 @@ import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.network
+import salt.utils.optsdict
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
@@ -2486,8 +2487,7 @@ def proxy_config(
     salt.features.setup_features(opts)
 
     # Convert to OptsDict for memory efficiency
-    from salt.utils.optsdict import OptsDict
-    return OptsDict.from_dict(opts, name='minion_config')
+    return salt.utils.optsdict.OptsDict.from_dict(opts, name="minion_config")
 
 
 def syndic_config(
