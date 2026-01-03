@@ -4136,7 +4136,7 @@ class SProxyMinion(SMinion):
         # need sync of custom grains as may be used in pillar compilation
         salt.utils.extmods.sync(self.opts, "grains")
         new_grains = salt.loader.grains(self.opts)
-        mutate_opts_key(self.opts, "grains", new_grains)
+        self.opts.mutate_key("grains", new_grains)
         new_pillar = salt.pillar.get_pillar(
             self.opts,
             self.opts["grains"],
@@ -4144,7 +4144,7 @@ class SProxyMinion(SMinion):
             saltenv=self.opts["saltenv"],
             pillarenv=self.opts.get("pillarenv"),
         ).compile_pillar()
-        mutate_opts_key(self.opts, "pillar", new_pillar)
+        self.opts.mutate_key("pillar", new_pillar)
 
         if "proxy" not in self.opts["pillar"] and "proxy" not in self.opts:
             errmsg = (
