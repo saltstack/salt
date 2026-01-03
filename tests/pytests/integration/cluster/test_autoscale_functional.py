@@ -410,7 +410,10 @@ def test_autoscale_join_with_cluster_pub_signature(
     import hashlib
 
     # Get cluster public key signature
-    cluster_pub_path = pathlib.Path(autoscale_bootstrap_master.config["cluster_pki_dir"]) / "cluster.pub"
+    cluster_pub_path = (
+        pathlib.Path(autoscale_bootstrap_master.config["cluster_pki_dir"])
+        / "cluster.pub"
+    )
     cluster_pub = cluster_pub_path.read_text()
 
     # Note: Should use SHA-256, currently uses SHA-1 (security issue)
@@ -454,7 +457,9 @@ def test_autoscale_join_with_cluster_pub_signature(
 
         # Verify join succeeded
         cluster_key = cluster_pub_path.parent / "cluster.pem"
-        assert cluster_key.exists(), "Join should succeed with correct cluster_pub_signature"
+        assert (
+            cluster_key.exists()
+        ), "Join should succeed with correct cluster_pub_signature"
 
 
 @pytest.mark.slow_test
@@ -524,7 +529,9 @@ def test_autoscale_handles_restart_during_join(
         # Verify no duplicate entries in peers directory
         peers_dir = cluster_pki_dir / "peers"
         peer_files = list(peers_dir.glob("joining-master-restart*"))
-        assert len(peer_files) == 1, "Should have exactly one peer key file (no duplicates)"
+        assert (
+            len(peer_files) == 1
+        ), "Should have exactly one peer key file (no duplicates)"
 
 
 def test_functional_coverage_checklist():
