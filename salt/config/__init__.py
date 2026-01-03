@@ -1355,7 +1355,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "auth_mode": 1,
         "user": _MASTER_USER,
         "worker_threads": 5,
-        "worker_pools_enabled": True,
+        "worker_pools_enabled": False,
         "worker_pools": {},
         "worker_pools_optimized": False,
         "worker_pool_default": None,
