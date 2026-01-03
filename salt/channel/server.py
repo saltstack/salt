@@ -1180,7 +1180,14 @@ class MasterPubServerChannel:
         transport = salt.transport.ipc_publish_server("master", opts)
         return cls(opts, transport, _discover_event=_discover_event)
 
-    def __init__(self, opts, transport, presence_events=False, _discover_event=None, _discover_token=None):
+    def __init__(
+        self,
+        opts,
+        transport,
+        presence_events=False,
+        _discover_event=None,
+        _discover_token=None,
+    ):
         self.opts = opts
         self.transport = transport
         self.io_loop = tornado.ioloop.IOLoop.current()
@@ -1192,7 +1199,7 @@ class MasterPubServerChannel:
         self._discover_candidates = {}
 
     def gen_token(self):
-        return ''.join(random.choices(string.ascii_letters + string.digits, k=32))
+        return "".join(random.choices(string.ascii_letters + string.digits, k=32))
 
     def discover_peers(self):
         path = self.master_key.master_pub_path
@@ -1208,11 +1215,13 @@ class MasterPubServerChannel:
             # Key by peer_id so we can validate the response came from who we asked
             self._discover_candidates[peer] = {"token": discover_token}
 
-            tosign = salt.payload.package({
-                "peer_id": self.opts["id"],
-                "pub": pub,
-                "token": discover_token,
-            })
+            tosign = salt.payload.package(
+                {
+                    "peer_id": self.opts["id"],
+                    "pub": pub,
+                    "token": discover_token,
+                }
+            )
             key = salt.crypt.PrivateKeyString(self.private_key())
             sig = key.sign(tosign)
             data = {
@@ -1459,7 +1468,10 @@ class MasterPubServerChannel:
                         )
                         return
                 except (OSError, InvalidKeyError) as e:
-                    log.error("Error loading sender public key for signature verification: %s", e)
+                    log.error(
+                        "Error loading sender public key for signature verification: %s",
+                        e,
+                    )
                     return
 
                 # Signature verified - now we can trust the notification
@@ -1522,7 +1534,10 @@ class MasterPubServerChannel:
                         )
                         return
                 except (OSError, InvalidKeyError) as e:
-                    log.error("Error loading bootstrap public key for signature verification: %s", e)
+                    log.error(
+                        "Error loading bootstrap public key for signature verification: %s",
+                        e,
+                    )
                     return
 
                 # Verify the return token matches what we sent
@@ -1582,7 +1597,9 @@ class MasterPubServerChannel:
                         log.error("Invalid peer_id in join-reply %s: %s", peer, e)
                         continue
                     log.info("Installing peer key: %s", peer)
-                    pathlib.Path(peer_pub_path).write_text(payload["peers"][peer], encoding="utf-8")
+                    pathlib.Path(peer_pub_path).write_text(
+                        payload["peers"][peer], encoding="utf-8"
+                    )
 
                 # Process minion keys from verified payload
                 allowed_kinds = [
@@ -1616,7 +1633,9 @@ class MasterPubServerChannel:
                     for minion_path in kind_path_obj.glob("*"):
                         if minion_path.name not in payload["minions"][kind]:
                             log.info(
-                                "Removing stale minion key: %s/%s", kind, minion_path.name
+                                "Removing stale minion key: %s/%s",
+                                kind,
+                                minion_path.name,
                             )
                             minion_path.unlink()
 
@@ -1629,10 +1648,14 @@ class MasterPubServerChannel:
                                 subdir=True,
                             )
                         except SaltValidationError as e:
-                            log.error("Invalid minion_id in join-reply %s: %s", minion, e)
+                            log.error(
+                                "Invalid minion_id in join-reply %s: %s", minion, e
+                            )
                             continue
                         log.info("Installing minion key: %s/%s", kind, minion)
-                        pathlib.Path(minion_pub_path).write_text(payload["minions"][kind][minion], encoding="utf-8")
+                        pathlib.Path(minion_pub_path).write_text(
+                            payload["minions"][kind][minion], encoding="utf-8"
+                        )
 
                 # Signal completion
                 event = self._discover_event
@@ -1671,7 +1694,7 @@ class MasterPubServerChannel:
                     .decode()
                 )
 
-                secret = salted_secret[len(token):]
+                secret = salted_secret[len(token) :]
 
                 if secret != self.opts["cluster_secret"]:
                     log.warning("Cluster secret invalid.")
@@ -1684,7 +1707,7 @@ class MasterPubServerChannel:
                     .decode()
                 )
 
-                aes_key = salted_aes[len(token):]
+                aes_key = salted_aes[len(token) :]
 
                 # Use clean_join to validate and construct path safely
                 try:
@@ -1695,7 +1718,9 @@ class MasterPubServerChannel:
                         subdir=True,
                     )
                 except SaltValidationError as e:
-                    log.error("Invalid peer_id in join request %s: %s", payload["peer_id"], e)
+                    log.error(
+                        "Invalid peer_id in join request %s: %s", payload["peer_id"], e
+                    )
                     return
 
                 with salt.utils.files.fopen(peer_pub_path, "w") as fp:
@@ -1706,12 +1731,14 @@ class MasterPubServerChannel:
                 self.auth_errors[payload["peer_id"]] = collections.deque()
 
                 # Build and sign the join-notify payload
-                notify_payload = salt.payload.package({
-                    "peer_id": self.opts["id"],
-                    "join_peer_id": payload["peer_id"],
-                    "pub": payload["pub"],
-                    "aes": aes_key,
-                })
+                notify_payload = salt.payload.package(
+                    {
+                        "peer_id": self.opts["id"],
+                        "join_peer_id": payload["peer_id"],
+                        "pub": payload["pub"],
+                        "aes": aes_key,
+                    }
+                )
                 notify_sig = salt.crypt.PrivateKeyString(self.private_key()).sign(
                     notify_payload
                 )
@@ -1725,10 +1752,12 @@ class MasterPubServerChannel:
                     # Send signed and encrypted join notification to all cluster members
                     event_data = salt.utils.event.SaltEvent.pack(
                         salt.utils.event.tagify("join-notify", "peer", "cluster"),
-                        crypticle.dumps({
-                            "payload": notify_payload,
-                            "sig": notify_sig,
-                        }),
+                        crypticle.dumps(
+                            {
+                                "payload": notify_payload,
+                                "sig": notify_sig,
+                            }
+                        ),
                     )
 
                     # XXX gather tasks instead of looping
@@ -1781,18 +1810,22 @@ class MasterPubServerChannel:
                     minions_dict[kind] = {}
                     for key_path in kind_path.glob("*"):
                         minion = key_path.name
-                        log.debug("Adding minion key to join-reply: %s/%s", kind, minion)
+                        log.debug(
+                            "Adding minion key to join-reply: %s/%s", kind, minion
+                        )
                         minions_dict[kind][minion] = key_path.read_text()
 
                 # Build and sign the join-reply payload
-                tosign = salt.payload.package({
-                    "return_token": payload["token"],
-                    "peer_id": self.opts["id"],
-                    "cluster_key": cluster_key_encrypted,
-                    "aes": aes_encrypted,
-                    "peers": peers_dict,
-                    "minions": minions_dict,
-                })
+                tosign = salt.payload.package(
+                    {
+                        "return_token": payload["token"],
+                        "peer_id": self.opts["id"],
+                        "cluster_key": cluster_key_encrypted,
+                        "aes": aes_encrypted,
+                        "peers": peers_dict,
+                        "minions": minions_dict,
+                    }
+                )
                 sig = salt.crypt.PrivateKeyString(self.private_key()).sign(tosign)
 
                 event_data = salt.utils.event.SaltEvent.pack(
@@ -1801,7 +1834,7 @@ class MasterPubServerChannel:
                         "peer_id": self.opts["id"],
                         "sig": sig,
                         "payload": tosign,
-                    }
+                    },
                 )
                 await self.pusher(payload["peer_id"]).publish(event_data)
             elif tag.startswith("cluster/peer/discover-reply"):
@@ -1872,16 +1905,22 @@ class MasterPubServerChannel:
                 log.info("Cluster discover reply from %s", payload["peer_id"])
                 key = salt.crypt.PublicKeyString(payload["pub"])
                 self._discover_token = self.gen_token()
-                tosign = salt.payload.package({
-                    "return_token": payload["token"],
-                    "token": self._discover_token,
-                    "peer_id": self.opts["id"],
-                    "secret": key.encrypt(payload["token"].encode() + self.opts["cluster_secret"].encode()),
-                    "key": key.encrypt(
-                        payload["token"].encode() + salt.master.SMaster.secrets["aes"]["secret"].value
-                    ),
-                    "pub": self.public_key(),
-                })
+                tosign = salt.payload.package(
+                    {
+                        "return_token": payload["token"],
+                        "token": self._discover_token,
+                        "peer_id": self.opts["id"],
+                        "secret": key.encrypt(
+                            payload["token"].encode()
+                            + self.opts["cluster_secret"].encode()
+                        ),
+                        "key": key.encrypt(
+                            payload["token"].encode()
+                            + salt.master.SMaster.secrets["aes"]["secret"].value
+                        ),
+                        "pub": self.public_key(),
+                    }
+                )
                 sig = salt.crypt.PrivateKeyString(self.private_key()).sign(tosign)
 
                 # Use clean_join to validate and construct path safely
@@ -1893,7 +1932,11 @@ class MasterPubServerChannel:
                         subdir=True,
                     )
                 except SaltValidationError as e:
-                    log.error("Invalid peer_id in discover-reply %s: %s", payload["peer_id"], e)
+                    log.error(
+                        "Invalid peer_id in discover-reply %s: %s",
+                        payload["peer_id"],
+                        e,
+                    )
                     return
 
                 self.cluster_peers.append(payload["peer_id"])
@@ -1920,7 +1963,9 @@ class MasterPubServerChannel:
                         subdir=True,
                     )
                 except (SaltValidationError, KeyError) as e:
-                    log.error("Invalid peer_id in discover %s: %s", payload.get("peer_id"), e)
+                    log.error(
+                        "Invalid peer_id in discover %s: %s", payload.get("peer_id"), e
+                    )
                     return
 
                 peer_key = salt.crypt.PublicKeyString(payload["pub"])
@@ -1932,19 +1977,23 @@ class MasterPubServerChannel:
                 # Store this peer as a candidate.
                 # XXX Add timestamp so we can clean up old candidates
                 self._discover_candidates[payload["peer_id"]] = (payload["pub"], token)
-                tosign = salt.payload.package({
-                    "return_token": payload["token"],
-                    "token": token,
-                    "peer_id": self.opts["id"],
-                    "pub": self.public_key(),
-                    "cluster_pub": self.cluster_public_key(),
-                })
+                tosign = salt.payload.package(
+                    {
+                        "return_token": payload["token"],
+                        "token": token,
+                        "peer_id": self.opts["id"],
+                        "pub": self.public_key(),
+                        "cluster_pub": self.cluster_public_key(),
+                    }
+                )
                 key = salt.crypt.PrivateKeyString(self.cluster_key())
                 sig = key.sign(tosign)
-                _ = salt.payload.package({
+                _ = salt.payload.package(
+                    {
                         "sig": sig,
                         "payload": tosign,
-                })
+                    }
+                )
                 event_data = salt.utils.event.SaltEvent.pack(
                     salt.utils.event.tagify("discover-reply", "peer", "cluster"),
                     {"sig": sig, "payload": tosign},
