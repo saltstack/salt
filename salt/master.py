@@ -1021,6 +1021,126 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
                 io_loop.close()
 
 
+class RequestRouter:
+    """
+    Routes requests to appropriate worker pools based on command type.
+
+    This class handles the classification of incoming requests and routes
+    them to the appropriate worker pool based on user-defined configuration.
+    """
+
+    def __init__(self, opts):
+        """
+        Initialize the request router.
+
+        Args:
+            opts: Master configuration dictionary
+        """
+        self.opts = opts
+        self.cmd_to_pool = {}  # cmd -> pool_name mapping (built from config)
+        self.default_pool = opts.get("worker_pool_default")
+        self.pools = {}  # pool_name -> dealer_socket mapping (populated later)
+        self.stats = {}  # routing statistics per pool
+
+        self._build_routing_table()
+
+    def _build_routing_table(self):
+        """Build command-to-pool routing table from user configuration."""
+        from salt.config.worker_pools import DEFAULT_WORKER_POOLS
+
+        worker_pools = self.opts.get("worker_pools", DEFAULT_WORKER_POOLS)
+        catchall_pool = None
+
+        # Build reverse mapping: cmd -> pool_name
+        for pool_name, pool_config in worker_pools.items():
+            commands = pool_config.get("commands", [])
+            for cmd in commands:
+                if cmd == "*":
+                    # Found catchall pool
+                    if catchall_pool is not None:
+                        raise ValueError(
+                            f"Multiple pools have catchall ('*'): "
+                            f"'{catchall_pool}' and '{pool_name}'. "
+                            "Only one pool can use catchall."
+                        )
+                    catchall_pool = pool_name
+                    continue
+
+                if cmd in self.cmd_to_pool:
+                    # Validation: detect duplicate command mappings
+                    raise ValueError(
+                        f"Command '{cmd}' mapped to multiple pools: "
+                        f"'{self.cmd_to_pool[cmd]}' and '{pool_name}'"
+                    )
+                self.cmd_to_pool[cmd] = pool_name
+
+        # Set up default routing
+        if catchall_pool:
+            # If catchall exists, use it for unmapped commands
+            self.default_pool = catchall_pool
+        elif self.default_pool:
+            # Validate explicitly configured default pool exists
+            if self.default_pool not in worker_pools:
+                raise ValueError(
+                    f"Default pool '{self.default_pool}' not found in worker_pools. "
+                    f"Available pools: {list(worker_pools.keys())}"
+                )
+        else:
+            # No catchall and no default pool specified
+            raise ValueError(
+                "Configuration must have either: (1) a pool with catchall ('*') "
+                "in its commands, or (2) worker_pool_default specified and existing"
+            )
+
+        # Initialize stats for each pool
+        for pool_name in worker_pools.keys():
+            self.stats[pool_name] = 0
+
+    def route_request(self, payload):
+        """
+        Determine which pool should handle this request.
+
+        Args:
+            payload: Request payload dictionary
+
+        Returns:
+            str: Name of the pool that should handle this request
+        """
+        cmd = self._extract_command(payload)
+        pool = self._classify_request(cmd)
+        self.stats[pool] = self.stats.get(pool, 0) + 1
+        return pool
+
+    def _classify_request(self, cmd):
+        """
+        Classify request based on user-defined pool routing.
+
+        Args:
+            cmd: Command name string
+
+        Returns:
+            str: Pool name for this command
+        """
+        # O(1) lookup in pre-built routing table
+        return self.cmd_to_pool.get(cmd, self.default_pool)
+
+    def _extract_command(self, payload):
+        """
+        Extract command from request payload.
+
+        Args:
+            payload: Request payload dictionary
+
+        Returns:
+            str: Command name or empty string if not found
+        """
+        try:
+            load = payload.get("load", {})
+            return load.get("cmd", "")
+        except (AttributeError, KeyError):
+            return ""
+
+
 class ReqServer(salt.utils.process.SignalHandlingProcess):
     """
     Starts up the master request server, minions send results to this
@@ -1071,30 +1191,107 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
             name="ReqServer_ProcessManager", wait_for_kill=1
         )
 
-        req_channels = []
-        for transport, opts in iter_transport_opts(self.opts):
-            chan = salt.channel.server.ReqServerChannel.factory(opts)
-            chan.pre_fork(self.process_manager)
-            req_channels.append(chan)
+        if self.opts.get("worker_pools_enabled", True):
+            # Multi-pool mode with pooled routing
+            from salt.config.worker_pools import get_worker_pools_config
 
-        if self.opts["req_server_niceness"] and not salt.utils.platform.is_windows():
-            log.info(
-                "setting ReqServer_ProcessManager niceness to %d",
-                self.opts["req_server_niceness"],
-            )
-            os.nice(self.opts["req_server_niceness"])
+            worker_pools = get_worker_pools_config(self.opts)
 
-        # Reset signals to default ones before adding processes to the process
-        # manager. We don't want the processes being started to inherit those
-        # signal handlers
-        with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-            for ind in range(int(self.opts["worker_threads"])):
-                name = f"MWorker-{ind}"
-                self.process_manager.add_process(
-                    MWorker,
-                    args=(self.opts, self.master_key, self.key, req_channels),
-                    name=name,
+            # Create single request server transport with pooled routing
+            # Only ZeroMQ transport supports worker pools
+            req_channels = []
+            for transport, opts in iter_transport_opts(self.opts):
+                chan = salt.channel.server.ReqServerChannel.factory(opts)
+                # Pass worker_pools to pre_fork for ZeroMQ transport
+                if hasattr(chan.transport, "pre_fork"):
+                    chan.transport.pre_fork(self.process_manager, worker_pools)
+                else:
+                    # Non-ZeroMQ transports don't support worker pools
+                    log.warning(
+                        "Transport %s does not support worker pools. "
+                        "Falling back to single pool.",
+                        transport,
+                    )
+                    chan.pre_fork(self.process_manager)
+                req_channels.append(chan)
+
+            if (
+                self.opts["req_server_niceness"]
+                and not salt.utils.platform.is_windows()
+            ):
+                log.info(
+                    "setting ReqServer_ProcessManager niceness to %d",
+                    self.opts["req_server_niceness"],
                 )
+                os.nice(self.opts["req_server_niceness"])
+
+            # Reset signals to default ones before adding processes to the process
+            # manager. We don't want the processes being started to inherit those
+            # signal handlers
+            with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                # Create workers for each pool
+                # Workers connect to pool-specific IPC sockets (workers-{pool_name}.ipc)
+                for pool_name, pool_config in worker_pools.items():
+                    worker_count = pool_config.get("worker_count", 1)
+
+                    for pool_index in range(worker_count):
+                        # Create pool-specific options for this worker
+                        pool_opts = self.opts.copy()
+                        pool_opts["pool_name"] = pool_name
+
+                        # Create pool-specific channel for worker to connect to
+                        worker_channels = []
+                        for transport, opts in iter_transport_opts(pool_opts):
+                            worker_chan = salt.channel.server.ReqServerChannel.factory(
+                                opts
+                            )
+                            worker_channels.append(worker_chan)
+                            # Only use first transport
+                            break
+
+                        name = f"MWorker-{pool_name}-{pool_index}"
+                        self.process_manager.add_process(
+                            MWorker,
+                            args=(
+                                pool_opts,
+                                self.master_key,
+                                self.key,
+                                worker_channels,
+                            ),
+                            kwargs={"pool_name": pool_name, "pool_index": pool_index},
+                            name=name,
+                        )
+        else:
+            # Legacy single-pool mode
+            req_channels = []
+            for transport, opts in iter_transport_opts(self.opts):
+                chan = salt.channel.server.ReqServerChannel.factory(opts)
+                chan.pre_fork(self.process_manager)
+                req_channels.append(chan)
+
+            if (
+                self.opts["req_server_niceness"]
+                and not salt.utils.platform.is_windows()
+            ):
+                log.info(
+                    "setting ReqServer_ProcessManager niceness to %d",
+                    self.opts["req_server_niceness"],
+                )
+                os.nice(self.opts["req_server_niceness"])
+
+            # Reset signals to default ones before adding processes to the process
+            # manager. We don't want the processes being started to inherit those
+            # signal handlers
+            with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                # Legacy mode: create workers using worker_threads
+                for ind in range(int(self.opts["worker_threads"])):
+                    name = f"MWorker-{ind}"
+                    self.process_manager.add_process(
+                        MWorker,
+                        args=(self.opts, self.master_key, self.key, req_channels),
+                        name=name,
+                    )
+
         self.process_manager.run()
 
     def run(self):
@@ -1122,19 +1319,23 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
     salt master.
     """
 
-    def __init__(self, opts, mkey, key, req_channels, **kwargs):
+    def __init__(
+        self, opts, mkey, key, req_channels, pool_name=None, pool_index=None, **kwargs
+    ):
         """
         Create a salt master worker process
 
         :param dict opts: The salt options
         :param dict mkey: The user running the salt master and the RSA key
         :param dict key: The user running the salt master and the AES key
+        :param str pool_name: Name of the worker pool this worker belongs to
+        :param int pool_index: Index of this worker within its pool
 
         :rtype: MWorker
         :return: Master worker
         """
         super().__init__(**kwargs)
-        self.opts = opts
+        self.opts = opts.copy()  # Copy opts to avoid modifying the shared instance
         self.req_channels = req_channels
 
         self.mkey = mkey
@@ -1142,6 +1343,14 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         self.k_mtime = 0
         self.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
         self.stat_clock = time.time()
+
+        # Pool-specific attributes
+        self.pool_name = pool_name or "default"
+        self.pool_index = pool_index if pool_index is not None else 0
+
+        # Add pool_name to opts so transport can use it for URI construction
+        if pool_name:
+            self.opts["pool_name"] = pool_name
 
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
     # Otherwise, 'SMaster.secrets' won't be copied over to the spawned process
@@ -1236,6 +1445,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                 {
                     "time": end - self.stat_clock,
                     "worker": self.name,
+                    "pool": self.pool_name,
+                    "pool_index": self.pool_index,
                     "stats": self.stats,
                 },
                 tagify(self.name, "stats"),

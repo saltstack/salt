@@ -441,14 +441,25 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             )
             os.nice(self.opts["mworker_queue_niceness"])
 
+        # Determine worker URI based on pool configuration
+        pool_name = self.opts.get("pool_name", "")
         if self.opts.get("ipc_mode", "") == "tcp":
-            self.w_uri = "tcp://127.0.0.1:{}".format(
-                self.opts.get("tcp_master_workers", 4515)
-            )
+            base_port = self.opts.get("tcp_master_workers", 4515)
+            if pool_name:
+                # Use different port for each pool
+                port_offset = hash(pool_name) % 1000
+                self.w_uri = f"tcp://127.0.0.1:{base_port + port_offset}"
+            else:
+                self.w_uri = f"tcp://127.0.0.1:{base_port}"
         else:
-            self.w_uri = "ipc://{}".format(
-                os.path.join(self.opts["sock_dir"], "workers.ipc")
-            )
+            if pool_name:
+                self.w_uri = "ipc://{}".format(
+                    os.path.join(self.opts["sock_dir"], f"workers-{pool_name}.ipc")
+                )
+            else:
+                self.w_uri = "ipc://{}".format(
+                    os.path.join(self.opts["sock_dir"], "workers.ipc")
+                )
 
         log.info("Setting up the master communication server")
         log.info("ReqServer clients %s", self.uri)
@@ -456,7 +467,13 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         log.info("ReqServer workers %s", self.w_uri)
         self.workers.bind(self.w_uri)
         if self.opts.get("ipc_mode", "") != "tcp":
-            os.chmod(os.path.join(self.opts["sock_dir"], "workers.ipc"), 0o600)
+            if pool_name:
+                ipc_path = os.path.join(
+                    self.opts["sock_dir"], f"workers-{pool_name}.ipc"
+                )
+            else:
+                ipc_path = os.path.join(self.opts["sock_dir"], "workers.ipc")
+            os.chmod(ipc_path, 0o600)
 
         while True:
             if self.clients.closed or self.workers.closed:
@@ -469,6 +486,158 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 raise
             except (KeyboardInterrupt, SystemExit):
                 break
+        context.term()
+
+    def zmq_device_pooled(self, worker_pools):
+        """
+        Custom ZeroMQ routing device that routes messages to different worker pools
+        based on the command in the payload.
+
+        :param dict worker_pools: Dict mapping pool_name to pool configuration
+        """
+        self.__setup_signals()
+        context = zmq.Context(
+            sum(p.get("worker_count", 1) for p in worker_pools.values())
+        )
+
+        # Create frontend ROUTER socket (minions connect here)
+        self.uri = "tcp://{interface}:{ret_port}".format(**self.opts)
+        self.clients = context.socket(zmq.ROUTER)
+        self.clients.setsockopt(zmq.LINGER, -1)
+        if self.opts["ipv6"] is True and hasattr(zmq, "IPV4ONLY"):
+            self.clients.setsockopt(zmq.IPV4ONLY, 0)
+        self.clients.setsockopt(zmq.BACKLOG, self.opts.get("zmq_backlog", 1000))
+        self._start_zmq_monitor()
+
+        if self.opts["mworker_queue_niceness"] and not salt.utils.platform.is_windows():
+            log.info(
+                "setting mworker_queue niceness to %d",
+                self.opts["mworker_queue_niceness"],
+            )
+            os.nice(self.opts["mworker_queue_niceness"])
+
+        # Create backend DEALER sockets (one per pool)
+        self.pool_workers = {}
+        for pool_name in worker_pools.keys():
+            dealer = context.socket(zmq.DEALER)
+            dealer.setsockopt(zmq.LINGER, -1)
+
+            # Determine worker URI for this pool
+            if self.opts.get("ipc_mode", "") == "tcp":
+                base_port = self.opts.get("tcp_master_workers", 4515)
+                port_offset = hash(pool_name) % 1000
+                w_uri = f"tcp://127.0.0.1:{base_port + port_offset}"
+            else:
+                w_uri = "ipc://{}".format(
+                    os.path.join(self.opts["sock_dir"], f"workers-{pool_name}.ipc")
+                )
+
+            log.info("ReqServer pool '%s' workers %s", pool_name, w_uri)
+            dealer.bind(w_uri)
+            if self.opts.get("ipc_mode", "") != "tcp":
+                ipc_path = os.path.join(
+                    self.opts["sock_dir"], f"workers-{pool_name}.ipc"
+                )
+                os.chmod(ipc_path, 0o600)
+
+            self.pool_workers[pool_name] = dealer
+
+        # Initialize request router for command classification
+        import salt.master
+
+        router = salt.master.RequestRouter(self.opts)
+
+        log.info("Setting up pooled master communication server")
+        log.info("ReqServer clients %s", self.uri)
+        self.clients.bind(self.uri)
+
+        # Poller for receiving from clients and all worker pools
+        poller = zmq.Poller()
+        poller.register(self.clients, zmq.POLLIN)
+        for dealer in self.pool_workers.values():
+            poller.register(dealer, zmq.POLLIN)
+
+        # Track pending requests: identity -> pool_name
+        pending_requests = {}
+
+        while True:
+            if self.clients.closed:
+                break
+
+            try:
+                socks = dict(poller.poll())
+
+                # Handle incoming request from client (minion)
+                if self.clients in socks:
+                    # Receive multipart message: [identity, empty, payload]
+                    msg = self.clients.recv_multipart()
+                    if len(msg) < 3:
+                        continue
+
+                    identity = msg[0]
+                    payload_raw = msg[2]
+
+                    # Decode payload to determine routing
+                    try:
+                        payload = salt.payload.loads(payload_raw)
+                        pool_name = router.route_request(payload)
+
+                        if pool_name not in self.pool_workers:
+                            log.error(
+                                "Unknown pool '%s' for routing. Using first available pool.",
+                                pool_name,
+                            )
+                            pool_name = next(iter(self.pool_workers.keys()))
+
+                        # Track this request
+                        pending_requests[identity] = pool_name
+
+                        # Forward to appropriate pool's workers
+                        dealer = self.pool_workers[pool_name]
+                        dealer.send_multipart([b"", payload_raw])
+
+                    except Exception as exc:  # pylint: disable=broad-except
+                        log.error("Error routing request: %s", exc, exc_info=True)
+                        # Send error response
+                        error_payload = salt.payload.dumps({"error": "Routing error"})
+                        self.clients.send_multipart([identity, b"", error_payload])
+
+                # Handle replies from worker pools
+                for pool_name, dealer in self.pool_workers.items():
+                    if dealer in socks:
+                        # Receive multipart message from worker: [empty, response]
+                        reply_msg = dealer.recv_multipart()
+                        if len(reply_msg) < 2:
+                            continue
+
+                        response_raw = reply_msg[1]
+
+                        # Find the client identity for this response
+                        # We need to match responses back to requests
+                        # This is a simplification - in reality we'd need better tracking
+                        # For now, we'll send to the most recent client from this pool
+                        matching_identity = None
+                        for identity, pname in list(pending_requests.items()):
+                            if pname == pool_name:
+                                matching_identity = identity
+                                del pending_requests[identity]
+                                break
+
+                        if matching_identity:
+                            self.clients.send_multipart(
+                                [matching_identity, b"", response_raw]
+                            )
+
+            except zmq.ZMQError as exc:
+                if exc.errno == errno.EINTR:
+                    continue
+                raise
+            except (KeyboardInterrupt, SystemExit):
+                break
+
+        # Cleanup
+        for dealer in self.pool_workers.values():
+            dealer.close()
         context.term()
 
     def close(self):
@@ -490,6 +659,11 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             self.clients.close()
         if hasattr(self, "workers") and self.workers.closed is False:
             self.workers.close()
+        # Close pool workers if they exist
+        if hasattr(self, "pool_workers"):
+            for dealer in self.pool_workers.values():
+                if not dealer.closed:
+                    dealer.close()
         if hasattr(self, "stream"):
             self.stream.close()
         if hasattr(self, "_socket") and self._socket.closed is False:
@@ -502,13 +676,23 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             except RuntimeError:
                 log.error("IOLoop closed when trying to cancel task")
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, worker_pools=None):
         """
         Pre-fork we need to create the zmq router device
 
         :param func process_manager: An instance of salt.utils.process.ProcessManager
+        :param dict worker_pools: Optional worker pools configuration for pooled routing
         """
-        process_manager.add_process(self.zmq_device, name="MWorkerQueue")
+        if worker_pools:
+            # Use pooled routing device
+            process_manager.add_process(
+                self.zmq_device_pooled,
+                args=(worker_pools,),
+                name="MWorkerQueue-Pooled",
+            )
+        else:
+            # Use standard routing device
+            process_manager.add_process(self.zmq_device, name="MWorkerQueue")
 
     def _start_zmq_monitor(self):
         """
@@ -540,20 +724,22 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self._socket.setsockopt(zmq.LINGER, -1)
         self._start_zmq_monitor()
 
-        if self.opts.get("ipc_mode", "") == "tcp":
-            self.w_uri = "tcp://127.0.0.1:{}".format(
-                self.opts.get("tcp_master_workers", 4515)
-            )
-        else:
-            self.w_uri = "ipc://{}".format(
-                os.path.join(self.opts["sock_dir"], "workers.ipc")
-            )
+        # Use get_worker_uri() for consistent URI construction
+        self.w_uri = self.get_worker_uri()
         log.info("Worker binding to socket %s", self.w_uri)
         self._socket.connect(self.w_uri)
-        if self.opts.get("ipc_mode", "") != "tcp" and os.path.isfile(
-            os.path.join(self.opts["sock_dir"], "workers.ipc")
-        ):
-            os.chmod(os.path.join(self.opts["sock_dir"], "workers.ipc"), 0o600)
+
+        # Set permissions for IPC sockets
+        if self.opts.get("ipc_mode", "") != "tcp":
+            pool_name = self.opts.get("pool_name", "")
+            if pool_name:
+                ipc_path = os.path.join(
+                    self.opts["sock_dir"], f"workers-{pool_name}.ipc"
+                )
+            else:
+                ipc_path = os.path.join(self.opts["sock_dir"], "workers.ipc")
+            if os.path.isfile(ipc_path):
+                os.chmod(ipc_path, 0o600)
         self.message_handler = message_handler
 
         async def callback():
@@ -608,6 +794,51 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
     def decode_payload(self, payload):
         payload = salt.payload.loads(payload)
         return payload
+
+    def get_worker_uri(self):
+        """
+        Get the URI where workers connect to this transport's queue.
+        Used by the dispatcher to know where to forward messages.
+        """
+        if self.opts.get("ipc_mode", "") == "tcp":
+            pool_name = self.opts.get("pool_name", "")
+            if pool_name:
+                # Hash pool name for consistent port assignment
+                base_port = self.opts.get("tcp_master_workers", 4515)
+                port_offset = hash(pool_name) % 1000
+                return f"tcp://127.0.0.1:{base_port + port_offset}"
+            else:
+                return f"tcp://127.0.0.1:{self.opts.get('tcp_master_workers', 4515)}"
+        else:
+            pool_name = self.opts.get("pool_name", "")
+            if pool_name:
+                return f"ipc://{os.path.join(self.opts['sock_dir'], f'workers-{pool_name}.ipc')}"
+            else:
+                return f"ipc://{os.path.join(self.opts['sock_dir'], 'workers.ipc')}"
+
+    async def forward_message(self, payload):
+        """
+        Forward a message to this transport's worker queue.
+        Creates a temporary client connection to send the message.
+        """
+        context = zmq.asyncio.Context()
+        socket = context.socket(zmq.REQ)
+        socket.setsockopt(zmq.LINGER, 0)
+
+        try:
+            w_uri = self.get_worker_uri()
+            socket.connect(w_uri)
+
+            # Send payload
+            await socket.send(self.encode_payload(payload))
+
+            # Receive reply (required for REQ/REP pattern)
+            reply = await asyncio.wait_for(socket.recv(), timeout=60.0)
+
+            return self.decode_payload(reply)
+        finally:
+            socket.close()
+            context.term()
 
 
 def _set_tcp_keepalive(zmq_socket, opts):

@@ -602,6 +602,19 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             self._socket.close()
             self._socket = None
 
+    async def forward_message(self, payload):
+        """
+        Forward a message into this transport's worker queue.
+
+        Not implemented for WebSocket transport. Worker pool routing is only
+        supported for ZeroMQ transport.
+        """
+        log.warning(
+            "Worker pool message forwarding is not supported for WebSocket transport. "
+            "Use ZeroMQ transport for worker pool routing."
+        )
+        return None
+
 
 class RequestClient(salt.transport.base.RequestClient):
 
