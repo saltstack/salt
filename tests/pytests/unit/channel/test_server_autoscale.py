@@ -17,11 +17,10 @@ import pytest
 import salt.channel.server
 import salt.crypt
 import salt.master
-from tests.support.mock import MagicMock, patch
 import salt.payload
 import salt.utils.event
 from salt.exceptions import SaltValidationError
-
+from tests.support.mock import MagicMock, patch
 
 # ============================================================================
 # FIXTURES
@@ -97,7 +96,9 @@ def test_handle_pool_publish_ignores_non_cluster_events(mock_channel):
     tag = "salt/minion/test"
 
     # Call the real method (we'll need to patch it)
-    with patch.object(salt.channel.server.MasterPubServerChannel, 'handle_pool_publish'):
+    with patch.object(
+        salt.channel.server.MasterPubServerChannel, "handle_pool_publish"
+    ):
         result = mock_channel.handle_pool_publish(tag, data)
 
     # Should not process non-cluster tags
@@ -250,8 +251,9 @@ def test_signature_generation_uses_private_key(mock_private_key):
 
 def test_token_generation_creates_random_32char_string():
     """Test that tokens are random 32-character strings."""
+
     def gen_token():
-        return ''.join(random.choices(string.ascii_letters + string.digits, k=32))
+        return "".join(random.choices(string.ascii_letters + string.digits, k=32))
 
     token1 = gen_token()
     token2 = gen_token()
@@ -369,16 +371,20 @@ def test_cluster_secret_missing_rejected(cluster_opts):
 # ============================================================================
 
 
-@patch('salt.crypt.PublicKey')
-@patch('salt.utils.verify.clean_join')
-def test_discover_handler_validates_peer_id_path(mock_clean_join, mock_pubkey, mock_channel):
+@patch("salt.crypt.PublicKey")
+@patch("salt.utils.verify.clean_join")
+def test_discover_handler_validates_peer_id_path(
+    mock_clean_join, mock_pubkey, mock_channel
+):
     """Test that discover handler validates peer_id against path traversal."""
     # Setup
     peer_id = "new-peer"
-    mock_clean_join.return_value = f"{mock_channel.opts['cluster_pki_dir']}/peers/{peer_id}.pub"
+    mock_clean_join.return_value = (
+        f"{mock_channel.opts['cluster_pki_dir']}/peers/{peer_id}.pub"
+    )
 
     # Simulate discover handler path construction
-    cluster_pki_dir = mock_channel.opts['cluster_pki_dir']
+    cluster_pki_dir = mock_channel.opts["cluster_pki_dir"]
     peer_pub_path = salt.utils.verify.clean_join(
         cluster_pki_dir,
         "peers",
@@ -390,8 +396,8 @@ def test_discover_handler_validates_peer_id_path(mock_clean_join, mock_pubkey, m
     assert peer_id in peer_pub_path
 
 
-@patch('salt.crypt.PublicKey')
-@patch('salt.utils.verify.clean_join')
+@patch("salt.crypt.PublicKey")
+@patch("salt.utils.verify.clean_join")
 def test_discover_handler_rejects_malicious_peer_id(mock_clean_join, mock_pubkey):
     """Test that discover handler rejects path traversal in peer_id."""
     # Setup malicious peer_id
@@ -443,9 +449,11 @@ def test_discover_handler_adds_candidate_to_dict(mock_channel):
 # ============================================================================
 
 
-@patch('salt.crypt.PublicKey')
-@patch('pathlib.Path.exists')
-def test_join_reply_handler_verifies_peer_in_cluster_peers(mock_exists, mock_pubkey, mock_channel):
+@patch("salt.crypt.PublicKey")
+@patch("pathlib.Path.exists")
+def test_join_reply_handler_verifies_peer_in_cluster_peers(
+    mock_exists, mock_pubkey, mock_channel
+):
     """Test that join-reply handler verifies sender is in cluster_peers."""
     # Setup
     bootstrap_peer = "bootstrap-master"
@@ -470,9 +478,11 @@ def test_join_reply_handler_rejects_unexpected_peer(mock_channel):
     assert unexpected_peer not in mock_channel.cluster_peers
 
 
-@patch('salt.crypt.PublicKey')
-@patch('pathlib.Path.exists')
-def test_join_reply_handler_loads_bootstrap_peer_public_key(mock_exists, mock_pubkey_class, mock_channel, tmp_path):
+@patch("salt.crypt.PublicKey")
+@patch("pathlib.Path.exists")
+def test_join_reply_handler_loads_bootstrap_peer_public_key(
+    mock_exists, mock_pubkey_class, mock_channel, tmp_path
+):
     """Test that join-reply handler loads bootstrap peer's public key."""
     # Setup
     bootstrap_peer = "bootstrap-master"
@@ -491,7 +501,7 @@ def test_join_reply_handler_loads_bootstrap_peer_public_key(mock_exists, mock_pu
     mock_pubkey_class.assert_called()
 
 
-@patch('salt.crypt.PrivateKey')
+@patch("salt.crypt.PrivateKey")
 def test_join_reply_handler_decrypts_cluster_key(mock_privkey_class, tmp_path):
     """Test that join-reply handler decrypts cluster private key."""
     # Setup
@@ -526,14 +536,16 @@ def test_join_reply_handler_validates_token_from_secrets():
     assert len(extracted_secret) > 0
 
 
-@patch('salt.crypt.PrivateKeyString')
+@patch("salt.crypt.PrivateKeyString")
 def test_join_reply_handler_writes_cluster_keys(mock_privkey_string, tmp_path):
     """Test that join-reply handler writes cluster.pem and cluster.pub."""
     # Setup
     cluster_pki_dir = tmp_path / "cluster_pki"
     cluster_pki_dir.mkdir()
 
-    decrypted_cluster_pem = "-----BEGIN RSA PRIVATE KEY-----\nDATA\n-----END RSA PRIVATE KEY-----"
+    decrypted_cluster_pem = (
+        "-----BEGIN RSA PRIVATE KEY-----\nDATA\n-----END RSA PRIVATE KEY-----"
+    )
 
     # Simulate writing keys
     cluster_key_path = cluster_pki_dir / "cluster.pem"
@@ -558,7 +570,7 @@ def test_join_reply_handler_writes_cluster_keys(mock_privkey_string, tmp_path):
 # ============================================================================
 
 
-@patch('salt.utils.verify.clean_join')
+@patch("salt.utils.verify.clean_join")
 def test_minion_key_sync_validates_minion_id_path(mock_clean_join, tmp_path):
     """Test that minion key sync validates minion_id against path traversal."""
     # Setup
@@ -580,7 +592,7 @@ def test_minion_key_sync_validates_minion_id_path(mock_clean_join, tmp_path):
     assert minion_id in minion_key_path
 
 
-@patch('salt.utils.verify.clean_join')
+@patch("salt.utils.verify.clean_join")
 def test_minion_key_sync_rejects_malicious_minion_id(mock_clean_join):
     """Test that minion key sync rejects path traversal in minion_id."""
     # Setup
@@ -717,10 +729,12 @@ def test_discover_reply_fires_event_with_correct_data(mock_channel):
 
     # Prepare event data
     event_data = {
-        "payload": salt.payload.dumps({
-            "cluster_pub": "PUBLIC KEY DATA",
-            "bootstrap": True,
-        }),
+        "payload": salt.payload.dumps(
+            {
+                "cluster_pub": "PUBLIC KEY DATA",
+                "bootstrap": True,
+            }
+        ),
         "sig": b"signature",
         "peer_id": mock_channel.opts["id"],
     }
