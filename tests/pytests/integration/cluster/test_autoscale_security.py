@@ -177,8 +177,8 @@ def test_autoscale_rejects_path_traversal_in_peer_id(
     assert not (cluster_pki_dir / ".." / ".." / "malicious.pub").exists()
 
     # Check bootstrap master logs for rejection
-    assert (
-        factory.is_running() is False or "Invalid peer_id" in _get_log_contents(factory)
+    assert factory.is_running() is False or "Invalid peer_id" in _get_log_contents(
+        factory
     )
 
 
