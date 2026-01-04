@@ -1159,7 +1159,7 @@ class MasterPubServerChannel:
                 pathlib.Path(self.opts["cluster_pki_dir"]) / "peers" / f"{peer}.pub"
             )
             if peer_pub.exists():
-                pub = salt.crypt.PublicKey(peer_pub)
+                pub = salt.crypt.BaseKey.from_file(peer_pub)
                 aes = salt.master.SMaster.secrets["aes"]["secret"].value
                 digest = salt.utils.stringutils.to_bytes(
                     hashlib.sha256(aes).hexdigest()
@@ -1370,7 +1370,7 @@ class MasterPubServerChannel:
 
                 # Verify the signature
                 try:
-                    sender_pub = salt.crypt.PublicKey(sender_pub_path)
+                    sender_pub = salt.crypt.BaseKey.from_file(sender_pub_path)
                     if not sender_pub.verify(data["payload"], data["sig"]):
                         log.error(
                             "Join-notify signature verification failed from %s",
@@ -1436,7 +1436,7 @@ class MasterPubServerChannel:
 
                 # Verify the signature
                 try:
-                    bootstrap_pub = salt.crypt.PublicKey(bootstrap_pub_path)
+                    bootstrap_pub = salt.crypt.BaseKey.from_file(bootstrap_pub_path)
                     if not bootstrap_pub.verify(data["payload"], data["sig"]):
                         log.error(
                             "Join-reply signature verification failed from %s",
@@ -1678,7 +1678,7 @@ class MasterPubServerChannel:
                 self.send_aes_key_event()
 
                 # Load the peer's public key to encrypt the reply
-                peer_pub = salt.crypt.PublicKey(peer_pub_path)
+                peer_pub = salt.crypt.BaseKey.from_file(peer_pub_path)
 
                 # Prepare encrypted cluster key with token salt
                 cluster_key_salted = (
