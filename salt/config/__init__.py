@@ -2386,7 +2386,8 @@ def minion_config(
         apply_sdb(opts)
         _validate_opts(opts)
     salt.features.setup_features(opts)
-    return opts
+    # Convert to OptsDict for memory efficiency
+    return salt.utils.optsdict.OptsDict.from_dict(opts, name=f"minion_config:role={role}")
 
 
 def mminion_config(path, overrides, ignore_config_errors=True):
@@ -2487,7 +2488,7 @@ def proxy_config(
     salt.features.setup_features(opts)
 
     # Convert to OptsDict for memory efficiency
-    return salt.utils.optsdict.OptsDict.from_dict(opts, name="minion_config")
+    return salt.utils.optsdict.OptsDict.from_dict(opts, name="minion_config:role=master")
 
 
 def syndic_config(
