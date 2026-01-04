@@ -24,6 +24,14 @@ from tests.conftest import FIPS_TESTRUN
 log = logging.getLogger(__name__)
 
 
+def _get_log_contents(factory):
+    """Helper to read log file contents from a salt factory."""
+    log_file = pathlib.Path(factory.config["log_file"])
+    if log_file.exists():
+        return log_file.read_text()
+    return ""
+
+
 @pytest.fixture
 def autoscale_cluster_secret():
     """Shared cluster secret for autoscale testing."""
@@ -201,7 +209,7 @@ def test_autoscale_single_master_joins_successfully(
 
         # Bootstrap master should receive the event (via cluster)
         # Check logs for event propagation
-        bootstrap_logs = autoscale_bootstrap_master.get_log_contents()
+        bootstrap_logs = _get_log_contents(autoscale_bootstrap_master)
         assert "joining-master-1" in bootstrap_logs or "Peer" in bootstrap_logs
 
 
@@ -283,7 +291,7 @@ def test_autoscale_minion_keys_synchronized(
         assert "fake-pending-minion-public-key" in pre_minion_key.read_text()
 
         # Check logs for successful synchronization
-        logs = factory.get_log_contents()
+        logs = _get_log_contents(factory)
         assert "Installing minion key" in logs or "minion" in logs.lower()
 
 
