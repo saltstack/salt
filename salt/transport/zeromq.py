@@ -544,8 +544,12 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
 
         # Initialize request router for command classification
         import salt.master
+        import collections
 
         router = salt.master.RequestRouter(self.opts)
+
+        # Track pending requests per pool (FIFO queue of client identities)
+        pending_requests = {pool: collections.deque() for pool in worker_pools.keys()}
 
         log.info("Setting up pooled master communication server")
         log.info("ReqServer clients %s", self.uri)
@@ -586,10 +590,13 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                             )
                             pool_name = next(iter(self.pool_workers.keys()))
 
+                        # Track this request in the pool's FIFO queue
+                        pending_requests[pool_name].append(identity)
+
                         # Forward to appropriate pool's workers
-                        # Include client identity so we can route response back correctly
+                        # DEALER expects just the payload (no identity frame)
                         dealer = self.pool_workers[pool_name]
-                        dealer.send_multipart([identity, b"", payload_raw])
+                        dealer.send_multipart([b"", payload_raw])
 
                     except Exception as exc:  # pylint: disable=broad-except
                         log.error("Error routing request: %s", exc, exc_info=True)
@@ -600,17 +607,23 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 # Handle replies from worker pools
                 for pool_name, dealer in self.pool_workers.items():
                     if dealer in socks:
-                        # Receive multipart message from worker: [identity, empty, response]
-                        # The identity was preserved from the original client request
+                        # Receive multipart message from worker: [empty, response]
                         reply_msg = dealer.recv_multipart()
-                        if len(reply_msg) < 3:
+                        if len(reply_msg) < 2:
                             continue
 
-                        identity = reply_msg[0]
-                        response_raw = reply_msg[2]
+                        response_raw = reply_msg[1]
 
-                        # Send response back to the original client
-                        self.clients.send_multipart([identity, b"", response_raw])
+                        # Get the client identity from our FIFO queue
+                        if pending_requests[pool_name]:
+                            identity = pending_requests[pool_name].popleft()
+                            # Send response back to the original client
+                            self.clients.send_multipart([identity, b"", response_raw])
+                        else:
+                            log.error(
+                                "Received response from pool '%s' but no pending requests!",
+                                pool_name,
+                            )
 
             except zmq.ZMQError as exc:
                 if exc.errno == errno.EINTR:
