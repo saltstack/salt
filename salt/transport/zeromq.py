@@ -557,9 +557,6 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         for dealer in self.pool_workers.values():
             poller.register(dealer, zmq.POLLIN)
 
-        # Track pending requests: identity -> pool_name
-        pending_requests = {}
-
         while True:
             if self.clients.closed:
                 break
@@ -589,12 +586,10 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                             )
                             pool_name = next(iter(self.pool_workers.keys()))
 
-                        # Track this request
-                        pending_requests[identity] = pool_name
-
                         # Forward to appropriate pool's workers
+                        # Include client identity so we can route response back correctly
                         dealer = self.pool_workers[pool_name]
-                        dealer.send_multipart([b"", payload_raw])
+                        dealer.send_multipart([identity, b"", payload_raw])
 
                     except Exception as exc:  # pylint: disable=broad-except
                         log.error("Error routing request: %s", exc, exc_info=True)
@@ -605,28 +600,17 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 # Handle replies from worker pools
                 for pool_name, dealer in self.pool_workers.items():
                     if dealer in socks:
-                        # Receive multipart message from worker: [empty, response]
+                        # Receive multipart message from worker: [identity, empty, response]
+                        # The identity was preserved from the original client request
                         reply_msg = dealer.recv_multipart()
-                        if len(reply_msg) < 2:
+                        if len(reply_msg) < 3:
                             continue
 
-                        response_raw = reply_msg[1]
+                        identity = reply_msg[0]
+                        response_raw = reply_msg[2]
 
-                        # Find the client identity for this response
-                        # We need to match responses back to requests
-                        # This is a simplification - in reality we'd need better tracking
-                        # For now, we'll send to the most recent client from this pool
-                        matching_identity = None
-                        for identity, pname in list(pending_requests.items()):
-                            if pname == pool_name:
-                                matching_identity = identity
-                                del pending_requests[identity]
-                                break
-
-                        if matching_identity:
-                            self.clients.send_multipart(
-                                [matching_identity, b"", response_raw]
-                            )
+                        # Send response back to the original client
+                        self.clients.send_multipart([identity, b"", response_raw])
 
             except zmq.ZMQError as exc:
                 if exc.errno == errno.EINTR:
