@@ -28,7 +28,7 @@ def _get_log_contents(factory):
     """Helper to read log file contents from a salt factory."""
     log_file = pathlib.Path(factory.config["log_file"])
     if log_file.exists():
-        return log_file.read_text()
+        return log_file.read_text(encoding="utf-8")
     return ""
 
 
