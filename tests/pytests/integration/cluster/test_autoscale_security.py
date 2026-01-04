@@ -25,6 +25,14 @@ from tests.conftest import FIPS_TESTRUN
 log = logging.getLogger(__name__)
 
 
+def _get_log_contents(factory):
+    """Helper to read log file contents from a salt factory."""
+    log_file = pathlib.Path(factory.config["log_file"])
+    if log_file.exists():
+        return log_file.read_text()
+    return ""
+
+
 @pytest.fixture
 def autoscale_cluster_secret():
     """Shared cluster secret for autoscale testing."""
@@ -170,7 +178,7 @@ def test_autoscale_rejects_path_traversal_in_peer_id(
 
     # Check bootstrap master logs for rejection
     assert (
-        factory.is_running() is False or "Invalid peer_id" in factory.get_log_contents()
+        factory.is_running() is False or "Invalid peer_id" in _get_log_contents(factory)
     )
 
 
@@ -254,7 +262,7 @@ def test_autoscale_rejects_unsigned_discover_message(
         time.sleep(2)
 
     # Verify in logs that unsigned message was rejected
-    log_contents = autoscale_bootstrap_master.get_log_contents()
+    log_contents = _get_log_contents(autoscale_bootstrap_master)
     # The handler should detect payload.loads failure or missing sig
 
 
@@ -296,7 +304,7 @@ def test_autoscale_rejects_invalid_signature_on_discover(
         time.sleep(2)
 
     # Check logs for signature verification failure
-    log_contents = autoscale_bootstrap_master.get_log_contents()
+    log_contents = _get_log_contents(autoscale_bootstrap_master)
     assert "Invalid signature" in log_contents or "signature" in log_contents.lower()
 
 
@@ -333,7 +341,7 @@ def test_autoscale_rejects_wrong_cluster_secret(
         time.sleep(10)  # Give time for discovery and join attempt
 
     # Check bootstrap master logs for secret validation failure
-    bootstrap_logs = autoscale_bootstrap_master.get_log_contents()
+    bootstrap_logs = _get_log_contents(autoscale_bootstrap_master)
     assert (
         "Cluster secret invalid" in bootstrap_logs or "secret" in bootstrap_logs.lower()
     )
@@ -377,7 +385,7 @@ def test_autoscale_rejects_missing_cluster_secret(
             time.sleep(5)
 
         # If it did start, check that join was rejected
-        logs = factory.get_log_contents()
+        logs = _get_log_contents(factory)
         assert "cluster_secret" in logs.lower()
     except Exception:  # pylint: disable=broad-except
         # Expected - configuration validation should catch this
