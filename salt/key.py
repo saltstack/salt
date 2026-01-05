@@ -511,16 +511,15 @@ class Key:
         ret = {}
         if "," in match and isinstance(match, str):
             match = match.split(",")
+        if not isinstance(match, list):
+            match = [match]
         for status, keys in matches.items():
+            if match == ["*"] and keys:
+                ret[status] = keys
+                continue
             for key in salt.utils.data.sorted_ignorecase(keys):
-                if isinstance(match, list):
-                    for match_item in match:
-                        if fnmatch.fnmatch(key, match_item):
-                            if status not in ret:
-                                ret[status] = []
-                            ret[status].append(key)
-                else:
-                    if fnmatch.fnmatch(key, match):
+                for match_item in match:
+                    if fnmatch.fnmatch(key, match_item):
                         if status not in ret:
                             ret[status] = []
                         ret[status].append(key)
