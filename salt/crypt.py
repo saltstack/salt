@@ -4,6 +4,7 @@ masters, encrypting and decrypting payloads, preparing messages, and
 authenticating peers
 """
 
+import asyncio
 import base64
 import binascii
 import copy
@@ -21,12 +22,14 @@ import traceback
 import uuid
 import weakref
 
-import tornado.gen
+import tornado.concurrent
+import tornado.ioloop
 
 import salt.cache
 import salt.channel.client
 import salt.defaults.exitcodes
 import salt.payload
+import salt.utils.asynchronous
 import salt.utils.crypt
 import salt.utils.decorators
 import salt.utils.event
@@ -235,7 +238,12 @@ class PrivateKey(BaseKey):
             password = passphrase.encode()
         else:
             password = None
-        self.key = serialization.load_pem_private_key(key_bytes, password=password)
+        try:
+            self.key = serialization.load_pem_private_key(key_bytes, password=password)
+        except ValueError:
+            raise InvalidKeyError("Encountered bad RSA private key")
+        except cryptography.exceptions.UnsupportedAlgorithm:
+            raise InvalidKeyError("Unsupported key algorithm")
 
     def encrypt(self, data):
         pem = self.key.private_bytes(
@@ -681,6 +689,19 @@ class MasterKeys(dict):
             return key
 
 
+def _auth_singleton_key(opts):
+    keypath = os.path.join(opts["pki_dir"], "minion.pem")
+    keytime = "0"
+    if os.path.exists(keypath):
+        keytime = str(os.path.getmtime(keypath))
+    return (
+        opts["pki_dir"],  # where the keys are stored
+        opts["id"],  # minion ID
+        opts["master_uri"],  # master ID
+        keytime,
+    )
+
+
 class AsyncAuth:
     """
     Set up an Async object to maintain authentication with the salt master
@@ -719,11 +740,7 @@ class AsyncAuth:
 
     @classmethod
     def __key(cls, opts, io_loop=None):
-        return (
-            opts["pki_dir"],  # where the keys are stored
-            opts["id"],  # minion ID
-            opts["master_uri"],  # master ID
-        )
+        return _auth_singleton_key(opts)
 
     # has to remain empty for singletons, since __init__ will *always* be called
     def __init__(self, opts, io_loop=None):
@@ -740,16 +757,22 @@ class AsyncAuth:
         """
         self.opts = opts
         self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
-        self.cache = salt.cache.Cache(opts, driver=self.opts["keys.cache_driver"])
+        self.cache = salt.cache.Cache(opts, driver=opts["keys.cache_driver"])
         self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
         self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
+        self._private_key = None
         if self.opts["__role"] == "syndic":
             self.mpub = "syndic_master.pub"
         else:
             self.mpub = "minion_master.pub"
         if not os.path.isfile(self.pub_path):
             self.get_keys()
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        if io_loop is None:
+            self.io_loop = salt.utils.asynchronous.aioloop(
+                tornado.ioloop.IOLoop.current()
+            )
+        else:
+            self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
         key = self.__key(self.opts)
         # TODO: if we already have creds for this key, lets just re-use
         if key in AsyncAuth.creds_map:
@@ -816,20 +839,19 @@ class AsyncAuth:
         else:
             future = tornado.concurrent.Future()
             self._authenticate_future = future
-            self.io_loop.add_callback(self._authenticate)
+            self.io_loop.create_task(self._authenticate())
 
         if callback is not None:
 
             def handle_future(future):
                 response = future.result()
-                self.io_loop.add_callback(callback, response)
+                self.io_loop.call_soon(callback, response)
 
             future.add_done_callback(handle_future)
 
         return future
 
-    @tornado.gen.coroutine
-    def _authenticate(self):
+    async def _authenticate(self):
         """
         Authenticate with the master, this method breaks the functional
         paradigm, it will update the master information from a fresh sign
@@ -851,7 +873,7 @@ class AsyncAuth:
             error = None
             while True:
                 try:
-                    creds = yield self.sign_in(channel=channel)
+                    creds = await self.sign_in(channel=channel)
                 except SaltClientError as exc:
                     error = exc
                     break
@@ -879,7 +901,7 @@ class AsyncAuth:
                         log.info(
                             "Waiting %s seconds before retry.", acceptance_wait_time
                         )
-                        yield tornado.gen.sleep(acceptance_wait_time)
+                        await asyncio.sleep(acceptance_wait_time)
                     if acceptance_wait_time < acceptance_wait_time_max:
                         acceptance_wait_time += acceptance_wait_time
                         log.debug(
@@ -913,17 +935,18 @@ class AsyncAuth:
                 self._authenticate_future.set_exception(error)
             else:
                 key = self.__key(self.opts)
+                new_aes, changed_aes, changed_session = False, False, False
                 if key not in AsyncAuth.creds_map:
+                    new_aes = True
                     log.debug("%s Got new master aes key.", self)
-                    AsyncAuth.creds_map[key] = creds
-                    self._creds = creds
-                    self._crypticle = Crypticle(self.opts, creds["aes"])
-                    self._session_crypticle = Crypticle(self.opts, creds["session"])
-                elif (
-                    self._creds["aes"] != creds["aes"]
-                    or self._creds["session"] != creds["session"]
-                ):
-                    log.debug("%s The master's aes key has changed.", self)
+                else:
+                    if self._creds["aes"] != creds["aes"]:
+                        changed_aes = True
+                        log.debug("%s The master's aes key has changed.", self)
+                    if self._creds["session"] != creds["session"]:
+                        changed_session = True
+                        log.debug("%s The master's session key has changed.", self)
+                if new_aes or changed_aes or changed_session:
                     AsyncAuth.creds_map[key] = creds
                     self._creds = creds
                     self._crypticle = Crypticle(self.opts, creds["aes"])
@@ -942,8 +965,7 @@ class AsyncAuth:
                             salt.utils.event.tagify(prefix="auth", suffix="creds"),
                         )
 
-    @tornado.gen.coroutine
-    def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
+    async def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
         """
         Send a sign in request to the master, sets the key information and
         returns a dict containing the master publish interface to bind to
@@ -959,7 +981,6 @@ class AsyncAuth:
         with the publication port and the shared AES key.
 
         """
-
         auth_timeout = self.opts.get("auth_timeout", None)
         if auth_timeout is not None:
             timeout = auth_timeout
@@ -979,13 +1000,13 @@ class AsyncAuth:
 
         sign_in_payload = self.minion_sign_in_payload()
         try:
-            payload = yield channel.send(sign_in_payload, tries=tries, timeout=timeout)
+            payload = await channel.send(sign_in_payload, tries=tries, timeout=timeout)
         except SaltReqTimeoutError as e:
             if safe:
                 log.warning("SaltReqTimeoutError: %s", e)
-                raise tornado.gen.Return("retry")
+                return "retry"
             if self.opts.get("detect_mode") is True:
-                raise tornado.gen.Return("retry")
+                return "retry"
             else:
                 raise SaltClientError(
                     "Attempt to authenticate with the salt master failed with timeout"
@@ -994,8 +1015,7 @@ class AsyncAuth:
         finally:
             if close_channel:
                 channel.close()
-        ret = self.handle_signin_response(sign_in_payload, payload)
-        raise tornado.gen.Return(ret)
+        return self.handle_signin_response(sign_in_payload, payload)
 
     def handle_signin_response(self, sign_in_payload, payload):
         auth = {}
@@ -1118,24 +1138,30 @@ class AsyncAuth:
         Return keypair object for the minion.
 
         :rtype: Crypto.PublicKey.RSA._RSAobj
-        :return: The RSA keypair
+        :return: PrivateKey of the RSA Private Key Pair
         """
-        # Make sure all key parent directories are accessible
-        user = self.opts.get("user", "root")
-        salt.utils.verify.check_path_traversal(self.opts["pki_dir"], user)
+        if self._private_key is None:
+            # Make sure all key parent directories are accessible
+            user = self.opts.get("user", "root")
+            salt.utils.verify.check_path_traversal(self.opts["pki_dir"], user)
 
-        if not os.path.exists(self.rsa_path):
-            log.info("Generating keys: %s", self.opts["pki_dir"])
-            (priv, pub) = gen_keys(self.opts["keysize"])
+            if not os.path.exists(self.rsa_path):
+                log.info("Generating keys: %s", self.opts["pki_dir"])
+                (priv, pub) = gen_keys(self.opts["keysize"])
 
-            # the cache bank is called master keys but the codepath is shared
-            # on master/minion for interacting with pki
-            self.cache.store("master_keys", "minion.pem", priv)
-            self.cache.store("master_keys", "minion.pub", pub)
+                # the cache bank is called master keys but the codepath is shared
+                # on master/minion for interacting with pki
+                self.cache.store("master_keys", "minion.pem", priv)
+                self.cache.store("master_keys", "minion.pub", pub)
+            else:
+                priv = self.cache.fetch("master_keys", "minion.pem")
 
-        key = PrivateKey.from_file(self.rsa_path, None)
-        log.debug("Loaded minion key: %s", self.rsa_path)
-        return key
+            self._private_key = PrivateKey.from_str(priv, None)
+        return self._private_key
+
+    @salt.utils.decorators.memoize
+    def _gen_token(self, key, token):
+        return key.encrypt(token)
 
     def gen_token(self, clear_tok):
         """
@@ -1146,7 +1172,7 @@ class AsyncAuth:
         :return: Encrypted token
         :rtype: str
         """
-        return self.get_keys().encrypt(clear_tok)
+        return self._gen_token(self.get_keys(), clear_tok)
 
     def minion_sign_in_payload(self):
         """
@@ -1493,11 +1519,7 @@ class SAuth(AsyncAuth):
 
     @classmethod
     def __key(cls, opts, io_loop=None):
-        return (
-            opts["pki_dir"],  # where the keys are stored
-            opts["id"],  # minion ID
-            opts["master_uri"],  # master ID
-        )
+        return _auth_singleton_key(opts)
 
     # has to remain empty for singletons, since __init__ will *always* be called
     def __init__(self, opts, io_loop=None):
@@ -1513,9 +1535,11 @@ class SAuth(AsyncAuth):
         :rtype: Auth
         """
         self.opts = opts
+        self.cache = salt.cache.Cache(opts, driver=opts["keys.cache_driver"])
         self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
         self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
         self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
+        self._private_key = None
         self._creds = None
         if "syndic_master" in self.opts:
             self.mpub = "syndic_master.pub"
@@ -1586,21 +1610,25 @@ class SAuth(AsyncAuth):
                         )
                     continue
                 break
+            new_aes, changed_aes, changed_session = False, False, False
             if self._creds is None:
+                new_aes = True
                 log.error("%s Got new master aes key.", self)
-                self._creds = creds
-                self._crypticle = Crypticle(self.opts, creds["aes"])
-                self._session_crypticle = Crypticle(self.opts, creds["session"])
-            elif (
-                self._creds["aes"] != creds["aes"]
-                or self._creds["session"] != creds["session"]
-            ):
-                log.error("%s The master's aes key has changed.", self)
+            else:
+                if self._creds["aes"] != creds["aes"]:
+                    changed_aes = True
+                    log.debug("%s The master's aes key has changed.", self)
+                if self._creds["session"] != creds["session"]:
+                    changed_session = True
+                    log.debug("%s The master's session key has changed.", self)
+            if new_aes or changed_aes or changed_session:
                 self._creds = creds
                 self._crypticle = Crypticle(self.opts, creds["aes"])
                 self._session_crypticle = Crypticle(self.opts, creds["session"])
 
-    def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
+    def sign_in(
+        self, timeout=60, safe=True, tries=1, channel=None
+    ):  # pylint: disable=invalid-overridden-method
         """
         Send a sign in request to the master, sets the key information and
         returns a dict containing the master publish interface to bind to

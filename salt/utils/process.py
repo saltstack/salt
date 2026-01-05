@@ -2,6 +2,7 @@
 Functions for daemonizing and otherwise modifying running processes
 """
 
+import asyncio
 import contextlib
 import copy
 import errno
@@ -20,8 +21,6 @@ import subprocess
 import sys
 import threading
 import time
-
-from tornado import gen
 
 import salt._logging
 import salt.defaults.exitcodes
@@ -608,22 +607,28 @@ class ProcessManager:
                 # Otherwise, it's a dead process, remove it from the process map
                 del self._process_map[pid]
 
-    @gen.coroutine
-    def run(self, asynchronous=False):
+    async def run(self, asynchronous=False):
         """
         Load and start all available api modules
         """
         log.debug("Process Manager starting!")
-        if multiprocessing.current_process().name != "MainProcess":
+        # Always append for minion process managers, even in MainProcess
+        # (e.g., when running with --disable-keepalive)
+        if (
+            multiprocessing.current_process().name != "MainProcess"
+            or "Minion" in self.name
+        ):
             appendproctitle(self.name)
 
         # make sure to kill the subprocesses if the parent is killed
-        if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
-            # There are no SIGTERM handlers installed, install ours
-            signal.signal(signal.SIGTERM, self._handle_signals)
-        if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
-            # There are no SIGINT handlers installed, install ours
-            signal.signal(signal.SIGINT, self._handle_signals)
+        # Only set up signal handlers if we're in the main thread
+        if threading.current_thread() == threading.main_thread():
+            if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
+                # There are no SIGTERM handlers installed, install ours
+                signal.signal(signal.SIGTERM, self._handle_signals)
+            if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
+                # There are no SIGINT handlers installed, install ours
+                signal.signal(signal.SIGINT, self._handle_signals)
 
         while True:
             log.trace("Process manager iteration")
@@ -633,10 +638,18 @@ class ProcessManager:
                 # The event-based subprocesses management code was removed from here
                 # because os.wait() conflicts with the subprocesses management logic
                 # implemented in `multiprocessing` package. See #35480 for details.
+
+                # In synchronous mode with no processes, exit after checking children
+                # but before sleeping (to avoid unnecessary 10s delay in tests)
+                if not asynchronous and not self._process_map:
+                    break
+
                 if asynchronous:
-                    yield gen.sleep(10)
+                    await asyncio.sleep(10)
                 else:
                     time.sleep(10)
+
+                # Check again after sleep - in async mode, exit if no processes
                 if not self._process_map:
                     break
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait

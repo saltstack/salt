@@ -1649,6 +1649,50 @@ def test_openeuler_os_grains():
     _run_os_grains_tests(_os_release_data, {}, expectation)
 
 
+@pytest.mark.skip_unless_on_linux
+def test_nixos_os_grains():
+    """
+    Test that OS grains are parsed correctly for NixOS
+    """
+    # /etc/os-release data taken from NixOS 25.05
+    _os_release_data = {
+        "ANSI_COLOR": "0;38;2;126;186;228",
+        "BUG_REPORT_URL": "https://github.com/NixOS/nixpkgs/issues",
+        "BUILD_ID": "25.05.807313.59e69648d345",
+        "CPE_NAME": "cpe:/o:nixos:nixos:25.05",
+        "DEFAULT_HOSTNAME": "nixos",
+        "DOCUMENTATION_URL": "https://nixos.org/learn.html",
+        "HOME_URL": "https://nixos.org/",
+        "ID": "nixos",
+        "ID_LIKE": "",
+        "IMAGE_ID": "",
+        "IMAGE_VERSION": "",
+        "LOGO": "nix-snowflake",
+        "NAME": "NixOS",
+        "PRETTY_NAME": "NixOS 25.05 (Warbler)",
+        "SUPPORT_END": "2025-12-31",
+        "SUPPORT_URL": "https://nixos.org/community.html",
+        "VARIANT": "",
+        "VARIANT_ID": "",
+        "VENDOR_NAME": "NixOS",
+        "VENDOR_URL": "https://nixos.org/",
+        "VERSION": "25.05 (Warbler)",
+        "VERSION_CODENAME": "warbler",
+        "VERSION_ID": "25.05",
+    }
+    expectation = {
+        "os": "NixOS",
+        "os_family": "NixOS",
+        "oscodename": "warbler",
+        "osfullname": "NixOS",
+        "osrelease": "25.05",
+        "osrelease_info": (25, 5),
+        "osmajorrelease": 25,
+        "osfinger": "NixOS-25.05",
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
 @pytest.mark.skip_unless_on_windows
 def test_windows_platform_data():
     """
@@ -3412,7 +3456,7 @@ def test_bsd_osfullname():
             os_grains = core.os_data()
 
     assert "osfullname" in os_grains
-    assert os_grains.get("osfullname") == "FreeBSD"
+    assert os_grains.get("osfullname") == "FreeBSD 10.3"
 
 
 def test_saltversioninfo():

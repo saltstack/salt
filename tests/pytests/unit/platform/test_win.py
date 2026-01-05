@@ -14,27 +14,33 @@ pytestmark = [
 @pytest.mark.parametrize(
     "command, expected",
     [
-        ("whoami", "whoami"),
-        ("hostname", "hostname"),
-        ("cmd /c hostname", "cmd /c hostname"),
-        ("echo foo", 'cmd /c "echo foo"'),
-        ('cmd /c "echo foo"', 'cmd /c "echo foo"'),
-        ("whoami && echo foo", 'cmd /c "whoami && echo foo"'),
-        ("whoami || echo foo", 'cmd /c "whoami || echo foo"'),
-        ("icacls 'C:\\Program Files'", 'icacls "C:\\Program Files"'),
+        ("whoami", "cmd.exe /s /c whoami"),
+        ("cmd /c hostname", "cmd.exe /s /c cmd /c hostname"),
+        ("echo foo", "cmd.exe /s /c echo foo"),
+        ('cmd /c "echo foo"', 'cmd.exe /s /c cmd /c "echo foo"'),
+        ("icacls 'C:\\Program Files'", "cmd.exe /s /c icacls 'C:\\Program Files'"),
         (
             "icacls 'C:\\Program Files' && echo 1",
-            'cmd /c "icacls "C:\\Program Files" && echo 1"',
+            "cmd.exe /s /c icacls 'C:\\Program Files' && echo 1",
         ),
         (
             ["secedit", "/export", "/cfg", "C:\\A Path\\with\\a\\space"],
-            'secedit /export /cfg "C:\\A Path\\with\\a\\space"',
+            'cmd.exe /s /c secedit /export /cfg "C:\\A Path\\with\\a\\space"',
+        ),
+        (
+            ["C:\\a space\\a space.bat", "foo foo", "bar bar"],
+            'cmd.exe /s /c "C:\\a space\\a space.bat" "foo foo" "bar bar"',
+        ),
+        (
+            '''echo "&<>[]|{}^=;!'+,`~ "''',
+            '''cmd.exe /s /c echo "&<>[]|{}^=;!'+,`~ "''',
         ),
     ],
 )
 def test_prepend_cmd(command, expected):
     """
-    Test that the command is prepended with "cmd /c" where appropriate
+    Test that the command is prepended with "cmd /c" and quoted
     """
-    result = win.prepend_cmd(command)
+    win_shell = "cmd.exe"
+    result = win.prepend_cmd(win_shell, command)
     assert result == expected

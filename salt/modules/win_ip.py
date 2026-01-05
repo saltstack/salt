@@ -113,6 +113,10 @@ def get_interface(iface):
     """
     Return the configuration of a network interface
 
+    Args:
+
+        iface (str): The name of the interface to manage
+
     CLI Example:
 
     .. code-block:: bash
@@ -125,6 +129,10 @@ def get_interface(iface):
 def is_enabled(iface):
     """
     Returns ``True`` if interface is enabled, otherwise ``False``
+
+    Args:
+
+        iface (str): The name of the interface to manage
 
     CLI Example:
 
@@ -147,6 +155,10 @@ def is_disabled(iface):
     """
     Returns ``True`` if interface is disabled, otherwise ``False``
 
+    Args:
+
+        iface (str): The name of the interface to manage
+
     CLI Example:
 
     .. code-block:: bash
@@ -159,6 +171,10 @@ def is_disabled(iface):
 def enable(iface):
     """
     Enable an interface
+
+    Args:
+
+        iface (str): The name of the interface to manage
 
     CLI Example:
 
@@ -184,6 +200,10 @@ def disable(iface):
     """
     Disable an interface
 
+    Args:
+
+        iface (str): The name of the interface to manage
+
     CLI Example:
 
     .. code-block:: bash
@@ -208,6 +228,10 @@ def get_subnet_length(mask):
     """
     Convenience function to convert the netmask to the CIDR subnet length
 
+    Args:
+
+        mask (str): A netmask
+
     CLI Example:
 
     .. code-block:: bash
@@ -223,21 +247,25 @@ def set_static_ip(iface, addr, gateway=None, append=False):
     """
     Set static IP configuration on a Windows NIC
 
-    iface
-        The name of the interface to manage
+    Args:
 
-    addr
-        IP address with subnet length (ex. ``10.1.2.3/24``). The
-        :mod:`ip.get_subnet_length <salt.modules.win_ip.get_subnet_length>`
-        function can be used to calculate the subnet length from a netmask.
+        iface (str):
+            The name of the interface to manage
 
-    gateway : None
-        If specified, the default gateway will be set to this value.
+        addr (str):
+            IP address with subnet length (ex. ``10.1.2.3/24``). The
+            :mod:`ip.get_subnet_length <salt.modules.win_ip.get_subnet_length>`
+            function can be used to calculate the subnet length from a netmask.
 
-    append : False
-        If ``True``, this IP address will be added to the interface. Default is
-        ``False``, which overrides any existing configuration for the interface
-        and sets ``addr`` as the only address on the interface.
+        gateway (:obj:`str`, optional):
+            If specified, the default gateway will be set to this value.
+            Default is ``None``.
+
+        append (:obj:`bool`, optional):
+            If ``True``, this IP address will be added to the interface. Default is
+            ``False``, which overrides any existing configuration for the interface
+            and sets ``addr`` as the only address on the interface.
+            Default is ``False``.
 
     CLI Example:
 
@@ -303,6 +331,11 @@ def set_dhcp_ip(iface):
     """
     Set Windows NIC to get IP from DHCP
 
+    Args:
+
+        iface (str):
+            The name of the interface to manage
+
     CLI Example:
 
     .. code-block:: bash
@@ -320,9 +353,9 @@ def set_static_dns(iface, *addrs):
 
     Args:
 
-        iface (str): The name of the interface to set
+        iface (str): The name of the interface to manage
 
-        addrs (*):
+        addrs (list):
             One or more DNS servers to be added. To clear the list of DNS
             servers pass an empty list (``[]``). If undefined or ``None`` no
             changes will be made.
@@ -390,6 +423,10 @@ def set_dhcp_dns(iface):
     """
     Set DNS source to DHCP on Windows
 
+    Args:
+
+        iface (str): The name of the interface to manage
+
     CLI Example:
 
     .. code-block:: bash
@@ -404,6 +441,10 @@ def set_dhcp_dns(iface):
 def set_dhcp_all(iface):
     """
     Set both IP Address and DNS to DHCP
+
+    Args:
+
+        iface (str): The name of the interface to manage
 
     CLI Example:
 

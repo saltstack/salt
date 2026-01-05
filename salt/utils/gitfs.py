@@ -21,6 +21,7 @@ import stat
 import subprocess
 import time
 import weakref
+from collections import OrderedDict
 from datetime import datetime
 
 import tornado.ioloop
@@ -44,7 +45,6 @@ from salt.config import DEFAULT_HASH_TYPE
 from salt.config import DEFAULT_MASTER_OPTS as _DEFAULT_MASTER_OPTS
 from salt.exceptions import FileserverConfigError, GitLockError, get_error_message
 from salt.utils.event import tagify
-from salt.utils.odict import OrderedDict
 from salt.utils.platform import get_machine_identifier as _get_machine_identifier
 from salt.utils.versions import Version
 
@@ -120,6 +120,15 @@ try:
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
+        if "HOME" not in os.environ:
+            # Make sure $HOME env variable is set before importing pygit2 to prevent
+            # _pygit2.GitError: error loading known_hosts in some libgit2 versions.
+            # The internal "git_sysdir__dirs" from libgit2, is initializated
+            # when importing pygit2. The $HOME env must be present to allow libgit2
+            # guessing function to successfully set the homedir in the initializated
+            # libgit2 stack.
+            # https://github.com/saltstack/salt/issues/64121
+            os.environ["HOME"] = os.path.expanduser("~")
         import pygit2
     PYGIT2_VERSION = Version(pygit2.__version__)
     LIBGIT2_VERSION = Version(pygit2.LIBGIT2_VERSION)
@@ -2013,8 +2022,9 @@ class Pygit2(GitProvider):
         """
         # https://github.com/libgit2/pygit2/issues/339
         # https://github.com/libgit2/libgit2/issues/2122
-        home = os.path.expanduser("~")
-        pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
+        pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = (
+            os.path.expanduser("~")
+        )
         new = False
         if not os.listdir(self._cachedir):
             # Repo cachedir is empty, initialize a new repo there

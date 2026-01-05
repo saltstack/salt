@@ -3,11 +3,11 @@ Test the iosconfig Execution module.
 """
 
 import textwrap
+from collections import OrderedDict
 
 import pytest
 
 import salt.modules.iosconfig as iosconfig
-from salt.utils.odict import OrderedDict
 
 
 @pytest.fixture

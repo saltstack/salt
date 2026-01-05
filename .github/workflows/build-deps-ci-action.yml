@@ -51,6 +51,7 @@ on:
 
 env:
   COLUMNS: 190
+  RELENV_DATA: "${{ github.workspace }}/.relenv"
   AWS_MAX_ATTEMPTS: "10"
   AWS_RETRY_MODE: "adaptive"
   PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
@@ -157,7 +158,7 @@ jobs:
 
   macos-dependencies:
     name: MacOS
-    runs-on: ${{ matrix.arch == 'x86_64' && 'macos-13' || 'macos-14' }}
+    runs-on: ${{ matrix.arch == 'x86_64' && 'macos-15-intel' || 'macos-14' }}
     if: ${{ toJSON(fromJSON(inputs.matrix)['macos']) != '[]' }}
     timeout-minutes: 90
     strategy:

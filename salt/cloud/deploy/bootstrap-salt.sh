@@ -26,7 +26,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2024.12.12"
+__ScriptVersion="2025.12.05"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -48,6 +48,7 @@ __ScriptArgs="$*"
 #   * BS_GENTOO_USE_BINHOST:    If 1 add `--getbinpkg` to gentoo's emerge
 #   * BS_SALT_MASTER_ADDRESS:   The IP or DNS name of the salt-master the minion should connect to
 #   * BS_SALT_GIT_CHECKOUT_DIR: The directory where to clone Salt on git installations
+#   * BS_TMP_DIR:               The directory to use for executing the installation (defaults to /tmp)
 #======================================================================================================================
 
 
@@ -171,12 +172,12 @@ __check_config_dir() {
 
     case "$CC_DIR_NAME" in
         http://*|https://*)
-            __fetch_url "/tmp/${CC_DIR_BASE}" "${CC_DIR_NAME}"
-            CC_DIR_NAME="/tmp/${CC_DIR_BASE}"
+            __fetch_url "${_TMP_DIR}/${CC_DIR_BASE}" "${CC_DIR_NAME}"
+            CC_DIR_NAME="${_TMP_DIR}/${CC_DIR_BASE}"
             ;;
         ftp://*)
-            __fetch_url "/tmp/${CC_DIR_BASE}" "${CC_DIR_NAME}"
-            CC_DIR_NAME="/tmp/${CC_DIR_BASE}"
+            __fetch_url "${_TMP_DIR}/${CC_DIR_BASE}" "${CC_DIR_NAME}"
+            CC_DIR_NAME="${_TMP_DIR}/${CC_DIR_BASE}"
             ;;
         *://*)
             echoerror "Unsupported URI scheme for $CC_DIR_NAME"
@@ -194,22 +195,22 @@ __check_config_dir() {
 
     case "$CC_DIR_NAME" in
         *.tgz|*.tar.gz)
-            tar -zxf "${CC_DIR_NAME}" -C /tmp
+            tar -zxf "${CC_DIR_NAME}" -C ${_TMP_DIR}
             CC_DIR_BASE=$(basename "${CC_DIR_BASE}" ".tgz")
             CC_DIR_BASE=$(basename "${CC_DIR_BASE}" ".tar.gz")
-            CC_DIR_NAME="/tmp/${CC_DIR_BASE}"
+            CC_DIR_NAME="${_TMP_DIR}/${CC_DIR_BASE}"
             ;;
         *.tbz|*.tar.bz2)
-            tar -xjf "${CC_DIR_NAME}" -C /tmp
+            tar -xjf "${CC_DIR_NAME}" -C ${_TMP_DIR}
             CC_DIR_BASE=$(basename "${CC_DIR_BASE}" ".tbz")
             CC_DIR_BASE=$(basename "${CC_DIR_BASE}" ".tar.bz2")
-            CC_DIR_NAME="/tmp/${CC_DIR_BASE}"
+            CC_DIR_NAME="${_TMP_DIR}/${CC_DIR_BASE}"
             ;;
         *.txz|*.tar.xz)
-            tar -xJf "${CC_DIR_NAME}" -C /tmp
+            tar -xJf "${CC_DIR_NAME}" -C ${_TMP_DIR}
             CC_DIR_BASE=$(basename "${CC_DIR_BASE}" ".txz")
             CC_DIR_BASE=$(basename "${CC_DIR_BASE}" ".tar.xz")
-            CC_DIR_NAME="/tmp/${CC_DIR_BASE}"
+            CC_DIR_NAME="${_TMP_DIR}/${CC_DIR_BASE}"
             ;;
     esac
 
@@ -245,6 +246,7 @@ __check_unparsed_options() {
 #----------------------------------------------------------------------------------------------------------------------
 _KEEP_TEMP_FILES=${BS_KEEP_TEMP_FILES:-$BS_FALSE}
 _TEMP_CONFIG_DIR="null"
+_TMP_DIR=${BS_TMP_DIR:-"/tmp"}
 _SALTSTACK_REPO_URL="https://github.com/saltstack/salt.git"
 _SALT_REPO_URL=${_SALTSTACK_REPO_URL}
 _TEMP_KEYS_DIR="null"
@@ -281,7 +283,7 @@ _SIMPLIFY_VERSION=$BS_TRUE
 _LIBCLOUD_MIN_VERSION="0.14.0"
 _EXTRA_PACKAGES=""
 _HTTP_PROXY=""
-_SALT_GIT_CHECKOUT_DIR=${BS_SALT_GIT_CHECKOUT_DIR:-/tmp/git/salt}
+_SALT_GIT_CHECKOUT_DIR=${BS_SALT_GIT_CHECKOUT_DIR:-${_TMP_DIR}/git/salt}
 _NO_DEPS=$BS_FALSE
 _FORCE_SHALLOW_CLONE=$BS_FALSE
 _DISABLE_SSL=$BS_FALSE
@@ -367,7 +369,7 @@ __usage() {
         also be specified. Salt installation will be ommitted, but some of the
         dependencies could be installed to write configuration with -j or -J.
     -d  Disables checking if Salt services are enabled to start on system boot.
-        You can also do this by touching /tmp/disable_salt_checks on the target
+        You can also do this by touching ${BS_TMP_DIR}/disable_salt_checks on the target
         host. Default: \${BS_FALSE}
     -D  Show debug output
     -f  Force shallow cloning for git installations.
@@ -424,6 +426,9 @@ __usage() {
     -r  Disable all repository configuration performed by this script. This
         option assumes all necessary repository configuration is already present
         on the system.
+    -T  If set this overrides the use of /tmp for script execution. This is
+        to allow for systems in which noexec is applied to temp filesystem mounts
+        for security reasons
     -U  If set, fully upgrade the system prior to bootstrapping Salt
     -v  Display script version
     -V  Install Salt into virtualenv
@@ -436,7 +441,7 @@ __usage() {
 EOT
 }   # ----------  end of function __usage  ----------
 
-while getopts ':hvnDc:g:Gx:k:s:MSWNXCPFUKIA:i:Lp:dH:bflV:J:j:rR:aqQ' opt
+while getopts ':hvnDc:g:Gx:k:s:MSWNXCPFUKIA:i:Lp:dH:bflV:J:j:rR:T:aqQ' opt
 do
   case "${opt}" in
 
@@ -478,6 +483,7 @@ do
     a )  _PIP_ALL=$BS_TRUE                              ;;
     r )  _DISABLE_REPOS=$BS_TRUE                        ;;
     R )  _CUSTOM_REPO_URL=$OPTARG                       ;;
+    T )  _TMP_DIR="$OPTARG"                             ;;
     J )  _CUSTOM_MASTER_CONFIG=$OPTARG                  ;;
     j )  _CUSTOM_MINION_CONFIG=$OPTARG                  ;;
     q )  _QUIET_GIT_INSTALLATION=$BS_TRUE               ;;
@@ -495,10 +501,10 @@ done
 shift $((OPTIND-1))
 
 # Define our logging file and pipe paths
-LOGFILE="/tmp/$( echo "$__ScriptName" | sed s/.sh/.log/g )"
-LOGPIPE="/tmp/$( echo "$__ScriptName" | sed s/.sh/.logpipe/g )"
+LOGFILE="${_TMP_DIR}/$( echo "$__ScriptName" | sed s/.sh/.log/g )"
+LOGPIPE="${_TMP_DIR}/$( echo "$__ScriptName" | sed s/.sh/.logpipe/g )"
 # Ensure no residual pipe exists
-rm "$LOGPIPE" 2>/dev/null
+rm -f "$LOGPIPE" 2>/dev/null
 
 # Create our logging pipe
 # On FreeBSD we have to use mkfifo instead of mknod
@@ -534,7 +540,7 @@ exec 2>"$LOGPIPE"
 #              14               SIGALRM
 #              15               SIGTERM
 #----------------------------------------------------------------------------------------------------------------------
-APT_ERR=$(mktemp /tmp/apt_error.XXXXXX)
+APT_ERR=$(mktemp ${_TMP_DIR}/apt_error.XXXXXX)
 __exit_cleanup() {
     EXIT_CODE=$?
 
@@ -925,6 +931,11 @@ fi
 if [ -d "${_VIRTUALENV_DIR}" ]; then
     echoerror "The directory ${_VIRTUALENV_DIR} for virtualenv already exists"
     exit 1
+fi
+
+# Make sure the designated temp directory exists
+if [ ! -d "${_TMP_DIR}" ]; then
+    mkdir -p "${_TMP_DIR}"
 fi
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
@@ -1941,11 +1952,6 @@ __wait_for_apt(){
     # Timeout set at 15 minutes
     WAIT_TIMEOUT=900
 
-    ## see if sync'ing the clocks helps
-    if [ -f /usr/sbin/hwclock ]; then
-        /usr/sbin/hwclock -s
-    fi
-
     # Run our passed in apt command
     "${@}" 2>"$APT_ERR"
     APT_RETURN=$?
@@ -1996,14 +2002,14 @@ __apt_get_upgrade_noinput() {
 #----------------------------------------------------------------------------------------------------------------------
 __temp_gpg_pub() {
     if __check_command_exists mktemp; then
-        tempfile="$(mktemp /tmp/salt-gpg-XXXXXXXX.pub 2>/dev/null)"
+        tempfile="$(mktemp ${_TMP_DIR}/salt-gpg-XXXXXXXX.pub 2>/dev/null)"
 
         if [ -z "$tempfile" ]; then
-            echoerror "Failed to create temporary file in /tmp"
+            echoerror "Failed to create temporary file in ${_TMP_DIR}"
             return 1
         fi
     else
-        tempfile="/tmp/salt-gpg-$$.pub"
+        tempfile="${_TMP_DIR}/salt-gpg-$$.pub"
     fi
 
     echo $tempfile
@@ -2043,7 +2049,7 @@ __rpm_import_gpg() {
     __fetch_url "$tempfile" "$url" || return 1
 
     # At least on CentOS 8, a missing newline at the end causes:
-    #   error: /tmp/salt-gpg-n1gKUb1u.pub: key 1 not an armored public key.
+    #   error: ${_TMP_DIR}/salt-gpg-n1gKUb1u.pub: key 1 not an armored public key.
     # shellcheck disable=SC1003,SC2086
     sed -i -e '$a\' $tempfile
 
@@ -2109,7 +2115,7 @@ __git_clone_and_checkout() {
     fi
 
     __SALT_GIT_CHECKOUT_PARENT_DIR=$(dirname "${_SALT_GIT_CHECKOUT_DIR}" 2>/dev/null)
-    __SALT_GIT_CHECKOUT_PARENT_DIR="${__SALT_GIT_CHECKOUT_PARENT_DIR:-/tmp/git}"
+    __SALT_GIT_CHECKOUT_PARENT_DIR="${__SALT_GIT_CHECKOUT_PARENT_DIR:-${_TMP_DIR}/git}"
     __SALT_CHECKOUT_REPONAME="$(basename "${_SALT_GIT_CHECKOUT_DIR}" 2>/dev/null)"
     __SALT_CHECKOUT_REPONAME="${__SALT_CHECKOUT_REPONAME:-salt}"
     [ -d "${__SALT_GIT_CHECKOUT_PARENT_DIR}" ] || mkdir "${__SALT_GIT_CHECKOUT_PARENT_DIR}"
@@ -2161,21 +2167,19 @@ __git_clone_and_checkout() {
         fi
 
         if [ "$__SHALLOW_CLONE" -eq $BS_TRUE ]; then
-            # Let's try shallow cloning to speed up.
-            # Test for "--single-branch" option introduced in git 1.7.10, the minimal version of git where the shallow
+            # Let's try 'treeless' cloning to speed up. Treeless cloning omits trees and blobs ('files')
+            # but includes metadata (commit history, tags, branches etc.
+            # Test for "--filter" option introduced in git 2.19, the minimal version of git where the treeless
             # cloning we need actually works
-            if [ "$(git clone 2>&1 | grep 'single-branch')" != "" ]; then
-                # The "--single-branch" option is supported, attempt shallow cloning
+            if [ "$(git clone 2>&1 | grep 'filter')" != "" ]; then
+                # The "--filter" option is supported: attempt treeless cloning
                 echoinfo "Attempting to shallow clone $GIT_REV_ADJ from Salt's repository ${_SALT_REPO_URL}"
-                ## Shallow cloning is resulting in the wrong version of Salt, even with a depth of 5
-                ## getting 3007.0+0na.246d066 when it should be 3007.1+410.g246d066457, disabling for now
-                ## if git clone --depth 1 --branch "$GIT_REV_ADJ" "$_SALT_REPO_URL" "$__SALT_CHECKOUT_REPONAME"; then
-                echodebug "git command, git clone --branch $GIT_REV_ADJ $_SALT_REPO_URL $__SALT_CHECKOUT_REPONAME"
-                if git clone --branch "$GIT_REV_ADJ" "$_SALT_REPO_URL" "$__SALT_CHECKOUT_REPONAME"; then
+                echodebug "git command, git clone --filter=tree:0 --branch $GIT_REV_ADJ $_SALT_REPO_URL $__SALT_CHECKOUT_REPONAME"
+                if git clone --filter=tree:0 --branch "$GIT_REV_ADJ" "$_SALT_REPO_URL" "$__SALT_CHECKOUT_REPONAME"; then
                     # shellcheck disable=SC2164
                     cd "${_SALT_GIT_CHECKOUT_DIR}"
                     __SHALLOW_CLONE=$BS_TRUE
-                    echoinfo  "shallow path (disabled shallow) git cloned $GIT_REV_ADJ, version $(python3 salt/version.py)"
+                    echoinfo  "shallow path git cloned $GIT_REV_ADJ, version $(python3 salt/version.py)"
                 else
                     # Shallow clone above failed(missing upstream tags???), let's resume the old behaviour.
                     echowarn "Failed to shallow clone."
@@ -2392,14 +2396,14 @@ __overwriteconfig() {
 
     # Make a tempfile to dump any python errors into.
     if __check_command_exists mktemp; then
-        tempfile="$(mktemp /tmp/salt-config-XXXXXXXX 2>/dev/null)"
+        tempfile="$(mktemp ${_TMP_DIR}/salt-config-XXXXXXXX 2>/dev/null)"
 
         if [ -z "$tempfile" ]; then
-            echoerror "Failed to create temporary file in /tmp"
+            echoerror "Failed to create temporary file in ${_TMP_DIR}"
             return 1
         fi
     else
-        tempfile="/tmp/salt-config-$$"
+        tempfile="${_TMP_DIR}/salt-config-$$"
     fi
 
     if [ -n "$_PY_EXE" ]; then
@@ -2762,8 +2766,8 @@ __install_salt_from_repo() {
     echoinfo "Installing salt using ${_py_exe}, $(${_py_exe} --version)"
     cd "${_SALT_GIT_CHECKOUT_DIR}" || return 1
 
-    mkdir -p /tmp/git/deps
-    echodebug "Created directory /tmp/git/deps"
+    mkdir -p ${_TMP_DIR}/git/deps
+    echodebug "Created directory ${_TMP_DIR}/git/deps"
 
     if [ ${DISTRO_NAME_L} = "ubuntu" ] && [ "$DISTRO_MAJOR_VERSION" -eq 22 ]; then
         echodebug "Ubuntu 22.04 has problem with base.txt requirements file, not parsing sys_platform == 'win32', upgrading from default pip works"
@@ -2776,7 +2780,7 @@ __install_salt_from_repo() {
         fi
     fi
 
-    rm -f /tmp/git/deps/*
+    rm -f ${_TMP_DIR}/git/deps/*
 
     echodebug "Installing Salt requirements from PyPi, ${_pip_cmd} install ${_USE_BREAK_SYSTEM_PACKAGES} --ignore-installed ${_PIP_INSTALL_ARGS} -r requirements/static/ci/py${_py_version}/linux.txt"
     ${_pip_cmd} install ${_USE_BREAK_SYSTEM_PACKAGES} --ignore-installed ${_PIP_INSTALL_ARGS} -r "requirements/static/ci/py${_py_version}/linux.txt"
@@ -2801,7 +2805,7 @@ __install_salt_from_repo() {
 
     echodebug "Running '${_py_exe} setup.py --salt-config-dir=$_SALT_ETC_DIR --salt-cache-dir=${_SALT_CACHE_DIR} ${SETUP_PY_INSTALL_ARGS} bdist_wheel'"
     ${_py_exe} setup.py --salt-config-dir="$_SALT_ETC_DIR" --salt-cache-dir="${_SALT_CACHE_DIR} ${SETUP_PY_INSTALL_ARGS}" bdist_wheel || return 1
-    mv dist/salt*.whl /tmp/git/deps/ || return 1
+    mv dist/salt*.whl ${_TMP_DIR}/git/deps/ || return 1
 
     cd "${__SALT_GIT_CHECKOUT_PARENT_DIR}" || return 1
 
@@ -2815,14 +2819,14 @@ __install_salt_from_repo() {
         ${_pip_cmd} install --force-reinstall --break-system-packages "${_arch_dep}"
     fi
 
-    echodebug "Running '${_pip_cmd} install ${_USE_BREAK_SYSTEM_PACKAGES} --no-deps --force-reinstall ${_PIP_INSTALL_ARGS} /tmp/git/deps/salt*.whl'"
+    echodebug "Running '${_pip_cmd} install ${_USE_BREAK_SYSTEM_PACKAGES} --no-deps --force-reinstall ${_PIP_INSTALL_ARGS} ${_TMP_DIR}/git/deps/salt*.whl'"
 
-    echodebug "Running ${_pip_cmd} install ${_USE_BREAK_SYSTEM_PACKAGES} --no-deps --force-reinstall ${_PIP_INSTALL_ARGS} --global-option=--salt-config-dir=$_SALT_ETC_DIR --salt-cache-dir=${_SALT_CACHE_DIR} ${SETUP_PY_INSTALL_ARGS} /tmp/git/deps/salt*.whl"
+    echodebug "Running ${_pip_cmd} install ${_USE_BREAK_SYSTEM_PACKAGES} --no-deps --force-reinstall ${_PIP_INSTALL_ARGS} --config-settings=--global-option=--salt-config-dir=$_SALT_ETC_DIR --salt-cache-dir=${_SALT_CACHE_DIR} ${SETUP_PY_INSTALL_ARGS} ${_TMP_DIR}/git/deps/salt*.whl"
 
     ${_pip_cmd} install ${_USE_BREAK_SYSTEM_PACKAGES} --no-deps --force-reinstall \
         ${_PIP_INSTALL_ARGS} \
-        --global-option="--salt-config-dir=$_SALT_ETC_DIR --salt-cache-dir=${_SALT_CACHE_DIR} ${SETUP_PY_INSTALL_ARGS}" \
-        /tmp/git/deps/salt*.whl || return 1
+        --config-settings="--global-option=--salt-config-dir=$_SALT_ETC_DIR --salt-cache-dir=${_SALT_CACHE_DIR} ${SETUP_PY_INSTALL_ARGS}" \
+        ${_TMP_DIR}/git/deps/salt*.whl || return 1
 
     echoinfo "Checking if Salt can be imported using ${_py_exe}"
     CHECK_SALT_SCRIPT=$(cat << EOM
@@ -6297,8 +6301,8 @@ __get_packagesite_onedir_latest() {
 }
 
 
-__install_saltstack_photon_onedir_repository() {
-    echodebug "__install_saltstack_photon_onedir_repository() entry"
+__install_saltstack_vmware_photon_os_onedir_repository() {
+    echodebug "__install_saltstack_vmware_photon_os_onedir_repository() entry"
 
     if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -ne 3 ]; then
         echoerror "Python version is no longer supported, only Python 3"
@@ -6378,8 +6382,8 @@ __install_saltstack_photon_onedir_repository() {
     return 0
 }
 
-install_photon_deps() {
-    echodebug "install_photon_deps() entry"
+install_vmware_photon_os_deps() {
+    echodebug "install_vmware_photon_os_deps() entry"
 
     if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -ne 3 ]; then
         echoerror "Python version is no longer supported, only Python 3"
@@ -6408,8 +6412,8 @@ install_photon_deps() {
     return 0
 }
 
-install_photon_stable_post() {
-    echodebug "install_photon_stable_post() entry"
+install_vmware_photon_os_stable_post() {
+    echodebug "install_vmware_photon_os_stable_post() entry"
 
     for fname in api master minion syndic; do
         # Skip salt-api since the service should be opt-in and not necessarily started on boot
@@ -6426,8 +6430,8 @@ install_photon_stable_post() {
     done
 }
 
-install_photon_git_deps() {
-    echodebug "install_photon_git_deps() entry"
+install_vmware_photon_os_git_deps() {
+    echodebug "install_vmware_photon_os_git_deps() entry"
 
     if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -ne 3 ]; then
         echoerror "Python version is no longer supported, only Python 3"
@@ -6465,7 +6469,7 @@ install_photon_git_deps() {
 
     __PACKAGES="python${PY_PKG_VER}-devel python${PY_PKG_VER}-pip python${PY_PKG_VER}-setuptools gcc glibc-devel linux-devel.x86_64 cython${PY_PKG_VER}"
 
-    echodebug "install_photon_git_deps() distro major version, ${DISTRO_MAJOR_VERSION}"
+    echodebug "install_vmware_photon_os_git_deps() distro major version, ${DISTRO_MAJOR_VERSION}"
 
     ## Photon 5 container is missing systemd on default installation
     if [ "${DISTRO_MAJOR_VERSION}" -lt 5  ]; then
@@ -6491,8 +6495,8 @@ install_photon_git_deps() {
     return 0
 }
 
-install_photon_git() {
-    echodebug "install_photon_git() entry"
+install_vmware_photon_os_git() {
+    echodebug "install_vmware_photon_os_git() entry"
 
     if [ "${_PY_EXE}" != "" ]; then
         _PYEXE=${_PY_EXE}
@@ -6502,7 +6506,7 @@ install_photon_git() {
         return 1
     fi
 
-    install_photon_git_deps
+    install_vmware_photon_os_git_deps
 
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/salt/syspaths.py" ]; then
         ${_PYEXE} setup.py --salt-config-dir="$_SALT_ETC_DIR" --salt-cache-dir="${_SALT_CACHE_DIR}" ${SETUP_PY_INSTALL_ARGS} install --prefix=/usr || return 1
@@ -6512,8 +6516,8 @@ install_photon_git() {
     return 0
 }
 
-install_photon_git_post() {
-    echodebug "install_photon_git_post() entry"
+install_vmware_photon_os_git_post() {
+    echodebug "install_vmware_photon_os_git_post() entry"
 
     for fname in api master minion syndic; do
         # Skip if not meant to be installed
@@ -6545,9 +6549,9 @@ install_photon_git_post() {
     done
 }
 
-install_photon_restart_daemons() {
+install_vmware_photon_os_restart_daemons() {
     [ "$_START_DAEMONS" -eq $BS_FALSE ] && return
-    echodebug "install_photon_restart_daemons() entry"
+    echodebug "install_vmware_photon_os_restart_daemons() entry"
 
 
     for fname in api master minion syndic; do
@@ -6569,8 +6573,8 @@ install_photon_restart_daemons() {
     done
 }
 
-install_photon_check_services() {
-    echodebug "install_photon_check_services() entry"
+install_vmware_photon_os_check_services() {
+    echodebug "install_vmware_photon_os_check_services() entry"
 
     for fname in api master minion syndic; do
         # Skip salt-api since the service should be opt-in and not necessarily started on boot
@@ -6587,8 +6591,8 @@ install_photon_check_services() {
     return 0
 }
 
-install_photon_onedir_deps() {
-    echodebug "install_photon_onedir_deps() entry"
+install_vmware_photon_os_onedir_deps() {
+    echodebug "install_vmware_photon_os_onedir_deps() entry"
 
 
     if [ "$_UPGRADE_SYS" -eq $BS_TRUE ]; then
@@ -6602,17 +6606,17 @@ install_photon_onedir_deps() {
     fi
 
     if [ "$_DISABLE_REPOS" -eq "$BS_FALSE" ]; then
-        __install_saltstack_photon_onedir_repository || return 1
+        __install_saltstack_vmware_photon_os_onedir_repository || return 1
     fi
 
     # If -R was passed, we need to configure custom repo url with rsync-ed packages
     # Which was handled in __install_saltstack_rhel_repository buu that hanlded old-stable which is for
     # releases which are End-Of-Life. This call has its own check in case -r was passed without -R.
     if [ "$_CUSTOM_REPO_URL" != "null" ]; then
-        __install_saltstack_photon_onedir_repository || return 1
+        __install_saltstack_vmware_photon_os_onedir_repository || return 1
     fi
 
-    __PACKAGES="procps-ng sudo shadow"
+    __PACKAGES="procps-ng sudo shadow wget"
 
     # shellcheck disable=SC2086
     __tdnf_install_noinput ${__PACKAGES} || return 1
@@ -6628,9 +6632,9 @@ install_photon_onedir_deps() {
 }
 
 
-install_photon_onedir() {
+install_vmware_photon_os_onedir() {
 
-    echodebug "install_photon_onedir() entry"
+    echodebug "install_vmware_photon_os_onedir() entry"
 
     STABLE_REV=$ONEDIR_REV
     _GENERIC_PKG_VERSION=""
@@ -6674,9 +6678,9 @@ install_photon_onedir() {
     return 0
 }
 
-install_photon_onedir_post() {
+install_vmware_photon_os_onedir_post() {
     STABLE_REV=$ONEDIR_REV
-    install_photon_stable_post || return 1
+    install_vmware_photon_os_stable_post || return 1
 
     return 0
 }
@@ -7799,7 +7803,7 @@ install_macosx_git_deps() {
         export PATH=/usr/local/bin:$PATH
     fi
 
-    __fetch_url "/tmp/get-pip.py" "https://bootstrap.pypa.io/get-pip.py" || return 1
+    __fetch_url "${_TMP_DIR}/get-pip.py" "https://bootstrap.pypa.io/get-pip.py" || return 1
 
     if [ -n "$_PY_EXE" ]; then
         _PYEXE="${_PY_EXE}"
@@ -7809,7 +7813,7 @@ install_macosx_git_deps() {
     fi
 
     # Install PIP
-    $_PYEXE /tmp/get-pip.py || return 1
+    $_PYEXE ${_TMP_DIR}/get-pip.py || return 1
 
     # shellcheck disable=SC2119
     __git_clone_and_checkout || return 1
@@ -7821,9 +7825,9 @@ install_macosx_stable() {
 
     install_macosx_stable_deps || return 1
 
-    __fetch_url "/tmp/${PKG}" "${SALTPKGCONFURL}" || return 1
+    __fetch_url "${_TMP_DIR}/${PKG}" "${SALTPKGCONFURL}" || return 1
 
-    /usr/sbin/installer -pkg "/tmp/${PKG}" -target / || return 1
+    /usr/sbin/installer -pkg "${_TMP_DIR}/${PKG}" -target / || return 1
 
     return 0
 }
@@ -7832,9 +7836,9 @@ install_macosx_onedir() {
 
     install_macosx_onedir_deps || return 1
 
-    __fetch_url "/tmp/${PKG}" "${SALTPKGCONFURL}" || return 1
+    __fetch_url "${_TMP_DIR}/${PKG}" "${SALTPKGCONFURL}" || return 1
 
-    /usr/sbin/installer -pkg "/tmp/${PKG}" -target / || return 1
+    /usr/sbin/installer -pkg "${_TMP_DIR}/${PKG}" -target / || return 1
 
     return 0
 }

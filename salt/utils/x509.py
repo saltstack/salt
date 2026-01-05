@@ -4,6 +4,7 @@ import ipaddress
 import logging
 import os.path
 import re
+from collections import OrderedDict
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from urllib.parse import urlparse, urlunparse
@@ -21,7 +22,6 @@ import salt.utils.immutabletypes as immutabletypes
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.utils.odict import OrderedDict
 
 try:
     import idna
@@ -701,7 +701,8 @@ def load_privkey(pk, passphrase=None, get_encoding=False):
                 return pk, "pem", None
             return pk
         except ValueError as err:
-            if "Bad decrypt" in str(err):
+            str_err = str(err)
+            if "Bad decrypt" in str_err or "Could not deserialize key data" in str_err:
                 raise SaltInvocationError(
                     "Bad decrypt - is the password correct?"
                 ) from err

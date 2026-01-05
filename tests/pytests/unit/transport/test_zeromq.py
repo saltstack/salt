@@ -1,3 +1,4 @@
+import asyncio
 import ctypes
 import hashlib
 import logging
@@ -9,7 +10,7 @@ import uuid
 
 import msgpack
 import pytest
-import tornado.gen
+import tornado.ioloop
 import zmq.eventloop.future
 
 import salt.config
@@ -266,17 +267,16 @@ def run_loop_in_thread(loop, evt):
     """
     loop.make_current()
 
-    @tornado.gen.coroutine
-    def stopper():
-        yield tornado.gen.sleep(0.1)
+    async def stopper():
+        await asyncio.sleep(0.1)
         while True:
             if not evt.is_set():
                 loop.stop()
                 break
-            yield tornado.gen.sleep(0.3)
+            await asyncio.sleep(0.3)
 
     loop.add_callback(evt.set)
-    loop.add_callback(stopper)
+    loop.spawn_callback(stopper)
     try:
         loop.start()
     finally:
@@ -348,13 +348,16 @@ class MockSaltMinionMaster:
 
     # pylint: enable=W1701
     @classmethod
-    @tornado.gen.coroutine
-    def _handle_payload(cls, payload):
+    async def _handle_payload(cls, payload):
         """
         TODO: something besides echo
         """
-        cls.mock._handle_payload_hook()
-        raise tornado.gen.Return((payload, {"fun": "send_clear"}))
+        hook_result = cls.mock._handle_payload_hook()
+        if asyncio.iscoroutine(hook_result):
+            hook_result = await hook_result
+        if hook_result is not None:
+            return hook_result
+        return payload, {"fun": "send_clear"}
 
 
 def test_master_uri():
@@ -476,7 +479,7 @@ def test_serverside_exception(temp_salt_minion, temp_salt_master):
     """
     with MockSaltMinionMaster(temp_salt_minion, temp_salt_master) as minion_master:
         with patch.object(minion_master.mock, "_handle_payload_hook") as _mock:
-            _mock.side_effect = tornado.gen.Return(({}, {"fun": "madeup-fun"}))
+            _mock.return_value = ({}, {"fun": "madeup-fun"})
             ret = minion_master.channel.send({}, timeout=5, tries=1)
             assert ret == "Server-side exception handling payload"
 
@@ -512,7 +515,7 @@ async def test_zeromq_async_pub_channel_publish_port(temp_salt_master):
 
 
 def test_zeromq_async_pub_channel_filtering_decode_message_no_match(
-    temp_salt_master,
+    temp_salt_master, io_loop
 ):
     """
     test zeromq PublishClient _decode_messages when
@@ -542,11 +545,7 @@ def test_zeromq_async_pub_channel_filtering_decode_message_no_match(
         sign_pub_messages=False,
     )
     opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
-
-    ioloop = tornado.ioloop.IOLoop()
-    channel = salt.transport.zeromq.PublishClient(
-        opts, ioloop, host=opts["interface"], port=opts["publish_port"]
-    )
+    channel = salt.transport.zeromq.PublishClient(opts, io_loop, host="127.0.0.1")
     with channel:
         with patch(
             "salt.crypt.AsyncAuth.crypticle",
@@ -700,7 +699,7 @@ def test_req_server_chan_encrypt_v1(pki_dir, encryption_algorithm, master_opts):
 def test_req_chan_decode_data_dict_entry_v1(
     pki_dir, encryption_algorithm, minion_opts, master_opts
 ):
-    mockloop = MagicMock()
+    mockloop = asyncio.new_event_loop()
     minion_opts.update(
         {
             "master_uri": "tcp://127.0.0.1:4506",
@@ -718,26 +717,29 @@ def test_req_chan_decode_data_dict_entry_v1(
     )
     master_opts = dict(master_opts, pki_dir=str(pki_dir.joinpath("master")))
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
-    client = salt.channel.client.ReqChannel.factory(minion_opts, io_loop=mockloop)
-    dictkey = "pillar"
-    target = "minion"
-    pillar_data = {"pillar1": "meh"}
-    ret = server._encrypt_private(
-        pillar_data,
-        dictkey,
-        target,
-        sign_messages=False,
-        encryption_algorithm=encryption_algorithm,
-    )
-    key = client.auth.get_keys()
-    aes = key.decrypt(ret["key"], encryption_algorithm)
-    pcrypt = salt.crypt.Crypticle(client.opts, aes)
-    ret_pillar_data = pcrypt.loads(ret[dictkey])
-    assert ret_pillar_data == pillar_data
+    try:
+        client = salt.channel.client.ReqChannel.factory(minion_opts, io_loop=mockloop)
+        dictkey = "pillar"
+        target = "minion"
+        pillar_data = {"pillar1": "meh"}
+        ret = server._encrypt_private(
+            pillar_data,
+            dictkey,
+            target,
+            sign_messages=False,
+            encryption_algorithm=encryption_algorithm,
+        )
+        key = client.auth.get_keys()
+        aes = key.decrypt(ret["key"], encryption_algorithm)
+        pcrypt = salt.crypt.Crypticle(client.opts, aes)
+        ret_pillar_data = pcrypt.loads(ret[dictkey])
+        assert ret_pillar_data == pillar_data
+    finally:
+        mockloop.close()
 
 
 async def test_req_chan_decode_data_dict_entry_v2(minion_opts, master_opts, pki_dir):
-    mockloop = MagicMock()
+    mockloop = asyncio.get_running_loop()
     minion_opts.update(
         {
             "master_uri": "tcp://127.0.0.1:4506",
@@ -776,10 +778,10 @@ async def test_req_chan_decode_data_dict_entry_v2(minion_opts, master_opts, pki_
     client.auth.crypticle.loads = auth.crypticle.loads
     client.auth.session_crypticle.dumps = auth.session_crypticle.dumps
     client.auth.session_crypticle.loads = auth.session_crypticle.loads
+    transport = client.transport
     client.transport = MagicMock()
 
-    @tornado.gen.coroutine
-    def mocksend(msg, timeout=60, tries=3):
+    async def mocksend(msg, timeout=60, tries=3):
         client.transport.msg = msg
         load = client.auth.session_crypticle.loads(msg["load"])
         ret = server._encrypt_private(
@@ -791,7 +793,7 @@ async def test_req_chan_decode_data_dict_entry_v2(minion_opts, master_opts, pki_
             encryption_algorithm=minion_opts["encryption_algorithm"],
             signing_algorithm=minion_opts["signing_algorithm"],
         )
-        raise tornado.gen.Return(ret)
+        return ret
 
     client.transport.send = mocksend
 
@@ -811,15 +813,20 @@ async def test_req_chan_decode_data_dict_entry_v2(minion_opts, master_opts, pki_
         load,
         dictkey="pillar",
     )
-    assert "version" in client.transport.msg
-    assert client.transport.msg["version"] == 3
-    assert ret == {"pillar1": "meh"}
+    try:
+        assert "version" in client.transport.msg
+        assert client.transport.msg["version"] == 3
+        assert ret == {"pillar1": "meh"}
+    finally:
+        server.close()
+        client.close()
+        transport.close()
 
 
 async def test_req_chan_decode_data_dict_entry_v2_bad_nonce(
     pki_dir, minion_opts, master_opts
 ):
-    mockloop = MagicMock()
+    mockloop = asyncio.get_running_loop()
     minion_opts.update(
         {
             "master_uri": "tcp://127.0.0.1:4506",
@@ -853,6 +860,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_nonce(
     client.auth.get_keys = auth.get_keys
     client.auth.crypticle.dumps = auth.crypticle.dumps
     client.auth.crypticle.loads = auth.crypticle.loads
+    transport = client.transport
     client.transport = MagicMock()
     ret = server._encrypt_private(
         pillar_data,
@@ -864,10 +872,9 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_nonce(
         signing_algorithm=minion_opts["signing_algorithm"],
     )
 
-    @tornado.gen.coroutine
-    def mocksend(msg, timeout=60, tries=3):
+    async def mocksend(msg, timeout=60, tries=3):
         client.transport.msg = msg
-        raise tornado.gen.Return(ret)
+        return ret
 
     client.transport.send = mocksend
 
@@ -889,13 +896,18 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_nonce(
             load,
             dictkey="pillar",
         )
-    assert "Pillar nonce verification failed." == excinfo.value.message
+    try:
+        assert "Pillar nonce verification failed." == excinfo.value.message
+    finally:
+        server.close()
+        client.close()
+        transport.close()
 
 
 async def test_req_chan_decode_data_dict_entry_v2_bad_signature(
     pki_dir, minion_opts, master_opts
 ):
-    mockloop = MagicMock()
+    mockloop = asyncio.get_running_loop()
     minion_opts.update(
         {
             "master_uri": "tcp://127.0.0.1:4506",
@@ -935,10 +947,10 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(
     client.auth.crypticle.loads = auth.crypticle.loads
     client.auth.session_crypticle.dumps = auth.session_crypticle.dumps
     client.auth.session_crypticle.loads = auth.session_crypticle.loads
+    transport = client.transport
     client.transport = MagicMock()
 
-    @tornado.gen.coroutine
-    def mocksend(msg, timeout=60, tries=3):
+    async def mocksend(msg, timeout=60, tries=3):
         client.transport.msg = msg
         load = client.auth.session_crypticle.loads(msg["load"])
         ret = server._encrypt_private(
@@ -961,16 +973,15 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(
         data["pillar"] = {"pillar1": "bar"}
         signed_msg["data"] = salt.payload.dumps(data)
         ret[dictkey] = pcrypt.dumps(signed_msg)
-        raise tornado.gen.Return(ret)
+        return ret
 
     client.transport.send = mocksend
 
     # Minion should try to authenticate on bad signature
-    @tornado.gen.coroutine
-    def mockauthenticate():
-        pass
+    async def mockauthenticate():
+        return None
 
-    client.auth.authenticate = MagicMock(wraps=mockauthenticate)
+    client.auth.authenticate = AsyncMock(side_effect=mockauthenticate)
 
     # Note the 'ver' value in 'load' does not represent the the 'version' sent
     # in the top level of the transport's message.
@@ -990,14 +1001,19 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(
             load,
             dictkey="pillar",
         )
-    assert "Pillar payload signature failed to validate." == excinfo.value.message
-    client.auth.authenticate.assert_called_once()
+    try:
+        assert "Pillar payload signature failed to validate." == excinfo.value.message
+        client.auth.authenticate.assert_called_once()
+    finally:
+        server.close()
+        client.close()
+        transport.close()
 
 
 async def test_req_chan_decode_data_dict_entry_v2_bad_key(
     pki_dir, minion_opts, master_opts
 ):
-    mockloop = MagicMock()
+    mockloop = asyncio.get_running_loop()
     minion_opts.update(
         {
             "master_uri": "tcp://127.0.0.1:4506",
@@ -1037,10 +1053,10 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(
     client.auth.crypticle.loads = auth.crypticle.loads
     client.auth.session_crypticle.dumps = auth.session_crypticle.dumps
     client.auth.session_crypticle.loads = auth.session_crypticle.loads
+    transport = client.transport
     client.transport = MagicMock()
 
-    @tornado.gen.coroutine
-    def mocksend(msg, timeout=60, tries=3):
+    async def mocksend(msg, timeout=60, tries=3):
         client.transport.msg = msg
         load = client.auth.session_crypticle.loads(msg["load"])
         ret = server._encrypt_private(
@@ -1066,7 +1082,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(
         ret[dictkey] = pcrypt.dumps(signed_msg)
         key = salt.utils.stringutils.to_bytes(key)
         ret["key"] = pub.encrypt(key, minion_opts["encryption_algorithm"])
-        raise tornado.gen.Return(ret)
+        return ret
 
     client.transport.send = mocksend
 
@@ -1092,6 +1108,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(
     finally:
         client.close()
         server.close()
+        transport.close()
 
 
 async def test_req_serv_auth_v1(pki_dir, minion_opts, master_opts):
@@ -1152,7 +1169,10 @@ async def test_req_serv_auth_v1(pki_dir, minion_opts, master_opts):
         "sig_algo": minion_opts["signing_algorithm"],
     }
     ret = server._auth(load, sign_messages=False)
-    assert "load" not in ret
+    try:
+        assert "load" not in ret
+    finally:
+        server.close()
 
 
 async def test_req_serv_auth_v2(pki_dir, minion_opts, master_opts):
@@ -1213,8 +1233,11 @@ async def test_req_serv_auth_v2(pki_dir, minion_opts, master_opts):
         "sig_algo": minion_opts["signing_algorithm"],
     }
     ret = server._auth(load, sign_messages=True)
-    assert "sig" in ret
-    assert "load" in ret
+    try:
+        assert "sig" in ret
+        assert "load" in ret
+    finally:
+        server.close()
 
 
 async def test_req_chan_auth_v2(pki_dir, io_loop, minion_opts, master_opts):
@@ -1258,21 +1281,24 @@ async def test_req_chan_auth_v2(pki_dir, io_loop, minion_opts, master_opts):
     minion_opts["verify_master_pubkey_sign"] = False
     minion_opts["always_verify_signature"] = False
     client = salt.channel.client.AsyncReqChannel.factory(minion_opts, io_loop=io_loop)
-    client = salt.channel.client.AsyncReqChannel.factory(minion_opts, io_loop=io_loop)
     auth_client = salt.channel.client.AsyncReqChannel.factory(
         minion_opts, io_loop=io_loop, crypt="clear"
     )
     signin_payload = client.auth.minion_sign_in_payload()
     pload = auth_client._package_load(signin_payload)
-    assert "version" in pload
-    assert pload["version"] == 3
+    try:
+        assert "version" in pload
+        assert pload["version"] == 3
 
-    ret = server._auth(pload["load"], sign_messages=True)
-    assert "sig" in ret
-    ret = client.auth.handle_signin_response(signin_payload, ret)
-    assert "aes" in ret
-    assert "master_uri" in ret
-    assert "publish_port" in ret
+        ret = server._auth(pload["load"], sign_messages=True)
+        assert "sig" in ret
+        ret = client.auth.handle_signin_response(signin_payload, ret)
+        assert "aes" in ret
+        assert "master_uri" in ret
+        assert "publish_port" in ret
+    finally:
+        server.close()
+        client.close()
 
 
 async def test_req_chan_auth_v2_with_master_signing(
@@ -1334,50 +1360,57 @@ async def test_req_chan_auth_v2_with_master_signing(
     )
     signin_payload = client.auth.minion_sign_in_payload()
     pload = auth_client._package_load(signin_payload)
-    assert "version" in pload
-    assert pload["version"] == 3
+    try:
+        assert "version" in pload
+        assert pload["version"] == 3
 
-    server_reply = server._auth(pload["load"], sign_messages=True)
-    # With version 2 we always get a clear signed response
-    assert "enc" in server_reply
-    assert server_reply["enc"] == "clear"
-    assert "sig" in server_reply
-    assert "load" in server_reply
-    ret = client.auth.handle_signin_response(signin_payload, server_reply)
-    assert "aes" in ret
-    assert "master_uri" in ret
-    assert "publish_port" in ret
+        server_reply = server._auth(pload["load"], sign_messages=True)
+        # With version 2 we always get a clear signed response
+        assert "enc" in server_reply
+        assert server_reply["enc"] == "clear"
+        assert "sig" in server_reply
+        assert "load" in server_reply
+        ret = client.auth.handle_signin_response(signin_payload, server_reply)
+        assert "aes" in ret
+        assert "master_uri" in ret
+        assert "publish_port" in ret
 
-    # Now create a new master key pair and try auth with it.
-    mapriv = pki_dir.joinpath("master", f"{server.master_key.master_id}.pem")
-    mapriv.unlink()
-    mapriv.write_text(MASTER2_PRIV_KEY.strip())
-    mapub = pki_dir.joinpath("master", f"{server.master_key.master_id}.pub")
-    mapub.unlink()
-    mapub.write_text(MASTER2_PUB_KEY.strip())
+        # Now create a new master key pair and try auth with it.
+        mapriv = pki_dir.joinpath("master", f"{server.master_key.master_id}.pem")
+        mapriv.unlink()
+        mapriv.write_text(MASTER2_PRIV_KEY.strip())
+        mapub = pki_dir.joinpath("master", f"{server.master_key.master_id}.pub")
+        mapub.unlink()
+        mapub.write_text(MASTER2_PUB_KEY.strip())
 
-    server = salt.channel.server.ReqServerChannel.factory(master_opts)
-    server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)
-    server.cache_cli = False
-    server.event = salt.utils.event.get_master_event(
-        master_opts, master_opts["sock_dir"], listen=False
-    )
-    server.master_key = salt.crypt.MasterKeys(server.opts)
+        server = salt.channel.server.ReqServerChannel.factory(master_opts)
+        server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)
+        server.cache_cli = False
+        server.event = salt.utils.event.get_master_event(
+            master_opts, master_opts["sock_dir"], listen=False
+        )
+        server.master_key = salt.crypt.MasterKeys(server.opts)
 
-    signin_payload = client.auth.minion_sign_in_payload()
+        signin_payload = client.auth.minion_sign_in_payload()
 
-    pload = auth_client._package_load(signin_payload)
-    server_reply = server._auth(pload["load"], sign_messages=True)
-    ret = client.auth.handle_signin_response(signin_payload, server_reply)
+        pload = auth_client._package_load(signin_payload)
+        server_reply = server._auth(pload["load"], sign_messages=True)
+        ret = client.auth.handle_signin_response(signin_payload, server_reply)
 
-    assert "aes" in ret
-    assert "master_uri" in ret
-    assert "publish_port" in ret
+        assert "aes" in ret
+        assert "master_uri" in ret
+        assert "publish_port" in ret
 
-    assert (
-        pki_dir.joinpath("minion", "minion_master.pub").read_text()
-        == pki_dir.joinpath("master", f"{server.master_key.master_id}.pub").read_text()
-    )
+        assert (
+            pki_dir.joinpath("minion", "minion_master.pub").read_text()
+            == pki_dir.joinpath(
+                "master", f"{server.master_key.master_id}.pub"
+            ).read_text()
+        )
+    finally:
+        server.close()
+        client.close()
+        auth_client.close()
 
 
 async def test_req_chan_auth_v2_new_minion_with_master_pub(
@@ -1430,13 +1463,18 @@ async def test_req_chan_auth_v2_new_minion_with_master_pub(
     )
     signin_payload = client.auth.minion_sign_in_payload()
     pload = auth_client._package_load(signin_payload)
-    assert "version" in pload
-    assert pload["version"] == 3
+    try:
+        assert "version" in pload
+        assert pload["version"] == 3
 
-    ret = server._auth(pload["load"], sign_messages=True)
-    assert "sig" in ret
-    ret = client.auth.handle_signin_response(signin_payload, ret)
-    assert ret == "retry"
+        ret = server._auth(pload["load"], sign_messages=True)
+        assert "sig" in ret
+        ret = client.auth.handle_signin_response(signin_payload, ret)
+        assert ret == "retry"
+    finally:
+        server.close()
+        client.close()
+        auth_client.close()
 
 
 async def test_req_chan_auth_v2_new_minion_with_master_pub_bad_sig(
@@ -1499,13 +1537,18 @@ async def test_req_chan_auth_v2_new_minion_with_master_pub_bad_sig(
         minion_opts, io_loop=io_loop, crypt="clear"
     )
     pload = auth_client._package_load(signin_payload)
-    assert "version" in pload
-    assert pload["version"] == 3
+    try:
+        assert "version" in pload
+        assert pload["version"] == 3
 
-    ret = server._auth(pload["load"], sign_messages=True)
-    assert "sig" in ret
-    with pytest.raises(salt.crypt.SaltClientError, match="Invalid signature"):
-        ret = client.auth.handle_signin_response(signin_payload, ret)
+        ret = server._auth(pload["load"], sign_messages=True)
+        assert "sig" in ret
+        with pytest.raises(salt.crypt.SaltClientError, match="Invalid signature"):
+            ret = client.auth.handle_signin_response(signin_payload, ret)
+    finally:
+        server.close()
+        client.close()
+        auth_client.close()
 
 
 async def test_req_chan_auth_v2_new_minion_without_master_pub(
@@ -1637,27 +1680,28 @@ async def test_req_chan_bad_payload_to_decode(pki_dir, io_loop, caplog):
     master_opts = dict(opts, pki_dir=str(pki_dir.joinpath("master")))
     master_opts["master_sign_pubkey"] = False
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
+    try:
 
-    with caplog.at_level(logging.WARNING):
-        await server.handle_message(None)
-        assert "bad load received on socket" in caplog.text
-    caplog.clear()
+        with caplog.at_level(logging.WARNING):
+            await server.handle_message(None)
+            assert "bad load received on socket" in caplog.text
+        caplog.clear()
 
-    with caplog.at_level(logging.WARNING):
-        await server.handle_message({})
-        assert "bad load received on socket" in caplog.text
-    caplog.clear()
+        with caplog.at_level(logging.WARNING):
+            await server.handle_message({})
+            assert "bad load received on socket" in caplog.text
+        caplog.clear()
 
-    with caplog.at_level(logging.WARNING):
-        await server.handle_message(12345)
-        assert "bad load received on socket" in caplog.text
+        with caplog.at_level(logging.WARNING):
+            await server.handle_message(12345)
+            assert "bad load received on socket" in caplog.text
+    finally:
+        server.close()
 
 
-async def test_client_timeout_msg(minion_opts):
-    client = salt.transport.zeromq.AsyncReqMessageClient(
-        minion_opts, "tcp://127.0.0.1:4506"
-    )
-    client.connect()
+async def test_client_timeout_msg(minion_opts, io_loop):
+    client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
+    await client.connect()
     try:
         with pytest.raises(salt.exceptions.SaltReqTimeoutError):
             await client.send({"meh": "bah"}, 1)
@@ -1665,34 +1709,16 @@ async def test_client_timeout_msg(minion_opts):
         client.close()
 
 
-async def test_client_send_recv_on_cancelled_error(minion_opts):
-    client = salt.transport.zeromq.AsyncReqMessageClient(
-        minion_opts, "tcp://127.0.0.1:4506"
-    )
+async def test_client_send_recv_on_cancelled_error(minion_opts, io_loop):
+    client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
 
     mock_future = MagicMock(**{"done.return_value": True})
 
     try:
         client.socket = AsyncMock()
-        client.socket.recv.side_effect = zmq.eventloop.future.CancelledError
-        await client._send_recv({"meh": "bah"}, mock_future)
-
-        mock_future.set_exception.assert_not_called()
-    finally:
-        client.close()
-
-
-async def test_client_send_recv_on_exception(minion_opts):
-    client = salt.transport.zeromq.AsyncReqMessageClient(
-        minion_opts, "tcp://127.0.0.1:4506"
-    )
-
-    mock_future = MagicMock(**{"done.return_value": True})
-
-    try:
-        client.socket = None
-        await client._send_recv({"meh": "bah"}, mock_future)
-
+        client.socket.poll.side_effect = zmq.eventloop.future.CancelledError
+        client._queue.put_nowait((mock_future, {"meh": "bah"}))
+        await client._send_recv(client.socket, client._queue)
         mock_future.set_exception.assert_not_called()
     finally:
         client.close()
@@ -1738,6 +1764,84 @@ async def test_unclosed_publish_client(minion_opts, io_loop):
             client.__del__()  # pylint: disable=unnecessary-dunder-call
     finally:
         client.close()
+
+
+@pytest.mark.skipif(not FIPS_TESTRUN, reason="Only run on fips enabled platforms")
+def test_req_server_auth_unsupported_sig_algo(
+    pki_dir, minion_opts, master_opts, caplog
+):
+    minion_opts.update(
+        {
+            "master_uri": "tcp://127.0.0.1:4506",
+            "interface": "127.0.0.1",
+            "ret_port": 4506,
+            "ipv6": False,
+            "sock_dir": ".",
+            "pki_dir": str(pki_dir.joinpath("minion")),
+            "id": "minion",
+            "__role": "minion",
+            "keysize": 4096,
+            "max_minions": 0,
+            "auto_accept": False,
+            "open_mode": False,
+            "key_pass": None,
+            "master_sign_pubkey": False,
+            "publish_port": 4505,
+            "auth_mode": 1,
+        }
+    )
+    SMaster.secrets["aes"] = {
+        "secret": multiprocessing.Array(
+            ctypes.c_char,
+            salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
+        ),
+        "reload": salt.crypt.Crypticle.generate_key_string,
+    }
+    master_opts.update(pki_dir=str(pki_dir.joinpath("master")))
+    server = salt.channel.server.ReqServerChannel.factory(master_opts)
+
+    server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)
+    server.cache_cli = False
+    server.event = salt.utils.event.get_master_event(
+        master_opts, master_opts["sock_dir"], listen=False
+    )
+    server.master_key = salt.crypt.MasterKeys(server.opts)
+    pub = salt.crypt.PublicKey(str(pki_dir.joinpath("master", "master.pub")))
+    token = pub.encrypt(
+        salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
+        algorithm=minion_opts["encryption_algorithm"],
+    )
+    nonce = uuid.uuid4().hex
+
+    # We need to read the public key with fopen otherwise the newlines might
+    # not match on windows.
+    with salt.utils.files.fopen(
+        str(pki_dir.joinpath("minion", "minion.pub")), "r"
+    ) as fp:
+        pub_key = salt.crypt.clean_key(fp.read())
+
+    load = {
+        "version": 2,
+        "cmd": "_auth",
+        "id": "minion",
+        "token": token,
+        "pub": pub_key,
+        "nonce": "asdfse",
+        "enc_algo": minion_opts["encryption_algorithm"],
+        "sig_algo": salt.crypt.PKCS1v15_SHA1,
+    }
+    try:
+        with caplog.at_level(logging.INFO):
+            ret = server._auth(load, sign_messages=True)
+            assert (
+                "Minion tried to authenticate with unsupported signing algorithm: PKCS1v15-SHA1"
+                in caplog.text
+            )
+            assert "load" in ret
+            assert "ret" in ret["load"]
+            assert ret["load"]["ret"] == "bad sig algo"
+    finally:
+        server.close()
 
 
 def test_req_server_auth_garbage_sig_algo(pki_dir, minion_opts, master_opts, caplog):
@@ -1801,15 +1905,18 @@ def test_req_server_auth_garbage_sig_algo(pki_dir, minion_opts, master_opts, cap
         "enc_algo": minion_opts["encryption_algorithm"],
         "sig_algo": "IAMNOTANALGO",
     }
-    with caplog.at_level(logging.INFO):
-        ret = server._auth(load, sign_messages=True)
-        assert (
-            "Minion tried to authenticate with unsupported signing algorithm: IAMNOTANALGO"
-            in caplog.text
-        )
-        assert "load" in ret
-        assert "ret" in ret["load"]
-        assert ret["load"]["ret"] == "bad sig algo"
+    try:
+        with caplog.at_level(logging.INFO):
+            ret = server._auth(load, sign_messages=True)
+            assert (
+                "Minion tried to authenticate with unsupported signing algorithm: IAMNOTANALGO"
+                in caplog.text
+            )
+            assert "load" in ret
+            assert "ret" in ret["load"]
+            assert ret["load"]["ret"] == "bad sig algo"
+    finally:
+        server.close()
 
 
 @pytest.mark.skipif(not FIPS_TESTRUN, reason="Only run on fips enabled platforms")
@@ -1879,15 +1986,18 @@ def test_req_server_auth_unsupported_enc_algo(
         "enc_algo": "OAEP-SHA1",
         "sig_algo": minion_opts["signing_algorithm"],
     }
-    with caplog.at_level(logging.INFO):
-        ret = server._auth(load, sign_messages=True)
-        assert (
-            "Minion minion tried to authenticate with unsupported encryption algorithm: OAEP-SHA1"
-            in caplog.text
-        )
-        assert "load" in ret
-        assert "ret" in ret["load"]
-        assert ret["load"]["ret"] == "bad enc algo"
+    try:
+        with caplog.at_level(logging.INFO):
+            ret = server._auth(load, sign_messages=True)
+            assert (
+                "Minion minion tried to authenticate with unsupported encryption algorithm: OAEP-SHA1"
+                in caplog.text
+            )
+            assert "load" in ret
+            assert "ret" in ret["load"]
+            assert ret["load"]["ret"] == "bad enc algo"
+    finally:
+        server.close()
 
 
 def test_req_server_auth_garbage_enc_algo(pki_dir, minion_opts, master_opts, caplog):
@@ -1954,15 +2064,22 @@ def test_req_server_auth_garbage_enc_algo(pki_dir, minion_opts, master_opts, cap
         "enc_algo": "IAMNOTAENCALGO",
         "sig_algo": minion_opts["signing_algorithm"],
     }
-    with caplog.at_level(logging.INFO):
-        ret = server._auth(load, sign_messages=True)
-        assert (
-            "Minion minion tried to authenticate with unsupported encryption algorithm: IAMNOTAENCALGO"
-            in caplog.text
-        )
-        assert "load" in ret
-        assert "ret" in ret["load"]
-        assert ret["load"]["ret"] == "bad enc algo"
+    try:
+        with caplog.at_level(logging.INFO):
+            ret = server._auth(load, sign_messages=True)
+            assert (
+                "Minion minion tried to authenticate with unsupported encryption algorithm: IAMNOTAENCALGO"
+                in caplog.text
+            )
+            assert "load" in ret
+            assert "ret" in ret["load"]
+            assert ret["load"]["ret"] == "bad enc algo"
+    finally:
+        server.close()
+        try:
+            server.event.destroy()
+        except ValueError:
+            pass
 
 
 async def test_request_server_continue_on_errors(io_loop):
@@ -2039,3 +2156,29 @@ async def test_request_server_continue_on_errors_log_debug(io_loop, caplog):
         assert server._socket.calls > 1
         assert "Exception in request handler" in caplog.text
         assert "Traceback" in caplog.text
+
+
+@pytest.mark.xfail
+def test_backoff_timer():
+    start = 0.0003
+    maximum = 0.3
+    percent = 0.01
+    backoff = salt.transport.zeromq.BackoffTimeout(
+        start,
+        maximum,
+        percent,
+    )
+    ourcount = 1
+    next_iteration = start
+    assert backoff._count == 0
+    assert backoff() == next_iteration
+    assert backoff._count == ourcount
+
+    next_iteration += next_iteration * percent * ourcount
+    while next_iteration < maximum:
+        assert backoff() == next_iteration, ourcount
+        ourcount += 1
+        assert backoff._count == ourcount
+        next_iteration += next_iteration * percent * ourcount
+    assert ourcount == 39
+    assert backoff() == maximum

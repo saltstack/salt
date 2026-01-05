@@ -13,7 +13,7 @@ import os
 import pathlib
 import time
 
-import tornado.gen
+import tornado.ioloop
 
 import salt.cache
 import salt.crypt
@@ -135,16 +135,30 @@ class ReqServerChannel:
         if hasattr(self.transport, "post_fork"):
             self.transport.post_fork(self.handle_message, io_loop)
 
-    @tornado.gen.coroutine
-    def handle_message(self, payload):
+    async def handle_message(self, payload):
         if (
             not isinstance(payload, dict)
             or "enc" not in payload
             or "load" not in payload
         ):
             log.warn("bad load received on socket")
-            raise tornado.gen.Return("bad load")
-        version = payload.get("version", 0)
+            return "bad load"
+        try:
+            version = int(payload.get("version", 0))
+        except ValueError:
+            version = 0
+
+        # Enforce minimum authentication protocol version to prevent downgrade attacks
+        minimum_version = self.opts.get("minimum_auth_version", 0)
+        if minimum_version > 0 and version < minimum_version:
+            log.warning(
+                "Rejected authentication attempt using protocol version %d "
+                "(minimum required: %d)",
+                version,
+                minimum_version,
+            )
+            return "bad load"
+
         try:
             payload = self._decode_payload(payload, version)
         except Exception as exc:  # pylint: disable=broad-except
@@ -158,7 +172,7 @@ class ReqServerChannel:
                 )
             else:
                 log.error("Bad load from minion: %s: %s", exc_type, exc)
-            raise tornado.gen.Return("bad load")
+            return "bad load"
 
         # TODO helper functions to normalize payload?
         if not isinstance(payload, dict) or not isinstance(payload.get("load"), dict):
@@ -167,16 +181,16 @@ class ReqServerChannel:
                 payload,
                 payload.get("load"),
             )
-            raise tornado.gen.Return("payload and load must be a dict")
+            return "payload and load must be a dict"
 
         try:
             id_ = payload["load"].get("id", "")
             if "\0" in id_:
                 log.error("Payload contains an id with a null byte: %s", payload)
-                raise tornado.gen.Return("bad load: id contains a null byte")
+                return "bad load: id contains a null byte"
         except TypeError:
             log.error("Payload contains non-string id: %s", payload)
-            raise tornado.gen.Return(f"bad load: id {id_} is not a string")
+            return f"bad load: id {id_} is not a string"
 
         sign_messages = False
         if version > 1:
@@ -185,9 +199,7 @@ class ReqServerChannel:
         # intercept the "_auth" commands, since the main daemon shouldn't know
         # anything about our key auth
         if payload["enc"] == "clear" and payload.get("load", {}).get("cmd") == "_auth":
-            raise tornado.gen.Return(
-                self._auth(payload["load"], sign_messages, version)
-            )
+            return self._auth(payload["load"], sign_messages, version)
 
         if payload["enc"] == "aes":
             nonce = None
@@ -205,7 +217,7 @@ class ReqServerChannel:
                             ttl,
                             self.opts["request_server_ttl"],
                         )
-                        raise tornado.gen.Return("bad load")
+                        return "bad load"
 
                 if payload["id"] != payload["load"]["id"]:
                     log.warning(
@@ -213,56 +225,52 @@ class ReqServerChannel:
                         payload["load"]["id"],
                         payload["id"],
                     )
-                    raise tornado.gen.Return("bad load")
+                    return "bad load"
                 if not salt.utils.verify.valid_id(self.opts, payload["load"]["id"]):
                     log.warning(
                         "Request contains invalid minion id '%s'", payload["load"]["id"]
                     )
-                    raise tornado.gen.Return("bad load")
+                    return "bad load"
                 if not self.validate_token(payload, required=True):
-                    raise tornado.gen.Return("bad load")
+                    return "bad load"
             # The token won't always be present in the payload for v2 and
             # below, but if it is we always wanto validate it.
             elif not self.validate_token(payload, required=False):
-                raise tornado.gen.Return("bad load")
+                return "bad load"
 
         # TODO: test
         try:
             # Take the payload_handler function that was registered when we created the channel
             # and call it, returning control to the caller until it completes
-            ret, req_opts = yield self.payload_handler(payload)
+            ret, req_opts = await self.payload_handler(payload)
         except Exception as e:  # pylint: disable=broad-except
             # always attempt to return an error to the minion
             log.error("Some exception handling a payload from minion", exc_info=True)
-            raise tornado.gen.Return("Some exception handling minion payload")
+            return "Some exception handling minion payload"
 
         req_fun = req_opts.get("fun", "send")
         if req_fun == "send_clear":
-            raise tornado.gen.Return(ret)
+            return ret
         elif req_fun == "send":
             if version > 2:
-                raise tornado.gen.Return(
-                    salt.crypt.Crypticle(self.opts, self.session_key(id_)).dumps(
-                        ret, nonce
-                    )
+                return salt.crypt.Crypticle(self.opts, self.session_key(id_)).dumps(
+                    ret, nonce
                 )
             else:
-                raise tornado.gen.Return(self.crypticle.dumps(ret, nonce))
+                return self.crypticle.dumps(ret, nonce)
         elif req_fun == "send_private":
-            raise tornado.gen.Return(
-                self._encrypt_private(
-                    ret,
-                    req_opts["key"],
-                    req_opts["tgt"],
-                    nonce,
-                    sign_messages,
-                    payload.get("enc_algo", salt.crypt.OAEP_SHA1),
-                    payload.get("sig_algo", salt.crypt.PKCS1v15_SHA1),
-                ),
+            return self._encrypt_private(
+                ret,
+                req_opts["key"],
+                req_opts["tgt"],
+                nonce,
+                sign_messages,
+                payload.get("enc_algo", salt.crypt.OAEP_SHA1),
+                payload.get("sig_algo", salt.crypt.PKCS1v15_SHA1),
             )
         log.error("Unknown req_fun %s", req_fun)
         # always attempt to return an error to the minion
-        raise tornado.gen.Return("Server-side exception handling payload")
+        return "Server-side exception handling payload"
 
     def _encrypt_private(
         self,
@@ -1163,10 +1171,13 @@ class MasterPubServerChannel:
                 payload_handler=self.handle_pool_publish,
             )
             self.pool_puller.start()
-        self.io_loop.add_callback(
-            self.transport.publisher,
-            self.publish_payload,
-            io_loop=self.io_loop,
+        # Extract asyncio loop for create_task
+        aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
+        aio_loop.create_task(
+            self.transport.publisher(
+                self.publish_payload,
+                io_loop=self.io_loop,
+            )
         )
         # run forever
         try:

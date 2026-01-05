@@ -98,7 +98,7 @@ def _present_test(
             )
     else:
         # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w-]+\s.+)$")
+        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w@.-]+\s.+)$")
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:
@@ -171,7 +171,7 @@ def _absent_test(
             return (True, f"All host keys in file {source} are already absent")
     else:
         # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w-]+\s.+)$")
+        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w@.-]+\s.+)$")
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:
@@ -253,7 +253,8 @@ def present(
         3. Paste it into a new file.
 
     options
-        The options passed to the key, pass a list object
+        The options passed to the key, pass a list object.
+        If set, this will overwrite the ``options`` to all keys in source file
 
     config
         The location of the authorized keys file relative to the user's home
@@ -268,7 +269,7 @@ def present(
 
     if source == "":
         # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w-]+\s.+)$")
+        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w@.-]+\s.+)$")
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:
@@ -300,43 +301,24 @@ def present(
         )
         return ret
 
-    # Get only the path to the file without env referrences to check if exists
     if source != "":
+        # Get only the path to the file without env references to check if exists
         source_path = __salt__["cp.get_url"](source, None, saltenv=__env__)
 
-    if source != "" and not source_path:
-        data = "no key"
-    elif source != "" and source_path:
-        key = __salt__["cp.get_file_str"](source, saltenv=__env__)
-        filehasoptions = False
-        # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(sk-)?(ssh\-|ecds).*")
-        key = key.rstrip().split("\n")
-        for keyline in key:
-            filehasoptions = sshre.match(keyline)
-            if not filehasoptions:
-                data = __salt__["ssh.set_auth_key_from_file"](
-                    user,
-                    source,
-                    config=config,
-                    saltenv=__env__,
-                    fingerprint_hash_type=fingerprint_hash_type,
-                )
-            else:
-                # Split keyline to get key and comment
-                keyline = keyline.split(" ")
-                key_type = keyline[0]
-                key_value = keyline[1]
-                key_comment = keyline[2] if len(keyline) > 2 else ""
-                data = __salt__["ssh.set_auth_key"](
-                    user,
-                    key_value,
-                    enc=key_type,
-                    comment=key_comment,
-                    options=options or [],
-                    config=config,
-                    fingerprint_hash_type=fingerprint_hash_type,
-                )
+        # Extract Key from file if source is present
+        if not source_path:
+            data = "no key"
+        else:
+            # ssh.set_auth_key_from_file already reads and add/replace all keys
+            # from source file.
+            data = __salt__["ssh.set_auth_key_from_file"](
+                user,
+                source,
+                config=config,
+                saltenv=__env__,
+                fingerprint_hash_type=fingerprint_hash_type,
+                options=options,
+            )
     else:
         data = __salt__["ssh.set_auth_key"](
             user,
@@ -454,35 +436,26 @@ def absent(
         )
         return ret
 
-    # Extract Key from file if source is present
     if source != "":
-        key = __salt__["cp.get_file_str"](source, saltenv=__env__)
-        filehasoptions = False
-        # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(sk-)?(ssh\-|ecds).*")
-        key = key.rstrip().split("\n")
-        for keyline in key:
-            filehasoptions = sshre.match(keyline)
-            if not filehasoptions:
-                ret["comment"] = __salt__["ssh.rm_auth_key_from_file"](
-                    user,
-                    source,
-                    config,
-                    saltenv=__env__,
-                    fingerprint_hash_type=fingerprint_hash_type,
-                )
-            else:
-                # Split keyline to get key
-                keyline = keyline.split(" ")
-                ret["comment"] = __salt__["ssh.rm_auth_key"](
-                    user,
-                    keyline[1],
-                    config=config,
-                    fingerprint_hash_type=fingerprint_hash_type,
-                )
+        # Get only the path to the file without env references to check if exists
+        source_path = __salt__["cp.get_url"](source, None, saltenv=__env__)
+
+        # Extract Key from file if source is present
+        if not source_path:
+            data = "no key"
+        else:
+            # ssh.rm_auth_key_from_file already reads and delete all keys
+            # from source file.
+            ret["comment"] = __salt__["ssh.rm_auth_key_from_file"](
+                user,
+                source,
+                config,
+                saltenv=__env__,
+                fingerprint_hash_type=fingerprint_hash_type,
+            )
     else:
         # Get just the key
-        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w-]+\s.+)$")
+        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w@.-]+\s.+)$")
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:

@@ -2,10 +2,11 @@
 Test functions in state.py that are not a part of a class
 """
 
+from collections import OrderedDict
+
 import pytest
 
 import salt.state
-from salt.utils.odict import OrderedDict
 
 pytestmark = [
     pytest.mark.core_test,

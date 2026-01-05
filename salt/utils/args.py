@@ -8,11 +8,13 @@ import inspect
 import logging
 import re
 import shlex
+import sys
 from collections import namedtuple
 
 import salt.utils.data
 import salt.utils.jid
 import salt.utils.versions
+import salt.utils.win_functions
 import salt.utils.yaml
 from salt.exceptions import SaltInvocationError
 
@@ -267,10 +269,13 @@ def get_function_argspec(func, is_class_method=None):
 
 def shlex_split(s, **kwargs):
     """
-    Only split if variable is a string
+    Only split if the variable is a string
     """
     if isinstance(s, str):
-        return shlex.split(s, **kwargs)
+        if sys.platform == "win32":
+            return salt.utils.win_functions.shlex_split(s)
+        else:
+            return shlex.split(s, **kwargs)
     else:
         return s
 

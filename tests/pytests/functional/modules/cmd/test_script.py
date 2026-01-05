@@ -1,39 +1,14 @@
+import stat
+from textwrap import dedent
+
 import pytest
 
-import salt.utils.path
+import salt.utils.platform
 
 pytestmark = [
     pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
-    pytest.mark.skip_unless_on_windows,
 ]
-
-
-@pytest.fixture(scope="module")
-def cmd(modules):
-    return modules.cmd
-
-
-@pytest.fixture(scope="module")
-def exitcode_script(state_tree):
-    exit_code = 12345
-    script_contents = f"""
-    Write-Host "Expected exit code: {exit_code}"
-    exit {exit_code}
-    """
-    with pytest.helpers.temp_file("exit_code.ps1", script_contents, state_tree):
-        yield exit_code
-
-
-@pytest.fixture(params=["powershell", "pwsh"])
-def shell(request):
-    """
-    This will run the test on powershell and powershell core (pwsh). If
-    powershell core is not installed that test run will be skipped
-    """
-    if request.param == "pwsh" and salt.utils.path.which("pwsh") is None:
-        pytest.skip("Powershell 7 Not Present")
-    return request.param
 
 
 @pytest.fixture(scope="module")
@@ -43,60 +18,150 @@ def account():
 
 
 @pytest.fixture
-def issue_56195(state_tree):
-    contents = """
-    [CmdLetBinding()]
-    Param(
-      [SecureString] $SecureString
-    )
-    $Credential = New-Object System.Net.NetworkCredential("DummyId", $SecureString)
-    $Credential.Password
+def echo_script(state_tree):
+    if salt.utils.platform.is_windows():
+        file_name = "echo_script.bat"
+        contents = dedent(
+            """\
+            @echo off
+            set a=%~1
+            set b=%~2
+            echo a: %a%, b: %b%
+            """
+        )
+    else:
+        file_name = "echo_script.sh"
+        contents = dedent(
+            """\
+            #!/bin/bash
+            a="$1"
+            b="$2"
+            echo "a: $a, b: $b"
+            """
+        )
+    with pytest.helpers.temp_file(file_name, contents, state_tree / "echo-script"):
+        yield file_name
+
+
+@pytest.fixture
+def pipe_script(state_tree):
+    if salt.utils.platform.is_windows():
+        file_name = "pipe_script.bat"
+        contents = dedent(
+            """\
+            @echo off
+            IF "%1" == "|" (
+                echo b0rken
+            ) ELSE (
+                echo fine
+            )
+            """
+        )
+    else:
+        file_name = "pipe_script.sh"
+        contents = dedent(
+            """\
+            #!/bin/bash
+            if [ "$1" == '|' ]; then
+                echo b0rken
+            else
+                echo fine
+            fi
+            """
+        )
+    with pytest.helpers.temp_file(file_name, contents, state_tree / "echo-script") as f:
+        if not salt.utils.platform.is_windows():
+            current_perms = f.stat().st_mode
+            new_perms = current_perms | stat.S_IXUSR
+            f.chmod(new_perms)
+            f.chmod(0o755)
+        yield f
+
+
+@pytest.mark.parametrize(
+    "args, expected",
+    [
+        ("foo bar", "a: foo, b: bar"),
+        ('foo "bar bar"', "a: foo, b: bar bar"),
+        (["foo", "bar"], "a: foo, b: bar"),
+        (["foo foo", "bar bar"], "a: foo foo, b: bar bar"),
+    ],
+)
+def test_echo(modules, echo_script, args, expected):
     """
-    with pytest.helpers.temp_file("test.ps1", contents, state_tree / "issue-56195"):
-        yield
-
-
-def test_windows_script_args_powershell(cmd, shell, issue_56195):
+    Test argument processing with a batch script
     """
-    Ensure that powershell processes an inline script with args where the args
-    contain powershell that needs to be rendered
+    script = f"salt://echo-script/{echo_script}"
+    result = modules.cmd.script(script, args=args)
+    assert result["stdout"] == expected
+
+
+@pytest.mark.parametrize(
+    "args, expected",
+    [
+        ("foo bar", "a: foo, b: bar"),
+        ('foo "bar bar"', "a: foo, b: bar bar"),
+        (["foo", "bar"], "a: foo, b: bar"),
+        (["foo foo", "bar bar"], "a: foo foo, b: bar bar"),
+    ],
+)
+def test_echo_runas(modules, account, echo_script, args, expected):
     """
-    password = "i like cheese"
-    args = (
-        "-SecureString (ConvertTo-SecureString -String '{}' -AsPlainText -Force)"
-        " -ErrorAction Stop".format(password)
-    )
-    script = "salt://issue-56195/test.ps1"
-
-    ret = cmd.script(source=script, args=args, shell=shell, saltenv="base")
-
-    assert ret["stdout"] == password
-
-
-def test_windows_script_args_powershell_runas(cmd, shell, account, issue_56195):
+    Test argument processing with a batch/bash script and runas
     """
-    Ensure that powershell processes an inline script with args where the args
-    contain powershell that needs to be rendered
-    """
-    password = "i like cheese"
-    args = (
-        "-SecureString (ConvertTo-SecureString -String '{}' -AsPlainText -Force)"
-        " -ErrorAction Stop".format(password)
-    )
-    script = "salt://issue-56195/test.ps1"
-
-    ret = cmd.script(
-        source=script,
+    script = f"salt://echo-script/{echo_script}"
+    result = modules.cmd.script(
+        script,
         args=args,
-        shell=shell,
-        saltenv="base",
         runas=account.username,
         password=account.password,
     )
+    assert result["stdout"] == expected
 
-    assert ret["stdout"] == password
+
+def test_pipe_run_python_shell_true(modules, pipe_script):
+    if salt.utils.platform.is_windows():
+        cmd = f'{str(pipe_script)} | find /c /v ""'
+    else:
+        cmd = f"{str(pipe_script)} | wc -l"
+    result = modules.cmd.run(cmd, python_shell=True)
+    assert result == "1"
 
 
-def test_windows_script_exitcode(cmd, shell, exitcode_script):
-    ret = cmd.script("salt://exit_code.ps1", shell=shell, saltenv="base")
-    assert ret["retcode"] == exitcode_script
+def test_pipe_run_python_shell_false(modules, pipe_script):
+    if salt.utils.platform.is_windows():
+        cmd = f'{str(pipe_script)} | find /c /v ""'
+        # Behavior is different on Windows, I think it has to do with how cmd
+        # deals with args vs bash... or maybe how args are passed on Windows
+        expected = "1"
+    else:
+        cmd = f"{str(pipe_script)} | wc -l"
+        expected = "b0rken"
+    result = modules.cmd.run(cmd, python_shell=False)
+    assert result == expected
+
+
+def test_pipe_run_default(modules, pipe_script):
+    if salt.utils.platform.is_windows():
+        cmd = f'{str(pipe_script)} | find /c /v ""'
+    else:
+        cmd = f"{str(pipe_script)} | wc -l"
+    # We need to mock running from the CLI by passing __pub_jid
+    # Normally this is populated when run from the CLI, but when run from the
+    # test suite, the value is empty
+    result = modules.cmd.run(cmd, __pub_jid="test")
+    assert result == "1"
+
+
+def test_pipe_run_shell(modules, pipe_script):
+    if salt.utils.platform.is_windows():
+        cmd = f'{str(pipe_script)} | find /c /v ""'
+        shell = "cmd"
+    else:
+        cmd = f"{str(pipe_script)} | wc -l"
+        shell = "/bin/bash"
+    # We need to mock running from the CLI by passing __pub_jid
+    # Normally this is populated when run from the CLI, but when run from the
+    # test suite, the value is empty
+    result = modules.cmd.run(cmd, shell=shell, __pub_jid="test")
+    assert result == "1"

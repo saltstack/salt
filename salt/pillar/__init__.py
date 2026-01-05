@@ -10,8 +10,7 @@ import os
 import sys
 import time
 import traceback
-
-import tornado.gen
+from collections import OrderedDict
 
 import salt.channel.client
 import salt.fileclient
@@ -30,7 +29,6 @@ from salt.template import compile_template
 # causes an UnboundLocalError. This should be investigated and fixed, but until
 # then, leave the import directly below this comment intact.
 from salt.utils.dictupdate import merge
-from salt.utils.odict import OrderedDict
 from salt.version import __version__
 
 log = logging.getLogger(__name__)
@@ -250,8 +248,7 @@ class AsyncRemotePillar(RemotePillarMixin):
         self._closing = False
         self.clean_cache = clean_cache
 
-    @tornado.gen.coroutine
-    def compile_pillar(self):
+    async def compile_pillar(self):
         """
         Return a future which will contain the pillar data from the master
         """
@@ -271,7 +268,7 @@ class AsyncRemotePillar(RemotePillarMixin):
             load["ext"] = self.ext
         start = time.monotonic()
         try:
-            ret_pillar = yield self.channel.crypted_transfer_decode_dictentry(
+            ret_pillar = await self.channel.crypted_transfer_decode_dictentry(
                 load,
                 dictkey="pillar",
             )
@@ -286,7 +283,7 @@ class AsyncRemotePillar(RemotePillarMixin):
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
-        raise tornado.gen.Return(ret_pillar)
+        return ret_pillar
 
     def destroy(self):
         if self._closing:
@@ -1394,7 +1391,8 @@ class Pillar:
 # TODO: actually migrate from Pillar to AsyncPillar to allow for futures in
 # ext_pillar etc.
 class AsyncPillar(Pillar):
-    @tornado.gen.coroutine
-    def compile_pillar(self, ext=True):
+    async def compile_pillar(
+        self, ext=True
+    ):  # pylint: disable=invalid-overridden-method
         ret = super().compile_pillar(ext=ext)
-        raise tornado.gen.Return(ret)
+        return ret

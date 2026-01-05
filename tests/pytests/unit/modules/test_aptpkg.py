@@ -4,6 +4,7 @@ import logging
 import os
 import pathlib
 import textwrap
+from collections import OrderedDict
 
 import pytest
 
@@ -15,7 +16,6 @@ from salt.exceptions import (
     CommandNotFoundError,
     SaltInvocationError,
 )
-from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, Mock, call, patch
 
 log = logging.getLogger(__name__)
@@ -1551,6 +1551,16 @@ def test_sourceslist_multiple_comps():
         assert source.dist == "focal-updates"
 
 
+def test_sourceslist_subdirectory_no_exception(fs):
+    fs.create_dir("/etc/apt/sources.list.d/backup.list")
+    fs.create_file(
+        "/etc/apt/sources.list.d/backup/test.list",
+        contents="deb http://archive.ubuntu.com/ubuntu/ focal main",
+    )
+    sources = aptpkg.SourcesList()
+    assert list(sources) == []
+
+
 @pytest.fixture(
     params=(
         "deb [ arch=amd64 ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
@@ -2301,4 +2311,35 @@ def test_latest_version_calls_aptcache_once_per_run():
     ):
         ret = aptpkg.latest_version("sudo", "unzip", refresh=False)
     mock_apt_cache.assert_called_once()
-    assert ret == {"sudo": "6.0-23+deb10u3", "unzip": ""}
+    assert ret == {"sudo": "1.8.27-1+deb10u5", "unzip": "6.0-23+deb10u3"}
+
+
+def test_latest_version_with_exclusive_foreign_arch_pkg():
+    """
+    Test behavior with foreign architecture packages
+    """
+    _short_name, _foreign_arch = "wine32", "i386"
+    mock_list_pkgs = MagicMock(
+        return_value={
+            _short_name: "10.0~repack-5",
+            f"{_short_name}:{_foreign_arch}": "10.0~repack-6",
+        }
+    )
+    apt_cache_ret = {
+        "stdout": textwrap.dedent(
+            f"""{_short_name}:{_foreign_arch}:
+              Installed: (none)
+              Candidate: 10.0~repack-6
+              Version table:
+                 10.0~repack-6 500
+                    500 http://deb.debian.org/debian testing/main {_foreign_arch} Packages
+            """
+        )
+    }
+    mock_apt_cache = MagicMock(return_value=apt_cache_ret)
+    with patch("salt.modules.aptpkg._call_apt", mock_apt_cache), patch(
+        "salt.modules.aptpkg.list_pkgs", mock_list_pkgs
+    ):
+        ret = aptpkg.latest_version("wine32", refresh=False)
+    mock_apt_cache.assert_called_once()
+    assert ret == "10.0~repack-6"

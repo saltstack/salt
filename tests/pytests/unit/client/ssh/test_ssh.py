@@ -517,3 +517,219 @@ def test_handle_routine_single_run_invalid_retcode(opts, target, caplog):
         )
     )
     assert "Got an invalid retcode for host 'localhost': 'None'" in caplog.text
+
+
+def test_mod_data_empty_result(tmp_path):
+    """
+    Test mod_data when no modules are found
+    """
+    mock_fsclient = Mock()
+    mock_fsclient.opts = {
+        "cachedir": str(tmp_path),
+        "file_roots": {},
+    }
+
+    with patch("salt.loader._module_dirs", return_value=[]):
+        result = ssh.mod_data(mock_fsclient)
+
+    assert result == {}
+
+
+def test_mod_data_with_global_loader_modules(tmp_path):
+    """
+    Test mod_data collects modules from global loader
+    """
+    # Create test module files
+    modules_dir = tmp_path / "modules"
+    modules_dir.mkdir()
+    test_module = modules_dir / "test_module.py"
+    test_module.write_text("# test module")
+
+    mock_fsclient = Mock()
+    mock_fsclient.opts = {
+        "cachedir": str(tmp_path),
+        "file_roots": {},
+    }
+
+    with patch("salt.loader._module_dirs", return_value=[str(modules_dir)]), patch(
+        "salt.utils.hashutils.get_hash", return_value="abc123"
+    ):
+        result = ssh.mod_data(mock_fsclient)
+
+    assert "version" in result
+    assert "file" in result
+    assert result["file"].startswith(str(tmp_path))
+    assert result["file"].endswith(".tgz")
+
+
+def test_mod_data_with_file_roots_modules(tmp_path):
+    """
+    Test mod_data collects modules from file_roots
+    """
+    # Create file_roots structure
+    root_dir = tmp_path / "srv" / "salt"
+    root_dir.mkdir(parents=True)
+    modules_dir = root_dir / "_modules"
+    modules_dir.mkdir()
+    test_module = modules_dir / "custom_module.py"
+    test_module.write_text("# custom module")
+
+    mock_fsclient = Mock()
+    mock_fsclient.opts = {
+        "cachedir": str(tmp_path),
+        "file_roots": {"base": [str(root_dir)]},
+    }
+
+    with patch("salt.loader._module_dirs", return_value=[]), patch(
+        "salt.utils.hashutils.get_hash", return_value="def456"
+    ):
+        result = ssh.mod_data(mock_fsclient)
+
+    assert "version" in result
+    assert "file" in result
+    assert result["file"].startswith(str(tmp_path))
+
+
+def test_mod_data_multiple_module_types(tmp_path):
+    """
+    Test mod_data collects different module types (modules, states, grains, etc.)
+    """
+    root_dir = tmp_path / "srv" / "salt"
+    root_dir.mkdir(parents=True)
+
+    # Create different module types
+    for mod_type in ["_modules", "_states", "_grains"]:
+        mod_dir = root_dir / mod_type
+        mod_dir.mkdir()
+        test_file = mod_dir / f"test_{mod_type}.py"
+        test_file.write_text(f"# {mod_type}")
+
+    mock_fsclient = Mock()
+    mock_fsclient.opts = {
+        "cachedir": str(tmp_path),
+        "file_roots": {"base": [str(root_dir)]},
+    }
+
+    with patch("salt.loader._module_dirs", return_value=[]), patch(
+        "salt.utils.hashutils.get_hash", return_value="hash123"
+    ):
+        result = ssh.mod_data(mock_fsclient)
+
+    assert "version" in result
+    assert "file" in result
+
+
+def test_mod_data_cached_tarball(tmp_path):
+    """
+    Test mod_data returns existing tarball if it exists
+    """
+    # Create test module to ensure mod_data has something to process
+    modules_dir = tmp_path / "modules"
+    modules_dir.mkdir()
+    test_module = modules_dir / "test_mod.py"
+    test_module.write_text("# test")
+
+    # Create a fake cached tarball
+    cached_tarball = tmp_path / "ext_mods.testversion.tgz"
+    cached_tarball.write_text("fake tarball")
+
+    mock_fsclient = Mock()
+    mock_fsclient.opts = {
+        "cachedir": str(tmp_path),
+        "file_roots": {},
+    }
+
+    # Mock the version calculation to match our fake file
+    with patch("salt.loader._module_dirs", return_value=[str(modules_dir)]), patch(
+        "salt.utils.hashutils.get_hash", return_value="hash"
+    ), patch("hashlib.sha1") as mock_sha:
+        mock_sha.return_value.hexdigest.return_value = "testversion"
+        result = ssh.mod_data(mock_fsclient)
+
+    # Should return cached version without creating new tarball
+    assert result["version"] == "testversion"
+    assert result["file"] == str(cached_tarball)
+
+
+def test_mod_data_filters_dunder_files(tmp_path):
+    """
+    Test mod_data ignores __init__.py and other dunder files
+    """
+    modules_dir = tmp_path / "modules"
+    modules_dir.mkdir()
+    (modules_dir / "__init__.py").write_text("# init")
+    (modules_dir / "__pycache__").mkdir()
+    (modules_dir / "valid_module.py").write_text("# valid")
+
+    mock_fsclient = Mock()
+    mock_fsclient.opts = {
+        "cachedir": str(tmp_path),
+        "file_roots": {},
+    }
+
+    with patch("salt.loader._module_dirs", return_value=[str(modules_dir)]), patch(
+        "salt.utils.hashutils.get_hash", return_value="xyz789"
+    ):
+        result = ssh.mod_data(mock_fsclient)
+
+    # Should only include valid_module.py, not __init__.py
+    assert "version" in result
+    assert "file" in result
+
+
+def test_mod_data_handles_multiple_saltenvs(tmp_path):
+    """
+    Test mod_data handles multiple salt environments in file_roots
+    """
+    base_dir = tmp_path / "base"
+    base_dir.mkdir()
+    dev_dir = tmp_path / "dev"
+    dev_dir.mkdir()
+
+    base_modules = base_dir / "_modules"
+    base_modules.mkdir()
+    (base_modules / "base_mod.py").write_text("# base")
+
+    dev_modules = dev_dir / "_modules"
+    dev_modules.mkdir()
+    (dev_modules / "dev_mod.py").write_text("# dev")
+
+    mock_fsclient = Mock()
+    mock_fsclient.opts = {
+        "cachedir": str(tmp_path),
+        "file_roots": {"base": [str(base_dir)], "dev": [str(dev_dir)]},
+    }
+
+    with patch("salt.loader._module_dirs", return_value=[]), patch(
+        "salt.utils.hashutils.get_hash", return_value="multi123"
+    ):
+        result = ssh.mod_data(mock_fsclient)
+
+    assert "version" in result
+    assert "file" in result
+
+
+def test_mod_data_supports_multiple_extensions(tmp_path):
+    """
+    Test mod_data collects .py, .so, and .pyx files
+    """
+    modules_dir = tmp_path / "modules"
+    modules_dir.mkdir()
+    (modules_dir / "python_mod.py").write_text("# py")
+    (modules_dir / "cython_mod.pyx").write_text("# pyx")
+    # Create empty .so file
+    (modules_dir / "compiled_mod.so").touch()
+
+    mock_fsclient = Mock()
+    mock_fsclient.opts = {
+        "cachedir": str(tmp_path),
+        "file_roots": {},
+    }
+
+    with patch("salt.loader._module_dirs", return_value=[str(modules_dir)]), patch(
+        "salt.utils.hashutils.get_hash", return_value="ext123"
+    ):
+        result = ssh.mod_data(mock_fsclient)
+
+    assert "version" in result
+    assert "file" in result

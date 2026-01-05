@@ -20,7 +20,7 @@ on:
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-6  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-1  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
@@ -172,8 +172,15 @@ jobs:
 
       - name: Get Hash For Nox Tarball Cache
         id: nox-archive-hash
+        shell: bash
         run: |
-          echo "nox-archive-hash=${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" | tee -a "$GITHUB_OUTPUT"
+          HASH=$(python3 .github/scripts/hash-files.py \
+            'requirements/**/*.txt' \
+            'cicd/golden-images.json' \
+            'noxfile.py' \
+            'pkg/common/env-cleanup-rules.yml' \
+            '.github/workflows/build-deps-ci-action.yml')
+          echo "nox-archive-hash=${HASH}" | tee -a "$GITHUB_OUTPUT"
 
       - name: Write Changed Files To A Local File
         run:
@@ -239,7 +246,9 @@ jobs:
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
-      pre-commit-version: "3.0.4"
+      pre-commit-version: "4.3.0"
+      ci-python-version: "3.11"
+      full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
 
   lint:
     name: Lint
@@ -325,12 +334,19 @@ jobs:
 
       - name: Generate MAN Pages
         shell: bash
-        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         env:
           LATEST_RELEASE: "${{ needs.prepare-workflow.outputs.salt-version }}"
           SALT_ON_SALTSTACK: "1"
         run: |
           tools docs man
+
+      - name: Upload MAN Pages Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: man-pages-${{ needs.prepare-workflow.outputs.salt-version }}
+          path: doc/man/
+          retention-days: 7
+          if-no-files-found: error
 
       - name: Update Changelog
         shell: bash
@@ -356,7 +372,7 @@ jobs:
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         uses: ./.github/actions/setup-pre-commit
         with:
-          version: "3.0.4"
+          version: "4.3.0"
           cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
       - name: Commit Changes
@@ -390,7 +406,7 @@ jobs:
     if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-docs'] }}
     needs:
       - prepare-workflow
-      - build-source-tarball
+      - prepare-release
     uses: ./.github/workflows/build-docs.yml
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
@@ -402,6 +418,7 @@ jobs:
     needs:
       - prepare-workflow
       - prepare-release
+      - build-docs
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -422,6 +439,20 @@ jobs:
         with:
           salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
 
+      - name: Download Man Pages Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs-man.tar.xz
+
+      - name: Extract and Remove Man Pages Artifact
+        shell: bash
+        run: |
+          pwd
+          mkdir -p doc/man
+          tar -xvf salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs-man.tar.xz -C doc/man
+          ls -la doc/man
+          rm salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs-man.tar.xz
+
       - name: Build Source Tarball
         uses: ./.github/actions/build-source-tarball
         with:
@@ -432,13 +463,14 @@ jobs:
     if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-salt-onedir'] }}
     needs:
       - prepare-workflow
+      - build-docs
       - build-source-tarball
     uses: ./.github/workflows/build-salt-onedir.yml
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.20.3"
-      python-version: "3.11.13"
+      relenv-version: "0.22.1"
+      python-version: "3.11.14"
       ci-python-version: "3.11"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
@@ -454,8 +486,8 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.20.3"
-      python-version: "3.11.13"
+      relenv-version: "0.22.1"
+      python-version: "3.11.14"
       ci-python-version: "3.11"
       source: "onedir"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
@@ -471,8 +503,8 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.20.3"
-      python-version: "3.11.13"
+      relenv-version: "0.22.1"
+      python-version: "3.11.14"
       ci-python-version: "3.11"
       source: "src"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
@@ -487,10 +519,10 @@ jobs:
     with:
       nox-session: ci-test-onedir
       nox-version: 2022.8.7
-      python-version: "3.11.13"
+      python-version: "3.11.14"
       ci-python-version: "3.11"
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.13
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.14
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
@@ -507,7 +539,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       nox-version: 2022.8.7
       ci-python-version: "3.11"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.13
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.14
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.config)['skip_code_coverage'] }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['pkg-test-matrix']) }}
@@ -525,7 +557,7 @@ jobs:
       ci-python-version: "3.11"
       testrun: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['testrun']) }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.13
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.14
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.config)['skip_code_coverage'] }}
       workflow-slug: ci
       default-timeout: 180
@@ -540,6 +572,7 @@ jobs:
       PIP_INDEX_URL: https://pypi.org/simple
     needs:
       - prepare-workflow
+      - test
       - build-ci-deps
     steps:
       - uses: actions/checkout@v4
@@ -561,27 +594,6 @@ jobs:
           python3 -m pip install 'nox==2022.8.7'
 
 
-
-      - name: Merge All Code Coverage Test Run Artifacts
-        continue-on-error: true
-        uses: actions/upload-artifact/merge@v4
-        with:
-          name: all-testrun-coverage-artifacts
-          pattern: all-testrun-coverage-artifacts-*
-          separate-directories: false
-          delete-merged: true
-
-      - name: Get coverage reports
-        id: get-coverage-reports
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts/coverage/
-          pattern: all-testrun-coverage-artifacts*
-          merge-multiple: true
-
-      - name: Display structure of downloaded files
-        run: tree -a artifacts/
-
       - name: Install Codecov CLI
         run: |
           # We can't yet use tokenless uploads with the codecov CLI
@@ -596,6 +608,24 @@ jobs:
           chmod +x codecov
           mv ./codecov /usr/local/bin/
 
+      - name: Get coverage reports
+        id: get-coverage-reports
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/coverage/
+          pattern: coverage*
+          merge-multiple: true
+
+      - name: Display structure of downloaded files (before combine)
+        run: tree -a artifacts/
+
+      - name: Combine Code Coverage
+        run: |
+          nox --force-color -e combine-coverage
+
+      - name: Display structure of downloaded files (after combine)
+        run: tree -a artifacts/
+
       - name: Create XML Coverage Reports
         run: |
           nox --force-color -e create-xml-coverage-reports
@@ -607,17 +637,9 @@ jobs:
         run: |
           tools ci upload-coverage --commit-sha=${{ github.event.pull_request.head.sha || github.sha }} artifacts/coverage/
 
-      - name: Combine Code Coverage
-        run: |
-          nox --force-color -e combine-coverage
-
       - name: Report Salt Code Coverage
         run: |
           nox --force-color -e coverage-report -- salt
-
-      - name: Create Salt Code Coverage HTML Report
-        run: |
-          nox --force-color -e create-html-coverage-report -- salt
 
       - name: Create Salt Code Coverage HTML Report
         run: |

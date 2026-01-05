@@ -11,6 +11,7 @@ import os
 import re
 import time
 import types
+from collections import OrderedDict
 
 import salt.config
 import salt.defaults.events
@@ -22,7 +23,6 @@ import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.lazy
-import salt.utils.odict
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
@@ -979,7 +979,20 @@ def render(
             "the needed software is unavailable".format(opts["renderer"])
         )
         log.critical(err)
-        raise LoaderError(err)
+        if opts.get("__role") == "minion":
+            default_renderer_config = salt.config.DEFAULT_MINION_OPTS["renderer"]
+        else:
+            default_renderer_config = salt.config.DEFAULT_MASTER_OPTS["renderer"]
+        log.warning(
+            "Attempting fallback to default render pipe: %s", default_renderer_config
+        )
+        if not check_render_pipe_str(
+            default_renderer_config,
+            rend,
+            opts["renderer_blacklist"],
+            opts["renderer_whitelist"],
+        ):
+            raise LoaderError(err)
     return rend
 
 
