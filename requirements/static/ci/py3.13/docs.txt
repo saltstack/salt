@@ -8,7 +8,7 @@ aiohappyeyeballs==2.4.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   aiohttp
-aiohttp==3.10.10
+aiohttp==3.13.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
