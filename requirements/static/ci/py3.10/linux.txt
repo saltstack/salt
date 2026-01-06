@@ -10,7 +10,7 @@ aiohappyeyeballs==2.6.1
     #   aiohttp
 aiohttp-retry==2.8.3
     # via twilio
-aiohttp==3.12.15
+aiohttp==3.13.3
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt
