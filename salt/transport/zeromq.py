@@ -516,11 +516,11 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             )
             os.nice(self.opts["mworker_queue_niceness"])
 
-        # Create backend DEALER sockets (one per pool)
+        # Create backend DEALER sockets (one per pool) that preserve envelopes
         self.pool_workers = {}
         for pool_name in worker_pools.keys():
-            dealer = context.socket(zmq.DEALER)
-            dealer.setsockopt(zmq.LINGER, -1)
+            dealer_socket = context.socket(zmq.DEALER)
+            dealer_socket.setsockopt(zmq.LINGER, -1)
 
             # Determine worker URI for this pool
             if self.opts.get("ipc_mode", "") == "tcp":
@@ -533,23 +533,19 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 )
 
             log.info("ReqServer pool '%s' workers %s", pool_name, w_uri)
-            dealer.bind(w_uri)
+            dealer_socket.bind(w_uri)
             if self.opts.get("ipc_mode", "") != "tcp":
                 ipc_path = os.path.join(
                     self.opts["sock_dir"], f"workers-{pool_name}.ipc"
                 )
                 os.chmod(ipc_path, 0o600)
 
-            self.pool_workers[pool_name] = dealer
+            self.pool_workers[pool_name] = dealer_socket
 
         # Initialize request router for command classification
         import salt.master
-        import collections
 
         router = salt.master.RequestRouter(self.opts)
-
-        # Track pending requests per pool (FIFO queue of client identities)
-        pending_requests = {pool: collections.deque() for pool in worker_pools.keys()}
 
         log.info("Setting up pooled master communication server")
         log.info("ReqServer clients %s", self.uri)
@@ -558,8 +554,8 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         # Poller for receiving from clients and all worker pools
         poller = zmq.Poller()
         poller.register(self.clients, zmq.POLLIN)
-        for dealer in self.pool_workers.values():
-            poller.register(dealer, zmq.POLLIN)
+        for pool_dealer in self.pool_workers.values():
+            poller.register(pool_dealer, zmq.POLLIN)
 
         while True:
             if self.clients.closed:
@@ -568,17 +564,26 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             try:
                 socks = dict(poller.poll())
 
+                # Handle incoming responses from worker pools
+                # DEALER preserves the envelope, so we get: [client_id, b"", response]
+                for pool_name, pool_dealer in self.pool_workers.items():
+                    if pool_dealer in socks:
+                        # Receive message from DEALER (envelope is preserved)
+                        msg = pool_dealer.recv_multipart()
+                        if len(msg) >= 3:
+                            # Forward entire envelope back to ROUTER -> client
+                            self.clients.send_multipart(msg)
+
                 # Handle incoming request from client (minion)
                 if self.clients in socks:
-                    # Receive multipart message: [identity, empty, payload]
+                    # Receive multipart message: [client_id, b"", payload]
                     msg = self.clients.recv_multipart()
                     if len(msg) < 3:
                         continue
 
-                    identity = msg[0]
                     payload_raw = msg[2]
 
-                    # Decode payload to determine routing
+                    # Decode payload to determine which pool should handle this
                     try:
                         payload = salt.payload.loads(payload_raw)
                         pool_name = router.route_request(payload)
@@ -590,40 +595,16 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                             )
                             pool_name = next(iter(self.pool_workers.keys()))
 
-                        # Track this request in the pool's FIFO queue
-                        pending_requests[pool_name].append(identity)
-
-                        # Forward to appropriate pool's workers
-                        # DEALER expects just the payload (no identity frame)
-                        dealer = self.pool_workers[pool_name]
-                        dealer.send_multipart([b"", payload_raw])
+                        # Forward entire envelope to appropriate pool's DEALER
+                        # DEALER will preserve the envelope when forwarding to REQ workers
+                        pool_dealer = self.pool_workers[pool_name]
+                        pool_dealer.send_multipart(msg)
 
                     except Exception as exc:  # pylint: disable=broad-except
                         log.error("Error routing request: %s", exc, exc_info=True)
-                        # Send error response
+                        # Send error response back to client
                         error_payload = salt.payload.dumps({"error": "Routing error"})
-                        self.clients.send_multipart([identity, b"", error_payload])
-
-                # Handle replies from worker pools
-                for pool_name, dealer in self.pool_workers.items():
-                    if dealer in socks:
-                        # Receive multipart message from worker: [empty, response]
-                        reply_msg = dealer.recv_multipart()
-                        if len(reply_msg) < 2:
-                            continue
-
-                        response_raw = reply_msg[1]
-
-                        # Get the client identity from our FIFO queue
-                        if pending_requests[pool_name]:
-                            identity = pending_requests[pool_name].popleft()
-                            # Send response back to the original client
-                            self.clients.send_multipart([identity, b"", response_raw])
-                        else:
-                            log.error(
-                                "Received response from pool '%s' but no pending requests!",
-                                pool_name,
-                            )
+                        self.clients.send_multipart([msg[0], b"", error_payload])
 
             except zmq.ZMQError as exc:
                 if exc.errno == errno.EINTR:
@@ -633,8 +614,8 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 break
 
         # Cleanup
-        for dealer in self.pool_workers.values():
-            dealer.close()
+        for pool_dealer in self.pool_workers.values():
+            pool_dealer.close()
         context.term()
 
     def close(self):
