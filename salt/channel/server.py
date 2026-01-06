@@ -1316,7 +1316,7 @@ class MasterPubServerChannel:
             pull_port=port,
         )
 
-    async def handle_pool_publish(self, payload, _):
+    async def handle_pool_publish(self, payload):
         """
         Handle incoming events from cluster peer.
         """
