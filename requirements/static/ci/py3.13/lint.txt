@@ -463,7 +463,7 @@ pymysql==1.1.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/linux.in
-pynacl==1.5.0
+pynacl==1.6.2
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
