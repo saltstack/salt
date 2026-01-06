@@ -4,7 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements/static/ci/py3.8/freebsd.txt requirements/base.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/freebsd.in requirements/static/pkg/freebsd.in requirements/zeromq.txt
 #
-aiohttp==3.9.5
+aiohttp==3.13.3
     # via
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
     #   -r requirements/base.txt
