@@ -1592,9 +1592,13 @@ class MasterPubServerChannel:
                 if payload["return_token"] != token:
                     log.warning("Cluster join, token does not not match")
                     return
-                pubk = salt.crypt.PublicKeyString(payload["pub"])
-                if not pubk.verify(data["payload"], data["sig"]):
-                    log.warning("Cluster join signature invalid.")
+                try:
+                    pubk = salt.crypt.PublicKeyString(payload["pub"])
+                    if not pubk.verify(data["payload"], data["sig"]):
+                        log.warning("Cluster join signature invalid.")
+                        return
+                except InvalidKeyError:
+                    log.warning("Invalid public key or signature in cluster join payload")
                     return
 
                 log.info("Cluster join from %s", payload["peer_id"])
@@ -1878,9 +1882,13 @@ class MasterPubServerChannel:
                     )
                     return
 
-                peer_key = salt.crypt.PublicKeyString(payload["pub"])
-                if not peer_key.verify(data["payload"], data["sig"]):
-                    log.warning("Invalid signature of cluster discover payload")
+                try:
+                    peer_key = salt.crypt.PublicKeyString(payload["pub"])
+                    if not peer_key.verify(data["payload"], data["sig"]):
+                        log.warning("Invalid signature of cluster discover payload")
+                        return
+                except InvalidKeyError:
+                    log.warning("Invalid public key or signature in cluster discover payload")
                     return
                 log.info("Cluster discovery from %s", payload["peer_id"])
                 token = self.gen_token()
