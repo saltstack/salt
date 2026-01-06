@@ -542,6 +542,14 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
 
             self.pool_workers[pool_name] = dealer_socket
 
+        # Create marker file for _is_master_running() check in netapi
+        # This file is expected by components that check if master is running
+        if self.opts.get("ipc_mode", "") != "tcp":
+            marker_path = os.path.join(self.opts["sock_dir"], "workers.ipc")
+            # Touch the file to create it if it doesn't exist
+            open(marker_path, "a").close()
+            os.chmod(marker_path, 0o600)
+
         # Initialize request router for command classification
         import salt.master
 
