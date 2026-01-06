@@ -808,13 +808,12 @@ class OptsDict(dict):
         """
         Support for copy.deepcopy().
 
-        When deepcopied, we return a regular dict to avoid issues with
-        unpicklable locks. This matches the behavior expected by code
-        that does copy.deepcopy(opts).
+        Returns a new OptsDict with a deep copy of the data.
         """
         with self._ensure_lock():
-            # Return a deep copy as a regular dict
-            return copy.deepcopy(dict(self), memo)
+            # Create a new OptsDict with deep copied data
+            copied_data = copy.deepcopy(dict(self), memo)
+            return OptsDict.from_dict(copied_data, name=f"{self._name}_copy")
 
     def __reduce_ex__(self, protocol):
         """
