@@ -262,6 +262,7 @@ Foo
         d1 = f(1_000)
         d2 = f(10_000)
         if d2 / d1 > 20:
+            self.fail(f"Disposition param parsing is not linear: {d1=} vs {d2=}")
 
 
 class HTTPHeadersTest(unittest.TestCase):
