@@ -541,6 +541,99 @@ class TestRealWorldScenarios:
             assert "pillar" in mod_opts.get_shared_keys()
 
 
+class TestOptsDictDeepCopy:
+    """Test OptsDict.__deepcopy__() behavior."""
+
+    def test_deepcopy_returns_optsdict(self):
+        """Test that copy.deepcopy() returns OptsDict, not plain dict."""
+        opts = OptsDict.from_dict({"a": 1, "b": 2, "c": 3}, name="test")
+
+        copied = copy.deepcopy(opts)
+
+        # Should be OptsDict, not plain dict
+        assert isinstance(copied, OptsDict)
+        assert hasattr(copied, "mutate_key")
+        assert hasattr(copied, "get_local_keys")
+
+    def test_deepcopy_uses_copy_on_write(self):
+        """Test that deepcopy uses copy-on-write (creates child)."""
+        opts = OptsDict.from_dict(
+            {"grains": {"os": "Linux"}, "pillar": {"app": "data"}, "test": False},
+            name="parent"
+        )
+
+        copied = copy.deepcopy(opts)
+
+        # Should be a child that shares parent data
+        assert copied._parent is not None
+        assert len(copied.get_local_keys()) == 0  # Nothing local yet
+        assert len(copied.get_shared_keys()) == 3  # All keys shared
+
+    def test_deepcopy_isolation(self):
+        """Test that deepcopy provides proper isolation."""
+        opts = OptsDict.from_dict({"a": 1, "b": 2, "nested": {"x": 10}}, name="original")
+
+        copied = copy.deepcopy(opts)
+
+        # Mutate copied
+        copied["a"] = 999
+        copied["c"] = "new"
+        copied["nested"]["y"] = 20
+
+        # Original should be unchanged
+        assert opts["a"] == 1
+        assert "c" not in opts
+        assert "y" not in opts["nested"]
+
+        # Copied should have new values
+        assert copied["a"] == 999
+        assert copied["c"] == "new"
+        assert copied["nested"]["y"] == 20
+
+    def test_deepcopy_preserves_all_data(self):
+        """Test that all data is accessible in deepcopy."""
+        opts = OptsDict.from_dict(
+            {"grains": {"os": "Linux", "cpus": 4}, "pillar": {"app": "data"}, "test": False},
+            name="test"
+        )
+
+        copied = copy.deepcopy(opts)
+
+        # All keys should be accessible
+        assert copied["grains"]["os"] == "Linux"
+        assert copied["grains"]["cpus"] == 4
+        assert copied["pillar"]["app"] == "data"
+        assert copied["test"] is False
+
+    def test_deepcopy_multiple_copies(self):
+        """Test creating multiple deepcopies (e.g., multi-master scenario)."""
+        opts = OptsDict.from_dict(
+            {"grains": {"os": "Linux"}, "master": "master1", "multimaster": False},
+            name="base"
+        )
+
+        # Create 3 copies like MinionManager does
+        copies = []
+        for master_name in ["master1", "master2", "master3"]:
+            s_opts = copy.deepcopy(opts)
+            s_opts["master"] = master_name
+            s_opts["multimaster"] = True
+            copies.append(s_opts)
+
+        # Each should be isolated
+        assert copies[0]["master"] == "master1"
+        assert copies[1]["master"] == "master2"
+        assert copies[2]["master"] == "master3"
+
+        # Original unchanged
+        assert opts["master"] == "master1"
+        assert opts["multimaster"] is False
+
+        # All should share grains (copy-on-write efficiency)
+        for s_opts in copies:
+            assert "grains" in s_opts.get_shared_keys()
+
+
 class TestOptsDictVsDeepCopy:
     """Compare OptsDict vs copy.deepcopy for memory efficiency."""
 
