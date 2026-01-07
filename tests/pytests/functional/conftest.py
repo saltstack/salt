@@ -69,6 +69,7 @@ def minion_opts(
                     str(state_tree_prod),
                 ],
             },
+            "lazy_loader_strict_matching": True,
         }
     )
 
