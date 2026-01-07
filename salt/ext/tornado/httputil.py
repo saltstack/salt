@@ -893,19 +893,33 @@ def parse_response_start_line(line):
 # combinations of semicolons and double quotes.
 # It has also been modified to support valueless parameters as seen in
 # websocket extension negotiations.
+#
+# _parseparam has been further modified with the logic from
+# https://github.com/python/cpython/pull/136072/files
+# to avoid quadratic behavior when parsing semicolons in quoted strings.
+#
+# TODO: See if we can switch to email.message.Message for this functionality.
+# This is the suggested replacement for the cgi.py module now that cgi has
+# been removed from recent versions of Python.  We need to verify that
+# the email module is consistent with our existing behavior (and all relevant
 
 
 def _parseparam(s):
-    while s[:1] == ";":
-        s = s[1:]
-        end = s.find(";")
-        while end > 0 and (s.count('"', 0, end) - s.count('\\"', 0, end)) % 2:
-            end = s.find(";", end + 1)
+    start = 0
+    while s.find(";", start) == start:
+        start += 1
+        end = s.find(";", start)
+        ind, diff = start, 0
+        while end > 0:
+            diff += s.count('"', ind, end) - s.count('\\"', ind, end)
+            if diff % 2 == 0:
+                break
+            end, ind = ind, s.find(";", end + 1)
         if end < 0:
             end = len(s)
-        f = s[:end]
+        f = s[start:end]
         yield f.strip()
-        s = s[end:]
+        start = end
 
 
 def _parse_header(line):
