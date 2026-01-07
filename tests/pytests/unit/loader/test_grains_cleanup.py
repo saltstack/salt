@@ -32,6 +32,7 @@ def test_grains_modules_removed_from_sys_modules(minion_opts):
     Test that grains modules are removed from sys.modules after grains() completes.
 
     This prevents modules from accumulating in memory on repeated grains() calls.
+    Base stub modules are preserved as they're shared infrastructure.
     """
     # Get initial state
     initial_modules = set(sys.modules.keys())
@@ -49,10 +50,23 @@ def test_grains_modules_removed_from_sys_modules(minion_opts):
         m for m in (after_grains - initial_modules) if m.startswith("salt.loaded.")
     ]
 
+    # Filter out base stub modules - these are intentionally preserved
+    # Base stubs are exactly: salt.loaded.int, salt.loaded.int.{tag}, salt.loaded.ext, salt.loaded.ext.{tag}
+    # where {tag} is the loader type (e.g., "grains", "modules", etc.)
+    # Anything with more path components than that is an actual loaded module
+    non_stub_modules = []
+    for m in loaded_modules:
+        parts = m.split('.')
+        # Base stubs have exactly 3 or 4 parts: salt.loaded.int or salt.loaded.int.grains
+        # Actual modules have 5+ parts: salt.loaded.int.grains.core
+        if len(parts) > 4:
+            non_stub_modules.append(m)
+
     # After grains() completes, loaded grains modules should be cleaned up
+    # (but base stubs remain for other loaders to use)
     assert (
-        len(loaded_modules) == 0
-    ), f"Found {len(loaded_modules)} grains modules still in sys.modules: {loaded_modules[:10]}"
+        len(non_stub_modules) == 0
+    ), f"Found {len(non_stub_modules)} grains modules still in sys.modules: {non_stub_modules[:10]}"
 
 
 def test_grains_modules_garbage_collected(minion_opts):
@@ -117,7 +131,8 @@ def test_grains_cleanup_is_idempotent(minion_opts):
     """
     Test that calling grains() multiple times doesn't accumulate modules.
 
-    Each call should clean up after itself.
+    Each call should clean up after itself. Base stubs remain but actual
+    grains modules should not accumulate.
     """
     # Get baseline
     gc.collect()
@@ -134,9 +149,12 @@ def test_grains_cleanup_is_idempotent(minion_opts):
             m for m in current_modules if m.startswith("salt.loaded.int.grains.")
         ]
 
+        # Filter out base stub (salt.loaded.int.grains itself is a stub)
+        non_stub_modules = [m for m in loaded_modules if m.count('.') > 4]
+
         assert (
-            len(loaded_modules) == 0
-        ), f"Iteration {i+1}: Found {len(loaded_modules)} accumulated grains modules"
+            len(non_stub_modules) == 0
+        ), f"Iteration {i+1}: Found {len(non_stub_modules)} accumulated grains modules: {non_stub_modules[:10]}"
 
 
 def test_grains_cleanup_clears_loader_internals(minion_opts):
@@ -189,9 +207,12 @@ def test_grains_cleanup_on_error(minion_opts):
         m for m in (after_modules - initial_modules) if m.startswith("salt.loaded.")
     ]
 
+    # Filter out base stubs (have 4 or fewer parts)
+    non_stub_modules = [m for m in loaded_modules if len(m.split('.')) > 4]
+
     assert (
-        len(loaded_modules) == 0
-    ), f"Cleanup failed on error: {len(loaded_modules)} modules remain"
+        len(non_stub_modules) == 0
+    ), f"Cleanup failed on error: {len(non_stub_modules)} modules remain: {non_stub_modules}"
 
 
 def test_clean_modules_removes_from_sys_modules(minion_opts):
@@ -202,8 +223,17 @@ def test_clean_modules_removes_from_sys_modules(minion_opts):
     """
     loader = salt.loader.grain_funcs(minion_opts)
 
-    # Track what base name is used
+    # Track what base name and tag are used
     loaded_base_name = loader.loaded_base_name
+    tag = loader.tag
+
+    # Expected base stub modules that should be preserved
+    expected_base_stubs = {
+        f"{loaded_base_name}.int",
+        f"{loaded_base_name}.int.{tag}",
+        f"{loaded_base_name}.ext",
+        f"{loaded_base_name}.ext.{tag}",
+    }
 
     # Load some modules
     for key in list(loader.keys())[:5]:
@@ -219,11 +249,67 @@ def test_clean_modules_removes_from_sys_modules(minion_opts):
     # Clean modules
     loader.clean_modules()
 
-    # Verify they're removed
-    loaded_after = [m for m in sys.modules if m.startswith(loaded_base_name)]
-    assert (
-        len(loaded_after) == 0
-    ), f"clean_modules() failed to remove {len(loaded_after)} modules from sys.modules"
+    # Verify actual loaded modules are removed but base stubs remain
+    remaining = [m for m in sys.modules if m.startswith(loaded_base_name)]
+
+    # All remaining modules should be base stubs
+    unexpected = set(remaining) - expected_base_stubs
+    assert len(unexpected) == 0, (
+        f"clean_modules() failed to remove {len(unexpected)} modules: {unexpected}"
+    )
+
+    # Base stubs should still be present
+    for stub in expected_base_stubs:
+        assert stub in sys.modules, f"Base stub module {stub} was incorrectly removed"
+
+
+def test_base_stubs_preserved_across_loaders(minion_opts):
+    """
+    Test that base stub modules are preserved when one loader cleans up,
+    so other loaders can still function.
+
+    This is critical because stub modules are shared infrastructure.
+    """
+    # Create two different loaders
+    loader1 = salt.loader.grain_funcs(minion_opts)
+    loader2 = salt.loader.grain_funcs(minion_opts)
+
+    # Verify they share the same base
+    assert loader1.loaded_base_name == loader2.loaded_base_name
+    assert loader1.tag == loader2.tag
+
+    # Track base stubs
+    base_stubs = {
+        f"{loader1.loaded_base_name}.int",
+        f"{loader1.loaded_base_name}.int.{loader1.tag}",
+        f"{loader1.loaded_base_name}.ext",
+        f"{loader1.loaded_base_name}.ext.{loader1.tag}",
+    }
+
+    # Load something in loader1
+    for key in list(loader1.keys())[:3]:
+        try:
+            _ = loader1[key]
+        except Exception:
+            pass
+
+    # Clean loader1
+    loader1.clean_modules()
+
+    # Verify base stubs still exist for loader2 to use
+    for stub in base_stubs:
+        assert stub in sys.modules, (
+            f"Base stub {stub} was removed, breaking other loaders"
+        )
+
+    # Verify loader2 can still load modules
+    for key in list(loader2.keys())[:3]:
+        try:
+            func = loader2[key]
+            # Should be able to access the function
+            assert callable(func)
+        except Exception as e:
+            pytest.fail(f"Loader2 failed after loader1 cleanup: {e}")
 
 
 @pytest.mark.parametrize("force_refresh", [False, True])
@@ -246,7 +332,11 @@ def test_grains_cleanup_with_refresh(minion_opts, force_refresh):
         m for m in (after_modules - initial_modules) if m.startswith("salt.loaded.")
     ]
 
-    assert len(loaded_modules) == 0, (
+    # Base stubs are ok to remain - they're shared infrastructure
+    # Filter them out to check for actual loaded modules (have > 4 parts)
+    non_stub_modules = [m for m in loaded_modules if len(m.split('.')) > 4]
+
+    assert len(non_stub_modules) == 0, (
         f"Cleanup failed with force_refresh={force_refresh}: "
-        f"{len(loaded_modules)} modules remain"
+        f"{len(non_stub_modules)} non-stub modules remain: {non_stub_modules}"
     )

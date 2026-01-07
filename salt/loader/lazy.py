@@ -339,10 +339,21 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         """
         Clean modules and free memory
         """
-        # Remove from sys.modules
+        # Build list of base stub modules that should be preserved
+        # These are shared across loaders and should not be removed
+        base_stubs = {
+            f"{self.loaded_base_name}.int",
+            f"{self.loaded_base_name}.int.{self.tag}",
+            f"{self.loaded_base_name}.ext",
+            f"{self.loaded_base_name}.ext.{self.tag}",
+        }
+
+        # Remove from sys.modules, but preserve base stub modules
         for name in list(sys.modules):
             if name.startswith(self.loaded_base_name):
-                del sys.modules[name]
+                # Don't remove base stub modules - they're shared
+                if name not in base_stubs:
+                    del sys.modules[name]
 
         # Clear internal caches to allow garbage collection
         self._dict.clear()
