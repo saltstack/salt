@@ -553,7 +553,7 @@ typing-extensions==4.8.0
     #   pydantic-core
     #   pytest-shell-utilities
     #   pytest-system-statistics
-urllib3==1.26.18
+urllib3==2.6.3
     # via
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
     #   botocore
