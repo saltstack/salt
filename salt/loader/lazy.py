@@ -337,11 +337,18 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
     def clean_modules(self):
         """
-        Clean modules
+        Clean modules and free memory
         """
+        # Remove from sys.modules
         for name in list(sys.modules):
             if name.startswith(self.loaded_base_name):
                 del sys.modules[name]
+
+        # Clear internal caches to allow garbage collection
+        self._dict.clear()
+        self.loaded_modules.clear()
+        self.loaded_files.clear()
+        self.missing_modules.clear()
 
     def __getitem__(self, item):
         """
@@ -625,9 +632,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 yield k
 
         # anyone else? Bueller?
-        for k in self.file_mapping:
-            if mod_name not in k:
-                yield k
+        # Skip expensive Bueller fallback search if strict matching is enabled
+        if not self.opts.get('lazy_loader_strict_matching', False):
+            for k in self.file_mapping:
+                if mod_name not in k:
+                    yield k
 
     def _reload_submodules(self, mod):
         submodules = (
