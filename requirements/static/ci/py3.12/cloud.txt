@@ -9,7 +9,7 @@ aiohappyeyeballs==2.6.1
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
     #   aiohttp
-aiohttp==3.12.14
+aiohttp==3.13.3
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -c requirements/static/ci/py3.12/linux.txt
