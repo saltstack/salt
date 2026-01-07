@@ -60,7 +60,7 @@ typing-extensions==4.9.0
     # via
     #   pydantic
     #   pydantic-core
-urllib3==1.26.18
+urllib3==2.6.3
     # via
     #   botocore
     #   requests
