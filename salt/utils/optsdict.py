@@ -808,12 +808,14 @@ class OptsDict(dict):
         """
         Support for copy.deepcopy().
 
-        Returns a new OptsDict with a deep copy of the data.
+        Uses copy-on-write by creating a child OptsDict instead of deep copying.
+        This provides the same isolation semantics as deepcopy while being much
+        more memory efficient. When the copied OptsDict is modified, only the
+        modified keys are copied, not the entire dict.
         """
-        with self._ensure_lock():
-            # Create a new OptsDict with deep copied data
-            copied_data = copy.deepcopy(dict(self), memo)
-            return OptsDict.from_dict(copied_data, name=f"{self._name}_copy")
+        # Use copy-on-write by creating a child OptsDict
+        # This shares data with parent until mutations occur
+        return OptsDict.from_parent(self, name=f"{self._name}_deepcopy")
 
     def __reduce_ex__(self, protocol):
         """
