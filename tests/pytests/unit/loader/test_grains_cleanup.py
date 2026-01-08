@@ -177,10 +177,10 @@ def test_grains_cleanup_is_idempotent(minion_opts):
 
 def test_grains_cleanup_clears_loader_internals(minion_opts):
     """
-    Test that clean_modules() clears internal loader state.
+    Test that clean_modules() does NOT clear internal loader state.
 
-    Verifies that _dict, loaded_modules, loaded_files, and missing_modules
-    are all cleared to allow garbage collection.
+    The loader may still be referenced after cleanup (e.g., in deltaproxy),
+    so internal state must remain intact. Only sys.modules entries are removed.
     """
     # Create a loader
     loader = salt.loader.grain_funcs(minion_opts)
@@ -195,14 +195,18 @@ def test_grains_cleanup_clears_loader_internals(minion_opts):
     # Verify loader has state
     assert len(loader._dict) > 0 or len(loader.loaded_modules) > 0
 
+    # Remember the state before cleanup
+    dict_size_before = len(loader._dict)
+    loaded_modules_before = len(loader.loaded_modules)
+
     # Clean modules
     loader.clean_modules()
 
-    # Verify all internal state is cleared
-    assert len(loader._dict) == 0, "loader._dict not cleared"
-    assert len(loader.loaded_modules) == 0, "loader.loaded_modules not cleared"
-    assert len(loader.loaded_files) == 0, "loader.loaded_files not cleared"
-    assert len(loader.missing_modules) == 0, "loader.missing_modules not cleared"
+    # Verify internal state is NOT cleared (loader may still be referenced)
+    assert len(loader._dict) == dict_size_before, "loader._dict should not be cleared"
+    assert (
+        len(loader.loaded_modules) == loaded_modules_before
+    ), "loader.loaded_modules should not be cleared"
 
 
 def test_grains_cleanup_on_error(minion_opts):
