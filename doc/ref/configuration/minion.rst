@@ -1807,6 +1807,33 @@ the priority of optimization level(s) Salt's module loader should prefer.
       - 0
       - 1
 
+.. conf_minion:: lazy_loader_strict_matching
+
+``lazy_loader_strict_matching``
+--------------------------------
+
+.. versionadded:: 3006.19
+
+Default: ``False``
+
+.. versionchanged:: 3008.0
+    The default will change to ``True`` in version 3008.0.
+
+Reduces memory usage by skipping expensive module file searches.
+
+When disabled (default), the loader searches for modules in three stages:
+
+1. Exact filename match (e.g., ``test.py`` for module ``test``)
+2. Partial filename matches (files containing "test" in the name)
+3. Expensive search through every module file
+
+When enabled, stage 3 is skipped. Virtual module names (``__virtualname__``)
+continue to work if stages 1 or 2 find the module file.
+
+.. code-block:: yaml
+
+    lazy_loader_strict_matching: True
+
 Minion Execution Module Management
 ==================================
 

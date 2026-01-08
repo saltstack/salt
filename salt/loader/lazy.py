@@ -147,7 +147,16 @@ class LoadedFunc:
 
     def __call__(self, *args, **kwargs):
         run_func = self.func
-        mod = sys.modules[run_func.__module__]
+        # Get the module object - it might have been removed from sys.modules by clean_modules()
+        # but the function still has a reference to it via __globals__
+        mod = sys.modules.get(run_func.__module__)
+        if mod is None:
+            # Module was cleaned from sys.modules, but we can get it from the function's globals
+            # The function's __globals__ is the module's namespace dict
+            import types
+
+            mod = types.ModuleType(run_func.__module__)
+            mod.__dict__.update(run_func.__globals__)
         # All modules we've imported should have __opts__ defined. There are
         # cases in the test suite where mod ends up being something other than
         # a module we've loaded.
@@ -343,11 +352,15 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         """
         Clean modules and free memory for this loader's tag only.
 
-        Removes loaded modules from sys.modules and clears internal caches,
+        Removes loaded modules from sys.modules to allow garbage collection,
         but only for modules belonging to this loader's tag (e.g., 'grains', 'modules').
         This prevents interfering with other active loaders (e.g., runners, states).
 
         Base stub modules are preserved as they are shared infrastructure.
+
+        Note: This method does NOT clear the loader's internal state (_dict, loaded_modules, etc.)
+        as the loader may still be referenced and used after cleanup. The modules will be
+        garbage collected when they're no longer referenced.
 
         Note: Injected loaders in pack (e.g., __utils__, __salt__, __states__) are
         NOT cleaned up because they are shared infrastructure. They will be cleaned
@@ -398,11 +411,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             del sys.modules[name]
                             break
 
-            # Clear internal caches to allow garbage collection
-            self._dict.clear()
-            self.loaded_modules.clear()
-            self.loaded_files.clear()
-            self.missing_modules.clear()
+            # Note: We do NOT clear internal loader state (self._dict, self.loaded_modules, etc.)
+            # because the loader object may still be referenced and used after cleanup.
+            # Python's garbage collector will clean up the modules once they're no longer
+            # referenced anywhere.
         finally:
             # Always remove from tracking set, even if an exception occurs
             _cleaning_loaders.discard(loader_id)

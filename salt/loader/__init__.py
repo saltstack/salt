@@ -1268,7 +1268,7 @@ def grains(opts, force_refresh=False, proxy=None, context=None, loaded_base_name
     else:
         grains_data.update(opts["grains"])
 
-    # Clean up loaded grains modules to free memory
+    # Clean up loaded grains modules from sys.modules to free memory
     funcs.clean_modules()
 
     return salt.utils.data.decode(grains_data, preserve_tuples=True)
