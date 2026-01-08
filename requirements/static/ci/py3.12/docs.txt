@@ -267,7 +267,7 @@ timelib==0.3.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
-tornado==6.5.2
+tornado==6.5.4
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt

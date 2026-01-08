@@ -518,7 +518,7 @@ toml==0.10.2
     # via -r requirements/static/ci/common.in
 tomli==2.2.1
     # via pytest
-tornado==6.5.2
+tornado==6.5.4
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   -r requirements/base.txt
