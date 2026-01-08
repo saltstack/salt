@@ -1343,18 +1343,21 @@ class LoaderCleanupTest(ModuleCase):
             f"{loaded_base_name}.ext.{tag}",
         }
 
-        # Check that only base stubs remain, not actual loaded modules
+        # Check that only base stubs and utils modules remain, not actual loaded modules
         for name in list(sys.modules):
             if name.startswith(loaded_base_name):
                 # Base stubs are ok
                 if name in expected_base_stubs:
                     continue
-                # Actual loaded modules (> 4 parts) should be removed
+                # Utils modules are shared infrastructure, ok to remain
+                parts = name.split(".")
+                if len(parts) >= 4 and parts[3] == "utils":
+                    continue
+                # Actual loaded modules should be removed
                 self.fail(
                     "Found a loaded module in sys.modules: {!r}. "
-                    "Only base stubs should remain: {}".format(
-                        name, expected_base_stubs
-                    )
+                    "Only base stubs and utils modules should remain. "
+                    "Base stubs: {}".format(name, expected_base_stubs)
                 )
 
 

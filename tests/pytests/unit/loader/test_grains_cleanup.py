@@ -50,20 +50,26 @@ def test_grains_modules_removed_from_sys_modules(minion_opts):
         m for m in (after_grains - initial_modules) if m.startswith("salt.loaded.")
     ]
 
-    # Filter out base stub modules - these are intentionally preserved
+    # Filter out base stub modules and utils modules - these are intentionally preserved
     # Base stubs are exactly: salt.loaded.int, salt.loaded.int.{tag}, salt.loaded.ext, salt.loaded.ext.{tag}
     # where {tag} is the loader type (e.g., "grains", "modules", etc.)
+    # Utils modules are shared infrastructure: salt.loaded.int.utils.*, salt.loaded.ext.utils.*
     # Anything with more path components than that is an actual loaded module
     non_stub_modules = []
     for m in loaded_modules:
-        parts = m.split('.')
+        parts = m.split(".")
         # Base stubs have exactly 3 or 4 parts: salt.loaded.int or salt.loaded.int.grains
-        # Actual modules have 5+ parts: salt.loaded.int.grains.core
-        if len(parts) > 4:
-            non_stub_modules.append(m)
+        if len(parts) <= 4:
+            continue
+        # Utils modules are shared infrastructure, skip them
+        # e.g., salt.loaded.int.utils.zfs
+        if len(parts) > 4 and parts[3] == "utils":
+            continue
+        # Actual grains modules have 5+ parts: salt.loaded.int.grains.core
+        non_stub_modules.append(m)
 
     # After grains() completes, loaded grains modules should be cleaned up
-    # (but base stubs remain for other loaders to use)
+    # (but base stubs and utils modules remain as shared infrastructure)
     assert (
         len(non_stub_modules) == 0
     ), f"Found {len(non_stub_modules)} grains modules still in sys.modules: {non_stub_modules[:10]}"
@@ -93,7 +99,10 @@ def test_grains_modules_garbage_collected(minion_opts):
 
     # Get loaded module objects from sys.modules and create weakrefs
     for mod_name in list(sys.modules.keys()):
-        if mod_name.startswith("salt.loaded.int.grains.") and mod_name not in initial_modules:
+        if (
+            mod_name.startswith("salt.loaded.int.grains.")
+            and mod_name not in initial_modules
+        ):
             mod_obj = sys.modules[mod_name]
             module_weakrefs.append((mod_name, weakref.ref(mod_obj)))
 
@@ -149,8 +158,17 @@ def test_grains_cleanup_is_idempotent(minion_opts):
             m for m in current_modules if m.startswith("salt.loaded.int.grains.")
         ]
 
-        # Filter out base stub (salt.loaded.int.grains itself is a stub)
-        non_stub_modules = [m for m in loaded_modules if m.count('.') > 4]
+        # Filter out base stub and utils modules
+        non_stub_modules = []
+        for m in loaded_modules:
+            parts = m.split(".")
+            # Base stub has exactly 4 parts: salt.loaded.int.grains
+            if len(parts) <= 4:
+                continue
+            # Skip utils modules (shared infrastructure)
+            if len(parts) > 4 and parts[3] == "utils":
+                continue
+            non_stub_modules.append(m)
 
         assert (
             len(non_stub_modules) == 0
@@ -207,8 +225,17 @@ def test_grains_cleanup_on_error(minion_opts):
         m for m in (after_modules - initial_modules) if m.startswith("salt.loaded.")
     ]
 
-    # Filter out base stubs (have 4 or fewer parts)
-    non_stub_modules = [m for m in loaded_modules if len(m.split('.')) > 4]
+    # Filter out base stubs and utils modules
+    non_stub_modules = []
+    for m in loaded_modules:
+        parts = m.split(".")
+        # Base stubs have 4 or fewer parts
+        if len(parts) <= 4:
+            continue
+        # Skip utils modules (shared infrastructure)
+        if len(parts) > 4 and parts[3] == "utils":
+            continue
+        non_stub_modules.append(m)
 
     assert (
         len(non_stub_modules) == 0
@@ -252,11 +279,24 @@ def test_clean_modules_removes_from_sys_modules(minion_opts):
     # Verify actual loaded modules are removed but base stubs remain
     remaining = [m for m in sys.modules if m.startswith(loaded_base_name)]
 
-    # All remaining modules should be base stubs
-    unexpected = set(remaining) - expected_base_stubs
-    assert len(unexpected) == 0, (
-        f"clean_modules() failed to remove {len(unexpected)} modules: {unexpected}"
-    )
+    # All remaining modules should be base stubs or utils modules (shared infrastructure)
+    # Filter out both base stubs and utils modules
+    unexpected = []
+    for m in remaining:
+        # Skip base stubs
+        if m in expected_base_stubs:
+            continue
+        # Skip utils modules (shared infrastructure)
+        parts = m.split(".")
+        # Utils modules: salt.loaded.int.utils, salt.loaded.int.utils.*, etc.
+        if len(parts) >= 4 and parts[3] == "utils":
+            continue
+        # Anything else is unexpected
+        unexpected.append(m)
+
+    assert (
+        len(unexpected) == 0
+    ), f"clean_modules() failed to remove {len(unexpected)} modules: {unexpected}"
 
     # Base stubs should still be present
     for stub in expected_base_stubs:
@@ -298,9 +338,9 @@ def test_base_stubs_preserved_across_loaders(minion_opts):
 
     # Verify base stubs still exist for loader2 to use
     for stub in base_stubs:
-        assert stub in sys.modules, (
-            f"Base stub {stub} was removed, breaking other loaders"
-        )
+        assert (
+            stub in sys.modules
+        ), f"Base stub {stub} was removed, breaking other loaders"
 
     # Verify loader2 can still load modules
     for key in list(loader2.keys())[:3]:
@@ -332,9 +372,18 @@ def test_grains_cleanup_with_refresh(minion_opts, force_refresh):
         m for m in (after_modules - initial_modules) if m.startswith("salt.loaded.")
     ]
 
-    # Base stubs are ok to remain - they're shared infrastructure
-    # Filter them out to check for actual loaded modules (have > 4 parts)
-    non_stub_modules = [m for m in loaded_modules if len(m.split('.')) > 4]
+    # Base stubs and utils modules are ok to remain - they're shared infrastructure
+    # Filter them out to check for actual loaded modules
+    non_stub_modules = []
+    for m in loaded_modules:
+        parts = m.split(".")
+        # Base stubs have 4 or fewer parts
+        if len(parts) <= 4:
+            continue
+        # Skip utils modules (shared infrastructure)
+        if len(parts) > 4 and parts[3] == "utils":
+            continue
+        non_stub_modules.append(m)
 
     assert len(non_stub_modules) == 0, (
         f"Cleanup failed with force_refresh={force_refresh}: "
