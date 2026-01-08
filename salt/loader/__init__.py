@@ -1189,7 +1189,8 @@ def grains(opts, force_refresh=False, proxy=None, context=None, loaded_base_name
         except Exception:  # pylint: disable=broad-except
             if salt.utils.platform.is_proxy():
                 log.info(
-                    "The following CRITICAL message may not be an error; the proxy may not be completely established yet."
+                    "The following CRITICAL message may not be an error; "
+                    "the proxy may not be completely established yet."
                 )
             log.critical(
                 "Failed to load grains defined in grain file %s in "
