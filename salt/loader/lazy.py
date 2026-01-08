@@ -349,8 +349,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         Base stub modules are preserved as they are shared infrastructure.
 
-        Also recursively cleans up any injected loaders in pack (e.g., __utils__,
-        __salt__, __states__) that were created specifically for this loader.
+        Note: Injected loaders in pack (e.g., __utils__, __salt__, __states__) are
+        NOT cleaned up because they are shared infrastructure. They will be cleaned
+        up when explicitly destroyed.
         """
         # Prevent infinite recursion from circular loader references
         # (e.g., when loaders reference each other in pack)
@@ -360,24 +361,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         _cleaning_loaders.add(loader_id)
 
         try:
-            # First, clean up any injected loaders in pack
-            # (e.g., __utils__, __salt__, __states__, etc.)
-            if hasattr(self, 'pack') and isinstance(self.pack, dict):
-                for key, value in self.pack.items():
-                    # Clean up any LazyLoader instances found in pack
-                    if isinstance(value, LazyLoader):
-                        # Recursively clean up the injected loader's modules
-                        value.clean_modules()
-
-                        # Also remove the base stub modules for the injected loader
-                        # since it was only used by this loader and won't be needed anymore
-                        injected_base_stubs = [
-                            f"{value.loaded_base_name}.int.{value.tag}",
-                            f"{value.loaded_base_name}.ext.{value.tag}",
-                        ]
-                        for stub in injected_base_stubs:
-                            if stub in sys.modules:
-                                del sys.modules[stub]
+            # Note: We do NOT recursively clean up injected loaders in pack
+            # (like __utils__, __salt__, __states__) because they are shared
+            # infrastructure used by multiple loaders. They will be cleaned up
+            # when explicitly destroyed, not as a side effect of cleaning this loader.
 
             # Build list of base stub modules that should be preserved
             # These are shared across loaders and should not be removed
@@ -703,7 +690,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         # anyone else? Bueller?
         # Skip expensive Bueller fallback search if strict matching is enabled
-        if not self.opts.get('lazy_loader_strict_matching', False):
+        if not self.opts.get("lazy_loader_strict_matching", False):
             for k in self.file_mapping:
                 if mod_name not in k:
                     yield k
