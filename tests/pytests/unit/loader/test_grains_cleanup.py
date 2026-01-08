@@ -87,7 +87,7 @@ def test_grains_modules_garbage_collected(minion_opts):
         # Trigger loading by accessing the function
         try:
             _ = temp_loader[key]
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             # Some grains may fail to load, that's ok
             pass
 
@@ -171,7 +171,7 @@ def test_grains_cleanup_clears_loader_internals(minion_opts):
     for key in list(loader.keys())[:3]:
         try:
             _ = loader[key]
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
 
     # Verify loader has state
@@ -239,7 +239,7 @@ def test_clean_modules_removes_from_sys_modules(minion_opts):
     for key in list(loader.keys())[:5]:
         try:
             _ = loader[key]
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
 
     # Find modules that were loaded
@@ -290,7 +290,7 @@ def test_base_stubs_preserved_across_loaders(minion_opts):
     for key in list(loader1.keys())[:3]:
         try:
             _ = loader1[key]
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
 
     # Clean loader1
@@ -308,7 +308,7 @@ def test_base_stubs_preserved_across_loaders(minion_opts):
             func = loader2[key]
             # Should be able to access the function
             assert callable(func)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             pytest.fail(f"Loader2 failed after loader1 cleanup: {e}")
 
 
