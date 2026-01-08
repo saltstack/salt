@@ -70,6 +70,10 @@ PY3_PRE_EXT = re.compile(r"\.cpython-{}{}(\.opt-[1-9])?".format(*sys.version_inf
 # Will be set to pyximport module at runtime if cython is enabled in config.
 pyximport = None
 
+# Track loaders currently being cleaned to prevent infinite recursion
+# from circular loader references (e.g., when loaders reference each other in pack)
+_cleaning_loaders = set()
+
 
 def _generate_module(name):
     if name in sys.modules:
@@ -337,29 +341,84 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
     def clean_modules(self):
         """
-        Clean modules and free memory
+        Clean modules and free memory for this loader's tag only.
+
+        Removes loaded modules from sys.modules and clears internal caches,
+        but only for modules belonging to this loader's tag (e.g., 'grains', 'modules').
+        This prevents interfering with other active loaders (e.g., runners, states).
+
+        Base stub modules are preserved as they are shared infrastructure.
+
+        Also recursively cleans up any injected loaders in pack (e.g., __utils__,
+        __salt__, __states__) that were created specifically for this loader.
         """
-        # Build list of base stub modules that should be preserved
-        # These are shared across loaders and should not be removed
-        base_stubs = {
-            f"{self.loaded_base_name}.int",
-            f"{self.loaded_base_name}.int.{self.tag}",
-            f"{self.loaded_base_name}.ext",
-            f"{self.loaded_base_name}.ext.{self.tag}",
-        }
+        # Prevent infinite recursion from circular loader references
+        # (e.g., when loaders reference each other in pack)
+        loader_id = id(self)
+        if loader_id in _cleaning_loaders:
+            return
+        _cleaning_loaders.add(loader_id)
 
-        # Remove from sys.modules, but preserve base stub modules
-        for name in list(sys.modules):
-            if name.startswith(self.loaded_base_name):
-                # Don't remove base stub modules - they're shared
-                if name not in base_stubs:
-                    del sys.modules[name]
+        try:
+            # First, clean up any injected loaders in pack
+            # (e.g., __utils__, __salt__, __states__, etc.)
+            if hasattr(self, 'pack') and isinstance(self.pack, dict):
+                for key, value in self.pack.items():
+                    # Clean up any LazyLoader instances found in pack
+                    if isinstance(value, LazyLoader):
+                        # Recursively clean up the injected loader's modules
+                        value.clean_modules()
 
-        # Clear internal caches to allow garbage collection
-        self._dict.clear()
-        self.loaded_modules.clear()
-        self.loaded_files.clear()
-        self.missing_modules.clear()
+                        # Also remove the base stub modules for the injected loader
+                        # since it was only used by this loader and won't be needed anymore
+                        injected_base_stubs = [
+                            f"{value.loaded_base_name}.int.{value.tag}",
+                            f"{value.loaded_base_name}.ext.{value.tag}",
+                        ]
+                        for stub in injected_base_stubs:
+                            if stub in sys.modules:
+                                del sys.modules[stub]
+
+            # Build list of base stub modules that should be preserved
+            # These are shared across loaders and should not be removed
+            base_stubs = {
+                f"{self.loaded_base_name}.int",
+                f"{self.loaded_base_name}.int.{self.tag}",
+                f"{self.loaded_base_name}.ext",
+                f"{self.loaded_base_name}.ext.{self.tag}",
+            }
+
+            # Prefixes for modules belonging to this loader's tag
+            tag_prefixes = [
+                f"{self.loaded_base_name}.int.{self.tag}.",
+                f"{self.loaded_base_name}.ext.{self.tag}.",
+            ]
+
+            # Remove from sys.modules, but only for this loader's tag
+            for name in list(sys.modules):
+                # Only consider modules under our base name
+                if name.startswith(self.loaded_base_name):
+                    # Don't remove base stub modules - they're shared
+                    if name in base_stubs:
+                        continue
+
+                    # Only remove modules that belong to this loader's tag
+                    # e.g., for grains loader with tag='grains', only remove:
+                    #   salt.loaded.int.grains.core, salt.loaded.ext.grains.custom, etc.
+                    # but NOT salt.loaded.int.runners.test or salt.loaded.int.modules.test
+                    for prefix in tag_prefixes:
+                        if name.startswith(prefix):
+                            del sys.modules[name]
+                            break
+
+            # Clear internal caches to allow garbage collection
+            self._dict.clear()
+            self.loaded_modules.clear()
+            self.loaded_files.clear()
+            self.missing_modules.clear()
+        finally:
+            # Always remove from tracking set, even if an exception occurs
+            _cleaning_loaders.discard(loader_id)
 
     def __getitem__(self, item):
         """
