@@ -1810,7 +1810,7 @@ the priority of optimization level(s) Salt's module loader should prefer.
 .. conf_minion:: lazy_loader_strict_matching
 
 ``lazy_loader_strict_matching``
---------------------------------
+-------------------------------
 
 .. versionadded:: 3006.19
 
