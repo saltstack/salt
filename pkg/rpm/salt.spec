@@ -40,7 +40,7 @@
 %define fish_dir %{_datadir}/fish/vendor_functions.d
 
 Name:    salt
-Version: 3006.18
+Version: 3006.19
 Release: 0
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
@@ -754,6 +754,24 @@ if [ $1 -ge 1 ] ; then
 fi
 
 %changelog
+* Fri Jan 09 2026 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.19
+
+# Fixed
+
+- Fixed a typo in salt.util.cloud to detect the version of winrm [#68561](https://github.com/saltstack/salt/issues/68561)
+- Patched tornado for BDSA-2025-60811 and BDSA-2025-60812 [#68594](https://github.com/saltstack/salt/issues/68594)
+- Increase pub and pub_async timeouts on LocalClient from 5 to 15 for better
+  handling of network delays. This change only affects programatic usage of
+  LocalClient. [#68597](https://github.com/saltstack/salt/issues/68597)
+- Added `lazy_loader_strict_matching` minion configuration option to reduce memory usage by skipping the expensive fallback search that scans through every module file. [#68606](https://github.com/saltstack/salt/issues/68606)
+- Upgrade relenv to 0.22.2:
+  * Remove RPATH from shared libraries that do not link to any other libraries in
+    our environment.
+  * Ensure we always return a proper and consistang default python version for
+    create, fetch, build commands. [#68607](https://github.com/saltstack/salt/issues/68607)
+- Mitigate CVE-2025-13836 in nxos utils [#68618](https://github.com/saltstack/salt/issues/68618)
+
+
 * Thu Dec 18 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.18
 
 # Fixed
