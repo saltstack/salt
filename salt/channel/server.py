@@ -1688,7 +1688,9 @@ class MasterPubServerChannel:
                         log.warning("Cluster join signature invalid.")
                         return
                 except InvalidKeyError:
-                    log.warning("Invalid public key or signature in cluster join payload")
+                    log.warning(
+                        "Invalid public key or signature in cluster join payload"
+                    )
                     return
 
                 log.info("Cluster join from %s", payload["peer_id"])
@@ -1978,7 +1980,9 @@ class MasterPubServerChannel:
                         log.warning("Invalid signature of cluster discover payload")
                         return
                 except InvalidKeyError:
-                    log.warning("Invalid public key or signature in cluster discover payload")
+                    log.warning(
+                        "Invalid public key or signature in cluster discover payload"
+                    )
                     return
                 log.info("Cluster discovery from %s", payload["peer_id"])
                 token = self.gen_token()
