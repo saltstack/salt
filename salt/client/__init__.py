@@ -1851,7 +1851,7 @@ class LocalClient:
         tgt_type="glob",
         ret="",
         jid="",
-        timeout=5,
+        timeout=15,
         listen=False,
         **kwargs,
     ):
@@ -1952,7 +1952,7 @@ class LocalClient:
         tgt_type="glob",
         ret="",
         jid="",
-        timeout=5,
+        timeout=15,
         io_loop=None,
         listen=True,
         **kwargs,

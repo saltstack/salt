@@ -98,7 +98,33 @@ in the context of a loader.
         with salt.loader.context(utils):
             func = coolmod.utils_func_getter("foo.bar")
 
+.. _module-naming-best-practices:
 
+Module Naming Best Practices
+-----------------------------
+
+For optimal loader performance, name module files to match their module name
+or include the module name in the filename.
+
+When the loader searches for a module, it performs the following stages:
+
+1. Exact filename match (e.g., ``test.py`` for module ``test``)
+2. Partial filename matches (files containing "test" in the name)
+3. Expensive search through every module file
+
+Naming your module files appropriately allows the loader to find modules using
+stages 1 or 2, avoiding the expensive full scan in stage 3. This reduces memory
+usage.
+
+Examples of good naming:
+
+- If a module provides functionality under the name ``mymod``, name the file
+  ``mymod.py``
+- If using virtual names via ``__virtualname__``, include the virtual name in
+  the filename (e.g., ``mymod_impl.py`` for virtual name ``mymod``)
+
+See :conf_minion:`lazy_loader_strict_matching` for a configuration option that
+disables the expensive stage 3 search entirely.
 
 Special Module Contents
 =======================
