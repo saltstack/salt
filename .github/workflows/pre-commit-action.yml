@@ -43,7 +43,7 @@ jobs:
 
       - name: Install dependency packages
         run: |
-          sudo apt-get install -y libxml2-dev libxslt1-dev
+          sudo apt-get update -y && sudo apt-get install -y libxml2-dev libxslt1-dev
 
       - name: Add Git Safe Directory
         run: |
