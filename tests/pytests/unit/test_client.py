@@ -358,14 +358,14 @@ def test_pub_async_default_timeout(master_opts):
             with patch(
                 "salt.channel.client.AsyncReqChannel.factory"
             ) as mock_channel_factory:
-                import salt.ext.tornado.gen
+                import tornado.gen
 
                 mock_channel = MagicMock()
                 mock_channel.__enter__ = MagicMock(return_value=mock_channel)
                 mock_channel.__exit__ = MagicMock(return_value=False)
 
                 # Mock the async send to return a completed Future
-                future = salt.ext.tornado.gen.maybe_future(
+                future = tornado.gen.maybe_future(
                     {"load": {"jid": "test_jid", "minions": ["minion1"]}}
                 )
                 mock_channel.send = MagicMock(return_value=future)
@@ -373,7 +373,7 @@ def test_pub_async_default_timeout(master_opts):
 
                 # Mock the event system
                 local_client.event.connect_pub = MagicMock(
-                    return_value=salt.ext.tornado.gen.maybe_future(True)
+                    return_value=tornado.gen.maybe_future(True)
                 )
 
                 # Mock _prep_pub to capture the timeout value
@@ -405,14 +405,14 @@ def test_pub_async_explicit_timeout(master_opts):
             with patch(
                 "salt.channel.client.AsyncReqChannel.factory"
             ) as mock_channel_factory:
-                import salt.ext.tornado.gen
+                import tornado.gen
 
                 mock_channel = MagicMock()
                 mock_channel.__enter__ = MagicMock(return_value=mock_channel)
                 mock_channel.__exit__ = MagicMock(return_value=False)
 
                 # Mock the async send to return a completed Future
-                future = salt.ext.tornado.gen.maybe_future(
+                future = tornado.gen.maybe_future(
                     {"load": {"jid": "test_jid", "minions": ["minion1"]}}
                 )
                 mock_channel.send = MagicMock(return_value=future)
@@ -420,7 +420,7 @@ def test_pub_async_explicit_timeout(master_opts):
 
                 # Mock the event system
                 local_client.event.connect_pub = MagicMock(
-                    return_value=salt.ext.tornado.gen.maybe_future(True)
+                    return_value=tornado.gen.maybe_future(True)
                 )
 
                 # Mock _prep_pub to capture the timeout value
