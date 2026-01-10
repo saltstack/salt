@@ -566,7 +566,13 @@ class ConfigDirMixIn(metaclass=MixInMeta):
 
         if hasattr(self, "setup_config"):
             try:
-                self.config = self.setup_config()
+                config = self.setup_config()
+                if hasattr(self, "config"):
+                    # Preserve existing config and merge
+                    self.config.update(config)
+                else:
+                    # Directly assign to preserve OptsDict type
+                    self.config = config
             except OSError as exc:
                 self.error(f"Failed to load configuration: {exc}")
 
