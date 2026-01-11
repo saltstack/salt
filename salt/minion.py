@@ -431,6 +431,11 @@ def service_name():
 
 class MinionBase:
     def __init__(self, opts):
+        # Ensure opts is OptsDict for mutate_key() and other OptsDict methods
+        from salt.utils.optsdict import OptsDict
+
+        if not isinstance(opts, OptsDict):
+            opts = OptsDict.from_dict(opts, name="minionbase_opts")
         self.opts = opts
         self.beacons_leader = opts.get("beacons_leader", True)
 
@@ -927,9 +932,12 @@ class SMinion(MinionBase):
         # Late setup of the opts grains, so we can log from the grains module
         import salt.loader
 
-        new_grains = salt.loader.grains(opts)
-        opts.mutate_key("grains", new_grains)
+        # MinionBase.__init__ will ensure opts is OptsDict
+        # We need to call super().__init__ first to get the OptsDict conversion
         super().__init__(opts)
+
+        new_grains = salt.loader.grains(self.opts)
+        self.opts.mutate_key("grains", new_grains)
 
         # Clean out the proc directory (default /var/cache/salt/minion/proc)
         if self.opts.get("file_client", "remote") == "remote" or self.opts.get(
