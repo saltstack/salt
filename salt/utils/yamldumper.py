@@ -15,6 +15,7 @@ import yaml  # pylint: disable=blacklisted-import
 
 import salt.utils.context
 from salt.utils.datastructures import HashableOrderedDict
+from salt.utils.optsdict import DictProxy, ListProxy, OptsDict
 
 try:
     from yaml import CDumper as Dumper
@@ -71,6 +72,22 @@ def represent_undefined(dumper, data):
     return dumper.represent_scalar("tag:yaml.org,2002:null", "NULL")
 
 
+def represent_optsdict(dumper, data):
+    """Represent OptsDict as a plain dict for YAML serialization."""
+    # Use to_dict() to recursively convert proxies to plain types
+    return dumper.represent_dict(data.to_dict())
+
+
+def represent_dictproxy(dumper, data):
+    """Represent DictProxy as a plain dict for YAML serialization."""
+    return dumper.represent_dict(dict(data))
+
+
+def represent_listproxy(dumper, data):
+    """Represent ListProxy as a plain list for YAML serialization."""
+    return dumper.represent_list(list(data))
+
+
 OrderedDumper.add_representer(OrderedDict, represent_ordereddict)
 OrderedDumper.add_representer(HashableOrderedDict, represent_ordereddict)
 SafeOrderedDumper.add_representer(OrderedDict, represent_ordereddict)
@@ -91,6 +108,20 @@ SafeOrderedDumper.add_representer(
     salt.utils.context.NamespacedDictWrapper,
     yaml.representer.SafeRepresenter.represent_dict,
 )
+
+OrderedDumper.add_representer(OptsDict, represent_optsdict)
+SafeOrderedDumper.add_representer(OptsDict, represent_optsdict)
+OrderedDumper.add_representer(DictProxy, represent_dictproxy)
+SafeOrderedDumper.add_representer(DictProxy, represent_dictproxy)
+OrderedDumper.add_representer(ListProxy, represent_listproxy)
+SafeOrderedDumper.add_representer(ListProxy, represent_listproxy)
+# Also register with base YAML dumpers for salt.utils.yaml.dump()
+yaml.Dumper.add_representer(OptsDict, represent_optsdict)
+yaml.SafeDumper.add_representer(OptsDict, represent_optsdict)
+yaml.Dumper.add_representer(DictProxy, represent_dictproxy)
+yaml.SafeDumper.add_representer(DictProxy, represent_dictproxy)
+yaml.Dumper.add_representer(ListProxy, represent_listproxy)
+yaml.SafeDumper.add_representer(ListProxy, represent_listproxy)
 
 OrderedDumper.add_representer(
     "tag:yaml.org,2002:timestamp", OrderedDumper.represent_scalar

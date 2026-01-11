@@ -63,7 +63,7 @@ def test_module_dirs_priority(venv, salt_extension, minion_opts, module_dirs):
     print(json.dumps(mod_dirs))
     """
     minion_opts["module_dirs"] = module_dirs
-    ret = venv.run_code(code, input=json.dumps(minion_opts))
+    ret = venv.run_code(code, input=json.dumps(minion_opts.copy()))
     module_dirs_return = json.loads(ret.stdout)
     assert len(module_dirs_return) == 5
     for i, tail in enumerate(
@@ -81,7 +81,7 @@ def test_module_dirs_priority(venv, salt_extension, minion_opts, module_dirs):
 
     # Test the deprecated mode as well
     minion_opts["features"] = {"enable_deprecated_module_search_path_priority": True}
-    ret = venv.run_code(code, input=json.dumps(minion_opts))
+    ret = venv.run_code(code, input=json.dumps(minion_opts.copy()))
     module_dirs_return = json.loads(ret.stdout)
     assert len(module_dirs_return) == 5
     for i, tail in enumerate(

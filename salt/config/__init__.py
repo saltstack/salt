@@ -2387,7 +2387,9 @@ def minion_config(
         _validate_opts(opts)
     salt.features.setup_features(opts)
     # Convert to OptsDict for memory efficiency
-    return salt.utils.optsdict.OptsDict.from_dict(opts, name=f"minion_config:role={role}")
+    return salt.utils.optsdict.OptsDict.from_dict(
+        opts, name=f"minion_config:role={role}"
+    )
 
 
 def mminion_config(path, overrides, ignore_config_errors=True):
@@ -2488,7 +2490,9 @@ def proxy_config(
     salt.features.setup_features(opts)
 
     # Convert to OptsDict for memory efficiency
-    return salt.utils.optsdict.OptsDict.from_dict(opts, name="minion_config:role=master")
+    return salt.utils.optsdict.OptsDict.from_dict(
+        opts, name="minion_config:role=master"
+    )
 
 
 def syndic_config(
@@ -2569,27 +2573,53 @@ def syndic_config(
     return opts
 
 
-def apply_sdb(opts, sdb_opts=None):
+def apply_sdb(opts, sdb_opts=None, _visited=None):
     """
     Recurse for sdb:// links for opts
     """
     if sdb_opts is None:
         sdb_opts = opts
+    if _visited is None:
+        _visited = set()
+
+    # Track visited objects to prevent circular references
+    # For OptsDict proxies, track the parent OptsDict to avoid new proxy instances
+    # from being treated as new objects (which causes infinite recursion)
+    try:
+        from salt.utils.optsdict import DictProxy, ListProxy
+
+        if isinstance(sdb_opts, (DictProxy, ListProxy)):
+            # Track the parent OptsDict instead of the proxy
+            parent = object.__getattribute__(sdb_opts, "_parent")
+            obj_id = id(parent)
+        else:
+            obj_id = id(sdb_opts)
+    except (ImportError, AttributeError):
+        # Fallback if optsdict not available or not a proxy
+        obj_id = id(sdb_opts)
+
+    if obj_id in _visited:
+        return sdb_opts
+    _visited.add(obj_id)
+
     if isinstance(sdb_opts, str) and sdb_opts.startswith("sdb://"):
         # Late load of SDB to keep CLI light
         import salt.utils.sdb
 
         return salt.utils.sdb.sdb_get(sdb_opts, opts)
     elif isinstance(sdb_opts, dict):
-        for key, value in sdb_opts.items():
+        # Create a list of items to avoid modifying dict during iteration
+        # This is especially important for OptsDict which has special iteration behavior
+        items = list(sdb_opts.items())
+        for key, value in items:
             if value is None:
                 continue
-            sdb_opts[key] = apply_sdb(opts, value)
+            sdb_opts[key] = apply_sdb(opts, value, _visited)
     elif isinstance(sdb_opts, list):
         for key, value in enumerate(sdb_opts):
             if value is None:
                 continue
-            sdb_opts[key] = apply_sdb(opts, value)
+            sdb_opts[key] = apply_sdb(opts, value, _visited)
 
     return sdb_opts
 
@@ -4013,7 +4043,8 @@ def master_config(
         opts["nodegroups"] = salt.utils.data.repack_dictlist(opts["nodegroups"])
     apply_sdb(opts)
     salt.features.setup_features(opts)
-    return opts
+    # Convert to OptsDict for memory efficiency
+    return salt.utils.optsdict.OptsDict.from_dict(opts, name="master_config")
 
 
 def apply_master_config(overrides=None, defaults=None):
@@ -4286,7 +4317,7 @@ def client_config(path, env_var="SALT_CLIENT_CONFIG", defaults=None):
     # Return the client options
     _validate_opts(opts)
     salt.features.setup_features(opts)
-    return opts
+    return salt.utils.optsdict.OptsDict.from_dict(opts, name="client_config")
 
 
 def api_config(path):

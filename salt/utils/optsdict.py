@@ -35,10 +35,22 @@ import sys
 import threading
 import traceback
 import weakref
-from collections.abc import MutableMapping
-from typing import Any, Optional
+from typing import Any
 
 log = logging.getLogger(__name__)
+
+
+class _DeletedKey:
+    """Sentinel to mark keys that have been deleted from inherited dicts."""
+
+    __slots__ = ()
+
+    def __repr__(self):
+        return "<DELETED>"
+
+
+# Singleton sentinel instance
+_DELETED = _DeletedKey()
 
 
 class DictProxy(dict):
@@ -48,7 +60,7 @@ class DictProxy(dict):
     Subclasses dict to pass isinstance checks while providing copy-on-write semantics.
     """
 
-    def __init__(self, target: dict, parent_optsdict: "OptsDict", key: str):
+    def __init__(self, target: dict, parent_optsdict: OptsDict, key: str):
         # Initialize underlying dict with target data AND keep _target
         # We need both: underlying dict for C code, _target for our logic
         super().__init__(target)
@@ -166,7 +178,7 @@ class ListProxy(list):
     Subclasses list to pass isinstance checks while providing copy-on-write semantics.
     """
 
-    def __init__(self, target: list, parent_optsdict: "OptsDict", key: str):
+    def __init__(self, target: list, parent_optsdict: OptsDict, key: str):
         # Initialize underlying list with target data AND keep _target
         # We need both: underlying list for C code, _target for our logic
         super().__init__(target)
@@ -427,7 +439,7 @@ class OptsDict(dict):
     def __init__(
         self,
         base_dict: dict[str, Any] | None = None,
-        parent: Optional["OptsDict"] = None,
+        parent: OptsDict | None = None,
         track_mutations: bool = False,
         name: str | None = None,
     ):
@@ -469,7 +481,7 @@ class OptsDict(dict):
         return self._lock
 
     @classmethod
-    def from_parent(cls, parent: "OptsDict", name: str | None = None) -> "OptsDict":
+    def from_parent(cls, parent: OptsDict, name: str | None = None) -> OptsDict:
         """
         Create a child OptsDict that shares parent's data.
 
@@ -488,7 +500,7 @@ class OptsDict(dict):
         base_dict: dict[str, Any],
         track_mutations: bool = False,
         name: str | None = None,
-    ) -> "OptsDict":
+    ) -> OptsDict:
         """
         Create a root OptsDict from a regular dictionary.
 
@@ -532,12 +544,19 @@ class OptsDict(dict):
         with self._ensure_lock():
             # Check local first - if already copied, return direct reference
             if key in self._local:
-                return self._local[key]
+                value = self._local[key]
+                # Check if this key was deleted (masked by sentinel)
+                if value is _DELETED:
+                    raise KeyError(key)
+                return value
 
             # Check parent chain
             if self._parent is not None:
                 found, value = self._get_from_parent_chain(key)
                 if found:
+                    # Check if this key was deleted in parent chain
+                    if value is _DELETED:
+                        raise KeyError(key)
                     # Wrap mutable values in proxies to catch mutations
                     if isinstance(value, dict) and not isinstance(value, OptsDict):
                         return DictProxy(value, self, key)
@@ -596,52 +615,101 @@ class OptsDict(dict):
             self._local[key] = value
 
     def __delitem__(self, key: str):
-        """Delete item (only from local dict)."""
+        """
+        Delete item with proper handling for inherited keys.
+
+        For keys in _local, directly delete them.
+        For keys inherited from parent/base, mask them with a sentinel.
+        """
         with self._ensure_lock():
             if key in self._local:
+                # Key is local, just delete it
                 del self._local[key]
             else:
-                # Can't delete from parent - record as mutation to None?
-                # For now, raise error
-                raise KeyError(f"Cannot delete key '{key}' (not in local dict)")
+                # Check if key exists in parent chain or base
+                key_exists = False
+
+                # Check parent chain
+                if self._parent is not None:
+                    found, _ = self._get_from_parent_chain(key)
+                    if found:
+                        key_exists = True
+
+                # Check base (root level only)
+                if not key_exists and self._parent is None and key in self._base:
+                    key_exists = True
+
+                if key_exists:
+                    # Mask the inherited key with sentinel
+                    self._local[key] = _DELETED
+                else:
+                    # Key doesn't exist anywhere
+                    raise KeyError(key)
 
     def __iter__(self):
-        """Iterate over all keys (local + parent chain + base)."""
+        """Iterate over all keys (local + parent chain + base), excluding deleted keys."""
         with self._ensure_lock():
-            # Collect all keys from the chain
-            keys = set(self._local.keys())
+            # Sync underlying dict for C-level iteration (e.g., JSON serialization)
+            # This ensures json.dumps() works without needing to_dict()
+            # Build items dict first to avoid leaving underlying dict in bad state
+            # if an exception occurs during iteration
+            items = {}
+            for key in self._get_all_keys():
+                try:
+                    value = self[key]
+                    # Skip deleted keys (will raise KeyError)
+                    items[key] = value
+                except KeyError:
+                    # Key was deleted (sentinel), skip it
+                    pass
 
-            # Add parent chain keys
-            if self._parent is not None:
-                current = self._parent
-                while current is not None:
-                    keys.update(current._local.keys())
-                    # Add base keys if this is a root node
-                    if current._parent is None:
-                        keys.update(current._base.keys())
-                    current = current._parent
-            else:
-                # This is a root node, add base keys
-                keys.update(self._base.keys())
+            # Only update underlying dict after successfully building all items
+            dict.clear(self)
+            for key, value in items.items():
+                dict.__setitem__(self, key, value)
 
-            return iter(keys)
+            return dict.__iter__(self)
+
+    def _get_all_keys(self):
+        """Get all keys from local, parent chain, and base."""
+        keys = set(self._local.keys())
+
+        # Add parent chain keys
+        if self._parent is not None:
+            current = self._parent
+            while current is not None:
+                keys.update(current._local.keys())
+                # Add base keys if this is a root node
+                if current._parent is None:
+                    keys.update(current._base.keys())
+                current = current._parent
+        else:
+            # This is a root node, add base keys
+            keys.update(self._base.keys())
+
+        return keys
 
     def __len__(self) -> int:
         """Return total number of keys."""
         with self._ensure_lock():
-            return len(set(self))
+            # Sync underlying dict for C-level access
+            _ = iter(self)
+            return dict.__len__(self)
 
     def __contains__(self, key: str) -> bool:
-        """Check if key exists in local, parent chain, or base."""
+        """Check if key exists in local, parent chain, or base (excluding deleted keys)."""
         with self._ensure_lock():
+            # Check if key is in local and not deleted
             if key in self._local:
-                return True
+                return self._local[key] is not _DELETED
 
+            # Check parent chain
             if self._parent is not None:
-                found, _ = self._get_from_parent_chain(key)
+                found, value = self._get_from_parent_chain(key)
                 if found:
-                    return True
+                    return value is not _DELETED
 
+            # Check base (root level only)
             if self._parent is None and key in self._base:
                 return True
 
@@ -654,19 +722,63 @@ class OptsDict(dict):
         except KeyError:
             return default
 
+    def setdefault(self, key: str, default: Any = None) -> Any:
+        """
+        Get value for key, setting it to default if not present.
+
+        This is important for OptsDict because dict's setdefault uses C-level
+        access which doesn't respect our copy-on-write storage. We need to
+        check using __getitem__ and set using __setitem__ to properly trigger
+        copy-on-write semantics.
+        """
+        try:
+            return self[key]
+        except KeyError:
+            self[key] = default
+            return default
+
+    def pop(self, key: str, *args) -> Any:
+        """
+        Remove and return value for key.
+
+        This is important for OptsDict because dict's pop uses C-level
+        access which doesn't respect our copy-on-write storage.
+
+        For copy-on-write semantics:
+        - If key is in local dict, delete it and return value
+        - If key is in parent chain, return value without deleting (can't modify parent)
+        - If key doesn't exist, return default or raise KeyError
+        """
+        with self._ensure_lock():
+            if key in self._local:
+                value = self._local[key]
+                del self._local[key]
+                return value
+            elif key in self:
+                # Key is in parent chain - return value but don't delete
+                return self[key]
+            elif args:
+                return args[0]
+            else:
+                raise KeyError(key)
+
     def keys(self):
         """Return all keys."""
-        return iter(self)
+        # Force iteration to sync underlying dict
+        _ = iter(self)
+        return dict.keys(self)
 
     def values(self):
         """Return all values."""
-        with self._ensure_lock():
-            return [self[k] for k in self]
+        # Force iteration to sync underlying dict
+        _ = iter(self)
+        return dict.values(self)
 
     def items(self):
         """Return all items."""
-        with self._ensure_lock():
-            return [(k, self[k]) for k in self]
+        # Force iteration to sync underlying dict
+        _ = iter(self)
+        return dict.items(self)
 
     def copy(self) -> dict[str, Any]:
         """Return a regular dict copy of all data."""
@@ -715,7 +827,7 @@ class OptsDict(dict):
             local_keys = self.get_local_keys()
             return all_keys - local_keys
 
-    def get_root(self) -> "OptsDict":
+    def get_root(self) -> OptsDict:
         """
         Get the root OptsDict instance.
 
@@ -816,6 +928,53 @@ class OptsDict(dict):
         # Use copy-on-write by creating a child OptsDict
         # This shares data with parent until mutations occur
         return OptsDict.from_parent(self, name=f"{self._name}_deepcopy")
+
+    def __eq__(self, other):
+        """
+        Compare OptsDict instances based on logical contents.
+
+        dict's built-in __eq__ compares the underlying dict storage directly
+        using C-level iteration, which doesn't account for OptsDict's
+        copy-on-write storage in _local, _parent, and _base. We need to
+        compare the logical key-value pairs instead.
+        """
+        if not isinstance(other, dict):
+            return NotImplemented
+
+        # Get all keys from self
+        with self._ensure_lock():
+            self_keys = set(self._get_all_keys())
+
+        # For regular dict, just use keys()
+        if isinstance(other, OptsDict):
+            with other._ensure_lock():
+                other_keys = set(other._get_all_keys())
+        else:
+            other_keys = set(other.keys())
+
+        # Quick check: if key sets differ, not equal
+        if self_keys != other_keys:
+            return False
+
+        # Compare values for each key
+        for key in self_keys:
+            if self[key] != other[key]:
+                return False
+
+        return True
+
+    def _sync_underlying_dict(self):
+        """
+        Sync the underlying dict storage with our custom storage.
+
+        This is needed for JSON serialization and other operations that
+        bypass our custom __iter__() and use C-level dict iteration.
+        """
+        with self._ensure_lock():
+            # Clear and repopulate the underlying dict
+            dict.clear(self)
+            for key in self:
+                dict.__setitem__(self, key, self[key])
 
     def __reduce_ex__(self, protocol):
         """
