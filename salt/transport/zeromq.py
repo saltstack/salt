@@ -674,7 +674,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             process_manager.add_process(
                 self.zmq_device_pooled,
                 args=(worker_pools,),
-                name="MWorkerQueue-Pooled",
+                name="MWorkerQueue",
             )
         else:
             # Use standard routing device
