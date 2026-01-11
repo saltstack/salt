@@ -1237,6 +1237,9 @@ class MasterPubServerChannel:
         pki_dir = self.opts.get("cluster_pki_dir") or self.opts["pki_dir"]
         for peerkey in pathlib.Path(pki_dir, "peers").glob("*"):
             peer = peerkey.name[:-4]
+            # Skip creating a pusher for the local master
+            if peer == self.opts["id"]:
+                continue
             if peer not in self.cluster_peers:
                 self.cluster_peers.append(peer)
                 pusher = salt.transport.tcp.PublishServer(
@@ -1926,6 +1929,10 @@ class MasterPubServerChannel:
                 if peer == self.opts["id"]:
                     log.debug("Skip our own cluster peer event %s", tag)
                     return
+                # Check if this peer has our AES key before processing
+                if self.opts["id"] not in data["peers"]:
+                    log.debug("Peer %s has not discovered us yet, skipping AES key event", peer)
+                    return
                 aes = data["peers"][self.opts["id"]]["aes"]
                 sig = data["peers"][self.opts["id"]]["sig"]
                 key_str = self.master_key.master_key.decrypt(
@@ -1980,7 +1987,7 @@ class MasterPubServerChannel:
                 try:
                     event_data = self.extract_cluster_event(peer_id, data)
                 except salt.exceptions.AuthenticationError:
-                    self.auth_errors[peer_id].append((tag, data))
+                    self.auth_errors.setdefault(peer_id, collections.deque()).append((tag, data))
                 else:
                     await self.transport.publish_payload(
                         salt.utils.event.SaltEvent.pack(parsed_tag, event_data)
@@ -2016,6 +2023,13 @@ class MasterPubServerChannel:
                     self.transport.publish_payload(load), name=self.opts["id"]
                 )
             ]
+        else:
+            # Process cluster/peer/* events locally as well as forwarding to peers
+            tasks.append(
+                asyncio.create_task(
+                    self.handle_pool_publish(load), name="local"
+                )
+            )
         for pusher in self.pushers:
             log.info("Publish event to peer %s:%s", pusher.pull_host, pusher.pull_port)
             if tag.startswith("cluster/peer"):
