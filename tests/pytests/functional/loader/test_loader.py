@@ -63,7 +63,7 @@ def test_module_dirs_priority(venv, salt_extension, minion_opts, module_dirs):
     print(json.dumps(mod_dirs))
     """
     minion_opts["module_dirs"] = module_dirs
-    ret = venv.run_code(code, input=json.dumps(minion_opts))
+    ret = venv.run_code(code, input=json.dumps(minion_opts.copy()))
     module_dirs_return = json.loads(ret.stdout)
     assert len(module_dirs_return) == 5
     for i, tail in enumerate(
@@ -78,7 +78,6 @@ def test_module_dirs_priority(venv, salt_extension, minion_opts, module_dirs):
         assert module_dirs_return[i].endswith(
             tail
         ), f"{module_dirs_return[i]} does not end with {tail}"
-
 
 def test_new_entry_points_passing_module(venv, salt_extension, salt_minion_factory):
     # Install our extension into the virtualenv
