@@ -23,6 +23,7 @@ import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.network
+import salt.utils.optsdict
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
@@ -2385,7 +2386,10 @@ def minion_config(
         apply_sdb(opts)
         _validate_opts(opts)
     salt.features.setup_features(opts)
-    return opts
+    # Convert to OptsDict for memory efficiency
+    return salt.utils.optsdict.OptsDict.from_dict(
+        opts, name=f"minion_config:role={role}"
+    )
 
 
 def mminion_config(path, overrides, ignore_config_errors=True):
@@ -2484,7 +2488,11 @@ def proxy_config(
     apply_sdb(opts)
     _validate_opts(opts)
     salt.features.setup_features(opts)
-    return opts
+
+    # Convert to OptsDict for memory efficiency
+    return salt.utils.optsdict.OptsDict.from_dict(
+        opts, name="minion_config:role=master"
+    )
 
 
 def syndic_config(
@@ -4009,7 +4017,8 @@ def master_config(
         opts["nodegroups"] = salt.utils.data.repack_dictlist(opts["nodegroups"])
     apply_sdb(opts)
     salt.features.setup_features(opts)
-    return opts
+    # Convert to OptsDict for memory efficiency
+    return salt.utils.optsdict.OptsDict.from_dict(opts, name="master_config")
 
 
 def apply_master_config(overrides=None, defaults=None):
@@ -4282,7 +4291,7 @@ def client_config(path, env_var="SALT_CLIENT_CONFIG", defaults=None):
     # Return the client options
     _validate_opts(opts)
     salt.features.setup_features(opts)
-    return opts
+    return salt.utils.optsdict.OptsDict.from_dict(opts, name="client_config")
 
 
 def api_config(path):

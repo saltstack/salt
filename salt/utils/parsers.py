@@ -565,10 +565,11 @@ class ConfigDirMixIn(metaclass=MixInMeta):
         self.options.config_dir = os.path.abspath(self.options.config_dir)
 
         if hasattr(self, "setup_config"):
-            if not hasattr(self, "config"):
-                self.config = {}
+            # Initialize config before try block to avoid linter error
+            self.config = None
             try:
-                self.config.update(self.setup_config())
+                # Directly assign to preserve OptsDict type
+                self.config = self.setup_config()
             except OSError as exc:
                 self.error(f"Failed to load configuration: {exc}")
 
