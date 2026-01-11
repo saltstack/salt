@@ -109,9 +109,12 @@ class NamedLoaderContext(collections.abc.MutableMapping):
         return self.value().__delitem__(item)
 
     def __eq__(self, other):
-        if not isinstance(other, self.__class__):
-            return False
-        return self.loader_context == other.loader_context and self.name == other.name
+        if isinstance(other, self.__class__):
+            return (
+                self.loader_context == other.loader_context and self.name == other.name
+            )
+        # Delegate to underlying value for comparisons with other types
+        return self.value() == other
 
     def __getstate__(self):
         return {
