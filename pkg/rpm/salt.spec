@@ -867,13 +867,6 @@ fi
 
   **BREAKING CHANGE:** The default value enforces authentication protocol version 3 or higher. If upgrading a deployment with older minions that do not support protocol v3, you must temporarily set `minimum_auth_version: 0` in the master configuration before upgrading the master, then upgrade all minions before removing this override. [#68467](https://github.com/saltstack/salt/issues/68467)
 - Fixed unsafe YAML loader usage in junos execution module (CVE-2025-62348) [#68469](https://github.com/saltstack/salt/issues/68469)
-
-
-* Thu Dec 18 2025 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.18
-
-# Fixed
-
-- Fixed ssh_auth.present to respect provided `options` when read keys from source file [#60769](https://github.com/saltstack/salt/issues/60769)
 - Fixed ssh_auth regexp to handle key types with @ or . [#61299](https://github.com/saltstack/salt/issues/61299)
 - Fixed a TypeError exception thrown by ssh_known_hosts.present when the specified user account does not exist [#62049](https://github.com/saltstack/salt/issues/62049)
 - Fix runtime error on OpenBSD by adding support for the osfullname grain [#64189](https://github.com/saltstack/salt/issues/64189)
