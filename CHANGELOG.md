@@ -8,6 +8,7 @@ Versions are `MAJOR.PATCH`.
 # Changelog
 
 ## 3007.11 (2026-01-09)
+## 3006.19 (2026-01-09)
 
 
 ### Fixed
