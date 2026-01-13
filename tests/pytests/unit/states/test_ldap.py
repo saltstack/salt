@@ -200,16 +200,24 @@ def configure_loader_modules(db):
     return {salt.states.ldap: {"__opts__": {"test": False}, "__salt__": salt_dunder}}
 
 
-def _test_helper(init_db, expected_ret, replace, delete_others=False):
+def _test_helper(
+    init_db,
+    expected_ret,
+    replace,
+    delete_others=False,
+    strict_order=True,
+):
     old = init_db.dump_db()
     new = init_db.dump_db()
     expected_db = copy.deepcopy(init_db.db)
     for dn, attrs in replace.items():
         for attr, vals in attrs.items():
-            vals = [to_bytes(val) for val in vals]
+            vals = sorted([to_bytes(val) for val in vals])
             if vals:
                 new.setdefault(dn, {})[attr] = list(OrderedSet(vals))
-                expected_db.setdefault(dn, {})[attr] = OrderedSet(vals)
+                expected_db.setdefault(dn, {})[attr] = sorted(
+                    list(OrderedSet(vals)),
+                )
             elif dn in expected_db:
                 new[dn].pop(attr, None)
                 expected_db[dn].pop(attr, None)
@@ -251,7 +259,7 @@ def _test_helper(init_db, expected_ret, replace, delete_others=False):
                 ),
                 "new": (
                     {
-                        attr: vals
+                        attr: sorted(vals)
                         for attr, vals in new[dn].items()
                         if vals != old.get(dn, {}).get(attr, ())
                     }
@@ -264,7 +272,13 @@ def _test_helper(init_db, expected_ret, replace, delete_others=False):
         },
     )
     entries = [
-        {dn: [{"replace": attrs}, {"delete_others": delete_others}]}
+        {
+            dn: [
+                {"replace": attrs},
+                {"delete_others": delete_others},
+                {"strict_order": strict_order},
+            ]
+        }
         for dn, attrs in replace.items()
     ]
     actual = salt.states.ldap.managed(name, entries)
@@ -272,7 +286,7 @@ def _test_helper(init_db, expected_ret, replace, delete_others=False):
     assert expected_db == init_db.db
 
 
-def _test_helper_success(db, replace, delete_others=False):
+def _test_helper_success(db, replace, delete_others=False, strict_order=True):
     _test_helper(db, {}, replace, delete_others)
 
 
@@ -385,8 +399,20 @@ def test_managed_add_attr(complex_db):
     _test_helper_success_add(complex_db, {"dnfoo": {"attrfoo4": ["valfoo4.1"]}})
 
 
-def test_managed_replace_attr(complex_db):
-    _test_helper_success(complex_db, {"dnfoo": {"attrfoo3": ["valfoo3.1"]}})
+def test_managed_replace_attr_not_strict(complex_db):
+    _test_helper_success(
+        complex_db,
+        {"dnfoo": {"attrfoo3": ["valfoo3.2", "valfoo3.1", "valfoo3.0"]}},
+        strict_order=False,
+    )
+
+
+def test_managed_replace_attr_strict(complex_db):
+    _test_helper_success(
+        complex_db,
+        {"dnfoo": {"attrfoo3": ["valfoo3.2", "valfoo3.1", "valfoo.3.0"]}},
+        strict_order=True,
+    )
 
 
 def test_managed_simplereplace(complex_db):
