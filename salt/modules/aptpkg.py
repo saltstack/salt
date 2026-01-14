@@ -21,8 +21,6 @@ from urllib.error import HTTPError
 from urllib.request import Request as _Request
 from urllib.request import urlopen as _urlopen
 
-import salt.config
-import salt.syspaths
 import salt.utils.args
 import salt.utils.data
 import salt.utils.environment
@@ -1553,6 +1551,7 @@ def _split_repo_str(repo):
         "dist": entry.dist,
         "comps": entry.comps,
         "signedby": signedby,
+        "trusted": entry.trusted,
     }
 
 
@@ -2740,7 +2739,8 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
             section["URIs"] = repo_entry["uri"]
             section["Suites"] = repo_entry["dist"]
             section["Components"] = " ".join(repo_entry["comps"])
-            if kwargs.get("trusted") is True or kwargs.get("Trusted") is True:
+            trusted_kwargs = kwargs.get("trusted") is True or kwargs.get("Trusted") is True
+            if trusted_kwargs or ("trusted" not in kwargs and repo_entry["trusted"] is True):
                 section["Trusted"] = "yes"
             mod_source = Deb822SourceEntry(section, apt_source_file)
         else:
