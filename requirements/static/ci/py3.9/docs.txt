@@ -228,7 +228,7 @@ timelib==0.3.0 ; python_version < "3.11"
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
-typing-extensions==4.8.0
+typing-extensions==4.15.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   myst-docutils

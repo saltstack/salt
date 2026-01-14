@@ -14,6 +14,8 @@ dnspython
 etcd3-py==0.1.6
 # aiohttp is a dependency of etcd3-py
 aiohttp>=3.10.2
+filelock>=3.19.1 ; python_version < '3.10'
+filelock>=3.20.3 ; python_version >= '3.10'
 gitpython>=3.1.37
 jmespath
 jsonschema
@@ -41,7 +43,7 @@ sqlparse>=0.4.4
 strict_rfc3339>=0.7
 toml
 vcert~=0.7.0; sys_platform != 'win32'
-virtualenv>=20.3.0
+virtualenv>=20.36.1
 watchdog>=0.9.0
 # werkzeug is a dependency of moto
 werkzeug>=3.0.6

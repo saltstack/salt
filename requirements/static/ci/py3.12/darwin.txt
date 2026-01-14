@@ -33,8 +33,6 @@ autocommand==2.2.2
     # via
     #   -c requirements/static/ci/../pkg/py3.12/darwin.txt
     #   jaraco.text
-backports.entry-points-selectable==1.1.0
-    # via virtualenv
 bcrypt==4.1.2
     # via -r requirements/static/ci/common.in
 boto3==1.39.3
@@ -104,7 +102,7 @@ cryptography==42.0.5
     #   pyopenssl
     #   trustme
     #   vcert
-distlib==0.3.2
+distlib==0.4.0
     # via virtualenv
 distro==1.5.0
     # via
@@ -119,8 +117,10 @@ docker==7.1.0 ; python_version >= "3.8"
     # via -r requirements/pytest.txt
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
-filelock==3.0.12
-    # via virtualenv
+filelock==3.20.3 ; python_version >= "3.10"
+    # via
+    #   -r requirements/static/ci/common.in
+    #   virtualenv
 flaky==3.8.1
     # via -r requirements/pytest.txt
 frozenlist==1.7.0 ; python_version >= "3.11"
@@ -270,7 +270,7 @@ pathspec==0.9.0
     # via yamllint
 pathtools==0.1.2
     # via watchdog
-platformdirs==2.2.0
+platformdirs==4.5.1
     # via virtualenv
 pluggy==1.4.0
     # via pytest
@@ -436,7 +436,6 @@ six==1.16.0
     #   pyvmomi
     #   textfsm
     #   vcert
-    #   virtualenv
     #   websocket-client
 smmap==4.0.0
     # via
@@ -475,7 +474,7 @@ urllib3==2.6.3 ; python_version >= "3.10"
     #   responses
 vcert==0.7.4 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-virtualenv==20.7.2
+virtualenv==20.36.1
     # via
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
