@@ -1112,11 +1112,13 @@ class MasterPubServerChannel:
         return "".join(random.choices(string.ascii_letters + string.digits, k=32))
 
     def discover_peers(self):
-        path = self.master_key.master_pub_path
+        # Get the master's public key path
+        path = os.path.join(self.opts["pki_dir"], f"{self.opts['id']}.pub")
         with salt.utils.files.fopen(path, "r") as fp:
             pub = fp.read()
 
-        for peer in self.cluster_peers:
+        # Discover configured peers (IPs/hostnames) that we haven't discovered yet
+        for peer in self.opts.get("cluster_peers", []):
             log.error("Discover cluster from %s", peer)
             # Generate unique token for each peer we're discovering
             discover_token = self.gen_token()
@@ -1222,6 +1224,8 @@ class MasterPubServerChannel:
             )
             os.nice(self.opts["event_publisher_niceness"])
         self.io_loop = tornado.ioloop.IOLoop.current()
+        # Re-initialize master_key in the daemon process
+        self.master_key = salt.crypt.MasterKeys(self.opts)
         self.tcp_master_pool_port = self.opts["cluster_pool_port"]
         self.pushers = []
         self.auth_errors = {}
@@ -1266,6 +1270,12 @@ class MasterPubServerChannel:
                 io_loop=self.io_loop,
             )
         )
+
+        # Trigger peer discovery if we have configured peers
+        if self.opts.get("cluster_peers"):
+            # Schedule discovery to run shortly after event loop starts
+            self.io_loop.call_later(1.0, self.discover_peers)
+
         # run forever
         try:
             self.io_loop.start()
