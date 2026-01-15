@@ -99,7 +99,7 @@ cryptography==42.0.5
     #   pyopenssl
     #   requests-ntlm
     #   trustme
-distlib==0.3.6
+distlib==0.4.0
     # via virtualenv
 distro==1.5.0
     # via
@@ -116,8 +116,10 @@ docker==7.1.0 ; python_version >= "3.8"
     # via -r requirements/pytest.txt
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
-filelock==3.8.0
-    # via virtualenv
+filelock==3.20.3 ; python_version >= "3.10"
+    # via
+    #   -r requirements/static/ci/common.in
+    #   virtualenv
 flaky==3.8.1
     # via -r requirements/pytest.txt
 frozenlist==1.7.0 ; python_version >= "3.11"
@@ -265,7 +267,7 @@ pathspec==0.10.2
     # via yamllint
 pathtools==0.1.2
     # via watchdog
-platformdirs==2.5.4
+platformdirs==4.5.1
     # via virtualenv
 pluggy==1.4.0
     # via pytest
@@ -485,7 +487,7 @@ urllib3==2.6.3 ; python_version >= "3.10"
     #   python-etcd
     #   requests
     #   responses
-virtualenv==20.17.0
+virtualenv==20.36.1
     # via
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
