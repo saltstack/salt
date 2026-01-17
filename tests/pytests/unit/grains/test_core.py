@@ -5582,3 +5582,32 @@ def test__ps():
             "| awk '{ $7=\"\"; print }'"
         )
     }
+
+
+@pytest.mark.skip_on_windows
+@pytest.mark.parametrize(
+    "status",
+    (
+        False,
+        True,
+    ),
+)
+def test_fibre_channel_host(status):
+    """
+    Test if fibre_channel_host grain is correctly reflecting a fibre channel enabled host.
+    """
+
+    def _dir_side_effect(path):
+        if path == "/sys/class/fc_host":
+            return status
+
+    with patch.object(
+        salt.utils.platform, "is_windows", MagicMock(return_value=False)
+    ), patch.object(
+        os.path,
+        "isdir",
+        MagicMock(side_effect=_dir_side_effect),
+    ):
+        grains = core.fibre_channel_host()
+        assert "fibre_channel_host" in grains
+        assert grains["fibre_channel_host"] is status
