@@ -107,9 +107,10 @@ Naming the Returner
 
 Note that a returner's default name is its filename (i.e. ``foo.py`` becomes
 returner ``foo``), but that its name can be overridden by using a
-:ref:`__virtual__ function <virtual-modules>`. A good example of this can be
-found in the `redis`_ returner, which is named ``redis_return.py`` but is
-loaded as simply ``redis``:
+:ref:`__virtual__ function <virtual-modules>`. For best practices on naming
+returner module files, see :ref:`module-naming-best-practices`. A good example
+of this can be found in the `redis`_ returner, which is named
+``redis_return.py`` but is loaded as simply ``redis``:
 
 .. code-block:: python
 

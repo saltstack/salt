@@ -8,7 +8,7 @@ aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   aiohttp
-aiohttp==3.12.15
+aiohttp==3.13.3
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/base.txt
@@ -471,7 +471,7 @@ toml==0.10.2
     # via -r requirements/static/ci/common.in
 tomli==2.0.1
     # via pytest
-tornado==6.5.2
+tornado==6.5.4
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/base.txt
