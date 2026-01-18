@@ -1,5 +1,4 @@
 import logging
-from collections import OrderedDict
 from pathlib import Path
 
 import pytest
@@ -7,6 +6,7 @@ import pytest
 import salt.loader
 import salt.pillar
 import salt.utils.cache
+from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock
 
 
@@ -208,3 +208,106 @@ def test_remote_pillar_timeout(temp_salt_minion, tmp_path):
     msg = r"^Pillar timed out after \d{1,4} seconds$"
     with pytest.raises(salt.exceptions.SaltClientError):
         pillar.compile_pillar()
+
+
+def test_issue_33437_pillar_merge_empty_pillar_should_preserve_data(
+    temp_salt_minion, tmp_path
+):
+    """
+    Test that merging pillars when one is empty should preserve the non-empty data.
+
+    Issue #33437: When merging pillar data, if one pillar file is empty (e.g., due to
+    conditional rendering that produces no output), None values were overwriting
+    existing non-empty dictionaries. This test verifies that the fix preserves
+    existing data when merging with empty/None values.
+    """
+    # Create pillar roots
+    pillar_base = tmp_path / "base"
+    pillar_base.mkdir(parents=True)
+
+    # First pillar file with data
+    common_pillar = pillar_base / "common.sls"
+    common_pillar.write_text(
+        """
+program:
+  modules:
+    00-definitions.conf: null
+    01-cleanup.conf: null
+"""
+    )
+
+    # Second pillar file that may be empty (conditional rendering)
+    modules_pillar = pillar_base / "modules.sls"
+    modules_pillar.write_text(
+        """
+program:
+  modules:
+    {% if 'test' in grains.get('roles', []) %}
+    10-dostuff.conf: null
+    {% endif %}
+"""
+    )
+
+    # Create top.sls
+    top_sls = pillar_base / "top.sls"
+    top_sls.write_text(
+        """
+base:
+  '*':
+    - common
+    - modules
+"""
+    )
+
+    opts = temp_salt_minion.config.copy()
+    opts["pillar_roots"] = {"base": [str(pillar_base)]}
+
+    # Test case 1: Minion with 'test' role - modules.sls has content
+    grains_with_role = salt.loader.grains(opts)
+    grains_with_role["roles"] = ["test"]
+
+    pillar_with_role = salt.pillar.Pillar(
+        opts, grains_with_role, temp_salt_minion.id, "base"
+    )
+    pillar_data_with_role = pillar_with_role.compile_pillar()
+
+    # Should have all three modules
+    assert "program" in pillar_data_with_role
+    assert "modules" in pillar_data_with_role["program"]
+    modules_with_role = pillar_data_with_role["program"]["modules"]
+    assert "00-definitions.conf" in modules_with_role
+    assert "01-cleanup.conf" in modules_with_role
+    assert "10-dostuff.conf" in modules_with_role
+
+    # Test case 2: Minion without 'test' role - modules.sls produces None for modules
+    # THIS IS WHERE THE BUG OCCURRED - None was overwriting existing data
+    grains_without_role = salt.loader.grains(opts)
+    grains_without_role["roles"] = ["saltmaster"]
+
+    pillar_without_role = salt.pillar.Pillar(
+        opts, grains_without_role, temp_salt_minion.id, "base"
+    )
+    pillar_data_without_role = pillar_without_role.compile_pillar()
+
+    # Expected: Should have the two modules from common.sls (None should not overwrite)
+    assert "program" in pillar_data_without_role, (
+        "Bug: When modules.sls produces None, the entire pillar becomes empty. "
+        "Expected: program key should exist with data from common.sls"
+    )
+    assert "modules" in pillar_data_without_role["program"], (
+        "Bug: modules key is missing. Expected: Should have modules from common.sls"
+    )
+    modules_without_role = pillar_data_without_role["program"]["modules"]
+    assert modules_without_role is not None, (
+        "Bug: modules is None. Expected: Should be a dict with data from common.sls"
+    )
+    assert "00-definitions.conf" in modules_without_role, (
+        "Bug: Data from common.sls is lost when modules.sls produces None. "
+        "Expected: 00-definitions.conf should be present"
+    )
+    assert "01-cleanup.conf" in modules_without_role, (
+        "Bug: Data from common.sls is lost when modules.sls produces None. "
+        "Expected: 01-cleanup.conf should be present"
+    )
+    # Should NOT have the conditional module
+    assert "10-dostuff.conf" not in modules_without_role
