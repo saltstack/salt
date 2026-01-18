@@ -93,6 +93,8 @@ OrderedDumper.add_representer(HashableOrderedDict, represent_ordereddict)
 SafeOrderedDumper.add_representer(OrderedDict, represent_ordereddict)
 SafeOrderedDumper.add_representer(HashableOrderedDict, represent_ordereddict)
 SafeOrderedDumper.add_representer(None, represent_undefined)
+IndentedSafeOrderedDumper.add_representer(OrderedDict, represent_ordereddict)
+IndentedSafeOrderedDumper.add_representer(HashableOrderedDict, represent_ordereddict)
 
 OrderedDumper.add_representer(
     collections.defaultdict, yaml.representer.SafeRepresenter.represent_dict
