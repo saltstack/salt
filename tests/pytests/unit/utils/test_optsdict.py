@@ -559,7 +559,7 @@ class TestOptsDictDeepCopy:
         """Test that deepcopy uses copy-on-write (creates child)."""
         opts = OptsDict.from_dict(
             {"grains": {"os": "Linux"}, "pillar": {"app": "data"}, "test": False},
-            name="parent"
+            name="parent",
         )
 
         copied = copy.deepcopy(opts)
@@ -571,7 +571,9 @@ class TestOptsDictDeepCopy:
 
     def test_deepcopy_isolation(self):
         """Test that deepcopy provides proper isolation."""
-        opts = OptsDict.from_dict({"a": 1, "b": 2, "nested": {"x": 10}}, name="original")
+        opts = OptsDict.from_dict(
+            {"a": 1, "b": 2, "nested": {"x": 10}}, name="original"
+        )
 
         copied = copy.deepcopy(opts)
 
@@ -593,8 +595,12 @@ class TestOptsDictDeepCopy:
     def test_deepcopy_preserves_all_data(self):
         """Test that all data is accessible in deepcopy."""
         opts = OptsDict.from_dict(
-            {"grains": {"os": "Linux", "cpus": 4}, "pillar": {"app": "data"}, "test": False},
-            name="test"
+            {
+                "grains": {"os": "Linux", "cpus": 4},
+                "pillar": {"app": "data"},
+                "test": False,
+            },
+            name="test",
         )
 
         copied = copy.deepcopy(opts)
@@ -609,7 +615,7 @@ class TestOptsDictDeepCopy:
         """Test creating multiple deepcopies (e.g., multi-master scenario)."""
         opts = OptsDict.from_dict(
             {"grains": {"os": "Linux"}, "master": "master1", "multimaster": False},
-            name="base"
+            name="base",
         )
 
         # Create 3 copies like MinionManager does

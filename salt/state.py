@@ -1308,13 +1308,27 @@ class State:
         if data.get("reload_grains", False):
             log.debug("Refreshing grains...")
             new_grains = salt.loader.grains(self.opts)
-            self.opts.mutate_key("grains", new_grains)
+            # Use mutate_key if available (OptsDict), otherwise mutate in place (plain dict)
+            if hasattr(self.opts, "mutate_key"):
+                self.opts.mutate_key("grains", new_grains)
+            elif "grains" in self.opts and isinstance(self.opts["grains"], dict):
+                self.opts["grains"].clear()
+                self.opts["grains"].update(new_grains)
+            else:
+                self.opts["grains"] = new_grains
             _reload_modules = True
 
         if data.get("reload_pillar", False):
             log.debug("Refreshing pillar...")
             new_pillar = self._gather_pillar()
-            self.opts.mutate_key("pillar", new_pillar)
+            # Use mutate_key if available (OptsDict), otherwise mutate in place (plain dict)
+            if hasattr(self.opts, "mutate_key"):
+                self.opts.mutate_key("pillar", new_pillar)
+            elif "pillar" in self.opts and isinstance(self.opts["pillar"], dict):
+                self.opts["pillar"].clear()
+                self.opts["pillar"].update(new_pillar)
+            else:
+                self.opts["pillar"] = new_pillar
             _reload_modules = True
 
         if not ret["changes"]:

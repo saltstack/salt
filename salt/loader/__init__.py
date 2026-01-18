@@ -255,7 +255,7 @@ def _module_dirs(
     ):
         salt.utils.versions.warn_until(
             3008,
-            "The old module search path priority will be removed in Salt 3008. "
+            "The old module search path priority will be removed in Salt 3008 (Argon). "
             "For more information see https://github.com/saltstack/salt/pull/65938.",
         )
         return cli_module_dirs + ext_type_types + ext_types + sys_types
