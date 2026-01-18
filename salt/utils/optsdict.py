@@ -799,14 +799,17 @@ class OptsDict(dict):
     def _unwrap_value(self, value):
         """Recursively unwrap DictProxy/ListProxy objects to plain dicts/lists."""
         if isinstance(value, DictProxy):
-            # Unwrap DictProxy to plain dict
-            return {k: self._unwrap_value(v) for k, v in value.items()}
+            # Unwrap DictProxy - preserve the original dict type from the target
+            target = object.__getattribute__(value, "_target")
+            dict_type = type(target)
+            return dict_type((k, self._unwrap_value(v)) for k, v in value.items())
         elif isinstance(value, ListProxy):
             # Unwrap ListProxy to plain list
             return [self._unwrap_value(item) for item in value]
         elif isinstance(value, dict) and not isinstance(value, OptsDict):
-            # Regular dict - recursively unwrap its values
-            return {k: self._unwrap_value(v) for k, v in value.items()}
+            # Regular dict (including OrderedDict, etc.) - preserve type and recursively unwrap values
+            dict_type = type(value)
+            return dict_type((k, self._unwrap_value(v)) for k, v in value.items())
         elif isinstance(value, (list, tuple)):
             # Regular list/tuple - recursively unwrap its items
             return type(value)(self._unwrap_value(item) for item in value)
@@ -1019,10 +1022,12 @@ class OptsDict(dict):
         """
         # Convert to regular dict
         data = self.to_dict()
+        name = getattr(self, "_name", None)
         # Return (callable, args) to reconstruct
+        # We pass the name as the third positional arg which maps to name= in from_dict
         return (
             self.__class__.from_dict,
-            (data, getattr(self, "_name", None)),
+            (data, False, name),  # base_dict, track_mutations=False, name
         )
 
     def mutate_key(self, key, new_value):
