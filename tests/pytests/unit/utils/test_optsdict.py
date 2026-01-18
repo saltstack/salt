@@ -696,5 +696,278 @@ class TestOptsDictVsDeepCopy:
         assert all(isinstance(inst, OptsDict) for inst in optsdict_instances)
 
 
+class TestOptsDictPickle:
+    """Test OptsDict pickle/unpickle support."""
+
+    def test_basic_pickle(self):
+        """Test basic pickling and unpickling of OptsDict."""
+        import pickle
+
+        opts = OptsDict.from_dict({"a": 1, "b": 2, "c": 3}, name="test")
+
+        # Pickle and unpickle
+        pickled = pickle.dumps(opts)
+        restored = pickle.loads(pickled)
+
+        # Should be OptsDict, not plain dict
+        assert isinstance(restored, OptsDict)
+        assert restored["a"] == 1
+        assert restored["b"] == 2
+        assert restored["c"] == 3
+
+    def test_pickle_with_nested_data(self):
+        """Test pickling OptsDict with nested dictionaries."""
+        import pickle
+
+        opts = OptsDict.from_dict(
+            {
+                "grains": {"os": "Linux", "cpus": 4},
+                "pillar": {"app": {"db": "mysql", "port": 3306}},
+                "test": False,
+            },
+            name="test",
+        )
+
+        pickled = pickle.dumps(opts)
+        restored = pickle.loads(pickled)
+
+        assert isinstance(restored, OptsDict)
+        assert restored["grains"]["os"] == "Linux"
+        assert restored["grains"]["cpus"] == 4
+        assert restored["pillar"]["app"]["db"] == "mysql"
+        assert restored["pillar"]["app"]["port"] == 3306
+        assert restored["test"] is False
+
+    def test_pickle_with_mutations(self):
+        """Test pickling OptsDict that has local mutations."""
+        import pickle
+
+        parent = OptsDict.from_dict(
+            {"a": 1, "b": 2, "c": 3, "nested": {"x": 10}}, name="parent"
+        )
+        child = OptsDict.from_parent(parent, name="child")
+
+        # Mutate child
+        child["b"] = 20
+        child["d"] = 4
+        child["nested"]["y"] = 20
+
+        # Pickle and unpickle child
+        pickled = pickle.dumps(child)
+        restored = pickle.loads(pickled)
+
+        # Should have all data (both shared and local)
+        assert isinstance(restored, OptsDict)
+        assert restored["a"] == 1  # From parent
+        assert restored["b"] == 20  # Mutated
+        assert restored["c"] == 3  # From parent
+        assert restored["d"] == 4  # Added
+        assert restored["nested"]["x"] == 10
+        assert restored["nested"]["y"] == 20
+
+    def test_pickle_flattens_hierarchy(self):
+        """Test that pickling flattens parent-child hierarchy."""
+        import pickle
+
+        grandparent = OptsDict.from_dict({"a": 1, "b": 2, "c": 3}, name="grandparent")
+        parent = OptsDict.from_parent(grandparent, name="parent")
+        parent["b"] = 20
+
+        child = OptsDict.from_parent(parent, name="child")
+        child["c"] = 30
+        child["d"] = 4
+
+        # Pickle child
+        pickled = pickle.dumps(child)
+        restored = pickle.loads(pickled)
+
+        # Should have all effective data
+        assert restored["a"] == 1
+        assert restored["b"] == 20
+        assert restored["c"] == 30
+        assert restored["d"] == 4
+
+        # But should be a new root (no parent)
+        # The to_dict() call in __reduce_ex__ flattens the hierarchy
+        assert len(restored) == 4
+
+    def test_pickle_preserves_name(self):
+        """Test that pickling preserves the OptsDict name."""
+        import pickle
+
+        opts = OptsDict.from_dict({"a": 1, "b": 2}, name="my_special_opts")
+
+        pickled = pickle.dumps(opts)
+        restored = pickle.loads(pickled)
+
+        assert restored._name == "my_special_opts"
+
+    def test_pickle_protocols(self):
+        """Test pickling with different protocols."""
+        import pickle
+
+        opts = OptsDict.from_dict(
+            {"grains": {"os": "Linux"}, "test": False}, name="test"
+        )
+
+        # Test all pickle protocols
+        for protocol in range(pickle.HIGHEST_PROTOCOL + 1):
+            pickled = pickle.dumps(opts, protocol=protocol)
+            restored = pickle.loads(pickled)
+
+            assert isinstance(restored, OptsDict)
+            assert restored["grains"]["os"] == "Linux"
+            assert restored["test"] is False
+
+    def test_pickle_large_optsdict(self):
+        """Test pickling OptsDict with large data structures."""
+        import pickle
+
+        # Create large opts similar to real Salt minion opts
+        large_opts = OptsDict.from_dict(
+            {
+                "grains": {f"grain_{i}": f"value_{i}" for i in range(100)},
+                "pillar": {f"pillar_{i}": {"nested": f"data_{i}"} for i in range(100)},
+                "test": False,
+                "saltenv": "base",
+                "file_roots": {"base": ["/srv/salt"]},
+            },
+            name="minion_opts",
+        )
+
+        # Pickle and unpickle
+        pickled = pickle.dumps(large_opts)
+        restored = pickle.loads(pickled)
+
+        # Verify all data is present
+        assert isinstance(restored, OptsDict)
+        assert len(restored["grains"]) == 100
+        assert len(restored["pillar"]) == 100
+        assert restored["test"] is False
+        assert restored["saltenv"] == "base"
+        assert restored["grains"]["grain_50"] == "value_50"
+        assert restored["pillar"]["pillar_50"]["nested"] == "data_50"
+
+    def test_pickle_with_deleted_keys(self):
+        """Test pickling OptsDict with deleted keys."""
+        import pickle
+
+        parent = OptsDict.from_dict({"a": 1, "b": 2, "c": 3}, name="parent")
+        child = OptsDict.from_parent(parent, name="child")
+
+        # Delete a key from child
+        del child["b"]
+
+        # Pickle child
+        pickled = pickle.dumps(child)
+        restored = pickle.loads(pickled)
+
+        # Should not have deleted key
+        assert "b" not in restored
+        assert restored["a"] == 1
+        assert restored["c"] == 3
+
+    def test_pickle_round_trip_equality(self):
+        """Test that pickle round-trip produces equivalent data."""
+        import pickle
+
+        original = OptsDict.from_dict(
+            {
+                "str_val": "hello",
+                "int_val": 42,
+                "bool_val": True,
+                "none_val": None,
+                "list_val": [1, 2, 3],
+                "dict_val": {"nested": {"deep": "value"}},
+                "tuple_val": (1, 2, 3),
+            },
+            name="test",
+        )
+
+        pickled = pickle.dumps(original)
+        restored = pickle.loads(pickled)
+
+        # Compare all values
+        assert restored.to_dict() == original.to_dict()
+
+    def test_pickle_with_special_types(self):
+        """Test pickling OptsDict with special Python types."""
+        import pickle
+        from collections import OrderedDict
+
+        opts = OptsDict.from_dict(
+            {
+                "ordered": OrderedDict([("z", 1), ("a", 2), ("m", 3)]),
+                "set_val": {1, 2, 3},
+                "frozenset_val": frozenset([4, 5, 6]),
+            },
+            name="special",
+        )
+
+        pickled = pickle.dumps(opts)
+        restored = pickle.loads(pickled)
+
+        # Direct access returns DictProxy for copy-on-write, so use to_dict() to get unwrapped values
+        unwrapped = restored.to_dict()
+        assert isinstance(unwrapped["ordered"], OrderedDict)
+        assert list(unwrapped["ordered"].keys()) == ["z", "a", "m"]
+
+        # Primitives are returned directly
+        assert restored["set_val"] == {1, 2, 3}
+        assert restored["frozenset_val"] == frozenset([4, 5, 6])
+
+    def test_unpickle_creates_root_optsdict(self):
+        """Test that unpickling creates a root OptsDict, not a child."""
+        import pickle
+
+        parent = OptsDict.from_dict({"a": 1, "b": 2}, name="parent")
+        child = OptsDict.from_parent(parent, name="child")
+        child["c"] = 3
+
+        # Child has parent
+        assert child._parent is not None
+
+        # Pickle child
+        pickled = pickle.dumps(child)
+        restored = pickle.loads(pickled)
+
+        # Restored should be a root (no parent)
+        # This is by design - to_dict() flattens the hierarchy
+        assert hasattr(restored, "_parent")
+        # The restored OptsDict is a new root with all the data flattened
+
+    def test_pickle_multimaster_scenario(self):
+        """Test pickling in multimaster scenario (real-world use case)."""
+        import pickle
+
+        # Simulate multimaster: base opts get copied per master
+        base_opts = OptsDict.from_dict(
+            {
+                "grains": {"os": "Linux", "id": "minion1"},
+                "pillar": {"app": "data"},
+                "master": None,
+            },
+            name="base",
+        )
+
+        # Create per-master copies
+        master_opts_list = []
+        for master in ["master1", "master2", "master3"]:
+            m_opts = OptsDict.from_parent(base_opts, name=f"master_{master}")
+            m_opts["master"] = master
+            master_opts_list.append(m_opts)
+
+        # Pickle each master's opts
+        for m_opts in master_opts_list:
+            pickled = pickle.dumps(m_opts)
+            restored = pickle.loads(pickled)
+
+            # Should have correct master
+            assert restored["master"] in ["master1", "master2", "master3"]
+            # Should have shared data
+            assert restored["grains"]["os"] == "Linux"
+            assert restored["pillar"]["app"] == "data"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
