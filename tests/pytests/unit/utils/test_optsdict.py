@@ -111,10 +111,15 @@ class TestOptsDictBasics:
         opts = OptsDict.from_dict({"a": 1})
         opts["b"] = 2  # Add to local
 
+        # Delete locally-added key (truly deleted)
         del opts["b"]
         assert "b" not in opts
 
-        # Can't delete from parent/base
+        # Delete key from base (masked with sentinel)
+        del opts["a"]
+        assert "a" not in opts
+
+        # Can't delete already-deleted key
         with pytest.raises(KeyError):
             del opts["a"]
 
