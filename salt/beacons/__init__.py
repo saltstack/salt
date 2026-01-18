@@ -18,13 +18,13 @@ class Beacon:
     This class is used to evaluate and execute on the beacon system
     """
 
-    def __init__(self, opts, functions):
+    def __init__(self, opts, functions, interval_map=None):
         import salt.loader
 
         self.opts = opts
         self.functions = functions
         self.beacons = salt.loader.beacons(opts, functions)
-        self.interval_map = dict()
+        self.interval_map = interval_map or dict()
 
     def process(self, config, grains):
         """
