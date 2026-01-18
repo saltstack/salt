@@ -24,7 +24,7 @@ aiosignal==1.4.0
     #   aiohttp
 ansible-core==2.19.2
     # via ansible
-ansible==12.0.0 ; python_version >= "3.10"
+ansible==12.2.0 ; python_version >= "3.10"
     # via -r requirements/static/ci/linux.in
 anyio==4.1.0
     # via httpcore
