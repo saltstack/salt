@@ -614,23 +614,45 @@ class OptsDict(dict):
             # Store the value locally
             self._local[key] = value
 
+    def _key_in_parent_or_base(self, key: str) -> bool:
+        """Check if key exists in parent chain or base dict."""
+        # Check parent chain
+        if self._parent is not None:
+            found, value = self._get_from_parent_chain(key)
+            if found and value is not _DELETED:
+                return True
+
+        # Check base (root level only)
+        if self._parent is None and key in self._base:
+            return True
+
+        return False
+
     def __delitem__(self, key: str):
         """
-        Delete item from local dict only.
+        Delete item by masking it with a sentinel.
 
-        Can only delete keys that were added locally. Cannot delete keys
-        from parent/base dicts as they are immutable.
+        For keys in local dict: truly delete them.
+        For keys in parent/base: mask them with _DELETED sentinel.
+        This preserves copy-on-write semantics.
         """
         with self._ensure_lock():
+            if key not in self:
+                raise KeyError(key)
+
             if key in self._local:
-                # Only allow deleting keys that are in _local
-                # Don't allow deleting if it's a sentinel (already deleted)
+                # Key is in local - check if it's already deleted
                 if self._local[key] is _DELETED:
                     raise KeyError(key)
-                del self._local[key]
+                # Truly delete if it's ONLY in local (not in parent/base)
+                if not self._key_in_parent_or_base(key):
+                    del self._local[key]
+                else:
+                    # Key is in both local and parent/base - mask it
+                    self._local[key] = _DELETED
             else:
-                # Can't delete keys from parent/base - they are immutable
-                raise KeyError(key)
+                # Key is in parent/base only - mask it
+                self._local[key] = _DELETED
 
     def __iter__(self):
         """Iterate over all keys (local + parent chain + base), excluding deleted keys."""
