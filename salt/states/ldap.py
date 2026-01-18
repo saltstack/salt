@@ -137,6 +137,13 @@ def managed(name, entries, connect_spec=None):
             directive or the ``'add'`` directive with an empty value
             list.
 
+        * ``'strict_order'``
+            Boolean indicating whether the ordering of attribute values is important.
+            With some LDAP implementations and attributes this directive should be set
+            to ``False`` when using the ``replace``` directive to ensure idempotency if
+            attributes get re-arranged by the LDAP server beyond administrative control.
+            Defaults to ``True``.
+
         * ``'default'``
             A dict mapping an attribute name to an iterable of default
             values for that attribute.  If the attribute already
@@ -347,8 +354,7 @@ def managed(name, entries, connect_spec=None):
                 )
 
     # set ret['changes'].  filter out any unchanged attributes, and
-    # convert the value sets to lists before returning them to the
-    # user (sorted for easier comparisons)
+    # convert the value sets to lists before returning them to the user
     for dn in success_dn_set:
         o = changed_old.get(dn, {})
         n = changed_new.get(dn, {})
@@ -442,6 +448,8 @@ def _process_entries(l, entries):
             # process the directives
             entry_status = {
                 "delete_others": False,
+                # False could be a better default for "strict_order", but unsure if it would break existing implementations
+                "strict_order": True,
                 "mentioned_attributes": set(),
             }
             for directives in directives_seq:
@@ -453,6 +461,9 @@ def _process_entries(l, entries):
                         to_delete.add(attr)
                 for attr in to_delete:
                     del newe[attr]
+            if not entry_status["strict_order"]:
+                for attr in olde:
+                    olde[attr] = OrderedSet(sorted(olde[attr]))
     return old, new
 
 
@@ -468,8 +479,8 @@ def _update_entry(entry, status, directives):
         A dict mapping directive types to directive-specific state
     """
     for directive, state in directives.items():
-        if directive == "delete_others":
-            status["delete_others"] = state
+        if directive in ["delete_others", "strict_order"]:
+            status[directive] = state
             continue
         for attr, vals in state.items():
             status["mentioned_attributes"].add(attr)
@@ -490,7 +501,10 @@ def _update_entry(entry, status, directives):
             elif directive == "replace":
                 entry.pop(attr, None)
                 if vals:
-                    entry[attr] = vals
+                    if status["strict_order"] is True:
+                        entry[attr] = vals
+                    else:
+                        entry[attr] = OrderedSet(sorted(vals))
             else:
                 raise ValueError("unknown directive: " + directive)
 
