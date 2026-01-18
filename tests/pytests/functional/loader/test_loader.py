@@ -79,6 +79,7 @@ def test_module_dirs_priority(venv, salt_extension, minion_opts, module_dirs):
             tail
         ), f"{module_dirs_return[i]} does not end with {tail}"
 
+
 def test_new_entry_points_passing_module(venv, salt_extension, salt_minion_factory):
     # Install our extension into the virtualenv
     venv.install(str(salt_extension.srcdir))
