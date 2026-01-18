@@ -616,35 +616,21 @@ class OptsDict(dict):
 
     def __delitem__(self, key: str):
         """
-        Delete item with proper handling for inherited keys.
+        Delete item from local dict only.
 
-        For keys in _local, directly delete them.
-        For keys inherited from parent/base, mask them with a sentinel.
+        Can only delete keys that were added locally. Cannot delete keys
+        from parent/base dicts as they are immutable.
         """
         with self._ensure_lock():
             if key in self._local:
-                # Key is local, just delete it
+                # Only allow deleting keys that are in _local
+                # Don't allow deleting if it's a sentinel (already deleted)
+                if self._local[key] is _DELETED:
+                    raise KeyError(key)
                 del self._local[key]
             else:
-                # Check if key exists in parent chain or base
-                key_exists = False
-
-                # Check parent chain
-                if self._parent is not None:
-                    found, _ = self._get_from_parent_chain(key)
-                    if found:
-                        key_exists = True
-
-                # Check base (root level only)
-                if not key_exists and self._parent is None and key in self._base:
-                    key_exists = True
-
-                if key_exists:
-                    # Mask the inherited key with sentinel
-                    self._local[key] = _DELETED
-                else:
-                    # Key doesn't exist anywhere
-                    raise KeyError(key)
+                # Can't delete keys from parent/base - they are immutable
+                raise KeyError(key)
 
     def __iter__(self):
         """Iterate over all keys (local + parent chain + base), excluding deleted keys."""
@@ -781,9 +767,30 @@ class OptsDict(dict):
         return dict.items(self)
 
     def copy(self) -> dict[str, Any]:
-        """Return a regular dict copy of all data."""
+        """Return a regular dict copy of all data, unwrapping all proxies."""
         with self._ensure_lock():
-            return {k: v for k, v in self.items()}
+            result = {}
+            for k, v in self.items():
+                result[k] = self._unwrap_value(v)
+            return result
+
+    def _unwrap_value(self, value):
+        """Recursively unwrap DictProxy/ListProxy objects to plain dicts/lists."""
+        if isinstance(value, DictProxy):
+            # Unwrap DictProxy to plain dict
+            return {k: self._unwrap_value(v) for k, v in value.items()}
+        elif isinstance(value, ListProxy):
+            # Unwrap ListProxy to plain list
+            return [self._unwrap_value(item) for item in value]
+        elif isinstance(value, dict) and not isinstance(value, OptsDict):
+            # Regular dict - recursively unwrap its values
+            return {k: self._unwrap_value(v) for k, v in value.items()}
+        elif isinstance(value, (list, tuple)):
+            # Regular list/tuple - recursively unwrap its items
+            return type(value)(self._unwrap_value(item) for item in value)
+        else:
+            # Primitive value or OptsDict - return as-is
+            return value
 
     def to_dict(self) -> dict[str, Any]:
         """Alias for copy() - return regular dict."""
@@ -927,7 +934,11 @@ class OptsDict(dict):
         """
         # Use copy-on-write by creating a child OptsDict
         # This shares data with parent until mutations occur
-        return OptsDict.from_parent(self, name=f"{self._name}_deepcopy")
+        child = OptsDict.from_parent(self, name=f"{self._name}_deepcopy")
+        # Sync underlying dict to support C-level iteration (e.g., JSON serialization)
+        # This ensures json.dumps() works without needing to call __iter__() first
+        list(child)  # Triggers __iter__() which syncs the underlying dict
+        return child
 
     def __eq__(self, other):
         """
