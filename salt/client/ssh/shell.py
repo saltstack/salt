@@ -156,7 +156,7 @@ class Shell:
         if self.priv and self.priv != "agent-forwarding":
             options.append(f"IdentityFile={self.priv}")
         if self.user:
-            options.append(f"User={self.user}")
+            options.append(f"User={shlex.quote(self.user)}")
         if self.identities_only:
             options.append("IdentitiesOnly=yes")
 
@@ -202,7 +202,7 @@ class Shell:
         if self.port:
             options.append(f"Port={self.port}")
         if self.user:
-            options.append(f"User={self.user}")
+            options.append(f"User={shlex.quote(self.user)}")
         if self.identities_only:
             options.append("IdentitiesOnly=yes")
 
