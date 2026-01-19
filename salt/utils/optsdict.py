@@ -799,9 +799,16 @@ class OptsDict(dict):
     def _unwrap_value(self, value):
         """Recursively unwrap DictProxy/ListProxy objects to plain dicts/lists."""
         if isinstance(value, DictProxy):
-            # Unwrap DictProxy - preserve the original dict type from the target
+            # Unwrap DictProxy - get the underlying target and preserve its type
             target = object.__getattribute__(value, "_target")
-            dict_type = type(target)
+            # If target is also a DictProxy, we need to get the real underlying dict
+            # This shouldn't happen in normal use, but handle it defensively
+            while isinstance(target, DictProxy):
+                target = object.__getattribute__(target, "_target")
+            # Now preserve the type of the real underlying dict (could be OrderedDict, etc.)
+            dict_type = (
+                type(target) if not isinstance(target, (DictProxy, ListProxy)) else dict
+            )
             return dict_type((k, self._unwrap_value(v)) for k, v in value.items())
         elif isinstance(value, ListProxy):
             # Unwrap ListProxy to plain list

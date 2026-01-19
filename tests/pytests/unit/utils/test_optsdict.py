@@ -969,5 +969,90 @@ class TestOptsDictPickle:
             assert restored["pillar"]["app"] == "data"
 
 
+def test_copy_with_nested_dicts():
+    """Test that copy() properly unwraps nested DictProxy objects."""
+    parent = OptsDict.from_dict(
+        {
+            "level1": {"level2": {"level3": "value"}},
+            "simple": "string",
+        },
+        name="parent",
+    )
+
+    child = OptsDict.from_parent(parent, name="child")
+
+    # Access the nested dict to create DictProxy wrappers
+    _ = child["level1"]["level2"]
+
+    # Now copy should properly unwrap all proxies
+    copied = child.copy()
+
+    # Should be a plain dict, not OptsDict
+    assert isinstance(copied, dict)
+    assert not isinstance(copied, OptsDict)
+
+    # Nested dicts should also be plain dicts
+    assert isinstance(copied["level1"], dict)
+    assert isinstance(copied["level1"]["level2"], dict)
+
+    # Values should be preserved
+    assert copied["level1"]["level2"]["level3"] == "value"
+    assert copied["simple"] == "string"
+
+
+def test_copy_preserves_ordereddict():
+    """Test that copy() preserves OrderedDict type."""
+    from collections import OrderedDict
+
+    opts = OptsDict.from_dict(
+        {
+            "ordered": OrderedDict([("z", 1), ("a", 2), ("m", 3)]),
+            "regular": {"b": 2, "a": 1},
+        },
+        name="test",
+    )
+
+    copied = opts.copy()
+
+    # OrderedDict should be preserved
+    assert isinstance(copied["ordered"], OrderedDict)
+    assert list(copied["ordered"].keys()) == ["z", "a", "m"]
+
+    # Regular dict should stay as dict
+    assert isinstance(copied["regular"], dict)
+
+
+def test_to_dict_unwraps_all_proxies():
+    """Test that to_dict() completely unwraps nested proxy structures."""
+    parent = OptsDict.from_dict(
+        {
+            "nested": {
+                "deep": {
+                    "value": "data",
+                    "list": [1, 2, 3],
+                }
+            }
+        },
+        name="parent",
+    )
+
+    child = OptsDict.from_parent(parent, name="child")
+
+    # Access to trigger proxy creation
+    _ = child["nested"]["deep"]["list"]
+
+    # to_dict should unwrap everything
+    result = child.to_dict()
+
+    # Check that nothing is a proxy
+    assert not hasattr(result["nested"], "_target")
+    assert not hasattr(result["nested"]["deep"], "_target")
+    assert isinstance(result["nested"]["deep"]["list"], list)
+
+    # Values should be correct
+    assert result["nested"]["deep"]["value"] == "data"
+    assert result["nested"]["deep"]["list"] == [1, 2, 3]
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
