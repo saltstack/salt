@@ -214,6 +214,19 @@ def test_info_int(user, account_int):
     assert ret["uid"].startswith("S-1-5")
 
 
+def test_info_domain_local(user, account_str):
+    domain = "."  # localhost or hostname doesn't work, only .
+    ret = user.info(f"{domain}\\{account_str.username}")
+    assert ret["name"] == account_str.username
+    assert ret["uid"].startswith("S-1-5")
+
+
+def test_info_domain_not_found(user, account_str):
+    domain = "junk.com"
+    ret = user.info(f"{domain}\\{account_str.username}")
+    assert ret == {}
+
+
 def test_list_groups_str(user, account_str):
     ret = user.list_groups(account_str.username)
     assert ret == ["Users"]
