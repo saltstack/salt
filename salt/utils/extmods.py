@@ -39,10 +39,16 @@ def sync(
     saltenv=None,
     extmod_whitelist=None,
     extmod_blacklist=None,
+    force_local=False,
 ):
     """
     Sync custom modules into the extension_modules directory
     """
+    print(
+        f"DGM syc entry, opts '{opts}', form '{form}', saltenv '{saltenv}', extmod_whitelist '{extmod_whitelist}', extmod_blacklist '{extmod_blacklist}', force_local '{force_local}'",
+        flush=True,
+    )
+
     if saltenv is None:
         saltenv = ["base"]
 
@@ -82,7 +88,9 @@ def sync(
                         "Cannot create cache module directory %s. Check permissions.",
                         mod_dir,
                     )
-            with salt.fileclient.get_file_client(opts) as fileclient:
+            with salt.fileclient.get_file_client(
+                opts, pillar=False, force_local=force_local
+            ) as fileclient:
                 for sub_env in saltenv:
                     log.info("Syncing %s for environment '%s'", form, sub_env)
                     cache = []
@@ -153,4 +161,6 @@ def sync(
                         shutil.rmtree(emptydir, ignore_errors=True)
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Failed to sync %s module: %s", form, exc)
+
+    print(f"DGM syc exit, ret '{ret}', touched '{touched}',  opts '{opts}'", flush=True)
     return ret, touched
