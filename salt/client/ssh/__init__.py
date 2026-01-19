@@ -1070,7 +1070,10 @@ class Single:
             self.python_env = kwargs.get("ssh_python_env")
         else:
             if user:
-                thin_dir = DEFAULT_THIN_DIR.replace("%%USER%%", user)
+                thin_dir = DEFAULT_THIN_DIR.replace(
+                    "%%USER%%",
+                    re.sub(r"[^a-zA-Z0-9\._\-@]", "_", user),
+                )
             else:
                 thin_dir = DEFAULT_THIN_DIR.replace("%%USER%%", "root")
             self.thin_dir = thin_dir.replace(
