@@ -215,7 +215,7 @@ def test_info_int(user, account_int):
 
 
 def test_info_domain_local(user, account_str):
-    domain = "." # localhost or hostname doesn't work, only .
+    domain = "."  # localhost or hostname doesn't work, only .
     ret = user.info(f"{domain}\\{account_str.username}")
     assert ret["name"] == account_str.username
     assert ret["uid"].startswith("S-1-5")
