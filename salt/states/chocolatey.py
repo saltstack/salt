@@ -35,7 +35,7 @@ def installed(
     package_args=None,
     allow_multiple=False,
     execution_timeout=None,
-    viruscheck=None,
+    virus_check=None,
 ):
     """
     Installs a package if not already installed
@@ -90,7 +90,7 @@ def installed(
             Chocolatey execution timeout value you want to pass to the
             installation process. Default is ``None``.
 
-        viruscheck (bool):
+        virus_check (bool):
             Enable or disable the chocolatey virus check extension (licensed
             version only). If not provided then no arguments are added.
             Default is ``None``.
@@ -176,7 +176,7 @@ def installed(
         package_args=package_args,
         allow_multiple=allow_multiple,
         execution_timeout=execution_timeout,
-        viruscheck=viruscheck,
+        virus_check=virus_check,
     )
 
     if "Running chocolatey failed" not in result:
