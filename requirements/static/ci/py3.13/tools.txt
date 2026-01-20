@@ -6,63 +6,68 @@
 #
 annotated-types==0.7.0
     # via pydantic
-attrs==24.2.0
+attrs==25.4.0
     # via
     #   -r requirements/static/ci/tools.in
     #   python-tools-scripts
-boto3==1.35.46
+boto3==1.42.31
     # via -r requirements/static/ci/tools.in
-botocore==1.35.46
+botocore==1.42.31
     # via
     #   boto3
     #   s3transfer
-certifi==2024.8.30
+certifi==2026.1.4
     # via requests
-charset-normalizer==3.4.0
+charset-normalizer==3.4.4
     # via requests
-filelock==3.16.1
+filelock==3.20.3
     # via python-tools-scripts
-idna==3.10
+idna==3.11
     # via requests
-jinja2==3.1.4
+jinja2==3.1.6
     # via -r requirements/static/ci/tools.in
 jmespath==1.0.1
     # via
     #   boto3
     #   botocore
-markdown-it-py==3.0.0
+markdown-it-py==4.0.0
     # via rich
-markupsafe==3.0.2
-    # via jinja2
+markupsafe==2.1.5
+    # via
+    #   -r requirements/static/ci/tools.in
+    #   jinja2
 mdurl==0.1.2
     # via markdown-it-py
-packaging==24.1
+packaging==25.0
     # via -r requirements/static/ci/tools.in
-pydantic-core==2.23.4
+pydantic-core==2.41.5
     # via pydantic
-pydantic==2.9.2
+pydantic==2.12.5
     # via python-tools-scripts
-pygments==2.18.0
+pygments==2.19.2
     # via rich
 python-dateutil==2.9.0.post0
     # via botocore
 python-tools-scripts==0.20.5
     # via -r requirements/static/ci/tools.in
-pyyaml==6.0.2
+pyyaml==6.0.3
     # via -r requirements/static/ci/tools.in
-requests==2.32.3
+requests==2.32.5
     # via python-tools-scripts
-rich==13.9.3
+rich==14.2.0
     # via python-tools-scripts
-s3transfer==0.10.3
+s3transfer==0.16.0
     # via boto3
-six==1.16.0
+six==1.17.0
     # via python-dateutil
-typing-extensions==4.12.2
+typing-extensions==4.15.0
     # via
     #   pydantic
     #   pydantic-core
-urllib3==2.2.3
+    #   typing-inspection
+typing-inspection==0.4.2
+    # via pydantic
+urllib3==2.6.3
     # via
     #   botocore
     #   requests

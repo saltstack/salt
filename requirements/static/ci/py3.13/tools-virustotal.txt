@@ -4,23 +4,23 @@
 #
 #    pip-compile --cert='' --client-cert='' --index-url='' --output-file=requirements/static/ci/py3.13/tools-virustotal.txt --pip-args='' requirements/static/ci/tools-virustotal.in
 #
-certifi==2024.8.30
+certifi==2026.1.4
     # via
     #   -c requirements/static/ci/../ci/py3.13/tools.txt
     #   requests
-charset-normalizer==3.4.0
+charset-normalizer==3.4.4
     # via
     #   -c requirements/static/ci/../ci/py3.13/tools.txt
     #   requests
-idna==3.10
+idna==3.11
     # via
     #   -c requirements/static/ci/../ci/py3.13/tools.txt
     #   requests
-requests==2.32.3
+requests==2.32.5
     # via
     #   -c requirements/static/ci/../ci/py3.13/tools.txt
     #   virustotal3
-urllib3==2.2.3
+urllib3==2.6.3
     # via
     #   -c requirements/static/ci/../ci/py3.13/tools.txt
     #   requests

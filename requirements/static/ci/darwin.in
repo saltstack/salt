@@ -1,4 +1,4 @@
---constraint=../pkg/py{py_version}/{platform}.txt
+--constraint=../pkg/py{py_version}/darwin.txt
 
 pygit2>=1.10.1
 yamllint
