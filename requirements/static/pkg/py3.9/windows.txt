@@ -95,7 +95,7 @@ portend==2.6
     # via cherrypy
 psutil==5.8.0 ; python_version <= "3.9"
     # via -r requirements/base.txt
-pyasn1==0.4.8
+pyasn1==0.6.2
     # via -r requirements/windows.txt
 pycparser==2.21
     # via
