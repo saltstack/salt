@@ -3,6 +3,7 @@
 # to a particular platform, please add it to the corresponding `<platform>.in` file in this directory.
 --constraint=../pkg/py{py_version}/{platform}.txt
 
+
 apache-libcloud>=1.5.0; sys_platform != 'win32'
 boto3>=1.25.0
 boto>=2.47.0
@@ -46,7 +47,7 @@ vcert~=0.7.0; sys_platform != 'win32'
 virtualenv>=20.36.1
 watchdog>=0.9.0
 # werkzeug is a dependency of moto
-werkzeug>=3.0.6
+werkzeug>=3.1.5
 textfsm
 # Available template libraries that can be used
 genshi>=0.7.3
