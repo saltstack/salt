@@ -578,7 +578,7 @@ def install(
     package_args=None,
     allow_multiple=False,
     execution_timeout=None,
-    viruscheck=None,
+    virus_check=None,
 ):
     """
     Instructs Chocolatey to install a package.
@@ -643,7 +643,7 @@ def install(
 
             .. versionadded:: 2018.3.0
 
-        viruscheck (bool):
+        virus_check (bool):
             Enable or disable the chocolatey virus check extension (licensed
             version only). If not provided then no arguments are added.
             Default is ``None``.
@@ -691,8 +691,8 @@ def install(
         cmd.append("--allow-multiple")
     if execution_timeout:
         cmd.extend(["--execution-timeout", execution_timeout])
-    if viruscheck is not None:
-        virusarg = "--viruscheck" if viruscheck else "--skipviruscheck"
+    if virus_check is not None:
+        virusarg = "--viruscheck" if virus_check else "--skipviruscheck"
         cmd.append(virusarg)
 
     # Salt doesn't need to see the progress
