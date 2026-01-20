@@ -30,7 +30,7 @@ class LdapDB:
     def dummy_connect(self, connect_spec):
         return _dummy_ctx()
 
-    def dummy_search(self, connect_spec, base, scope):
+    def dummy_search(self, connect_spec, base, scope, attrlist):
         if base not in self.db:
             return {}
         return {
@@ -38,6 +38,7 @@ class LdapDB:
                 attr: list(self.db[base][attr])
                 for attr in self.db[base]
                 if len(self.db[base][attr])
+                and (attrlist is None or attr in attrlist or "*" in attrlist)
             }
         }
 
@@ -200,7 +201,7 @@ def configure_loader_modules(db):
     return {salt.states.ldap: {"__opts__": {"test": False}, "__salt__": salt_dunder}}
 
 
-def _test_helper(init_db, expected_ret, replace, delete_others=False):
+def _test_helper(init_db, expected_ret, replace, delete_others=False, attrlist=None):
     old = init_db.dump_db()
     new = init_db.dump_db()
     expected_db = copy.deepcopy(init_db.db)
@@ -267,13 +268,13 @@ def _test_helper(init_db, expected_ret, replace, delete_others=False):
         {dn: [{"replace": attrs}, {"delete_others": delete_others}]}
         for dn, attrs in replace.items()
     ]
-    actual = salt.states.ldap.managed(name, entries)
+    actual = salt.states.ldap.managed(name, entries, attrlist=attrlist)
     assert expected_ret == actual
     assert expected_db == init_db.db
 
 
-def _test_helper_success(db, replace, delete_others=False):
-    _test_helper(db, {}, replace, delete_others)
+def _test_helper_success(db, replace, delete_others=False, attrlist=None):
+    _test_helper(db, {}, replace, delete_others, attrlist)
 
 
 def _test_helper_nochange(db, replace, delete_others=False):
@@ -284,7 +285,7 @@ def _test_helper_nochange(db, replace, delete_others=False):
     _test_helper(db, expected, replace, delete_others)
 
 
-def _test_helper_add(db, expected_ret, add_items, delete_others=False):
+def _test_helper_add(db, expected_ret, add_items, delete_others=False, attrlist=None):
     old = db.dump_db()
     new = db.dump_db()
     expected_db = copy.deepcopy(db.db)
@@ -355,13 +356,13 @@ def _test_helper_add(db, expected_ret, add_items, delete_others=False):
         {dn: [{"add": attrs}, {"delete_others": delete_others}]}
         for dn, attrs in add_items.items()
     ]
-    actual = salt.states.ldap.managed(name, entries)
+    actual = salt.states.ldap.managed(name, entries, attrlist=attrlist)
     assert expected_ret == actual
     assert expected_db == db.db
 
 
-def _test_helper_success_add(db, add_items, delete_others=False):
-    _test_helper_add(db, {}, add_items, delete_others)
+def _test_helper_success_add(db, add_items, delete_others=False, attrlist=None):
+    _test_helper_add(db, {}, add_items, delete_others, attrlist)
 
 
 def test_managed_empty(db):
@@ -383,10 +384,22 @@ def test_managed_add_entry(db):
 def test_managed_add_attr(complex_db):
     _test_helper_success_add(complex_db, {"dnfoo": {"attrfoo1": ["valfoo1.3"]}})
     _test_helper_success_add(complex_db, {"dnfoo": {"attrfoo4": ["valfoo4.1"]}})
+    _test_helper_success_add(
+        complex_db, {"dnfoo": {"attrfoo10": ["valfoo10"]}}, attrlist=["*"]
+    )
+    _test_helper_success_add(
+        complex_db, {"dnfoo11": {"attrfoo11": ["valfoo11"]}}, attrlist=["attrfoo11"]
+    )
 
 
 def test_managed_replace_attr(complex_db):
     _test_helper_success(complex_db, {"dnfoo": {"attrfoo3": ["valfoo3.1"]}})
+    _test_helper_success(
+        complex_db, {"dnfoo": {"attrfoo12": ["valfoo12"]}}, attrlist=["*"]
+    )
+    _test_helper_success(
+        complex_db, {"dnfoo13": {"attrfoo13": ["valfoo13"]}}, attrlist=["attrfoo13"]
+    )
 
 
 def test_managed_simplereplace(complex_db):
