@@ -106,6 +106,8 @@ jobs:
 
       - name: Install build dependencies
         run: |
+          # Update the repo before installing stuff
+          apt-get update -y
           # Installing python3.13-venv for Python 3.13 support
           apt-get install -y python3.13-venv
           # Installing devscripts for source package builds (provides debuild)
