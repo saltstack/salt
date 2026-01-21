@@ -394,6 +394,12 @@ class LoadAuth:
         # Get auth list from token
         if token and self.opts["keep_acl_in_token"] and "auth_list" in token:
             return token["auth_list"]
+
+        # If eauth is not present in the load, but is in the token, set it in
+        # the load so that we can engage the ACL lookup code inside __get_acl().
+        if "eauth" not in load and "eauth" in token:
+            load["eauth"] = token["eauth"]
+
         # Get acl from eauth module.
         auth_list = self.__get_acl(load)
         if auth_list is not None:
