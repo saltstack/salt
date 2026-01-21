@@ -569,13 +569,12 @@ def check(table="filter", chain=None, rule=None, family="ipv4"):
         return res
 
     nft_family = _NFTABLES_FAMILIES[family]
-    cmd = "{} --handle --numeric --numeric --numeric list chain {} {} {}".format(
-        _nftables_cmd(), nft_family, table, chain
-    )
-    search_rule = f"{rule} #"
-    out = __salt__["cmd.run"](cmd, python_shell=False).find(search_rule)
+    cmd = f"{_nftables_cmd()} --handle list chain {nft_family} {table} {chain}"
+    search_rule = f"{rule} #".replace("{ ", "{? ?").replace(" }", " ?}?")
+    out = __salt__["cmd.run"](cmd, python_shell=False)
+    found = re.search(search_rule, out)
 
-    if out == -1:
+    if not found:
         ret["comment"] = (
             "Rule {} in chain {} in table {} in family {} does not exist".format(
                 rule, chain, table, family
