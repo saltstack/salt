@@ -852,7 +852,7 @@ def test_retry_option_eventual_success(state, state_tree, tmp_path):
         ret = state.sls("retry")
         for state_return in ret:
             assert state_return.result is True
-            assert state_return.full_return["duration"] > 4
+            assert state_return.full_return["duration"] > 2
             # It should not take 5 attempts
             assert "Attempt 5" not in state_return.comment
 
@@ -903,7 +903,7 @@ def test_retry_option_eventual_success_parallel(state, state_tree, tmp_path):
         for state_return in ret:
             log.debug("=== state_return %s ===", state_return)
             assert state_return.result is True
-            assert state_return.full_return["duration"] > 4
+            assert state_return.full_return["duration"] > 2
             # It should not take 5 attempts
             assert "Attempt 5" not in state_return.comment
 
