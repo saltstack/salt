@@ -164,7 +164,7 @@ def _options_browser(cfg, ret_config, defaults, virtualname, options):
         # default place for the option in the config
         value = _fetch_option(cfg, ret_config, virtualname, options[option])
 
-        if value:
+        if value != "":
             yield option, value
             continue
 
