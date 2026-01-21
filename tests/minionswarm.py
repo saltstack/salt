@@ -6,6 +6,7 @@ on a single system to test scale capabilities
 """
 # pylint: disable=resource-leakage
 
+import getpass
 import hashlib
 import optparse  # pylint: disable=deprecated-module
 import os
@@ -18,10 +19,10 @@ import tempfile
 import time
 import uuid
 
-import salt
+import support.runtests
+
 import salt.utils.files
 import salt.utils.yaml
-import tests.support.runtests
 
 OSES = [
     "Arch",
@@ -34,10 +35,10 @@ OSES = [
     "Solaris",
 ]
 VERS = [
-    "2014.1.6",
-    "2014.7.4",
-    "2015.5.5",
-    "2015.8.0",
+    "3006.1",
+    "3006.5",
+    "3006.9",
+    "3007.1",
 ]
 
 
@@ -45,14 +46,29 @@ def parse():
     """
     Parse the cli options
     """
-    parser = optparse.OptionParser()
+    guidance = (
+        "\n\n   To execute salt commands against minionswarm you must include the configuration\n"
+        "   file using the -c option. For commands such as salt, salt-key, salt-cp,\n"
+        "   and salt-run use -c <temp-dir>/master. For example, when using the\n"
+        "   default for --temp-dir, the configuration directory would be\n"
+        "   /tmp/sroot/master. If the master runs on a different machine you\n"
+        "   must execute the command on that machine using the master config file\n"
+        "   there. For the salt-call command, which is a minion side\n"
+        "   command, use -c <tmp-dir>/<name>-<minion number>. For example to\n"
+        "   execute salt-call on the first minion using the default values for\n"
+        "   temp-dir and name use -c /tmp/sroot/minion-0. The commands salt-api,\n"
+        "   salt-cloud, salt-extend, salt-master, salt-minion, salt-proxy,\n"
+        "   salt-ssh, salt-syndic and spm are not supported."
+    )
+    usage = "usage: python %prog [options]" + guidance
+    parser = optparse.OptionParser(usage)
     parser.add_option(
         "-m",
         "--minions",
         dest="minions",
         default=5,
         type="int",
-        help="The number of minions to make",
+        help="The number of minions to make (default = 5)",
     )
     parser.add_option(
         "-M",
@@ -64,19 +80,19 @@ def parse():
     parser.add_option(
         "--master",
         dest="master",
-        default="salt",
-        help="The location of the salt master that this swarm will serve",
+        default="localhost",
+        help="The location of the salt master that this swarm will serve. (default = localhost) "
+        "The standard port used by daemon masters is 4506. Masters can be specified using "
+        "<IP address>:<port>. For example, 192.168.1.2:4506",
     )
     parser.add_option(
         "--name",
         "-n",
         dest="name",
-        default="ms",
-        help=(
-            "Give the minions an alternative id prefix, this is used "
-            "when minions from many systems are being aggregated onto "
-            "a single master"
-        ),
+        default="minion",
+        help="Give the minions an alternative id prefix, this is used "
+        "when minions from many systems are being aggregated onto "
+        "a single master. (default = minion)",
     )
     parser.add_option(
         "--rand-os",
@@ -111,7 +127,7 @@ def parse():
         "--keep-modules",
         dest="keep",
         default="",
-        help="A comma delimited list of modules to enable",
+        help="A comma delimited list of modules to enable. (default = None)",
     )
     parser.add_option(
         "-f",
@@ -124,26 +140,33 @@ def parse():
     parser.add_option(
         "--temp-dir",
         dest="temp_dir",
-        default=None,
-        help="Place temporary files/directories here",
+        default="/tmp/sroot",
+        help="Place temporary files/directories here, (default = /tmp/sroot)",
     )
     parser.add_option(
         "--no-clean",
         action="store_true",
         default=False,
-        help="Don't cleanup temporary files/directories",
+        help="Don't cleanup temporary files/directories. "
+        "If specified, you must manually recursively delete "
+        "the swarm root (see --temp-dir) before running "
+        "minionswarm again, e.g., using the default swarm "
+        "root, rm -fr /tmp/srooot",
     )
     parser.add_option(
         "--root-dir",
         dest="root_dir",
         default=None,
-        help="Override the minion root_dir config",
+        help="Override the minion root_dir config. (default = None)",
     )
     parser.add_option(
         "--transport",
         dest="transport",
         default="zeromq",
-        help="Declare which transport to use, default is zeromq",
+        help="Declare which transport to use, (default = zeromq). Currently, "
+        "tcp/TLS and ws/TLS are not supported, since they require the "
+        "establishment of a certificate infrastructure and use of PKI "
+        "keys manaaged by that infrastructure.",
     )
     parser.add_option(
         "--start-delay",
@@ -156,9 +179,20 @@ def parse():
         "-c",
         "--config-dir",
         default="",
-        help="Pass in a configuration directory containing base configuration.",
+        help="Pass in a configuration directory containing base configuration. "
+        "If a configuration directory is specified, at a minimum, it must "
+        "have a master and minion configuration file and these files "
+        "must not be empty. For example, each could have a user: <username> "
+        "entry.",
     )
-    parser.add_option("-u", "--user", default=tests.support.runtests.this_user())
+    parser.add_option(
+        "--open-mode",
+        dest="open_mode",
+        default=True,
+        help="Turn off authentication at the Master. Default is True to align "
+        "this version of minionswarm with previous version.",
+    )
+    parser.add_option("-u", "--user", default=support.runtests.this_user())
 
     options, _args = parser.parse_args()
 
@@ -286,8 +320,11 @@ class MinionSwarm(Swarm):
         Iterate over the config files and start up the minions
         """
         self.prep_configs()
+        username = getpass.getuser()
         for path in self.confs:
-            cmd = "salt-minion -c {} --pid-file {}".format(path, f"{path}.pid")
+            cmd = "salt-minion -c {} --user={} --pid-file {}".format(
+                path, username, f"{path}.pid"
+            )
             if self.opts["foreground"]:
                 cmd += " -l debug &"
             else:
@@ -314,7 +351,6 @@ class MinionSwarm(Swarm):
             {
                 "id": minion_id,
                 "user": self.opts["user"],
-                "cachedir": os.path.join(dpath, "cache"),
                 "master": self.opts["master"],
                 "log_file": os.path.join(dpath, "minion.log"),
                 "grains": {},
@@ -329,12 +365,12 @@ class MinionSwarm(Swarm):
                 minion_pub = os.path.join(self.pki, "minion.pub")
                 shutil.copy(minion_pem, minion_pkidir)
                 shutil.copy(minion_pub, minion_pkidir)
-            data["pki_dir"] = minion_pkidir
+            data.update({"pki_dir": minion_pkidir})
         elif self.opts["transport"] == "tcp":
-            data["transport"] = "tcp"
+            data.update({"transport": "tcp"})
 
         if self.opts["root_dir"]:
-            data["root_dir"] = self.opts["root_dir"]
+            data.update({"root_dir": self.opts["root_dir"]})
 
         path = os.path.join(dpath, "minion")
 
@@ -343,20 +379,64 @@ class MinionSwarm(Swarm):
             modpath = os.path.join(os.path.dirname(salt.__file__), "modules")
             fn_prefixes = (fn_.partition(".")[0] for fn_ in os.listdir(modpath))
             ignore = [fn_prefix for fn_prefix in fn_prefixes if fn_prefix not in keep]
-            data["disable_modules"] = ignore
+            data.update({"disable_modules": ignore})
 
         if self.opts["rand_os"]:
             data["grains"]["os"] = random.choice(OSES)
         if self.opts["rand_ver"]:
             data["grains"]["saltversion"] = random.choice(VERS)
         if self.opts["rand_machine_id"]:
-            data["grains"]["machine_id"] = hashlib.md5(minion_id).hexdigest()
+            try:
+                minion_id_encode = minion_id.encode(encoding="utf-8", errors="strict")
+                data["grains"]["machine_id"] = hashlib.md5(minion_id_encode).hexdigest()
+            except UnicodeEncodeError:
+                print("\n'minion id contains illegal character. Shutting down.")
+                sys.exit([1])
+            data["grains"]["machine_id"] = hashlib.md5(minion_id_encode).hexdigest()
         if self.opts["rand_uuid"]:
             data["grains"]["uuid"] = str(uuid.uuid4())
+
+        data = self._update_minion_conf(data)
 
         with salt.utils.files.fopen(path, "w+") as fp_:
             salt.utils.yaml.safe_dump(data, fp_)
         self.confs.add(dpath)
+
+    def _update_minion_conf(self, data):  # pylint: disable=W0221
+        """
+        Modify the minion config to contain cachedir and sock_dir definitions. Unless cachedir and sock_dir
+        are modified as indicated, alt-master will think they are /var/cache/salt and /var/run/salt/master,
+        respectively, which generally will not exist. Also, specify the extmods directory path and the
+        pki/minion directory path.
+        """
+
+        cachdir_path = os.path.join(self.swarm_root, "var/cache/salt/minion")
+        sock_dir_path = os.path.join(self.swarm_root, "var/run/salt/minion")
+        extension_modules_dir_path = os.path.join(
+            self.swarm_root, "var/cache/salt/minion/extmods"
+        )
+        pki_dir_path = os.path.join(self.swarm_root, "etc/salt/pki/minion")
+
+        try:
+            os.makedirs(cachdir_path)
+        except FileExistsError:
+            # directory already exists
+            pass
+        try:
+            os.makedirs(sock_dir_path)
+        except FileExistsError:
+            # directory already exists
+            pass
+
+        data.update(
+            {
+                "cachedir": cachdir_path,
+                "sock_dir": sock_dir_path,
+                "extension_modules": extension_modules_dir_path,
+                "pki_dir": pki_dir_path,
+            }
+        )
+        return data
 
     def prep_configs(self):
         """
@@ -390,9 +470,13 @@ class MasterSwarm(Swarm):
 
     def start_master(self):
         """
-        Do the master start
+        Do the master start.. Run the master as the user under which minionswarm runs.
         """
-        cmd = "salt-master -c {} --pid-file {}".format(self.conf, f"{self.conf}.pid")
+
+        username = getpass.getuser()
+        cmd = "salt-master '--config-dir={}' --user={} --pid-file {}".format(
+            self.conf, username, f"{self.conf}.pid"
+        )
         if self.opts["foreground"]:
             cmd += " -l debug &"
         else:
@@ -401,27 +485,74 @@ class MasterSwarm(Swarm):
 
     def mkconf(self):  # pylint: disable=W0221
         """
-        Make a master config and write it'
+        Make the config file with standard values
         """
+
         data = {}
         if self.opts["config_dir"]:
             spath = os.path.join(self.opts["config_dir"], "master")
             with salt.utils.files.fopen(spath) as conf:
                 data = salt.utils.yaml.safe_load(conf)
+        head, tail = os.path.split(self.conf)
+        if self.opts["transport"] == "tcp":
+            data.update({"transport": "tcp"})
         data.update(
             {
                 "log_file": os.path.join(self.conf, "master.log"),
-                "open_mode": True,  # TODO Pre-seed keys
+                "pki_dir": os.path.join(head, "pki"),
             }
         )
+        data.update({"open_mode": self.opts["open_mode"]})
+
+        # TODO Pre-seed keys
 
         os.makedirs(self.conf)
         path = os.path.join(self.conf, "master")
 
+        data = self._update_master_conf(data)
+
         with salt.utils.files.fopen(path, "w+") as fp_:
             salt.utils.yaml.safe_dump(data, fp_)
 
+    def _update_master_conf(self, data):  # pylint: disable=W0221
+        """
+        Modify the master config to contain cachedir and sock_dir definitions. Unless cachedir and sock_dir
+        are modified as indicated, alt-master will think they are /var/cache/salt and /var/run/salt/master,
+        respectively, which generally will not exist.
+        """
+
+        key_logfile_path = os.path.join(self.swarm_root, "var/log/salt/key")
+        cachdir_path = os.path.join(self.swarm_root, "var/cache/salt/master")
+        sock_dir_path = os.path.join(self.swarm_root, "var/run/salt/minion")
+        sqlite_queue_dir_path = os.path.join(self.swarm_root, "var/cache/salt/master")
+
+        try:
+            os.makedirs(cachdir_path)
+        except FileExistsError:
+            # directory already exists
+            pass
+        try:
+            os.makedirs(sock_dir_path)
+        except FileExistsError:
+            # directory already exists
+            pass
+
+        data.update(
+            {
+                "key_logfile": key_logfile_path,
+                "cachedir": cachdir_path,
+                "sock_dir": sock_dir_path,
+                "sqlite_queue_dir": sqlite_queue_dir_path,
+            }
+        )
+
+        return data
+
     def shutdown(self):
+        """
+        Shutdown master
+        """
+
         print("Killing master")
         subprocess.call('pkill -KILL -f "python.*salt-master"', shell=True)
         print("Master killed")
