@@ -54,6 +54,13 @@ from salt.utils.process import Process
 from salt.utils.zeromq import zmq
 
 try:
+    import fcntl
+
+    HAS_FCNTL = True
+except ImportError:
+    HAS_FCNTL = False
+
+try:
     import saltwinshell
 
     HAS_WINSHELL = True
@@ -255,6 +262,133 @@ else:
     SSH_PY_SHIM = None
 
 log = logging.getLogger(__name__)
+
+
+def cache_context_manager(cache_path):
+    """Returns a context manager that allows for disk file cache persistence.
+
+    Uses the fcntl module.  If no fcntl module is available, falls back to no cache.
+
+    This is multiprocessing-safe because fcntl works across processes.
+    """
+
+    if HAS_FCNTL:
+
+        class filecache:
+            """fcntl-enabled single-file disk cache."""
+
+            def __init__(self, path):
+                self.path = path
+                self.file = None
+                self.payload = None
+
+            def __enter__(self):
+                """Tries to create and lock the cache file.
+
+                On failure, returns an ineffective but usable self.
+                """
+                cdir = os.path.dirname(self.path)
+                try:
+                    if not os.path.isdir(cdir):
+                        os.makedirs(cdir)
+                    self.file = salt.utils.files.fopen(self.path, "a+b")
+                    fcntl.flock(self.file.fileno(), fcntl.LOCK_EX)
+                except Exception:
+                    log.exception(
+                        "Cache file %s could not be opened or locked; proceeding without cache",
+                        self.path,
+                    )
+                return self
+
+            def __exit__(self, _, __, ___):
+                if self.file:
+                    try:
+                        fcntl.flock(self.file.fileno(), fcntl.LOCK_UN)
+                        self.file.close()
+                    finally:
+                        self.file = None
+
+            def invalidate(self):
+                """Invalidates the cache."""
+                if self.file:
+                    self.file.seek(0)
+                    self.file.truncate()
+
+            def retrieve(self):
+                """Retrieves the cache.  Returns None if no valid cache is found."""
+                if not self.file:
+                    return None
+                try:
+                    log.debug("Loading from %s", self.path)
+                    self.file.seek(0)
+                    payload = self.file.read()
+                    if not payload:
+                        log.debug("No data in cache file")
+                        return None
+                    self.payload = payload
+                    # Do not use payload.load -- closes file.
+                    return salt.payload.loads(payload)
+                except Exception:
+                    log.exception(
+                        "Cached data could not be loaded from file %s; proceeding without cache",
+                        self.path,
+                    )
+                    self.invalidate()
+
+            def persist(self, data):
+                """Persists into cache.  Handles errors best-effort."""
+                if not self.file:
+                    return
+                payload = salt.payload.dumps(data)
+                if self.payload == payload:
+                    log.debug(
+                        "Not saving data to cache file %s -- it has not changed",
+                        self.path,
+                    )
+                    return
+                log.debug("Saving to cache file %s", self.path)
+                try:
+                    self.file.seek(0)
+                    self.file.truncate()
+                    self.file.write(payload)
+                except Exception:
+                    log.exception(
+                        "Data could not be persisted to cache file %s; ignoring and proceeding",
+                        self.path,
+                    )
+                    self.invalidate()
+
+            def older_than(self, timestamp):
+                """Is cache older than the supplied UNIX timestamp?"""
+                if not self.file:
+                    return True
+                return os.stat(self.path).st_mtime < timestamp
+
+    class nocache:
+        """Dummy version of the cache above."""
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, _, __, ___):
+            pass
+
+        def invalidate(self):
+            pass
+
+        def retrieve(self):
+            return None
+
+        def persist(self, _):
+            pass
+
+        def older_than(self, _):
+            return True
+
+    if HAS_FCNTL and cache_path:
+        return filecache(cache_path)
+
+    return nocache()
 
 
 class SSH(MultiprocessingStateMixin):
@@ -1355,41 +1489,72 @@ class Single:
         """
         # Ensure that opts/grains are up to date
         # Execute routine
-        data_cache = False
-        data = None
-        cdir = os.path.join(self.opts["cachedir"], "minions", self.id)
-        if not os.path.isdir(cdir):
-            os.makedirs(cdir)
-        datap = os.path.join(cdir, "ssh_data.p")
-        refresh = False
-        if not os.path.isfile(datap):
-            refresh = True
-        else:
-            passed_time = (time.time() - os.stat(datap).st_mtime) / 60
-            if passed_time > self.opts.get("cache_life", 60):
-                refresh = True
 
-        if self.opts.get("refresh_cache"):
-            refresh = True
-        conf_grains = {}
-        # Save conf file grains before they get clobbered
-        if "ssh_grains" in self.opts:
-            conf_grains = self.opts["ssh_grains"]
-        if not data_cache:
-            refresh = True
-        if refresh:
-            # Make the datap
-            # TODO: Auto expire the datap
-            pre_wrapper = salt.client.ssh.wrapper.FunctionWrapper(
-                self.opts,
-                self.id,
-                fsclient=self.fsclient,
-                minion_opts=self.minion_opts,
-                **self.target,
+        # Implement a very lightweight cache, whose only purpose is to avoid
+        # contacting the minion twice on every SSH operation.  The computation
+        # that used to be cached by Salt pre-2014 is no longer cached.  Only
+        # the minion test.opts_pkg call result is cached, resulting in a solid
+        # performance improvement, most noticeable in large orchestration runs.
+        #
+        # The code used for the cache is generic and can be used to implement
+        # other types of caches.
+        minion_cache_timeout = self.opts.get("ssh_minion_opts_cache", 0)
+        if not isinstance(minion_cache_timeout, int) or minion_cache_timeout < 0:
+            log.warning("ssh_minion_opts_cache set but not a positive integer")
+            minion_cache_timeout = 0
+
+        if minion_cache_timeout and not HAS_FCNTL:
+            log.warning(
+                "ssh_minion_opts_cache option cannot be enabled on systems without"
+                "the fcntl module; proceeding without minion cache anyway"
             )
+            minion_cache_timeout = 0
 
-            opts_pkg = pre_wrapper["test.opts_pkg"]()  # pylint: disable=E1102
+        cache_path = (
+            os.path.join(
+                os.path.join(self.opts["cachedir"], "minions", self.id),
+                "ssh_test_opts_pkg.p",
+            )
+            if minion_cache_timeout
+            else None
+        )
+        context = cache_context_manager(cache_path)
 
+        with context as cache:
+            opts_pkg = None
+            if self.opts.get("refresh_cache"):
+                cache.invalidate()
+            elif cache.older_than(time.time() - minion_cache_timeout):
+                cache.invalidate()
+            else:
+                opts_pkg = cache.retrieve()
+
+            # Save conf file grains before they get clobbered.
+            # It is currently unclear to me if the call to the
+            # pre_wrapper will clobber these opts, but we need
+            # them below to complete the opts_pkg.  I'm carrying
+            # this precaution from the prior commit anyway.
+            conf_grains = self.opts.get("ssh_grains", {})
+            if opts_pkg is None:
+                pre_wrapper = salt.client.ssh.wrapper.FunctionWrapper(
+                    self.opts,
+                    self.id,
+                    fsclient=self.fsclient,
+                    minion_opts=self.minion_opts,
+                    **self.target,
+                )
+                opts_pkg = pre_wrapper["test.opts_pkg"]()  # pylint: disable=E1102
+
+            if "_error" in opts_pkg:
+                # Refresh failed
+                cache.invalidate()
+                retcode = opts_pkg["retcode"]
+                ret = salt.utils.json.dumps({"local": opts_pkg})
+                return ret, retcode
+            else:
+                cache.persist(opts_pkg)
+
+        if True:  # Left to reduce indentation diff.
             opts_pkg["file_roots"] = self.opts["file_roots"]
             opts_pkg["pillar_roots"] = self.opts["pillar_roots"]
             opts_pkg["ext_pillar"] = self.opts["ext_pillar"]
@@ -1431,21 +1596,13 @@ class Single:
                 opts_pkg.get("saltenv", "base"),
             )
             pillar_data = pillar.compile_pillar()
+            # TODO: cache generated pkg_opts and pillar in a separate cache
+            # context manager instance. Invalidation of this cached data
+            # will be difficult due to the need to determine what inputs
+            # and environment of this function influence these values.
 
-            # TODO: cache minion opts in datap in master.py
-            data = {
-                "opts": opts_pkg,
-                "grains": opts_pkg["grains"],
-                "pillar": pillar_data,
-            }
-            if data_cache:
-                with salt.utils.files.fopen(datap, "w+b") as fp_:
-                    fp_.write(salt.payload.dumps(data))
-        if not data and data_cache:
-            with salt.utils.files.fopen(datap, "rb") as fp_:
-                data = salt.payload.load(fp_)
-        opts = data.get("opts", {})
-        opts["grains"] = data.get("grains")
+        opts = opts_pkg
+        opts["grains"] = opts_pkg["grains"]
 
         # Restore master grains
         for grain in conf_grains:
@@ -1455,12 +1612,10 @@ class Single:
             for grain in self.target["grains"]:
                 opts["grains"][grain] = self.target["grains"][grain]
 
-        opts["pillar"] = data.get("pillar")
+        opts["pillar"] = pillar_data
 
         # Restore --wipe. Note: Since it is also a CLI option, it should not
-        # be read from cache, hence it is restored here. This is currently only
-        # of semantic distinction since data_cache has been disabled, so refresh
-        # above always evaluates to True. TODO: cleanup?
+        # be read from cache, hence it is restored here.
         opts["ssh_wipe"] = self.opts.get("ssh_wipe", False)
 
         wrapper = salt.client.ssh.wrapper.FunctionWrapper(

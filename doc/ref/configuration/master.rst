@@ -1694,6 +1694,27 @@ exists first.
 
 .. conf_master:: thin_extra_mods
 
+``ssh_minion_opts_cache``
+-----------------------
+
+.. versionadded:: 3007.1
+
+Default: ``0``
+
+If a positive integer, defines the number of seconds for which the initial options query
+to an SSH minion is cached on disk, run prior to any module execution on an SSH minion.
+This can speed up large runs, and halves the amount of SSH sessions that ``salt-ssh``
+opens to a minion.
+
+The cached data changes infrequently (for instance, when a full version system upgrade
+is performed on a minion) so it is relatively safe to leave this cache at a high value.
+
+This value is ignored for standard minions or any other kind of minion not SSH.
+
+.. code-block:: yaml
+
+    ssh_minion_opts_cache: 3600
+
 ``thin_extra_mods``
 -------------------
 
