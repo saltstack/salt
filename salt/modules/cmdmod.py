@@ -845,7 +845,7 @@ def _run(
             proc_stdout = proc.stdout
             proc_stderr = proc.stderr
 
-        if output_loglevel != "quiet" and output_encoding is not None:
+        if output_loglevel is not None and output_encoding is not None:
             log.debug(
                 "Decoding output from command %s using %s encoding",
                 cmd,
@@ -863,7 +863,7 @@ def _run(
             out = salt.utils.stringutils.to_unicode(
                 proc_stdout, encoding=output_encoding, errors="replace"
             )
-            if output_loglevel != "quiet":
+            if output_loglevel is not None:
                 log.error(
                     "Failed to decode stdout from command %s, non-decodable "
                     "characters have been replaced",
@@ -881,7 +881,7 @@ def _run(
             err = salt.utils.stringutils.to_unicode(
                 proc_stderr, encoding=output_encoding, errors="replace"
             )
-            if output_loglevel != "quiet":
+            if output_loglevel is not None:
                 log.error(
                     "Failed to decode stderr from command %s, non-decodable "
                     "characters have been replaced",
