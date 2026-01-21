@@ -454,9 +454,11 @@ def __virtual__():
     """
     if salt.utils.platform.is_windows():
         return (False, "Only supported on non-Windows OSs")
-    if "ip.get_interface" in __salt__:
+    if "ip.build_interface" in __salt__:
         return True
-    return (False, "ip module could not be loaded")
+    elif "ip.get_interface" in __salt__:
+        return (False, "Loaded ip exec module can't manage interface config")
+    return (False, "ip execution module could not be loaded")
 
 
 def managed(name, enabled=True, **kwargs):
