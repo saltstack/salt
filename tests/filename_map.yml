@@ -96,6 +96,7 @@ salt/(states|modules)/.*postgres.py:
   - pytests.unit.states.postgresql.test_schema
   - pytests.unit.states.postgresql.test_user
 
+
 salt/modules/rabbitmq.py:
   - pytests.unit.states.rabbitmq.test_cluster
   - pytests.unit.states.rabbitmq.test_plugin
