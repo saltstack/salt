@@ -425,7 +425,7 @@ def remove_service(service, zone=None, permanent=True):
     return __firewall_cmd(cmd)
 
 
-def add_service_port(service, port):
+def add_service_port(service, port, check_service=True):
     """
     Add a new port to the specified service.
 
@@ -437,14 +437,14 @@ def add_service_port(service, port):
 
         salt '*' firewalld.add_service_port zone 80
     """
-    if service not in get_services(permanent=True):
+    if check_service and service not in get_services(permanent=True):
         raise CommandExecutionError("The service does not exist.")
 
     cmd = f"--permanent --service={service} --add-port={port}"
     return __firewall_cmd(cmd)
 
 
-def remove_service_port(service, port):
+def remove_service_port(service, port, check_service=True):
     """
     Remove a port from the specified service.
 
@@ -456,7 +456,7 @@ def remove_service_port(service, port):
 
         salt '*' firewalld.remove_service_port zone 80
     """
-    if service not in get_services(permanent=True):
+    if check_service and service not in get_services(permanent=True):
         raise CommandExecutionError("The service does not exist.")
 
     cmd = f"--permanent --service={service} --remove-port={port}"
@@ -1040,4 +1040,195 @@ def remove_rich_rule(zone, rule, permanent=True):
     if permanent:
         cmd += " --permanent"
 
+    return __firewall_cmd(cmd)
+
+
+def get_target(zone):
+    """
+    Get zone's target
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.get_target zone
+    """
+    cmd = f"--zone={zone} --get-target --permanent"
+
+    return __firewall_cmd(cmd)
+
+
+def set_target(zone, target, permanent=True):
+    """
+    Set zone's target
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.set_target zone 'DROP'
+    """
+    cmd = f"--zone={zone} --set-target='{target}'"
+
+    if permanent:
+        cmd += " --permanent"
+
+    return __firewall_cmd(cmd)
+
+
+def __parse_ipset(cmd):
+    """
+    Return ipset information in a dictionary
+    """
+    _ipset = {}
+    id_ = ""
+
+    for i in __firewall_cmd(cmd).splitlines():
+        if i.strip():
+            if re.match("^[a-z0-9]", i, re.I):
+                ipset_name = i.rstrip()
+            else:
+                if i.startswith("\t"):
+                    _ipset[ipset_name][id_].append(i.strip())
+                    continue
+
+                (id_, val) = i.split(":", 1)
+
+                id_ = id_.strip()
+                if _ipset.get(ipset_name, None):
+                    if id_ == "entries":
+                        if val == "":
+                            _ipset[ipset_name].update({id_: []})
+                        else:
+                            _ipset[ipset_name].update({id_: val.strip().split(" ")})
+                    elif id_ == "options":
+                        _ipset[ipset_name].update(
+                            {id_: dict(item.split("=") for item in val.split())}
+                        )
+                    else:
+                        _ipset[ipset_name].update({id_: [val.strip()]})
+                else:
+                    _ipset[ipset_name] = {id_: [val.strip()]}
+    return _ipset
+
+
+def get_ipsets(permanent=True):
+    """
+    Print predefined ipsets
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.get_ipsets
+    """
+    cmd = "--get-ipsets"
+
+    if permanent:
+        cmd += " --permanent"
+
+    return __firewall_cmd(cmd).split()
+
+
+def info_ipset(ipset):
+    """
+    Print ipset info
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.get_ipsets
+    """
+    cmd = f"--info-ipset={ipset} --permanent"
+
+    return __parse_ipset(cmd)
+
+
+def new_ipset(ipset, ipset_type, family=None, options=None, restart=False):
+    """
+    Add a new ipset
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.new_ipset my_ipset
+
+    By default firewalld will be reloaded. However, to avoid reloading
+    you need to specify the restart as False
+
+    .. code-block:: bash
+
+        salt '*' firewalld.new_ipset my_ipset False
+    """
+    cmd = f"--permanent --new-ipset={ipset} --type={ipset_type}"
+
+    if family:
+        cmd += f" --family={family}"
+
+    if options:
+        for k, v in options.items():
+            cmd += f" --option={k}={v}"
+
+    out = __firewall_cmd(cmd)
+
+    if restart:
+        if out == "success":
+            return __firewall_cmd("--reload")
+
+    return out
+
+
+def delete_ipset(ipset, permanent=True, restart=True):
+    """
+    Delete an existing ipset
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.delete_ipset my_ipset
+
+    By default firewalld will be reloaded. However, to avoid reloading
+    you need to specify the restart as False
+
+    .. code-block:: bash
+
+        salt '*' firewalld.delete_ipset my_ipset False
+    """
+    out = __mgmt(ipset, "ipset", "delete")
+
+    if restart:
+        if out == "success":
+            return __firewall_cmd("--reload")
+
+    return out
+
+
+def add_ipset_entry(ipset, entry):
+    """
+    Add an new entry to the specified ipset.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.add_ipset_entry ipset1 10.0.0.1/32
+    """
+    cmd = f"--permanent --ipset={ipset} --add-entry={entry}"
+    return __firewall_cmd(cmd)
+
+
+def remove_ipset_entry(ipset, entry):
+    """
+    Remove an entry from the specified ipset.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.remove_ipset_entry ipset1 10.0.0.1/32
+    """
+    cmd = f"--permanent --ipset={ipset} --remove-entry={entry}"
     return __firewall_cmd(cmd)
