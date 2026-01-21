@@ -542,6 +542,11 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
 
             self.pool_workers[pool_name] = dealer_socket
 
+        # Initialize request router for command classification
+        import salt.master
+
+        router = salt.master.RequestRouter(self.opts)
+
         # Create marker file for _is_master_running() check in netapi
         # This file is expected by components that check if master is running
         if self.opts.get("ipc_mode", "") != "tcp":
@@ -550,11 +555,6 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             with salt.utils.files.fopen(marker_path, "a", encoding="utf-8"):
                 pass
             os.chmod(marker_path, 0o600)
-
-        # Initialize request router for command classification
-        import salt.master
-
-        router = salt.master.RequestRouter(self.opts)
 
         log.info("Setting up pooled master communication server")
         log.info("ReqServer clients %s", self.uri)
