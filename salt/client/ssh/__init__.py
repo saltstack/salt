@@ -1,4 +1,5 @@
 """
+
 Create ssh executor system
 """
 
@@ -192,11 +193,7 @@ EOF'''.format(
 )
 
 
-SSH_SH_SHIM_RELENV = "\n".join(
-    [
-        s.strip()
-        for s in """
-/bin/sh << 'EOF'
+SSH_SH_SHIM_RELENV = """/bin/sh << 'EOF'
 set -e
 set -u
 DEBUG="{DEBUG}"
@@ -211,9 +208,11 @@ if [ -n "{SUDO}" ]; then SUDO="{SUDO} "; fi
 SUDO_USER="{SUDO_USER}"
 if [ "$SUDO" ] && [ "$SUDO_USER" ]; then SUDO="$SUDO -u $SUDO_USER"; fi
 
-RELENV_TAR="{THIN_DIR}/salt-relenv.tar.xz"
-mkdir -p "{THIN_DIR}"
-SALT_CALL_BIN="{THIN_DIR}/salt-call"
+THIN_DIR={THIN_DIR}
+mkdir -pv $THIN_DIR >&2
+ls "$THIN_DIR" >&2
+RELENV_TAR=$THIN_DIR/salt-relenv.tar.xz
+SALT_CALL_BIN="$THIN_DIR/salt-call"
 
 # Extract relenv tarball if not already extracted
 if [ ! -x "$SALT_CALL_BIN" ]; then
@@ -223,9 +222,13 @@ if [ ! -x "$SALT_CALL_BIN" ]; then
         exit 11
     fi
 
+    file $RELENV_TAR >&2
+
     # Create directory if not exists and extract the tarball
-    tar --strip-components=1 -xf "$RELENV_TAR" -C "{THIN_DIR}"
-fi
+    tar --strip-components=1 -xf "$RELENV_TAR" -C "$THIN_DIR"
+fi;
+
+file $SALT_CALL_BIN >&2
 
 # Check if Python binary is executable
 if [ ! -x "$SALT_CALL_BIN" ]; then
@@ -236,13 +239,10 @@ fi
 echo "{RSTR}"
 echo "{RSTR}" >&2
 
-exec $SUDO "$SALT_CALL_BIN" --retcode-passthrough --local --metadata --out=json -lquiet -c "{THIN_DIR}" {ARGS}
+exec $SUDO "$SALT_CALL_BIN" --retcode-passthrough --local --metadata --out=json -lquiet -c "$THIN_DIR" {ARGS}
 EOF
-""".split(
-            "\n"
-        )
-    ]
-)
+"""
+
 
 if not salt.utils.platform.is_windows() and not salt.utils.platform.is_junos():
     shim_file = os.path.join(os.path.dirname(__file__), "ssh_py_shim.py")
