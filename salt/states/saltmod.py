@@ -336,7 +336,7 @@ def state(
         cmd_kw["failhard"] = True
 
     masterless = __opts__["__role"] == "minion" and __opts__["file_client"] == "local"
-    if not masterless:
+    if not masterless or ssh:
         _fire_args({"type": "state", "tgt": tgt, "name": name, "args": cmd_kw})
         cmd_ret = __salt__["saltutil.cmd"](tgt, fun, **cmd_kw)
     else:
