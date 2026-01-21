@@ -930,7 +930,7 @@ class RemoteFuncs:
             }
         )
         runner = salt.runner.Runner(opts)
-        return runner.run()
+        return runner.run(print_event=False)
 
     def pub_ret(self, load, skip_verify=False):
         """
