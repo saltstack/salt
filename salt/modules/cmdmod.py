@@ -726,12 +726,7 @@ def _run(
             f"Specified cwd '{cwd}' either not absolute or does not exist"
         )
 
-    if (
-        python_shell is not True
-        and shell is not None
-        # and not salt.utils.platform.is_windows()
-        and not isinstance(cmd, list)
-    ):
+    if python_shell is not True and shell is not None and not isinstance(cmd, list):
         cmd = salt.utils.args.shlex_split(cmd)
 
     if success_retcodes is None:
