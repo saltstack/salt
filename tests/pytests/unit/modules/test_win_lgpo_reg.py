@@ -64,27 +64,22 @@ def empty_reg_pol_user():
 
 
 @pytest.fixture
-def reg_pol_mach():
-    data_to_write = {
+def pol_data_mach():
+    return {
         "SOFTWARE\\MyKey1": {
-            "MyValue1": {
-                "data": "squidward",
-                "type": "REG_SZ",
-            },
-            "**del.MyValue2": {
-                "data": " ",
-                "type": "REG_SZ",
-            },
+            "MyValue1": {"data": "squidward", "type": "REG_SZ"},
+            "**del.MyValue2": {"data": " ", "type": "REG_SZ"},
             "MyValue3.exe": {"data": "dot_value", "type": "REG_SZ"},
         },
         "SOFTWARE\\MyKey2": {
-            "MyValue3": {
-                "data": ["spongebob", "squarepants"],
-                "type": "REG_MULTI_SZ",
-            },
+            "MyValue3": {"data": ["spongebob", "squarepants"], "type": "REG_MULTI_SZ"},
         },
     }
-    lgpo_reg.write_reg_pol(data_to_write)
+
+
+@pytest.fixture
+def reg_pol_mach(pol_data_mach):
+    lgpo_reg.write_reg_pol(pol_data_mach)
     salt.utils.win_reg.set_value(
         hive="HKLM",
         key="SOFTWARE\\MyKey1",
@@ -125,27 +120,22 @@ def reg_pol_mach():
 
 
 @pytest.fixture
-def reg_pol_user():
-    data_to_write = {
+def pol_data_user():
+    return {
         "SOFTWARE\\MyKey1": {
-            "MyValue1": {
-                "data": "squidward",
-                "type": "REG_SZ",
-            },
-            "**del.MyValue2": {
-                "data": " ",
-                "type": "REG_SZ",
-            },
+            "MyValue1": {"data": "squidward", "type": "REG_SZ"},
+            "**del.MyValue2": {"data": " ", "type": "REG_SZ"},
             "MyValue3.exe": {"data": "dot_value", "type": "REG_SZ"},
         },
         "SOFTWARE\\MyKey2": {
-            "MyValue3": {
-                "data": ["spongebob", "squarepants"],
-                "type": "REG_MULTI_SZ",
-            },
+            "MyValue3": {"data": ["spongebob", "squarepants"], "type": "REG_MULTI_SZ"},
         },
     }
-    lgpo_reg.write_reg_pol(data_to_write, policy_class="User")
+
+
+@pytest.fixture
+def reg_pol_user(pol_data_user):
+    lgpo_reg.write_reg_pol(pol_data_user, policy_class="User")
     salt.utils.win_reg.set_value(
         hive="HKCU",
         key="SOFTWARE\\MyKey1",
@@ -614,4 +604,19 @@ def test_user_delete_value_no_change(empty_reg_pol_user):
     key = "SOFTWARE\\MyKey1"
     lgpo_reg.delete_value(key=key, v_name="MyValue2", policy_class="User")
     result = lgpo_reg.get_key(key=key, policy_class="User")
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "key, v_name, expected",
+    [
+        ("SOFTWARE\\MyKey1", "MyValue", ("SOFTWARE\\MyKey1", "")),
+        ("SOFTWARE\\MyKey1", "Value1", ("SOFTWARE\\MyKey1", "")),
+        ("SOFTWARE\\MyKey1", "MyValue1", ("SOFTWARE\\MyKey1", "MyValue1")),
+        ("SOFTWARE\\MyKey1", "MyValue2", ("SOFTWARE\\MyKey1", "**del.MyValue2")),
+        ("SOFTWARE\\MyKey1", "MyValue3.exe", ("SOFTWARE\\MyKey1", "MyValue3.exe")),
+    ],
+)
+def test__find_value(pol_data_mach, key, v_name, expected):
+    result = lgpo_reg._find_value(pol_data=pol_data_mach, key=key, v_name=v_name)
     assert result == expected
