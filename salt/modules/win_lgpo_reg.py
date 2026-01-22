@@ -76,6 +76,30 @@ def __virtual__():
     return __virtualname__
 
 
+def _find_value(pol_data, key, v_name):
+    """
+    Helper function to find the value in the registry.pol file. Sometimes the
+    value is prepended by an action that needs to happen with that value, such
+    as `**del.` to delete it from the registry.
+
+    Returns:
+        tuple: A tuple containing: found_key, found_name
+    """
+    found_key = ""
+    found_name = ""
+    for p_key in pol_data:
+        if key.lower() == p_key.lower():
+            found_key = p_key
+            for p_name in pol_data[p_key]:
+                if p_name.lower().startswith("**del."):
+                    if v_name.lower() == p_name.lower().split(".", 1)[1]:
+                        found_name = p_name
+                else:
+                    if v_name.lower() == p_name.lower():
+                        found_name = p_name
+    return found_key, found_name
+
+
 def read_reg_pol(policy_class="Machine"):
     r"""
     Read the contents of the Registry.pol file. Display the contents as a
@@ -213,14 +237,7 @@ def get_value(key, v_name, policy_class="Machine"):
         raise SaltInvocationError("An invalid policy class was specified")
     pol_data = read_reg_pol(policy_class=policy_class)
 
-    found_key = ""
-    found_name = ""
-    for p_key in pol_data:
-        if key.lower() == p_key.lower():
-            found_key = p_key
-            for p_name in pol_data[p_key]:
-                if v_name.lower() in p_name.lower().split("."):
-                    found_name = p_name
+    found_key, found_name = _find_value(pol_data, key, v_name)
 
     if found_key:
         if found_name:
@@ -360,6 +377,8 @@ def set_value(
         raise SaltInvocationError(msg)
 
     if v_type in ["REG_SZ", "REG_EXPAND_SZ"]:
+        if isinstance(v_data, int):
+            v_data = str(v_data)
         if not isinstance(v_data, str):
             msg = f"{v_type} data must be a string"
             raise SaltInvocationError(msg)
@@ -376,14 +395,7 @@ def set_value(
 
     pol_data = read_reg_pol(policy_class=policy_class)
 
-    found_key = ""
-    found_name = ""
-    for p_key in pol_data:
-        if key.lower() == p_key.lower():
-            found_key = p_key
-            for p_name in pol_data[p_key]:
-                if v_name.lower() == p_name.lower().lstrip("**del."):
-                    found_name = p_name
+    found_key, found_name = _find_value(pol_data, key, v_name)
 
     if found_key:
         if found_name:
@@ -470,14 +482,7 @@ def disable_value(key, v_name, policy_class="machine"):
 
     pol_data = read_reg_pol(policy_class=policy_class)
 
-    found_key = ""
-    found_name = ""
-    for p_key in pol_data:
-        if key.lower() == p_key.lower():
-            found_key = p_key
-            for p_name in pol_data[p_key]:
-                if v_name.lower() == p_name.lower().lstrip("**del."):
-                    found_name = p_name
+    found_key, found_name = _find_value(pol_data, key, v_name)
 
     if found_key:
         if found_name:
@@ -569,14 +574,7 @@ def delete_value(key, v_name, policy_class="Machine"):
 
     pol_data = read_reg_pol(policy_class=policy_class)
 
-    found_key = ""
-    found_name = ""
-    for p_key in pol_data:
-        if key.lower() == p_key.lower():
-            found_key = p_key
-            for p_name in pol_data[p_key]:
-                if v_name.lower() == p_name.lower().lstrip("**del."):
-                    found_name = p_name
+    found_key, found_name = _find_value(pol_data, key, v_name)
 
     if found_key:
         if found_name:
