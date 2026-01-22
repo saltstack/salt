@@ -174,6 +174,12 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
         )
 
     comment = []
+    if pol_correct:
+        comment.append("Policy value already present")
+    if reg_correct:
+        if policy_class == "Machine":
+            comment.append("Registry value already present")
+
     if __opts__["test"]:
         if not pol_correct:
             comment.append("Policy value will be set")
@@ -181,15 +187,11 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
             if policy_class == "Machine":
                 comment.append("Registry value will be set")
         ret["comment"] = "\n".join(comment)
-        ret["result"] = None
+        if pol_correct and reg_correct:
+            ret["result"] = True
+        else:
+            ret["result"] = None
         return ret
-
-    if pol_correct:
-        comment.append("Policy value already present")
-
-    if reg_correct:
-        if policy_class == "Machine":
-            comment.append("Registry value already present")
 
     if pol_correct and reg_correct:
         ret["comment"] = "\n".join(comment)
@@ -305,6 +307,12 @@ def value_disabled(name, key, policy_class="Machine"):
         reg_correct = old["reg"] == {}
 
     comment = []
+    if pol_correct:
+        comment.append("Policy value already disabled")
+
+    if reg_correct:
+        if policy_class == "Machine":
+            comment.append("Registry value already deleted")
 
     if __opts__["test"]:
         if not pol_correct:
@@ -313,15 +321,11 @@ def value_disabled(name, key, policy_class="Machine"):
             if policy_class == "Machine":
                 comment.append("Registry value will be deleted")
         ret["comment"] = "\n".join(comment)
-        ret["result"] = None
+        if pol_correct and reg_correct:
+            ret["result"] = True
+        else:
+            ret["result"] = None
         return ret
-
-    if pol_correct:
-        comment.append("Policy value already disabled")
-
-    if reg_correct:
-        if policy_class == "Machine":
-            comment.append("Registry value already deleted")
 
     if pol_correct and reg_correct:
         ret["comment"] = "\n".join(comment)
@@ -420,6 +424,11 @@ def value_absent(name, key, policy_class="Machine"):
         reg_correct = old["reg"] == {}
 
     comment = []
+    if pol_correct:
+        comment.append("Policy value already deleted")
+    if reg_correct:
+        if policy_class == "Machine":
+            comment.append("Registry value already deleted")
 
     if __opts__["test"]:
         if not pol_correct:
@@ -428,15 +437,11 @@ def value_absent(name, key, policy_class="Machine"):
             if policy_class == "Machine":
                 comment.append("Registry value will be deleted")
         ret["comment"] = "\n".join(comment)
-        ret["result"] = None
+        if pol_correct and reg_correct:
+            ret["result"] = True
+        else:
+            ret["result"] = None
         return ret
-
-    if pol_correct:
-        comment.append("Policy value already deleted")
-
-    if reg_correct:
-        if policy_class == "Machine":
-            comment.append("Registry value already deleted")
 
     if pol_correct and reg_correct:
         ret["comment"] = "\n".join(comment)
