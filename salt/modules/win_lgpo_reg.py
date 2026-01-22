@@ -91,8 +91,12 @@ def _find_value(pol_data, key, v_name):
         if key.lower() == p_key.lower():
             found_key = p_key
             for p_name in pol_data[p_key]:
-                if p_name.lower().endswith(v_name.lower()):
-                    found_name = p_name
+                if p_name.lower().startswith("**del."):
+                    if v_name.lower() == p_name.lower().split(".", 1)[1]:
+                        found_name = p_name
+                else:
+                    if v_name.lower() == p_name.lower():
+                        found_name = p_name
     return found_key, found_name
 
 
