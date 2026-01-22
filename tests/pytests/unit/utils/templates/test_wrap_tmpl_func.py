@@ -30,7 +30,7 @@ def _test_generated_sls_context(tmplpath, sls, **expected):
         tmplpath = f"C:{tmplpath}"
     expected["tplpath"] = tmplpath
     actual = generate_sls_context(tmplpath, sls)
-    assert {key: actual[key] for key in expected if key in actual} == actual
+    assert {key: expected[key] for key in expected if key in actual} == actual
 
 
 def test_sls_context_call(tmp_path):
@@ -215,4 +215,46 @@ def test_generate_sls_context__backslash_in_path():
         slscolonpath="foo",
         sls_path="foo",
         slspath="foo",
+    )
+
+
+def test_generate_sls_context__non_sls_root():
+    """generate_sls_context - Non-SLS template in the root directory
+
+    (Issue #56410)
+    """
+    _test_generated_sls_context(
+        "jinja.yaml",
+        "jinja.yaml",
+        tplpath="jinja.yaml",
+        tplfile="jinja.yaml",
+        tpldir=".",
+    )
+
+
+def test_generate_sls_context__non_sls_one_level():
+    """generate_sls_context - Non-SLS template with one-level directory
+
+    (Issue #56410)
+    """
+    _test_generated_sls_context(
+        "one/jinja.yaml",
+        "one/jinja.yaml",
+        tplpath="one/jinja.yaml",
+        tplfile="one/jinja.yaml",
+        tpldir="one",
+    )
+
+
+def test_generate_sls_context__non_sls_two_level():
+    """generate_sls_context - Non-SLS template with two-level directory
+
+    (Issue #56410)
+    """
+    _test_generated_sls_context(
+        "one/two/jinja.yaml",
+        "one/two/jinja.yaml",
+        tplpath="one/two/jinja.yaml",
+        tplfile="one/two/jinja.yaml",
+        tpldir="one/two",
     )
