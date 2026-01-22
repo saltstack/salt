@@ -1,0 +1,31 @@
+title: "[Documentation]"
+labels: [Docs]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping us improve **Salt**!
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: |
+        A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+  - type: textarea
+    id: suggested-fix
+    attributes:
+      label: Suggested Fix
+      description: |
+        What did you expect to see in the documentation that is missing or needs updating?
+  - type: textarea
+    id: type
+    attributes:
+      label: Type of Documentation
+      description: |
+        This could be Salt documentation, Salt modules, the Salt Repo or the Getting Started guide.
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: |
+        Add any other context or screenshots about the feature request here.
