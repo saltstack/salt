@@ -1134,7 +1134,13 @@ class MinionManager(MinionBase):
 
         beacons_leader = True
         for master in masters:
-            s_opts = copy.deepcopy(self.opts)
+            # Use OptsDict copy-on-write instead of deepcopy
+            # Only master, multimaster, and beacons_leader are mutated
+            # Grains, pillar, and other large dicts are shared via copy-on-write
+            # self.opts is guaranteed to be OptsDict (set by MinionBase.__init__)
+            from salt.utils.optsdict import OptsDict
+
+            s_opts = OptsDict.from_parent(self.opts, name=f"minion_manager:{master}")
             s_opts["master"] = master
             s_opts["multimaster"] = True
             s_opts["beacons_leader"] = beacons_leader
@@ -1637,7 +1643,12 @@ class Minion(MinionBase):
         self.utils = salt.loader.utils(opts, proxy=proxy, context=context)
 
         if opts.get("multimaster", False):
-            s_opts = copy.deepcopy(opts)
+            # Use OptsDict copy-on-write instead of deepcopy
+            # Loader already handles OptsDict, so this is safe
+            # opts is guaranteed to be OptsDict (set by MinionBase.__init__ via super().__init__)
+            from salt.utils.optsdict import OptsDict
+
+            s_opts = OptsDict.from_parent(opts, name="minion_multimaster_loader")
             functions = salt.loader.minion_mods(
                 s_opts,
                 utils=self.utils,
