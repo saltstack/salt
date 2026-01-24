@@ -6,7 +6,7 @@
 #
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.13.3
+aiohttp==3.12.14
     # via -r requirements/base.txt
 aiosignal==1.4.0
     # via aiohttp
@@ -16,7 +16,7 @@ attrs==23.2.0
     # via aiohttp
 autocommand==2.2.2
     # via jaraco.text
-certifi==2024.7.4 ; python_version >= "3.10" and python_version < "3.13"
+certifi==2024.7.4 ; python_version >= "3.10"
     # via
     #   -r requirements/base.txt
     #   requests
@@ -34,14 +34,14 @@ cherrypy==18.8.0 ; python_version < "3.13"
     #   -r requirements/static/pkg/freebsd.in
 contextvars==2.4
     # via -r requirements/base.txt
-croniter==2.0.5 ; sys_platform != "win32" and python_version < "3.13"
+croniter==2.0.5 ; sys_platform != "win32"
     # via -r requirements/base.txt
 cryptography==42.0.5 ; python_version < "3.13"
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
     #   pyopenssl
-distro==1.8.0 ; python_version < "3.13"
+distro==1.8.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
@@ -131,7 +131,7 @@ pytz==2024.1
     # via
     #   croniter
     #   tempora
-pyyaml==6.0.1 ; python_version >= "3.10" and python_version < "3.13"
+pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==25.1.2
     # via -r requirements/zeromq.txt
@@ -147,11 +147,11 @@ tempora==5.3.0
     # via portend
 timelib==0.3.0 ; python_version < "3.11"
     # via -r requirements/base.txt
-tornado==6.5.4
+tornado==6.5.2
     # via -r requirements/base.txt
 typing-extensions==4.14.1
     # via aiosignal
-urllib3==2.6.3 ; python_version >= "3.10"
+urllib3==2.5.0 ; python_version >= "3.10"
     # via
     #   -r requirements/base.txt
     #   requests

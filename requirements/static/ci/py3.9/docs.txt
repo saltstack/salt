@@ -109,7 +109,7 @@ pytz==2024.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   tempora
-pyyaml==6.0.3 ; python_version == "3.9"
+pyyaml==6.0.3
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   myst-docutils

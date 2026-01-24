@@ -100,7 +100,7 @@ contextvars==2.4
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/base.txt
-cryptography==42.0.5 ; python_version < "3.13"
+cryptography==42.0.5
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/base.txt
@@ -110,7 +110,7 @@ cryptography==42.0.5 ; python_version < "3.13"
     #   trustme
 distlib==0.3.8
     # via virtualenv
-distro==1.8.0 ; python_version < "3.13"
+distro==1.8.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/base.txt
@@ -401,7 +401,7 @@ pywin32==306 ; sys_platform == "win32"
     #   docker
     #   pytest-skip-markers
     #   wmi
-pyyaml==6.0.3 ; python_version == "3.9"
+pyyaml==6.0.3
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/base.txt

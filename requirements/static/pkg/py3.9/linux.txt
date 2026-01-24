@@ -34,14 +34,14 @@ cherrypy==18.8.0 ; python_version < "3.13"
     #   -r requirements/static/pkg/linux.in
 contextvars==2.4
     # via -r requirements/base.txt
-croniter==2.0.5 ; sys_platform != "win32" and python_version < "3.13"
+croniter==2.0.5 ; sys_platform != "win32"
     # via -r requirements/base.txt
 cryptography==42.0.5 ; python_version < "3.13"
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.in
     #   pyopenssl
-distro==1.8.0 ; python_version < "3.13"
+distro==1.8.0
     # via -r requirements/base.txt
 frozenlist==1.4.1 ; python_version < "3.11"
     # via
@@ -130,7 +130,7 @@ pytz==2024.1
     # via
     #   croniter
     #   tempora
-pyyaml==6.0.3 ; python_version == "3.9"
+pyyaml==6.0.3
     # via -r requirements/base.txt
 pyzmq==25.1.2
     # via -r requirements/zeromq.txt

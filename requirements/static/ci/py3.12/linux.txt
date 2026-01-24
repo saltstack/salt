@@ -62,7 +62,7 @@ botocore==1.42.33
     #   s3transfer
 cassandra-driver==3.29.3
     # via -r requirements/static/ci/common.in
-certifi==2024.7.4 ; python_version >= "3.10" and python_version < "3.13"
+certifi==2024.7.4 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -102,7 +102,7 @@ contextvars==2.4
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -r requirements/base.txt
-croniter==2.0.5 ; sys_platform != "win32" and python_version < "3.13"
+croniter==2.0.5 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -119,7 +119,7 @@ cryptography==42.0.5 ; python_version < "3.13"
     #   trustme
 distlib==0.3.8
     # via virtualenv
-distro==1.8.0 ; python_version < "3.13"
+distro==1.8.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -136,7 +136,7 @@ filelock==3.20.3
     # via virtualenv
 flaky==3.8.1
     # via -r requirements/pytest.txt
-frozenlist==1.7.0 ; python_version >= "3.11" and python_version < "3.13"
+frozenlist==1.7.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -425,7 +425,7 @@ pytz==2024.1
     #   twilio
 pyvmomi==9.0.0.0
     # via -r requirements/static/ci/common.in
-pyyaml==6.0.1 ; python_version >= "3.10" and python_version < "3.13"
+pyyaml==6.0.1
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -r requirements/base.txt

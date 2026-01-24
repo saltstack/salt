@@ -82,7 +82,7 @@ cassandra-driver==3.29.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
-certifi==2026.1.4 ; python_version >= "3.13"
+certifi==2026.1.4 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -134,7 +134,7 @@ contextvars==2.4
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
-croniter==6.0.0 ; sys_platform != "win32" and python_version >= "3.13"
+croniter==6.0.0 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -156,7 +156,7 @@ distlib==0.4.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   virtualenv
-distro==1.9.0 ; python_version >= "3.13"
+distro==1.9.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -178,7 +178,7 @@ filelock==3.20.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   virtualenv
-frozenlist==1.8.0 ; python_version >= "3.13"
+frozenlist==1.8.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -529,7 +529,7 @@ pyvmomi==9.0.0.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
-pyyaml==6.0.3 ; python_version >= "3.13"
+pyyaml==6.0.3
     # via
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
     #   -c requirements/static/ci/py3.13/linux.txt

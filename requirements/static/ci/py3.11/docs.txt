@@ -12,7 +12,7 @@ autocommand==2.2.2
     #   jaraco.text
 babel==2.12.1
     # via sphinx
-certifi==2024.7.4 ; python_version >= "3.10" and python_version < "3.13"
+certifi==2024.7.4 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   requests
@@ -100,7 +100,7 @@ pytz==2024.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   tempora
-pyyaml==6.0.1 ; python_version >= "3.10" and python_version < "3.13"
+pyyaml==6.0.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   myst-docutils

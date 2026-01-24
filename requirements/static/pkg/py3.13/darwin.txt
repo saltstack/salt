@@ -16,7 +16,7 @@ attrs==25.4.0
     # via aiohttp
 autocommand==2.2.2
     # via jaraco.text
-certifi==2026.1.4 ; python_version >= "3.13"
+certifi==2026.1.4 ; python_version >= "3.10"
     # via
     #   -r requirements/base.txt
     #   requests
@@ -34,15 +34,15 @@ cherrypy==18.10.0 ; python_version >= "3.13"
     #   -r requirements/darwin.txt
 contextvars==2.4
     # via -r requirements/base.txt
-croniter==6.0.0 ; sys_platform != "win32" and python_version >= "3.13"
+croniter==6.0.0 ; sys_platform != "win32"
     # via -r requirements/base.txt
-cryptography==42.0.2 ; python_version >= "3.13"
+cryptography==42.0.2
     # via
     #   -r requirements/base.txt
     #   pyopenssl
-distro==1.9.0 ; python_version >= "3.13"
+distro==1.9.0
     # via -r requirements/base.txt
-frozenlist==1.8.0 ; python_version >= "3.13"
+frozenlist==1.8.0 ; python_version >= "3.11"
     # via
     #   -r requirements/base.txt
     #   aiohttp
@@ -139,7 +139,7 @@ python-gnupg==0.5.6
     #   -r requirements/darwin.txt
 pytz==2025.2
     # via croniter
-pyyaml==6.0.3 ; python_version >= "3.13"
+pyyaml==6.0.3
     # via -r requirements/base.txt
 pyzmq==27.1.0
     # via -r requirements/zeromq.txt

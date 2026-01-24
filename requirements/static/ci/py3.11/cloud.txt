@@ -8,7 +8,7 @@ apache-libcloud==3.8.0 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/cloud.in
-certifi==2024.7.4 ; python_version >= "3.10" and python_version < "3.13"
+certifi==2024.7.4 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   requests

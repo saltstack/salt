@@ -21,6 +21,8 @@ aiohttp>=3.10.2
 gitpython>=3.1.37
 jmespath
 jsonschema
+# Pin jsonschema==3.2.0 for Python 3.10 to match 3007.x
+jsonschema==3.2.0; python_version == '3.10'
 junos-eznc; sys_platform != 'win32'
 junit-xml>=1.9
 jxmlease; sys_platform != 'win32'
