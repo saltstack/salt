@@ -21,14 +21,20 @@ aiohttp>=3.10.2
 gitpython>=3.1.37
 jmespath
 jsonschema
-# Pin jsonschema==3.2.0 for Python 3.10 to match 3007.x
+# Pin jsonschema==3.2.0 and pyrsistent==0.19.3 for Python 3.10 to match 3007.x
 jsonschema==3.2.0; python_version == '3.10'
+pyrsistent==0.19.3; python_version == '3.10'
 junos-eznc; sys_platform != 'win32'
 junit-xml>=1.9
 jxmlease; sys_platform != 'win32'
 kazoo; sys_platform != 'win32' and sys_platform != 'darwin'
 keyring==5.7.1
 kubernetes<4.0.0
+# Pin kubernetes==3.0.0, google-auth==2.27.0, and pyasn1-modules==0.3.0 for Python 3.9 to match 3007.x
+# This ensures pyasn1-modules==0.3.0 (requires pyasn1<0.6.0) instead of 0.4.2 (requires pyasn1>=0.6.1)
+kubernetes==3.0.0; python_version == '3.9'
+google-auth==2.27.0; python_version == '3.9'
+pyasn1-modules==0.3.0; python_version == '3.9'
 libnacl>=1.7.1; sys_platform != 'win32' and sys_platform != 'darwin'
 # markdown-it-py constraint for py3.9: myst-docutils (docs requirement) needs <3.0.0,
 # but netmiko (from napalm, only in py3.9) pulls in rich which wants 3.0.0+

@@ -10,7 +10,7 @@ aiohappyeyeballs==2.6.1
     #   aiohttp
 aiohttp-retry==2.8.3
     # via twilio
-aiohttp==3.12.14
+aiohttp==3.13.3
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt
@@ -367,8 +367,10 @@ pyopenssl==24.0.0
     #   etcd3-py
 pyparsing==3.0.9
     # via junos-eznc
-pyrsistent==0.20.0
-    # via jsonschema
+pyrsistent==0.19.3 ; python_version == "3.10"
+    # via
+    #   -r requirements/static/ci/common.in
+    #   jsonschema
 pyserial==3.5
     # via junos-eznc
 pytest-custom-exit-code==0.3.0
@@ -542,7 +544,7 @@ toml==0.10.2
     # via -r requirements/static/ci/common.in
 tomli==2.2.1
     # via pytest
-tornado==6.5.2
+tornado==6.5.4
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt
@@ -559,7 +561,7 @@ typing-extensions==4.14.1
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   aiosignal
     #   pytest-system-statistics
-urllib3==2.5.0 ; python_version >= "3.10"
+urllib3==2.6.3 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt

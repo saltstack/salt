@@ -13,7 +13,8 @@ ioloop>=0.1a0
 jaraco.functools>=4.1.0
 jaraco.text>=4.0.0
 lxml>=4.6.3
-pyasn1>=0.4.8
+pyasn1>=0.4.8,<0.6.0; python_version < '3.11'
+pyasn1>=0.4.8; python_version >= '3.11'
 pycparser>=2.21
 pymssql>=2.2.11
 pyopenssl>=23.2.0,<25.0.0

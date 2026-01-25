@@ -121,7 +121,7 @@ propcache==0.3.2
     #   yarl
 psutil==5.9.6 ; python_version <= "3.9"
     # via -r requirements/base.txt
-pyasn1==0.6.2
+pyasn1==0.5.1 ; python_version < "3.11"
     # via -r requirements/windows.txt
 pycparser==2.21
     # via

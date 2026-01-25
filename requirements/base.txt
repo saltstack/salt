@@ -19,8 +19,8 @@ psutil>=5.0.0; python_version >= '3.10'
 # tests on target hosts with older python versions.
 packaging==24.0
 looseversion
-tornado>=6.5.2
-aiohttp>=3.10.2
+tornado>=6.5.4
+aiohttp>=3.13.3
 
 croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'
 
@@ -56,7 +56,7 @@ immutables>=0.21
 cryptography>=42.0.0
 
 urllib3>=1.26.20,<2.0.0; python_version < '3.10'
-urllib3>=2.5.0; python_version >= '3.10'
+urllib3>=2.6.3; python_version >= '3.10'
 
 jaraco.text>=4.0.0
 jaraco.functools>=4.1.0

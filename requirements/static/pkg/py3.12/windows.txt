@@ -110,7 +110,9 @@ multidict==6.0.4
     #   aiohttp
     #   yarl
 packaging==24.0
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   wheel
 portend==3.1.0
     # via cherrypy
 propcache==0.3.2
@@ -119,7 +121,7 @@ propcache==0.3.2
     #   yarl
 psutil==5.9.6 ; python_version >= "3.10"
     # via -r requirements/base.txt
-pyasn1==0.6.2
+pyasn1==0.6.2 ; python_version >= "3.11"
     # via -r requirements/windows.txt
 pycparser==2.21
     # via
@@ -187,7 +189,7 @@ urllib3==2.6.3 ; python_version >= "3.10"
     #   -r requirements/base.txt
     #   -r requirements/windows.txt
     #   requests
-wheel==0.45.1
+wheel==0.46.3
     # via
     #   -c requirements/constraints.txt
     #   -r requirements/windows.txt
