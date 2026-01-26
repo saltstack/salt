@@ -17,6 +17,7 @@ pytestmark = [
     pytest.mark.windows_whitelisted,
 ]
 
+
 @pytest.fixture
 def port():
     return pytestshellutils.utils.ports.get_unused_localhost_port()
