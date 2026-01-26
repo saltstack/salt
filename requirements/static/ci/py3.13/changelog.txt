@@ -21,7 +21,7 @@ looseversion==1.3.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/changelog.in
-markupsafe==3.0.2
+markupsafe==2.1.5
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   jinja2
