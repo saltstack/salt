@@ -689,7 +689,9 @@ class AsyncReqMessageClient:
                     # Time is in milliseconds.
                     ready = yield socket.poll(300, zmq.POLLIN)
                 except zmq.eventloop.future.CancelledError as exc:
-                    log.trace("Loop closed while polling receive socket.", exc_info=True)
+                    log.trace(
+                        "Loop closed while polling receive socket.", exc_info=True
+                    )
                     log.error("Master is unavailable (Connection Cancelled).")
                     send_recv_running = False
                     if not future.done():
