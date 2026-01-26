@@ -18,11 +18,14 @@ aiosignal==1.4.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   aiohttp
-apache-libcloud==2.5.0 ; sys_platform != "win32"
+apache-libcloud==3.7.0 ; sys_platform != "win32"
     # via
-    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   -r requirements/darwin.txt
     #   -r requirements/static/ci/common.in
+    #   -r requirements/static/ci/darwin.in
+asn1crypto==1.5.1
+    # via
+    #   certvalidator
+    #   oscrypto
 attrs==23.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
@@ -61,6 +64,8 @@ certifi==2024.7.4 ; python_version >= "3.10"
     #   -r requirements/base.txt
     #   kubernetes
     #   requests
+certvalidator==0.11.1
+    # via vcert
 cffi==2.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
@@ -79,11 +84,10 @@ cheroot==10.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   cherrypy
-cherrypy==18.8.0 ; python_version < "3.13"
+cherrypy==18.8.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
-    #   -r requirements/darwin.txt
     #   -r requirements/static/ci/common.in
 click==8.3.1
     # via geomet
@@ -106,6 +110,7 @@ cryptography==42.0.5
     #   paramiko
     #   pyopenssl
     #   trustme
+    #   vcert
 distlib==0.3.8
     # via virtualenv
 distro==1.8.0
@@ -136,14 +141,11 @@ genshi==0.7.10
 geomet==1.1.0
     # via cassandra-driver
 gitdb==4.0.12
+    # via gitpython
+gitpython==3.1.43
     # via
-    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   gitpython
-gitpython==3.1.46
-    # via
-    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   -r requirements/darwin.txt
     #   -r requirements/static/ci/common.in
+    #   -r requirements/static/ci/darwin.in
 google-auth==2.47.0
     # via kubernetes
 hglib==2.6.2
@@ -151,7 +153,6 @@ hglib==2.6.2
 idna==3.7
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   -r requirements/darwin.txt
     #   etcd3-py
     #   requests
     #   trustme
@@ -165,7 +166,6 @@ importlib-metadata==8.7.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
-    #   -r requirements/darwin.txt
 iniconfig==2.0.0
     # via pytest
 invoke==2.2.1
@@ -184,7 +184,6 @@ jaraco.functools==4.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
-    #   -r requirements/darwin.txt
     #   cheroot
     #   jaraco.text
     #   tempora
@@ -192,7 +191,6 @@ jaraco.text==4.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
-    #   -r requirements/darwin.txt
     #   jaraco.collections
 jinja2==3.1.6
     # via
@@ -221,10 +219,6 @@ keyring==5.7.1
     # via -r requirements/static/ci/common.in
 kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
-linode-python==1.1.1
-    # via
-    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   -r requirements/darwin.txt
 looseversion==1.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
@@ -250,7 +244,6 @@ mock==5.1.0
 more-itertools==10.8.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   -r requirements/darwin.txt
     #   -r requirements/pytest.txt
     #   cheroot
     #   cherrypy
@@ -270,6 +263,8 @@ multidict==6.0.4
     #   yarl
 ncclient==0.7.0
     # via junos-eznc
+oscrypto==1.3.0
+    # via certvalidator
 packaging==24.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
@@ -306,16 +301,13 @@ psutil==5.9.6 ; python_version >= "3.10"
     #   pytest-system-statistics
 pyasn1-modules==0.4.2
     # via google-auth
-pyasn1==0.6.2 ; python_version >= "3.11"
+pyasn1==0.6.2
     # via
-    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   -r requirements/darwin.txt
     #   pyasn1-modules
     #   rsa
 pycparser==2.21
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   -r requirements/darwin.txt
     #   cffi
 pycryptodomex==3.19.1
     # via
@@ -333,7 +325,6 @@ pyopenssl==24.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
-    #   -r requirements/darwin.txt
     #   etcd3-py
 pyparsing==3.3.2
     # via junos-eznc
@@ -381,18 +372,17 @@ python-dateutil==2.8.2
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
-    #   -r requirements/darwin.txt
     #   botocore
     #   croniter
     #   kubernetes
     #   moto
+    #   vcert
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
 python-gnupg==0.5.2
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
-    #   -r requirements/darwin.txt
 pytz==2024.1
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
@@ -430,7 +420,7 @@ requests==2.32.5 ; python_version >= "3.10"
     #   kubernetes
     #   moto
     #   responses
-    #   vultr
+    #   vcert
 responses==0.25.8
     # via moto
 rfc3987==1.3.8
@@ -451,7 +441,6 @@ setproctitle==1.3.2
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
-    #   -r requirements/darwin.txt
 six==1.16.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
@@ -461,11 +450,10 @@ six==1.16.0
     #   kubernetes
     #   python-dateutil
     #   transitions
+    #   vcert
     #   websocket-client
 smmap==5.0.2
-    # via
-    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   gitdb
+    # via gitdb
 sqlparse==0.5.5
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
@@ -480,7 +468,6 @@ timelib==0.3.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
-    #   -r requirements/darwin.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.in
 tornado==6.5.4
@@ -507,14 +494,12 @@ urllib3==2.6.3 ; python_version >= "3.10"
     #   python-etcd
     #   requests
     #   responses
+vcert==0.9.1 ; sys_platform != "win32" and python_version < "3.13"
+    # via -r requirements/static/ci/common.in
 virtualenv==20.24.7
     # via
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
-vultr==1.0.1
-    # via
-    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   -r requirements/darwin.txt
 watchdog==6.0.0
     # via -r requirements/static/ci/common.in
 websocket-client==0.40.0
@@ -546,7 +531,6 @@ zipp==3.23.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
-    #   -r requirements/darwin.txt
     #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:

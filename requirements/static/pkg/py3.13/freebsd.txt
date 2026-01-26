@@ -26,23 +26,18 @@ charset-normalizer==3.4.4
     # via requests
 cheroot==11.1.2
     # via cherrypy
-cherrypy==18.10.0 ; python_version >= "3.13"
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/static/pkg/freebsd.in
+cherrypy==18.10.0
+    # via -r requirements/base.txt
 contextvars==2.4
     # via -r requirements/base.txt
 croniter==6.0.0 ; sys_platform != "win32"
     # via -r requirements/base.txt
-cryptography==42.0.2 ; python_version >= "3.13"
+cryptography==42.0.2
     # via
     #   -r requirements/base.txt
-    #   -r requirements/static/pkg/freebsd.in
     #   pyopenssl
 distro==1.9.0
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/static/pkg/freebsd.in
+    # via -r requirements/base.txt
 frozenlist==1.8.0 ; python_version >= "3.11"
     # via
     #   -r requirements/base.txt
@@ -57,9 +52,7 @@ immutables==0.21
     #   -r requirements/base.txt
     #   contextvars
 importlib-metadata==8.7.1
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/static/pkg/freebsd.in
+    # via -r requirements/base.txt
 jaraco.collections==5.2.1
     # via cherrypy
 jaraco.context==6.1.0
@@ -106,26 +99,19 @@ propcache==0.4.1
     #   yarl
 psutil==7.2.1 ; python_version >= "3.10"
     # via -r requirements/base.txt
-pycparser==3.0 ; python_version >= "3.9"
-    # via
-    #   -r requirements/static/pkg/freebsd.in
-    #   cffi
+pycparser==3.0
+    # via cffi
 pycryptodomex==3.23.0
     # via -r requirements/crypto.txt
 pyopenssl==24.3.0
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/static/pkg/freebsd.in
+    # via -r requirements/base.txt
 python-dateutil==2.9.0.post0
     # via
     #   -r requirements/base.txt
-    #   -r requirements/static/pkg/freebsd.in
     #   croniter
     #   tempora
 python-gnupg==0.5.6
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/static/pkg/freebsd.in
+    # via -r requirements/base.txt
 pytz==2025.2
     # via croniter
 pyyaml==6.0.3
@@ -135,9 +121,7 @@ pyzmq==27.1.0
 requests==2.32.5 ; python_version >= "3.10"
     # via -r requirements/base.txt
 setproctitle==1.3.7
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/static/pkg/freebsd.in
+    # via -r requirements/base.txt
 six==1.17.0
     # via python-dateutil
 tempora==5.8.1

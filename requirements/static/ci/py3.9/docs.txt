@@ -24,7 +24,7 @@ cheroot==10.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   cherrypy
-cherrypy==18.8.0 ; python_version < "3.13"
+cherrypy==18.8.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/docs.in
@@ -82,7 +82,7 @@ mdurl==0.1.2
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   markdown-it-py
-more-itertools==9.1.0 ; python_version < "3.11"
+more-itertools==9.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   cheroot

@@ -11,8 +11,7 @@ boto>=2.47.0
 botocore>=1.30.0
 cassandra-driver>=2.0
 cffi>=1.14.6
-cherrypy>=17.4.1,<18.9.0; python_version < '3.13'
-cherrypy>=17.4.1; python_version >= '3.13'
+cherrypy>=17.4.1
 clustershell
 dnspython
 etcd3-py==0.1.6
@@ -21,9 +20,6 @@ aiohttp>=3.10.2
 gitpython>=3.1.37
 jmespath
 jsonschema
-# Pin jsonschema==3.2.0 and pyrsistent==0.19.3 for Python 3.10 to match 3007.x
-jsonschema==3.2.0; python_version == '3.10'
-pyrsistent==0.19.3; python_version == '3.10'
 junos-eznc; sys_platform != 'win32'
 junit-xml>=1.9
 jxmlease; sys_platform != 'win32'
@@ -55,8 +51,12 @@ rfc3987
 sqlparse>=0.4.4
 strict_rfc3339>=0.7
 toml
-# vcert removed due to hard cryptography pin conflicts with pkg requirements
-# vcert>=0.7.4,<0.18.0; sys_platform != 'win32' and python_version < '3.12'
+# Pin vcert==0.9.1 for Python < 3.13 to match 3007.x exactly
+# vcert>=0.18.0 requires cryptography==45.0.7, but pyopenssl==24.0.0 requires cryptography<43
+# vcert==0.17.0 requires cryptography==42.0.2, which conflicts with cryptography==42.0.5 in pkg files
+# vcert==0.9.1 is compatible with cryptography==42.0.5 (as used in 3007.x)
+# Exclude for Python 3.13 due to incompatible strict pins
+vcert==0.9.1; sys_platform != 'win32' and python_version < '3.13'
 virtualenv>=20.3.0
 watchdog>=0.9.0
 xmldiff>=2.4

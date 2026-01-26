@@ -30,6 +30,10 @@ anyio==4.1.0
     # via httpcore
 apache-libcloud==3.7.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
+asn1crypto==1.5.1
+    # via
+    #   certvalidator
+    #   oscrypto
 async-timeout==4.0.3
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
@@ -76,6 +80,8 @@ certifi==2024.7.4 ; python_version >= "3.10"
     #   httpx
     #   kubernetes
     #   requests
+certvalidator==0.11.1
+    # via vcert
 cffi==2.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
@@ -94,12 +100,11 @@ cheroot==10.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   cherrypy
-cherrypy==18.8.0 ; python_version < "3.13"
+cherrypy==18.8.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
-    #   -r requirements/static/pkg/linux.in
 click==8.1.3
     # via geomet
 clustershell==1.9.1
@@ -112,17 +117,17 @@ croniter==2.0.5 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt
-cryptography==42.0.5 ; python_version < "3.13"
+cryptography==42.0.5
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt
-    #   -r requirements/static/pkg/linux.in
     #   ansible-core
     #   etcd3-py
     #   moto
     #   paramiko
     #   pyopenssl
     #   trustme
+    #   vcert
 distlib==0.3.8
     # via virtualenv
 distro==1.8.0
@@ -190,7 +195,6 @@ importlib-metadata==8.7.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt
-    #   -r requirements/static/pkg/linux.in
 iniconfig==2.0.0
     # via pytest
 ipaddress==1.0.23
@@ -229,7 +233,7 @@ jmespath==1.0.1
     #   -r requirements/static/ci/common.in
     #   boto3
     #   botocore
-jsonschema==3.2.0 ; python_version == "3.10"
+jsonschema==3.2.0
     # via -r requirements/static/ci/common.in
 junit-xml==1.9
     # via -r requirements/static/ci/common.in
@@ -267,11 +271,10 @@ mercurial==6.4.4
     # via -r requirements/static/ci/linux.in
 mock==5.1.0
     # via -r requirements/pytest.txt
-more-itertools==9.1.0 ; python_version < "3.11"
+more-itertools==9.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/pytest.txt
-    #   -r requirements/static/pkg/linux.in
     #   cheroot
     #   cherrypy
     #   jaraco.functools
@@ -292,6 +295,8 @@ ncclient==0.6.13
     # via junos-eznc
 netaddr==0.8.0
     # via junos-eznc
+oscrypto==1.3.0
+    # via certvalidator
 packaging==24.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
@@ -334,10 +339,9 @@ pyasn1==0.5.1
     # via
     #   pyasn1-modules
     #   rsa
-pycparser==2.21 ; python_version >= "3.9"
+pycparser==2.21
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
-    #   -r requirements/static/pkg/linux.in
     #   cffi
 pycryptodomex==3.19.1
     # via
@@ -363,14 +367,11 @@ pyopenssl==24.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt
-    #   -r requirements/static/pkg/linux.in
     #   etcd3-py
 pyparsing==3.0.9
     # via junos-eznc
-pyrsistent==0.19.3 ; python_version == "3.10"
-    # via
-    #   -r requirements/static/ci/common.in
-    #   jsonschema
+pyrsistent==0.19.3
+    # via jsonschema
 pyserial==3.5
     # via junos-eznc
 pytest-custom-exit-code==0.3.0
@@ -417,18 +418,17 @@ python-dateutil==2.8.2
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt
-    #   -r requirements/static/pkg/linux.in
     #   botocore
     #   croniter
     #   kubernetes
     #   moto
+    #   vcert
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
 python-gnupg==0.5.2
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt
-    #   -r requirements/static/pkg/linux.in
 python-telegram-bot==20.3
     # via -r requirements/static/ci/linux.in
 pytz==2024.1
@@ -472,6 +472,7 @@ requests==2.32.5 ; python_version >= "3.10"
     #   python-consul
     #   responses
     #   twilio
+    #   vcert
 resolvelib==1.0.1
     # via ansible-core
 responses==0.23.1
@@ -482,7 +483,6 @@ rpm-vercmp==0.1.2 ; sys_platform == "linux"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt
-    #   -r requirements/static/pkg/linux.in
 rsa==4.9
     # via google-auth
 s3transfer==0.13.0
@@ -495,7 +495,6 @@ setproctitle==1.3.2
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -r requirements/base.txt
-    #   -r requirements/static/pkg/linux.in
 six==1.16.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
@@ -514,6 +513,7 @@ six==1.16.0
     #   pyvmomi
     #   textfsm
     #   transitions
+    #   vcert
     #   websocket-client
 slack-bolt==1.18.0
     # via -r requirements/static/ci/linux.in
@@ -571,6 +571,8 @@ urllib3==2.6.3 ; python_version >= "3.10"
     #   python-etcd
     #   requests
     #   responses
+vcert==0.9.1 ; sys_platform != "win32" and python_version < "3.13"
+    # via -r requirements/static/ci/common.in
 virtualenv==20.24.7
     # via
     #   -r requirements/static/ci/common.in
