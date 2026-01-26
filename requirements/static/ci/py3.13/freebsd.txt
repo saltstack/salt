@@ -4,23 +4,23 @@
 #
 #    pip-compile --cert='' --client-cert='' --index-url='' --no-emit-index-url --output-file=requirements/static/ci/py3.13/freebsd.txt --pip-args='' requirements/base.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/freebsd.in requirements/static/pkg/freebsd.in requirements/zeromq.txt
 #
-aiohappyeyeballs==2.4.3
+aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   aiohttp
-aiohttp==3.10.10
+aiohttp==3.13.3
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   etcd3-py
-aiosignal==1.3.1
+aiosignal==1.4.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   aiohttp
 apache-libcloud==3.8.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-attrs==24.2.0
+attrs==25.4.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   aiohttp
@@ -35,27 +35,25 @@ autocommand==2.2.2
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   jaraco.text
-bcrypt==4.2.0
+bcrypt==5.0.0
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
-boto3==1.35.46
+boto3==1.42.33
     # via
     #   -r requirements/static/ci/common.in
     #   moto
 boto==2.49.0
     # via -r requirements/static/ci/common.in
-botocore==1.35.46
+botocore==1.42.33
     # via
     #   -r requirements/static/ci/common.in
     #   boto3
     #   moto
     #   s3transfer
-cachetools==5.5.0
-    # via google-auth
-cassandra-driver==3.29.2
+cassandra-driver==3.29.3
     # via -r requirements/static/ci/common.in
-certifi==2024.8.30 ; python_version >= "3.10"
+certifi==2026.1.4 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
@@ -68,13 +66,13 @@ cffi==2.0.0
     #   -r requirements/static/ci/common.in
     #   cryptography
     #   pynacl
-charset-normalizer==3.4.0
+charset-normalizer==3.4.4
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   requests
 cheetah3==3.2.6.post1
     # via -r requirements/static/ci/common.in
-cheroot==10.0.1
+cheroot==11.1.2
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   cherrypy
@@ -83,19 +81,19 @@ cherrypy==18.10.0
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
-click==8.1.7
+click==8.3.1
     # via geomet
-clustershell==1.9.2
+clustershell==1.9.3
     # via -r requirements/static/ci/common.in
 contextvars==2.4
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
-croniter==3.0.3 ; sys_platform != "win32"
+croniter==6.0.0 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
-cryptography==42.0.2 ; python_version >= "3.13"
+cryptography==42.0.2
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
@@ -104,14 +102,14 @@ cryptography==42.0.2 ; python_version >= "3.13"
     #   paramiko
     #   pyopenssl
     #   trustme
-distlib==0.3.9
+distlib==0.4.0
     # via virtualenv
 distro==1.9.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
     #   pytest-skip-markers
-dnspython==2.7.0
+dnspython==2.8.0
     # via
     #   -r requirements/static/ci/common.in
     #   python-etcd
@@ -119,31 +117,29 @@ docker==7.1.0 ; python_version >= "3.8"
     # via -r requirements/pytest.txt
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
-filelock==3.16.1
+filelock==3.20.3
     # via virtualenv
 flaky==3.8.1
     # via -r requirements/pytest.txt
-frozenlist==1.7.0 ; python_version >= "3.11"
+frozenlist==1.8.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
     #   aiohttp
     #   aiosignal
-future==1.0.0
-    # via textfsm
-genshi==0.7.9
+genshi==0.7.10
     # via -r requirements/static/ci/common.in
-geomet==0.2.1.post1
+geomet==1.1.0
     # via cassandra-driver
-gitdb==4.0.11
+gitdb==4.0.12
     # via gitpython
-gitpython==3.1.43
+gitpython==3.1.46
     # via -r requirements/static/ci/common.in
-google-auth==2.35.0
+google-auth==2.47.0
     # via kubernetes
 hglib==2.6.2
     # via -r requirements/static/ci/freebsd.in
-idna==3.10
+idna==3.11
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   etcd3-py
@@ -155,23 +151,25 @@ immutables==0.21
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
     #   contextvars
-importlib-metadata==8.7.0
+importlib-metadata==8.7.1
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
-iniconfig==2.0.0
+iniconfig==2.3.0
     # via pytest
+invoke==2.2.1
+    # via paramiko
 ipaddress==1.0.23
     # via kubernetes
-jaraco.collections==5.1.0
+jaraco.collections==5.2.1
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   cherrypy
-jaraco.context==6.0.1
+jaraco.context==6.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   jaraco.text
-jaraco.functools==4.1.0
+jaraco.functools==4.4.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
@@ -189,20 +187,20 @@ jinja2==3.1.6
     #   -r requirements/base.txt
     #   junos-eznc
     #   moto
-jmespath==1.0.1
+jmespath==1.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   boto3
     #   botocore
-jsonschema-specifications==2024.10.1
+jsonschema-specifications==2025.9.1
     # via jsonschema
-jsonschema==4.23.0
+jsonschema==4.26.0
     # via -r requirements/static/ci/common.in
 junit-xml==1.9
     # via -r requirements/static/ci/common.in
-junos-eznc==2.7.1 ; sys_platform != "win32"
+junos-eznc==2.7.6 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 jxmlease==1.0.3 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
@@ -218,25 +216,25 @@ looseversion==1.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
-lxml==5.3.0
+lxml==6.0.2
     # via
     #   junos-eznc
     #   ncclient
     #   xmldiff
-mako==1.3.6
+mako==1.3.10
     # via -r requirements/static/ci/common.in
-markupsafe==3.0.2
+markupsafe==2.1.5
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
     #   jinja2
     #   mako
     #   werkzeug
-mercurial==6.8.1
+mercurial==7.1.2
     # via -r requirements/static/ci/freebsd.in
-mock==5.1.0
+mock==5.2.0
     # via -r requirements/pytest.txt
-more-itertools==10.5.0
+more-itertools==10.8.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/pytest.txt
@@ -244,86 +242,85 @@ more-itertools==10.5.0
     #   cherrypy
     #   jaraco.functools
     #   jaraco.text
-moto==5.0.18
+moto==5.1.20
     # via -r requirements/static/ci/common.in
-msgpack==1.1.0 ; python_version >= "3.13"
+msgpack==1.1.2
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.1.0
+multidict==6.7.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   aiohttp
     #   yarl
-ncclient==0.6.16
+ncclient==0.7.0
     # via junos-eznc
-networkx==3.1
-    # via
-    #   -c requirements/constraints.txt
-    #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
-    #   -r requirements/base.txt
 packaging==24.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
     #   pytest
-paramiko==3.5.0 ; sys_platform != "win32" and sys_platform != "darwin"
+paramiko==4.0.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -r requirements/static/ci/common.in
+    #   junos-eznc
     #   ncclient
     #   scp
 passlib==1.7.4
     # via -r requirements/static/ci/common.in
-pathspec==0.12.1
+pathspec==1.0.3
     # via yamllint
-platformdirs==4.3.6
+platformdirs==4.5.1
     # via virtualenv
-pluggy==1.5.0
+pluggy==1.6.0
     # via pytest
-portend==3.2.0
+portend==3.2.1
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   cherrypy
-propcache==0.2.0
+propcache==0.4.1
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
+    #   aiohttp
     #   yarl
-psutil==6.1.0 ; python_version >= "3.10"
+psutil==7.2.1 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-pyasn1-modules==0.4.1
+pyasn1-modules==0.4.2
     # via google-auth
-pyasn1==0.6.1
+pyasn1==0.6.2
     # via
     #   pyasn1-modules
     #   rsa
-pycparser==2.22
+pycparser==3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   cffi
-pycryptodomex==3.21.0
+pycryptodomex==3.23.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/crypto.txt
-pyfakefs==5.7.1
+pyfakefs==6.0.0
     # via -r requirements/pytest.txt
+pygments==2.19.2
+    # via pytest
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via -r requirements/static/ci/common.in
-pynacl==1.5.0
+pynacl==1.6.2
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==24.2.1
+pyopenssl==24.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
     #   etcd3-py
-pyparsing==3.2.0
+pyparsing==3.3.2
     # via junos-eznc
 pyserial==3.5
     # via junos-eznc
@@ -334,9 +331,9 @@ pytest-helpers-namespace==2021.12.29
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
-pytest-httpserver==1.1.0
+pytest-httpserver==1.1.3
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.4
+pytest-salt-factories==1.0.5
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.9.7 ; python_version >= "3.10"
     # via
@@ -348,13 +345,13 @@ pytest-skip-markers==1.5.2 ; python_version >= "3.8"
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-pytest-subtests==0.13.1
+pytest-subtests==0.15.0
     # via -r requirements/pytest.txt
 pytest-system-statistics==1.0.2
     # via pytest-salt-factories
-pytest-timeout==2.3.1
+pytest-timeout==2.4.0
     # via -r requirements/pytest.txt
-pytest==8.3.3
+pytest==9.0.2
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
@@ -376,17 +373,17 @@ python-dateutil==2.9.0.post0
     #   tempora
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
-python-gnupg==0.5.3
+python-gnupg==0.5.6
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
-pytz==2024.2
+pytz==2025.2
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   croniter
-pyvmomi==8.0.3.0.1
+pyvmomi==9.0.0.0
     # via -r requirements/static/ci/common.in
-pyyaml==6.0.2
+pyyaml==6.0.3
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
@@ -396,13 +393,13 @@ pyyaml==6.0.2
     #   pytest-salt-factories
     #   responses
     #   yamllint
-    #   yamlordereddictloader
-pyzmq==26.2.0 ; python_version >= "3.13"
+    #   yamlloader
+pyzmq==27.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
-referencing==0.35.1
+referencing==0.37.0
     # via
     #   jsonschema
     #   jsonschema-specifications
@@ -416,52 +413,47 @@ requests==2.32.5 ; python_version >= "3.10"
     #   kubernetes
     #   moto
     #   responses
-responses==0.25.3
+responses==0.25.8
     # via moto
 rfc3987==1.3.8
     # via -r requirements/static/ci/common.in
-rpds-py==0.20.0
+rpds-py==0.30.0
     # via
     #   jsonschema
     #   referencing
-rsa==4.9
+rsa==4.9.1
     # via google-auth
-s3transfer==0.10.3
+s3transfer==0.16.0
     # via boto3
 scp==0.15.0
     # via junos-eznc
 semantic-version==2.10.0
     # via etcd3-py
-setproctitle==1.3.3
+setproctitle==1.3.7
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
-six==1.16.0
+six==1.17.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   etcd3-py
-    #   genshi
-    #   geomet
     #   junit-xml
     #   junos-eznc
     #   kubernetes
-    #   ncclient
     #   python-dateutil
-    #   pyvmomi
-    #   textfsm
     #   transitions
     #   websocket-client
-smmap==5.0.1
+smmap==5.0.2
     # via gitdb
-sqlparse==0.5.1
+sqlparse==0.5.5
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in
-tempora==5.7.0
+tempora==5.8.1
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   portend
-textfsm==1.1.3
+textfsm==2.1.0
     # via -r requirements/static/ci/common.in
 timelib==0.3.0 ; python_version >= "3.11"
     # via
@@ -469,17 +461,17 @@ timelib==0.3.0 ; python_version >= "3.11"
     #   -r requirements/base.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.in
-tornado==6.5.2
+tornado==6.5.4
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
-transitions==0.9.2
+transitions==0.9.3
     # via junos-eznc
-trustme==1.2.0
+trustme==1.2.1
     # via -r requirements/pytest.txt
-typing-extensions==4.12.2
+typing-extensions==4.15.0
     # via pytest-system-statistics
-urllib3==2.5.0 ; python_version >= "3.10"
+urllib3==2.6.3 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
@@ -489,38 +481,38 @@ urllib3==2.5.0 ; python_version >= "3.10"
     #   python-etcd
     #   requests
     #   responses
-virtualenv==20.27.0
+virtualenv==20.36.1
     # via
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
-watchdog==5.0.3
+watchdog==6.0.0
     # via -r requirements/static/ci/common.in
 websocket-client==0.40.0
     # via kubernetes
 wempy==0.2.1
     # via -r requirements/static/ci/common.in
-werkzeug==3.1.3
+werkzeug==3.1.5
     # via
     #   -r requirements/static/ci/common.in
     #   moto
     #   pytest-httpserver
 xmldiff==2.7.0
     # via -r requirements/static/ci/common.in
-xmltodict==0.14.2
+xmltodict==1.0.2
     # via moto
-yamllint==1.35.1
+yamllint==1.38.0
     # via -r requirements/static/ci/freebsd.in
-yamlordereddictloader==0.4.2
+yamlloader==1.6.0
     # via junos-eznc
-yarl==1.16.0
+yarl==1.22.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   aiohttp
-zc.lockfile==3.0.post1
+zc.lockfile==4.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   cherrypy
-zipp==3.20.2
+zipp==3.23.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt

@@ -1,6 +1,6 @@
 # Lint requirements
 
---constraint=./py{py_version}/{platform}.txt
+--constraint=py{py_version}/linux.txt
 
 docker >= 7.1.0; python_version >= '3.8'
 docker < 7.1.0; python_version < '3.8'

@@ -4,7 +4,7 @@
 #
 #    pip-compile --cert='' --client-cert='' --index-url='' --no-emit-index-url --output-file=requirements/static/ci/py3.13/linux-crypto.txt --pip-args='' requirements/static/ci/crypto.in
 #
-m2crypto==0.45.1
+m2crypto==0.46.2
     # via -r requirements/static/ci/crypto.in
 pycryptodome==3.23.0
     # via -r requirements/static/ci/crypto.in

@@ -1,5 +1,5 @@
 # Cloud tests requirements
---constraint=./py{py_version}/{platform}.txt
+--constraint=py{py_version}/linux.txt
 
 apache-libcloud>=2.5.0
 netaddr

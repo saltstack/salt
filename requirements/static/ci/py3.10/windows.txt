@@ -265,7 +265,7 @@ passlib==1.7.4
     # via -r requirements/static/ci/common.in
 patch==1.16
     # via -r requirements/static/ci/windows.in
-pathspec==0.12.1
+pathspec==1.0.3
     # via yamllint
 platformdirs==4.0.0
     # via virtualenv
@@ -303,7 +303,7 @@ pycryptodomex==3.19.1
     #   -r requirements/crypto.txt
 pyfakefs==5.3.1
     # via -r requirements/pytest.txt
-pygit2==1.13.1
+pygit2==1.18.2
     # via -r requirements/static/ci/windows.in
 pymssql==2.3.1 ; sys_platform == "win32"
     # via
@@ -322,7 +322,7 @@ pyopenssl==24.0.0
     #   etcd3-py
 pyrsistent==0.19.3
     # via jsonschema
-pyspnego==0.9.0
+pyspnego==0.12.0
     # via requests-ntlm
 pytest-custom-exit-code==0.3.0
     # via -r requirements/pytest.txt
@@ -392,7 +392,7 @@ pywin32==306 ; sys_platform == "win32"
     #   docker
     #   pytest-skip-markers
     #   wmi
-pywinrm==0.4.3
+pywinrm==0.5.0
     # via -r requirements/static/ci/windows.in
 pyyaml==6.0.1
     # via
@@ -408,7 +408,7 @@ pyzmq==25.1.2
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
-requests-ntlm==1.2.0
+requests-ntlm==1.3.0
     # via pywinrm
 requests==2.32.5 ; python_version >= "3.10"
     # via
@@ -449,7 +449,6 @@ six==1.15.0
     #   kubernetes
     #   python-dateutil
     #   pyvmomi
-    #   pywinrm
     #   textfsm
     #   websocket-client
 smmap==5.0.1
@@ -458,6 +457,8 @@ smmap==5.0.1
     #   gitdb
 sqlparse==0.5.0
     # via -r requirements/static/ci/common.in
+sspilib==0.5.0
+    # via pyspnego
 strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in
 tempora==5.3.0
@@ -524,7 +525,7 @@ xmltodict==0.13.0 ; sys_platform == "win32"
     #   -r requirements/base.txt
     #   moto
     #   pywinrm
-yamllint==1.32.0
+yamllint==1.38.0
     # via -r requirements/static/ci/windows.in
 yarl==1.20.1
     # via
