@@ -56,7 +56,7 @@ typing-extensions==4.14.1
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   astroid
-urllib3==2.6.2 ; python_version >= "3.10"
+urllib3==2.6.3 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   docker

@@ -18,8 +18,10 @@ aiosignal==1.4.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
     #   aiohttp
-apache-libcloud==3.8.0 ; sys_platform != "win32"
-    # via -r requirements/static/ci/common.in
+apache-libcloud==3.7.0 ; sys_platform != "win32"
+    # via
+    #   -r requirements/static/ci/common.in
+    #   -r requirements/static/ci/darwin.in
 attrs==24.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
@@ -88,11 +90,15 @@ click==8.1.7
     # via geomet
 clustershell==1.9.2
     # via -r requirements/static/ci/common.in
+contextvars==2.4
+    # via
+    #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
+    #   -r requirements/base.txt
 croniter==3.0.3 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
     #   -r requirements/base.txt
-cryptography==42.0.2 ; python_version >= "3.13"
+cryptography==42.0.2
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
     #   -r requirements/base.txt
@@ -135,7 +141,9 @@ geomet==0.2.1.post1
 gitdb==4.0.11
     # via gitpython
 gitpython==3.1.43
-    # via -r requirements/static/ci/common.in
+    # via
+    #   -r requirements/static/ci/common.in
+    #   -r requirements/static/ci/darwin.in
 google-auth==2.35.0
     # via kubernetes
 hglib==2.6.2
@@ -147,6 +155,11 @@ idna==3.10
     #   requests
     #   trustme
     #   yarl
+immutables==0.21
+    # via
+    #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
+    #   -r requirements/base.txt
+    #   contextvars
 importlib-metadata==8.7.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
@@ -224,10 +237,9 @@ mercurial==6.8.1
     # via -r requirements/static/ci/darwin.in
 mock==5.1.0
     # via -r requirements/pytest.txt
-more-itertools==10.5.0 ; sys_platform == "darwin" and python_version >= "3.11"
+more-itertools==10.5.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
-    #   -r requirements/base.txt
     #   -r requirements/pytest.txt
     #   cheroot
     #   cherrypy
@@ -235,7 +247,7 @@ more-itertools==10.5.0 ; sys_platform == "darwin" and python_version >= "3.11"
     #   jaraco.text
 moto==5.0.18
     # via -r requirements/static/ci/common.in
-msgpack==1.1.0 ; python_version >= "3.13"
+msgpack==1.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
     #   -r requirements/base.txt
@@ -247,11 +259,6 @@ multidict==6.1.0
     #   yarl
 ncclient==0.6.16
     # via junos-eznc
-networkx==3.1
-    # via
-    #   -c requirements/constraints.txt
-    #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
-    #   -r requirements/base.txt
 packaging==24.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
@@ -468,7 +475,7 @@ trustme==1.2.0
     # via -r requirements/pytest.txt
 typing-extensions==4.12.2
     # via pytest-system-statistics
-urllib3==2.6.2 ; python_version >= "3.10"
+urllib3==2.6.3 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
     #   -r requirements/base.txt

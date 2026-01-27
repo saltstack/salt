@@ -441,6 +441,13 @@ class SaltPkgInstall:
         """
         if ret.returncode != 0:
             log.error(ret)
+            # Provide better error message for Windows access violation
+            # 0xC0000005 as signed 32-bit integer is 3221225477
+            if platform.is_windows() and ret.returncode in (0xC0000005, 3221225477):
+                log.error(
+                    "Windows installer crashed with access violation (0xC0000005). "
+                    "This may indicate a file locking issue or that services weren't fully stopped."
+                )
         assert ret.returncode == 0
         return True
 
@@ -455,6 +462,9 @@ class SaltPkgInstall:
                 self.bin_dir = self.install_dir
                 self.ssm_bin = self.install_dir / "ssm.exe"
                 self._ensure_windows_services_stopped()
+                # Add a small delay after stopping services to ensure all file handles
+                # are released and processes are fully terminated before running installer
+                time.sleep(3)
             if pkg.endswith("exe"):
                 # Install the package
                 log.info("Installing: %s", str(pkg))

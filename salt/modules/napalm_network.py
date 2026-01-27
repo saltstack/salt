@@ -509,12 +509,22 @@ def environment(**kwargs):  # pylint: disable=unused-argument
 
 
 @salt.utils.napalm.proxy_napalm_wrap
-def cli(*commands, **kwargs):  # pylint: disable=unused-argument
+def cli(*commands, cli_kwargs=None, **kwargs):  # pylint: disable=unused-argument
     """
     Returns a dictionary with the raw output of all commands passed as arguments.
 
     commands
         List of commands to be executed on the device.
+
+    cli_kwargs
+        Dictionary of keyword arguments to pass directly to the NAPALM driver's
+        ``cli`` method. Use this for driver-specific options like ``encoding``.
+
+        .. versionadded:: 3006.19
+
+        Example::
+
+            salt '*' net.cli "show version" cli_kwargs='{"encoding": "json"}'
 
     textfsm_parse: ``False``
         Try parsing the outputs using the TextFSM templates.
@@ -689,10 +699,13 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
           }
         }
     """
+    napalm_kwargs = {"commands": list(commands)}
+    if cli_kwargs:
+        napalm_kwargs.update(cli_kwargs)
     raw_cli_outputs = salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         "cli",
-        **{"commands": list(commands)},
+        **napalm_kwargs,
     )
     # thus we can display the output as is
     # in case of errors, they'll be caught in the proxy

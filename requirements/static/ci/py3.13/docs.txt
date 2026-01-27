@@ -51,11 +51,15 @@ cherrypy==18.10.0
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/docs.in
+contextvars==2.4
+    # via
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   -r requirements/base.txt
 croniter==3.0.3 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
-cryptography==42.0.2 ; python_version >= "3.13"
+cryptography==42.0.2
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
@@ -79,6 +83,11 @@ idna==3.10
     #   yarl
 imagesize==1.4.1
     # via sphinx
+immutables==0.21
+    # via
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   -r requirements/base.txt
+    #   contextvars
 importlib-metadata==8.7.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -140,7 +149,7 @@ more-itertools==10.5.0
     #   cherrypy
     #   jaraco.functools
     #   jaraco.text
-msgpack==1.1.0 ; python_version >= "3.13"
+msgpack==1.1.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
@@ -151,11 +160,6 @@ multidict==6.1.0
     #   yarl
 myst-docutils[linkify]==4.0.0
     # via -r requirements/static/ci/docs.in
-networkx==3.1
-    # via
-    #   -c requirements/constraints.txt
-    #   -c requirements/static/ci/py3.13/linux.txt
-    #   -r requirements/base.txt
 packaging==24.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -268,7 +272,7 @@ tornado==6.5.4
     #   -r requirements/base.txt
 uc-micro-py==1.0.3
     # via linkify-it-py
-urllib3==2.6.2 ; python_version >= "3.10"
+urllib3==2.6.3 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
