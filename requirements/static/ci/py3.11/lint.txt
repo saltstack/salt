@@ -16,7 +16,7 @@ charset-normalizer==3.2.0
     #   requests
 dill==0.3.8
     # via pylint
-docker==7.1.0 ; python_version >= "3.8"
+docker==7.1.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/lint.in
@@ -32,15 +32,15 @@ platformdirs==4.0.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   pylint
-pylint==3.1.0
+pylint==3.1.0 ; python_version >= "3.11"
     # via
     #   -r requirements/static/ci/lint.in
     #   saltpylint
-requests==2.32.5 ; python_version >= "3.10"
+requests==2.32.5 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   docker
-saltpylint==2024.2.5
+saltpylint==2024.2.5 ; python_version >= "3.11"
     # via -r requirements/static/ci/lint.in
 toml==0.10.2
     # via
@@ -48,7 +48,7 @@ toml==0.10.2
     #   -r requirements/static/ci/lint.in
 tomlkit==0.12.3
     # via pylint
-urllib3==2.6.3 ; python_version >= "3.10"
+urllib3==2.6.3 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   docker

@@ -6,7 +6,7 @@
 #
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.13.3
+aiohttp==3.13.3 ; python_version >= "3.11"
     # via -r requirements/base.txt
 aiosignal==1.4.0
     # via aiohttp
@@ -18,7 +18,7 @@ certifi==2024.7.4 ; python_version >= "3.10"
     # via
     #   -r requirements/base.txt
     #   requests
-cffi==2.0.0
+cffi==2.0.0 ; python_version >= "3.11"
     # via
     #   -r requirements/base.txt
     #   cryptography
@@ -28,11 +28,9 @@ cheroot==10.0.0
     # via cherrypy
 cherrypy==18.8.0
     # via -r requirements/base.txt
-contextvars==2.4
-    # via -r requirements/base.txt
 croniter==2.0.5 ; sys_platform != "win32"
     # via -r requirements/base.txt
-cryptography==42.0.5
+cryptography==42.0.5 ; python_version >= "3.11" and python_version < "3.13"
     # via
     #   -r requirements/base.txt
     #   pyopenssl
@@ -47,11 +45,7 @@ idna==3.7
     # via
     #   requests
     #   yarl
-immutables==0.21
-    # via
-    #   -r requirements/base.txt
-    #   contextvars
-importlib-metadata==8.7.0
+importlib-metadata==8.7.0 ; python_version >= "3.11"
     # via -r requirements/base.txt
 jaraco.collections==4.1.0
     # via cherrypy
@@ -83,13 +77,17 @@ more-itertools==5.0.0
     #   cherrypy
     #   jaraco.functools
     #   jaraco.text
-msgpack==1.0.7
+msgpack==1.0.7 ; python_version < "3.13"
     # via -r requirements/base.txt
 multidict==6.0.4
     # via
     #   aiohttp
     #   yarl
-packaging==24.0
+networkx==3.1
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/base.txt
+packaging==24.0 ; python_version >= "3.11"
     # via -r requirements/base.txt
 portend==3.1.0
     # via cherrypy
@@ -103,7 +101,7 @@ pycparser==2.21
     # via cffi
 pycryptodomex==3.19.1
     # via -r requirements/crypto.txt
-pyopenssl==24.0.0
+pyopenssl==24.0.0 ; python_version >= "3.11"
     # via -r requirements/base.txt
 python-dateutil==2.8.2
     # via
@@ -119,7 +117,7 @@ pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==25.1.2 ; python_version < "3.13"
     # via -r requirements/zeromq.txt
-requests==2.32.5 ; python_version >= "3.10"
+requests==2.32.5 ; python_version >= "3.11"
     # via -r requirements/base.txt
 rpm-vercmp==0.1.2 ; sys_platform == "linux"
     # via -r requirements/base.txt
@@ -133,11 +131,11 @@ tempora==5.3.0
     # via portend
 timelib==0.3.0 ; python_version >= "3.11"
     # via -r requirements/base.txt
-tornado==6.5.4
+tornado==6.5.4 ; python_version >= "3.11"
     # via -r requirements/base.txt
 typing-extensions==4.14.1
     # via aiosignal
-urllib3==2.6.3 ; python_version >= "3.10"
+urllib3==2.6.3 ; python_version >= "3.11"
     # via
     #   -r requirements/base.txt
     #   requests

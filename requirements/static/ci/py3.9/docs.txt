@@ -36,7 +36,7 @@ idna==3.7
     #   requests
 imagesize==1.4.1
     # via sphinx
-importlib-metadata==8.7.0
+importlib-metadata==8.7.0 ; python_version < "3.11"
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   sphinx
@@ -66,22 +66,18 @@ jinja2==3.1.6
     #   sphinx
 linkify-it-py==1.0.3
     # via myst-docutils
-markdown-it-py==2.2.0 ; python_version == "3.9"
+markdown-it-py==2.2.0
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   mdit-py-plugins
     #   myst-docutils
-markupsafe==2.1.3 ; python_version < "3.13"
+markupsafe==2.1.3
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/docs.in
     #   jinja2
 mdit-py-plugins==0.3.5
     # via myst-docutils
 mdurl==0.1.2
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   markdown-it-py
+    # via markdown-it-py
 more-itertools==9.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -91,7 +87,7 @@ more-itertools==9.1.0
     #   jaraco.text
 myst-docutils[linkify]==1.0.0
     # via -r requirements/static/ci/docs.in
-packaging==24.0
+packaging==24.0 ; python_version < "3.11"
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   sphinx

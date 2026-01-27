@@ -5,23 +5,21 @@
 #    pip-compile --cert='' --client-cert='' --index-url='' --no-emit-index-url --output-file=requirements/static/ci/py3.9/linux.txt --pip-args='' requirements/base.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/linux.in requirements/static/pkg/linux.in requirements/zeromq.txt
 #
 aiohappyeyeballs==2.6.1
-    # via
-    #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   aiohttp
+    # via aiohttp
 aiohttp-retry==2.8.3
     # via twilio
 aiohttp==3.13.3
     # via
-    #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   aiohttp-retry
     #   etcd3-py
     #   twilio
 aiosignal==1.4.0
-    # via
-    #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   aiohttp
+    # via aiohttp
+ansible-core==2.15.13
+    # via ansible
+ansible==8.7.0 ; python_version >= "3.9" and python_version < "3.11"
+    # via -r requirements/static/ci/linux.in
 anyio==4.1.0
     # via httpcore
 apache-libcloud==3.7.0 ; sys_platform != "win32"
@@ -30,13 +28,10 @@ asn1crypto==1.5.1
     # via
     #   certvalidator
     #   oscrypto
-async-timeout==4.0.3
+async-timeout==5.0.1
+    # via aiohttp
+attrs==25.4.0
     # via
-    #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   aiohttp
-attrs==23.2.0
-    # via
-    #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   aiohttp
     #   jsonschema
     #   pytest-salt-factories
@@ -81,7 +76,6 @@ certvalidator==0.11.1
 cffi==2.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   cryptography
     #   napalm
@@ -106,18 +100,15 @@ click==8.1.3
     # via geomet
 clustershell==1.9.1
     # via -r requirements/static/ci/common.in
-contextvars==2.4
-    # via
-    #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -r requirements/base.txt
 croniter==2.0.5 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -r requirements/base.txt
-cryptography==42.0.5
+cryptography==41.0.7 ; python_version < "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -r requirements/base.txt
+    #   ansible-core
     #   etcd3-py
     #   moto
     #   paramiko
@@ -165,10 +156,8 @@ gitdb==4.0.10
     # via gitpython
 gitpython==3.1.43
     # via -r requirements/static/ci/common.in
-google-auth==2.27.0 ; python_version == "3.9"
-    # via
-    #   -r requirements/static/ci/common.in
-    #   kubernetes
+google-auth==2.27.0
+    # via kubernetes
 h11==0.14.0
     # via httpcore
 hglib==2.6.2
@@ -186,15 +175,12 @@ idna==3.7
     #   requests
     #   trustme
     #   yarl
-immutables==0.21
+importlib-metadata==8.7.0 ; python_version < "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -r requirements/base.txt
-    #   contextvars
-importlib-metadata==8.7.0
-    # via
-    #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -r requirements/base.txt
+importlib-resources==5.0.7
+    # via ansible-core
 iniconfig==2.0.0
     # via pytest
 ipaddress==1.0.23
@@ -223,6 +209,7 @@ jinja2==3.1.6
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -r requirements/base.txt
+    #   ansible-core
     #   junos-eznc
     #   moto
     #   napalm
@@ -247,7 +234,7 @@ kazoo==2.9.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
 keyring==5.7.1
     # via -r requirements/static/ci/common.in
-kubernetes==3.0.0 ; python_version == "3.9"
+kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.8.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
@@ -263,8 +250,6 @@ lxml==4.9.2
     #   xmldiff
 mako==1.2.4
     # via -r requirements/static/ci/common.in
-markdown-it-py==2.2.0 ; python_version == "3.9"
-    # via -r requirements/static/ci/common.in
 markupsafe==2.1.3
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
@@ -272,8 +257,6 @@ markupsafe==2.1.3
     #   jinja2
     #   mako
     #   werkzeug
-mdurl==0.1.2
-    # via markdown-it-py
 mercurial==6.4.4
     # via -r requirements/static/ci/linux.in
 mock==5.1.0
@@ -288,14 +271,13 @@ more-itertools==9.1.0
     #   jaraco.text
 moto==5.1.8
     # via -r requirements/static/ci/common.in
-msgpack==1.0.7
+msgpack==1.0.7 ; python_version < "3.13"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.0.4
+multidict==6.7.1
     # via
-    #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   aiohttp
     #   yarl
 napalm==4.1.0 ; sys_platform != "win32" and python_version < "3.10"
@@ -313,14 +295,20 @@ netmiko==4.2.0
     # via napalm
 netutils==1.6.0
     # via napalm
+networkx==3.1
+    # via
+    #   -c requirements/constraints.txt
+    #   -c requirements/static/ci/../pkg/py3.9/linux.txt
+    #   -r requirements/base.txt
 ntc-templates==4.0.1
     # via netmiko
 oscrypto==1.3.0
     # via certvalidator
-packaging==24.0
+packaging==24.0 ; python_version < "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -r requirements/base.txt
+    #   ansible-core
     #   pytest
 paramiko==3.4.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
@@ -342,9 +330,8 @@ portend==3.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   cherrypy
-propcache==0.3.2
+propcache==0.4.1
     # via
-    #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   aiohttp
     #   yarl
 psutil==5.9.6 ; python_version <= "3.9"
@@ -354,10 +341,8 @@ psutil==5.9.6 ; python_version <= "3.9"
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-pyasn1-modules==0.3.0 ; python_version == "3.9"
-    # via
-    #   -r requirements/static/ci/common.in
-    #   google-auth
+pyasn1-modules==0.3.0
+    # via google-auth
 pyasn1==0.5.1
     # via
     #   pyasn1-modules
@@ -382,13 +367,13 @@ pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and plat
     # via -r requirements/static/ci/common.in
 pyjwt==2.7.0
     # via twilio
-pymysql==1.1.1
+pymysql==1.1.1 ; python_version < "3.11"
     # via -r requirements/static/ci/linux.in
 pynacl==1.5.0
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==24.0.0
+pyopenssl==24.0.0 ; python_version < "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -r requirements/base.txt
@@ -470,6 +455,7 @@ pyyaml==6.0.1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -r requirements/base.txt
+    #   ansible-core
     #   clustershell
     #   junos-eznc
     #   kubernetes
@@ -502,6 +488,8 @@ requests==2.31.0 ; python_version < "3.10"
     #   responses
     #   twilio
     #   vcert
+resolvelib==1.0.1
+    # via ansible-core
 responses==0.24.1
     # via moto
 rfc3987==1.3.8
@@ -578,7 +566,7 @@ toml==0.10.2
     # via -r requirements/static/ci/common.in
 tomli==2.0.1
     # via pytest
-tornado==6.5.4
+tornado==6.5.4 ; python_version < "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -r requirements/base.txt
@@ -594,10 +582,10 @@ ttp==0.9.5
     #   ttp-templates
 twilio==8.2.2
     # via -r requirements/static/ci/linux.in
-typing-extensions==4.14.1
+typing-extensions==4.15.0
     # via
-    #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   aiosignal
+    #   multidict
     #   napalm
     #   pytest-shell-utilities
     #   pytest-system-statistics
@@ -611,7 +599,7 @@ urllib3==1.26.20 ; python_version < "3.10"
     #   python-etcd
     #   requests
     #   responses
-vcert==0.9.1 ; sys_platform != "win32" and python_version < "3.13"
+vcert==0.9.1 ; sys_platform != "win32" and python_version < "3.13.0"
     # via -r requirements/static/ci/common.in
 virtualenv==20.24.7
     # via
@@ -636,10 +624,8 @@ yamllint==1.32.0
     # via -r requirements/static/ci/linux.in
 yamlordereddictloader==0.4.0
     # via junos-eznc
-yarl==1.20.1
-    # via
-    #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   aiohttp
+yarl==1.22.0
+    # via aiohttp
 zc.lockfile==3.0.post1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt

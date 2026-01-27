@@ -8,7 +8,7 @@ aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   aiohttp
-aiohttp==3.13.3
+aiohttp==3.13.3 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
@@ -33,7 +33,7 @@ certifi==2024.8.30 ; python_version >= "3.10"
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
     #   requests
-cffi==2.0.0
+cffi==2.0.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
@@ -51,15 +51,11 @@ cherrypy==18.10.0
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/docs.in
-contextvars==2.4
-    # via
-    #   -c requirements/static/ci/py3.13/linux.txt
-    #   -r requirements/base.txt
 croniter==3.0.3 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
-cryptography==42.0.2
+cryptography==42.0.2 ; python_version >= "3.13"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
@@ -83,12 +79,7 @@ idna==3.10
     #   yarl
 imagesize==1.4.1
     # via sphinx
-immutables==0.21
-    # via
-    #   -c requirements/static/ci/py3.13/linux.txt
-    #   -r requirements/base.txt
-    #   contextvars
-importlib-metadata==8.7.0
+importlib-metadata==8.7.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
@@ -149,7 +140,7 @@ more-itertools==10.5.0
     #   cherrypy
     #   jaraco.functools
     #   jaraco.text
-msgpack==1.1.0
+msgpack==1.1.0 ; python_version >= "3.13"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
@@ -160,7 +151,12 @@ multidict==6.1.0
     #   yarl
 myst-docutils[linkify]==4.0.0
     # via -r requirements/static/ci/docs.in
-packaging==24.0
+networkx==3.1
+    # via
+    #   -c requirements/constraints.txt
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   -r requirements/base.txt
+packaging==24.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
@@ -190,7 +186,7 @@ pyenchant==3.2.2
     # via sphinxcontrib-spelling
 pygments==2.18.0
     # via sphinx
-pyopenssl==24.2.1
+pyopenssl==24.2.1 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
@@ -217,7 +213,7 @@ pyzmq==26.2.0 ; python_version >= "3.13"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/zeromq.txt
-requests==2.32.5 ; python_version >= "3.10"
+requests==2.32.5 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
@@ -266,13 +262,13 @@ timelib==0.3.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
-tornado==6.5.4
+tornado==6.5.4 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
 uc-micro-py==1.0.3
     # via linkify-it-py
-urllib3==2.6.3 ; python_version >= "3.10"
+urllib3==2.6.3 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt

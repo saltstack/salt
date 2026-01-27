@@ -8,7 +8,7 @@ aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
     #   aiohttp
-aiohttp==3.13.3
+aiohttp==3.13.3 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
     #   -r requirements/base.txt
@@ -19,9 +19,7 @@ aiosignal==1.4.0
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
     #   aiohttp
 apache-libcloud==3.7.0 ; sys_platform != "win32"
-    # via
-    #   -r requirements/static/ci/common.in
-    #   -r requirements/static/ci/darwin.in
+    # via -r requirements/static/ci/common.in
 attrs==24.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
@@ -63,7 +61,7 @@ certifi==2024.8.30 ; python_version >= "3.10"
     #   -r requirements/base.txt
     #   kubernetes
     #   requests
-cffi==2.0.0
+cffi==2.0.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
     #   -r requirements/base.txt
@@ -90,15 +88,11 @@ click==8.1.7
     # via geomet
 clustershell==1.9.2
     # via -r requirements/static/ci/common.in
-contextvars==2.4
-    # via
-    #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
-    #   -r requirements/base.txt
 croniter==3.0.3 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
     #   -r requirements/base.txt
-cryptography==42.0.2
+cryptography==42.0.2 ; python_version >= "3.13"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
     #   -r requirements/base.txt
@@ -141,9 +135,7 @@ geomet==0.2.1.post1
 gitdb==4.0.11
     # via gitpython
 gitpython==3.1.43
-    # via
-    #   -r requirements/static/ci/common.in
-    #   -r requirements/static/ci/darwin.in
+    # via -r requirements/static/ci/common.in
 google-auth==2.35.0
     # via kubernetes
 hglib==2.6.2
@@ -155,12 +147,7 @@ idna==3.10
     #   requests
     #   trustme
     #   yarl
-immutables==0.21
-    # via
-    #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
-    #   -r requirements/base.txt
-    #   contextvars
-importlib-metadata==8.7.0
+importlib-metadata==8.7.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
     #   -r requirements/base.txt
@@ -237,9 +224,10 @@ mercurial==6.8.1
     # via -r requirements/static/ci/darwin.in
 mock==5.1.0
     # via -r requirements/pytest.txt
-more-itertools==10.5.0
+more-itertools==10.5.0 ; sys_platform == "darwin" and python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
+    #   -r requirements/base.txt
     #   -r requirements/pytest.txt
     #   cheroot
     #   cherrypy
@@ -247,7 +235,7 @@ more-itertools==10.5.0
     #   jaraco.text
 moto==5.0.18
     # via -r requirements/static/ci/common.in
-msgpack==1.1.0
+msgpack==1.1.0 ; python_version >= "3.13"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
     #   -r requirements/base.txt
@@ -259,7 +247,12 @@ multidict==6.1.0
     #   yarl
 ncclient==0.6.16
     # via junos-eznc
-packaging==24.0
+networkx==3.1
+    # via
+    #   -c requirements/constraints.txt
+    #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
+    #   -r requirements/base.txt
+packaging==24.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
     #   -r requirements/base.txt
@@ -314,7 +307,7 @@ pynacl==1.5.0
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==24.2.1
+pyopenssl==24.2.1 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
     #   -r requirements/base.txt
@@ -402,7 +395,7 @@ referencing==0.35.1
     # via
     #   jsonschema
     #   jsonschema-specifications
-requests==2.32.5 ; python_version >= "3.10"
+requests==2.32.5 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
     #   -r requirements/base.txt
@@ -465,7 +458,7 @@ timelib==0.3.0 ; python_version >= "3.11"
     #   -r requirements/base.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.in
-tornado==6.5.4
+tornado==6.5.4 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
     #   -r requirements/base.txt
@@ -475,7 +468,7 @@ trustme==1.2.0
     # via -r requirements/pytest.txt
 typing-extensions==4.12.2
     # via pytest-system-statistics
-urllib3==2.6.3 ; python_version >= "3.10"
+urllib3==2.6.3 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/darwin.txt
     #   -r requirements/base.txt

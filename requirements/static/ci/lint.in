@@ -1,9 +1,10 @@
 # Lint requirements
 
---constraint=py{py_version}/linux.txt
+--constraint=./py{py_version}/{platform}.txt
 
-docker >= 7.1.0; python_version >= '3.8'
-docker < 7.1.0; python_version < '3.8'
-pylint~=3.1.0
-SaltPyLint>=2024.2.2
+docker >= 7.1.0; python_version >= '3.11'
+pylint~=3.1.0; python_version >= '3.11'
+pylint==2.4.4; python_version < '3.11'
+SaltPyLint>=2024.2.2; python_version >= '3.11'
+SaltPyLint==2023.8.3; python_version < '3.11'
 toml
