@@ -118,7 +118,7 @@ etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
 exceptiongroup==1.1.1
     # via pytest
-filelock==3.13.1
+filelock==3.20.3
     # via virtualenv
 flaky==3.8.1
     # via -r requirements/pytest.txt
