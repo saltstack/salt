@@ -16,7 +16,7 @@ aiohttp==3.13.3
     #   twilio
 aiosignal==1.4.0
     # via aiohttp
-ansible-core==2.15.13
+ansible-core==2.16.14rc1
     # via ansible
 ansible==8.7.0 ; python_version >= "3.9" and python_version < "3.11"
     # via -r requirements/static/ci/linux.in
