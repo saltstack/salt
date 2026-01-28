@@ -32,7 +32,7 @@ def test_state_args():
     """
     id_ = "/etc/bar.conf"
     state = "file"
-    high = OrderedDict(
+    high: salt.state.HighData = OrderedDict(
         [
             (
                 "/etc/foo.conf",
@@ -85,13 +85,60 @@ def test_state_args():
     assert ret == {"order", "use"}
 
 
+def test_state_args_as_dict() -> None:
+    """
+    Testing state.state_args when this state is being used:
+
+    /etc/foo.conf:
+      file.managed:
+        contents: "blah"
+        mkdirs: True
+        user: ch3ll
+        group: ch3ll
+        mode: 755
+
+    /etc/bar.conf:
+      file.managed:
+        use:
+          - file: /etc/foo.conf
+    """
+    id_ = "/etc/bar.conf"
+    state = "file"
+    high: salt.state.HighData = {
+        "/etc/foo.conf": {
+            "file": {
+                "fun": "managed",
+                "contents": "blah",
+                "mkdirs": True,
+                "user": "ch3ll",
+                "group": "ch3ll",
+                "mode": 755,
+                "order": 10000,
+            },
+            "__sls__": "test",
+            "__env__": "base",
+        },
+        "/etc/bar.conf": {
+            "file": {
+                "fun": "managed",
+                "use": [{"file": "/etc/foo.conf"}],
+                "order": 10001,
+            },
+            "__sls__": "test",
+            "__env__": "base",
+        },
+    }
+    ret = salt.state.state_args(id_, state, high)
+    assert ret == {"order", "use"}
+
+
 def test_state_args_id_not_high():
     """
     Testing state.state_args when id_ is not in high
     """
     id_ = "/etc/bar.conf2"
     state = "file"
-    high = OrderedDict(
+    high: salt.state.HighData = OrderedDict(
         [
             (
                 "/etc/foo.conf",
@@ -150,7 +197,7 @@ def test_state_args_state_not_high():
     """
     id_ = "/etc/bar.conf"
     state = "file2"
-    high = OrderedDict(
+    high: salt.state.HighData = OrderedDict(
         [
             (
                 "/etc/foo.conf",

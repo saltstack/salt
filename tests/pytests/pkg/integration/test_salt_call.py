@@ -3,6 +3,9 @@ import subprocess
 import pytest
 from pytestskipmarkers.utils import platform
 
+import salt.version
+from salt.utils.versions import Version
+
 
 def test_salt_call_local(salt_call_cli):
     """
@@ -26,7 +29,7 @@ def test_salt_call(salt_call_cli, salt_master):
 
 @pytest.fixture
 def state_name(salt_master):
-    name = "some-test-state"
+    name = "state_name"
     sls_contents = """
     test_foo:
       test.succeed_with_changes:
@@ -46,13 +49,43 @@ def state_name(salt_master):
         yield name
 
 
-def test_sls(salt_call_cli, salt_master, state_name):
+@pytest.fixture
+def state_name_dict_arg(salt_master):
+    name = "state_name_dict_arg"
+    sls_contents = """
+    test_foo:
+      test.succeed_with_changes:
+          name: foo
+    """
+    with salt_master.state_tree.base.temp_file(f"{name}.sls", sls_contents):
+        if not platform.is_windows() and not platform.is_darwin():
+            subprocess.run(
+                [
+                    "chown",
+                    "-R",
+                    "salt:salt",
+                    str(salt_master.state_tree.base.write_path),
+                ],
+                check=False,
+            )
+        yield name
+
+
+@pytest.mark.parametrize("fixture_name", ["state_name", "state_name_dict_arg"])
+def test_sls(salt_call_cli, salt_master, fixture_name, request):
     """
     Test calling a sls file
     """
+    min_version_required = Version("3008.0")
+    current_version = Version(salt.version.__version__)
+    if fixture_name == "state_name_dict_arg" and current_version < min_version_required:
+        pytest.skip(
+            f"requires Salt >= {min_version_required}, running {current_version}"
+        )
     assert salt_master.is_running()
+    sls_id = request.getfixturevalue(fixture_name)
 
-    ret = salt_call_cli.run("state.apply", state_name)
+    ret = salt_call_cli.run("state.apply", sls_id)
     assert ret.returncode == 0
     assert ret.data
     sls_ret = ret.data[next(iter(ret.data))]
