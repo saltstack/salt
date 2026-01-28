@@ -129,18 +129,9 @@ def test_list_available_packages_with_index_url(pip, pip_version, tmp_path):
         "pip>=21.0",
     ),
 )
-@pytest.mark.parametrize(
-    "include_alpha,include_beta,include_rc",
-    (
-        (False, False, True),  # 001
-        (False, True, False),  # 010
-        (False, True, True),   # 011
-        (True, False, False),  # 100
-        (True, False, True),   # 101
-        (True, True, False),   # 110
-        (True, True, True),    # 111
-    )
-)
+@pytest.mark.parametrize("include_alpha", (True, False))
+@pytest.mark.parametrize("include_beta", (True, False))
+@pytest.mark.parametrize("include_rc", (True, False))
 def test_list_available_packages_returns_prerelease_versions_if_alpha_beta_or_rc_included(
     venv, pip, pip_version, include_alpha, include_beta, include_rc
 ):
@@ -158,7 +149,7 @@ def test_list_available_packages_returns_prerelease_versions_if_alpha_beta_or_rc
         include_rc=include_rc,
     )
     # parse each version and assert there's a pre-release version somewhere
-    assert any(map(lambda v: v.is_prerelease, map(parse_version, versions)))
+    assert any(list(map(lambda v: v.is_prerelease, map(parse_version, versions))))
 
 
 def test_issue_2087_missing_pip(venv, pip, modules):
