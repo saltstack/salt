@@ -1986,8 +1986,9 @@ def _set_line(
     if mode != "delete" and content is None:
         raise CommandExecutionError("Content can only be empty if mode is delete")
 
-    if not match and before is None and after is None:
-        match = content
+    # Before/after has privilege. If nothing defined, match is used by content.
+    if match is None and before is None and after is None:
+        match = re.escape(content)
 
     after = _regex_to_static(lines, after)
     before = _regex_to_static(lines, before)
@@ -2380,10 +2381,6 @@ def line(
             )
         )
     del empty_content_modes
-
-    # Before/after has privilege. If nothing defined, match is used by content.
-    if before is None and after is None and not match:
-        match = content
 
     with salt.utils.files.fopen(path, mode="r") as fp_:
         body = salt.utils.data.decode_list(fp_.readlines())
