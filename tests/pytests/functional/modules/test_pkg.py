@@ -72,6 +72,8 @@ def pkg_name(grains):
             _pkg = "units"
     elif grains["os_family"] == "Debian":
         _pkg = "ifenslave"
+    elif grains["os_family"] == "Suse":
+        _pkg = "wget"
     return _pkg
 
 
@@ -218,6 +220,8 @@ def test_owner(modules, grains):
     binary = "/bin/ls"
     if grains["os"] == "Ubuntu" and grains["osmajorrelease"] >= 24:
         binary = "/usr/bin/ls"
+    if grains["os"] == "Debian" and grains["osmajorrelease"] >= 13:
+        binary = "/usr/bin/ls"
 
     ret = modules.pkg.owner(binary)
     assert len(ret) != 0
@@ -232,6 +236,8 @@ def test_which(modules, grains):
     """
     binary = "/bin/ls"
     if grains["os"] == "Ubuntu" and grains["osmajorrelease"] >= 24:
+        binary = "/usr/bin/ls"
+    elif grains["os"] == "Debian" and grains["osmajorrelease"] >= 13:
         binary = "/usr/bin/ls"
     ret = modules.pkg.which(binary)
     assert len(ret) != 0

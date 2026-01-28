@@ -77,16 +77,19 @@ WINRM_MIN_VER = "0.3.0"
 
 
 try:
-    # Verify WinRM 0.3.0 or greater
-    import pkg_resources  # pylint: disable=3rd-party-module-not-gated
-    import winrm
-    from winrm.exceptions import WinRMTransportError
+    import importlib
+    import importlib.metadata
 
-    winrm_pkg = pkg_resources.get_distribution("pywinrm")
-    if not salt.utils.versions.compare(winrm_pkg.version, ">=", WINRM_MIN_VER):
+    # Verify WinRM 0.3.0 or greater
+
+    version = importlib.metadata.version("winrm")
+    if not salt.utils.versions.compare(version, ">=", WINRM_MIN_VER):
         HAS_WINRM = False
     else:
         HAS_WINRM = True
+
+    import winrm
+    from winrm.exceptions import WinRMTransportError
 
 except ImportError:
     HAS_WINRM = False
@@ -253,16 +256,10 @@ def gen_keys(keysize=2048):
     # Mandate that keys are at least 2048 in size
     if keysize < 2048:
         keysize = 2048
-    tdir = tempfile.mkdtemp()
 
-    salt.crypt.gen_keys(tdir, "minion", keysize)
-    priv_path = os.path.join(tdir, "minion.pem")
-    pub_path = os.path.join(tdir, "minion.pub")
-    with salt.utils.files.fopen(priv_path) as fp_:
-        priv = salt.utils.stringutils.to_unicode(fp_.read())
-    with salt.utils.files.fopen(pub_path) as fp_:
-        pub = salt.utils.stringutils.to_unicode(fp_.read())
-    shutil.rmtree(tdir)
+    (priv, pub) = salt.crypt.gen_keys(keysize)
+    priv = salt.utils.stringutils.to_unicode(priv)
+    pub = salt.utils.stringutils.to_unicode(pub)
     return priv, pub
 
 

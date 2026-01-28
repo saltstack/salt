@@ -9,6 +9,7 @@ import logging
 import pathlib
 import platform
 import sys
+import tarfile
 from typing import TYPE_CHECKING
 
 from ptscripts import Context, command_group
@@ -19,6 +20,7 @@ from tools.precommit.workflows import (
     PLATFORMS,
     TEST_SALT_LISTING,
     TEST_SALT_PKG_LISTING,
+    slugs,
 )
 
 log = logging.getLogger(__name__)
@@ -152,7 +154,7 @@ def download_nox_artifact(
         "slug": {
             "help": "The OS slug",
             "required": True,
-            "choices": sorted(tools.utils.get_golden_images()),
+            "choices": sorted(slugs()),
         },
         "repository": {
             "help": "The repository to query, e.g. saltstack/salt",
@@ -288,13 +290,16 @@ def test_artifacts(
         ctx.error(f"No platform definition found for {slug}")
         ctx.exit(1)
 
-    pkgdef = None
+    pkgdef = []
     for platform in PLATFORMS:
         for _ in TEST_SALT_PKG_LISTING[platform]:
             if _.slug == slug:
                 ctx.info(f"Found pkg definition {slug}")
-                pkgdef = _
-                break
+                pkgdef.append(_)
+                # Shortcut since all non windows paltforms have only one
+                # package type.
+                if platform != "windows":
+                    break
 
     if not pkgdef:
         ctx.warn(f"No package definition found for {slug}")
@@ -311,7 +316,8 @@ def test_artifacts(
         ("./", f"nox-{platdef.platform}-{platdef.arch}-ci-test-onedir"),
     ]
     if pkgdef:
-        artifacts.append(("artifacts/pkg/", f"salt-*-{pkgdef.arch}-{pkgdef.pkg_type}"))
+        for _ in pkgdef:
+            artifacts.append(("artifacts/pkg/", f"salt-*-{_.arch}-{_.pkg_type}"))
     for dest, artifact_name in artifacts:
         succeeded = tools.utils.gh.download_artifact(
             ctx,
@@ -320,9 +326,13 @@ def test_artifacts(
             repository=repository,
             artifact_name=artifact_name,
         )
-        ctx.info(succeeded)
         if succeeded:
-            ctx.info(f"Downloaded {artifact_name} to {dest}")
-            continue
+            ctx.info(f"Downloaded {succeeded} to {dest}")
         else:
+            ctx.error("Download failed.")
             ctx.exit(1)
+        if succeeded.endswith("tar.xz"):
+            ctx.info(f"Extracting {succeeded} to {dest}")
+            destpath = pathlib.Path(dest)
+            with tarfile.open(str(destpath / succeeded)) as tarball:
+                tarball.extractall(path=dest)  # nosec

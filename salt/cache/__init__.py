@@ -6,11 +6,11 @@ Loader mechanism for caching data, with data expiration, etc.
 
 import logging
 import time
+from collections import OrderedDict
 
 import salt.config
 import salt.loader
 import salt.syspaths
-from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
@@ -62,7 +62,9 @@ class Cache:
             self.cachedir = opts.get("cachedir", salt.syspaths.CACHE_DIR)
         else:
             self.cachedir = cachedir
-        self.driver = opts.get("cache", salt.config.DEFAULT_MASTER_OPTS["cache"])
+        self.driver = kwargs.get(
+            "driver", opts.get("cache", salt.config.DEFAULT_MASTER_OPTS["cache"])
+        )
         self._modules = None
         self._kwargs = kwargs
         self._kwargs["cachedir"] = self.cachedir

@@ -304,19 +304,19 @@ class Client:
         """
         This function must be overwritten
         """
-        return []
+        return []  # pragma: no cover
 
     def dir_list(self, saltenv="base", prefix=""):
         """
         This function must be overwritten
         """
-        return []
+        return []  # pragma: no cover
 
     def symlink_list(self, saltenv="base", prefix=""):
         """
         This function must be overwritten
         """
-        return {}
+        return {}  # pragma: no cover
 
     def is_cached(self, path, saltenv="base", cachedir=None):
         """
@@ -682,6 +682,7 @@ class Client:
             write_body = [None, False, None, None]
 
             def on_header(hdr):
+
                 if write_body[1] is not False and (
                     write_body[2] is None or (use_etag and write_body[3] is None)
                 ):
@@ -744,8 +745,9 @@ class Client:
                 # Check the status line of the HTTP request
                 if write_body[0] is None:
                     try:
-                        hdr = parse_response_start_line(hdr)
-                    except HTTPInputError:
+                        hdr = parse_response_start_line(hdr.strip())
+                    except HTTPInputError as exc:
+                        log.trace("Unable to parse header: %r", hdr.strip())
                         # Not the first line, do nothing
                         return
                     write_body[0] = hdr.code not in [301, 302, 303, 307]
@@ -1478,8 +1480,6 @@ class RemoteClient(Client):
         Return the metadata derived from the master_tops system
         """
         load = {"cmd": "_master_tops", "id": self.opts["id"], "opts": self.opts}
-        if self.auth:
-            load["tok"] = self.auth.gen_token(b"salt")
         return self._channel_send(
             load,
         )

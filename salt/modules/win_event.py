@@ -54,9 +54,13 @@ def _to_bytes(data, encoding="utf-8", encode_keys=False):
 
         data (object): The string object to encode
 
-        encoding(str): The encoding type
+        encoding (:obj:`str`, optional):
+            The encoding type.
+            Default is "utf-8".
 
-        encode_keys(bool): If false key strings will not be turned into bytes
+        encode_keys (:obj:`bool`, optional):
+            If ``False``, key strings will not be encoded.
+            Defaults is ``False``.
 
     Returns:
         (object): An object with the new encoding
@@ -97,7 +101,7 @@ def _raw_time(time):
 
     Args:
 
-        time (ob): A datetime object
+        time (obj): A datetime object
 
     Returns:
         TimeTuple: A TimeTuple
@@ -406,7 +410,7 @@ def get(log_name):
 
     Args:
 
-        log_name(str): The name of the log to retrieve.
+        log_name (str): The name of the log to retrieve.
 
     Returns
         tuple: A tuple of events as dictionaries
@@ -441,15 +445,23 @@ def query(log_name, query_text=None, records=20, latest=True, raw=False):
 
         log_name (str): The name of the log to query
 
-        query_text (str): The filter to apply to the log
+        query_text (:obj:`str`, optional):
+            The filter to apply to the log.
+            Default is ``None``.
 
-        records (int): The number of records to return
+        records (:obj:`int`, optional):
+            The number of records to return.
+            Default is 20
 
-        latest (bool): ``True`` will return the newest events. ``False`` will
-            return the oldest events. Default is ``True``
+        latest (:obj:`bool`, optional):
+            ``True`` will return the newest events. ``False`` will return the
+            oldest events.
+            Default is ``True``.
 
-        raw (bool): ``True`` will return the raw xml results. ``False`` will
-            return the xml converted to a dictionary. Default is ``False``
+        raw (:obj:`bool`, optional):
+            ``True`` will return the raw xml results. ``False`` will return the
+            xml converted to a dictionary.
+            Default is ``False``.
 
     Returns:
         list: A list of dict objects that contain information about the event
@@ -459,29 +471,29 @@ def query(log_name, query_text=None, records=20, latest=True, raw=False):
     .. code-block:: bash
 
         # Return the 20 most recent events from the Application log with an event ID of 22
-        salt '*' win_event.query Application "*[System[(EventID=22)]]"
+        salt '*' win_event.query Application '*[System[(EventID=22)]]'
 
         # Return the 20 most recent events from the Application log with an event ID of 22
         # Return raw xml
-        salt '*' win_event.query Application "*[System[(EventID=22)]]" raw=True
+        salt '*' win_event.query Application '*[System[(EventID=22)]]' raw=True
 
         # Return the 20 oldest events from the Application log with an event ID of 22
-        salt '*' win_event.query Application "*[System[(EventID=22)]]" latest=False
+        salt '*' win_event.query Application '*[System[(EventID=22)]]' latest=False
 
         # Return the 20 most recent Critical (1) events from the Application log in the last 12 hours
-        salt '*" win_event.query Application "*[System[(Level=1) and TimeCreated[timediff(@SystemTime) <= 43200000]]]"
+        salt '*' win_event.query Application '*[System[(Level=1) and TimeCreated[timediff(@SystemTime) <= 43200000]]]'
 
         # Return the 5 most recent Error (2) events from the application log
-        salt '*" win_event.query Application "*[System[(Level=2)]]" records=5
+        salt '*' win_event.query Application '*[System[(Level=2)]]' records=5
 
         # Return the 20 most recent Warning (3) events from the Windows PowerShell log where the Event Source is PowerShell
-        salt '*" win_event.query "Windows PowerShell" "*[System[Provider[@Name='PowerShell'] and (Level=3)]]"
+        salt '*' win_event.query 'Windows PowerShell' '*[System[Provider[@Name="PowerShell"] and (Level=3)]]'
 
         # Return the 20 most recent Information (0 or 4) events from the Microsoft-Windows-PowerShell/Operational on 2022-08-24 with an Event ID of 4103
-        salt '*" win_event.query "Microsoft-Windows-PowerShell/Operational" "*[System[(Level=4 or Level=0) and (EventID=4103) and TimeCreated[@SystemTime >= '2022-08-24T06:00:00.000Z']]]"
+        salt '*' win_event.query 'Microsoft-Windows-PowerShell/Operational' '*[System[(Level=4 or Level=0) and (EventID=4103) and TimeCreated[@SystemTime >= "2022-08-24T06:00:00.000Z"]]]'
 
         # Return the 20 most recent Information (0 or 4) events from the Microsoft-Windows-PowerShell/Operational within the last hour
-        salt '*" win_event.query "Microsoft-Windows-PowerShell/Operational" "*[System[(Level=4 or Level=0) and TimeCreated[timediff(@SystemTime) <= 3600000]]]"
+        salt '*' win_event.query 'Microsoft-Windows-PowerShell/Operational' '*[System[(Level=4 or Level=0) and TimeCreated[timediff(@SystemTime) <= 3600000]]]'
     """
     if not isinstance(latest, bool):
         raise CommandExecutionError("latest must be a boolean")
@@ -516,8 +528,10 @@ def get_filtered(log_name, all_requirements=True, **kwargs):
 
         log_name (str): The name of the log to retrieve
 
-        all_requirements (bool): ``True`` matches all requirements. ``False``
-            matches any requirement. Default is ``True``
+        all_requirements (:obj:`bool`, optional):
+            ``True`` matches all requirements. ``False`` matches any
+            requirement.
+            Default is ``True``.
 
     Kwargs:
 
@@ -559,16 +573,16 @@ def get_filtered(log_name, all_requirements=True, **kwargs):
     .. code-block:: bash
 
         # Return all events from the Security log with an ID of 1100
-        salt "*" win_event.get_filtered Security eventID=1100
+        salt '*' win_event.get_filtered Security eventID=1100
 
         # Return all events from the System log with an Error (1) event type
-        salt "*" win_event.get_filtered System eventType=1
+        salt '*' win_event.get_filtered System eventType=1
 
         # Return all events from System log with an Error (1) type, source is Service Control Manager, and data is netprofm
-        salt "*" win_event.get_filtered System eventType=1 sourceName="Service Control Manager" data="netprofm"
+        salt '*' win_event.get_filtered System eventType=1 sourceName='Service Control Manager' data='netprofm'
 
         # Return events from the System log that match any of the kwargs below
-        salt "*" win_event.get_filtered System eventType=1 sourceName="Service Control Manager" data="netprofm" all_requirements=False
+        salt '*' win_event.get_filtered System eventType=1 sourceName='Service Control Manager' data='netprofm' all_requirements=False
     """
 
     return tuple(_event_generator_filter(log_name, all_requirements, **kwargs))
@@ -585,7 +599,7 @@ def get_log_names():
 
     .. code-block:: bash
 
-        salt "*" win_event.get_log_names
+        salt '*' win_event.get_log_names
     """
     h = win32evtlog.EvtOpenChannelEnum(None)
     log_names = []
@@ -612,9 +626,12 @@ def add(
 
         event_id (int): The event ID
 
-        event_category (int): The event category
+        event_category (:obj:`int`, optional):
+            The event category.
+            Default is 0
 
-        event_type (str): The event category. Must be one of:
+        event_type (:obj:`str`, optional):
+            The event category. Must be one of:
 
             - Success
             - Error
@@ -623,11 +640,19 @@ def add(
             - AuditSuccess
             - AuditFailure
 
-        event_strings (list): A list of strings
+            Default is ``None``.
 
-        event_data (bytes): Event data. Strings will be converted to bytes
+        event_strings (:obj:`list`, optional):
+            A list of strings.
+            Default is ``None``.
 
-        event_sid (sid): The SID for the event
+        event_data (:obj:`bytes`, optional):
+            Event data. Strings will be converted to bytes.
+            Default is ``None``.
+
+        event_sid (:obj:`sid`, optional):
+            The SID for the event.
+            Default is ``None``.
 
     Raises:
         CommandExecutionError: event_id is not an integer
@@ -643,10 +668,12 @@ def add(
         salt '*' win_event.add Application 1234 12 Warning
 
         # A more complex System event log information entry
-        salt '*' win_event.add System 1234 12 Information "['Event string data 1', 'Event string data 2']" "Some event data"
+        salt '*' win_event.add System 1234 12 Information '["Event string data 1", "Event string data 2"]' 'Some event data'
 
         # Log to the System Event log with the source "Service Control Manager"
-        salt '*' win_event.add "Service Control Manager" 1234 12 Warning "['Event string data 1', 'Event string data 2']" "Some event data"
+        salt '*' win_event.add 'Service Control Manager' 1234 12 Warning '["Event string data 1", "Event string data 2"]' 'Some event data'
+
+    .. code-block:: powershell
 
         # Log to the PowerShell event log with the source "PowerShell (PowerShell)"
         salt-call --local win_event.add "PowerShell" 6969 12 Warning
@@ -717,7 +744,9 @@ def clear(log_name, backup=None):
 
         log_name (str): The name of the log to clear
 
-        backup (str): Path to backup file
+        backup (:obj:`str`, optional):
+            Path to backup file.
+            Default is ``None``.
 
     CLI Example:
 

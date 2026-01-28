@@ -1611,7 +1611,7 @@ class VirtualEnv:
     venv_bin_dir = attr.ib(init=False, repr=False)
 
     @pip_requirement.default
-    def _default_pip_requiremnt(self):
+    def _default_pip_requirement(self):
         if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
             return "pip>=22.3.1,<23.0"
         return "pip>=20.2.4,<21.2"
@@ -1748,11 +1748,13 @@ class VirtualEnv:
         return data
 
     def _create_virtualenv(self):
-        virtualenv = shutil.which("virtualenv")
-        if not virtualenv:
-            pytest.fail("'virtualenv' binary not found")
+        pyexec = shutil.which("python3") or shutil.which("python")
+        if not pyexec:
+            pytest.fail("'python' or 'python3' binary not found for virtualenv")
         cmd = [
-            virtualenv,
+            pyexec,
+            "-m",
+            "virtualenv",
             f"--python={self.get_real_python()}",
         ]
         if self.system_site_packages:
@@ -1778,15 +1780,32 @@ class SaltVirtualEnv(VirtualEnv):
     def _create_virtualenv(self):
         super()._create_virtualenv()
         code_dir = pathlib.Path(RUNTIME_VARS.CODE_DIR)
+        py_version = f"py{sys.version_info.major}.{sys.version_info.minor}"
         self.install(
-            "-r", code_dir / "requirements" / "static" / "pkg" / "py3.10" / "linux.txt"
+            "--prefer-binary",
+            "-r",
+            code_dir / "requirements" / "static" / "pkg" / py_version / "linux.txt",
         )
         self.install(RUNTIME_VARS.CODE_DIR)
 
     def install(self, *args, **kwargs):
         env = kwargs.pop("env", None) or {}
         env["USE_STATIC_REQUIREMENTS"] = "1"
+        # Add relenv toolchain to PATH if it exists
+        toolchains_dir = pathlib.Path.home() / ".cache" / "relenv" / "toolchains"
+        if toolchains_dir.exists():
+            # Find any toolchain subdirectory (e.g., x86_64-linux-gnu, aarch64-linux-gnu)
+            for toolchain in toolchains_dir.iterdir():
+                if toolchain.is_dir():
+                    toolchain_bin = toolchain / "bin"
+                    if toolchain_bin.exists():
+                        current_path = env.get("PATH", os.environ.get("PATH", ""))
+                        env["PATH"] = f"{toolchain_bin}:{current_path}"
+                        break
         kwargs["env"] = env
+        # Add --prefer-binary to avoid building from source when possible
+        if "--prefer-binary" not in args:
+            args = ("--prefer-binary",) + args
         return super().install(*args, **kwargs)
 
 
@@ -1905,3 +1924,15 @@ class Keys:
 
     def __exit__(self, *_):
         shutil.rmtree(str(self.priv_path.parent), ignore_errors=True)
+
+
+@functools.cache
+def system_python_version():
+    if salt.utils.platform.is_windows():
+        binary = "python3.exe"
+    else:
+        binary = "/usr/bin/python3"
+    proc = subprocess.run([binary, "--version"], capture_output=True, check=True)
+    return tuple(
+        int(_) for _ in proc.stdout.decode().split(" ", 1)[1].strip().split(".")
+    )

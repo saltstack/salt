@@ -4,14 +4,14 @@ from pathlib import Path
 
 import pytest
 
-from tests.pytests.integration.ssh.test_slsutil import check_system_python_version
-from tests.support.helpers import SaltVirtualEnv
+from tests.support.helpers import SaltVirtualEnv, system_python_version
 from tests.support.pytest.helpers import FakeSaltExtension
 
 pytestmark = [
     pytest.mark.skip_unless_on_linux,
     pytest.mark.skipif(
-        not check_system_python_version(), reason="Needs system python >= 3.9"
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
     ),
 ]
 

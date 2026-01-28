@@ -10,13 +10,14 @@ from saltfactories.utils.functional import StateResult
 
 import salt.utils.platform
 import salt.utils.versions
-from tests.pytests.integration.ssh import check_system_python_version
+from tests.support.helpers import system_python_version
 
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows"),
     pytest.mark.skipif(
-        not check_system_python_version(), reason="Needs system python >= 3.9"
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
     ),
 ]
 
@@ -55,7 +56,7 @@ def test_service(salt_ssh_cli, grains):
     os_release = grains["osrelease"]
     if os_family == "RedHat":
         service = "crond"
-    elif os_family == "Arch":
+    elif os_family in ["Suse", "Arch"]:
         service = "sshd"
     elif os_family == "MacOS":
         service = "org.ntp.ntpd"
@@ -89,7 +90,7 @@ def _state_tree(salt_master, tmp_path):
     {}/testfile:
       file:
         - managed
-        - source: salt://testfile
+        - contents: "This is a test file"
         - makedirs: true
     """.format(
         tmp_path

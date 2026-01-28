@@ -193,6 +193,29 @@ def test_pkg_install_existing():
         assert expected == result
 
 
+def test_pkg_install_existing_force_true():
+    """
+    test pkg.install when the package is already installed
+    and force=True
+    """
+    ret_reg = {"Nullsoft Install System": "3.03"}
+    # The 2nd time it's run, pkg.list_pkgs uses with stringify
+    se_list_pkgs = {"nsis": ["3.03"]}
+    with patch.object(win_pkg, "list_pkgs", return_value=se_list_pkgs), patch.object(
+        win_pkg, "_get_reg_software", return_value=ret_reg
+    ), patch.dict(
+        win_pkg.__salt__,
+        {
+            "cmd.run_all": MagicMock(return_value={"retcode": 0}),
+            "cp.cache_file": MagicMock(return_value="C:\\fake\\path.exe"),
+            "cp.is_cached": MagicMock(return_value=True),
+        },
+    ):
+        expected = {"nsis": {"install status": "success"}}
+        result = win_pkg.install(name="nsis", force=True)
+        assert expected == result
+
+
 def test_pkg_install_latest():
     """
     test pkg.install when the package is already installed
@@ -429,10 +452,11 @@ def test_pkg_install_log_message(caplog):
             version="3.03",
             extra_install_flags="-e True -test_flag True",
         )
-        assert (
-            'PKG : cmd: C:\\WINDOWS\\system32\\cmd.exe /c "runme.exe" /s -e '
-            "True -test_flag True"
-        ).lower() in [x.lower() for x in caplog.messages]
+        for x in caplog.messages:
+            print(x)
+        assert 'PKG : cmd: "runme.exe" /s -e True -test_flag True'.lower() in [
+            x.lower() for x in caplog.messages
+        ]
         assert "PKG : pwd: ".lower() in [x.lower() for x in caplog.messages]
         assert "PKG : retcode: 0" in caplog.messages
 
@@ -650,9 +674,9 @@ def test_pkg_remove_log_message(caplog):
         win_pkg.remove(
             pkgs=["firebox"],
         )
-        assert (
-            'PKG : cmd: C:\\WINDOWS\\system32\\cmd.exe /c "%program.exe" /S'
-        ).lower() in [x.lower() for x in caplog.messages]
+        assert 'PKG : cmd: "%program.exe" /S'.lower() in [
+            x.lower() for x in caplog.messages
+        ]
         assert "PKG : pwd: ".lower() in [x.lower() for x in caplog.messages]
         assert "PKG : retcode: 0" in caplog.messages
 

@@ -1,6 +1,7 @@
 import tornado
 import tornado.testing
 
+import salt.config
 import salt.netapi.rest_tornado.saltnado as saltnado
 from tests.support.mock import MagicMock, patch
 
@@ -604,15 +605,20 @@ class TestDisbatchLocal(tornado.testing.AsyncTestCase):
     def setUp(self):
         super().setUp()
         self.mock = MagicMock()
-        self.mock.opts = {
-            "syndic_wait": 0.1,
-            "cachedir": "/tmp/testing/cachedir",
-            "sock_dir": "/tmp/testing/sock_drawer",
-            "transport": "zeromq",
-            "extension_modules": "/tmp/testing/moduuuuules",
-            "order_masters": False,
-            "gather_job_timeout": 10.001,
-        }
+        self.mock.opts = salt.config.master_config(None)
+        self.mock.opts.update(
+            {
+                "syndic_wait": 0.1,
+                "cachedir": "/tmp/testing/cachedir",
+                "sock_dir": "/tmp/testing/sock_drawer",
+                "transport": "zeromq",
+                "extension_modules": "/tmp/testing/moduuuuules",
+                "order_masters": False,
+                "gather_job_timeout": 10.001,
+                "keys.cache_driver": "localfs_key",
+                "__role": "master",
+            }
+        )
         self.handler = saltnado.SaltAPIHandler(self.mock, self.mock)
 
     @tornado.testing.gen_test

@@ -17,6 +17,7 @@ import sys
 import tarfile
 import tempfile
 import time
+from collections import OrderedDict
 
 import salt.config
 import salt.defaults.exitcodes
@@ -39,7 +40,6 @@ import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.loader import _format_cached_grains
 from salt.runners.state import orchestrate as _orchestrate
-from salt.utils.odict import OrderedDict
 
 __proxyenabled__ = ["*"]
 
@@ -488,8 +488,8 @@ def _get_test_value(test=None, **kwargs):
             ret = True
         else:
             ret = __opts__.get("test", None)
-    else:
-        ret = test
+    elif test is False:
+        ret = False
     return ret
 
 
@@ -1926,7 +1926,7 @@ def sls_id(id_, mods, test=None, queue=None, state_events=None, **kwargs):
         ret = {}
         for chunk in chunks:
             if chunk.get("__id__", "") == id_:
-                ret.update(st_.state.call_chunk(chunk, {}, chunks))
+                ret.update(st_.state.call_chunk(chunk, {}, chunks)[0])
 
         _set_retcode(ret, highstate=highstate)
         # Work around Windows multiprocessing bug, set __opts__['test'] back to

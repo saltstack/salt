@@ -285,6 +285,10 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
         else:
             extra["exc_info_on_loglevel"] = exc_info_on_loglevel
 
+        # this is required for log lines to work as expected because we are
+        # adding a stackframe with this function
+        stacklevel = stacklevel + 1
+
         try:
             LOGGING_LOGGER_CLASS._log(
                 self,
@@ -553,6 +557,13 @@ if logging.getLoggerClass() is not SaltLoggingClass:
         #   No handlers could be found for logger 'foo'
         setup_temp_handler()
         logging.root.addHandler(get_temp_handler())
+
+
+# Override asyncio logger class if asyncio is already imported
+if "asyncio" in sys.modules:
+    asyncio_logger = logging.getLogger("asyncio")
+    if not isinstance(asyncio_logger, SaltLoggingClass):
+        asyncio_logger.__class__ = SaltLoggingClass
 
 
 # Now that we defined the default logging logger class, we can instantiate our logger

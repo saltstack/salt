@@ -22,6 +22,10 @@ pytestmark = [
     pytest.mark.destructive_test,
     pytest.mark.windows_whitelisted,
     pytest.mark.timeout_unless_on_windows(240),
+    pytest.mark.skipif(
+        bool(salt.utils.path.which("transactional-update")),
+        reason="Skipping on transactional systems",
+    ),
 ]
 
 
@@ -72,13 +76,13 @@ def PKG_TARGETS(grains):
                 _PKG_TARGETS = ["ctags", "zsh-html"]
         elif (
             grains["os"] in ("CentOS Stream", "Rocky", "AlmaLinux")
-            and grains["osmajorrelease"] == 9
+            and grains["osmajorrelease"] >= 9
         ):
             _PKG_TARGETS = ["units", "zsh"]
         else:
             _PKG_TARGETS = ["units", "zsh-html"]
     elif grains["os_family"] == "Suse":
-        _PKG_TARGETS = ["lynx", "htop"]
+        _PKG_TARGETS = ["iotop", "screen"]
     return _PKG_TARGETS
 
 
@@ -943,8 +947,8 @@ def test_pkg_cap_003_installed_multipkg_with_version(
     This is a destructive test as it installs and then removes two packages
     """
     target, realpkg = PKG_CAP_TARGETS[0]
-    version = latest_version(target)
-    realver = latest_version(realpkg)
+    version = modules.pkg.version(target)
+    realver = modules.pkg.version(realpkg)
 
     # If this condition is False, we need to find new targets.
     # This needs to be able to test successful installation of packages.

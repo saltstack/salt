@@ -29,6 +29,7 @@ import random
 import re
 import sys
 import tempfile
+from collections import OrderedDict
 
 import salt.exceptions
 import salt.utils.data
@@ -38,10 +39,13 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
-from salt.utils.odict import OrderedDict
 
 try:
     import M2Crypto
+
+    # These imports intended to be used from M2Crypto,
+    # but not loaded by-default with recent M2Crypto version.
+    from M2Crypto import ASN1, BIO, EVP, RSA, X509, m2  # pylint: disable=unused-import
 
     HAS_M2 = True
 except ImportError:

@@ -1,12 +1,15 @@
+import importlib
 import os
 import time
 
 import pytest
 
 import salt.config
+import salt.exceptions
 import salt.fileserver.gitfs
 import salt.utils.gitfs
 from salt.exceptions import FileserverConfigError
+from tests.support.helpers import patched_environ
 from tests.support.mock import MagicMock, patch
 
 try:
@@ -256,9 +259,172 @@ def test_checkout_pygit2(_prepare_provider):
 @pytest.mark.skip_on_windows(
     reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
 )
+def test_checkout_pygit2_with_home_env_unset(_prepare_provider):
+    provider = _prepare_provider
+    provider.remotecallbacks = None
+    provider.credentials = None
+    with patched_environ(__cleanup__=["HOME"]):
+        assert "HOME" not in os.environ
+        importlib.reload(salt.utils.gitfs)
+        assert "HOME" in os.environ
+
+
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+@pytest.mark.skip_on_windows(
+    reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
+)
 @pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
 @pytest.mark.skip_on_windows(
     reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
 )
 def test_get_cachedir_basename_pygit2(_prepare_provider):
     assert "_" == _prepare_provider.get_cache_basename()
+
+
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+def test_find_file(tmp_path):
+    opts = {
+        "cachedir": f"{tmp_path / 'cache'}",
+        "gitfs_user": "",
+        "gitfs_password": "",
+        "gitfs_pubkey": "",
+        "gitfs_privkey": "",
+        "gitfs_passphrase": "",
+        "gitfs_insecure_auth": False,
+        "gitfs_refspecs": salt.config._DFLT_REFSPECS,
+        "gitfs_ssl_verify": True,
+        "gitfs_branch": "master",
+        "gitfs_base": "master",
+        "gitfs_root": "",
+        "gitfs_env": "",
+        "gitfs_fallback": "",
+    }
+    remotes = []
+
+    gitfs = salt.utils.gitfs.GitFS(opts, remotes)
+    assert gitfs.find_file("asdf") == {"path": "", "rel": ""}
+
+
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+def test_find_file_bad_path(tmp_path):
+    opts = {
+        "cachedir": f"{tmp_path / 'cache'}",
+        "gitfs_user": "",
+        "gitfs_password": "",
+        "gitfs_pubkey": "",
+        "gitfs_privkey": "",
+        "gitfs_passphrase": "",
+        "gitfs_insecure_auth": False,
+        "gitfs_refspecs": salt.config._DFLT_REFSPECS,
+        "gitfs_ssl_verify": True,
+        "gitfs_branch": "master",
+        "gitfs_base": "master",
+        "gitfs_root": "",
+        "gitfs_env": "",
+        "gitfs_fallback": "",
+    }
+    remotes = []
+
+    gitfs = salt.utils.gitfs.GitFS(opts, remotes)
+    with pytest.raises(salt.exceptions.SaltValidationError):
+        gitfs.find_file("sdf/../../../asdf")
+
+
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+def test_find_file_bad_env(tmp_path):
+    opts = {
+        "cachedir": f"{tmp_path / 'cache'}",
+        "gitfs_user": "",
+        "gitfs_password": "",
+        "gitfs_pubkey": "",
+        "gitfs_privkey": "",
+        "gitfs_passphrase": "",
+        "gitfs_insecure_auth": False,
+        "gitfs_refspecs": salt.config._DFLT_REFSPECS,
+        "gitfs_ssl_verify": True,
+        "gitfs_branch": "master",
+        "gitfs_base": "master",
+        "gitfs_root": "",
+        "gitfs_env": "",
+        "gitfs_fallback": "",
+    }
+    remotes = []
+
+    gitfs = salt.utils.gitfs.GitFS(opts, remotes)
+    with pytest.raises(salt.exceptions.SaltValidationError):
+        gitfs.find_file("asdf", tgt_env="asd/../../../sdf")
+
+
+@pytest.mark.parametrize(
+    "remote,valid",
+    [
+        ("git@github.com:/saltstack/salt", True),
+        ("git@github.com:saltstack/salt", True),
+        ("git@github.com/saltstack/salt", False),
+        ("ssh://git@github.com/saltstack/salt.git", True),
+        ("ssh://git@github.com:22/saltstack/salt.git", True),
+        ("https://github.com/salttack/salt.git", True),
+        ("https://github.com/\nsaltstack/salt.git", False),
+        ("https://git:mypassword@github.com/saltstack/salt.git", True),
+        ("file:///srv/git/salt.git", True),
+    ],
+)
+def test_remote_validation(remote, valid):
+    assert salt.utils.gitfs.GitFS.validate_remote(remote) is valid
+
+
+@pytest.mark.parametrize(
+    "remote,result",
+    [
+        ("git@github.com:/saltstack/salt", "ssh://git@github.com/saltstack/salt"),
+        ("git@github.com:saltstack/salt", "ssh://git@github.com/saltstack/salt"),
+        (
+            "ssh://git@github.com/saltstack/salt.git",
+            "ssh://git@github.com/saltstack/salt.git",
+        ),
+        (
+            "ssh://git@github.com:22/saltstack/salt.git",
+            "ssh://git@github.com:22/saltstack/salt.git",
+        ),
+        (
+            "https://github.com/salttack/salt.git",
+            "https://github.com/salttack/salt.git",
+        ),
+        (
+            "https://git:mypassword@github.com/saltstack/salt.git",
+            "https://git:mypassword@github.com/saltstack/salt.git",
+        ),
+        ("file:///srv/git/salt.git", "file:///srv/git/salt.git"),
+    ],
+)
+def test_remote_to_url(remote, result):
+    assert salt.utils.gitfs.GitFS.remote_to_url(remote) == result
+
+
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+def test_find_file_subdir(tmp_path):
+    root = tmp_path / "root"
+    root.mkdir()
+    (root / "refs").mkdir()
+    (root / "refs" / "base").mkdir()
+    opts = {
+        "cachedir": f"{tmp_path / 'cache'}",
+        "gitfs_user": "",
+        "gitfs_password": "",
+        "gitfs_pubkey": "",
+        "gitfs_privkey": "",
+        "gitfs_passphrase": "",
+        "gitfs_insecure_auth": False,
+        "gitfs_refspecs": salt.config._DFLT_REFSPECS,
+        "gitfs_ssl_verify": True,
+        "gitfs_branch": "master",
+        "gitfs_base": "master",
+        "gitfs_root": "",
+        "gitfs_env": "",
+        "gitfs_fallback": "",
+    }
+    remotes = []
+    gitfs = salt.utils.gitfs.GitFS(opts, remotes)
+    gitfs.cache_root = str(root)
+    ret = gitfs.find_file("foo/init.sls")
+    assert ret == {"path": "", "rel": ""}

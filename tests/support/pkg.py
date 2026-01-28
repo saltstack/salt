@@ -84,10 +84,17 @@ class SaltPkgInstall:
     pkgs: list[str] = attr.ib(factory=list)
     file_ext: bool = attr.ib(default=None)
     relenv: bool = attr.ib(default=True)
+    installer_timeout: int = attr.ib(default=attr.NOTHING)
 
     @proc.default
     def _default_proc(self):
         return Subprocess(timeout=240)
+
+    @installer_timeout.default
+    def _default_installer_timeout(self):
+        if platform.is_windows():
+            return 600
+        return 240
 
     @distro_id.default
     def _default_distro_id(self):
@@ -258,6 +265,8 @@ class SaltPkgInstall:
         self.relenv = packaging.version.parse(self.version) >= packaging.version.parse(
             "3006.0"
         )
+        if self.installer_timeout:
+            self.proc.timeout = self.installer_timeout
 
         file_ext_re = "rpm|deb"
         if platform.is_darwin():
@@ -432,6 +441,13 @@ class SaltPkgInstall:
         """
         if ret.returncode != 0:
             log.error(ret)
+            # Provide better error message for Windows access violation
+            # 0xC0000005 as signed 32-bit integer is 3221225477
+            if platform.is_windows() and ret.returncode in (0xC0000005, 3221225477):
+                log.error(
+                    "Windows installer crashed with access violation (0xC0000005). "
+                    "This may indicate a file locking issue or that services weren't fully stopped."
+                )
         assert ret.returncode == 0
         return True
 
@@ -445,10 +461,19 @@ class SaltPkgInstall:
                 self.root = self.install_dir.parent
                 self.bin_dir = self.install_dir
                 self.ssm_bin = self.install_dir / "ssm.exe"
+                self._ensure_windows_services_stopped()
+                # Add a small delay after stopping services to ensure all file handles
+                # are released and processes are fully terminated before running installer
+                time.sleep(3)
             if pkg.endswith("exe"):
                 # Install the package
                 log.info("Installing: %s", str(pkg))
-                ret = self.proc.run(str(pkg), "/start-minion=0", "/S")
+                ret = self.proc.run(
+                    str(pkg),
+                    "/start-minion=0",
+                    "/S",
+                    _timeout=self.installer_timeout,
+                )
                 self._check_retcode(ret)
             elif pkg.endswith("msi"):
                 # Install the package
@@ -527,6 +552,9 @@ class SaltPkgInstall:
                 # tdnf does not detect nightly build versions to be higher version
                 # than release versions
                 upgrade_cmd = "install"
+                if "+" in self.pkgs[0]:
+                    # self.pkgs are not signed unless this is a release.
+                    args.append("--nogpgcheck")
             ret = self.proc.run(
                 self.pkg_mngr,
                 upgrade_cmd,
@@ -535,8 +563,20 @@ class SaltPkgInstall:
                 env=env,
             )
         else:
+            args = ["install", "-y"]
+            if self.distro_id == "photon":
+                ret = self.proc.run(
+                    "rpm",
+                    "--import",
+                    "https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public",
+                )
+                self._check_retcode(ret)
+                if "+" in self.pkgs[0]:
+                    # self.pkgs are not signed unless this is a release.
+                    args.append("--nogpgcheck")
             log.info("Installing packages:\n%s", pprint.pformat(self.pkgs))
-            ret = self.proc.run(self.pkg_mngr, "install", "-y", *self.pkgs)
+            args += self.pkgs
+            ret = self.proc.run(self.pkg_mngr, *args)
 
         if not platform.is_darwin() and not platform.is_windows():
             # Make sure we don't have any trailing references to old package file locations
@@ -544,6 +584,53 @@ class SaltPkgInstall:
             assert "/saltstack/salt/run" not in ret.stdout
             log.info(ret)
             self._check_retcode(ret)
+
+    def _ensure_windows_services_stopped(self):
+        """
+        Stop Salt Windows services prior to running the installer and wait for
+        their processes to exit to avoid upgrade timeouts.
+        """
+        if not platform.is_windows():
+            return
+        if not getattr(self, "ssm_bin", None):
+            return
+        if not pathlib.Path(self.ssm_bin).exists():
+            log.debug("Windows SSM binary not found at %s", self.ssm_bin)
+            return
+
+        for service in ("salt-minion", "salt-master", "salt-syndic"):
+            stop = self.proc.run(
+                str(self.ssm_bin), "stop", service, "confirm", _timeout=120
+            )
+            # 1062: The service has not been started.
+            if stop.returncode not in (0, 1062):
+                log.debug(
+                    "Stopping service %s returned %s",
+                    service,
+                    stop.returncode,
+                )
+
+        deadline = time.time() + 120
+        running = set()
+        tracked = {name.lower() for name in ("salt-minion.exe", "salt-master.exe")}
+        while time.time() < deadline:
+            running = {
+                (proc.info["name"] or "").lower()
+                for proc in psutil.process_iter(["name"])
+                if (proc.info["name"] or "").lower() in tracked
+            }
+            if not running:
+                break
+            log.debug(
+                "Waiting for Salt processes to exit before upgrade: %s",
+                sorted(running),
+            )
+            time.sleep(2)
+        else:
+            log.warning(
+                "Salt processes still running before upgrade: %s",
+                sorted(running),
+            )
 
     def _install_ssm_service(self, service="minion"):
         """
@@ -600,9 +687,9 @@ class SaltPkgInstall:
             "import sys; print('{}.{}'.format(*sys.version_info))",
         ).stdout.strip()
 
-    def install(self, upgrade=False, downgrade=False):
+    def install(self, upgrade=False, downgrade=False, stop_services=True):
         self._install_pkgs(upgrade=upgrade, downgrade=downgrade)
-        if self.distro_id in ("ubuntu", "debian"):
+        if self.distro_id in ("ubuntu", "debian") and stop_services:
             self.stop_services()
 
     def stop_services(self):
@@ -688,25 +775,36 @@ class SaltPkgInstall:
                 f"/etc/yum.repos.d/salt-{distro_name}.repo",
             )
 
-            if "3007" in self.prev_version:
-                ret = self.proc.run(
-                    self.pkg_mngr, "config-manager", "--enable", "salt-repo-3007-sts"
-                )
-                self._check_retcode(ret)
-            else:
-                ret = self.proc.run(
-                    self.pkg_mngr, "config-manager", "--disable", "salt-repo-3007-sts"
-                )
-                self._check_retcode(ret)
-
-            if self.distro_name == "photon":
-                # yum version on photon doesn't support expire-cache
-                ret = self.proc.run(self.pkg_mngr, "clean", "all")
-            else:
-                ret = self.proc.run(self.pkg_mngr, "clean", "expire-cache")
-            self._check_retcode(ret)
             cmd_action = "downgrade" if downgrade else "install"
             pkgs_to_install = self.salt_pkgs.copy()
+
+            if self.distro_name == "photon":
+                orig_pkgs = pkgs_to_install[:]
+                pkgs_to_install = []
+                for _ in orig_pkgs:
+                    pkgs_to_install.append(f"{_}-{self.prev_version}")
+                ret = self.proc.run(self.pkg_mngr, "clean", "all")
+                self._check_retcode(ret)
+            else:
+                if "3007" in self.prev_version:
+                    ret = self.proc.run(
+                        self.pkg_mngr,
+                        "config-manager",
+                        "--enable",
+                        "salt-repo-3007-sts",
+                    )
+                    self._check_retcode(ret)
+                else:
+                    ret = self.proc.run(
+                        self.pkg_mngr,
+                        "config-manager",
+                        "--disable",
+                        "salt-repo-3007-sts",
+                    )
+                    self._check_retcode(ret)
+                ret = self.proc.run(self.pkg_mngr, "clean", "expire-cache")
+                self._check_retcode(ret)
+
             if self.distro_version == "8" and self.classic:
                 # centosstream 8 doesn't downgrade properly using the downgrade command for some reason
                 # So we explicitly install the correct version here
@@ -860,12 +958,7 @@ class SaltPkgInstall:
                 )
                 assert ret.returncode in [0, 3010]
             else:
-                batch_file = pkg_path.parent / "install_nsis.cmd"
-                batch_content = f'start "" /wait {str(pkg_path)} /start-minion=0 /S'
-                with salt.utils.files.fopen(batch_file, "w") as fp:
-                    fp.write(batch_content)
-                # Now run the batch file
-                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
+                ret = self.proc.run(str(pkg_path), "/start-minion=0", "/S", timeout=600)
                 self._check_retcode(ret)
 
             # XXX This should be temporary. See also a similar thing happening

@@ -235,7 +235,7 @@ class SaltEvent:
         self.node = node
         self.keep_loop = keep_loop
         if io_loop is not None:
-            self.io_loop = io_loop
+            self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
             self._run_io_loop_sync = False
         else:
             self.io_loop = None
@@ -270,6 +270,7 @@ class SaltEvent:
             # and don't read out events from the buffer on an on-going basis,
             # the buffer will grow resulting in big memory usage.
             self.connect_pub()
+        self._publish_tasks = []
 
     @classmethod
     def __load_cache_regex(cls):
@@ -319,6 +320,30 @@ class SaltEvent:
             ):
                 self.pending_events.append(evt)
 
+    def _schedule(self, func, *args, **kwargs):
+        """
+        Schedule ``func`` on the underlying asyncio event loop.
+
+        ``func`` can be a coroutine function or a regular callable. If it
+        returns a coroutine, we ensure it's converted into a task so that any
+        exceptions are surfaced instead of being silently ignored.
+        """
+        if self.io_loop is None:
+            raise RuntimeError("No asyncio event loop available for scheduling")
+
+        loop = salt.utils.asynchronous.aioloop(self.io_loop)
+
+        if asyncio.iscoroutinefunction(func):
+            loop.create_task(func(*args, **kwargs))
+            return
+
+        def runner():
+            result = func(*args, **kwargs)
+            if asyncio.iscoroutine(result):
+                loop.create_task(result)
+
+        loop.call_soon(runner)
+
     def connect_pub(self, timeout=None):
         """
         Establish the publish connection
@@ -355,7 +380,7 @@ class SaltEvent:
                 self.subscriber = salt.transport.ipc_publish_client(
                     self.node, self.opts, io_loop=self.io_loop
                 )
-                self.io_loop.spawn_callback(self.subscriber.connect)
+                self._connect_task = self.io_loop.create_task(self.subscriber.connect())
 
             # For the asynchronous case, the connect will be defered to when
             # set_event_handler() is invoked.
@@ -368,6 +393,11 @@ class SaltEvent:
         """
         if not self.cpub:
             return
+        if hasattr(self, "_connect_task"):
+            task = self._connect_task
+            if task and not task.done():
+                task.cancel()
+            self._connect_task = None
         self.subscriber.close()
         self.subscriber = None
         self.pending_events = []
@@ -416,11 +446,14 @@ class SaltEvent:
         """
         Close the pusher connection (if established)
         """
-        if not self.cpush:
-            return
-        self.pusher.close()
-        self.pusher = None
-        self.cpush = False
+        if self.pusher:
+            self.pusher.close()
+            self.pusher = None
+            self.cpush = False
+        for task in self._publish_tasks:
+            if task and not task.done():
+                task.cancel()
+        self._publish_tasks.clear()
 
     @classmethod
     def unpack(cls, raw):
@@ -798,7 +831,8 @@ class SaltEvent:
                 )
                 raise
         else:
-            asyncio.create_task(self.pusher.publish(msg))
+            task = self.io_loop.create_task(self.pusher.publish(msg))
+            self._publish_tasks.append(task)
         return True
 
     def fire_master(self, data, tag, timeout=1000):
@@ -917,7 +951,7 @@ class SaltEvent:
         if not self.cpub:
             self.connect_pub()
         # This will handle reconnects
-        self.io_loop.spawn_callback(self.subscriber.on_recv, event_handler)
+        self._schedule(self.subscriber.on_recv, event_handler)
 
     # pylint: disable=W1701
     def __del__(self):
@@ -1448,11 +1482,9 @@ class StateFire:
 
         load.update(
             {
-                "id": self.opts["id"],
                 "tag": tag,
                 "data": data,
                 "cmd": "_minion_event",
-                "tok": self.auth.gen_token(b"salt"),
             }
         )
 

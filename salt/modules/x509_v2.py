@@ -188,11 +188,12 @@ try:
 except ImportError:
     HAS_CRYPTOGRAPHY = False
 
+from collections import OrderedDict
+
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 

@@ -1,8 +1,8 @@
 ---
 name: Test Failure
-about: Jenkins Test Failure issues
+about: GitHub Actions Test Failure issues
 title: "[TEST FAILURE]"
-labels: 'Test-Failure'
+labels: 'test-failure'
 assignees: ''
 
 ---

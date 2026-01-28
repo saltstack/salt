@@ -5,7 +5,7 @@
 import datetime
 import logging
 import os
-from collections import namedtuple
+from collections import OrderedDict, namedtuple
 
 import pytest
 
@@ -19,7 +19,6 @@ import salt.utils.args
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.json
-import salt.utils.odict
 import salt.utils.platform
 import salt.utils.state
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -107,7 +106,7 @@ class MockState:
             """
             Mock call_chunk method
             """
-            return {"": "ABC"}
+            return {"": "ABC"}, False
 
         @staticmethod
         def call_chunks(data):
@@ -138,7 +137,7 @@ class MockState:
         opts = {"state_top": "", "pillar": {}}
 
         def __init__(self, opts, pillar_override=None, *args, **kwargs):
-            self.building_highstate = salt.utils.odict.OrderedDict
+            self.building_highstate = OrderedDict
             self.state = MockState.State(opts, pillar_override=pillar_override)
 
         def render_state(self, sls, saltenv, mods, matches, local=False):

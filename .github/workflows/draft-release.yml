@@ -26,16 +26,16 @@ env:
 
 jobs:
 
-  list-artifacts:
-    name: List Artifacts
-    runs-on: ubuntu-22.04
-    steps:
-      # Checkout here so we can easily use custom actions
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts/
-      - name: List Directory Structure
-        run: ls -R artifacts/
+  #list-artifacts:
+  #  name: List Artifacts
+  #  runs-on: ubuntu-22.04
+  #  steps:
+  #    # Checkout here so we can easily use custom actions
+  #    - uses: actions/download-artifact@v4
+  #      with:
+  #        path: artifacts/
+  #    - name: List Directory Structure
+  #      run: ls -R artifacts/
 
   create-github-release:
     name: Draft Release v${{ inputs.salt-version }}
@@ -137,4 +137,12 @@ jobs:
     uses: ./.github/workflows/release-artifact.yml
     with:
       name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-NSIS
+      upload_url: ${{ needs.create-github-release.outputs.upload_url }}
+
+  upload-docs:
+    needs:
+      - create-github-release
+    uses: ./.github/workflows/release-artifact.yml
+    with:
+      name: salt-${{ inputs.salt-version }}-docs-html.tar.xz
       upload_url: ${{ needs.create-github-release.outputs.upload_url }}

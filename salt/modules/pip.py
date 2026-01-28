@@ -84,8 +84,6 @@ import shutil
 import sys
 import tempfile
 
-import pkg_resources  # pylint: disable=3rd-party-module-not-gated
-
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
@@ -412,6 +410,19 @@ def _format_env_vars(env_vars):
         else:
             raise CommandExecutionError(f"env_vars {env_vars} is not a dictionary")
     return ret
+
+
+def normalize(name):
+    """Normalize a package name according to the recommendations in PEP 503.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pip.normalize requests_ntlm
+
+    """
+    return re.sub(r"[-_.]+", "-", name).lower()
 
 
 def install(
@@ -1366,12 +1377,14 @@ def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwarg
     except ValueError:
         raise CommandExecutionError("Invalid JSON", info=result)
 
+    normal_prefix = normalize(prefix) if prefix else None
     for pkg in pkgs:
+        normal_pkg_name = normalize(pkg["name"])
         if prefix:
-            if pkg["name"].lower().startswith(prefix.lower()):
-                packages[pkg["name"]] = pkg["version"]
+            if normal_pkg_name.startswith(normal_prefix):
+                packages[normal_pkg_name] = pkg["version"]
         else:
-            packages[pkg["name"]] = pkg["version"]
+            packages[normal_pkg_name] = pkg["version"]
 
     return packages
 
@@ -1701,7 +1714,7 @@ def list_all_versions(
             versions = [
                 v for v in match.group(1).split(", ") if v and excludes.match(v)
             ]
-            versions.sort(key=pkg_resources.parse_version)
+            versions.sort(key=salt.utils.versions.parse)
             break
     if not versions:
         return None

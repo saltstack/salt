@@ -31,9 +31,9 @@ runs:
       id: venv-hash
       shell: bash
       run: |
+        FILES_HASH=$(python3 .github/scripts/hash-files.py 'requirements/**/*.txt' 'tools/**/*.py')
         VENV_NAME_HASH=$(echo "${{ inputs.cache-prefix }}|${{ github.workflow }}|${{
-          steps.get-python-version.outputs.version-sha256sum }}|${{
-          hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}"  | sha256sum | cut -d ' ' -f 1)
+          steps.get-python-version.outputs.version-sha256sum }}|${FILES_HASH}"  | sha256sum | cut -d ' ' -f 1)
         echo "TOOLS_VIRTUALENV_CACHE_SEED=$VENV_NAME_HASH" | tee -a "${GITHUB_ENV}"
         echo "venv-hash=$VENV_NAME_HASH" | tee -a "${GITHUB_OUTPUT}"
 

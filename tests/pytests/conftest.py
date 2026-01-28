@@ -311,6 +311,7 @@ def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port):
         "fips_mode": FIPS_TESTRUN,
         "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        "lazy_loader_strict_matching": True,
     }
 
     virtualenv_binary = get_virtualenv_binary_path()
@@ -344,6 +345,7 @@ def salt_sub_minion_factory(salt_master_factory, salt_sub_minion_id):
         "fips_mode": FIPS_TESTRUN,
         "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        "lazy_loader_strict_matching": True,
     }
 
     virtualenv_binary = get_virtualenv_binary_path()
@@ -371,6 +373,7 @@ def salt_proxy_factory(salt_master_factory):
         "fips_mode": FIPS_TESTRUN,
         "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        "lazy_loader_strict_matching": True,
     }
 
     factory = salt_master_factory.salt_proxy_minion_daemon(

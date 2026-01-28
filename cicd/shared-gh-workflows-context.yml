@@ -1,17 +1,28 @@
+# Shared context variables for GitHub Actions workflows
+# This file defines versions and configuration used across CI/CD workflows
+
+# Tool versions
 nox_version: "2022.8.7"
-python_version: "3.10.17"
-relenv_version: "0.19.0"
+
+python_version: "3.11.14"
+relenv_version: "0.22.2"
+
+# Release branch configuration
 release_branches:
   - "3006.x"
   - "3007.x"
+
+# Test run slugs for PR testing (subset of platforms)
 pr-testrun-slugs:
   - ubuntu-24.04-pkg
   - ubuntu-24.04
   - rockylinux-9
   - rockylinux-9-pkg
-  - windows-2022
-  - windows-2022-pkg
+  - windows-2025
+  - windows-2025-pkg
   - macos-15
   - macos-15-pkg
+
+# Test run slugs for full testing (all platforms)
 full-testrun-slugs:
   - all

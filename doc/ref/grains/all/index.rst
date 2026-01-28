@@ -13,6 +13,8 @@ grains modules
     core
     disks
     extra
+    lvm
+    mdadm
     minion_process
     opts
     package

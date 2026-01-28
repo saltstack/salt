@@ -48,6 +48,15 @@ def mock_ip_base():
             "dns_enabled": False,
             "dns_suffix": "",
             "dynamic_dns_enabled": False,
+            "ipv4_apipa_active": False,
+            "ipv4_apipa_enabled": True,
+            "ipv4_dhcp_enabled": False,
+            "ipv4_forwarding_enabled": False,
+            "ipv4_index": 1,
+            "ipv4_mtu": 1500,
+            "ipv4_wins_enabled": False,
+            "ipv6_index": 1,
+            "ipv6_mtu": 1500,
         }
     )
 
@@ -175,6 +184,13 @@ def test_get_interface_info_dot_net(
                 "239.255.255.250",
             ],
             "ip_wins": [],
+            "ipv4_apipa_active": False,
+            "ipv4_apipa_enabled": True,
+            "ipv4_dhcp_enabled": False,
+            "ipv4_forwarding_enabled": False,
+            "ipv4_index": 1,
+            "ipv4_mtu": 1500,
+            "ipv4_wins_enabled": False,
             "ipv6_addresses": [
                 {
                     "address": "fe80::e8a4:1224:5548:2b81",
@@ -187,6 +203,8 @@ def test_get_interface_info_dot_net(
             "ipv6_anycast": [],
             "ipv6_dns": ["2600:740a:1:304::1"],
             "ipv6_gateways": ["fe80::208:a2ff:fe0b:de70"],
+            "ipv6_index": 1,
+            "ipv6_mtu": 1500,
             "ipv6_multicast": [
                 "ff01::1",
                 "ff02::1",
@@ -233,21 +251,30 @@ def test_get_network_info(
     mock_wins,
 ):
     expected = {
-        "Dell GigabitEthernet": {
+        "Ethernet": {
+            "description": "Dell GigabitEthernet",
             "hwaddr": "02:D5:F1:DD:31:E0",
             "inet": [
                 {
                     "address": "172.18.87.49",
+                    "apipa_active": False,
+                    "apipa_enabled": True,
                     "broadcast": "172.18.87.63",
+                    "dhcp_enabled": False,
+                    "forwarding_enabled": False,
                     "gateway": "192.168.0.1",
-                    "label": "Dell GigabitEthernet",
+                    "index": 1,
+                    "mtu": 1500,
                     "netmask": "255.255.255.240",
+                    "wins_enabled": False,
                 }
             ],
             "inet6": [
                 {
                     "address": "fe80::e8a4:1224:5548:2b81",
                     "gateway": "fe80::208:a2ff:fe0b:de70",
+                    "index": 1,
+                    "mtu": 1500,
                     "prefixlen": 64,
                 }
             ],

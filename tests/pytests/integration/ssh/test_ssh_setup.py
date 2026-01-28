@@ -14,9 +14,10 @@ import pytest
 from pytestshellutils.utils.processes import ProcessResult, terminate_process
 from saltfactories.utils import random_string
 
+from salt.utils.versions import Version
 from tests.support.helpers import Keys
 
-pytest.importorskip("docker")
+docker = pytest.importorskip("docker")
 
 
 log = logging.getLogger(__name__)
@@ -24,6 +25,10 @@ log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("dockerd"),
+    pytest.mark.skipif(
+        Version(docker.__version__) < Version("4.0.0"),
+        reason="Test does not work in this version of docker-py",
+    ),
 ]
 
 
@@ -68,7 +73,7 @@ def ssh_container(salt_factories, ssh_container_name, ssh_password):
                 "SSH_USER_PASSWORD": ssh_password,
                 "SSH_PASSWORD_AUTHENTICATION": "true",
             },
-            "cap_add": "IPC_LOCK",
+            "cap_add": ["IPC_LOCK"],
         },
         pull_before_start=True,
         skip_on_pull_failure=True,
@@ -95,7 +100,7 @@ def ssh_sub_container(salt_factories, ssh_sub_container_name, ssh_password):
                 "SSH_USER_PASSWORD": ssh_password,
                 "SSH_PASSWORD_AUTHENTICATION": "true",
             },
-            "cap_add": "IPC_LOCK",
+            "cap_add": ["IPC_LOCK"],
         },
         pull_before_start=True,
         skip_on_pull_failure=True,

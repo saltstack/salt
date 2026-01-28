@@ -12,11 +12,10 @@ on:
         required: true
         type: string
         description: JSON string containing information about what and how to run the test suite
-      python-version:
-        required: false
+      ci-python-version:
+        required: true
         type: string
         description: The python version to run tests with
-        default: "3.10"
       salt-version:
         type: string
         required: true
@@ -60,6 +59,7 @@ on:
 
 env:
   COLUMNS: 190
+  RELENV_DATA: "${{ github.workspace }}/.relenv"
   PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
   PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
   PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
@@ -94,10 +94,10 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Setup Python ${{ inputs.python-version }}
+      - name: Setup Python ${{ inputs.ci-python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "${{ inputs.python-version }}"
+          python-version: "${{ inputs.ci-python-version }}"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -148,7 +148,22 @@ jobs:
 
       - name: "Create docker network"
         run: |
-           docker network create -o "com.docker.network.driver.mtu=1500" --ipv6 --subnet 2001:db8::/64 ip6net
+           # Use ULA prefix (fd00::/8) for proper IPv6 support with NAT
+           docker network create --ipv6 \
+             --subnet="fd00:db8::/64" \
+             -o "com.docker.network.driver.mtu=1500" \
+             ip6net
+
+           # Enable IPv6 forwarding and NAT for internet connectivity
+           sudo sysctl -w net.ipv6.conf.all.forwarding=1
+           sudo sysctl -w net.ipv6.conf.default.forwarding=1
+
+           # Accept router advertisements even with forwarding enabled
+           sudo sysctl -w net.ipv6.conf.all.accept_ra=2
+           sudo sysctl -w net.ipv6.conf.default.accept_ra=2
+
+           # Add masquerading for ULA to reach internet (fixes Python 3.11+ IPv6 timeouts)
+           sudo ip6tables -t nat -A POSTROUTING -s fd00:db8::/64 ! -d fd00:db8::/64 -j MASQUERADE
 
       - name: "Host network config"
         run: |
@@ -205,6 +220,13 @@ jobs:
       - name: Decompress .nox Directory
         run: |
           docker exec ${{ github.run_id}}_salt-test python3 -m nox --force-color -e decompress-dependencies -- linux ${{ matrix.arch }}
+
+      - name: Create relenv toolchain symlink
+        run: |
+          # Python's sysconfig expects toolchain at ~/.local/relenv/toolchain but
+          # relenv extracts to ~/.cache/relenv/toolchains - create symlink
+          docker exec ${{ github.run_id}}_salt-test bash -c \
+            'mkdir -p ~/.local/relenv && ln -sf ~/.cache/relenv/toolchains ~/.local/relenv/toolchain'
 
       - name: Download testrun-changed-files.txt
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
@@ -274,14 +296,14 @@ jobs:
 
       - name: Run Changed Tests
         id: run-fast-changed-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' }}
         run: |
           docker exec ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --core-tests --slow-tests --suppress-no-test-exit-code --from-filenames=testrun-changed-files.txt
 
       - name: Run Fast Tests
         id: run-fast-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] }}
         run: |
           docker exec ${{ github.run_id}}_salt-test \
             python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
@@ -289,7 +311,7 @@ jobs:
 
       - name: Run Slow Tests
         id: run-slow-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] }}
         run: |
           docker exec ${{ github.run_id}}_salt-test \
             python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
@@ -297,7 +319,7 @@ jobs:
 
       - name: Run Core Tests
         id: run-core-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] }}
         run: |
           docker exec ${{ github.run_id}}_salt-test \
             python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
@@ -305,7 +327,7 @@ jobs:
 
       - name: Run Flaky Tests
         id: run-flaky-tests
-        if: ${{ fromJSON(inputs.testrun)['selected_tests']['flaky'] }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['selected_tests']['flaky'] }}
         run: |
           docker exec ${{ github.run_id}}_salt-test \
             python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
@@ -313,7 +335,7 @@ jobs:
 
       - name: Run Full Tests
         id: run-full-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] == 'full' }}
         run: |
           docker exec ${{ github.run_id}}_salt-test \
             python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
@@ -335,11 +357,6 @@ jobs:
         run: |
           sudo chown -R "$(id -un)" .
 
-      - name: Combine Coverage Reports
-        if: always() && inputs.skip-code-coverage == false
-        run: |
-          nox --force-color -e combine-coverage
-
       - name: Prepare Test Run Artifacts
         id: download-artifacts-from-vm
         if: always()
@@ -348,17 +365,24 @@ jobs:
           # from it showing in the tree command below
           sudo rm -rf artifacts/salt*
           tree -a artifacts
-          if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
-            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
-          fi
+
+      - name: Combine Code Coverage
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
+        run: |
+          nox --force-color -e combine-coverage
+
+      - name: Rename Coverage Artifact
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
+        run: |
+          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
 
       - name: Upload Code Coverage Test Run Artifacts
-        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         uses: actions/upload-artifact@v4
         with:
-          name: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
+          name: coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
           path: |
-            artifacts/coverage/
+            artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
           include-hidden-files: true
 
       - name: Upload JUnit XML Test Run Artifacts
@@ -406,10 +430,10 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Setup Python ${{ inputs.python-version }}
+      - name: Setup Python ${{ inputs.ci-python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "${{ inputs.python-version }}"
+          python-version: "${{ inputs.ci-python-version }}"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -465,7 +489,22 @@ jobs:
 
       - name: "Create docker network"
         run: |
-           docker network create -o "com.docker.network.driver.mtu=1500" --ipv6 --subnet 2001:db8::/64 ip6net
+           # Use ULA prefix (fd00::/8) for proper IPv6 support with NAT
+           docker network create --ipv6 \
+             --subnet="fd00:db8::/64" \
+             -o "com.docker.network.driver.mtu=1500" \
+             ip6net
+
+           # Enable IPv6 forwarding and NAT for internet connectivity
+           sudo sysctl -w net.ipv6.conf.all.forwarding=1
+           sudo sysctl -w net.ipv6.conf.default.forwarding=1
+
+           # Accept router advertisements even with forwarding enabled
+           sudo sysctl -w net.ipv6.conf.all.accept_ra=2
+           sudo sysctl -w net.ipv6.conf.default.accept_ra=2
+
+           # Add masquerading for ULA to reach internet (fixes Python 3.11+ IPv6 timeouts)
+           sudo ip6tables -t nat -A POSTROUTING -s fd00:db8::/64 ! -d fd00:db8::/64 -j MASQUERADE
 
       - name: "Host network config"
         run: |
@@ -522,6 +561,13 @@ jobs:
       - name: Decompress .nox Directory
         run: |
           docker exec ${{ github.run_id}}_salt-test python3 -m nox --force-color -e decompress-dependencies -- linux ${{ matrix.arch }}
+
+      - name: Create relenv toolchain symlink
+        run: |
+          # Python's sysconfig expects toolchain at ~/.local/relenv/toolchain but
+          # relenv extracts to ~/.cache/relenv/toolchains - create symlink
+          docker exec ${{ github.run_id}}_salt-test bash -c \
+            'mkdir -p ~/.local/relenv && ln -sf ~/.cache/relenv/toolchains ~/.local/relenv/toolchain'
 
       - name: Download testrun-changed-files.txt
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
@@ -591,14 +637,14 @@ jobs:
 
       - name: Run Changed Tests
         id: run-fast-changed-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' }}
         run: |
           docker exec ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --core-tests --slow-tests --suppress-no-test-exit-code --from-filenames=testrun-changed-files.txt
 
       - name: Run Fast Tests
         id: run-fast-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] }}
         run: |
           docker exec ${{ github.run_id}}_salt-test \
             python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
@@ -606,7 +652,7 @@ jobs:
 
       - name: Run Slow Tests
         id: run-slow-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] }}
         run: |
           docker exec ${{ github.run_id}}_salt-test \
             python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
@@ -614,7 +660,7 @@ jobs:
 
       - name: Run Core Tests
         id: run-core-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] }}
         run: |
           docker exec ${{ github.run_id}}_salt-test \
             python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
@@ -622,7 +668,7 @@ jobs:
 
       - name: Run Flaky Tests
         id: run-flaky-tests
-        if: ${{ fromJSON(inputs.testrun)['selected_tests']['flaky'] }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['selected_tests']['flaky'] }}
         run: |
           docker exec ${{ github.run_id}}_salt-test \
             python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
@@ -630,7 +676,7 @@ jobs:
 
       - name: Run Full Tests
         id: run-full-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] == 'full' }}
         run: |
           docker exec ${{ github.run_id}}_salt-test \
             python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
@@ -652,11 +698,6 @@ jobs:
         run: |
           sudo chown -R "$(id -un)" .
 
-      - name: Combine Coverage Reports
-        if: always() && inputs.skip-code-coverage == false
-        run: |
-          nox --force-color -e combine-coverage
-
       - name: Prepare Test Run Artifacts
         id: download-artifacts-from-vm
         if: always()
@@ -665,17 +706,24 @@ jobs:
           # from it showing in the tree command below
           sudo rm -rf artifacts/salt*
           tree -a artifacts
-          if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
-            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
-          fi
+
+      - name: Combine Code Coverage
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
+        run: |
+          nox --force-color -e combine-coverage
+
+      - name: Rename Coverage Artifact
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
+        run: |
+          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
 
       - name: Upload Code Coverage Test Run Artifacts
-        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         uses: actions/upload-artifact@v4
         with:
-          name: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
+          name: coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
           path: |
-            artifacts/coverage/
+            artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ matrix.test-group || 1 }}-${{ github.run_attempt }}
           include-hidden-files: true
 
       - name: Upload JUnit XML Test Run Artifacts
@@ -722,10 +770,10 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Setup Python ${{ inputs.python-version }}
+      - name: Setup Python ${{ inputs.ci-python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "${{ inputs.python-version }}"
+          python-version: "${{ inputs.ci-python-version }}"
 
       - name: Setup Salt Version
         run: |
@@ -777,7 +825,7 @@ jobs:
 
       - name: Run Changed Tests
         id: run-fast-changed-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
@@ -803,7 +851,7 @@ jobs:
 
       - name: Run Fast Tests
         id: run-fast-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
@@ -828,7 +876,7 @@ jobs:
 
       - name: Run Slow Tests
         id: run-slow-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
@@ -853,7 +901,7 @@ jobs:
 
       - name: Run Core Tests
         id: run-core-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
@@ -878,7 +926,7 @@ jobs:
 
       - name: Run Flaky Tests
         id: run-flaky-tests
-        if: ${{ fromJSON(inputs.testrun)['selected_tests']['flaky'] }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['selected_tests']['flaky'] }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
@@ -903,7 +951,7 @@ jobs:
 
       - name: Run Full Tests
         id: run-full-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] == 'full' }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
@@ -931,11 +979,6 @@ jobs:
         run: |
           sudo chown -R "$(id -un)" .
 
-      - name: Combine Coverage Reports
-        if: always() && inputs.skip-code-coverage == false
-        run: |
-          nox --force-color -e combine-coverage
-
       - name: Prepare Test Run Artifacts
         id: download-artifacts-from-vm
         if: always()
@@ -944,17 +987,25 @@ jobs:
           # from it showing in the tree command below
           rm -rf artifacts/salt*
           tree -a artifacts
-          if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
-            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
-          fi
+
+      - name: Combine Code Coverage
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
+        run: |
+          nox --force-color -e combine-coverage
+
+      - name: Rename Coverage Artifact
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
+        run: |
+          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
 
       - name: Upload Code Coverage Test Run Artifacts
-        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         uses: actions/upload-artifact@v4
         with:
-          name: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}
+          name: coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
           path: |
-            artifacts/coverage/
+            artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
+
           include-hidden-files: true
 
       - name: Upload JUnit XML Test Run Artifacts
@@ -988,9 +1039,11 @@ jobs:
       matrix:
         include: ${{ fromJSON(inputs.matrix)['windows'] }}
     steps:
-      - uses: actions/setup-python@v5
+
+      - name: Setup Python ${{ inputs.ci-python-version }}
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: ${{ inputs.ci-python-version }}
 
       - name: "Throttle Builds"
         shell: bash
@@ -1025,11 +1078,6 @@ jobs:
       - name: Install System Dependencies
         run: |
           echo true
-
-      - name: Setup Python ${{ inputs.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: "${{ inputs.python-version }}"
 
       - name: Install Nox
         run: |
@@ -1066,7 +1114,7 @@ jobs:
 
       - name: Run Changed Tests
         id: run-fast-changed-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
@@ -1094,7 +1142,7 @@ jobs:
 
       - name: Run Fast Tests
         id: run-fast-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
@@ -1121,7 +1169,7 @@ jobs:
 
       - name: Run Slow Tests
         id: run-slow-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
@@ -1148,7 +1196,7 @@ jobs:
 
       - name: Run Core Tests
         id: run-core-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
@@ -1175,7 +1223,7 @@ jobs:
 
       - name: Run Flaky Tests
         id: run-flaky-tests
-        if: ${{ fromJSON(inputs.testrun)['selected_tests']['flaky'] }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['selected_tests']['flaky'] }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
@@ -1202,7 +1250,7 @@ jobs:
 
       - name: Run Full Tests
         id: run-full-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
+        if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] == 'full' }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
@@ -1228,11 +1276,6 @@ jobs:
           --slow-tests --core-tests -k "win" --test-group-count=${{ matrix.test-group-count || 1 }} --test-group=${{ matrix.test-group || 1 }}
 
 
-      - name: Combine Coverage Reports
-        if: always() && inputs.skip-code-coverage == false
-        run: |
-          nox --force-color -e combine-coverage
-
       - name: Prepare Test Run Artifacts
         id: download-artifacts-from-vm
         if: always()
@@ -1241,17 +1284,26 @@ jobs:
           # Delete the salt onedir, we won't need it anymore and it will prevent
           # from it showing in the tree command below
           rm -rf artifacts/salt*
-          if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
-            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
-          fi
+
+      - name: Combine Code Coverage
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
+        run: |
+          nox --force-color -e combine-coverage
+
+      - name: Rename Coverage Artifact
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
+        run: |
+          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
+
 
       - name: Upload Code Coverage Test Run Artifacts
-        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        if: ${{ !cancelled() && !inputs.skip-code-coverage }}
         uses: actions/upload-artifact@v4
         with:
-          name: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}
+          name: coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
           path: |
-            artifacts/coverage/
+            artifacts/coverage/.coverage.${{ matrix.slug }}-${{ inputs.nox-session }}-${{ matrix.transport }}-${{ matrix.tests-chunk }}-${{ matrix.test-group || 1 }}-${{ env.TIMESTAMP }}-${{ matrix.fips && 'fips' || 'std' }}-${{ github.run_attempt }}
+
           include-hidden-files: true
 
       - name: Upload JUnit XML Test Run Artifacts
@@ -1295,7 +1347,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: "${{ inputs.ci-python-version }}"
 
       - name: "Throttle Builds"
         shell: bash
@@ -1320,68 +1372,16 @@ jobs:
           separate-directories: false
           delete-merged: true
 
-      - name: Merge Code Coverage Test Run Artifacts
-        if: ${{ inputs.skip-code-coverage == false }}
-        continue-on-error: true
-        uses: actions/upload-artifact/merge@v4
-        with:
-          name: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}
-          pattern: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}-*
-          separate-directories: false
-          delete-merged: true
-
-      - name: Download Code Coverage Test Run Artifacts
-        uses: actions/download-artifact@v4
-        if: ${{ inputs.skip-code-coverage == false }}
-        id: download-coverage-artifacts
-        with:
-          path: artifacts/coverage/
-          pattern: testrun-coverage-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}*
-          merge-multiple: true
-
       - name: Show Downloaded Test Run Artifacts
         if: ${{ inputs.skip-code-coverage == false }}
         run: |
           tree -a artifacts
 
-      - name: Setup Python ${{ inputs.python-version }}
+      - name: Setup Python ${{ inputs.ci-python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "${{ inputs.python-version }}"
+          python-version: "${{ inputs.ci-python-version }}"
 
       - name: Install Nox
         run: |
           python3 -m pip install 'nox==${{ inputs.nox-version }}'
-
-      - name: Create XML Coverage Reports
-        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success' && job.status != 'cancelled'
-        run: |
-          nox --force-color -e create-xml-coverage-reports
-          mv artifacts/coverage/salt.xml artifacts/coverage/salt..${{ matrix.slug }}..${{ inputs.nox-session }}.xml
-          mv artifacts/coverage/tests.xml artifacts/coverage/tests..${{ matrix.slug }}..${{ inputs.nox-session }}.xml
-
-      - name: Report Salt Code Coverage
-        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
-        continue-on-error: true
-        run: |
-          nox --force-color -e report-coverage -- salt
-
-      - name: Report Combined Code Coverage
-        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
-        continue-on-error: true
-        run: |
-          nox --force-color -e report-coverage
-
-      - name: Rename Code Coverage DB
-        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
-        continue-on-error: true
-        run: |
-          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}.${{ inputs.nox-session }}
-
-      - name: Upload Code Coverage DB
-        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
-        uses: actions/upload-artifact@v4
-        with:
-          name: all-testrun-coverage-artifacts-${{ matrix.slug }}.${{ inputs.nox-session }}
-          path: artifacts/coverage
-          include-hidden-files: true

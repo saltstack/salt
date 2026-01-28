@@ -11,6 +11,7 @@ import shlex
 import time
 import uuid
 import warnings
+from collections import OrderedDict
 from collections.abc import Hashable
 from functools import wraps
 from xml.dom import minidom
@@ -30,7 +31,6 @@ import salt.utils.url
 import salt.utils.yaml
 from salt.exceptions import TemplateError
 from salt.utils.decorators.jinja import jinja_filter, jinja_global, jinja_test
-from salt.utils.odict import OrderedDict
 from salt.utils.versions import Version
 
 try:
@@ -468,6 +468,9 @@ def regex_search(txt, rgx, ignorecase=False, multiline=False):
     obj = re.search(rgx, txt, flag)
     if not obj:
         return
+    # Handle regular expressions which do not not use grouping
+    if obj and not obj.groups():
+        return (obj.group(),)
     return obj.groups()
 
 
@@ -495,6 +498,9 @@ def regex_match(txt, rgx, ignorecase=False, multiline=False):
     obj = re.match(rgx, txt, flag)
     if not obj:
         return
+    # Handle regular expressions which do not use grouping
+    if obj and not obj.groups():
+        return (obj.group(),)
     return obj.groups()
 
 

@@ -2,7 +2,6 @@
 <%- set prepare_workflow_salt_version_input = "${{ inputs.salt-version }}" %>
 <%- set prepare_workflow_skip_test_suite = "${{ inputs.skip-salt-test-suite && ' --skip-tests' || '' }}" %>
 <%- set prepare_workflow_skip_pkg_test_suite = "${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }}" %>
-<%- set prepare_workflow_skip_pkg_download_test_suite = "${{ inputs.skip-salt-pkg-download-test-suite && ' --skip-pkg-download-tests' || '' }}" %>
 <%- set gh_environment = "staging" %>
 <%- set prepare_actual_release = True %>
 <%- set skip_test_coverage_check = "true" %>
@@ -30,6 +29,10 @@ on:
         type: boolean
         default: false
         description: Sign Windows Packages
+      sign-rpm-packages:
+        type: boolean
+        default: false
+        description: Sign RPM Packages
       skip-test-pypi-publish:
         type: boolean
         default: false
@@ -42,10 +45,6 @@ on:
         type: boolean
         default: false
         description: Skip running the Salt packages test suite.
-      skip-salt-pkg-download-test-suite:
-        type: boolean
-        default: false
-        description: Skip running the Salt packages download test suite.
 
 <%- endblock on %>
 

@@ -14,12 +14,14 @@ import logging
 import multiprocessing
 import os
 import pathlib
+import re
 import shlex
 import shutil
 import stat
 import subprocess
 import time
 import weakref
+from collections import OrderedDict
 from datetime import datetime
 
 import tornado.ioloop
@@ -43,7 +45,6 @@ from salt.config import DEFAULT_HASH_TYPE
 from salt.config import DEFAULT_MASTER_OPTS as _DEFAULT_MASTER_OPTS
 from salt.exceptions import FileserverConfigError, GitLockError, get_error_message
 from salt.utils.event import tagify
-from salt.utils.odict import OrderedDict
 from salt.utils.platform import get_machine_identifier as _get_machine_identifier
 from salt.utils.versions import Version
 
@@ -119,6 +120,15 @@ try:
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
+        if "HOME" not in os.environ:
+            # Make sure $HOME env variable is set before importing pygit2 to prevent
+            # _pygit2.GitError: error loading known_hosts in some libgit2 versions.
+            # The internal "git_sysdir__dirs" from libgit2, is initializated
+            # when importing pygit2. The $HOME env must be present to allow libgit2
+            # guessing function to successfully set the homedir in the initializated
+            # libgit2 stack.
+            # https://github.com/saltstack/salt/issues/64121
+            os.environ["HOME"] = os.path.expanduser("~")
         import pygit2
     PYGIT2_VERSION = Version(pygit2.__version__)
     LIBGIT2_VERSION = Version(pygit2.LIBGIT2_VERSION)
@@ -213,7 +223,7 @@ def enforce_types(key, val):
     else:
         try:
             return expected(val)
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             log.error(
                 "Failed to enforce type for key=%s with val=%s, falling back "
                 "to a string",
@@ -2012,8 +2022,9 @@ class Pygit2(GitProvider):
         """
         # https://github.com/libgit2/pygit2/issues/339
         # https://github.com/libgit2/libgit2/issues/2122
-        home = os.path.expanduser("~")
-        pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
+        pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = (
+            os.path.expanduser("~")
+        )
         new = False
         if not os.listdir(self._cachedir):
             # Repo cachedir is empty, initialize a new repo there
@@ -2574,6 +2585,55 @@ class GitBase:
                 global_only,
             )
 
+    @classmethod
+    def split_name(cls, remote):
+        """
+        Given a string determine if it is a url or a name and url combination.
+
+        Examples:
+
+           None, "https://github.com/saltstack/salt.git" == split_name("https://github.com/saltstack/salt.git")
+
+           "__env__", "https://github.com/saltstack/salt.git" == split_name("__env__ https://github.com/saltstack/salt.git")
+        """
+        parts = remote.split(" ", 1)
+        if len(parts) == 1:
+            return None, remote
+        maybename, maybeurl = parts
+        if not salt.utils.verify.url(maybename):
+            return maybename, maybeurl
+        return None, remote
+
+    @classmethod
+    def remote_to_url(cls, remote):
+        """
+        Convert a remote to a URL
+
+        Remotes should be in url format with the exception of some ssh remotes
+        which can be in a `git@...` format. This method handles the special ssh
+        remote case by converting to `ssh://` style URLs.
+        """
+        pattern = r"^([^@:/]+)@([^:]+):(.+)$"
+        if match := re.match(pattern, remote):
+            user, host, path = match.groups()
+            if not path.startswith("/"):
+                path = f"/{path}"
+            url = f"ssh://{user}@{host}{path}"
+            return url
+        return remote
+
+    @classmethod
+    def validate_remote(cls, remote):
+        """
+        Validate a remote repository config.
+
+        """
+        _, remote = cls.split_name(remote)
+        url = cls.remote_to_url(remote)
+        if salt.utils.verify.url(url):
+            return True
+        return False
+
     def init_remotes(
         self,
         remotes,
@@ -2625,7 +2685,25 @@ class GitBase:
             per_remote_defaults[param] = enforce_types(key, self.opts[key])
 
         self.remotes = []
-        for remote in remotes:
+        # In case a tuple is passed.
+        remotes = list(remotes)
+        for remote in list(remotes):
+
+            if isinstance(remote, dict):
+                for key in list(remote):
+                    if not self.validate_remote(key):
+                        log.warning("Found bad url data %r", key)
+                        remote.pop(key)
+                        continue
+                # None of the remotes were valid
+                if not remote:
+                    remotes.remove(remote)
+            else:
+                if not self.validate_remote(remote):
+                    log.warning("Found bad url data %r", remote)
+                    remotes.remove(remote)
+                    continue
+
             repo_obj = self.git_providers[self.provider](
                 self.opts,
                 remote,
@@ -3243,14 +3321,19 @@ class GitFS(GitBase):
         if os.path.isabs(path):
             return fnd
 
-        dest = salt.utils.path.join(self.cache_root, "refs", tgt_env, path)
-        hashes_glob = salt.utils.path.join(
-            self.hash_cachedir, tgt_env, f"{path}.hash.*"
+        # dest = salt.utils.path.join(self.cache_root, "refs", tgt_env, path)
+        dest = salt.utils.verify.clean_join(
+            self.cache_root, "refs", tgt_env, path, subdir=True
         )
-        blobshadest = salt.utils.path.join(
-            self.hash_cachedir, tgt_env, f"{path}.hash.blob_sha1"
+        hashes_glob = salt.utils.verify.clean_join(
+            self.hash_cachedir, tgt_env, f"{path}.hash.*", subdir=True
         )
-        lk_fn = salt.utils.path.join(self.hash_cachedir, tgt_env, f"{path}.lk")
+        blobshadest = salt.utils.verify.clean_join(
+            self.hash_cachedir, tgt_env, f"{path}.hash.blob_sha1", subdir=True
+        )
+        lk_fn = salt.utils.verify.clean_join(
+            self.hash_cachedir, tgt_env, f"{path}.lk", subdir=True
+        )
         destdir = os.path.dirname(dest)
         hashdir = os.path.dirname(blobshadest)
         if not os.path.isdir(destdir):

@@ -21,6 +21,7 @@ import salt.utils.path
 import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import CommandExecutionError
+from salt.loader.context import NamedLoaderContext
 from salt.loader.dunder import (
     __context__,
     __file_client__,
@@ -39,7 +40,7 @@ def _auth():
     Return the auth object
     """
     if "auth" not in __context__:
-        __context__["auth"] = salt.crypt.SAuth(__opts__)
+        __context__["auth"] = salt.crypt.SAuth(__opts__.value())
     return __context__["auth"]
 
 
@@ -48,7 +49,7 @@ def _gather_pillar(pillarenv, pillar_override):
     Whenever a state run starts, gather the pillar data fresh
     """
     pillar = salt.pillar.get_pillar(
-        __opts__,
+        __opts__.value(),
         __grains__.value(),
         __opts__["id"],
         __opts__["saltenv"],
@@ -983,10 +984,14 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
         "id": __opts__["id"],
         "path": load_path_list,
         "size": os.path.getsize(path),
-        "tok": auth.gen_token(b"salt"),
     }
 
-    with salt.channel.client.ReqChannel.factory(__opts__) as channel:
+    if isinstance(__opts__, NamedLoaderContext):
+        opts = __opts__.value()
+    else:
+        opts = __opts__
+
+    with salt.channel.client.ReqChannel.factory(opts) as channel:
         with salt.utils.files.fopen(path, "rb") as fp_:
             init_send = False
             while True:

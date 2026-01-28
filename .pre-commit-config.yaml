@@ -435,7 +435,6 @@ repos:
           - --no-emit-index-url
           - requirements/static/pkg/windows.in
 
-
   # <---- Packaging Requirements -------------------------------------------------------------------------------------
 
   # ----- CI Requirements ------------------------------------------------------------------------------------------->
@@ -589,7 +588,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-crypto-3.13-requirements
         name: Linux CI Py3.13 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.12/linux-crypto\.txt))$
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.13/linux-crypto\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -847,7 +846,6 @@ repos:
           - --no-emit-index-url
           - requirements/static/ci/darwin.in
 
-
       - id: pip-tools-compile
         alias: compile-ci-darwin-crypto-3.9-requirements
         name: Darwin CI Py3.9 Crypto Requirements
@@ -1073,7 +1071,6 @@ repos:
           - --no-emit-index-url
           - requirements/static/ci/crypto.in
 
-
   # <---- CI Requirements --------------------------------------------------------------------------------------------
 
   # ----- Cloud CI Requirements ------------------------------------------------------------------------------------->
@@ -1219,7 +1216,6 @@ repos:
           - --include=requirements/zeromq.txt
           - --no-emit-index-url
           - requirements/static/ci/docs.in
-
 
   # <---- Doc CI Requirements ----------------------------------------------------------------------------------------
 
@@ -1368,6 +1364,7 @@ repos:
           - --platform=linux
           - --no-emit-index-url
           - requirements/static/ci/changelog.in
+
   # <---- Changelog --------------------------------------------------------------------------------------------------
 
   # ----- Tools ---------------------------------------------------------------------------------------------------->
@@ -1480,6 +1477,7 @@ repos:
           - -v
           - --py-version=3.13
           - requirements/static/ci/tools-virustotal.in
+
   # <---- Tools -----------------------------------------------------------------------------------------------------
 
   # ----- Code Formatting ------------------------------------------------------------------------------------------->
@@ -1496,6 +1494,8 @@ repos:
             salt/client/ssh/wrapper/pillar.py
             |
             salt/ext/.*\.py
+            |
+            .github/scripts/hash-files.py
           )$
 
   - repo: https://github.com/saltstack/pre-commit-remove-import-headers

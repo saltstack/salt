@@ -20,11 +20,10 @@ on:
         required: true
         type: string
         description: The nox version to install
-      python-version:
-        required: false
+      ci-python-version:
+        required: true
         type: string
         description: The python version to run tests with
-        default: "3.10"
       nox-session:
         required: false
         type: string
@@ -86,10 +85,10 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ inputs.python-version }}
+      - name: Set up Python ${{ inputs.ci-python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "${{ inputs.python-version }}"
+          python-version: "${{ inputs.ci-python-version }}"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -162,6 +161,7 @@ jobs:
           ${{ github.run_id }}_salt-test-pkg python3 -m nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
 
       - name: Run Package Tests
+        if: ${{ !cancelled() }}
         run: |
           docker exec \
           ${{ github.run_id }}_salt-test-pkg \
@@ -190,7 +190,7 @@ jobs:
           include-hidden-files: true
 
   test-macos:
-    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
+    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.version }}
     runs-on: ${{ matrix.runner }}
     if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['macos']) != '[]' }}
     timeout-minutes: 150  # 2 & 1/2 Hours - More than this and something is wrong (MacOS needs a little more time)
@@ -221,7 +221,7 @@ jobs:
 
       - name: Install System Dependencies
         run: |
-          brew install tree pkg-config mysql
+          brew install tree
 
       - name: List Packages
         run: |
@@ -240,10 +240,10 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
 
-      - name: Set up Python ${{ inputs.python-version }}
+      - name: Set up Python ${{ inputs.ci-python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "${{ inputs.python-version }}"
+          python-version: "${{ inputs.ci-python-version }}"
 
       - name: Install Nox
         run: |
@@ -268,6 +268,7 @@ jobs:
           sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
 
       - name: Run Package Tests
+        if: ${{ !cancelled() }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
@@ -317,7 +318,7 @@ jobs:
 
 
   test-windows:
-    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
+    name: ${{ matrix.display_name }} ${{ matrix.pkg_type }} ${{ matrix.tests-chunk }} ${{ matrix.version }}
     runs-on: ${{ matrix.slug }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
@@ -327,10 +328,10 @@ jobs:
         include: ${{ fromJSON(inputs.matrix)['windows'] }}
     steps:
 
-      - name: Set up Python ${{ inputs.python-version }}
+      - name: Set up Python ${{ inputs.ci-python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "${{ inputs.python-version }}"
+          python-version: "${{ inputs.ci-python-version }}"
 
       - name: "Throttle Builds"
         shell: bash
@@ -383,7 +384,6 @@ jobs:
 
       - name: List Important Directories
         run: |
-          dir d:/
           dir .
           dir artifacts/
           dir artifacts/pkg
@@ -409,6 +409,7 @@ jobs:
           nox --force-color -f noxfile.py -e "${{ inputs.nox-session }}-pkgs" -- '${{ matrix.tests-chunk }}' --log-cli-level=debug
 
       - name: Run Package Tests
+        if: ${{ !cancelled() }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
@@ -433,9 +434,6 @@ jobs:
           # Delete the salt onedir, we won't need it anymore and it will prevent
           # from it showing in the tree command below
           rm -rf artifacts/salt*
-          if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
-            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ matrix.slug }}.${{ inputs.nox-session }}.${{ matrix.transport }}.${{ matrix.tests-chunk }}
-          fi
 
       - name: Upload Test Run Log Artifacts
         if: always()

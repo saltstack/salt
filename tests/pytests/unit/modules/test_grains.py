@@ -1,5 +1,6 @@
 import copy
 import os
+from collections import OrderedDict
 
 import pytest
 import yaml
@@ -7,7 +8,6 @@ import yaml
 import salt.modules.grains as grainsmod
 import salt.utils.dictupdate as dictupdate
 from salt.exceptions import SaltException
-from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 

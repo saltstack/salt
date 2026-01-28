@@ -4,7 +4,14 @@
 ### {{ definitions[category]['name'] }}
 
 {% for text, values in sections[""][category].items() %}
-- {{ text }} {{ values|join(', ') }}
+{% set lines = text.split('\n') %}
+{% for line in lines %}
+{% if line.startswith('- ') %}
+{{ line | trim }} {{ values|join(', ') }}
+{% else %}
+- {{ line | trim }} {{ values|join(', ') }}
+{% endif %}
+{% endfor %}
 {% endfor %}
 
 {% endfor %}

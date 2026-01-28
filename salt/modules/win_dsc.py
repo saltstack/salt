@@ -59,7 +59,7 @@ def _pshell(cmd, cwd=None, json_depth=2, ignore_retcode=False):
     in json format and load that into python. Either return a dict or raise a
     CommandExecutionError.
     """
-    if "convertto-json" not in cmd.lower():
+    if "ConvertTo-Json" not in cmd.lower():
         cmd = f"{cmd} | ConvertTo-Json -Depth {json_depth}"
     log.debug("DSC: %s", cmd)
     results = __salt__["cmd.run_all"](
@@ -111,67 +111,75 @@ def run_config(
 
     Args:
 
-        path (str): The local path to the PowerShell script that contains the
-            DSC Configuration. Required.
+        path (str):
+            The local path to the PowerShell script that contains the DSC
+            Configuration. Required.
 
-        source (str): The path to the script on ``file_roots`` to cache at the
-            location specified by ``path``. The source file will be cached
-            locally and then executed. If source is not passed, the config
-            script located at ``path`` will be compiled. Optional.
+        source (:obj:`str`, optional):
+            The path to the script on ``file_roots`` to cache at the location
+            specified by ``path``. The source file will be cached locally and
+            then executed. If source is not passed, the config script located at
+            ``path`` will be compiled.
+            Default is ``None``.
 
-        config_name (str): The name of the Configuration within the script to
-            apply. If the script contains multiple configurations within the
-            file a ``config_name`` must be specified. If the ``config_name`` is
-            not specified, the name of the file will be used as the
-            ``config_name`` to run. Optional.
+        config_name (:obj:`str`, optional):
+            The name of the Configuration within the script to apply. If the
+            script contains multiple configurations within the file a
+            ``config_name`` must be specified. If the ``config_name`` is not
+            specified, the name of the file will be used as the ``config_name``
+            to run.
+            Default is ``None``.
 
-        config_data (str): Configuration data in the form of a hash table that
-            will be passed to the ``ConfigurationData`` parameter when the
-            ``config_name`` is compiled. This can be the path to a ``.psd1``
-            file containing the proper hash table or the PowerShell code to
-            create the hash table.
-
-            .. versionadded:: 2017.7.0
-
-        config_data_source (str): The path to the ``.psd1`` file on
-            ``file_roots`` to cache at the location specified by
-            ``config_data``. If this is specified, ``config_data`` must be a
-            local path instead of a hash table.
-
-            .. versionadded:: 2017.7.0
-
-        script_parameters (str): Any additional parameters expected by the
-            configuration script. These must be defined in the script itself.
-            Note that these are passed to the script (the outermost scope), and
-            not to the dsc configuration inside the script (the inner scope).
+        config_data (:obj:`str`, optional):
+            Configuration data in the form of a hash table that will be passed
+            to the ``ConfigurationData`` parameter when the ``config_name`` is
+            compiled. This can be the path to a ``.psd1`` file containing the
+            proper hash table or the PowerShell code to create the hash table.
+            Default is ``None``.
 
             .. versionadded:: 2017.7.0
 
-        salt_env (str): The salt environment to use when copying the source.
-            Default is 'base'
+        config_data_source (:obj:`str`, optional):
+            The path to the ``.psd1`` file on ``file_roots`` to cache at the
+            location specified by ``config_data``. If this is specified,
+            ``config_data`` must be a local path instead of a hash table.
+            Default is ``None``.
+
+            .. versionadded:: 2017.7.0
+
+        script_parameters (:obj:`str`, optional):
+            Any additional parameters expected by the configuration script.
+            These must be defined in the script itself. Note that these are
+            passed to the script (the outermost scope), and not to the dsc
+            configuration inside the script (the inner scope).
+            Default is ``None``.
+
+            .. versionadded:: 2017.7.0
+
+        salt_env (:obj:`str`, optional):
+            The salt environment to use when copying the source.
+            Default is ``base``.
 
     Returns:
-        bool: True if successfully compiled and applied, otherwise False
+        bool: ``True`` if successfully compiled and applied, otherwise ``False``
 
     CLI Example:
 
-    To compile a config from a script that already exists on the system:
+    .. code-block:: bash
+
+        # To compile a config from a script that already exists on the system
+        salt '*' dsc.run_config 'C:\\DSC\\WebsiteConfig.ps1'
+
 
     .. code-block:: bash
 
-        salt '*' dsc.run_config C:\\DSC\\WebsiteConfig.ps1
-
-    To cache a config script to the system from the master and compile it:
-
-    .. code-block:: bash
-
-        salt '*' dsc.run_config C:\\DSC\\WebsiteConfig.ps1 salt://dsc/configs/WebsiteConfig.ps1
-
-    To cache a config script to the system from the master and compile it, passing in `script_parameters`:
+        # To cache a config script to the system from the master and compile it
+        salt '*' dsc.run_config 'C:\\DSC\\WebsiteConfig.ps1' salt://dsc/configs/WebsiteConfig.ps1
 
     .. code-block:: bash
 
-        salt '*' dsc.run_config path=C:\\DSC\\WebsiteConfig.ps1 source=salt://dsc/configs/WebsiteConfig.ps1 script_parameters="-hostname 'my-computer' -ip '192.168.1.10' -DnsArray '192.168.1.3','192.168.1.4','1.1.1.1'"
+        # To cache a config script to the system from the master and compile it, passing in `script_parameters`:
+        salt '*' dsc.run_config path='C:\\DSC\\WebsiteConfig.ps1' source=salt://dsc/configs/WebsiteConfig.ps1 script_parameters='-hostname "my-computer" -ip "192.168.1.10" -DnsArray "192.168.1.3","192.168.1.4","1.1.1.1"'
     """
     ret = compile_config(
         path=path,
@@ -204,60 +212,69 @@ def compile_config(
 
     Args:
 
-        path (str): Path (local) to the script that will create the ``.mof``
+        path (str):
+            Path (local) to the script that will create the ``.mof``
             configuration file. If no source is passed, the file must exist
-            locally. Required.
+            locally.
 
-        source (str): Path to the script on ``file_roots`` to cache at the
-            location specified by ``path``. The source file will be cached
-            locally and then executed. If source is not passed, the config
-            script located at ``path`` will be compiled. Optional.
+        source (:obj:`str`, optional):
+            Path to the script on ``file_roots`` to cache at the location
+            specified by ``path``. The source file will be cached locally and
+            then executed. If source is not passed, the config script located at
+            ``path`` will be compiled.
+            Default is ``None``.
 
-        config_name (str): The name of the Configuration within the script to
-            apply. If the script contains multiple configurations within the
-            file a ``config_name`` must be specified. If the ``config_name`` is
-            not specified, the name of the file will be used as the
-            ``config_name`` to run. Optional.
+        config_name (:obj:`str`, optional):
+            The name of the Configuration within the script to apply. If the
+            script contains multiple configurations within the file a
+            ``config_name`` must be specified. If the ``config_name`` is not
+            specified, the name of the file will be used as the ``config_name``
+            to run.
+            Default is ``None``.
 
-        config_data (str): Configuration data in the form of a hash table that
-            will be passed to the ``ConfigurationData`` parameter when the
-            ``config_name`` is compiled. This can be the path to a ``.psd1``
-            file containing the proper hash table or the PowerShell code to
-            create the hash table.
-
-            .. versionadded:: 2017.7.0
-
-        config_data_source (str): The path to the ``.psd1`` file on
-            ``file_roots`` to cache at the location specified by
-            ``config_data``. If this is specified, ``config_data`` must be a
-            local path instead of a hash table.
+        config_data (:obj:`str`, optional):
+            Configuration data in the form of a hash table that will be passed
+            to the ``ConfigurationData`` parameter when the ``config_name`` is
+            compiled. This can be the path to a ``.psd1`` file containing the
+            proper hash table or the PowerShell code to create the hash table.
+            Default is ``None``.
 
             .. versionadded:: 2017.7.0
 
-        script_parameters (str): Any additional parameters expected by the
-            configuration script. These must be defined in the script itself.
+        config_data_source (:obj:`str`, optional):
+            The path to the ``.psd1`` file on ``file_roots`` to cache at the
+            location specified by ``config_data``. If this is specified,
+            ``config_data`` must be a local path instead of a hash table.
+            Default is ``None``.
 
             .. versionadded:: 2017.7.0
 
-        salt_env (str): The salt environment to use when copying the source.
-            Default is 'base'
+        script_parameters (:obj:`str`, optional):
+            Any additional parameters expected by the configuration script.
+            These must be defined in the script itself.
+            Default is ``None``.
+
+            .. versionadded:: 2017.7.0
+
+        salt_env (Optional[str]):
+        salt_env (Optional[str]):
+            The salt environment to use when copying the source.
+            Default is ``base``.
 
     Returns:
         dict: A dictionary containing the results of the compilation
 
     CLI Example:
 
-    To compile a config from a script that already exists on the system:
+    .. code-block:: bash
+
+        # To compile a config from a script that already exists on the system
+        salt '*' dsc.compile_config 'C:\\DSC\\WebsiteConfig.ps1'
 
     .. code-block:: bash
 
-        salt '*' dsc.compile_config C:\\DSC\\WebsiteConfig.ps1
-
-    To cache a config script to the system from the master and compile it:
-
-    .. code-block:: bash
-
-        salt '*' dsc.compile_config C:\\DSC\\WebsiteConfig.ps1 salt://dsc/configs/WebsiteConfig.ps1
+        # To cache a config script to the system from the master and compile it:
+        salt '*' dsc.compile_config 'C:\\DSC\\WebsiteConfig.ps1' salt://dsc/configs/WebsiteConfig.ps1
     """
     if source:
         log.info("DSC: Caching %s", source)
@@ -300,8 +317,7 @@ def compile_config(
     cmd.append(
         r"| Where-Object FullName -match '(?<!\.meta)\.mof$' "
         "| Select-Object -Property FullName, Extension, Exists, "
-        '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) '
-        "-Format g}}"
+        "@{Name='LastWriteTime';Expression={Get-Date ($_.LastWriteTime) -Format g}}"
     )
 
     cmd = " ".join(cmd)
@@ -325,7 +341,7 @@ def compile_config(
     cmd.append(
         r"| Where-Object FullName -match '(?<!\.meta)\.mof$' "
         "| Select-Object -Property FullName, Extension, Exists, "
-        '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) '
+        "@{Name='LastWriteTime';Expression={Get-Date ($_.LastWriteTime) "
         "-Format g}}"
     )
 
@@ -352,34 +368,36 @@ def apply_config(path, source=None, salt_env="base"):
 
     Args:
 
-        path (str): Local path to the directory that contains the .mof
-            configuration file to apply. Required.
+        path (str):
+            Local path to the directory that contains the .mof configuration
+            file to apply.
 
-        source (str): Path to the directory that contains the .mof file on the
+        source (:obj:`str`, optional):
+            Path to the directory that contains the .mof file on the
             ``file_roots``. The source directory will be copied to the path
             directory and then executed. If the path and source directories
             differ, the source directory will be applied. If source is not
-            passed, the config located at ``path`` will be applied. Optional.
+            passed, the config located at ``path`` will be applied.
+            Default is ``None``.
 
-        salt_env (str): The salt environment to use when copying your source.
-            Default is 'base'
+        salt_env (:obj:`str`, optional):
+            The salt environment to use when copying your source.
+            Default is ``base``.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
-    To apply a config that already exists on the system
+    .. code-block:: bash
+
+        # To apply a config that already exists on the system
+        salt '*' dsc.apply_config 'C:\\DSC\\WebSiteConfiguration'
 
     .. code-block:: bash
 
-        salt '*' dsc.apply_config C:\\DSC\\WebSiteConfiguration
-
-    To cache a configuration from the master and apply it:
-
-    .. code-block:: bash
-
-        salt '*' dsc.apply_config C:\\DSC\\WebSiteConfiguration salt://dsc/configs/WebSiteConfiguration
+        # To cache a configuration from the master and apply it
+        salt '*' dsc.apply_config 'C:\\DSC\\WebSiteConfiguration' salt://dsc/configs/WebSiteConfiguration
 
     """
     # If you're getting an error along the lines of "The client cannot connect
@@ -414,7 +432,7 @@ def apply_config(path, source=None, salt_env="base"):
 
     # Run the DSC Configuration
     # Putting quotes around the parameter protects against command injection
-    cmd = f'Start-DscConfiguration -Path "{config}" -Wait -Force'
+    cmd = f"Start-DscConfiguration -Path '{config}' -Wait -Force"
     _pshell(cmd)
 
     cmd = "$status = Get-DscConfigurationStatus; $status.Status"
@@ -482,7 +500,8 @@ def remove_config(reset=False):
     .. versionadded:: 2017.7.5
 
     Args:
-        reset (bool):
+
+        reset (:obj:`bool`, optional):
             Attempts to reset the DSC configuration by removing the following
             from ``C:\\Windows\\System32\\Configuration``:
 
@@ -490,7 +509,7 @@ def remove_config(reset=False):
             - File: DSCEngineCache.mof
             - Dir: ConfigurationStatus
 
-            Default is False
+            Default is ``False``.
 
             .. warning::
                 ``remove_config`` may fail to reset the DSC environment if any
@@ -499,7 +518,7 @@ def remove_config(reset=False):
                 successfully.
 
     Returns:
-        bool: True if successful
+        bool: ``True`` if successful
 
     Raises:
         CommandExecutionError: On failure
@@ -568,11 +587,11 @@ def restore_config():
     .. versionadded:: 2017.7.5
 
     .. note::
-        The current configuration will be come the previous configuration. If
+        The current configuration will become the previous configuration. If
         run a second time back-to-back it is like toggling between two configs.
 
     Returns:
-        bool: True if successfully restored
+        bool: ``True`` if successfully restored, otherwise ``False``
 
     Raises:
         CommandExecutionError: On failure
@@ -598,7 +617,7 @@ def test_config():
     Tests the current applied DSC Configuration
 
     Returns:
-        bool: True if successfully applied, otherwise False
+        bool: ``True`` if successfully applied, otherwise ``False``
 
     CLI Example:
 
@@ -635,7 +654,7 @@ def get_config_status():
     cmd = (
         "Get-DscConfigurationStatus | "
         "Select-Object -Property HostName, Status, MetaData, "
-        '@{Name="StartDate";Expression={Get-Date ($_.StartDate) -Format g}}, '
+        "@{Name='StartDate';Expression={Get-Date ($_.StartDate) -Format g}}, "
         "Type, Mode, RebootRequested, NumberofResources"
     )
     try:
@@ -683,66 +702,88 @@ def set_lcm_config(
     certificate_id=None,
     configuration_id=None,
     allow_module_overwrite=None,
-    debug_mode=False,
+    debug_mode=None,
     status_retention_days=None,
 ):
     """
     For detailed descriptions of the parameters see:
     https://msdn.microsoft.com/en-us/PowerShell/DSC/metaConfig
 
-    config_mode (str): How the LCM applies the configuration. Valid values
-        are:
+    Args:
 
-        - ApplyOnly
-        - ApplyAndMonitor
-        - ApplyAndAutoCorrect
+        config_mode (:obj:`str`, optional):
+            How the LCM applies the configuration. Valid values are:
 
-    config_mode_freq (int): How often, in minutes, the current configuration
-        is checked and applied. Ignored if config_mode is set to ApplyOnly.
-        Default is 15.
+            - ApplyOnly
+            - ApplyAndMonitor
+            - ApplyAndAutoCorrect
 
-    refresh_mode (str): How the LCM gets configurations. Valid values are:
+            Default is ``None``.
 
-        - Disabled
-        - Push
-        - Pull
+        config_mode_freq (:obj:`int`, optional):
+            How often, in minutes, the current configuration is checked and applied.
+            Ignored if config_mode is set to ``ApplyOnly``.
+            Default is 15.
 
-    refresh_freq (int): How often, in minutes, the LCM checks for updated
-        configurations. (pull mode only) Default is 30.
+        refresh_mode (:obj:`str`, optional):
+            How the LCM gets configurations. Valid values are:
 
-    reboot_if_needed (bool): Reboot the machine if needed after a
-        configuration is applied. Default is False.
+            - Disabled
+            - Push
+            - Pull
 
-    action_after_reboot (str): Action to take after reboot. Valid values
-        are:
+            Default is ``None``.
 
-        - ContinueConfiguration
-        - StopConfiguration
+        refresh_freq (:obj:`int`, optional):
+            How often, in minutes, the LCM checks for updated configurations (pull
+            mode only).
+            Default is 30.
 
-    certificate_id (guid): A GUID that specifies a certificate used to
-        access the configuration: (pull mode)
+        reboot_if_needed (:obj:`bool`, optional):
+            Reboot the machine if needed after a configuration is applied.
+            Default is ``False``.
 
-    configuration_id (guid): A GUID that identifies the config file to get
-        from a pull server. (pull mode)
+        action_after_reboot (:obj:`str`, optional):
+            Action to take after reboot. Valid values are:
 
-    allow_module_overwrite (bool): New configs are allowed to overwrite old
-        ones on the target node.
+            - ContinueConfiguration
+            - StopConfiguration
 
-    debug_mode (str): Sets the debug level. Valid values are:
+            Default is ``None``.
 
-        - None
-        - ForceModuleImport
-        - All
+        certificate_id (:obj:`guid`, optional):
+            A GUID that specifies a certificate used to access the configuration
+            (pull mode).
+            Default is ``None``.
 
-    status_retention_days (int): Number of days to keep status of the
-        current config.
+        configuration_id (:obj:`guid`, optional):
+            A GUID that identifies the config file to get from a pull server (pull
+            mode).
+            Default is ``None``.
 
-    .. note::
-        Either ``config_mode_freq`` or ``refresh_freq`` needs to be a
-        multiple of the other. See documentation on MSDN for more details.
+        allow_module_overwrite (:obj:`bool`, optional):
+            New configs are allowed to overwrite old ones on the target node.
+            Default is ``False``.
+
+        debug_mode (:obj:`str`, optional):
+            Sets the debug level. Valid values are:
+
+            - None
+            - ForceModuleImport
+            - All
+
+            Default is ``None``.
+
+        status_retention_days (:obj:`int`, optional):
+            Number of days to keep status of the current config.
+            Default is 10
+
+        .. note::
+            Either ``config_mode_freq`` or ``refresh_freq`` needs to be a
+            multiple of the other. See documentation on MSDN for more details.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -761,7 +802,7 @@ def set_lcm_config(
                 "or ApplyAndAutoCorrect. Passed {}".format(config_mode)
             )
             raise SaltInvocationError(error)
-        cmd += f'            ConfigurationMode = "{config_mode}";'
+        cmd += f"            ConfigurationMode = '{config_mode}';"
     if config_mode_freq:
         if not isinstance(config_mode_freq, int):
             error = "config_mode_freq must be an integer. Passed {}".format(
@@ -776,7 +817,7 @@ def set_lcm_config(
             raise SaltInvocationError(
                 "refresh_mode must be one of Disabled, Push, or Pull"
             )
-        cmd += f'            RefreshMode = "{refresh_mode}";'
+        cmd += f"            RefreshMode = '{refresh_mode}';"
     if refresh_freq:
         if not isinstance(refresh_freq, int):
             raise SaltInvocationError("refresh_freq must be an integer")
@@ -812,15 +853,14 @@ def set_lcm_config(
         else:
             allow_module_overwrite = "$false"
         cmd += f"            AllowModuleOverwrite = {allow_module_overwrite};"
-    if debug_mode is not False:
-        if debug_mode is None:
-            debug_mode = "None"
-        if debug_mode not in ("None", "ForceModuleImport", "All"):
-            raise SaltInvocationError(
-                "debug_mode must be one of None, ForceModuleImport, "
-                "ResourceScriptBreakAll, or All"
-            )
-        cmd += f'            DebugMode = "{debug_mode}";'
+    if debug_mode is None:
+        debug_mode = "None"
+    if debug_mode not in ("None", "ForceModuleImport", "All"):
+        raise SaltInvocationError(
+            "debug_mode must be one of None, ForceModuleImport, "
+            "ResourceScriptBreakAll, or All"
+        )
+    cmd += f'            DebugMode = "{debug_mode}";'
     if status_retention_days:
         if not isinstance(status_retention_days, int):
             raise SaltInvocationError("status_retention_days must be an integer")

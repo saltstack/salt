@@ -8,6 +8,7 @@ import threading
 
 import salt.exceptions
 import salt.utils.data
+import salt.utils.platform
 import salt.utils.stringutils
 
 
@@ -52,11 +53,12 @@ class TimedProc:
             self.process = subprocess.Popen(args, **kwargs)
         except (AttributeError, TypeError):
             if not kwargs.get("shell", False):
+                use_posix = not salt.utils.platform.is_windows()
                 if not isinstance(args, (list, tuple)):
                     try:
-                        args = shlex.split(args)
+                        args = shlex.split(args, posix=use_posix)
                     except AttributeError:
-                        args = shlex.split(str(args))
+                        args = shlex.split(str(args), posix=use_posix)
                 str_args = []
                 for arg in args:
                     if not isinstance(arg, str):
@@ -68,12 +70,6 @@ class TimedProc:
                 if not isinstance(args, (list, tuple, str)):
                     # Handle corner case where someone does a 'cmd.run 3'
                     args = str(args)
-            # Ensure that environment variables are strings
-            for key, val in kwargs.get("env", {}).items():
-                if not isinstance(val, str):
-                    kwargs["env"][key] = str(val)
-                if not isinstance(key, str):
-                    kwargs["env"][str(key)] = kwargs["env"].pop(key)
             args = salt.utils.data.decode(args)
             self.process = subprocess.Popen(args, **kwargs)
         self.command = args

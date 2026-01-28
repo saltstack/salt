@@ -8,6 +8,7 @@ import errno
 import glob
 import logging
 import os
+import pathlib
 import shutil
 import time
 
@@ -205,7 +206,10 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
         else:
             raise
     try:
-        with salt.utils.files.fopen(os.path.join(jid_dir, LOAD_P), "w+b") as wfh:
+        # When multiple Salt Syndic masters return, a race condition can occur when writing to this same file.
+        with salt.utils.atomicfile.atomic_open(
+            os.path.join(jid_dir, LOAD_P), "w+b"
+        ) as wfh:
             salt.payload.dump(clear_load, wfh)
     except OSError as exc:
         log.warning("Could not write job invocation cache file: %s", exc)
@@ -231,6 +235,8 @@ def save_minions(jid, minions, syndic_id=None):
     """
     Save/update the serialized list of minions for a given job
     """
+    import salt.utils.verify
+
     # Ensure we have a list for Python 3 compatibility
     minions = list(minions)
 
@@ -254,10 +260,20 @@ def save_minions(jid, minions, syndic_id=None):
         else:
             raise
 
-    if syndic_id is not None:
-        minions_path = os.path.join(jid_dir, SYNDIC_MINIONS_P.format(syndic_id))
-    else:
-        minions_path = os.path.join(jid_dir, MINIONS_P)
+    try:
+        if syndic_id is not None:
+            name = SYNDIC_MINIONS_P.format(syndic_id)
+        else:
+            name = MINIONS_P
+        minions_path = salt.utils.verify.clean_join(jid_dir, name)
+        target_name = pathlib.Path(minions_path).resolve().name
+        if name != target_name:
+            raise salt.exceptions.SaltValidationError(
+                f"Filenames do not match: {name} != {target_name}"
+            )
+    except salt.exceptions.SaltValidationError as exc:
+        log.error("Error %s", exc)
+        return
 
     try:
         if not os.path.exists(jid_dir):
@@ -265,7 +281,9 @@ def save_minions(jid, minions, syndic_id=None):
                 os.makedirs(jid_dir)
             except OSError:
                 pass
-        with salt.utils.files.fopen(minions_path, "w+b") as wfh:
+
+        # When multiple Salt Syndic masters return, a race condition can occur when writing to this same file.
+        with salt.utils.atomicfile.atomic_open(minions_path, "w+b") as wfh:
             salt.payload.dump(minions, wfh)
     except OSError as exc:
         log.error(
@@ -293,8 +311,9 @@ def get_load(jid):
             try:
                 ret = salt.payload.load(rfh)
                 break
-            except Exception as exc:  # pylint: disable=broad-except
-                if index == num_tries:
+            except Exception as e:  # pylint: disable=broad-except
+                exc = e
+                if index < num_tries:
                     time.sleep(0.25)
     else:
         log.critical("Failed to unpack %s", load_p)
@@ -309,7 +328,15 @@ def get_load(jid):
         log.debug("Reading minion list from %s", minions_path)
         try:
             with salt.utils.files.fopen(minions_path, "rb") as rfh:
-                all_minions.update(salt.payload.load(rfh))
+                minions_data = salt.payload.load(rfh)
+                if minions_data is not None:
+                    try:
+                        all_minions.update(minions_data)
+                    except (TypeError, ValueError) as e:
+                        log.warning(
+                            "Job cache file %s contains invalid minion data, skipping.",
+                            minions_path,
+                        )
         except OSError as exc:
             salt.utils.files.process_read_exception(exc, minions_path)
 

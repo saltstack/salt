@@ -487,8 +487,8 @@ they don't appear to be reflected, this is one option:
 
 ::
 
-   kill -INT $(pgrep salt-master)
-   kill -INT $(pgrep salt-minion)
+   kill -INT $(pgrep -f salt-master)
+   kill -INT $(pgrep -f salt-minion)
 
 If you'd rather not use ``kill``, you can have a couple of terminals
 open with your salt virtualenv activated and omit the ``--daemon``
@@ -539,7 +539,7 @@ Now you can run your tests:
 
 ::
 
-   python -m nox -e "test-3(coverage=False)" -- tests/unit/cli/test_batch.py
+   python -m nox -e "test-3(coverage=False)" -- tests/pytests/unit/cli/test_batch.py
 
 It's a good idea to install
 `espeak <https://github.com/espeak-ng/espeak-ng>`__ or use ``say`` on
@@ -548,7 +548,7 @@ this:
 
 ::
 
-   python -m nox -e "test-3(coverage=False)" -- tests/unit/cli/test_batch.py; espeak "Tests done, woohoo!"
+   python -m nox -e "test-3(coverage=False)" -- tests/pytests/unit/cli/test_batch.py; espeak "Tests done, woohoo!"
 
 That way you don't have to keep monitoring the actual test run.
 

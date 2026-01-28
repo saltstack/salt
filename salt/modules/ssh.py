@@ -625,6 +625,7 @@ def set_auth_key_from_file(
     config=".ssh/authorized_keys",
     saltenv="base",
     fingerprint_hash_type=None,
+    **kwargs,
 ):
     """
     Add a key to the authorized_keys file, using a file as the source.
@@ -648,13 +649,14 @@ def set_auth_key_from_file(
         return "fail"
     else:
         rval = ""
+        options = kwargs.get("options", None)
         for key in s_keys:
             rval += set_auth_key(
                 user,
                 key,
                 enc=s_keys[key]["enc"],
                 comment=s_keys[key]["comment"],
-                options=s_keys[key]["options"],
+                options=options or s_keys[key]["options"],
                 config=config,
                 cache_keys=list(s_keys.keys()),
                 fingerprint_hash_type=fingerprint_hash_type,
@@ -789,12 +791,11 @@ def _get_matched_host_line_numbers(lines, enc):
     number of known_hosts entries with encryption key type matching enc,
     one by one.
     """
-    enc = enc if enc else "rsa"
     for i, line in enumerate(lines):
         if i % 2 == 0:
             line_no = int(line.strip().split()[-1])
             line_enc = lines[i + 1].strip().split()[-2]
-            if line_enc != enc:
+            if enc is not None and line_enc != enc:
                 continue
             yield line_no
 
@@ -971,6 +972,8 @@ def check_known_host(
         port=port,
         fingerprint_hash_type=fingerprint_hash_type,
     )
+    if known_host_entries and "error" in known_host_entries:
+        return known_host_entries
     known_keys = [h["key"] for h in known_host_entries] if known_host_entries else []
     known_fingerprints = (
         [h["fingerprint"] for h in known_host_entries] if known_host_entries else []
@@ -1116,7 +1119,14 @@ def set_known_host(
         port=port,
         fingerprint_hash_type=fingerprint_hash_type,
     )
-    stored_keys = [h["key"] for h in stored_host_entries] if stored_host_entries else []
+    if stored_host_entries and "error" in stored_host_entries:
+        return stored_host_entries
+
+    stored_keys = (
+        [h["key"] for h in stored_host_entries if enc is None or h["enc"] == enc]
+        if stored_host_entries
+        else []
+    )
     stored_fingerprints = (
         [h["fingerprint"] for h in stored_host_entries] if stored_host_entries else []
     )
@@ -1165,9 +1175,8 @@ def set_known_host(
             }
 
         if check_required:
-            for key in known_keys:
-                if key in stored_keys:
-                    return {"status": "exists", "keys": stored_keys}
+            if set(known_keys) == set(stored_keys):
+                return {"status": "exists", "keys": stored_keys}
 
     full = _get_known_hosts_file(config=config, user=user)
 
