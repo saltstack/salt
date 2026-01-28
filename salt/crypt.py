@@ -1814,3 +1814,129 @@ class Crypticle:
                     return {}
                 self.serial = serial
         return payload
+
+
+class TLSAwareCrypticle(Crypticle):
+    """
+    Extension of Crypticle that can skip AES encryption when TLS is active.
+
+    This class provides the TLS encryption optimization feature. It maintains
+    backward compatibility by falling back to AES encryption when TLS
+    requirements are not met.
+    """
+
+    TLS_MARKER = b"tls_opt::"
+
+    def __init__(self, opts, key_string, key_size=192, serial=0):
+        super().__init__(opts, key_string, key_size, serial)
+        self.opts = opts
+
+    def dumps(self, obj, nonce=None, peer_cert=None, claimed_id=None):
+        """
+        Serialize and conditionally encrypt a python object.
+
+        If TLS optimization is enabled and all security requirements are met,
+        this will skip AES encryption and only serialize the object.
+
+        Args:
+            obj: Object to serialize
+            nonce: Optional nonce for verification
+            peer_cert: Peer's SSL certificate (DER format bytes)
+            claimed_id: The minion ID claimed in the message
+
+        Returns:
+            bytes: Encrypted or plaintext serialized data
+        """
+        import salt.transport.tls_util
+
+        # Check if we can skip AES encryption
+        if salt.transport.tls_util.can_skip_aes_encryption(
+            self.opts, peer_cert=peer_cert, claimed_id=claimed_id
+        ):
+            # TLS optimization active - skip AES encryption
+            log.debug("TLS optimization: skipping AES encryption for %s", claimed_id)
+            if nonce:
+                plaintext = (
+                    self.TLS_MARKER
+                    + self.PICKLE_PAD
+                    + nonce.encode()
+                    + salt.payload.dumps(obj)
+                )
+            else:
+                plaintext = self.TLS_MARKER + self.PICKLE_PAD + salt.payload.dumps(obj)
+            return plaintext
+        else:
+            # Fall back to standard AES encryption
+            return super().dumps(obj, nonce=nonce)
+
+    def loads(self, data, raw=False, nonce=None, peer_cert=None, claimed_id=None):
+        """
+        Conditionally decrypt and un-serialize a python object.
+
+        Detects whether the data was encrypted with AES or sent via TLS-only.
+
+        Args:
+            data: Data to decrypt and deserialize
+            raw: Whether to return raw deserialized data
+            nonce: Optional nonce for verification
+            peer_cert: Peer's SSL certificate (DER format bytes)
+            claimed_id: The minion ID claimed in the message
+
+        Returns:
+            Deserialized python object
+        """
+        import salt.transport.tls_util
+
+        # Check if data has TLS marker (was sent without AES)
+        if data.startswith(self.TLS_MARKER):
+            # Verify TLS optimization is valid for this connection
+            if not salt.transport.tls_util.can_skip_aes_encryption(
+                self.opts, peer_cert=peer_cert, claimed_id=claimed_id
+            ):
+                log.warning(
+                    "Received TLS-optimized message but TLS requirements not met. Rejecting."
+                )
+                return {}
+
+            log.debug("TLS optimization: skipping AES decryption for %s", claimed_id)
+            # Remove TLS marker
+            data = data[len(self.TLS_MARKER) :]
+
+            # Verify integrity marker
+            if not data.startswith(self.PICKLE_PAD):
+                return {}
+            data = data[len(self.PICKLE_PAD) :]
+
+            # Handle nonce if present
+            if nonce:
+                ret_nonce = data[:32].decode()
+                data = data[32:]
+                if ret_nonce != nonce:
+                    from salt.exceptions import SaltClientError
+
+                    raise SaltClientError(
+                        f"Nonce verification error {ret_nonce} {nonce}"
+                    )
+
+            # Deserialize payload
+            payload = salt.payload.loads(data, raw=raw)
+
+            # Handle serial number check
+            if isinstance(payload, dict):
+                if "serial" in payload:
+                    serial = payload.pop("serial")
+                    if serial <= self.serial:
+                        log.critical(
+                            "A message with an invalid serial was received.\n"
+                            "this serial: %d\n"
+                            "last serial: %d\n"
+                            "The minion will not honor this request.",
+                            serial,
+                            self.serial,
+                        )
+                        return {}
+                    self.serial = serial
+            return payload
+        else:
+            # Standard AES-encrypted message
+            return super().loads(data, raw=raw, nonce=nonce)

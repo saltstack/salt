@@ -520,19 +520,47 @@ def ssl_context(ssl_options, server_side=False):
     # Use create_default_context to start with what Python considers resonably
     # secure settings.
     context = ssl.create_default_context(purpose)
-    context.protocol = ssl_options.get("ssl_version", default_version)
-    if "certfile" in ssl_options:
-        context.load_cert_chain(
-            ssl_options["certfile"], ssl_options.get("keyfile", None)
-        )
-    if "cert_reqs" in ssl_options:
-        if ssl_options["cert_reqs"].upper() == "CERT_NONE":
-            # This may have been set automatically by PROTOCOL_TLS_CLIENT but is
-            # incompatible with CERT_NONE so we must manually clear it.
+    # Note: context.protocol is read-only in Python 3.10+
+    # The protocol is set via create_default_context using the purpose parameter
+    # If a specific ssl_version is provided, we would need to use SSLContext(protocol) instead
+    ssl_version = ssl_options.get("ssl_version")
+    if ssl_version and ssl_version != default_version:
+        # Create a new context with the specific protocol
+        context = ssl.SSLContext(ssl_version)
+        # Re-apply purpose-specific settings
+        if server_side:
             context.check_hostname = False
-        context.verify_mode = getattr(ssl.VerifyMode, ssl_options["cert_reqs"])
+            context.verify_mode = ssl.CERT_REQUIRED
+        elif server_side is not None:
+            context.check_hostname = True
+            context.verify_mode = ssl.CERT_REQUIRED
+    if "certfile" in ssl_options:
+        certfile = ssl_options["certfile"]
+        keyfile = ssl_options.get("keyfile", None)
+        log.debug("Loading SSL cert chain: certfile=%s, keyfile=%s", certfile, keyfile)
+        context.load_cert_chain(certfile, keyfile)
+    # Load CA certificates BEFORE setting cert_reqs to ensure proper validation
     if "ca_certs" in ssl_options:
         context.load_verify_locations(ssl_options["ca_certs"])
+    # Now set cert_reqs after CA is loaded
+    if "cert_reqs" in ssl_options:
+        cert_reqs = ssl_options["cert_reqs"]
+        # Handle both string and already-converted VerifyMode enum
+        if isinstance(cert_reqs, str):
+            if cert_reqs.upper() == "CERT_NONE":
+                # This may have been set automatically by PROTOCOL_TLS_CLIENT but is
+                # incompatible with CERT_NONE so we must manually clear it.
+                context.check_hostname = False
+            context.verify_mode = getattr(ssl.VerifyMode, cert_reqs)
+        else:
+            # Already converted to VerifyMode enum by _update_ssl_config
+            if cert_reqs == ssl.CERT_NONE:
+                context.check_hostname = False
+            context.verify_mode = cert_reqs
+    elif server_side:
+        # For CLIENT_AUTH (server side), default context has verify_mode=CERT_NONE
+        # If cert_reqs wasn't explicitly provided, set CERT_REQUIRED for server side
+        context.verify_mode = ssl.CERT_REQUIRED
     if "verify_locations" in ssl_options:
         for _ in ssl_options["verify_locations"]:
             if isinstance(_, dict):

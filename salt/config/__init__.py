@@ -932,6 +932,8 @@ VALID_OPTS = immutabletypes.freeze(
         # Note: to set enum arguments values like `cert_reqs` and `ssl_version` use constant names
         # without ssl module prefix: `CERT_REQUIRED` or `PROTOCOL_SSLv23`.
         "ssl": (dict, bool, type(None)),
+        # Disable redundant AES encryption when TLS is active with validated certificates
+        "disable_aes_with_tls": bool,
         # Controls how a multi-function job returns its data. If this is False,
         # it will return its data using a dictionary with the function name as
         # the key. This is compatible with legacy systems. If this is True, it
@@ -1325,6 +1327,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "proxy_port": 0,
         "minion_jid_queue_hwm": 100,
         "ssl": None,
+        "disable_aes_with_tls": False,
         "multifunc_ordered": False,
         "beacons_before_connect": False,
         "scheduler_before_connect": False,
@@ -1671,6 +1674,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "thin_saltext_allowlist": None,
         "thin_saltext_blocklist": [],
         "ssl": None,
+        "disable_aes_with_tls": False,
         "extmod_whitelist": {},
         "extmod_blacklist": {},
         "clean_dynamic_modules": True,
