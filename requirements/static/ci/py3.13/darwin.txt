@@ -116,7 +116,7 @@ docker==7.1.0 ; python_version >= "3.8"
     # via -r requirements/pytest.txt
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
-filelock==3.16.1
+filelock==3.20.3
     # via virtualenv
 flaky==3.8.1
     # via -r requirements/pytest.txt
