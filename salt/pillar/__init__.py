@@ -438,6 +438,11 @@ class PillarCache:
         else:
             self.saltenv = saltenv
 
+        if pillarenv is None:
+            self.pillarenv = "base"
+        else:
+            self.pillarenv = pillarenv
+
         # Determine caching backend
         self.cache = salt.utils.cache.CacheFactory.factory(
             self.opts["pillar_cache_backend"],
