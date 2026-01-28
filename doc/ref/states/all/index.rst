@@ -100,6 +100,7 @@ state modules
     service
     ssh_auth
     ssh_known_hosts
+    ssh_pki
     stateconf
     status
     sysctl
