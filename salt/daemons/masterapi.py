@@ -141,10 +141,7 @@ def clean_expired_tokens(opts):
     Clean expired tokens from the master
     """
     loadauth = salt.auth.LoadAuth(opts)
-    for tok in loadauth.list_tokens():
-        token_data = loadauth.get_tok(tok)
-        if "expire" not in token_data or token_data.get("expire", 0) < time.time():
-            loadauth.rm_token(tok)
+    loadauth.clean_expired_tokens()
 
 
 def clean_pub_auth(opts):
@@ -624,7 +621,7 @@ class RemoteFuncs:
         minions = _res["minions"]
         minion_side_acl = {}  # Cache minion-side ACL
         for minion in minions:
-            mine_data = self.cache.fetch(f"minions/{minion}", "mine")
+            mine_data = self.cache.fetch("mine", minion)
             if not isinstance(mine_data, dict):
                 continue
             for function in functions_allowed:
@@ -675,8 +672,8 @@ class RemoteFuncs:
         if self.opts.get("minion_data_cache", False) or self.opts.get(
             "enforce_mine_cache", False
         ):
-            cbank = "minions/{}".format(load["id"])
-            ckey = "mine"
+            ckey = load["id"]
+            cbank = "mine"
             new_data = load["data"]
             if not load.get("clear", False):
                 data = self.cache.fetch(cbank, ckey)
@@ -694,8 +691,8 @@ class RemoteFuncs:
         if self.opts.get("minion_data_cache", False) or self.opts.get(
             "enforce_mine_cache", False
         ):
-            cbank = "minions/{}".format(load["id"])
-            ckey = "mine"
+            cbank = "mine"
+            ckey = load["id"]
             try:
                 data = self.cache.fetch(cbank, ckey)
                 if not isinstance(data, dict):
@@ -716,7 +713,7 @@ class RemoteFuncs:
         if self.opts.get("minion_data_cache", False) or self.opts.get(
             "enforce_mine_cache", False
         ):
-            return self.cache.flush("minions/{}".format(load["id"]), "mine")
+            return self.cache.flush("mine", load["id"])
         return True
 
     def _file_recv(self, load):
@@ -789,11 +786,7 @@ class RemoteFuncs:
         )
         data = pillar.compile_pillar()
         if self.opts.get("minion_data_cache", False):
-            self.cache.store(
-                "minions/{}".format(load["id"]),
-                "data",
-                {"grains": load["grains"], "pillar": data},
-            )
+            self.cache.store("grains", load["id"], load["grains"])
             if self.opts.get("minion_data_cache_events") is True:
                 self.event.fire_event(
                     {"comment": "Minion data cache refresh"},
