@@ -11,6 +11,8 @@ import hashlib
 import logging
 import os
 import pathlib
+import random
+import string
 import time
 
 import tornado.ioloop
@@ -25,7 +27,13 @@ import salt.utils.event
 import salt.utils.minions
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.exceptions import SaltDeserializationError, UnsupportedAlgorithm
+import salt.utils.verify
+from salt.exceptions import (
+    InvalidKeyError,
+    SaltDeserializationError,
+    SaltValidationError,
+    UnsupportedAlgorithm,
+)
 from salt.utils.cache import CacheCli
 
 log = logging.getLogger(__name__)
@@ -1078,21 +1086,82 @@ class MasterPubServerChannel:
 
     @classmethod
     def factory(cls, opts, **kwargs):
+        _discover_event = kwargs.get("_discover_event", None)
         transport = salt.transport.ipc_publish_server("master", opts)
-        return cls(opts, transport)
+        return cls(opts, transport, _discover_event=_discover_event)
 
-    def __init__(self, opts, transport, presence_events=False):
+    def __init__(
+        self,
+        opts,
+        transport,
+        presence_events=False,
+        _discover_event=None,
+        _discover_token=None,
+    ):
         self.opts = opts
         self.transport = transport
         self.io_loop = tornado.ioloop.IOLoop.current()
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.peer_keys = {}
+        self.cluster_peers = self.opts["cluster_peers"]
+        self._discover_event = _discover_event
+        self._discover_token = _discover_token
+        self._discover_candidates = {}
+
+    def gen_token(self):
+        return "".join(random.choices(string.ascii_letters + string.digits, k=32))
+
+    def discover_peers(self):
+        # Get the master's public key path
+        path = os.path.join(self.opts["pki_dir"], f"{self.opts['id']}.pub")
+        with salt.utils.files.fopen(path, "r") as fp:
+            pub = fp.read()
+
+        # Discover configured peers (IPs/hostnames) that we haven't discovered yet
+        for peer in self.opts.get("cluster_peers", []):
+            log.error("Discover cluster from %s", peer)
+            # Generate unique token for each peer we're discovering
+            discover_token = self.gen_token()
+
+            # Store token to validate discover-reply
+            # Key by peer_id so we can validate the response came from who we asked
+            self._discover_candidates[peer] = {"token": discover_token}
+
+            tosign = salt.payload.package(
+                {
+                    "peer_id": self.opts["id"],
+                    "pub": pub,
+                    "token": discover_token,
+                }
+            )
+            key = salt.crypt.PrivateKeyString(self.private_key())
+            sig = key.sign(tosign)
+            data = {
+                "sig": sig,
+                "payload": tosign,
+            }
+            with salt.utils.event.get_master_event(
+                self.opts, self.opts["sock_dir"], listen=False
+            ) as event:
+                success = event.fire_event(
+                    data,
+                    salt.utils.event.tagify("discover", "peer", "cluster"),
+                    timeout=30000,  # 30 second timeout
+                )
+                if not success:
+                    log.error("Unable to send aes key event")
 
     def send_aes_key_event(self):
+        import traceback
+
+        log.warning("SEND AES KEY EVENT %s", "".join(traceback.format_stack()[-4:-1]))
         data = {"peer_id": self.opts["id"], "peers": {}}
-        for peer in self.opts.get("cluster_peers", []):
-            pub = self.master_key.fetch(f"peers/{peer}.pub")
-            if pub:
+        for peer in self.cluster_peers:
+            peer_pub = (
+                pathlib.Path(self.opts["cluster_pki_dir"]) / "peers" / f"{peer}.pub"
+            )
+            if peer_pub.exists():
+                pub = salt.crypt.PublicKey.from_file(peer_pub)
                 aes = salt.master.SMaster.secrets["aes"]["secret"].value
                 digest = salt.utils.stringutils.to_bytes(
                     hashlib.sha256(aes).hexdigest()
@@ -1102,7 +1171,8 @@ class MasterPubServerChannel:
                     "sig": self.master_key.master_key.encrypt(digest),
                 }
             else:
-                log.warning("Peer key missing %r", "peers/{peer}.pub")
+                log.warning("Peer key missing %r", peer_pub)
+                # request peer key
                 data["peers"][peer] = {}
         with salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
@@ -1119,11 +1189,13 @@ class MasterPubServerChannel:
         return {
             "opts": self.opts,
             "transport": self.transport,
+            "_discover_event": self._discover_event,
         }
 
     def __setstate__(self, state):
         self.opts = state["opts"]
         self.transport = state["transport"]
+        self._discover_event = state["_discover_event"]
 
     def close(self):
         self.transport.close()
@@ -1152,21 +1224,40 @@ class MasterPubServerChannel:
             )
             os.nice(self.opts["event_publisher_niceness"])
         self.io_loop = tornado.ioloop.IOLoop.current()
-        tcp_master_pool_port = self.opts["cluster_pool_port"]
+        # Re-initialize master_key in the daemon process
+        self.master_key = salt.crypt.MasterKeys(self.opts)
+        self.tcp_master_pool_port = self.opts["cluster_pool_port"]
         self.pushers = []
         self.auth_errors = {}
         for peer in self.opts.get("cluster_peers", []):
             pusher = salt.transport.tcp.PublishServer(
                 self.opts,
                 pull_host=peer,
-                pull_port=tcp_master_pool_port,
+                pull_port=self.tcp_master_pool_port,
             )
             self.auth_errors[peer] = collections.deque()
             self.pushers.append(pusher)
+
+        pki_dir = self.opts.get("cluster_pki_dir") or self.opts["pki_dir"]
+        for peerkey in pathlib.Path(pki_dir, "peers").glob("*"):
+            peer = peerkey.name[:-4]
+            # Skip creating a pusher for the local master
+            if peer == self.opts["id"]:
+                continue
+            if peer not in self.cluster_peers:
+                self.cluster_peers.append(peer)
+                pusher = salt.transport.tcp.PublishServer(
+                    self.opts,
+                    pull_host=peer,
+                    pull_port=self.tcp_master_pool_port,
+                )
+                self.auth_errors[peer] = collections.deque()
+                self.pushers.append(pusher)
+
         if self.opts.get("cluster_id", None):
             self.pool_puller = salt.transport.tcp.TCPPuller(
                 host=self.opts["interface"],
-                port=tcp_master_pool_port,
+                port=self.tcp_master_pool_port,
                 io_loop=self.io_loop,
                 payload_handler=self.handle_pool_publish,
             )
@@ -1179,6 +1270,12 @@ class MasterPubServerChannel:
                 io_loop=self.io_loop,
             )
         )
+
+        # Trigger peer discovery if we have configured peers
+        if self.opts.get("cluster_peers"):
+            # Schedule discovery to run shortly after event loop starts
+            self.io_loop.call_later(1.0, self.discover_peers)
+
         # run forever
         try:
             self.io_loop.start()
@@ -1187,14 +1284,665 @@ class MasterPubServerChannel:
         finally:
             self.close()
 
+    def private_key(self):
+        """
+        The public key string associated with this node.
+        """
+        # XXX Do not read every time
+        path = self.master_key.master_rsa_path
+        with salt.utils.files.fopen(path, "r") as fp:
+            return fp.read()
+
+    def public_key(self):
+        """
+        The public key string associated with this node.
+        """
+        # XXX Do not read every time
+        path = self.master_key.master_pub_path
+        with salt.utils.files.fopen(path, "r") as fp:
+            return fp.read()
+
+    def cluster_key(self):
+        """
+        The private key associated with this cluster.
+        """
+        # XXX Do not read every time
+        path = pathlib.Path(self.master_key.cluster_rsa_path)
+        if path.exists():
+            return path.read_text(encoding="utf-8")
+
+    def cluster_public_key(self):
+        """
+        The private key associated with this cluster.
+        """
+        # XXX Do not read every time
+        path = pathlib.Path(self.master_key.cluster_pub_path)
+        if path.exists():
+            return path.read_text(encoding="utf-8")
+
+    def pusher(self, peer, port=None):
+        if port is None:
+            port = self.tcp_master_pool_port
+        return salt.transport.tcp.PublishServer(
+            self.opts,
+            pull_host=peer,
+            pull_port=port,
+        )
+
     async def handle_pool_publish(self, payload):
         """
         Handle incoming events from cluster peer.
         """
         try:
             tag, data = salt.utils.event.SaltEvent.unpack(payload)
-            if tag.startswith("cluster/peer"):
+            log.debug("Incomming from peer %s %r", tag, data)
+            if tag.startswith("cluster/peer/join-notify"):
+                # Verify this is a properly signed notification
+                if "payload" not in data or "sig" not in data:
+                    log.error("Join-notify missing payload or signature")
+                    return
+
+                try:
+                    notify_data = salt.payload.loads(data["payload"])
+                except SaltDeserializationError as e:
+                    log.error("Failed to deserialize join-notify payload: %s", e)
+                    return
+
+                sender_id = notify_data.get("peer_id")
+                join_peer_id = notify_data.get("join_peer_id")
+
+                log.info(
+                    "Cluster join notify from %s for %s",
+                    sender_id,
+                    join_peer_id,
+                )
+
+                # Load sender's public key to verify signature
+                try:
+                    sender_pub_path = salt.utils.verify.clean_join(
+                        self.opts["cluster_pki_dir"],
+                        "peers",
+                        f"{sender_id}.pub",
+                        subdir=True,
+                    )
+                except (SaltValidationError, KeyError) as e:
+                    log.error(
+                        "Invalid sender peer_id in join-notify: %s: %s",
+                        sender_id,
+                        e,
+                    )
+                    return
+
+                sender_pub_path = pathlib.Path(sender_pub_path)
+                if not sender_pub_path.exists():
+                    log.error(
+                        "Join-notify from unknown peer (no public key): %s",
+                        sender_id,
+                    )
+                    return
+
+                # Verify the signature
+                try:
+                    sender_pub = salt.crypt.PublicKey.from_file(sender_pub_path)
+                    if not sender_pub.verify(data["payload"], data["sig"]):
+                        log.error(
+                            "Join-notify signature verification failed from %s",
+                            sender_id,
+                        )
+                        return
+                except (OSError, InvalidKeyError) as e:
+                    log.error(
+                        "Error loading sender public key for signature verification: %s",
+                        e,
+                    )
+                    return
+
+                # Signature verified - now we can trust the notification
+                # Use clean_join to validate and construct path safely
+                try:
+                    peer_pub_path = salt.utils.verify.clean_join(
+                        self.opts["cluster_pki_dir"],
+                        "peers",
+                        f"{join_peer_id}.pub",
+                        subdir=True,
+                    )
+                except (SaltValidationError, KeyError) as e:
+                    log.error(
+                        "Invalid join_peer_id in join-notify from %s: %s",
+                        sender_id,
+                        e,
+                    )
+                    return
+
+                with salt.utils.files.fopen(peer_pub_path, "w") as fp:
+                    fp.write(notify_data["pub"])
+            elif tag.startswith("cluster/peer/join-reply"):
+                # Verify this is a properly signed response
+                if "payload" not in data or "sig" not in data:
+                    log.error("Join-reply missing payload or signature")
+                    return
+
+                try:
+                    payload = salt.payload.loads(data["payload"])
+                except SaltDeserializationError as e:
+                    log.error("Failed to deserialize join-reply payload: %s", e)
+                    return
+
+                # Verify the peer_id matches who we're expecting (bootstrap peer)
+                if data["peer_id"] not in self.cluster_peers:
+                    log.error("Join-reply from unexpected peer: %s", data["peer_id"])
+                    return
+
+                # Load the bootstrap peer's public key (saved during discover-reply)
+                bootstrap_pub_path = (
+                    pathlib.Path(self.opts["cluster_pki_dir"])
+                    / "peers"
+                    / f"{data['peer_id']}.pub"
+                )
+
+                if not bootstrap_pub_path.exists():
+                    log.error(
+                        "Cannot verify join-reply: bootstrap peer key not found: %s",
+                        bootstrap_pub_path,
+                    )
+                    return
+
+                # Verify the signature
+                try:
+                    bootstrap_pub = salt.crypt.PublicKey.from_file(bootstrap_pub_path)
+                    if not bootstrap_pub.verify(data["payload"], data["sig"]):
+                        log.error(
+                            "Join-reply signature verification failed from %s",
+                            data["peer_id"],
+                        )
+                        return
+                except (OSError, InvalidKeyError) as e:
+                    log.error(
+                        "Error loading bootstrap public key for signature verification: %s",
+                        e,
+                    )
+                    return
+
+                # Verify the return token matches what we sent
+                if payload.get("return_token") != self._discover_token:
+                    log.error(
+                        "Join-reply token mismatch: expected %s, got %s",
+                        self._discover_token,
+                        payload.get("return_token"),
+                    )
+                    return
+
+                log.info("Join-reply signature verified from %s", data["peer_id"])
+
+                # Decrypt and validate the cluster key
+                try:
+                    cluster_key_encrypted = payload.get("cluster_key")
+                    if not cluster_key_encrypted:
+                        log.error("Join-reply missing cluster_key")
+                        return
+
+                    # Decrypt using our private key
+                    our_private_key = salt.crypt.PrivateKey(
+                        self.master_key.master_rsa_path
+                    )
+                    cluster_key_bytes = our_private_key.decrypt(cluster_key_encrypted)
+
+                    # Verify token salting
+                    expected_prefix = self._discover_token.encode()
+                    if not cluster_key_bytes.startswith(expected_prefix):
+                        log.error("Join-reply cluster_key token salt mismatch")
+                        return
+
+                    # Extract the actual cluster key (remove token prefix)
+                    cluster_key_pem = cluster_key_bytes[len(expected_prefix) :].decode()
+
+                    # Load and validate it's a valid private key
+                    cluster_key_obj = salt.crypt.PrivateKeyString(cluster_key_pem)
+
+                except (OSError, InvalidKeyError, ValueError, UnicodeDecodeError) as e:
+                    log.error("Error decrypting/validating cluster key: %s", e)
+                    return
+
+                # Write the verified cluster key
+                cluster_key_obj.write_private(self.opts["cluster_pki_dir"], "cluster")
+                cluster_key_obj.write_public(self.opts["cluster_pki_dir"], "cluster")
+
+                # Process peer keys from verified payload
+                for peer in payload.get("peers", {}):
+                    try:
+                        peer_pub_path = salt.utils.verify.clean_join(
+                            self.opts["cluster_pki_dir"],
+                            "peers",
+                            f"{peer}.pub",
+                            subdir=True,
+                        )
+                    except SaltValidationError as e:
+                        log.error("Invalid peer_id in join-reply %s: %s", peer, e)
+                        continue
+                    log.info("Installing peer key: %s", peer)
+                    pathlib.Path(peer_pub_path).write_text(
+                        payload["peers"][peer], encoding="utf-8"
+                    )
+
+                # Process minion keys from verified payload
+                allowed_kinds = [
+                    "minions",
+                    "minions_autosign",
+                    "minions_denied",
+                    "minions_pre",
+                    "minions_rejected",
+                ]
+                for kind in payload.get("minions", {}):
+                    # Validate kind is an expected directory
+                    if kind not in allowed_kinds:
+                        log.error("Invalid minion key type in join-reply: %s", kind)
+                        continue
+
+                    try:
+                        kind_path = salt.utils.verify.clean_join(
+                            self.opts["cluster_pki_dir"],
+                            kind,
+                            subdir=True,
+                        )
+                    except SaltValidationError as e:
+                        log.error("Invalid kind path in join-reply %s: %s", kind, e)
+                        continue
+
+                    kind_path_obj = pathlib.Path(kind_path)
+                    if not kind_path_obj.exists():
+                        kind_path_obj.mkdir(parents=True, exist_ok=True)
+
+                    # Remove keys not in the cluster
+                    for minion_path in kind_path_obj.glob("*"):
+                        if minion_path.name not in payload["minions"][kind]:
+                            log.info(
+                                "Removing stale minion key: %s/%s",
+                                kind,
+                                minion_path.name,
+                            )
+                            minion_path.unlink()
+
+                    # Install keys from cluster
+                    for minion in payload["minions"][kind]:
+                        try:
+                            minion_pub_path = salt.utils.verify.clean_join(
+                                kind_path,
+                                minion,
+                                subdir=True,
+                            )
+                        except SaltValidationError as e:
+                            log.error(
+                                "Invalid minion_id in join-reply %s: %s", minion, e
+                            )
+                            continue
+                        log.info("Installing minion key: %s/%s", kind, minion)
+                        pathlib.Path(minion_pub_path).write_text(
+                            payload["minions"][kind][minion], encoding="utf-8"
+                        )
+
+                # Signal completion
+                event = self._discover_event
+                self._discover_event = None
+                if event:
+                    event.set()
+            elif tag.startswith("cluster/peer/join"):
+
+                payload = salt.payload.loads(data["payload"])
+
+                # Verify we have a discovery candidate for this peer
+                if payload["peer_id"] not in self._discover_candidates:
+                    log.warning(
+                        "Join request from unknown peer_id (not in candidates): %s",
+                        payload["peer_id"],
+                    )
+                    return
+
+                pub, token = self._discover_candidates[payload["peer_id"]]
+
+                if payload["pub"] != pub:
+                    log.warning("Cluster join, peer public keys do not match")
+                    return
+                if payload["return_token"] != token:
+                    log.warning("Cluster join, token does not not match")
+                    return
+                try:
+                    pubk = salt.crypt.PublicKeyString(payload["pub"])
+                    if not pubk.verify(data["payload"], data["sig"]):
+                        log.warning("Cluster join signature invalid.")
+                        return
+                except InvalidKeyError:
+                    log.warning(
+                        "Invalid public key or signature in cluster join payload"
+                    )
+                    return
+
+                log.info("Cluster join from %s", payload["peer_id"])
+                salted_secret = (
+                    salt.crypt.PrivateKey(self.master_key.master_rsa_path)
+                    .decrypt(payload["secret"])
+                    .decode()
+                )
+
+                secret = salted_secret[len(token) :]
+
+                if secret != self.opts["cluster_secret"]:
+                    log.warning("Cluster secret invalid.")
+                    return
+
+                log.info("Peer %s joined cluster", payload["peer_id"])
+                salted_aes = (
+                    salt.crypt.PrivateKey(self.master_key.master_rsa_path)
+                    .decrypt(payload["key"])
+                    .decode()
+                )
+
+                aes_key = salted_aes[len(token) :]
+
+                # Use clean_join to validate and construct path safely
+                try:
+                    peer_pub_path = salt.utils.verify.clean_join(
+                        self.opts["cluster_pki_dir"],
+                        "peers",
+                        f"{payload['peer_id']}.pub",
+                        subdir=True,
+                    )
+                except SaltValidationError as e:
+                    log.error(
+                        "Invalid peer_id in join request %s: %s", payload["peer_id"], e
+                    )
+                    return
+
+                with salt.utils.files.fopen(peer_pub_path, "w") as fp:
+                    fp.write(payload["pub"])
+
+                self.cluster_peers.append(payload["peer_id"])
+                self.pushers.append(self.pusher(payload["peer_id"]))
+                self.auth_errors[payload["peer_id"]] = collections.deque()
+
+                # Build and sign the join-notify payload
+                notify_payload = salt.payload.package(
+                    {
+                        "peer_id": self.opts["id"],
+                        "join_peer_id": payload["peer_id"],
+                        "pub": payload["pub"],
+                        "aes": aes_key,
+                    }
+                )
+                notify_sig = salt.crypt.PrivateKeyString(self.private_key()).sign(
+                    notify_payload
+                )
+
+                # Encrypt the signed payload with cluster AES key
+                crypticle = salt.crypt.Crypticle(
+                    self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
+                )
+
+                for pusher in self.pushers:
+                    # Send signed and encrypted join notification to all cluster members
+                    event_data = salt.utils.event.SaltEvent.pack(
+                        salt.utils.event.tagify("join-notify", "peer", "cluster"),
+                        crypticle.dumps(
+                            {
+                                "payload": notify_payload,
+                                "sig": notify_sig,
+                            }
+                        ),
+                    )
+
+                    # XXX gather tasks instead of looping
+                    await pusher.publish(event_data)
+
+                # XXX Kick off minoins key repair
+
+                self.send_aes_key_event()
+
+                # Load the peer's public key to encrypt the reply
+                peer_pub = salt.crypt.PublicKey.from_file(peer_pub_path)
+
+                # Prepare encrypted cluster key with token salt
+                cluster_key_salted = (
+                    payload["token"].encode() + self.cluster_key().encode()
+                )
+                cluster_key_encrypted = peer_pub.encrypt(cluster_key_salted)
+
+                # Prepare encrypted AES key with token salt
+                aes_salted = (
+                    payload["token"].encode()
+                    + salt.master.SMaster.secrets["aes"]["secret"].value
+                )
+                aes_encrypted = peer_pub.encrypt(aes_salted)
+
+                # Collect peer keys
+                peers_dict = {}
+                for key_path in (
+                    pathlib.Path(self.opts["cluster_pki_dir"]) / "peers"
+                ).glob("*.pub"):
+                    peer = key_path.name[:-4]
+                    if peer == payload["peer_id"]:
+                        continue
+                    log.debug("Adding peer key to join-reply: %s", peer)
+                    peers_dict[peer] = key_path.read_text()
+
+                # Collect minion keys
+                minions_dict = {}
+                kinds = [
+                    "minions",
+                    "minions_autosign",
+                    "minions_denied",
+                    "minions_pre",
+                    "minions_rejected",
+                ]
+                for kind in kinds:
+                    kind_path = pathlib.Path(self.opts["cluster_pki_dir"]) / kind
+                    if not kind_path.exists():
+                        continue
+                    minions_dict[kind] = {}
+                    for key_path in kind_path.glob("*"):
+                        minion = key_path.name
+                        log.debug(
+                            "Adding minion key to join-reply: %s/%s", kind, minion
+                        )
+                        minions_dict[kind][minion] = key_path.read_text()
+
+                # Build and sign the join-reply payload
+                tosign = salt.payload.package(
+                    {
+                        "return_token": payload["token"],
+                        "peer_id": self.opts["id"],
+                        "cluster_key": cluster_key_encrypted,
+                        "aes": aes_encrypted,
+                        "peers": peers_dict,
+                        "minions": minions_dict,
+                    }
+                )
+                sig = salt.crypt.PrivateKeyString(self.private_key()).sign(tosign)
+
+                event_data = salt.utils.event.SaltEvent.pack(
+                    salt.utils.event.tagify("join-reply", "peer", "cluster"),
+                    {
+                        "peer_id": self.opts["id"],
+                        "sig": sig,
+                        "payload": tosign,
+                    },
+                )
+                await self.pusher(payload["peer_id"]).publish(event_data)
+            elif tag.startswith("cluster/peer/discover-reply"):
+                payload = salt.payload.loads(data["payload"])
+
+                # Verify digest (using SHA-256 for security)
+                digest = hashlib.sha256(payload["cluster_pub"].encode()).hexdigest()
+
+                # Check if cluster_pub_signature is configured
+                cluster_pub_sig = self.opts.get("cluster_pub_signature", None)
+
+                if cluster_pub_sig:
+                    # Signature is configured - verify it matches
+                    if digest != cluster_pub_sig:
+                        log.error(
+                            "Cluster public key verification failed: "
+                            "expected %s, got %s",
+                            cluster_pub_sig,
+                            digest,
+                        )
+                        return
+                    log.info("Cluster public key signature verified: %s", digest)
+                else:
+                    # No signature configured - check if it's required
+                    if self.opts.get("cluster_pub_signature_required", True):
+                        log.error(
+                            "cluster_pub_signature is required for autoscale join "
+                            "(set cluster_pub_signature_required=False to allow TOFU). "
+                            "Refusing to join cluster with unknown key: %s",
+                            digest,
+                        )
+                        return
+                    else:
+                        # TOFU mode - trust on first use
+                        log.warning(
+                            "SECURITY: No cluster_pub_signature configured, "
+                            "trusting cluster public key on first use: %s "
+                            "(vulnerable to man-in-the-middle attacks)",
+                            digest,
+                        )
+
+                cluster_pub = salt.crypt.PublicKeyString(payload["cluster_pub"])
+                if not cluster_pub.verify(data["payload"], data["sig"]):
+                    log.warning("Invalid signature of cluster discover payload")
+                    return
+
+                # Validate return_token matches the token we sent to this peer
+                peer_id = payload.get("peer_id")
+                if peer_id not in self._discover_candidates:
+                    log.warning(
+                        "Discover-reply from unexpected peer: %s (not in candidates)",
+                        peer_id,
+                    )
+                    return
+
+                expected_token = self._discover_candidates[peer_id].get("token")
+                received_token = payload.get("return_token")
+
+                if received_token != expected_token:
+                    log.warning(
+                        "Invalid return_token in discover-reply from %s: %s != %s",
+                        peer_id,
+                        received_token,
+                        expected_token,
+                    )
+                    return
+
+                log.info("Cluster discover reply from %s", payload["peer_id"])
+                key = salt.crypt.PublicKeyString(payload["pub"])
+                self._discover_token = self.gen_token()
+                tosign = salt.payload.package(
+                    {
+                        "return_token": payload["token"],
+                        "token": self._discover_token,
+                        "peer_id": self.opts["id"],
+                        "secret": key.encrypt(
+                            payload["token"].encode()
+                            + self.opts["cluster_secret"].encode()
+                        ),
+                        "key": key.encrypt(
+                            payload["token"].encode()
+                            + salt.master.SMaster.secrets["aes"]["secret"].value
+                        ),
+                        "pub": self.public_key(),
+                    }
+                )
+                sig = salt.crypt.PrivateKeyString(self.private_key()).sign(tosign)
+
+                # Use clean_join to validate and construct path safely
+                try:
+                    peer_pub_path = salt.utils.verify.clean_join(
+                        self.opts["cluster_pki_dir"],
+                        "peers",
+                        f"{payload['peer_id']}.pub",
+                        subdir=True,
+                    )
+                except SaltValidationError as e:
+                    log.error(
+                        "Invalid peer_id in discover-reply %s: %s",
+                        payload["peer_id"],
+                        e,
+                    )
+                    return
+
+                self.cluster_peers.append(payload["peer_id"])
+                event_data = salt.utils.event.SaltEvent.pack(
+                    salt.utils.event.tagify("join", "peer", "cluster"),
+                    {"sig": sig, "payload": tosign},
+                )
+                with salt.utils.files.fopen(peer_pub_path, "w") as fp:
+                    fp.write(payload["pub"])
+                pusher = self.pusher(payload["peer_id"])
+                self.pushers.append(pusher)
+                await pusher.publish(event_data)
+            elif tag.startswith("cluster/peer/discover"):
+                payload = salt.payload.loads(data["payload"])
+
+                # Validate peer_id early (before storing in candidates)
+                # Note: We don't construct a path yet, but validate the ID is safe
+                try:
+                    # Use clean_join just for validation (we don't use the result yet)
+                    _ = salt.utils.verify.clean_join(
+                        self.opts["cluster_pki_dir"],
+                        "peers",
+                        f"{payload.get('peer_id', '')}.pub",
+                        subdir=True,
+                    )
+                except (SaltValidationError, KeyError) as e:
+                    log.error(
+                        "Invalid peer_id in discover %s: %s", payload.get("peer_id"), e
+                    )
+                    return
+
+                try:
+                    peer_key = salt.crypt.PublicKeyString(payload["pub"])
+                    if not peer_key.verify(data["payload"], data["sig"]):
+                        log.warning("Invalid signature of cluster discover payload")
+                        return
+                except InvalidKeyError:
+                    log.warning(
+                        "Invalid public key or signature in cluster discover payload"
+                    )
+                    return
+                log.info("Cluster discovery from %s", payload["peer_id"])
+                token = self.gen_token()
+                # Store this peer as a candidate.
+                # XXX Add timestamp so we can clean up old candidates
+                self._discover_candidates[payload["peer_id"]] = (payload["pub"], token)
+                tosign = salt.payload.package(
+                    {
+                        "return_token": payload["token"],
+                        "token": token,
+                        "peer_id": self.opts["id"],
+                        "pub": self.public_key(),
+                        "cluster_pub": self.cluster_public_key(),
+                    }
+                )
+                key = salt.crypt.PrivateKeyString(self.cluster_key())
+                sig = key.sign(tosign)
+                _ = salt.payload.package(
+                    {
+                        "sig": sig,
+                        "payload": tosign,
+                    }
+                )
+                event_data = salt.utils.event.SaltEvent.pack(
+                    salt.utils.event.tagify("discover-reply", "peer", "cluster"),
+                    {"sig": sig, "payload": tosign},
+                )
+                await self.pusher(payload["peer_id"]).publish(event_data)
+            elif tag.startswith("cluster/peer"):
                 peer = data["peer_id"]
+                if peer == self.opts["id"]:
+                    log.debug("Skip our own cluster peer event %s", tag)
+                    return
+                # Check if this peer has our AES key before processing
+                if self.opts["id"] not in data["peers"]:
+                    log.debug("Peer %s has not discovered us yet, skipping AES key event", peer)
+                    return
                 aes = data["peers"][self.opts["id"]]["aes"]
                 sig = data["peers"][self.opts["id"]]["sig"]
                 key_str = self.master_key.master_key.decrypt(
@@ -1208,7 +1956,7 @@ class MasterPubServerChannel:
                 if m_digest != digest:
                     log.error("Invalid aes signature from peer: %s", peer)
                     return
-                log.info("Received new key from peer %s", peer)
+                log.info("Received new AES key from peer %s", peer)
                 if peer in self.peer_keys:
                     if self.peer_keys[peer] != key_str:
                         self.peer_keys[peer] = key_str
@@ -1249,7 +1997,7 @@ class MasterPubServerChannel:
                 try:
                     event_data = self.extract_cluster_event(peer_id, data)
                 except salt.exceptions.AuthenticationError:
-                    self.auth_errors[peer_id].append((tag, data))
+                    self.auth_errors.setdefault(peer_id, collections.deque()).append((tag, data))
                 else:
                     await self.transport.publish_payload(
                         salt.utils.event.SaltEvent.pack(parsed_tag, event_data)
@@ -1277,6 +2025,7 @@ class MasterPubServerChannel:
 
     async def publish_payload(self, load, *args):
         tag, data = salt.utils.event.SaltEvent.unpack(load)
+        # log.warning("Event %s %s %r", len(self.pushers), tag, data)
         tasks = []
         if not tag.startswith("cluster/peer"):
             tasks = [
@@ -1284,9 +2033,17 @@ class MasterPubServerChannel:
                     self.transport.publish_payload(load), name=self.opts["id"]
                 )
             ]
+        else:
+            # Process cluster/peer/* events locally as well as forwarding to peers
+            tasks.append(
+                asyncio.create_task(
+                    self.handle_pool_publish(load), name="local"
+                )
+            )
         for pusher in self.pushers:
-            log.debug("Publish event to peer %s:%s", pusher.pull_host, pusher.pull_port)
+            log.info("Publish event to peer %s:%s", pusher.pull_host, pusher.pull_port)
             if tag.startswith("cluster/peer"):
+                # log.info("Send %s %r", tag, load)
                 tasks.append(
                     asyncio.create_task(pusher.publish(load), name=pusher.pull_host)
                 )
