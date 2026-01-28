@@ -163,7 +163,7 @@ dnspython==2.7.0
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
     #   python-etcd
-docker==7.1.0 ; python_version >= "3.11"
+docker==7.1.0 ; python_version >= "3.8"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/lint.in
@@ -456,7 +456,7 @@ pyjwt==2.9.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   twilio
-pylint==3.1.1 ; python_version >= "3.11"
+pylint==3.1.1
     # via
     #   -r requirements/static/ci/lint.in
     #   saltpylint
@@ -592,7 +592,7 @@ s3transfer==0.10.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   boto3
-saltpylint==2024.2.5 ; python_version >= "3.11"
+saltpylint==2024.2.5
     # via -r requirements/static/ci/lint.in
 scp==0.15.0
     # via

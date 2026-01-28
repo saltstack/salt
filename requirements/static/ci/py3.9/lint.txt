@@ -4,31 +4,61 @@
 #
 #    pip-compile --cert='' --client-cert='' --index-url='' --no-emit-index-url --output-file=requirements/static/ci/py3.9/lint.txt --pip-args='' requirements/static/ci/lint.in
 #
-astroid==2.3.3
+astroid==3.1.0
     # via pylint
+certifi==2023.7.22 ; python_version < "3.10"
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   requests
+charset-normalizer==3.2.0
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   requests
+dill==0.4.1
+    # via pylint
+docker==7.1.0 ; python_version >= "3.8"
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   -r requirements/static/ci/lint.in
+idna==3.7
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   requests
 isort==4.3.21
     # via pylint
-lazy-object-proxy==1.4.3
-    # via astroid
 mccabe==0.6.1
     # via pylint
-modernize==0.5
-    # via saltpylint
-pycodestyle==2.14.0
-    # via saltpylint
-pylint==2.4.4 ; python_version < "3.11"
+platformdirs==4.0.0
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   pylint
+pylint==3.1.1
     # via
     #   -r requirements/static/ci/lint.in
     #   saltpylint
-saltpylint==2023.8.3 ; python_version < "3.11"
-    # via -r requirements/static/ci/lint.in
-six==1.16.0
+requests==2.31.0 ; python_version < "3.10"
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
-    #   astroid
+    #   docker
+saltpylint==2024.2.5
+    # via -r requirements/static/ci/lint.in
 toml==0.10.2
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/lint.in
-wrapt==1.11.2
-    # via astroid
+tomli==2.0.1
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   pylint
+tomlkit==0.14.0
+    # via pylint
+typing-extensions==4.15.0
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   astroid
+    #   pylint
+urllib3==1.26.20 ; python_version < "3.10"
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   docker
+    #   requests
