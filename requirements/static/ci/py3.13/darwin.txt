@@ -287,7 +287,7 @@ psutil==6.1.0 ; python_version >= "3.10"
     #   pytest-system-statistics
 pyasn1-modules==0.4.1
     # via google-auth
-pyasn1==0.6.1
+pyasn1==0.6.2
     # via
     #   pyasn1-modules
     #   rsa
