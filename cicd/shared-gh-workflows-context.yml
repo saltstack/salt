@@ -3,6 +3,7 @@
 
 # Tool versions
 nox_version: "2022.8.7"
+
 python_version: "3.11.14"
 relenv_version: "0.22.2"
 

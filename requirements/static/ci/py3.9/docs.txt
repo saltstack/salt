@@ -36,7 +36,7 @@ idna==3.7
     #   requests
 imagesize==1.4.1
     # via sphinx
-importlib-metadata==8.7.0
+importlib-metadata==8.7.0 ; python_version < "3.11"
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   sphinx
@@ -87,7 +87,7 @@ more-itertools==9.1.0
     #   jaraco.text
 myst-docutils[linkify]==1.0.0
     # via -r requirements/static/ci/docs.in
-packaging==24.0
+packaging==24.0 ; python_version < "3.11"
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   sphinx

@@ -6,7 +6,7 @@
 #
 astroid==3.1.0
     # via pylint
-certifi==2023.07.22 ; python_version < "3.10"
+certifi==2023.7.22 ; python_version < "3.10"
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   requests
@@ -14,7 +14,7 @@ charset-normalizer==3.2.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   requests
-dill==0.3.8
+dill==0.4.1
     # via pylint
 docker==7.1.0 ; python_version >= "3.8"
     # via
@@ -32,7 +32,7 @@ platformdirs==4.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   pylint
-pylint==3.1.0
+pylint==3.1.1
     # via
     #   -r requirements/static/ci/lint.in
     #   saltpylint
@@ -50,9 +50,9 @@ tomli==2.0.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   pylint
-tomlkit==0.12.3
+tomlkit==0.14.0
     # via pylint
-typing-extensions==4.14.1
+typing-extensions==4.15.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   astroid

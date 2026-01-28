@@ -10,7 +10,7 @@ aiohappyeyeballs==2.6.1
     #   aiohttp
 aiohttp-retry==2.8.3
     # via twilio
-aiohttp==3.13.3
+aiohttp==3.13.3 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -24,7 +24,7 @@ aiosignal==1.4.0
     #   aiohttp
 ansible-core==2.19.2
     # via ansible
-ansible==12.0.0 ; python_version >= "3.10"
+ansible==12.0.0 ; python_version >= "3.11"
     # via -r requirements/static/ci/linux.in
 anyio==4.1.0
     # via httpcore
@@ -77,7 +77,7 @@ certifi==2024.7.4 ; python_version >= "3.10"
     #   requests
 certvalidator==0.11.1
     # via vcert
-cffi==2.0.0
+cffi==2.0.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -108,7 +108,7 @@ croniter==2.0.5 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -r requirements/base.txt
-cryptography==42.0.5 ; python_version < "3.13"
+cryptography==42.0.5 ; python_version >= "3.11" and python_version < "3.13"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -173,7 +173,7 @@ idna==3.7
     #   requests
     #   trustme
     #   yarl
-importlib-metadata==8.7.0
+importlib-metadata==8.7.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -284,7 +284,7 @@ networkx==3.1
     #   -r requirements/base.txt
 oscrypto==1.3.0
     # via certvalidator
-packaging==24.0
+packaging==24.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -344,13 +344,13 @@ pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and plat
     # via -r requirements/static/ci/common.in
 pyjwt==2.4.0
     # via twilio
-pymysql==1.1.1
+pymysql==1.1.1 ; python_version >= "3.11"
     # via -r requirements/static/ci/linux.in
 pynacl==1.5.0
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==24.0.0
+pyopenssl==24.0.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -447,7 +447,7 @@ redis-py-cluster==2.1.3
     # via -r requirements/static/ci/linux.in
 redis==3.5.3
     # via redis-py-cluster
-requests==2.32.5 ; python_version >= "3.10"
+requests==2.32.5 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -530,7 +530,7 @@ timelib==0.3.0 ; python_version >= "3.11"
     #   -r requirements/base.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.in
-tornado==6.5.4
+tornado==6.5.4 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -547,7 +547,7 @@ typing-extensions==4.14.1
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   aiosignal
     #   pytest-system-statistics
-urllib3==2.6.2 ; python_version >= "3.10"
+urllib3==2.6.3 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -557,7 +557,7 @@ urllib3==2.6.2 ; python_version >= "3.10"
     #   python-etcd
     #   requests
     #   responses
-vcert==0.7.4 ; sys_platform != "win32" and python_version < "3.13.0"
+vcert==0.9.1 ; sys_platform != "win32" and python_version < "3.13.0"
     # via -r requirements/static/ci/common.in
 virtualenv==20.24.7
     # via

@@ -32,7 +32,7 @@ jmespath==1.0.1
     #   botocore
 markdown-it-py==3.0.0
     # via rich
-markupsafe==3.0.2
+markupsafe==2.1.5
     # via jinja2
 mdurl==0.1.2
     # via markdown-it-py

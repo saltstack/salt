@@ -5,32 +5,23 @@
 #    pip-compile --cert='' --client-cert='' --index-url='' --no-emit-index-url --output-file=requirements/static/ci/py3.9/freebsd.txt --pip-args='' requirements/base.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/freebsd.in requirements/static/pkg/freebsd.in requirements/zeromq.txt
 #
 aiohappyeyeballs==2.6.1
-    # via
-    #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
-    #   aiohttp
+    # via aiohttp
 aiohttp==3.13.3
     # via
-    #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
-    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   etcd3-py
 aiosignal==1.4.0
-    # via
-    #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
-    #   aiohttp
+    # via aiohttp
 apache-libcloud==3.7.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 asn1crypto==1.5.1
     # via
     #   certvalidator
     #   oscrypto
-async-timeout==4.0.3
+async-timeout==5.0.1
+    # via aiohttp
+attrs==25.4.0
     # via
-    #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
-    #   aiohttp
-attrs==23.2.0
-    # via
-    #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   aiohttp
     #   jsonschema
     #   pytest-salt-factories
@@ -73,7 +64,6 @@ certvalidator==0.11.1
 cffi==2.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
-    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   cryptography
     #   napalm
@@ -101,7 +91,7 @@ croniter==2.0.5 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   -r requirements/base.txt
-cryptography==42.0.5 ; python_version < "3.13"
+cryptography==41.0.7 ; python_version < "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   -r requirements/base.txt
@@ -161,7 +151,7 @@ idna==3.7
     #   requests
     #   trustme
     #   yarl
-importlib-metadata==8.7.0
+importlib-metadata==8.7.0 ; python_version < "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   -r requirements/base.txt
@@ -259,9 +249,8 @@ msgpack==1.0.7 ; python_version < "3.13"
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.0.4
+multidict==6.7.1
     # via
-    #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   aiohttp
     #   yarl
 napalm==4.1.0 ; sys_platform != "win32" and python_version < "3.10"
@@ -288,7 +277,7 @@ ntc-templates==4.0.1
     # via netmiko
 oscrypto==1.3.0
     # via certvalidator
-packaging==24.0
+packaging==24.0 ; python_version < "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   -r requirements/base.txt
@@ -313,9 +302,8 @@ portend==3.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   cherrypy
-propcache==0.3.2
+propcache==0.4.1
     # via
-    #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   aiohttp
     #   yarl
 psutil==5.9.6 ; python_version <= "3.9"
@@ -349,7 +337,7 @@ pynacl==1.5.0
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==24.0.0
+pyopenssl==24.0.0 ; python_version < "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   -r requirements/base.txt
@@ -514,7 +502,7 @@ toml==0.10.2
     # via -r requirements/static/ci/common.in
 tomli==2.0.1
     # via pytest
-tornado==6.5.4
+tornado==6.5.4 ; python_version < "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   -r requirements/base.txt
@@ -530,10 +518,10 @@ ttp==0.9.5
     #   ttp-templates
 types-pyyaml==6.0.1
     # via responses
-typing-extensions==4.14.1
+typing-extensions==4.15.0
     # via
-    #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   aiosignal
+    #   multidict
     #   napalm
     #   pytest-shell-utilities
     #   pytest-system-statistics
@@ -572,10 +560,8 @@ yamllint==1.32.0
     # via -r requirements/static/ci/freebsd.in
 yamlordereddictloader==0.4.0
     # via junos-eznc
-yarl==1.20.1
-    # via
-    #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
-    #   aiohttp
+yarl==1.22.0
+    # via aiohttp
 zc.lockfile==3.0.post1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt

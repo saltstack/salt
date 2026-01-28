@@ -13,7 +13,7 @@ aiohttp-retry==2.8.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   twilio
-aiohttp==3.13.3
+aiohttp==3.13.3 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -31,7 +31,7 @@ ansible-core==2.17.5
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   ansible
-ansible==10.5.0 ; python_version >= "3.10"
+ansible==10.5.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/linux.in
@@ -95,7 +95,7 @@ certifi==2024.8.30 ; python_version >= "3.10"
     #   httpx
     #   kubernetes
     #   requests
-cffi==2.0.0
+cffi==2.0.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -231,7 +231,7 @@ idna==3.10
     #   httpx
     #   requests
     #   yarl
-importlib-metadata==8.7.0
+importlib-metadata==8.7.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -380,7 +380,7 @@ networkx==3.1
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
-packaging==24.0
+packaging==24.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -460,7 +460,7 @@ pylint==3.1.1
     # via
     #   -r requirements/static/ci/lint.in
     #   saltpylint
-pymysql==1.1.1
+pymysql==1.1.1 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/linux.in
@@ -469,7 +469,7 @@ pynacl==1.5.0
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==24.2.1
+pyopenssl==24.2.1 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -549,7 +549,7 @@ referencing==0.35.1
     #   -c requirements/static/ci/py3.13/linux.txt
     #   jsonschema
     #   jsonschema-specifications
-requests==2.32.5 ; python_version >= "3.10"
+requests==2.32.5 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -670,7 +670,7 @@ toml==0.10.2
     #   -r requirements/static/ci/lint.in
 tomlkit==0.13.2
     # via pylint
-tornado==6.5.4
+tornado==6.5.4 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -683,7 +683,7 @@ twilio==9.3.4
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/linux.in
-urllib3==2.6.2 ; python_version >= "3.10"
+urllib3==2.6.3 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
     #   -c requirements/static/ci/py3.13/linux.txt
