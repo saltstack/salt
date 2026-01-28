@@ -30,7 +30,7 @@ def _test_generated_sls_context(tmplpath, sls, **expected):
         tmplpath = f"C:{tmplpath}"
     expected["tplpath"] = tmplpath
     actual = generate_sls_context(tmplpath, sls)
-    assert {key: actual[key] for key in expected if key in actual} == actual
+    assert {key: actual[key] for key in expected if key in actual} == expected
 
 
 def test_sls_context_call(tmp_path):
@@ -81,6 +81,21 @@ def test_generate_sls_context__one_level_init_implicit():
     _test_generated_sls_context(
         "/tmp/foo/init.sls",
         "foo",
+        tplfile="foo/init.sls",
+        tpldir="foo",
+        tpldot="foo",
+        slsdotpath="foo",
+        slscolonpath="foo",
+        sls_path="foo",
+        slspath="foo",
+    )
+
+
+def test_generate_sls_context__one_level_init_implicit_with_trailing_dot():
+    """generate_sls_context - Basic one level with implicit init.sls with trailing dot"""
+    _test_generated_sls_context(
+        "/tmp/foo/init.sls",
+        "foo.",
         tplfile="foo/init.sls",
         tpldir="foo",
         tpldot="foo",
