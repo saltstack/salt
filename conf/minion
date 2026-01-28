@@ -91,6 +91,10 @@
 # directory will need to be changed to the ownership of the new user.
 #sudo_user: root
 
+# The command to use as an alternative to sudo when running remote execution
+# commands. This will default to sudo if the command below does not exist.
+#sudo_cmd: doas
+
 # Specify the location of the daemon process ID file.
 #pidfile: /var/run/salt-minion.pid
 
