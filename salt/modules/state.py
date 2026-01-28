@@ -1376,7 +1376,6 @@ def sls(
 
     orig_test = __opts__.get("test", None)
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
-
     opts["test"] = _get_test_value(test, **kwargs)
 
     # Since this is running a specific SLS file (or files), fall back to the

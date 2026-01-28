@@ -1307,12 +1307,28 @@ class State:
         _reload_modules = False
         if data.get("reload_grains", False):
             log.debug("Refreshing grains...")
-            self.opts["grains"] = salt.loader.grains(self.opts)
+            new_grains = salt.loader.grains(self.opts)
+            # Use mutate_key if available (OptsDict), otherwise mutate in place (plain dict)
+            if hasattr(self.opts, "mutate_key"):
+                self.opts.mutate_key("grains", new_grains)
+            elif "grains" in self.opts and isinstance(self.opts["grains"], dict):
+                self.opts["grains"].clear()
+                self.opts["grains"].update(new_grains)
+            else:
+                self.opts["grains"] = new_grains
             _reload_modules = True
 
         if data.get("reload_pillar", False):
             log.debug("Refreshing pillar...")
-            self.opts["pillar"] = self._gather_pillar()
+            new_pillar = self._gather_pillar()
+            # Use mutate_key if available (OptsDict), otherwise mutate in place (plain dict)
+            if hasattr(self.opts, "mutate_key"):
+                self.opts.mutate_key("pillar", new_pillar)
+            elif "pillar" in self.opts and isinstance(self.opts["pillar"], dict):
+                self.opts["pillar"].clear()
+                self.opts["pillar"].update(new_pillar)
+            else:
+                self.opts["pillar"] = new_pillar
             _reload_modules = True
 
         if not ret["changes"]:
@@ -3438,6 +3454,7 @@ class BaseHighState:
 
     def __init__(self, opts):
         self.opts = self.__gen_opts(opts)
+
         self.iorder = 10000
         self.avail = self.__gather_avail()
         self.building_highstate = HashableOrderedDict()
@@ -3461,7 +3478,10 @@ class BaseHighState:
             if opts["local_state"]:
                 return opts
         mopts = self.client.master_opts()
-        if not isinstance(mopts, dict):
+        # OptsDict is a MutableMapping, not a dict subclass, so check for both
+        from collections.abc import Mapping
+
+        if not isinstance(mopts, (dict, Mapping)):
             # An error happened on the master
             opts["renderer"] = "jinja|yaml"
             opts["failhard"] = False

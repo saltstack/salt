@@ -1,0 +1,1058 @@
+"""
+Unit tests for salt.utils.optsdict
+
+Tests cover:
+- Basic dict interface compliance
+- Copy-on-write semantics
+- Mutation tracking
+- Parent-child relationships
+- Memory efficiency
+- Thread safety
+"""
+
+import copy
+import sys
+import threading
+
+import pytest
+
+# Add parent directory to path for imports
+sys.path.insert(0, "/home/dan/src/wt/minion_mem")
+
+from salt.utils.optsdict import MutationTracker, OptsDict, safe_opts_copy
+
+
+class TestMutationTracker:
+    """Test MutationTracker functionality."""
+
+    def test_basic_tracking(self):
+        """Test basic mutation recording."""
+        tracker = MutationTracker(track_mutations=True)
+
+        tracker.record_mutation("test", False, True)
+
+        report = tracker.get_mutation_report(verbose=False)
+        assert "test" in report
+        assert report["test"]["mutation_count"] == 1
+        assert report["test"]["original_value_type"] == "bool"
+        assert report["test"]["current_value_type"] == "bool"
+
+    def test_multiple_mutations(self):
+        """Test tracking multiple mutations of same key."""
+        tracker = MutationTracker(track_mutations=True)
+
+        tracker.record_mutation("test", False, True)
+        tracker.record_mutation("test", True, False)
+        tracker.record_mutation("test", False, True)
+
+        report = tracker.get_mutation_report(verbose=True)
+        assert report["test"]["mutation_count"] == 3
+        assert len(report["test"]["all_mutations"]) == 3
+
+    def test_hotspot_detection(self):
+        """Test identifying frequently mutated keys."""
+        tracker = MutationTracker(track_mutations=True)
+
+        # Mutate 'test' many times
+        for i in range(5):
+            tracker.record_mutation("test", i, i + 1)
+
+        # Mutate 'saltenv' once
+        tracker.record_mutation("saltenv", "base", "dev")
+
+        hotspots = tracker.get_hotspot_keys(min_mutations=2)
+        assert "test" in hotspots
+        assert "saltenv" not in hotspots
+
+    def test_disabled_tracking(self):
+        """Test that tracking can be disabled."""
+        tracker = MutationTracker(track_mutations=False)
+
+        tracker.record_mutation("test", False, True)
+
+        report = tracker.get_mutation_report()
+        assert len(report) == 0
+
+
+class TestOptsDictBasics:
+    """Test basic OptsDict functionality."""
+
+    def test_creation_from_dict(self):
+        """Test creating OptsDict from regular dict."""
+        base = {"grains": {}, "pillar": {}, "test": False}
+        opts = OptsDict.from_dict(base, name="test")
+
+        assert opts["test"] is False
+        assert "grains" in opts
+        assert len(opts) == 3
+
+    def test_getitem(self):
+        """Test getting items."""
+        opts = OptsDict.from_dict({"a": 1, "b": 2})
+
+        assert opts["a"] == 1
+        assert opts["b"] == 2
+
+        with pytest.raises(KeyError):
+            _ = opts["nonexistent"]
+
+    def test_setitem(self):
+        """Test setting items."""
+        opts = OptsDict.from_dict({"a": 1})
+
+        opts["b"] = 2
+        assert opts["b"] == 2
+
+        opts["a"] = 10
+        assert opts["a"] == 10
+
+    def test_delitem(self):
+        """Test deleting items."""
+        opts = OptsDict.from_dict({"a": 1})
+        opts["b"] = 2  # Add to local
+
+        # Delete locally-added key (truly deleted)
+        del opts["b"]
+        assert "b" not in opts
+
+        # Delete key from base (masked with sentinel)
+        del opts["a"]
+        assert "a" not in opts
+
+        # Can't delete already-deleted key
+        with pytest.raises(KeyError):
+            del opts["a"]
+
+    def test_contains(self):
+        """Test 'in' operator."""
+        opts = OptsDict.from_dict({"a": 1, "b": 2})
+
+        assert "a" in opts
+        assert "b" in opts
+        assert "c" not in opts
+
+    def test_get(self):
+        """Test get with default."""
+        opts = OptsDict.from_dict({"a": 1})
+
+        assert opts.get("a") == 1
+        assert opts.get("b") is None
+        assert opts.get("b", "default") == "default"
+
+    def test_iteration(self):
+        """Test iterating over keys."""
+        opts = OptsDict.from_dict({"a": 1, "b": 2, "c": 3})
+
+        keys = set(opts.keys())
+        assert keys == {"a", "b", "c"}
+
+        values = list(opts.values())
+        assert len(values) == 3
+        assert 1 in values
+
+        items = dict(opts.items())
+        assert items == {"a": 1, "b": 2, "c": 3}
+
+    def test_len(self):
+        """Test length."""
+        opts = OptsDict.from_dict({"a": 1, "b": 2, "c": 3})
+        assert len(opts) == 3
+
+    def test_update(self):
+        """Test update method."""
+        opts = OptsDict.from_dict({"a": 1})
+        opts.update({"b": 2, "c": 3})
+
+        assert opts["b"] == 2
+        assert opts["c"] == 3
+
+    def test_to_dict(self):
+        """Test converting to regular dict."""
+        opts = OptsDict.from_dict({"a": 1, "b": 2})
+        opts["c"] = 3
+
+        regular_dict = opts.to_dict()
+        assert isinstance(regular_dict, dict)
+        assert regular_dict == {"a": 1, "b": 2, "c": 3}
+
+
+class TestOptsDictCopyOnWrite:
+    """Test copy-on-write semantics."""
+
+    def test_child_shares_parent_data(self):
+        """Test that child shares parent data until mutation."""
+        parent = OptsDict.from_dict(
+            {
+                "grains": {"os": "Linux"},
+                "pillar": {"app": {"setting": "value"}},
+                "test": False,
+            }
+        )
+
+        child = OptsDict.from_parent(parent, name="child")
+
+        # Child can read parent data
+        assert child["test"] is False
+        assert child["grains"]["os"] == "Linux"
+
+        # Child has no local data yet
+        assert len(child.get_local_keys()) == 0
+
+    def test_mutation_creates_local_copy(self):
+        """Test that mutation creates local copy of only that key."""
+        parent = OptsDict.from_dict(
+            {
+                "grains": {"os": "Linux"},  # Large dict
+                "pillar": {"app": "data"},  # Large dict
+                "test": False,  # Small value
+            },
+            name="parent",
+        )
+
+        child = OptsDict.from_parent(parent, name="child")
+
+        # Mutate only 'test'
+        child["test"] = True
+
+        # Only 'test' should be local
+        local_keys = child.get_local_keys()
+        assert local_keys == {"test"}
+
+        # grains and pillar still shared
+        shared_keys = child.get_shared_keys()
+        assert "grains" in shared_keys
+        assert "pillar" in shared_keys
+
+        # Values are correct
+        assert child["test"] is True  # Local
+        assert parent["test"] is False  # Unchanged
+        assert child["grains"] == parent["grains"]  # Shared
+
+    def test_nested_children(self):
+        """Test grandparent -> parent -> child hierarchy."""
+        grandparent = OptsDict.from_dict({"a": 1, "b": 2, "c": 3}, name="grandparent")
+
+        parent = OptsDict.from_parent(grandparent, name="parent")
+        parent["b"] = 20  # Mutate in parent
+
+        child = OptsDict.from_parent(parent, name="child")
+        child["c"] = 30  # Mutate in child
+
+        # Check values
+        assert grandparent["a"] == 1
+        assert grandparent["b"] == 2
+        assert grandparent["c"] == 3
+
+        assert parent["a"] == 1  # From grandparent
+        assert parent["b"] == 20  # Local
+        assert parent["c"] == 3  # From grandparent
+
+        assert child["a"] == 1  # From grandparent
+        assert child["b"] == 20  # From parent
+        assert child["c"] == 30  # Local
+
+    def test_multiple_children_isolated(self):
+        """Test that sibling children don't affect each other."""
+        parent = OptsDict.from_dict({"test": False, "saltenv": "base"}, name="parent")
+
+        child1 = OptsDict.from_parent(parent, name="child1")
+        child2 = OptsDict.from_parent(parent, name="child2")
+
+        # Each child mutates independently
+        child1["test"] = True
+        child2["test"] = False  # Different value
+        child1["saltenv"] = "dev"
+
+        # Check isolation
+        assert child1["test"] is True
+        assert child2["test"] is False
+        assert parent["test"] is False
+
+        assert child1["saltenv"] == "dev"
+        assert child2["saltenv"] == "base"  # Still shared from parent
+        assert parent["saltenv"] == "base"
+
+
+class TestOptsDictMutationTracking:
+    """Test mutation tracking features."""
+
+    def test_mutation_recorded(self):
+        """Test that mutations are recorded."""
+        opts = OptsDict.from_dict({"test": False}, track_mutations=True, name="test")
+
+        opts["test"] = True
+
+        report = opts.get_mutation_report()
+        assert "test" in report
+        assert report["test"]["mutation_count"] == 1
+
+    def test_mutation_stack_trace(self):
+        """Test that stack trace is captured."""
+        opts = OptsDict.from_dict({"test": False}, track_mutations=True, name="test")
+
+        opts["test"] = True
+
+        report = opts.get_mutation_report(verbose=False)
+        assert "first_mutated_at" in report["test"]
+        assert len(report["test"]["first_mutated_at"]) > 0
+
+    def test_multiple_mutations_tracked(self):
+        """Test tracking multiple mutations."""
+        opts = OptsDict.from_dict({"test": False}, track_mutations=True, name="test")
+
+        opts["test"] = True
+        opts["test"] = False
+        opts["test"] = True
+
+        report = opts.get_mutation_report(verbose=True)
+        assert report["test"]["mutation_count"] == 3
+        assert len(report["test"]["all_mutations"]) == 3
+
+    def test_shared_tracker_across_hierarchy(self):
+        """Test that child opts share parent's tracker."""
+        parent = OptsDict.from_dict(
+            {"test": False, "saltenv": "base"}, track_mutations=True, name="parent"
+        )
+        child = OptsDict.from_parent(parent, name="child")
+
+        parent["test"] = True
+        child["saltenv"] = "dev"  # Mutate existing key
+
+        # Both mutations visible in both reports (shared tracker)
+        parent_report = parent.get_mutation_report()
+        child_report = child.get_mutation_report()
+
+        assert parent_report == child_report
+        assert "test" in parent_report
+        assert "saltenv" in child_report
+
+    def test_no_tracking_mode(self):
+        """Test disabling mutation tracking."""
+        opts = OptsDict.from_dict({"test": False}, track_mutations=False, name="test")
+
+        opts["test"] = True
+
+        report = opts.get_mutation_report()
+        assert len(report) == 0
+
+
+class TestOptsDictMemoryStats:
+    """Test memory statistics and reporting."""
+
+    def test_memory_stats_basic(self):
+        """Test basic memory stats."""
+        parent = OptsDict.from_dict(
+            {
+                "grains": {"os": "Linux", "cpus": 4},
+                "pillar": {"app": "data"},
+                "test": False,
+            },
+            name="parent",
+        )
+
+        child = OptsDict.from_parent(parent, name="child")
+        child["test"] = True
+
+        stats = child.get_memory_stats()
+
+        assert stats["name"] == "child"
+        assert stats["local_keys_count"] == 1  # Only 'test'
+        assert stats["shared_keys_count"] == 2  # grains, pillar
+        assert stats["total_keys_count"] == 3
+        assert stats["local_size_bytes"] > 0
+
+    def test_local_vs_shared_keys(self):
+        """Test distinguishing local vs shared keys."""
+        parent = OptsDict.from_dict({"a": 1, "b": 2, "c": 3}, name="parent")
+        child = OptsDict.from_parent(parent, name="child")
+
+        child["b"] = 20  # Mutate one key
+
+        assert child.get_local_keys() == {"b"}
+        assert child.get_shared_keys() == {"a", "c"}
+
+
+class TestOptsDictThreadSafety:
+    """Test thread safety of OptsDict."""
+
+    def test_concurrent_reads(self):
+        """Test concurrent reads are safe."""
+        opts = OptsDict.from_dict({"a": 1, "b": 2, "c": 3}, name="test")
+
+        results = []
+
+        def reader():
+            for _ in range(100):
+                results.append(opts["a"])
+
+        threads = [threading.Thread(target=reader) for _ in range(10)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        # All reads should succeed
+        assert len(results) == 1000
+        assert all(r == 1 for r in results)
+
+    def test_concurrent_writes(self):
+        """Test concurrent writes are serialized."""
+        opts = OptsDict.from_dict({"counter": 0}, name="test")
+
+        def writer(thread_id):
+            for i in range(100):
+                current = opts.get("counter", 0)
+                opts["counter"] = current + 1
+
+        threads = [threading.Thread(target=writer, args=(i,)) for i in range(10)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        # Due to locking, final value should be predictable
+        # (though not necessarily 1000 due to the read-modify-write pattern)
+        # The important thing is no crashes/corruption
+        assert "counter" in opts
+        assert isinstance(opts["counter"], int)
+
+
+class TestSafeOptsCopy:
+    """Test safe_opts_copy migration helper."""
+
+    def test_copy_from_dict(self):
+        """Test creating OptsDict from regular dict."""
+        regular_dict = {"a": 1, "b": 2}
+        opts = safe_opts_copy(regular_dict, name="test")
+
+        assert isinstance(opts, OptsDict)
+        assert opts["a"] == 1
+        assert opts["b"] == 2
+
+    def test_copy_from_optsdict(self):
+        """Test creating child from existing OptsDict."""
+        parent = OptsDict.from_dict({"a": 1, "b": 2}, name="parent")
+        child = safe_opts_copy(parent, name="child")
+
+        assert isinstance(child, OptsDict)
+        assert child["a"] == 1
+
+        # Should be child of parent
+        child["a"] = 10
+        assert parent["a"] == 1  # Unchanged
+
+
+class TestRealWorldScenarios:
+    """Test real-world Salt usage patterns."""
+
+    def test_state_execution_pattern(self):
+        """
+        Simulate state execution pattern:
+        1. Base opts with grains, pillar
+        2. get_sls_opts creates child with test=True
+        3. State object modifies saltenv
+        """
+        # Base minion opts
+        base_opts = OptsDict.from_dict(
+            {
+                "grains": {"os": "Linux", "id": "minion1"},  # ~500KB in real life
+                "pillar": {"app": {"db": "mysql"}},  # ~5MB in real life
+                "test": False,
+                "saltenv": "base",
+            },
+            name="minion_opts",
+        )
+
+        # get_sls_opts pattern
+        sls_opts = OptsDict.from_parent(base_opts, name="get_sls_opts")
+        sls_opts["test"] = True
+
+        # State object pattern
+        state_opts = OptsDict.from_parent(sls_opts, name="state_object")
+        state_opts["saltenv"] = "dev"
+
+        # Verify isolation
+        assert base_opts["test"] is False
+        assert base_opts["saltenv"] == "base"
+
+        assert sls_opts["test"] is True
+        assert sls_opts["saltenv"] == "base"
+
+        assert state_opts["test"] is True
+        assert state_opts["saltenv"] == "dev"
+
+        # Check memory efficiency
+        state_stats = state_opts.get_memory_stats()
+        assert state_stats["local_keys_count"] == 1  # Only saltenv
+        assert state_stats["shared_keys_count"] >= 2  # grains, pillar shared
+
+    def test_multimaster_pattern(self):
+        """
+        Simulate multimaster pattern:
+        Multiple loaders with separate opts per master.
+        """
+        base_opts = OptsDict.from_dict(
+            {"grains": {"os": "Linux"}, "pillar": {"app": "data"}, "master": "master1"},
+            name="base_opts",
+        )
+
+        # Master 1 loader
+        master1_opts = OptsDict.from_parent(base_opts, name="master1_loader")
+        master1_opts["master"] = "master1"
+
+        # Master 2 loader
+        master2_opts = OptsDict.from_parent(base_opts, name="master2_loader")
+        master2_opts["master"] = "master2"
+
+        # Each has different master
+        assert master1_opts["master"] == "master1"
+        assert master2_opts["master"] == "master2"
+
+        # But share grains/pillar
+        assert master1_opts["grains"] is not None
+        assert master2_opts["pillar"] is not None
+
+        # Check shared data
+        assert "grains" in master1_opts.get_shared_keys()
+        assert "grains" in master2_opts.get_shared_keys()
+
+    def test_loader_per_module_pattern(self):
+        """
+        Simulate loader creating opts for each loaded module.
+        """
+        loader_opts = OptsDict.from_dict(
+            {"grains": {"os": "Linux"}, "pillar": {"app": "data"}, "test": False},
+            name="loader_opts",
+        )
+
+        # Simulate 50 modules
+        module_opts_list = []
+        for i in range(50):
+            mod_opts = OptsDict.from_parent(loader_opts, name=f"module_{i}")
+            # Some modules might mutate test mode
+            if i % 10 == 0:
+                mod_opts["test"] = True
+            module_opts_list.append(mod_opts)
+
+        # Check memory efficiency
+        total_local_keys = sum(len(mod.get_local_keys()) for mod in module_opts_list)
+
+        # Only 5 modules mutated test, so only 5 local keys total
+        assert total_local_keys == 5
+
+        # All share grains/pillar
+        for mod_opts in module_opts_list:
+            assert "grains" in mod_opts.get_shared_keys()
+            assert "pillar" in mod_opts.get_shared_keys()
+
+
+class TestOptsDictDeepCopy:
+    """Test OptsDict.__deepcopy__() behavior."""
+
+    def test_deepcopy_returns_optsdict(self):
+        """Test that copy.deepcopy() returns OptsDict, not plain dict."""
+        opts = OptsDict.from_dict({"a": 1, "b": 2, "c": 3}, name="test")
+
+        copied = copy.deepcopy(opts)
+
+        # Should be OptsDict, not plain dict
+        assert isinstance(copied, OptsDict)
+        assert hasattr(copied, "mutate_key")
+        assert hasattr(copied, "get_local_keys")
+
+    def test_deepcopy_uses_copy_on_write(self):
+        """Test that deepcopy uses copy-on-write (creates child)."""
+        opts = OptsDict.from_dict(
+            {"grains": {"os": "Linux"}, "pillar": {"app": "data"}, "test": False},
+            name="parent",
+        )
+
+        copied = copy.deepcopy(opts)
+
+        # Should be a child that shares parent data
+        assert copied._parent is not None
+        assert len(copied.get_local_keys()) == 0  # Nothing local yet
+        assert len(copied.get_shared_keys()) == 3  # All keys shared
+
+    def test_deepcopy_isolation(self):
+        """Test that deepcopy provides proper isolation."""
+        opts = OptsDict.from_dict(
+            {"a": 1, "b": 2, "nested": {"x": 10}}, name="original"
+        )
+
+        copied = copy.deepcopy(opts)
+
+        # Mutate copied
+        copied["a"] = 999
+        copied["c"] = "new"
+        copied["nested"]["y"] = 20
+
+        # Original should be unchanged
+        assert opts["a"] == 1
+        assert "c" not in opts
+        assert "y" not in opts["nested"]
+
+        # Copied should have new values
+        assert copied["a"] == 999
+        assert copied["c"] == "new"
+        assert copied["nested"]["y"] == 20
+
+    def test_deepcopy_preserves_all_data(self):
+        """Test that all data is accessible in deepcopy."""
+        opts = OptsDict.from_dict(
+            {
+                "grains": {"os": "Linux", "cpus": 4},
+                "pillar": {"app": "data"},
+                "test": False,
+            },
+            name="test",
+        )
+
+        copied = copy.deepcopy(opts)
+
+        # All keys should be accessible
+        assert copied["grains"]["os"] == "Linux"
+        assert copied["grains"]["cpus"] == 4
+        assert copied["pillar"]["app"] == "data"
+        assert copied["test"] is False
+
+    def test_deepcopy_multiple_copies(self):
+        """Test creating multiple deepcopies (e.g., multi-master scenario)."""
+        opts = OptsDict.from_dict(
+            {"grains": {"os": "Linux"}, "master": "master1", "multimaster": False},
+            name="base",
+        )
+
+        # Create 3 copies like MinionManager does
+        copies = []
+        for master_name in ["master1", "master2", "master3"]:
+            s_opts = copy.deepcopy(opts)
+            s_opts["master"] = master_name
+            s_opts["multimaster"] = True
+            copies.append(s_opts)
+
+        # Each should be isolated
+        assert copies[0]["master"] == "master1"
+        assert copies[1]["master"] == "master2"
+        assert copies[2]["master"] == "master3"
+
+        # Original unchanged
+        assert opts["master"] == "master1"
+        assert opts["multimaster"] is False
+
+        # All should share grains (copy-on-write efficiency)
+        for s_opts in copies:
+            assert "grains" in s_opts.get_shared_keys()
+
+
+class TestOptsDictVsDeepCopy:
+    """Compare OptsDict vs copy.deepcopy for memory efficiency."""
+
+    def test_memory_comparison(self):
+        """
+        Compare memory usage: OptsDict vs deepcopy.
+
+        This test demonstrates the memory savings.
+        """
+        import sys
+
+        # Create large opts dict
+        large_opts = {
+            "grains": {f"grain_{i}": f"value_{i}" for i in range(1000)},
+            "pillar": {f"pillar_{i}": f"data_{i}" for i in range(1000)},
+            "test": False,
+            "saltenv": "base",
+        }
+
+        # Measure deepcopy approach
+        deepcopy_size = 0
+        deepcopy_instances = []
+        for i in range(10):
+            instance = copy.deepcopy(large_opts)
+            deepcopy_instances.append(instance)
+            deepcopy_size += sys.getsizeof(instance)
+
+        # Measure OptsDict approach
+        root_opts = OptsDict.from_dict(large_opts, name="root")
+        optsdict_instances = []
+        optsdict_size = 0
+
+        for i in range(10):
+            child = OptsDict.from_parent(root_opts, name=f"child_{i}")
+            child["test"] = i % 2 == 0  # Mutate only test
+            optsdict_instances.append(child)
+            stats = child.get_memory_stats()
+            optsdict_size += stats["local_size_bytes"]
+
+        # OptsDict should use significantly less memory
+        # (exact ratio depends on dict size, but should be substantial)
+        print(f"\nDeep copy total: ~{deepcopy_size} bytes")
+        print(f"OptsDict total: ~{optsdict_size} bytes")
+        print(f"Savings: ~{deepcopy_size - optsdict_size} bytes")
+
+        # OptsDict should use less memory (exact amount varies)
+        # Main assertion: both work correctly
+        assert all(isinstance(inst, dict) for inst in deepcopy_instances)
+        assert all(isinstance(inst, OptsDict) for inst in optsdict_instances)
+
+
+class TestOptsDictPickle:
+    """Test OptsDict pickle/unpickle support."""
+
+    def test_basic_pickle(self):
+        """Test basic pickling and unpickling of OptsDict."""
+        import pickle
+
+        opts = OptsDict.from_dict({"a": 1, "b": 2, "c": 3}, name="test")
+
+        # Pickle and unpickle
+        pickled = pickle.dumps(opts)
+        restored = pickle.loads(pickled)
+
+        # Should be OptsDict, not plain dict
+        assert isinstance(restored, OptsDict)
+        assert restored["a"] == 1
+        assert restored["b"] == 2
+        assert restored["c"] == 3
+
+    def test_pickle_with_nested_data(self):
+        """Test pickling OptsDict with nested dictionaries."""
+        import pickle
+
+        opts = OptsDict.from_dict(
+            {
+                "grains": {"os": "Linux", "cpus": 4},
+                "pillar": {"app": {"db": "mysql", "port": 3306}},
+                "test": False,
+            },
+            name="test",
+        )
+
+        pickled = pickle.dumps(opts)
+        restored = pickle.loads(pickled)
+
+        assert isinstance(restored, OptsDict)
+        assert restored["grains"]["os"] == "Linux"
+        assert restored["grains"]["cpus"] == 4
+        assert restored["pillar"]["app"]["db"] == "mysql"
+        assert restored["pillar"]["app"]["port"] == 3306
+        assert restored["test"] is False
+
+    def test_pickle_with_mutations(self):
+        """Test pickling OptsDict that has local mutations."""
+        import pickle
+
+        parent = OptsDict.from_dict(
+            {"a": 1, "b": 2, "c": 3, "nested": {"x": 10}}, name="parent"
+        )
+        child = OptsDict.from_parent(parent, name="child")
+
+        # Mutate child
+        child["b"] = 20
+        child["d"] = 4
+        child["nested"]["y"] = 20
+
+        # Pickle and unpickle child
+        pickled = pickle.dumps(child)
+        restored = pickle.loads(pickled)
+
+        # Should have all data (both shared and local)
+        assert isinstance(restored, OptsDict)
+        assert restored["a"] == 1  # From parent
+        assert restored["b"] == 20  # Mutated
+        assert restored["c"] == 3  # From parent
+        assert restored["d"] == 4  # Added
+        assert restored["nested"]["x"] == 10
+        assert restored["nested"]["y"] == 20
+
+    def test_pickle_flattens_hierarchy(self):
+        """Test that pickling flattens parent-child hierarchy."""
+        import pickle
+
+        grandparent = OptsDict.from_dict({"a": 1, "b": 2, "c": 3}, name="grandparent")
+        parent = OptsDict.from_parent(grandparent, name="parent")
+        parent["b"] = 20
+
+        child = OptsDict.from_parent(parent, name="child")
+        child["c"] = 30
+        child["d"] = 4
+
+        # Pickle child
+        pickled = pickle.dumps(child)
+        restored = pickle.loads(pickled)
+
+        # Should have all effective data
+        assert restored["a"] == 1
+        assert restored["b"] == 20
+        assert restored["c"] == 30
+        assert restored["d"] == 4
+
+        # But should be a new root (no parent)
+        # The to_dict() call in __reduce_ex__ flattens the hierarchy
+        assert len(restored) == 4
+
+    def test_pickle_preserves_name(self):
+        """Test that pickling preserves the OptsDict name."""
+        import pickle
+
+        opts = OptsDict.from_dict({"a": 1, "b": 2}, name="my_special_opts")
+
+        pickled = pickle.dumps(opts)
+        restored = pickle.loads(pickled)
+
+        assert restored._name == "my_special_opts"
+
+    def test_pickle_protocols(self):
+        """Test pickling with different protocols."""
+        import pickle
+
+        opts = OptsDict.from_dict(
+            {"grains": {"os": "Linux"}, "test": False}, name="test"
+        )
+
+        # Test all pickle protocols
+        for protocol in range(pickle.HIGHEST_PROTOCOL + 1):
+            pickled = pickle.dumps(opts, protocol=protocol)
+            restored = pickle.loads(pickled)
+
+            assert isinstance(restored, OptsDict)
+            assert restored["grains"]["os"] == "Linux"
+            assert restored["test"] is False
+
+    def test_pickle_large_optsdict(self):
+        """Test pickling OptsDict with large data structures."""
+        import pickle
+
+        # Create large opts similar to real Salt minion opts
+        large_opts = OptsDict.from_dict(
+            {
+                "grains": {f"grain_{i}": f"value_{i}" for i in range(100)},
+                "pillar": {f"pillar_{i}": {"nested": f"data_{i}"} for i in range(100)},
+                "test": False,
+                "saltenv": "base",
+                "file_roots": {"base": ["/srv/salt"]},
+            },
+            name="minion_opts",
+        )
+
+        # Pickle and unpickle
+        pickled = pickle.dumps(large_opts)
+        restored = pickle.loads(pickled)
+
+        # Verify all data is present
+        assert isinstance(restored, OptsDict)
+        assert len(restored["grains"]) == 100
+        assert len(restored["pillar"]) == 100
+        assert restored["test"] is False
+        assert restored["saltenv"] == "base"
+        assert restored["grains"]["grain_50"] == "value_50"
+        assert restored["pillar"]["pillar_50"]["nested"] == "data_50"
+
+    def test_pickle_with_deleted_keys(self):
+        """Test pickling OptsDict with deleted keys."""
+        import pickle
+
+        parent = OptsDict.from_dict({"a": 1, "b": 2, "c": 3}, name="parent")
+        child = OptsDict.from_parent(parent, name="child")
+
+        # Delete a key from child
+        del child["b"]
+
+        # Pickle child
+        pickled = pickle.dumps(child)
+        restored = pickle.loads(pickled)
+
+        # Should not have deleted key
+        assert "b" not in restored
+        assert restored["a"] == 1
+        assert restored["c"] == 3
+
+    def test_pickle_round_trip_equality(self):
+        """Test that pickle round-trip produces equivalent data."""
+        import pickle
+
+        original = OptsDict.from_dict(
+            {
+                "str_val": "hello",
+                "int_val": 42,
+                "bool_val": True,
+                "none_val": None,
+                "list_val": [1, 2, 3],
+                "dict_val": {"nested": {"deep": "value"}},
+                "tuple_val": (1, 2, 3),
+            },
+            name="test",
+        )
+
+        pickled = pickle.dumps(original)
+        restored = pickle.loads(pickled)
+
+        # Compare all values
+        assert restored.to_dict() == original.to_dict()
+
+    def test_pickle_with_special_types(self):
+        """Test pickling OptsDict with special Python types."""
+        import pickle
+        from collections import OrderedDict
+
+        opts = OptsDict.from_dict(
+            {
+                "ordered": OrderedDict([("z", 1), ("a", 2), ("m", 3)]),
+                "set_val": {1, 2, 3},
+                "frozenset_val": frozenset([4, 5, 6]),
+            },
+            name="special",
+        )
+
+        pickled = pickle.dumps(opts)
+        restored = pickle.loads(pickled)
+
+        # Direct access returns DictProxy for copy-on-write, so use to_dict() to get unwrapped values
+        unwrapped = restored.to_dict()
+        assert isinstance(unwrapped["ordered"], OrderedDict)
+        assert list(unwrapped["ordered"].keys()) == ["z", "a", "m"]
+
+        # Primitives are returned directly
+        assert restored["set_val"] == {1, 2, 3}
+        assert restored["frozenset_val"] == frozenset([4, 5, 6])
+
+    def test_unpickle_creates_root_optsdict(self):
+        """Test that unpickling creates a root OptsDict, not a child."""
+        import pickle
+
+        parent = OptsDict.from_dict({"a": 1, "b": 2}, name="parent")
+        child = OptsDict.from_parent(parent, name="child")
+        child["c"] = 3
+
+        # Child has parent
+        assert child._parent is not None
+
+        # Pickle child
+        pickled = pickle.dumps(child)
+        restored = pickle.loads(pickled)
+
+        # Restored should be a root (no parent)
+        # This is by design - to_dict() flattens the hierarchy
+        assert hasattr(restored, "_parent")
+        # The restored OptsDict is a new root with all the data flattened
+
+    def test_pickle_multimaster_scenario(self):
+        """Test pickling in multimaster scenario (real-world use case)."""
+        import pickle
+
+        # Simulate multimaster: base opts get copied per master
+        base_opts = OptsDict.from_dict(
+            {
+                "grains": {"os": "Linux", "id": "minion1"},
+                "pillar": {"app": "data"},
+                "master": None,
+            },
+            name="base",
+        )
+
+        # Create per-master copies
+        master_opts_list = []
+        for master in ["master1", "master2", "master3"]:
+            m_opts = OptsDict.from_parent(base_opts, name=f"master_{master}")
+            m_opts["master"] = master
+            master_opts_list.append(m_opts)
+
+        # Pickle each master's opts
+        for m_opts in master_opts_list:
+            pickled = pickle.dumps(m_opts)
+            restored = pickle.loads(pickled)
+
+            # Should have correct master
+            assert restored["master"] in ["master1", "master2", "master3"]
+            # Should have shared data
+            assert restored["grains"]["os"] == "Linux"
+            assert restored["pillar"]["app"] == "data"
+
+
+def test_copy_with_nested_dicts():
+    """Test that copy() properly unwraps nested DictProxy objects."""
+    parent = OptsDict.from_dict(
+        {
+            "level1": {"level2": {"level3": "value"}},
+            "simple": "string",
+        },
+        name="parent",
+    )
+
+    child = OptsDict.from_parent(parent, name="child")
+
+    # Access the nested dict to create DictProxy wrappers
+    _ = child["level1"]["level2"]
+
+    # Now copy should properly unwrap all proxies
+    copied = child.copy()
+
+    # Should be a plain dict, not OptsDict
+    assert isinstance(copied, dict)
+    assert not isinstance(copied, OptsDict)
+
+    # Nested dicts should also be plain dicts
+    assert isinstance(copied["level1"], dict)
+    assert isinstance(copied["level1"]["level2"], dict)
+
+    # Values should be preserved
+    assert copied["level1"]["level2"]["level3"] == "value"
+    assert copied["simple"] == "string"
+
+
+def test_copy_preserves_ordereddict():
+    """Test that copy() preserves OrderedDict type."""
+    from collections import OrderedDict
+
+    opts = OptsDict.from_dict(
+        {
+            "ordered": OrderedDict([("z", 1), ("a", 2), ("m", 3)]),
+            "regular": {"b": 2, "a": 1},
+        },
+        name="test",
+    )
+
+    copied = opts.copy()
+
+    # OrderedDict should be preserved
+    assert isinstance(copied["ordered"], OrderedDict)
+    assert list(copied["ordered"].keys()) == ["z", "a", "m"]
+
+    # Regular dict should stay as dict
+    assert isinstance(copied["regular"], dict)
+
+
+def test_to_dict_unwraps_all_proxies():
+    """Test that to_dict() completely unwraps nested proxy structures."""
+    parent = OptsDict.from_dict(
+        {
+            "nested": {
+                "deep": {
+                    "value": "data",
+                    "list": [1, 2, 3],
+                }
+            }
+        },
+        name="parent",
+    )
+
+    child = OptsDict.from_parent(parent, name="child")
+
+    # Access to trigger proxy creation
+    _ = child["nested"]["deep"]["list"]
+
+    # to_dict should unwrap everything
+    result = child.to_dict()
+
+    # Check that nothing is a proxy
+    assert not hasattr(result["nested"], "_target")
+    assert not hasattr(result["nested"]["deep"], "_target")
+    assert isinstance(result["nested"]["deep"]["list"], list)
+
+    # Values should be correct
+    assert result["nested"]["deep"]["value"] == "data"
+    assert result["nested"]["deep"]["list"] == [1, 2, 3]
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

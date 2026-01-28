@@ -196,7 +196,15 @@ def _remove_circular_refs(ob, _seen=None):
             for k, v in ob.items()
         }
     elif isinstance(ob, (list, tuple, set, frozenset)):
-        res = type(ob)(_remove_circular_refs(v, _seen) for v in ob)
+        # Handle ListProxy from OptsDict by converting to regular list
+        # ListProxy.__init__ requires special arguments, so we can't use type(ob)()
+        from salt.utils.optsdict import ListProxy
+
+        if isinstance(ob, ListProxy):
+            # Convert ListProxy to regular list (like __deepcopy__ does)
+            res = list(_remove_circular_refs(v, _seen) for v in ob)
+        else:
+            res = type(ob)(_remove_circular_refs(v, _seen) for v in ob)
     # remove id again; only *nested* references count
     _seen.remove(id(ob))
     return res

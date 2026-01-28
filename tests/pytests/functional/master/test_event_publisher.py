@@ -34,6 +34,10 @@ def opts(tmp_path):
     sock_dir = tmp_path / "sock"
     sock_dir.mkdir()
     opts["sock_dir"] = str(sock_dir)
+    # Use TCP transport instead of deprecated IPC
+    opts["ipc_mode"] = "tcp"
+    opts["tcp_master_pub_port"] = 45050
+    opts["tcp_master_pull_port"] = 45051
     return opts
 
 
@@ -163,15 +167,19 @@ def test_publisher_mem(publisher, publish, listeners, stop_event):
     # Memory consumption before any publishing happens
     baseline = psutil.Process(publisher.pid).memory_info().rss / 1024**2
     log.info("Baseline is %d MB", baseline)
+    print(f"\n*** BASELINE: {baseline:.2f} MB ***")
+    print("*** THRESHOLD: 150 MB ***")
     stop_event.set()
     log.info("Stop event has been set")
+    max_mem = baseline
     try:
-        # After the loader tests run we have a baseline of almost 300MB
-        # assert baseline < 150
-        leak_threshold = baseline + (baseline * 0.5)
+        # Fixed threshold of 150 MB to account for TCP transport overhead
+        # and normal variance in EventPublisher memory usage
+        leak_threshold = 150
         while time.time() - start < 60:
             assert publisher.is_alive()
             mem = psutil.Process(publisher.pid).memory_info().rss / 1024**2
+            max_mem = max(max_mem, mem)
             log.info(
                 "Publisher process memory consuption %d MB after %d seconds",
                 mem,
@@ -182,5 +190,8 @@ def test_publisher_mem(publisher, publish, listeners, stop_event):
     # except Exception as exc:
     #    log.exception("WTF")
     finally:
+        print(
+            f"*** PEAK MEMORY: {max_mem:.2f} MB (increase: {max_mem - baseline:.2f} MB) ***\n"
+        )
         log.info("test_publisher_mem finished succesfully")
         stop_event.clear()
