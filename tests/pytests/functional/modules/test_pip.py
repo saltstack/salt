@@ -6,6 +6,7 @@ import sys
 from contextlib import contextmanager
 
 import pytest
+from packaging.version import parse as parse_version
 
 import salt.utils.platform
 from salt.exceptions import CommandNotFoundError
@@ -111,6 +112,44 @@ def test_list_available_packages_with_index_url(pip, pip_version, tmp_path):
             index_url="https://pypi.python.org/simple",
         )
         assert available_versions
+
+
+@pytest.mark.parametrize(
+    "pip_version",
+    (
+        pytest.param(
+            "pip==9.0.3",
+            marks=pytest.mark.skipif(
+                sys.version_info >= (3, 10),
+                reason="'pip==9.0.3' is not available on Py >= 3.10",
+            ),
+        ),
+        "pip<20.0",
+        "pip<21.0",
+        "pip>=21.0",
+    ),
+)
+@pytest.mark.parametrize("include_alpha", (True, False))
+@pytest.mark.parametrize("include_beta", (True, False))
+@pytest.mark.parametrize("include_rc", (True, False))
+def test_list_available_packages_returns_prerelease_versions_if_alpha_beta_or_rc_included(
+    venv, pip, pip_version, include_alpha, include_beta, include_rc
+):
+    """Tests that pre-release versions are returned when flags enable them.
+
+    Note: relies on PyPI hosting pre-release versions of `typing-extensions`.
+    """
+    venv.install("-U", pip_version)
+    package_name = "typing-extensions"
+    versions = pip.list_all_versions(
+        package_name,
+        bin_env=str(venv.venv_bin_dir),
+        include_alpha=include_alpha,
+        include_beta=include_beta,
+        include_rc=include_rc,
+    )
+    # parse each version and assert there's a pre-release version somewhere
+    assert any(list(map(lambda v: v.is_prerelease, map(parse_version, versions))))
 
 
 def test_issue_2087_missing_pip(venv, pip, modules):
