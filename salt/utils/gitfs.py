@@ -828,6 +828,7 @@ class GitProvider:
             # 1. Fetch URL
             # 2. refspecs used in fetch
             # 3. http.sslVerify
+            # 4. http.proxy
             conf_changed = False
             remote_section = 'remote "origin"'
 
@@ -906,6 +907,31 @@ class GitProvider:
                     self.role,
                     self.id,
                     desired_ssl_verify,
+                )
+                conf_changed = True
+
+            # 4. http.proxy
+            try:
+                proxy = conf.get("http", "proxy")
+            except salt.utils.configparser.NoSectionError:
+                conf.add_section("http")
+                proxy = ""
+            except salt.utils.configparser.NoOptionError:
+                proxy = ""
+            log.debug(
+                "Current http.proxy for %s remote '%s': %s (desired: %s)",
+                self.role,
+                self.id,
+                proxy,
+                self.proxy,
+            )
+            if proxy != self.proxy:
+                conf.set("http", "proxy", self.proxy)
+                log.debug(
+                    "http.proxy for %s remote '%s' set to %s",
+                    self.role,
+                    self.id,
+                    self.proxy,
                 )
                 conf_changed = True
 
@@ -2044,6 +2070,17 @@ class Pygit2(GitProvider):
         if os.path.exists(git_config) and PYGIT2_VERSION >= Version("0.28.0"):
             self.repo.config.add_file(git_config)
 
+        if self.proxy:
+            transport, _, _ = self.url.partition("://")
+            transport = transport.lower()
+            if transport != "https":
+                address = self.url
+                warnings.warn(
+                    "pygit2 ignores proxy settings if the git url "
+                    '(currently {}) does not have an "https" scheme. '
+                    "Fetches will connect directly to the repository.".format(self.url)
+                )
+
         return new
 
     def dir_list(self, tgt_env):
@@ -2124,9 +2161,9 @@ class Pygit2(GitProvider):
         """
         origin = self.repo.remotes[0]
         refs_pre = self.repo.listall_references()
-        fetch_kwargs = {}
+        fetch_kwargs = {"proxy": True}
 
-        # pygit2 radically changed fetchiing in 0.23.2
+        # pygit2 radically changed fetching in 0.23.2
         if self.remotecallbacks is not None:
             fetch_kwargs["callbacks"] = self.remotecallbacks
         else:

@@ -52,6 +52,7 @@ _OPTS = freeze(
         "git_pillar_env": "",
         "git_pillar_fallback": "",
         "git_pillar_root": "",
+        "git_pillar_proxy": "",
         "git_pillar_ssl_verify": True,
         "git_pillar_global_lock": True,
         "git_pillar_user": "",
