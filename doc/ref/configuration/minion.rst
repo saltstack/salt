@@ -2358,6 +2358,16 @@ performance is hampered.
 
     state_queue: 2
 
+.. conf_minion:: state_max_parallel
+
+``state_max_parallel``
+----------------------
+
+Default: ``0``
+
+Limit the number of ``parallel: true`` states that can be running at the same time.
+By default, there is no limit.
+
 .. conf_minion:: state_verbose
 
 ``state_verbose``
