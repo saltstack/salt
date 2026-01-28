@@ -517,6 +517,14 @@ VALID_OPTS = immutabletypes.freeze(
         # The number of MWorker processes for a master to startup. This number needs to scale up as
         # the number of connected minions increases.
         "worker_threads": int,
+        # Enable worker pool routing for mworkers
+        "worker_pools_enabled": bool,
+        # Worker pool configuration (dict of pool_name -> {worker_count, commands})
+        "worker_pools": dict,
+        # Use optimized worker pools configuration
+        "worker_pools_optimized": bool,
+        # Default pool for unmapped commands (when no catchall exists)
+        "worker_pool_default": (type(None), str),
         # The port for the master to listen to returns on. The minion needs to connect to this port
         # to send returns.
         "ret_port": int,
@@ -1356,6 +1364,10 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "auth_mode": 1,
         "user": _MASTER_USER,
         "worker_threads": 5,
+        "worker_pools_enabled": True,
+        "worker_pools": {},
+        "worker_pools_optimized": False,
+        "worker_pool_default": None,
         "sock_dir": os.path.join(salt.syspaths.SOCK_DIR, "master"),
         "sock_pool_size": 1,
         "ret_port": 4506,
@@ -4207,6 +4219,25 @@ def apply_master_config(overrides=None, defaults=None):
             opts["conf_file"],
         )
         opts["worker_threads"] = 3
+
+    # Handle worker pools configuration
+    if opts.get("worker_pools_enabled", True):
+        from salt.config.worker_pools import (
+            get_worker_pools_config,
+            validate_worker_pools_config,
+        )
+
+        # Get effective worker pools config (handles backward compat)
+        effective_pools = get_worker_pools_config(opts)
+        if effective_pools is not None:
+            opts["worker_pools"] = effective_pools
+
+            # Validate the configuration
+            try:
+                validate_worker_pools_config(opts)
+            except ValueError as exc:
+                log.error("Worker pools configuration error: %s", exc)
+                raise
 
     opts.setdefault("pillar_source_merging_strategy", "smart")
 
