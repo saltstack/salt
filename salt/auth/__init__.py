@@ -100,10 +100,10 @@ class LoadAuth:
         _valid = ["username", "password", "eauth", "token"]
         _load = {key: value for (key, value) in load.items() if key in _valid}
 
-        fcall = salt.utils.args.format_call(
-            self.auth[fstr], _load, expected_extra_kws=AUTH_INTERNAL_KEYWORDS
-        )
         try:
+            fcall = salt.utils.args.format_call(
+                self.auth[fstr], _load, expected_extra_kws=AUTH_INTERNAL_KEYWORDS
+            )
             if "kwargs" in fcall:
                 return self.auth[fstr](*fcall["args"], **fcall["kwargs"])
             else:
