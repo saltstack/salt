@@ -541,7 +541,7 @@ urllib3==2.6.3 ; python_version >= "3.11"
     #   python-etcd
     #   requests
     #   responses
-virtualenv==20.27.0
+virtualenv==20.36.1
     # via
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
