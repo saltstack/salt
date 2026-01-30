@@ -20,7 +20,7 @@ certifi==2024.8.30
     # via requests
 charset-normalizer==3.4.0
     # via requests
-filelock==3.16.1
+filelock==3.20.3
     # via python-tools-scripts
 idna==3.10
     # via requests
