@@ -412,6 +412,13 @@ Defines how often to restart the master's Maintenance process.
 
     maintenance_interval: 9600
 
+.. note::
+
+    Scheduled jobs will fail to trigger if their interval is greater than the
+    ``maintenance_interval``. Because the master scheduler only evaluates jobs
+    during maintenance cycles, a default 3600-second (1-hour) maintenance
+    interval will effectively ignore any job set to run every 7200 seconds (2
+    hours).
 
 .. conf_master:: output
 
