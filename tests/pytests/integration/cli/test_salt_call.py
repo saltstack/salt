@@ -294,7 +294,9 @@ def test_syslog_file_not_found(salt_minion, salt_call_cli, tmp_path):
         minion_config = copy.deepcopy(salt_minion.config)
         minion_config["log_file"] = "file:///dev/doesnotexist"
         with salt.utils.files.fopen(str(config_dir / "minion"), "w") as fh_:
-            fh_.write(salt.utils.yaml.dump(minion_config, default_flow_style=False))
+            fh_.write(
+                salt.utils.yaml.safe_dump(minion_config, default_flow_style=False)
+            )
         ret = salt_call_cli.run(
             f"--config-dir={config_dir}",
             "--log-level=debug",
