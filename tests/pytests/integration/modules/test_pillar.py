@@ -351,6 +351,8 @@ def test_pillar_refresh_pillar_items(salt_cli, salt_minion, key_pillar):
     with key_pillar(key) as key_pillar_instance:
         # A pillar.items call sees the pillar right away because a
         # refresh_pillar event is fired.
+        # Calling refresh_pillar to update in-memory pillars
+        key_pillar_instance.refresh_pillar()
         ret = salt_cli.run("pillar.items", minion_tgt=salt_minion.id)
         assert ret.returncode == 0
         val = ret.data

@@ -1032,6 +1032,13 @@ VALID_OPTS = immutabletypes.freeze(
         "request_server_aes_session": int,
         # Minimum authentication protocol version to accept from minions
         "minimum_auth_version": int,
+        "ipc_write_timeout": int,
+        # optional cache driver for pillar cache
+        "pillar.cache_driver": (type(None), str),
+        # optional cache driver for eauth_tokens cache
+        "eauth_tokens.cache_driver": (type(None), str),
+        # eauth tokens cluster id override
+        "eauth_tokens.cluster_id": (type(None), str),
     }
 )
 
@@ -1344,6 +1351,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "encryption_algorithm": "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA1",
         "keys.cache_driver": "localfs_key",
+        "pillar.cache_driver": None,
     }
 )
 
@@ -1706,6 +1714,10 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "request_server_aes_session": 0,
         "request_server_ttl": 0,
         "minimum_auth_version": 3,
+        "ipc_write_timeout": salt.defaults.IPC_WRITE_TIMEOUT,
+        "pillar.cache_driver": None,
+        "eauth_tokens.cache_driver": None,
+        "eauth_tokens.cluster_id": None,
     }
 )
 
