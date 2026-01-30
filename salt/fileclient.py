@@ -463,6 +463,76 @@ class Client:
         ret.sort()
         return ret
 
+    def _on_header(self, hdr, write_body, use_etag, dest_etag):
+        hdr = hdr.strip()
+        if write_body[1] is not False and (
+            write_body[2] is None or (use_etag and write_body[3] is None)
+        ):
+            if not hdr and "Content-Type" not in write_body[1]:
+                # If write_body[0] is True, then we are not following a
+                # redirect (initial response was a 200 OK). So there is
+                # no need to reset write_body[0].
+                if write_body[0] is not True:
+                    # We are following a redirect, so we need to reset
+                    # write_body[0] so that we properly follow it.
+                    write_body[0] = None
+                # We don't need the HTTPHeaders object anymore
+                if not use_etag or write_body[3]:
+                    write_body[1] = False
+                return
+            # Try to find out what content type encoding is used if
+            # this is a text file
+            write_body[1].parse_line(hdr)  # pylint: disable=no-member
+            # Case insensitive Etag header checking below. Don't break case
+            # insensitivity unless you really want to mess with people's heads
+            # in the tests. Note: http.server and apache2 use "Etag" and nginx
+            # uses "ETag" as the header key. Yay standards!
+            if use_etag and "etag" in map(str.lower, write_body[1]):
+                etag = write_body[3] = [
+                    val for key, val in write_body[1].items() if key.lower() == "etag"
+                ][0]
+                with salt.utils.files.fopen(dest_etag, "w") as etagfp:
+                    etag = etagfp.write(etag)
+            elif "Content-Type" in write_body[1]:
+                content_type = write_body[1].get(
+                    "Content-Type"
+                )  # pylint: disable=no-member
+                if not content_type.startswith("text"):
+                    write_body[2] = False
+                    if not use_etag or write_body[3]:
+                        write_body[1] = False
+                else:
+                    encoding = "utf-8"
+                    fields = content_type.split(";")
+                    for field in fields:
+                        if "encoding" in field:
+                            encoding = field.split("encoding=")[-1]
+                    write_body[2] = encoding
+                    # We have found our encoding. Stop processing headers.
+                    if not use_etag or write_body[3]:
+                        write_body[1] = False
+
+                # If write_body[0] is False, this means that this
+                # header is a 30x redirect, so we need to reset
+                # write_body[0] to None so that we parse the HTTP
+                # status code from the redirect target. Additionally,
+                # we need to reset write_body[2] so that we inspect the
+                # headers for the Content-Type of the URL we're
+                # following.
+                if write_body[0] is write_body[1] is False:
+                    write_body[0] = write_body[2] = None
+
+        # Check the status line of the HTTP request
+        if write_body[0] is None:
+            try:
+                hdr_response = parse_response_start_line(hdr)
+            except HTTPInputError:
+                log.debug("Unable to parse header: %r", hdr.strip())
+                # Not the first line, do nothing
+                return
+            write_body[0] = hdr_response.code not in [301, 302, 303, 307]
+            write_body[1] = HTTPHeaders()
+
     def get_url(
         self,
         url,
@@ -681,78 +751,6 @@ class Client:
             #   both content encoding and etag are found.
             write_body = [None, False, None, None]
 
-            def on_header(hdr):
-
-                if write_body[1] is not False and (
-                    write_body[2] is None or (use_etag and write_body[3] is None)
-                ):
-                    if not hdr.strip() and "Content-Type" not in write_body[1]:
-                        # If write_body[0] is True, then we are not following a
-                        # redirect (initial response was a 200 OK). So there is
-                        # no need to reset write_body[0].
-                        if write_body[0] is not True:
-                            # We are following a redirect, so we need to reset
-                            # write_body[0] so that we properly follow it.
-                            write_body[0] = None
-                        # We don't need the HTTPHeaders object anymore
-                        if not use_etag or write_body[3]:
-                            write_body[1] = False
-                        return
-                    # Try to find out what content type encoding is used if
-                    # this is a text file
-                    write_body[1].parse_line(hdr)  # pylint: disable=no-member
-                    # Case insensitive Etag header checking below. Don't break case
-                    # insensitivity unless you really want to mess with people's heads
-                    # in the tests. Note: http.server and apache2 use "Etag" and nginx
-                    # uses "ETag" as the header key. Yay standards!
-                    if use_etag and "etag" in map(str.lower, write_body[1]):
-                        etag = write_body[3] = [
-                            val
-                            for key, val in write_body[1].items()
-                            if key.lower() == "etag"
-                        ][0]
-                        with salt.utils.files.fopen(dest_etag, "w") as etagfp:
-                            etag = etagfp.write(etag)
-                    elif "Content-Type" in write_body[1]:
-                        content_type = write_body[1].get(
-                            "Content-Type"
-                        )  # pylint: disable=no-member
-                        if not content_type.startswith("text"):
-                            write_body[2] = False
-                            if not use_etag or write_body[3]:
-                                write_body[1] = False
-                        else:
-                            encoding = "utf-8"
-                            fields = content_type.split(";")
-                            for field in fields:
-                                if "encoding" in field:
-                                    encoding = field.split("encoding=")[-1]
-                            write_body[2] = encoding
-                            # We have found our encoding. Stop processing headers.
-                            if not use_etag or write_body[3]:
-                                write_body[1] = False
-
-                        # If write_body[0] is False, this means that this
-                        # header is a 30x redirect, so we need to reset
-                        # write_body[0] to None so that we parse the HTTP
-                        # status code from the redirect target. Additionally,
-                        # we need to reset write_body[2] so that we inspect the
-                        # headers for the Content-Type of the URL we're
-                        # following.
-                        if write_body[0] is write_body[1] is False:
-                            write_body[0] = write_body[2] = None
-
-                # Check the status line of the HTTP request
-                if write_body[0] is None:
-                    try:
-                        hdr = parse_response_start_line(hdr.strip())
-                    except HTTPInputError as exc:
-                        log.trace("Unable to parse header: %r", hdr.strip())
-                        # Not the first line, do nothing
-                        return
-                    write_body[0] = hdr.code not in [301, 302, 303, 307]
-                    write_body[1] = HTTPHeaders()
-
             if no_cache:
                 result = []
 
@@ -786,7 +784,9 @@ class Client:
                 fixed_url,
                 stream=True,
                 streaming_callback=on_chunk,
-                header_callback=on_header,
+                header_callback=lambda header: self._on_header(
+                    header, write_body, use_etag, dest_etag
+                ),
                 username=url_data.username,
                 password=url_data.password,
                 opts=self.opts,
