@@ -20,6 +20,7 @@ config file.
      you are using mongo authentication. Defaults to ``''``.
    * ``mongo.password`` - The password for connecting to mongo. Only required
      if you are using mongo authentication. Defaults to ``''``.
+   * ``mongo.authdb`` - The database to authenticate against. Defaults to ``'admin'``.
 
 
 Configuring the Mongo Tops Subsystem
@@ -96,6 +97,9 @@ def top(**kwargs):
     host = __opts__["mongo.host"]
     port = __opts__["mongo.port"]
     ssl = __opts__.get("mongo.ssl") or False
+    user = __opts__.get("mongo.user")
+    password = __opts__.get("mongo.password")
+    authdb = __opts__.get("mongo.authdb", "admin")
     collection = __opts__["master_tops"]["mongo"].get("collection", "tops")
     id_field = __opts__["master_tops"]["mongo"].get("id_field", "_id")
     re_pattern = __opts__["master_tops"]["mongo"].get("re_pattern", "")
@@ -106,17 +110,25 @@ def top(**kwargs):
     )
 
     log.info("connecting to %s:%s for mongo ext_tops", host, port)
-    conn = pymongo.MongoClient(host=host, port=port, ssl=ssl)
+
+    # Build connection parameters for pymongo v4 compatibility
+    conn_kwargs = {
+        "host": host,
+        "port": port,
+        "ssl": ssl,
+    }
+
+    # Pass authentication credentials directly to MongoClient for pymongo v4 compatibility
+    if user and password:
+        log.debug("authenticating as '%s'", user)
+        conn_kwargs["username"] = user
+        conn_kwargs["password"] = password
+        conn_kwargs["authSource"] = authdb
+
+    conn = pymongo.MongoClient(**conn_kwargs)
 
     log.debug("using database '%s'", __opts__["mongo.db"])
     mdb = conn[__opts__["mongo.db"]]
-
-    user = __opts__.get("mongo.user")
-    password = __opts__.get("mongo.password")
-
-    if user and password:
-        log.debug("authenticating as '%s'", user)
-        mdb.authenticate(user, password)
 
     # Do the regex string replacement on the minion id
     minion_id = kwargs["opts"]["id"]
