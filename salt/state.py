@@ -1600,7 +1600,7 @@ class State:
                 if name not in high or state_type not in high[name]:
                     # Check for a matching 'name' override in high data
                     ids = find_name(name, state_type, high, strict=strict)
-                    if len(ids) != 1:
+                    if len(ids) == 0:
                         errors.append(
                             "Cannot extend ID '{0}' in '{1}:{2}'. It is not "
                             "part of the high state.\n"
@@ -1611,6 +1611,22 @@ class State:
                                 name,
                                 body.get("__env__", "base"),
                                 body.get("__sls__", "base"),
+                            )
+                        )
+                        continue
+                    elif len(ids) > 1:
+                        errors.append(
+                            "Cannot extend ID '{0}' in '{1}:{2}'. It is not "
+                            "unique in the running high state.\n"
+                            "This is likely due to more than one state using "
+                            "the same `name` parameter. Ensure that\nthe "
+                            "state with an ID of '{0}' is unique in "
+                            "environment '{1}' and to SLS '{2}'.\nDuplicate "
+                            "states IDs are: '{3}'".format(
+                                name,
+                                body.get("__env__", "base"),
+                                body.get("__sls__", "base"),
+                                ", ".join(f"{state}: {id}" for id, state in ids),
                             )
                         )
                         continue
