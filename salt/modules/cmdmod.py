@@ -594,15 +594,22 @@ def _run(
 
             msg = f"env command: {env_cmd}"
             log.debug(log_callback(msg))
-            env_bytes, env_encoded_err = subprocess.Popen(
-                env_cmd,
-                stderr=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stdin=subprocess.PIPE,
-            ).communicate(salt.utils.stringutils.to_bytes(py_code))
+            try:
+                env_bytes, env_encoded_err = subprocess.Popen(
+                    env_cmd,
+                    stderr=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stdin=subprocess.PIPE,
+                ).communicate(salt.utils.stringutils.to_bytes(py_code), timeout=10)
+            except subprocess.TimeoutExpired:
+                marker_count = 0
+                env_encoded_err = None
+                env_bytes = None
+            else:
+                marker_count = env_bytes.count(marker_b)
+
             if salt.utils.pkg.check_bundled():
                 os.remove(fp.name)
-            marker_count = env_bytes.count(marker_b)
             if marker_count == 0:
                 # Possibly PAM prevented the login
                 log.error(
