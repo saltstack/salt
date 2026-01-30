@@ -183,12 +183,15 @@ def _get_uri(repo):
 class MockSourceEntry:
     def __init__(self, uri, source_type, line, invalid, dist="", file=None):
         self.uri = uri
+        self.uris = [uri]
         self.type = source_type
+        self.types = [source_type]
         self.line = line
         self.invalid = invalid
         self.file = file
         self.disabled = False
         self.dist = dist
+        self.suites = [dist]
         self.comps = []
         self.architectures = []
         self.signedby = ""
@@ -211,6 +214,106 @@ class MockSourceList:
 @pytest.fixture
 def configure_loader_modules():
     return {aptpkg: {"__grains__": {}}}
+
+
+@pytest.fixture
+def deb822_repo_content():
+    return """# TEST SOURCE Deb822
+Types: deb
+URIs: http://cz.archive.ubuntu.com/ubuntu/
+Suites: noble noble-updates noble-backports
+Components: main
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+"""
+
+
+@pytest.fixture
+def deb822_repo_file(tmp_path: pathlib.Path, deb822_repo_content: str):
+    """
+    Create a Debian-style repository in the deb822 format and return
+    the path of the repository file.
+    """
+    repo = tmp_path / "sources.list.d" / "test.sources"
+    repo.parent.mkdir(parents=True, exist_ok=True)
+    repo.write_text(deb822_repo_content, encoding="UTF-8")
+    return repo
+
+
+@pytest.fixture
+def mock_apt_config(deb822_repo_file: pathlib.Path):
+    """
+    Mocking common to deb822 testing so that apt_pkg uses the
+    tmp_path/sources.list.d as the sourceparts location
+    """
+    with patch.dict(
+        aptpkg.__salt__,
+        {"config.option": MagicMock()},
+    ) as mock_config, patch(
+        "salt.utils.pkg.deb._APT_SOURCES_PARTSDIR",
+        os.path.dirname(str(deb822_repo_file)),
+    ):
+        yield mock_config
+
+
+def test_mod_repo_deb822_modify(deb822_repo_file: pathlib.Path, mock_apt_config):
+    """
+    Test that aptpkg can modify an existing repository in the deb822 format.
+    In this test, we match the repository by name and disable it.
+    """
+    uri = "http://cz.archive.ubuntu.com/ubuntu/"
+    repo = f"deb [signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] {uri} noble main"
+
+    aptpkg.mod_repo(repo, enabled=False, file=str(deb822_repo_file), refresh_db=False)
+
+    repo_file = deb822_repo_file.read_text(encoding="UTF-8")
+    assert "Enabled: no" in repo_file
+    assert f"URIs: {uri}" in repo_file
+
+
+def test_mod_repo_deb822_add(deb822_repo_file: pathlib.Path, mock_apt_config):
+    """
+    Test that aptpkg can add a repository in the deb822 format.
+    """
+    uri = "http://security.ubuntu.com/ubuntu/"
+    repo = f"deb [signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] {uri} noble-security main"
+
+    aptpkg.mod_repo(repo, file=str(deb822_repo_file), refresh_db=False)
+
+    repo_file = deb822_repo_file.read_text(encoding="UTF-8")
+    assert f"URIs: {uri}" in repo_file
+
+
+def test_del_repo_deb822(deb822_repo_file: pathlib.Path, mock_apt_config):
+    """
+    Test that aptpkg can delete a repository in the deb822 format.
+    """
+    uri = "http://cz.archive.ubuntu.com/ubuntu/"
+
+    with patch.object(aptpkg, "refresh_db"):
+        repo = f"deb {uri} noble main"
+        aptpkg.del_repo(repo, file=str(deb822_repo_file))
+        assert os.path.isfile(str(deb822_repo_file))
+
+        repo = f"deb {uri} noble-updates main"
+        aptpkg.del_repo(repo, file=str(deb822_repo_file))
+        assert os.path.isfile(str(deb822_repo_file))
+
+        repo = f"deb {uri} noble-backports main"
+        aptpkg.del_repo(repo, file=str(deb822_repo_file))
+        assert not os.path.isfile(str(deb822_repo_file))
+
+
+def test_get_repo_deb822(deb822_repo_file: pathlib.Path, mock_apt_config):
+    """
+    Test that aptpkg can match a repository in the deb822 format.
+    """
+    uri = "http://cz.archive.ubuntu.com/ubuntu/"
+    repo = f"deb {uri} noble main"
+
+    result = aptpkg.get_repo(repo)
+
+    assert bool(result)
+    assert result["uri"] == uri
 
 
 def test_version(lowpkg_info_var):
@@ -942,45 +1045,30 @@ def test_mod_repo_match():
         aptpkg.__salt__,
         {"config.option": MagicMock(), "no_proxy": MagicMock(return_value=False)},
     ):
-        with patch("salt.modules.aptpkg.refresh_db", MagicMock(return_value={})):
-            with patch("salt.utils.data.is_true", MagicMock(return_value=True)):
-                with patch("salt.modules.aptpkg.SourceEntry", MagicMock(), create=True):
-                    with patch(
-                        "salt.modules.aptpkg.SourcesList",
-                        MagicMock(return_value=mock_source_list),
-                        create=True,
-                    ):
-                        with patch(
-                            "salt.modules.aptpkg._split_repo_str",
-                            MagicMock(
-                                return_value={
-                                    "type": "deb",
-                                    "architectures": [],
-                                    "uri": "http://cdn-aws.deb.debian.org/debian/",
-                                    "dist": "stretch",
-                                    "comps": ["main"],
-                                    "signedby": "",
-                                }
-                            ),
-                        ):
-                            source_line_no_slash = (
-                                "deb http://cdn-aws.deb.debian.org/debian"
-                                " stretch main"
-                            )
-                            if salt.utils.path.which("apt-key"):
-                                repo = aptpkg.mod_repo(
-                                    source_line_no_slash, enabled=False
-                                )
-                                assert repo[source_line_no_slash]["uri"] == source_uri
-                            else:
-                                with pytest.raises(Exception) as err:
-                                    repo = aptpkg.mod_repo(
-                                        source_line_no_slash, enabled=False
-                                    )
-                                assert (
-                                    "missing 'signedby' option when apt-key is missing"
-                                    in str(err.value)
-                                )
+        with patch("salt.modules.aptpkg.refresh_db", MagicMock(return_value={})), patch(
+            "salt.utils.data.is_true", MagicMock(return_value=True)
+        ), patch("salt.modules.aptpkg.SourceEntry", MagicMock(), create=True), patch(
+            "salt.modules.aptpkg.SourcesList",
+            MagicMock(return_value=mock_source_list),
+            create=True,
+        ), patch(
+            "salt.modules.aptpkg._split_repo_str",
+            MagicMock(
+                return_value={
+                    "type": "deb",
+                    "architectures": [],
+                    "uri": "http://cdn-aws.deb.debian.org/debian/",
+                    "dist": "stretch",
+                    "comps": ["main"],
+                    "signedby": "",
+                }
+            ),
+        ):
+            source_line_no_slash = (
+                "deb http://cdn-aws.deb.debian.org/debian stretch main"
+            )
+            repo = aptpkg.mod_repo(source_line_no_slash, enabled=False)
+            assert repo[source_line_no_slash]["uri"] == source_uri
 
 
 def test_list_downloaded():
@@ -1103,7 +1191,7 @@ def test__parse_source(case):
     importlib.reload(aptpkg)
 
     source = NoAptSourceEntry(case["line"])
-    ok = source._parse_sources(case["line"])
+    ok = source.parse(case["line"])
 
     assert ok is case["ok"]
     assert source.invalid is case["invalid"]

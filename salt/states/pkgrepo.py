@@ -415,7 +415,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
 
     kwargs["name"] = repo = name
 
-    if __grains__["os"] in ("Ubuntu", "Mint"):
+    if __grains__["os_family"] == "Debian":
         if ppa is not None:
             # overload the name/repo value for PPAs cleanly
             # this allows us to have one code-path for PPAs
@@ -547,6 +547,23 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
             ret["result"] = True
             ret["comment"] = f"Package repo '{name}' already configured"
             return ret
+
+    if __grains__["os_family"] == "Debian":
+        if (
+            "uri" not in kwargs
+            and "uri" in sanitizedkwargs
+            and "uri" in pre
+            and pre["uri"] != sanitizedkwargs["uri"]
+        ):
+            kwargs["uri"] = sanitizedkwargs["uri"]
+        if (
+            "uris" not in kwargs
+            and "uris" in sanitizedkwargs
+            and "uris" in pre
+            and sanitizedkwargs["uris"]
+            and sanitizedkwargs["uris"][0] not in pre["uris"]
+        ):
+            kwargs["uris"] = sanitizedkwargs["uris"]
 
     if __opts__["test"]:
         ret["comment"] = (
