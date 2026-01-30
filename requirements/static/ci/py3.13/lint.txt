@@ -425,7 +425,7 @@ pyasn1-modules==0.4.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   google-auth
-pyasn1==0.6.1
+pyasn1==0.6.2
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   pyasn1-modules
