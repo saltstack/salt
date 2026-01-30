@@ -104,10 +104,20 @@ Actions
 
     Reject the specified public key (use --include-all to match accepted keys
     in addition to pending keys). Globs are supported.
+    .. warning::
+        Using globs to reject the specified public key may cause performance issues
+        because of a Salt master degredation dramatic performance salt-master degradation. 
+        See [`performance guide`](https://docs.saltproject.io/en/latest/topics/tutorials/intro_scale.html#too-many-minions-re-authing) 
+        for more information about performance impacts and workarounds.
 
 .. option:: -R, --reject-all
 
     Rejects all pending keys.
+    .. warning::
+        Using globs to reject the specified public key may cause performance issues
+        because of a Salt master degredation dramatic performance salt-master degradation. 
+        See [`performance guide`](https://docs.saltproject.io/en/latest/topics/tutorials/intro_scale.html#too-many-minions-re-authing) 
+        for more information about performance impacts and workarounds.
 
 .. option:: --include-all
 
@@ -124,10 +134,20 @@ Actions
 .. option:: -d DELETE, --delete=DELETE
 
     Delete the specified key. Globs are supported.
+    .. warning::
+        Using globs to reject the specified public key may cause performance issues
+        because of a Salt master degredation dramatic performance salt-master degradation. 
+        See [`performance guide`](https://docs.saltproject.io/en/latest/topics/tutorials/intro_scale.html#too-many-minions-re-authing) 
+        for more information about performance impacts and workarounds.
 
 .. option:: -D, --delete-all
 
     Delete all keys.
+    .. warning::
+        Using globs to reject the specified public key may cause performance issues
+        because of a Salt master degredation dramatic performance salt-master degradation. 
+        See [`performance guide`](https://docs.saltproject.io/en/latest/topics/tutorials/intro_scale.html#too-many-minions-re-authing) 
+        for more information about performance impacts and workarounds.
 
 .. option:: -f FINGER, --finger=FINGER
 
