@@ -802,7 +802,7 @@ def handle_decoded_payload(self, data):
     if process_count_max > 0:
         process_count = len(salt.utils.minion.running(self.opts))
         while process_count >= process_count_max:
-            log.warning(
+            log.debug(
                 "Maximum number of processes reached while executing jid %s, waiting...",
                 data["jid"],
             )
