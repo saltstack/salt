@@ -26,7 +26,7 @@ import salt.utils.lazy
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
-from salt.exceptions import LoaderError
+from salt.exceptions import LoaderError, SaltDeserializationError
 from salt.template import check_render_pipe_str
 from salt.utils import entrypoints
 
@@ -1068,7 +1068,7 @@ def _load_cached_grains(opts, cfn):
             return None
 
         return _format_cached_grains(cached_grains)
-    except OSError:
+    except (OSError, SaltDeserializationError):
         return None
 
 
