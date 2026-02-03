@@ -192,3 +192,31 @@ def set_leader(value=True):
 
         res = sevent.get_event(wait=30, tag="salt/reactors/manage/leader/value")
         return res["result"]
+
+
+def cleanup():
+    """
+    Request cached reactor clients to be cleaned up.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run reactor.cleanup
+    """
+    if not _reactor_system_available():
+        raise CommandExecutionError("Reactor system is not running.")
+
+    with salt.utils.event.get_event(
+        "master",
+        __opts__["sock_dir"],
+        opts=__opts__,
+        listen=True,
+    ) as sevent:
+
+        master_key = salt.utils.master.get_master_key("root", __opts__)
+
+        __jid_event__.fire_event({"key": master_key}, "salt/reactors/manage/cleanup")
+
+        res = sevent.get_event(wait=30, tag="salt/reactors/manage/cleanup-complete")
+        return res.get("result")

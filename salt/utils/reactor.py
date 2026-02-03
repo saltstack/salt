@@ -6,6 +6,7 @@ import fnmatch
 import glob
 import logging
 import os
+import time
 
 import salt.client
 import salt.defaults.exitcodes
@@ -273,6 +274,12 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
                         {"reactors": self.list_all()},
                         "salt/reactors/manage/list-results",
                     )
+                elif data["tag"].endswith("salt/reactors/manage/cleanup"):
+                    res = self.wrap.cleanup()
+                    event.fire_event(
+                        {"result": res},
+                        "salt/reactors/manage/cleanup-complete",
+                    )
                 else:
                     # do not handle any reactions if not leader in cluster
                     if not self.is_leader:
@@ -287,6 +294,7 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
                                 self.call_reactions(chunks)
                             except SystemExit:
                                 log.warning("Exit ignored by reactor")
+                self.wrap.maybe_cleanup()
 
 
 class ReactWrap:
@@ -316,6 +324,35 @@ class ReactWrap:
             self.opts["reactor_worker_threads"],  # number of workers for runner/wheel
             queue_size=self.opts["reactor_worker_hwm"],  # queue size for those workers
         )
+        self.cleanup_interval = self.opts.get(
+            "reactor_cleanup_interval", self.opts["reactor_refresh_interval"]
+        )
+        self._next_cleanup = None
+        if self.cleanup_interval:
+            self._next_cleanup = time.monotonic() + self.cleanup_interval
+
+    def maybe_cleanup(self):
+        """
+        Periodically release cached clients to avoid retaining stale references.
+        """
+        if not self.cleanup_interval:
+            return None
+        now = time.monotonic()
+        if self._next_cleanup is None or now < self._next_cleanup:
+            return None
+        self._next_cleanup = now + self.cleanup_interval
+        return self.cleanup()
+
+    def cleanup(self):
+        """
+        Force cache expiry checks and return cleanup details.
+        """
+        removed_clients = []
+        if isinstance(self.client_cache, salt.utils.cache.CacheDict):
+            for client_type in list(self.client_cache.keys()):
+                if client_type not in self.client_cache:
+                    removed_clients.append(client_type)
+        return {"removed_clients": removed_clients}
 
     def populate_client_cache(self, low):
         """
