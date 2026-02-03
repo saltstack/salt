@@ -339,6 +339,33 @@ def remove_section(file_name, section, separator="=", encoding=None):
         return ret
 
 
+def remove_sections(file_name, sections, separator="=", encoding=None):
+    """
+    Remove multiple sections from an ini file. Returns a dictionary of
+    removed sections with their values.
+
+    Args:
+
+        file_name (str):
+            The full path to the ini file.
+
+        sections (list):
+            A list of section names to remove.
+
+    Returns:
+        dict: Mapping of section name to removed section values (or None).
+    """
+    removed = {}
+    for section in sections or []:
+        removed[section] = remove_section(
+            file_name=file_name,
+            section=section,
+            separator=separator,
+            encoding=encoding,
+        )
+    return removed
+
+
 def get_ini(file_name, separator="=", encoding=None):
     """
     Retrieve the whole structure from an ini file and return it as a dictionary.

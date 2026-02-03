@@ -156,6 +156,35 @@ def options_present(
                                 }
                             }
                         )
+                desired_sections = {
+                    sname
+                    for sname, sbody in sections.items()
+                    if isinstance(sbody, (dict, OrderedDict))
+                }
+                sections_to_remove = set(original_sections).difference(desired_sections)
+                if sections_to_remove:
+                    if __opts__["test"]:
+                        for section_name in sorted(sections_to_remove):
+                            ret["comment"] += (
+                                f"Removed section {section_name}.\n"
+                            )
+                            ret["result"] = None
+                    else:
+                        removed_sections = __salt__["ini.remove_sections"](
+                            file_name=name,
+                            sections=sorted(sections_to_remove),
+                            separator=separator,
+                            encoding=encoding,
+                        )
+                        for section_name in sections_to_remove:
+                            changes.update(
+                                {
+                                    section_name: {
+                                        "before": removed_sections.get(section_name),
+                                        "after": None,
+                                    }
+                                }
+                            )
             for section_name, section_body in [
                 (sname, sbody)
                 for sname, sbody in sections.items()

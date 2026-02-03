@@ -20,6 +20,8 @@ def configure_loader_modules():
             "__salt__": {
                 "ini.get_ini": mod_ini_manage.get_ini,
                 "ini.set_option": mod_ini_manage.set_option,
+                "ini.remove_option": mod_ini_manage.remove_option,
+                "ini.remove_sections": mod_ini_manage.remove_sections,
             },
             "__opts__": {"test": False},
         },
@@ -107,6 +109,30 @@ def test_options_present_true_file(tmp_path, sections):
         assert ini_manage.options_present(name, new_section) == exp_ret
 
     assert os.path.exists(name)
+    assert mod_ini_manage.get_ini(name) == sections
+
+
+def test_options_present_strict_removes_sections(tmp_path, sections):
+    """
+    Test to verify strict options_present removes sections not in the input.
+    """
+    name = str(tmp_path / "test_strict_remove_section.ini")
+
+    initial = copy.deepcopy(sections)
+    initial["extra"] = OrderedDict()
+    initial["extra"]["enabled"] = "true"
+    initial["other"] = OrderedDict()
+    initial["other"]["value"] = "42"
+    ini_manage.options_present(name, initial)
+
+    ret = ini_manage.options_present(name, sections, strict=True)
+
+    assert ret["result"] is True
+    assert ret["comment"] == "Changes take effect"
+    assert ret["changes"] == {
+        "extra": {"before": {"enabled": "true"}, "after": None},
+        "other": {"before": {"value": "42"}, "after": None},
+    }
     assert mod_ini_manage.get_ini(name) == sections
 
 
