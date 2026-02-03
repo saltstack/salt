@@ -20,12 +20,19 @@ Example Config in Master or Minion config
 import salt.utils.reactor
 
 
-def start(refresh_interval=None, worker_threads=None, worker_hwm=None):
+def start(
+    refresh_interval=None,
+    worker_threads=None,
+    worker_hwm=None,
+    cleanup_interval=None,
+):
     if refresh_interval is not None:
         __opts__["reactor_refresh_interval"] = refresh_interval
     if worker_threads is not None:
         __opts__["reactor_worker_threads"] = worker_threads
     if worker_hwm is not None:
         __opts__["reactor_worker_hwm"] = worker_hwm
+    if cleanup_interval is not None:
+        __opts__["reactor_cleanup_interval"] = cleanup_interval
 
     salt.utils.reactor.Reactor(__opts__).run()

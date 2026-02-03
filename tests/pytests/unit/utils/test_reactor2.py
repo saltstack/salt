@@ -8,6 +8,7 @@ import pytest
 
 import salt.loader
 import salt.template
+import salt.utils.cache
 import salt.utils.data
 import salt.utils.files
 import salt.utils.reactor as reactor
@@ -583,3 +584,16 @@ def test_client_cache_missing_key(file_client, react_wrap):
                 file_client_key = key
 
         assert file_client_key == f"{file_client}"
+
+
+def test_react_wrap_cleanup_expires_cache(monkeypatch, react_wrap):
+    client_cache = salt.utils.cache.CacheDict(1)
+    client_cache["runner"] = Mock()
+    react_wrap.client_cache = client_cache
+
+    now = 1000.0
+    monkeypatch.setattr(salt.utils.cache.time, "time", lambda: now + 5)
+
+    result = react_wrap.cleanup()
+
+    assert result["removed_clients"] == ["runner"]
