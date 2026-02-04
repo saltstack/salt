@@ -91,7 +91,9 @@ more-itertools==10.7.0
 msgpack==1.0.2
     # via -r requirements/base.txt
 packaging==24.0
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   wheel
 portend==2.6
     # via cherrypy
 psutil==5.8.0 ; python_version >= "3.10"
@@ -145,6 +147,10 @@ urllib3==2.6.3 ; python_version >= "3.10"
     #   requests
 vultr==1.0.1
     # via -r requirements/darwin.txt
+wheel==0.46.3
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/base.txt
 zc.lockfile==2.0
     # via cherrypy
 zipp==3.21.0
@@ -153,4 +159,5 @@ zipp==3.21.0
     #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
+# pip
 # setuptools
