@@ -2,6 +2,7 @@
 Various network validation utilities
 """
 
+import ipaddress
 import re
 import socket
 
@@ -92,8 +93,8 @@ def netmask(mask):
     if not isinstance(mask, str):
         return False
 
-    octets = mask.split(".")
-    if not len(octets) == 4:
+    try:
+        ipaddress.IPv4Network(f"0.0.0.0/{mask}")
+        return True
+    except ipaddress.NetmaskValueError:
         return False
-
-    return ipv4_addr(mask) and octets == sorted(octets, reverse=True)
