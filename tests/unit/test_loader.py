@@ -1702,16 +1702,18 @@ class LoaderLoadCachedGrainsTest(TestCase):
         SaltDeserializationError. This should be caught and return None
         so grains can be regenerated.
         """
-        import salt.exceptions
         import time
 
-        with patch('os.path.isfile', return_value=True), \
-             patch('os.path.getmtime', return_value=time.time()), \
-             patch('salt.utils.files.fopen'), \
-             patch('salt.payload.load',
-                   side_effect=salt.exceptions.SaltDeserializationError(
-                       "Could not deserialize msgpack message"
-                   )):
+        import salt.exceptions
+
+        with patch("os.path.isfile", return_value=True), patch(
+            "os.path.getmtime", return_value=time.time()
+        ), patch("salt.utils.files.fopen"), patch(
+            "salt.payload.load",
+            side_effect=salt.exceptions.SaltDeserializationError(
+                "Could not deserialize msgpack message"
+            ),
+        ):
             result = salt.loader._load_cached_grains(self.opts, "/fake/path")
             # Should return None, not raise exception
             self.assertIsNone(result)
