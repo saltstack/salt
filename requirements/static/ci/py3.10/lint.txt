@@ -390,6 +390,7 @@ packaging==24.0
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/base.txt
     #   ansible-core
+    #   wheel
 paramiko==3.4.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
@@ -741,6 +742,12 @@ werkzeug==3.1.3
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/common.in
     #   moto
+wheel==0.46.3
+    # via
+    #   -c requirements/constraints.txt
+    #   -c requirements/static/ci/../pkg/py3.10/linux.txt
+    #   -c requirements/static/ci/py3.10/linux.txt
+    #   -r requirements/base.txt
 xmltodict==0.12.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
@@ -769,4 +776,5 @@ zipp==3.23.0
     #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
+# pip
 # setuptools
