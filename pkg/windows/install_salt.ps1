@@ -119,6 +119,23 @@ if ( ! $SkipInstall ) {
       }
   }
 
+
+  #-------------------------------------------------------------------------------
+  # Updating pip, setuptools, and wheel
+  #-------------------------------------------------------------------------------
+  Write-Host "Updating pip, setuptools, and wheel: " -NoNewline
+  $env:PIP_CONSTRAINT = "$PROJECT_DIR\requirements\constraints.txt"
+  Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
+                -ArgumentList "install", "-U", "pip", "setuptools", "wheel" `
+                -WorkingDirectory "$PROJECT_DIR" `
+                -Wait -WindowStyle Hidden
+  if ( Test-Path -Path "$SCRIPTS_DIR\distro.exe" ) {
+      Write-Result "Success" -ForegroundColor Green
+  } else {
+      Write-Result "Failed" -ForegroundColor Red
+      exit 1
+  }
+
   #-------------------------------------------------------------------------------
   # Installing dependencies
   #-------------------------------------------------------------------------------
