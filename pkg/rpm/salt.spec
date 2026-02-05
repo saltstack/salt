@@ -40,7 +40,7 @@
 %define fish_dir %{_datadir}/fish/vendor_functions.d
 
 Name:    salt
-Version: 3006.19
+Version: 3006.20
 Release: 0
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
@@ -754,6 +754,27 @@ if [ $1 -ge 1 ] ; then
 fi
 
 %changelog
+* Thu Feb 05 2026 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.20
+
+# Fixed
+
+- Support attrlist in ldap.managed [#53364](https://github.com/saltstack/salt/issues/53364)
+- Fix a stacktrace that happens then the minion fails to connect to a master. [#62780](https://github.com/saltstack/salt/issues/62780)
+- Add virtualenv to package dependencies so venv module can work without ensurepip. [#68388](https://github.com/saltstack/salt/issues/68388)
+- Preserve interval_map on beacon refresh to ensure beacons are still fired when we refresh beacons. [#68548](https://github.com/saltstack/salt/issues/68548)
+- Fixed Arista EOS Napalm driver to return json data, by allowing to pass cli kwargs to driver. [#68550](https://github.com/saltstack/salt/issues/68550)
+- Fix an issue with Value names that contain periods, such as scrnsave.exe [#68565](https://github.com/saltstack/salt/issues/68565)
+- Fixed output of lgpo_reg states. Comments and result are now correct. [#68566](https://github.com/saltstack/salt/issues/68566)
+- Update bootstrap-salt.sh to v2026-01-15 [#68640](https://github.com/saltstack/salt/issues/68640)
+- Update bootstrap to v2026-01-22 [#68656](https://github.com/saltstack/salt/issues/68656)
+- Upgrade relenv to 0.22.3
+  * Upgrade OpenSSL to 3.6.1 - Fixes CVE-2025-15467
+  * Upgrade SQLite to 3.51.2.0
+  * Upgrade XZ to 5.8.2
+  * Upgrade ncurses to6.6
+  * Upgrade expat to2.7.4 [#68682](https://github.com/saltstack/salt/issues/68682)
+
+
 * Fri Jan 09 2026 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.19
 
 # Fixed
