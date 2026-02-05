@@ -258,11 +258,7 @@ class Batch:
                                 continue
                         else:
                             for minion_id, data in part.items():
-                                if minion_id == "error":
-                                    log.debug("Error in batch run: %s", data)
-                                    continue
-                                #minion_tracker[queue]["minions"].discard(id)
-                                if minion_id not in self.minions:
+                                if minion_id == "error" or minion_id not in self.minions:
                                     continue
                                 parts[minion_id] = data
                                 minion_tracker[queue]["minions"].discard(minion_id)
