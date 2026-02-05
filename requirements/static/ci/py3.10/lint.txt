@@ -28,7 +28,7 @@ isort==4.3.21
     # via pylint
 mccabe==0.6.1
     # via pylint
-platformdirs==4.0.0
+platformdirs==4.5.1
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   pylint
