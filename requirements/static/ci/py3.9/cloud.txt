@@ -161,6 +161,7 @@ cryptography==42.0.5
     #   vcert
 distlib==0.4.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   virtualenv
 distro==1.5.0
@@ -189,6 +190,7 @@ exceptiongroup==1.0.4
     #   pytest
 filelock==3.19.1 ; python_version < "3.10"
     # via
+    #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
     #   virtualenv
@@ -438,6 +440,7 @@ pathtools==0.1.2
     #   watchdog
 platformdirs==4.4.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   virtualenv
 pluggy==1.4.0
@@ -763,6 +766,7 @@ trustme==1.1.0
     #   -r requirements/pytest.txt
 typing-extensions==4.15.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   pytest-shell-utilities
     #   pytest-system-statistics
@@ -784,7 +788,9 @@ vcert==0.7.4 ; sys_platform != "win32"
     #   -r requirements/static/ci/common.in
 virtualenv==20.36.1
     # via
+    #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
 watchdog==0.10.3

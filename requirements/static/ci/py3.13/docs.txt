@@ -46,12 +46,20 @@ cryptography==42.0.8
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
+distlib==0.4.0
+    # via
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   virtualenv
 distro==1.9.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
 docutils==0.21.2
     # via sphinx
+filelock==3.20.3 ; python_version >= "3.10"
+    # via
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   virtualenv
 frozenlist==1.8.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -135,6 +143,10 @@ packaging==24.0
     #   -r requirements/base.txt
     #   sphinx
     #   wheel
+platformdirs==4.5.1
+    # via
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   virtualenv
 portend==3.2.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -221,6 +233,10 @@ urllib3==2.6.3 ; python_version >= "3.10"
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
     #   requests
+virtualenv==20.36.1
+    # via
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   -r requirements/base.txt
 wheel==0.46.3
     # via
     #   -c requirements/constraints.txt

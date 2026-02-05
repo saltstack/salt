@@ -102,7 +102,9 @@ cryptography==42.0.5
     #   requests-ntlm
     #   trustme
 distlib==0.4.0
-    # via virtualenv
+    # via
+    #   -c requirements/static/ci/../pkg/py3.9/windows.txt
+    #   virtualenv
 distro==1.5.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
@@ -122,6 +124,7 @@ exceptiongroup==1.0.4
     # via pytest
 filelock==3.19.1 ; python_version < "3.10"
     # via
+    #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/static/ci/common.in
     #   virtualenv
 flaky==3.8.1
@@ -273,7 +276,9 @@ pathspec==0.9.0
 pathtools==0.1.2
     # via watchdog
 platformdirs==4.4.0
-    # via virtualenv
+    # via
+    #   -c requirements/static/ci/../pkg/py3.9/windows.txt
+    #   virtualenv
 pluggy==1.4.0
     # via pytest
 portend==2.6
@@ -484,6 +489,7 @@ trustme==1.1.0
     # via -r requirements/pytest.txt
 typing-extensions==4.15.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   pytest-shell-utilities
     #   pytest-system-statistics
     #   virtualenv
@@ -500,6 +506,8 @@ urllib3==1.26.20 ; python_version < "3.10"
     #   responses
 virtualenv==20.36.1
     # via
+    #   -c requirements/static/ci/../pkg/py3.9/windows.txt
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
 watchdog==0.10.3
