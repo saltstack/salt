@@ -118,7 +118,7 @@ def beacon(config):
     Return status for requested information
     """
     log.debug(config)
-    ctime = datetime.datetime.utcnow().isoformat()
+    ctime = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
     whitelist = []
     config = salt.utils.beacons.remove_hidden_options(config, whitelist)

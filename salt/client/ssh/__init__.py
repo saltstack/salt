@@ -185,17 +185,12 @@ echo "ERROR: Unable to locate appropriate python command" >&2
 exit $EX_PYTHON_INVALID
 EOF'''.format(
             EX_THIN_PYTHON_INVALID=salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,
-        ).split(
-            "\n"
-        )
+        ).split("\n")
     ]
 )
 
 
-SSH_SH_SHIM_RELENV = "\n".join(
-    [
-        s.strip()
-        for s in """
+SSH_SH_SHIM_RELENV = "\n".join([s.strip() for s in """
 /bin/sh << 'EOF'
 set -e
 set -u
@@ -238,11 +233,7 @@ echo "{RSTR}" >&2
 
 exec $SUDO "$SALT_CALL_BIN" --retcode-passthrough --local --metadata --out=json -lquiet -c "{THIN_DIR}" {ARGS}
 EOF
-""".split(
-            "\n"
-        )
-    ]
-)
+""".split("\n")])
 
 if not salt.utils.platform.is_windows() and not salt.utils.platform.is_junos():
     shim_file = os.path.join(os.path.dirname(__file__), "ssh_py_shim.py")
@@ -479,7 +470,9 @@ class SSH(MultiprocessingStateMixin):
                         '# Automatically added by "{s_user}" at {s_time}\n{hostname}:\n'
                         "    host: {hostname}\n    user: {user}\n    passwd: {passwd}\n".format(
                             s_user=getpass.getuser(),
-                            s_time=datetime.datetime.utcnow().isoformat(),
+                            s_time=datetime.datetime.now(
+                                datetime.timezone.utc
+                            ).isoformat(),
                             hostname=self.opts.get("tgt", ""),
                             user=self.opts.get("ssh_user", ""),
                             passwd=self.opts.get("ssh_passwd", ""),

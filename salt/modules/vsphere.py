@@ -3877,7 +3877,9 @@ def update_host_datetime(
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         date_time_manager = _get_date_time_mgr(host_ref)
         try:
-            date_time_manager.UpdateDateTime(datetime.datetime.utcnow())
+            date_time_manager.UpdateDateTime(
+                datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+            )
         except vim.fault.HostConfigFault as err:
             msg = "'vsphere.update_date_time' failed for host {}: {}".format(
                 host_name, err
@@ -11151,7 +11153,7 @@ def create_vm(
     # If datacenter is specified, set the container reference to start search
     # from it instead
     container_object = salt.utils.vmware.get_datacenter(service_instance, datacenter)
-    (resourcepool_object, placement_object) = salt.utils.vmware.get_placement(
+    resourcepool_object, placement_object = salt.utils.vmware.get_placement(
         service_instance, datacenter, placement=placement
     )
     folder_object = salt.utils.vmware.get_folder(
@@ -11209,7 +11211,7 @@ def create_vm(
         )
         config_spec.deviceChange.extend(disk_specs)
     if interfaces:
-        (interface_specs, nic_settings) = _create_network_adapters(
+        interface_specs, nic_settings = _create_network_adapters(
             interfaces, parent=container_object
         )
         config_spec.deviceChange.extend(interface_specs)
@@ -11391,7 +11393,7 @@ def update_vm(
         )
         for item in diffs["interfaces"].removed:
             network_changes.append(_delete_device(item["object"]))
-        (adapters, nics) = _create_network_adapters(
+        adapters, nics = _create_network_adapters(
             diffs["interfaces"].added, datacenter_ref
         )
         network_changes.extend(adapters)
@@ -11641,7 +11643,7 @@ def _remove_vm(name, datacenter, service_instance, placement=None, power_off=Non
     """
     results = {}
     if placement:
-        (resourcepool_object, placement_object) = salt.utils.vmware.get_placement(
+        resourcepool_object, placement_object = salt.utils.vmware.get_placement(
             service_instance, datacenter, placement
         )
     else:
@@ -11702,7 +11704,7 @@ def delete_vm(name, datacenter, placement=None, power_off=False, service_instanc
         )
     except jsonschema.exceptions.ValidationError as exc:
         raise InvalidConfigError(exc)
-    (results, vm_ref) = _remove_vm(
+    results, vm_ref = _remove_vm(
         name,
         datacenter,
         service_instance=service_instance,
@@ -11751,7 +11753,7 @@ def unregister_vm(
         )
     except jsonschema.exceptions.ValidationError as exc:
         raise InvalidConfigError(exc)
-    (results, vm_ref) = _remove_vm(
+    results, vm_ref = _remove_vm(
         name,
         datacenter,
         service_instance=service_instance,

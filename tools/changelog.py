@@ -107,7 +107,7 @@ def update_rpm(ctx: Context, salt_version: Version, draft: bool = False):
         capture=True,
         check=True,
     ).stdout.decode()
-    dt = datetime.datetime.utcnow()
+    dt = datetime.datetime.now(datetime.timezone.utc)
     date = dt.strftime("%a %b %d %Y")
     header = f"* {date} Salt Project Packaging <saltproject-packaging@vmware.com> - {str_salt_version}\n"
     parts = orig.split("%changelog")
@@ -150,7 +150,7 @@ def update_deb(ctx: Context, salt_version: Version, draft: bool = False):
         salt_version = _get_salt_version(ctx)
     changes = _get_pkg_changelog_contents(ctx, salt_version)
     formated = "\n".join([f"  {_.replace('-', '*', 1)}" for _ in changes.split("\n")])
-    dt = datetime.datetime.utcnow()
+    dt = datetime.datetime.now(datetime.timezone.utc)
     date = dt.strftime("%a, %d %b %Y %H:%M:%S +0000")
     tmpchanges = "pkg/rpm/salt.spec.1"
     debian_changelog_path = "pkg/debian/changelog"
@@ -229,9 +229,7 @@ def update_release_notes(
         release_notes_path.parent / "templates" / f"{version}.md.template"
     )
     if not template_release_path.exists():
-        template_release_path.write_text(
-            textwrap.dedent(
-                f"""\
+        template_release_path.write_text(textwrap.dedent(f"""\
                 (release-{salt_version})=
                 # Salt {salt_version} release notes{{{{ unreleased }}}}
                 {{{{ warning }}}}
@@ -246,9 +244,7 @@ def update_release_notes(
                 -->
                 ## Changelog
                 {{{{ changelog }}}}
-                """
-            )
-        )
+                """))
         ctx.run("git", "add", str(template_release_path))
         ctx.info(f"Created template {template_release_path} release notes file")
         if template_only:

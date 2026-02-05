@@ -15,8 +15,13 @@ LAST_JID_DATETIME = None
 def _utc_now():
     """
     Helper method so tests do not have to patch the built-in method.
+
+    Returns a naive datetime object in UTC (without tzinfo) for backward
+    compatibility with existing JID format expectations.
     """
-    return datetime.datetime.utcnow()
+    # Use timezone-aware datetime.now() to avoid deprecation warning in Python 3.12+,
+    # then convert to naive datetime for backward compatibility
+    return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
 
 def gen_jid(opts):

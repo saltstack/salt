@@ -31,8 +31,7 @@ def init():
     try:
         conn.execute("SELECT count(*) FROM packages")
     except OperationalError:
-        conn.execute(
-            """CREATE TABLE packages (
+        conn.execute("""CREATE TABLE packages (
             package text,
             version text,
             release text,
@@ -44,14 +43,12 @@ def init():
             os_family_dependencies text,
             summary text,
             description text
-        )"""
-        )
+        )""")
 
     try:
         conn.execute("SELECT count(*) FROM files")
     except OperationalError:
-        conn.execute(
-            """CREATE TABLE files (
+        conn.execute("""CREATE TABLE files (
             package text,
             path text,
             size real,
@@ -64,8 +61,7 @@ def init():
             uname text,
             gname text,
             mtime text
-        )"""
-        )
+        )""")
 
     return conn
 
@@ -166,7 +162,9 @@ def register_pkg(name, formula_def, conn=None):
             name,
             formula_def["version"],
             formula_def["release"],
-            datetime.datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT"),
+            datetime.datetime.now(datetime.timezone.utc).strftime(
+                "%a, %d %b %Y %H:%M:%S GMT"
+            ),
             formula_def.get("os", None),
             formula_def.get("os_family", None),
             formula_def.get("dependencies", None),

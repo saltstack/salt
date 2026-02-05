@@ -1,10 +1,10 @@
 """
-    salt.utils.versions
-    ~~~~~~~~~~~~~~~~~~~
+salt.utils.versions
+~~~~~~~~~~~~~~~~~~~
 
-    Version parsing based on `packaging.version` and `looseversion.LooseVersion`
-    which works under python 3 because on python 3 you can no longer compare
-    strings against integers.
+Version parsing based on `packaging.version` and `looseversion.LooseVersion`
+which works under python 3 because on python 3 you can no longer compare
+strings against integers.
 """
 
 import datetime
@@ -243,7 +243,7 @@ def warn_until_date(
         # Attribute the warning to the calling function, not to warn_until_date()
         stacklevel = 2
 
-    today = _current_date or datetime.datetime.utcnow().date()
+    today = _current_date or datetime.datetime.now(datetime.timezone.utc).date()
     if today >= date:
         caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
         deprecated_message = (

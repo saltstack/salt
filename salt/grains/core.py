@@ -2433,7 +2433,7 @@ def _legacy_linux_distribution_data(grains, os_release, lsb_has_error):
     log.trace(
         "Getting OS name, release, and codename from distro id, version, codename"
     )
-    (osname, osrelease, oscodename) = (
+    osname, osrelease, oscodename = (
         x.strip('"').strip("'") for x in _linux_distribution()
     )
     # Try to assign these three names based on the lsb info, they tend to
@@ -2929,7 +2929,7 @@ def hostname():
         __FQDN__ = "localhost.localdomain"
 
     grains["fqdn"] = __FQDN__
-    (grains["host"], grains["domain"]) = grains["fqdn"].partition(".")[::2]
+    grains["host"], grains["domain"] = grains["fqdn"].partition(".")[::2]
     return grains
 
 
@@ -2991,12 +2991,12 @@ def ip_fqdn():
         if not ret["ipv" + ipv_num]:
             ret[key] = []
         else:
-            start_time = datetime.datetime.utcnow()
+            start_time = datetime.datetime.now(datetime.timezone.utc)
             try:
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
                 ret[key] = list({item[4][0] for item in info})
             except (OSError, UnicodeError):
-                timediff = datetime.datetime.utcnow() - start_time
+                timediff = datetime.datetime.now(datetime.timezone.utc) - start_time
                 if timediff.seconds > 5 and __opts__["__role"] == "master":
                     log.warning(
                         'Unable to find IPv%s record for "%s" causing a %s '
