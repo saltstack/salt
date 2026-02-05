@@ -104,7 +104,9 @@ cryptography==42.0.5
     #   trustme
     #   vcert
 distlib==0.4.0
-    # via virtualenv
+    # via
+    #   -c requirements/static/ci/../pkg/py3.12/freebsd.txt
+    #   virtualenv
 distro==1.5.0
     # via
     #   -c requirements/static/ci/../pkg/py3.12/freebsd.txt
@@ -121,6 +123,7 @@ etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
 filelock==3.20.3 ; python_version >= "3.10"
     # via
+    #   -c requirements/static/ci/../pkg/py3.12/freebsd.txt
     #   -r requirements/static/ci/common.in
     #   virtualenv
 flaky==3.8.1
@@ -267,7 +270,9 @@ pathspec==0.9.0
 pathtools==0.1.2
     # via watchdog
 platformdirs==4.5.1
-    # via virtualenv
+    # via
+    #   -c requirements/static/ci/../pkg/py3.12/freebsd.txt
+    #   virtualenv
 pluggy==1.4.0
     # via pytest
 portend==2.4
@@ -471,6 +476,8 @@ vcert==0.7.4 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 virtualenv==20.36.1
     # via
+    #   -c requirements/static/ci/../pkg/py3.12/freebsd.txt
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
 watchdog==0.10.3

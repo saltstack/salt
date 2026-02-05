@@ -30,8 +30,12 @@ cryptography==42.0.8
     # via
     #   -r requirements/base.txt
     #   pyopenssl
+distlib==0.4.0
+    # via virtualenv
 distro==1.9.0
     # via -r requirements/base.txt
+filelock==3.20.3
+    # via virtualenv
 frozenlist==1.8.0 ; python_version >= "3.11"
     # via -r requirements/base.txt
 gitdb==4.0.12
@@ -88,6 +92,8 @@ packaging==24.0
     # via
     #   -r requirements/base.txt
     #   wheel
+platformdirs==4.5.1
+    # via virtualenv
 portend==3.2.1
     # via cherrypy
 psutil==7.2.1 ; python_version >= "3.10"
@@ -141,6 +147,8 @@ urllib3==2.6.3 ; python_version >= "3.10"
     #   -r requirements/base.txt
     #   -r requirements/windows.txt
     #   requests
+virtualenv==20.36.1
+    # via -r requirements/base.txt
 wheel==0.46.3
     # via
     #   -c requirements/constraints.txt
