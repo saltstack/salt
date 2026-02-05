@@ -19,7 +19,7 @@ from salt.utils.stringutils import to_bytes
 log = logging.getLogger(__name__)
 
 
-def managed(name, entries, connect_spec=None):
+def managed(name, entries, connect_spec=None, attrlist=None):
     """Ensure the existence (or not) of LDAP entries and their attributes
 
     Example:
@@ -183,6 +183,12 @@ def managed(name, entries, connect_spec=None):
         the ``'url'`` entry is set to the value of the ``name``
         parameter.
 
+    :param attrlist:
+        Passed directly to :py:func:`ldap3.connect <salt.modules.ldap3.search>`
+        to filter the attributes returned by the LDAP server. By default, all
+        user attributes will be requested, and this should only need to be
+        modified if management of operational attributes is desired.
+
     :returns:
         A dict with the following keys:
 
@@ -254,7 +260,7 @@ def managed(name, entries, connect_spec=None):
 
     with connect(connect_spec) as l:
 
-        old, new = _process_entries(l, entries)
+        old, new = _process_entries(l, attrlist, entries)
 
         # collect all of the affected entries (only the key is
         # important in this dict; would have used an OrderedSet if
@@ -367,7 +373,7 @@ def managed(name, entries, connect_spec=None):
     return ret
 
 
-def _process_entries(l, entries):
+def _process_entries(l, attrlist, entries):
     """Helper for managed() to process entries and return before/after views
 
     Collect the current database state and update it according to the
@@ -420,7 +426,7 @@ def _process_entries(l, entries):
             olde = new.get(dn, None)
             if olde is None:
                 # next check the database
-                results = __salt__["ldap3.search"](l, dn, "base")
+                results = __salt__["ldap3.search"](l, dn, "base", attrlist=attrlist)
                 if len(results) == 1:
                     attrs = results[dn]
                     olde = {
