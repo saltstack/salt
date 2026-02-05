@@ -13,6 +13,11 @@ import salt.transport.zeromq
 log = logging.getLogger(__name__)
 
 
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+]
+
+
 @pytest.fixture
 def port():
     return pytestshellutils.utils.ports.get_unused_localhost_port()
@@ -349,8 +354,17 @@ async def test_request_client_recv_loop_closed(
                 assert "Loop closed while receiving." in caplog.messages
                 assert f"Send and receive coroutine ending {socket}" in caplog.messages
             finally:
+                # 1. Close the stream first
+                # This unregisters the FD from the IOLoop selector
+                if not stream.closed():
+                    stream.close()
+
+                # 2. Now close the client and the raw socket
                 request_client.close()
-                serve_socket.close()
+                if not serve_socket.closed:
+                    serve_socket.close()
+
+                # 3. Terminate the context last
                 ctx.term()
 
 
@@ -388,6 +402,15 @@ async def test_request_client_recv_socket_closed(
                 assert "Receive socket closed while receiving." in caplog.messages
                 assert f"Send and receive coroutine ending {socket}" in caplog.messages
             finally:
+                # 1. Close the stream first
+                # This unregisters the FD from the IOLoop selector
+                if not stream.closed():
+                    stream.close()
+
+                # 2. Now close the client and the raw socket
                 request_client.close()
-                serve_socket.close()
+                if not serve_socket.closed:
+                    serve_socket.close()
+
+                # 3. Terminate the context last
                 ctx.term()

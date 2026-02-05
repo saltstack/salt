@@ -2,6 +2,7 @@ import logging
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import urllib.error
 import urllib.request
@@ -30,6 +31,8 @@ pytestmark = [
 ]
 
 KNOWN_VIRTUALENV_BINARY_NAMES = (
+    "artifacts/salt/bin/virtualenv",
+    os.path.join(os.path.dirname(sys.executable), "virtualenv"),
     "virtualenv",
     "virtualenv2",
     "virtualenv-2.6",

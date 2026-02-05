@@ -4,6 +4,7 @@ import os
 import pathlib
 import pprint
 import shutil
+import subprocess
 import sys
 
 import pytest
@@ -64,6 +65,18 @@ def create_virtualenv(modules):
         Also, one windows, we must also point to the virtualenv binary outside the existing
         virtualenv because it will fail otherwise
         """
+        if "venv_bin" not in kwargs:
+            # Try to find the onedir virtualenv first
+            onedir_venv = os.path.join(
+                os.environ.get("REPO_ROOT_DIR", "/salt"),
+                "artifacts",
+                "salt",
+                "bin",
+                "virtualenv",
+            )
+            if os.path.exists(onedir_venv):
+                kwargs["venv_bin"] = onedir_venv
+
         if "python" not in kwargs:
             try:
                 if salt.utils.platform.is_windows():
@@ -81,12 +94,9 @@ def create_virtualenv(modules):
                         if os.path.exists(python):
                             break
                     else:
-                        pytest.fail(
-                            "Couldn't find a python binary name under '{}' matching: {}".format(
-                                os.path.join(sys.real_prefix, "bin"),
-                                python_binary_names,
-                            )
-                        )
+                        # Fallback to system python if we can't find the real prefix one
+                        python = sys.executable
+
                 # We're running off a virtualenv, and we don't want to create a virtualenv off of
                 # a virtualenv, let's point to the actual python that created the virtualenv
                 kwargs["python"] = python
@@ -394,6 +404,7 @@ def test_issue_6912_wrong_owner_requirements_file(
 
 @pytest.mark.destructive_test
 @pytest.mark.slow_test
+@pytest.mark.requires_network
 def test_issue_6833_pip_upgrade_pip(tmp_path, create_virtualenv, modules, states):
     # Create the testing virtualenv
     if sys.platform == "win32":
@@ -420,33 +431,45 @@ def test_issue_6833_pip_upgrade_pip(tmp_path, create_virtualenv, modules, states
             pprint.pformat(ret)
         )
 
-    # Let's install a fixed version pip over whatever pip was
-    # previously installed
-    ret = modules.pip.install("pip==19.3.1", upgrade=True, bin_env=venv_dir)
+    # Download wheels to avoid PyPI slowness/timeouts during test
+    wheels_dir = tmp_path / "wheels"
+    wheels_dir.mkdir()
 
-    if not isinstance(ret, dict):
-        pytest.fail(
-            "The 'pip.install' command did not return the excepted dictionary."
-            " Output:\n{}".format(ret)
-        )
+    pip_22_0_4_url = "https://files.pythonhosted.org/packages/4d/16/0a14ca596f30316efd412a60bdfac02a7259bf8673d4d917dc60b9a21812/pip-22.0.4-py3-none-any.whl"
+    pip_22_1_2_url = "https://files.pythonhosted.org/packages/96/2f/caec18213f6a67852f6997fb0673ae08d2e93d1b81573edb93ba4ef06970/pip-22.1.2-py3-none-any.whl"
 
-    assert ret["retcode"] == 0
-    assert "Successfully installed pip" in ret["stdout"]
+    for url in (pip_22_0_4_url, pip_22_1_2_url):
+        subprocess.check_call(["curl", "-L", "-O", url], cwd=str(wheels_dir))
 
-    # Let's make sure we have pip 9.0.1 installed
-    assert modules.pip.list("pip", bin_env=venv_dir) == {"pip": "19.3.1"}
+    # Use local wheels
+    with patched_environ(PIP_NO_INDEX="1", PIP_FIND_LINKS=str(wheels_dir)):
+        # Let's install a fixed version pip over whatever pip was
+        # previously installed
+        ret = modules.pip.install("pip==22.0.4", upgrade=True, bin_env=venv_dir)
 
-    # Now the actual pip upgrade pip test
-    ret = states.pip.installed(name="pip==20.0.1", upgrade=True, bin_env=venv_dir)
+        if not isinstance(ret, dict):
+            pytest.fail(
+                "The 'pip.install' command did not return the excepted dictionary."
+                " Output:\n{}".format(ret)
+            )
 
-    if not isinstance(ret.raw, dict):
-        pytest.fail(
-            "The 'pip.install' command did not return the excepted dictionary."
-            " Output:\n{}".format(ret)
-        )
+        assert ret["retcode"] == 0
+        assert "Successfully installed pip" in ret["stdout"]
 
-    assert ret.result is True
-    assert ret.changes == {"pip==20.0.1": "Installed"}
+        # Let's make sure we have pip 22.0.4 installed
+        assert modules.pip.list("pip", bin_env=venv_dir) == {"pip": "22.0.4"}
+
+        # Now the actual pip upgrade pip test
+        ret = states.pip.installed(name="pip==22.1.2", upgrade=True, bin_env=venv_dir)
+
+        if not isinstance(ret.raw, dict):
+            pytest.fail(
+                "The 'pip.install' command did not return the excepted dictionary."
+                " Output:\n{}".format(ret)
+            )
+
+        assert ret.result is True
+        assert ret.changes == {"pip==22.1.2": "Installed"}
 
 
 @pytest.mark.slow_test

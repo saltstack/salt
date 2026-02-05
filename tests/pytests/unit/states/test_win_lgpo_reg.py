@@ -410,6 +410,46 @@ def test_mach_value_present_test_true(empty_reg_pol_mach):
     assert result == expected
 
 
+def test_mach_value_present_test_true_existing_no_change(reg_pol_mach):
+    """
+    Test value.present with existing correct value in Machine policy
+    """
+    with patch.dict(lgpo_reg.__opts__, {"test": True}):
+        result = lgpo_reg.value_present(
+            name="MyValue1",
+            key="SOFTWARE\\MyKey1",
+            v_data="squidward",
+            v_type="REG_SZ",
+        )
+    expected = {
+        "changes": {},
+        "comment": "Policy value already present\nRegistry value already present",
+        "name": "MyValue1",
+        "result": True,
+    }
+    assert result == expected
+
+
+def test_mach_value_present_test_true_existing_change(reg_pol_mach):
+    """
+    Test value.present with existing incorrect value in Machine policy
+    """
+    with patch.dict(lgpo_reg.__opts__, {"test": True}):
+        result = lgpo_reg.value_present(
+            name="MyValue1",
+            key="SOFTWARE\\MyKey1",
+            v_data="2",
+            v_type="REG_DWORD",
+        )
+    expected = {
+        "changes": {},
+        "comment": "Policy value will be set\nRegistry value will be set",
+        "name": "MyValue1",
+        "result": None,
+    }
+    assert result == expected
+
+
 def test_mach_value_present_existing_disabled(reg_pol_mach):
     """
     Test value.present with existing value that is disabled in Machine policy
@@ -540,9 +580,46 @@ def test_mach_value_disabled_test_true(empty_reg_pol_mach):
         )
     expected = {
         "changes": {},
-        "comment": "Policy value will be disabled",
+        "comment": "Registry value already deleted\n" "Policy value will be disabled",
         "name": "MyValue",
         "result": None,
+    }
+    assert result == expected
+
+
+def test_mach_value_disabled_test_true_existing_change(reg_pol_mach):
+    """
+    Test value.disabled with an existing value that is not disabled in Machine
+    policy
+    """
+    with patch.dict(lgpo_reg.__opts__, {"test": True}):
+        result = lgpo_reg.value_disabled(
+            name="MyValue1",
+            key="SOFTWARE\\MyKey1",
+        )
+    expected = {
+        "changes": {},
+        "comment": "Policy value will be disabled\nRegistry value will be deleted",
+        "name": "MyValue1",
+        "result": None,
+    }
+    assert result == expected
+
+
+def test_mach_value_disabled_test_true_existing_no_change(reg_pol_mach):
+    """
+    Test value.disabled with an existing disabled value in Machine policy
+    """
+    with patch.dict(lgpo_reg.__opts__, {"test": True}):
+        result = lgpo_reg.value_disabled(
+            name="MyValue2",
+            key="SOFTWARE\\MyKey1",
+        )
+    expected = {
+        "changes": {},
+        "comment": "Policy value already disabled\nRegistry value already deleted",
+        "name": "MyValue2",
+        "result": True,
     }
     assert result == expected
 
@@ -625,6 +702,36 @@ def test_mach_value_absent_test_true(reg_pol_mach):
         "changes": {},
         "comment": "Policy value will be deleted\nRegistry value will be deleted",
         "name": "MyValue1",
+        "result": None,
+    }
+    assert result == expected
+
+
+def test_mach_value_absent_test_true_no_change(empty_reg_pol_mach):
+    """
+    Test value.absent when the value is already absent in Machine policy
+    """
+    with patch.dict(lgpo_reg.__opts__, {"test": True}):
+        result = lgpo_reg.value_absent(name="MyValue1", key="SOFTWARE\\MyKey1")
+    expected = {
+        "changes": {},
+        "comment": "Policy value already deleted\nRegistry value already deleted",
+        "name": "MyValue1",
+        "result": True,
+    }
+    assert result == expected
+
+
+def test_mach_value_absent_test_true_disabled(reg_pol_mach):
+    """
+    Test value.absent when the value is disabled in Machine policy
+    """
+    with patch.dict(lgpo_reg.__opts__, {"test": True}):
+        result = lgpo_reg.value_absent(name="MyValue2", key="SOFTWARE\\MyKey1")
+    expected = {
+        "changes": {},
+        "comment": "Registry value already deleted\nPolicy value will be deleted",
+        "name": "MyValue2",
         "result": None,
     }
     assert result == expected
@@ -801,6 +908,48 @@ def test_user_value_present_test_true(empty_reg_pol_user):
     assert result == expected
 
 
+def test_user_value_present_test_true_existing_change(reg_pol_user):
+    """
+    Test value.present with existing incorrect value in User policy
+    """
+    with patch.dict(lgpo_reg.__opts__, {"test": True}):
+        result = lgpo_reg.value_present(
+            name="MyValue1",
+            key="SOFTWARE\\MyKey1",
+            v_data="2",
+            v_type="REG_DWORD",
+            policy_class="User",
+        )
+    expected = {
+        "changes": {},
+        "comment": "Policy value will be set",
+        "name": "MyValue1",
+        "result": None,
+    }
+    assert result == expected
+
+
+def test_user_value_present_test_true_existing_no_change(reg_pol_user):
+    """
+    Test value.present with existing correct value in User policy
+    """
+    with patch.dict(lgpo_reg.__opts__, {"test": True}):
+        result = lgpo_reg.value_present(
+            name="MyValue1",
+            key="SOFTWARE\\MyKey1",
+            v_data="squidward",
+            v_type="REG_SZ",
+            policy_class="User",
+        )
+    expected = {
+        "changes": {},
+        "comment": "Policy value already present",
+        "name": "MyValue1",
+        "result": True,
+    }
+    assert result == expected
+
+
 def test_user_value_present_existing_disabled(reg_pol_user):
     """
     Test value.present with existing value that is disabled in User policy
@@ -927,6 +1076,45 @@ def test_user_value_disabled_test_true(empty_reg_pol_user):
     assert result == expected
 
 
+def test_user_value_disabled_test_true_existing_change(reg_pol_user):
+    """
+    Test value.disabled with an existing value that is not disabled in User
+    policy
+    """
+    with patch.dict(lgpo_reg.__opts__, {"test": True}):
+        result = lgpo_reg.value_disabled(
+            name="MyValue1",
+            key="SOFTWARE\\MyKey1",
+            policy_class="User",
+        )
+    expected = {
+        "changes": {},
+        "comment": "Policy value will be disabled",
+        "name": "MyValue1",
+        "result": None,
+    }
+    assert result == expected
+
+
+def test_user_value_disabled_test_true_existing_no_change(reg_pol_user):
+    """
+    Test value.disabled with an existing disabled value in User policy
+    """
+    with patch.dict(lgpo_reg.__opts__, {"test": True}):
+        result = lgpo_reg.value_disabled(
+            name="MyValue2",
+            key="SOFTWARE\\MyKey1",
+            policy_class="User",
+        )
+    expected = {
+        "changes": {},
+        "comment": "Policy value already disabled",
+        "name": "MyValue2",
+        "result": True,
+    }
+    assert result == expected
+
+
 def test_user_value_absent(reg_pol_user):
     """
     Test value.absent in User policy
@@ -1017,6 +1205,44 @@ def test_user_value_absent_test_true(reg_pol_user):
         "changes": {},
         "comment": "Policy value will be deleted",
         "name": "MyValue1",
+        "result": None,
+    }
+    assert result == expected
+
+
+def test_user_value_absent_test_true_no_change(empty_reg_pol_user):
+    """
+    Test value.absent when the value is already absent in User policy
+    """
+    with patch.dict(lgpo_reg.__opts__, {"test": True}):
+        result = lgpo_reg.value_absent(
+            name="MyValue1",
+            key="SOFTWARE\\MyKey1",
+            policy_class="User",
+        )
+    expected = {
+        "changes": {},
+        "comment": "Policy value already deleted",
+        "name": "MyValue1",
+        "result": True,
+    }
+    assert result == expected
+
+
+def test_user_value_absent_test_true_disabled(reg_pol_user):
+    """
+    Test value.absent when the value is disabled in User policy
+    """
+    with patch.dict(lgpo_reg.__opts__, {"test": True}):
+        result = lgpo_reg.value_absent(
+            name="MyValue2",
+            key="SOFTWARE\\MyKey1",
+            policy_class="User",
+        )
+    expected = {
+        "changes": {},
+        "comment": "Policy value will be deleted",
+        "name": "MyValue2",
         "result": None,
     }
     assert result == expected

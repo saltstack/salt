@@ -36,8 +36,12 @@ cryptography==42.0.5
     # via
     #   -r requirements/base.txt
     #   pyopenssl
+distlib==0.4.0
+    # via virtualenv
 distro==1.8.0
     # via -r requirements/base.txt
+filelock==3.20.3
+    # via virtualenv
 frozenlist==1.7.0 ; python_version >= "3.11"
     # via
     #   -r requirements/base.txt
@@ -90,7 +94,11 @@ multidict==6.0.4
     #   aiohttp
     #   yarl
 packaging==24.0
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   wheel
+platformdirs==4.5.1
+    # via virtualenv
 portend==3.1.0
     # via cherrypy
 propcache==0.3.2
@@ -139,6 +147,12 @@ urllib3==2.6.3 ; python_version >= "3.10"
     # via
     #   -r requirements/base.txt
     #   requests
+virtualenv==20.36.1
+    # via -r requirements/base.txt
+wheel==0.46.3
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/base.txt
 yarl==1.20.1
     # via aiohttp
 zc.lockfile==3.0.post1
@@ -149,4 +163,5 @@ zipp==3.23.0
     #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
+# pip
 # setuptools

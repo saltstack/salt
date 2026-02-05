@@ -110,8 +110,10 @@ cryptography==42.0.5
     #   pyspnego
     #   requests-ntlm
     #   trustme
-distlib==0.3.8
-    # via virtualenv
+distlib==0.4.0
+    # via
+    #   -c requirements/static/ci/../pkg/py3.10/windows.txt
+    #   virtualenv
 distro==1.8.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
@@ -129,8 +131,11 @@ etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
 exceptiongroup==1.1.1
     # via pytest
-filelock==3.13.1
-    # via virtualenv
+filelock==3.20.3 ; python_version >= "3.10"
+    # via
+    #   -c requirements/static/ci/../pkg/py3.10/windows.txt
+    #   -r requirements/static/ci/common.in
+    #   virtualenv
 flaky==3.8.1
     # via -r requirements/pytest.txt
 frozenlist==1.4.1 ; python_version < "3.11"
@@ -261,14 +266,17 @@ packaging==24.0
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -r requirements/base.txt
     #   pytest
+    #   wheel
 passlib==1.7.4
     # via -r requirements/static/ci/common.in
 patch==1.16
     # via -r requirements/static/ci/windows.in
 pathspec==1.0.3
     # via yamllint
-platformdirs==4.0.0
-    # via virtualenv
+platformdirs==4.5.1
+    # via
+    #   -c requirements/static/ci/../pkg/py3.10/windows.txt
+    #   virtualenv
 pluggy==1.5.0
     # via pytest
 portend==3.1.0
@@ -488,6 +496,7 @@ typing-extensions==4.14.1
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   aiosignal
     #   pytest-system-statistics
+    #   virtualenv
 urllib3==2.6.3 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
@@ -498,8 +507,10 @@ urllib3==2.6.3 ; python_version >= "3.10"
     #   python-etcd
     #   requests
     #   responses
-virtualenv==20.24.7
+virtualenv==20.36.1
     # via
+    #   -c requirements/static/ci/../pkg/py3.10/windows.txt
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
 watchdog==3.0.0
@@ -513,6 +524,11 @@ werkzeug==3.1.3
     #   -r requirements/static/ci/common.in
     #   moto
     #   pytest-httpserver
+wheel==0.46.3
+    # via
+    #   -c requirements/constraints.txt
+    #   -c requirements/static/ci/../pkg/py3.10/windows.txt
+    #   -r requirements/base.txt
 wmi==1.5.1 ; sys_platform == "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
@@ -542,4 +558,5 @@ zipp==3.23.0
     #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
+# pip
 # setuptools

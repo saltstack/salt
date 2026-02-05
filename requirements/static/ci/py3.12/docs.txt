@@ -64,12 +64,20 @@ cryptography==42.0.5
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
     #   pyopenssl
+distlib==0.4.0
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   virtualenv
 distro==1.8.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
 docutils==0.20.1
     # via sphinx
+filelock==3.20.3 ; python_version >= "3.10"
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   virtualenv
 frozenlist==1.7.0 ; python_version >= "3.11"
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -166,6 +174,11 @@ packaging==24.0
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
     #   sphinx
+    #   wheel
+platformdirs==4.5.1
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   virtualenv
 portend==3.1.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -282,6 +295,15 @@ urllib3==2.6.3 ; python_version >= "3.10"
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
     #   requests
+virtualenv==20.36.1
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
+wheel==0.46.3
+    # via
+    #   -c requirements/constraints.txt
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
 yarl==1.20.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -297,4 +319,5 @@ zipp==3.23.0
     #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
+# pip
 # setuptools

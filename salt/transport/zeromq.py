@@ -664,6 +664,7 @@ class AsyncReqMessageClient:
         else:
             self.io_loop = io_loop
         self.context = zmq.eventloop.future.Context()
+        self.socket = None
         self._closing = False
         self._queue = tornado.queues.Queue()
 
@@ -676,14 +677,17 @@ class AsyncReqMessageClient:
     def close(self):
         if self._closing:
             return
-        self._closing = True
-        if hasattr(self, "socket") and self.socket is not None:
-            self.socket.close(0)
-            self.socket = None
-        if self.context.closed is False:
-            self.context.destroy(0)
-            self.context.term()
-            self.context = None
+        else:
+            self._closing = True
+            try:
+                if hasattr(self, "socket") and self.socket is not None:
+                    self.socket.close(0)
+                    self.socket = None
+                if self.context is not None and self.context.closed is False:
+                    self.context.term()
+                    self.context = None
+            finally:
+                self._closing = False
 
     def _init_socket(self):
         self._closing = False
@@ -744,7 +748,7 @@ class AsyncReqMessageClient:
     @tornado.gen.coroutine
     def _send_recv(self, socket, _TimeoutError=tornado.gen.TimeoutError):
         """
-        Long running send/receive coroutine. This should be started once for
+        Long-running send/receive coroutine. This should be started once for
         each socket created. Once started, the coroutine will run until the
         socket is closed. A future and message are pulled from the queue. The
         message is sent and the reply socket is polled for a response while
@@ -823,11 +827,15 @@ class AsyncReqMessageClient:
                     # Time is in milliseconds.
                     ready = yield socket.poll(300, zmq.POLLIN)
                 except zmq.eventloop.future.CancelledError as exc:
-                    log.trace("Loop closed while polling receive socket.")
+                    log.trace(
+                        "Loop closed while polling receive socket.", exc_info=True
+                    )
+                    log.error("Master is unavailable (Connection Cancelled).")
                     send_recv_running = False
-                    future.set_exception(exc)
+                    if not future.done():
+                        future.set_result(None)
                 except zmq.ZMQError as exc:
-                    log.trace("Recieve socket closed while polling.")
+                    log.trace("Receive socket closed while polling.")
                     send_recv_running = False
                     future.set_exception(exc)
 
