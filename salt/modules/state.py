@@ -19,8 +19,6 @@ import tempfile
 import time
 from collections import OrderedDict
 
-import filelock
-
 import salt.config
 import salt.defaults.exitcodes
 import salt.payload
@@ -129,13 +127,13 @@ def _wait(jid, max_queue=0):
     if jid is None:
         jid = salt.utils.jid.gen_jid(__opts__)
 
-    with _acquire_queue_lock():
+    with salt.utils.state.acquire_queue_lock(__opts__):
         states = _prior_running_states(jid)
 
     if not max_queue or len(states) < max_queue:
         while states:
             time.sleep(1)
-            with _acquire_queue_lock():
+            with salt.utils.state.acquire_queue_lock(__opts__):
                 states = _prior_running_states(jid)
         return True
     return False
@@ -404,8 +402,7 @@ def _acquire_queue_lock():
     """
     Acquire the state queue lock
     """
-    lock_path = os.path.join(__opts__["cachedir"], "state_queue.lock")
-    return filelock.FileLock(lock_path)
+    return salt.utils.state.acquire_queue_lock(__opts__)
 
 
 def _set_queue_flag(jid):
@@ -449,57 +446,39 @@ def _prior_running_states(jid):
     Return a list of dicts of prior calls to state functions.  This function is
     used to queue state calls so only one is run at a time.
     """
-
     ret = []
     active = __salt__["saltutil.is_running"]("state.*")
 
-    # Also check the state_queue directory for jobs that are starting up
+    # Check for queued jobs
     queue_dir = os.path.join(__opts__["cachedir"], "state_queue")
     if os.path.exists(queue_dir):
-        # We assume the lock is held by the caller (_wait)
         for fn in os.listdir(queue_dir):
-            # Check if this jid is already in active list to avoid duplicates
-            if any(str(item["jid"]) == fn for item in active):
-                continue
-
-            # Construct a dummy data object for the queued job
-            try:
-                # verify it is a valid integer JID
-                int(fn)
-
-                # Check if the process is still running
-                queue_path = os.path.join(queue_dir, fn)
-                try:
-                    with salt.utils.files.fopen(queue_path, "r") as fp_:
-                        pid = int(fp_.read().strip())
-                    if not salt.utils.process.os_is_running(pid):
-                        # The process is dead, clean up the flag
-                        os.remove(queue_path)
-                        continue
-                except (ValueError, OSError):
-                    # If we can't read the PID or file, assume it's stale or bad
-                    continue
-
-                active.append({"jid": fn, "fun": "unknown", "pid": pid})
-            except ValueError:
-                continue
+            if fn.startswith("queued_") and fn.endswith(".p"):
+                # fn is queued_<timestamp>_<jid>.p
+                parts = fn[:-2].split("_")
+                if len(parts) >= 3:
+                    job_jid = parts[2]
+                    # We use PID 0 or similar to indicate it's not a real process yet,
+                    # but saltutil.is_running structure usually expects a pid.
+                    active.append({"jid": job_jid, "fun": "state.apply", "pid": 0})
 
     for data in active:
         try:
             data_jid = int(data["jid"])
         except ValueError:
             continue
-        if data_jid < int(jid):
+
+        if jid is None:
+            # If no JID is provided (e.g. local call without JID), assume current job is newer
+            # than any running job, so any running job is a "prior" job.
             ret.append(data)
-        elif data_jid > int(jid):
-            # If the jid is newer than the current jid, check if the newer jid
-            # has set a queue flag. If the flag is set, it means that the newer
-            # jid is waiting for the older jid to finish, so we can ignore it.
-            # If the flag is not set, it means that the newer jid has already
-            # started running, so we must wait for it to finish.
-            queue_path = os.path.join(queue_dir, str(data_jid))
-            if not os.path.exists(queue_path):
+            continue
+
+        try:
+            if data_jid < int(jid):
                 ret.append(data)
+        except (ValueError, TypeError):
+            continue
     return ret
 
 
@@ -513,15 +492,73 @@ def _check_queue(queue, kwargs):
 
     if queue is True:
         jid = kwargs.get("__pub_jid")
-        _set_queue_flag(jid)
-        try:
-            _wait(jid)
-        finally:
-            _clear_queue_flag(jid)
+        if jid is None:
+            # If running locally (salt-call), JID might be in opts or not present.
+            # Fallback to __opts__['jid'] to ensure we have a JID for comparison.
+            jid = __opts__.get("jid")
+
+        with salt.utils.state.acquire_queue_lock(__opts__):
+            states = _prior_running_states(jid)
+            if states:
+                # Conflict found, queue the job
+                queue_dir = os.path.join(__opts__["cachedir"], "state_queue")
+                if not os.path.exists(queue_dir):
+                    try:
+                        os.makedirs(queue_dir)
+                    except OSError:
+                        pass
+
+                # Construct payload to persist
+                # We need to save enough info to re-execute the job
+                # Generate a new JID for the queued execution to ensure it is unique
+                new_jid = salt.utils.jid.gen_jid(__opts__)
+
+                # Remove 'queue' from kwargs to prevent re-queuing logic when executed
+                kwarg = {k: v for k, v in kwargs.items() if not k.startswith("__pub_")}
+                if "queue" in kwarg:
+                    del kwarg["queue"]
+
+                payload = {
+                    "fun": kwargs.get("__pub_fun"),
+                    "arg": kwargs.get("__pub_arg", []),
+                    "tgt": kwargs.get("__pub_tgt"),
+                    "jid": new_jid,
+                    "ret": kwargs.get("__pub_ret", ""),
+                    "user": kwargs.get("__pub_user", "root"),
+                    "kwarg": kwarg,
+                }
+
+                # Use timestamp to ensure FIFO ordering
+                # We use microseconds to avoid collisions
+                fn = f"queued_{int(time.time() * 1000000)}_{jid}.p"
+                path = os.path.join(queue_dir, fn)
+
+                try:
+                    with salt.utils.files.fopen(path, "w+b") as fp_:
+                        salt.payload.dump(payload, fp_)
+
+                    return {
+                        "result": True,
+                        "comment": "Job queued for execution",
+                        "queued": True,
+                        "changes": {},
+                    }
+                except OSError:
+                    log.error("Failed to write queue file %s", path)
+                    return {
+                        "result": False,
+                        "comment": "Failed to queue job: unable to write queue file",
+                        "changes": {},
+                    }
+            else:
+                # No conflict, we can run.
+                pass
+
     else:
         queue_ret = False
         if not isinstance(queue, bool) and isinstance(queue, int):
             jid = kwargs.get("__pub_jid")
+            # For max_queue (int), we retain blocking behavior but use lock
             _set_queue_flag(jid)
             try:
                 queue_ret = _wait(jid, max_queue=queue)

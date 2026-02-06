@@ -16,6 +16,7 @@ import tempfile
 import zipfile
 
 import distro
+import filelock
 import jinja2
 import looseversion
 import msgpack
@@ -289,6 +290,7 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
         "backports_abc",
         "looseversion",
         "packaging",
+        "filelock",
     ]
     # backports package doesn't exist in Python 3.13+
     if sys.version_info < (3, 13):
@@ -442,6 +444,7 @@ def get_tops(extra_mods="", so_mods=""):
         looseversion,
         packaging,
         backports,
+        filelock,
     ]
     modules = find_site_modules("contextvars")
     if modules:
