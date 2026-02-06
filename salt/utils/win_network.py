@@ -486,11 +486,11 @@ def get_interface_info_wmi():
                             i_faces[i_face.Description]["inet"] = []
                         item = {"address": ip, "label": i_face.Description}
                         if i_face.DefaultIPGateway:
-                            broadcast = next(
+                            gateway = next(
                                 (i for i in i_face.DefaultIPGateway if "." in i), ""
                             )
-                            if broadcast:
-                                item["broadcast"] = broadcast
+                            if gateway:
+                                item["gateway"] = gateway
                         if i_face.IPSubnet:
                             netmask = next((i for i in i_face.IPSubnet if "." in i), "")
                             if netmask:
@@ -501,11 +501,11 @@ def get_interface_info_wmi():
                             i_faces[i_face.Description]["inet6"] = []
                         item = {"address": ip}
                         if i_face.DefaultIPGateway:
-                            broadcast = next(
+                            gateway = next(
                                 (i for i in i_face.DefaultIPGateway if ":" in i), ""
                             )
-                            if broadcast:
-                                item["broadcast"] = broadcast
+                            if gateway:
+                                item["gateway"] = gateway
                         if i_face.IPSubnet:
                             prefixlen = next(
                                 (int(i) for i in i_face.IPSubnet if "." not in i), None
