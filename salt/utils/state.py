@@ -5,11 +5,22 @@ Utility functions for state functions
 """
 
 import copy
+import os
+
+import filelock
 
 import salt.state
 from salt.exceptions import CommandExecutionError
 
 _empty = object()
+
+
+def acquire_queue_lock(opts):
+    """
+    Acquire the state queue lock
+    """
+    lock_path = os.path.join(opts["cachedir"], "state_queue.lock")
+    return filelock.FileLock(lock_path)
 
 
 def gen_tag(low):

@@ -7,13 +7,22 @@ import pytest
 import salt.loader.context
 import salt.modules.config as config
 import salt.modules.state as state
-from tests.support.mock import MagicMock, patch
+import salt.payload
+import salt.utils.files
+import salt.utils.state
+from tests.support.mock import MagicMock, mock_open, patch
 
 
 @pytest.fixture
 def configure_loader_modules():
     return {
-        state: {"__salt__": {"config.get": config.get}, "__opts__": {"test": True}},
+        state: {
+            "__salt__": {
+                "config.get": config.get,
+                "saltutil.is_running": MagicMock(return_value=[]),
+            },
+            "__opts__": {"test": True, "cachedir": "/tmp/salt_test_cache"},
+        },
         config: {"__opts__": {}},
     }
 
@@ -47,102 +56,135 @@ def test_check_test_value_is_boolean():
         assert state._get_test_value() is False
 
 
-def test_prior_running_states_checks_flags():
+def test_check_queue_queues_job_when_conflict():
     """
-    Test that _prior_running_states correctly handles newer JIDs
-    by checking for the queue flag.
+    Test that _check_queue serializes the job and returns queued=True when prior states exist.
     """
-    # Setup
-    my_jid = 100
-    newer_jid = 101
+    my_jid = "20230101000000100000"
+    older_jid = "20230101000000000000"
+    new_jid = "20230101000000300000"
 
-    # Mock __opts__ needed for cachedir
+    kwargs = {
+        "__pub_jid": my_jid,
+        "__pub_fun": "state.apply",
+        "__pub_arg": ["foo"],
+        "__pub_tgt": "*",
+        "__pub_ret": "",
+        "__pub_user": "root",
+        "concurrent": False,
+    }
+
+    # Mock active jobs containing an older job
+    active_jobs = [{"jid": older_jid, "pid": 1234, "fun": "state.apply"}]
+
     opts = {"cachedir": "/tmp/salt_test_cache"}
 
-    # Mock is_running to return the newer JID
-    active_jobs = [{"jid": str(newer_jid), "pid": 1234, "fun": "state.apply"}]
+    # Mock the lock to do nothing
+    mock_lock = MagicMock()
+    mock_lock.__enter__ = MagicMock(return_value=None)
+    mock_lock.__exit__ = MagicMock(return_value=None)
 
     with patch.dict(state.__opts__, opts, create=True), patch(
         "salt.modules.state.__salt__",
         {"saltutil.is_running": MagicMock(return_value=active_jobs)},
-    ), patch("os.path.exists") as mock_exists, patch("os.listdir") as mock_listdir:
+    ), patch("salt.utils.state.acquire_queue_lock", return_value=mock_lock), patch(
+        "os.path.exists", return_value=True
+    ), patch(
+        "os.listdir", return_value=[]
+    ), patch(
+        "salt.utils.jid.gen_jid", return_value=new_jid
+    ), patch(
+        "salt.utils.files.fopen", mock_open()
+    ) as mock_file, patch(
+        "salt.payload.dump"
+    ) as mock_dump:
 
-        # Case 1: Newer JID has a flag (it is starting/waiting).
-        # We should IGNORE it (return empty list).
+        ret = state._check_queue(True, kwargs)
 
-        # Logic:
-        # 1. os.path.exists(queue_dir) -> True (for checking state_queue presence)
-        # 2. os.listdir -> [] (empty state_queue for this test part, or we just ignore duplicates)
-        # 3. loop active_jobs
-        # 4. newer > my.
-        # 5. queue_path = .../101
-        # 6. os.path.exists(queue_path) -> True (Flag exists)
+        # Should return queued dict
+        assert isinstance(ret, dict)
+        assert ret["queued"] is True
+        assert ret["result"] is True
+        assert "Job queued for execution" in ret["comment"]
 
-        def side_effect_exists(path):
-            if "state_queue" in path and str(newer_jid) in path:
-                return True  # Flag exists
-            if path.endswith("state_queue"):
-                return True  # Dir exists
-            return False
-
-        mock_exists.side_effect = side_effect_exists
-        mock_listdir.return_value = []  # Nothing extra in queue dir
-
-        ret = state._prior_running_states(str(my_jid))
-        assert len(ret) == 0
-
-        # Case 2: Newer JID has NO flag (it is running).
-        # We should WAIT for it (return it in the list).
-
-        def side_effect_exists_no_flag(path):
-            if "state_queue" in path and str(newer_jid) in path:
-                return False  # Flag GONE
-            if path.endswith("state_queue"):
-                return True
-            return False
-
-        mock_exists.side_effect = side_effect_exists_no_flag
-
-        ret = state._prior_running_states(str(my_jid))
-        assert len(ret) == 1
-        assert ret[0]["jid"] == str(newer_jid)
+        # Should have dumped payload
+        assert mock_dump.called
+        args, _ = mock_dump.call_args
+        payload = args[0]
+        assert payload["jid"] == new_jid
+        assert payload["fun"] == "state.apply"
 
 
-def test_prior_running_states_checks_state_queue():
+def test_check_queue_proceeds_when_no_conflict():
     """
-    Test that _prior_running_states checks state_queue for invisible jobs.
+    Test that _check_queue returns None (proceeds) when no prior states exist.
     """
-    my_jid = 101
-    older_jid = 100
+    my_jid = "20230101000000100000"
 
-    opts = {"cachedir": "/tmp/salt_test_cache"}
+    kwargs = {"__pub_jid": my_jid, "concurrent": False}
 
-    # is_running returns NOTHING (Invisible Gap)
+    # Mock active jobs - EMPTY
     active_jobs = []
 
+    opts = {"cachedir": "/tmp/salt_test_cache"}
+
+    mock_lock = MagicMock()
+    mock_lock.__enter__ = MagicMock(return_value=None)
+    mock_lock.__exit__ = MagicMock(return_value=None)
+
     with patch.dict(state.__opts__, opts, create=True), patch(
         "salt.modules.state.__salt__",
         {"saltutil.is_running": MagicMock(return_value=active_jobs)},
-    ), patch("os.path.exists") as mock_exists, patch(
-        "os.listdir"
-    ) as mock_listdir, patch(
-        "salt.utils.files.fopen", MagicMock()
-    ) as mock_fopen, patch(
-        "salt.utils.process.os_is_running", MagicMock(return_value=True)
-    ):
+    ), patch("salt.utils.state.acquire_queue_lock", return_value=mock_lock), patch(
+        "os.path.exists", return_value=False
+    ):  # No queue dir
 
-        # mock_exists for queue_dir -> True
-        mock_exists.return_value = True
-        # mock_listdir returns [older_jid]
-        mock_listdir.return_value = [str(older_jid)]
+        ret = state._check_queue(True, kwargs)
 
-        # Setup mock_fopen to return a context manager that returns a file object with read() returning "1234"
-        mock_file = MagicMock()
-        mock_file.read.return_value = "1234"
-        mock_fopen.return_value.__enter__.return_value = mock_file
+        # Should return None (no conflict)
+        assert ret is None
 
-        # Verify my_jid (101) sees older_jid (100)
-        ret = state._prior_running_states(str(my_jid))
 
-        assert len(ret) == 1
-        assert ret[0]["jid"] == str(older_jid)
+def test_check_queue_detects_queued_file_as_conflict():
+    """
+    Test that _check_queue sees a file in state_queue as a conflict and queues itself.
+    """
+    my_jid = "20230101000000200000"
+    older_queued_jid = "20230101000000100000"
+
+    kwargs = {"__pub_jid": my_jid, "__pub_fun": "state.apply", "concurrent": False}
+
+    # Mock active jobs - EMPTY (simulating gap where job is only on disk)
+    active_jobs = []
+
+    opts = {"cachedir": "/tmp/salt_test_cache"}
+
+    mock_lock = MagicMock()
+    mock_lock.__enter__ = MagicMock(return_value=None)
+    mock_lock.__exit__ = MagicMock(return_value=None)
+
+    # Mock os.listdir to return an older queued file
+    queued_filename = f"queued_123456_{older_queued_jid}.p"
+
+    with patch.dict(state.__opts__, opts, create=True), patch(
+        "salt.modules.state.__salt__",
+        {"saltutil.is_running": MagicMock(return_value=active_jobs)},
+    ), patch("salt.utils.state.acquire_queue_lock", return_value=mock_lock), patch(
+        "os.path.exists", return_value=True
+    ), patch(
+        "os.listdir", return_value=[queued_filename]
+    ), patch(
+        "salt.utils.files.fopen", mock_open()
+    ) as mock_file, patch(
+        "salt.payload.dump"
+    ) as mock_dump:
+
+        ret = state._check_queue(True, kwargs)
+
+        # Should return queued dict because it saw the older queued file
+        assert isinstance(ret, dict)
+        assert ret["queued"] is True
+        assert ret["result"] is True
+
+        # Should have dumped payload
+        assert mock_dump.called
