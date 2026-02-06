@@ -762,4 +762,5 @@ allowed-3rd-party-modules=msgpack,
                           aiohttp,
                           pytest_timeout,
                           salt,
-                          tests
+                          tests,
+                          filelock

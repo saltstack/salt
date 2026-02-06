@@ -60,6 +60,10 @@ distro==1.5.0
     #   -r requirements/base.txt
 docutils==0.19
     # via sphinx
+filelock-lts-py39==2025.68146.2 ; python_version >= "3.9" and python_version < "3.10"
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   -r requirements/base.txt
 filelock==3.19.1 ; python_version < "3.10"
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
