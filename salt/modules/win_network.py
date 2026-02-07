@@ -351,6 +351,39 @@ def interfaces():
     return salt.utils.network.win_interfaces()
 
 
+def gateways(interface=None):
+    """
+    Return gateway addresses for one or more interfaces.
+
+    Args:
+
+        interface (:obj:`str`, optional):
+            Restrict results to a single interface name.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.gateways
+        salt '*' network.gateways interface='Ethernet'
+    """
+    ifaces = salt.utils.network.win_interfaces()
+    ret = {}
+    for name, data in ifaces.items():
+        if interface and name != interface:
+            continue
+        gateways = set()
+        for entry in data.get("inet", []):
+            if entry.get("gateway"):
+                gateways.add(entry["gateway"])
+        for entry in data.get("inet6", []):
+            if entry.get("gateway"):
+                gateways.add(entry["gateway"])
+        if gateways:
+            ret[name] = sorted(gateways)
+    return ret
+
+
 def hw_addr(iface):
     """
     Return the hardware address (a.k.a. MAC address) for a given interface

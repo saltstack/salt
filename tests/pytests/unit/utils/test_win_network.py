@@ -1,3 +1,5 @@
+import contextlib
+
 import pytest
 
 import salt.utils.win_network as win_network
@@ -299,6 +301,33 @@ def test_get_network_info(
         results = win_network.get_interface_info()
 
     assert expected == results
+
+
+def test_get_interface_info_wmi_gateway_and_broadcast():
+    iface = MagicMock()
+    iface.Description = "vmxnet3 Ethernet Adapter"
+    iface.MACAddress = "00-50-56-83-11-D5"
+    iface.IPEnabled = True
+    iface.IPAddress = ["10.153.30.240", "fe80::1"]
+    iface.DefaultIPGateway = ["10.153.31.240", "fe80::2"]
+    iface.IPSubnet = ["255.255.252.0", "64"]
+
+    fake_wmi = MagicMock()
+    fake_wmi.Win32_NetworkAdapterConfiguration.return_value = [iface]
+
+    with patch("salt.utils.win_network.wmi", create=True) as wmi_mod, patch(
+        "salt.utils.win_network.salt.utils.winapi.Com",
+        create=True,
+        return_value=contextlib.nullcontext(),
+    ):
+        wmi_mod.WMI.return_value = fake_wmi
+        results = win_network.get_interface_info_wmi()
+
+    inet = results[iface.Description]["inet"][0]
+    assert inet["gateway"] == "10.153.31.240"
+    assert inet["broadcast"] == "10.153.31.255"
+    inet6 = results[iface.Description]["inet6"][0]
+    assert inet6["gateway"] == "fe80::2"
 
 
 def test__get_base_properties_tap_adapter():

@@ -143,6 +143,26 @@ def __virtual__():
     return __virtualname__
 
 
+def _calc_ipv4_broadcast(address, netmask):
+    """
+    Calculate IPv4 broadcast address from address and netmask.
+    """
+    try:
+        network = ipaddress.IPv4Network(f"{address}/{netmask}", strict=False)
+    except (ValueError, ipaddress.AddressValueError):
+        return ""
+    return network.broadcast_address.compressed
+
+
+def _first_gateway(gateways, family_char):
+    """
+    Return the first gateway matching the address family.
+    """
+    if not gateways:
+        return ""
+    return next((gw for gw in gateways if family_char in gw), "")
+
+
 def _get_base_properties(i_face):
     raw_mac = i_face.GetPhysicalAddress().ToString()
     try:
@@ -486,26 +506,25 @@ def get_interface_info_wmi():
                             i_faces[i_face.Description]["inet"] = []
                         item = {"address": ip, "label": i_face.Description}
                         if i_face.DefaultIPGateway:
-                            broadcast = next(
-                                (i for i in i_face.DefaultIPGateway if "." in i), ""
-                            )
-                            if broadcast:
-                                item["broadcast"] = broadcast
+                            gateway = _first_gateway(i_face.DefaultIPGateway, ".")
+                            if gateway:
+                                item["gateway"] = gateway
                         if i_face.IPSubnet:
                             netmask = next((i for i in i_face.IPSubnet if "." in i), "")
                             if netmask:
                                 item["netmask"] = netmask
+                                broadcast = _calc_ipv4_broadcast(ip, netmask)
+                                if broadcast:
+                                    item["broadcast"] = broadcast
                         i_faces[i_face.Description]["inet"].append(item)
                     if ":" in ip:
                         if "inet6" not in i_faces[i_face.Description]:
                             i_faces[i_face.Description]["inet6"] = []
                         item = {"address": ip}
                         if i_face.DefaultIPGateway:
-                            broadcast = next(
-                                (i for i in i_face.DefaultIPGateway if ":" in i), ""
-                            )
-                            if broadcast:
-                                item["broadcast"] = broadcast
+                            gateway = _first_gateway(i_face.DefaultIPGateway, ":")
+                            if gateway:
+                                item["gateway"] = gateway
                         if i_face.IPSubnet:
                             prefixlen = next(
                                 (int(i) for i in i_face.IPSubnet if "." not in i), None

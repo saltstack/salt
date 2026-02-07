@@ -1169,7 +1169,42 @@ def win_interfaces():
     if WIN_NETWORK_LOADED is False:
         # Let's throw the ImportException again
         import salt.utils.win_network as _
-    return salt.utils.win_network.get_interface_info()
+    interfaces = salt.utils.win_network.get_interface_info()
+    return _normalize_windows_interfaces(interfaces)
+
+
+def _calc_ipv4_broadcast(address, netmask):
+    """
+    Calculate IPv4 broadcast address from address and netmask.
+    """
+    try:
+        network = ipaddress.ip_network(f"{address}/{netmask}", strict=False)
+    except ValueError:
+        return ""
+    return str(network.broadcast_address)
+
+
+def _normalize_windows_interfaces(interfaces):
+    """
+    Normalize Windows interface data for gateway/broadcast consistency.
+    """
+    for _, iface in interfaces.items():
+        for inet in iface.get("inet", []):
+            address = inet.get("address")
+            netmask = inet.get("netmask")
+            broadcast = inet.get("broadcast")
+            if address and netmask:
+                expected_broadcast = _calc_ipv4_broadcast(address, netmask)
+                if expected_broadcast:
+                    if not broadcast:
+                        inet["broadcast"] = expected_broadcast
+                    elif "gateway" not in inet and broadcast != expected_broadcast:
+                        inet["gateway"] = broadcast
+                        inet["broadcast"] = expected_broadcast
+        for inet6 in iface.get("inet6", []):
+            if "gateway" not in inet6 and "broadcast" in inet6:
+                inet6["gateway"] = inet6.pop("broadcast")
+    return interfaces
 
 
 def interfaces():
