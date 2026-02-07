@@ -50,6 +50,34 @@ except ImportError:
 _INTERNAL_PROCESS_FINALIZE_FUNCTION_LIST = []
 
 
+class LogThrottle:
+    """
+    Simple time-based throttler for repetitive log messages.
+    """
+
+    def __init__(self, interval):
+        self.interval = max(0, interval or 0)
+        self._last_log = 0.0
+        self._suppressed = 0
+
+    def ready(self):
+        """
+        Return (should_log, suppressed_count).
+        """
+        now = time.monotonic()
+        if self.interval == 0 or now - self._last_log >= self.interval:
+            suppressed = self._suppressed
+            self._suppressed = 0
+            self._last_log = now
+            return True, suppressed
+        self._suppressed += 1
+        return False, self._suppressed
+
+    def reset(self):
+        self._last_log = 0.0
+        self._suppressed = 0
+
+
 def appendproctitle(name):
     """
     Append "name" to the current process title

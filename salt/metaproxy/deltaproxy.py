@@ -1046,14 +1046,39 @@ async def handle_decoded_payload(self, data):
     process_count_max = self.opts.get("process_count_max")
     if process_count_max > 0:
         process_count = self.subprocess_list.count
-        once_logged = False
+        throttle = getattr(self, "_process_count_log_throttle", None)
+        if throttle is None:
+            interval = self.opts.get("process_count_max_log_interval", 60)
+            throttle = salt.utils.process.LogThrottle(interval)
+            self._process_count_log_throttle = throttle
         while process_count >= process_count_max:
-            if once_logged is False:
+            should_warn, suppressed = throttle.ready()
+            if should_warn:
+                if suppressed:
+                    log.warning(
+                        "Maximum number of processes reached (%s/%s) while "
+                        "executing jid %s, waiting... (suppressed %s repeats)",
+                        process_count,
+                        process_count_max,
+                        data["jid"],
+                        suppressed,
+                    )
+                else:
+                    log.warning(
+                        "Maximum number of processes reached (%s/%s) while "
+                        "executing jid %s, waiting...",
+                        process_count,
+                        process_count_max,
+                        data["jid"],
+                    )
+            else:
                 log.debug(
-                    "Maximum number of processes reached while executing jid %s, waiting...",
+                    "Maximum number of processes reached (%s/%s) while "
+                    "executing jid %s, waiting...",
+                    process_count,
+                    process_count_max,
                     data["jid"],
                 )
-                once_logged = True
             await asyncio.sleep(0.5)
             process_count = self.subprocess_list.count
 
