@@ -7,6 +7,8 @@ This is run by ``salt-api`` and started in a multiprocess.
 import logging
 import os
 
+import salt.utils.args
+
 from salt.utils.versions import Version
 
 # pylint: disable=C0103
@@ -25,6 +27,22 @@ __virtualname__ = os.path.abspath(__file__).rsplit(os.sep)[-2] or "rest_cherrypy
 
 logger = logging.getLogger(__virtualname__)
 cpy_min = "3.2.2"
+
+
+def parse_timeout(value, name="timeout"):
+    """
+    Parse a timeout value from config or request data.
+    """
+    if value in (None, ""):
+        return None
+    parsed = salt.utils.args.yamlify_arg(value)
+    if parsed is None:
+        return None
+    if isinstance(parsed, bool) or not isinstance(parsed, (int, float)):
+        raise ValueError(f"{name} must be a number")
+    if parsed < 0:
+        raise ValueError(f"{name} must be >= 0")
+    return parsed
 
 
 def __virtual__():

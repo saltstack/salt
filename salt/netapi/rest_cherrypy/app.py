@@ -608,6 +608,7 @@ import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.versions
 import salt.utils.yaml
+from . import parse_timeout
 
 logger = logging.getLogger(__name__)
 
@@ -1124,6 +1125,23 @@ def lowdata_fmt():
         cherrypy.request.lowstate = [data]
     else:
         cherrypy.serving.request.lowstate = data
+
+    _normalize_lowstate_timeouts(cherrypy.serving.request.lowstate)
+
+
+def _normalize_lowstate_timeouts(lowstate):
+    if not lowstate:
+        return
+    chunks = lowstate if isinstance(lowstate, list) else [lowstate]
+    for chunk in chunks:
+        if not isinstance(chunk, Mapping):
+            continue
+        if "timeout" not in chunk:
+            continue
+        try:
+            chunk["timeout"] = parse_timeout(chunk["timeout"])
+        except ValueError as exc:
+            raise cherrypy.HTTPError(400, str(exc))
 
 
 tools_config = {

@@ -2,8 +2,19 @@ import logging
 
 import salt.netapi
 import salt.utils.json
+from . import parse_timeout
 
 logger = logging.getLogger(__name__)
+
+
+def _get_rest_timeout(opts):
+    try:
+        return parse_timeout(opts.get("rest_timeout"), name="rest_timeout")
+    except ValueError as exc:
+        logger.warning(
+            "Invalid rest_timeout value %r: %s", opts.get("rest_timeout"), exc
+        )
+        return None
 
 
 class SaltInfo:
@@ -166,17 +177,19 @@ class SaltInfo:
         if tgt:
             changed = True
             client = salt.netapi.NetapiClient(opts)
-            client.run(
-                {
-                    "fun": "grains.items",
-                    "tgt": tgt,
-                    "expr_type": "list",
-                    "mode": "client",
-                    "client": "local",
-                    "asynchronous": "local_async",
-                    "token": token,
-                }
-            )
+            low = {
+                "fun": "grains.items",
+                "tgt": tgt,
+                "expr_type": "list",
+                "mode": "client",
+                "client": "local",
+                "asynchronous": "local_async",
+                "token": token,
+            }
+            timeout = _get_rest_timeout(opts)
+            if timeout is not None:
+                low["timeout"] = timeout
+            client.run(low)
 
         if changed:
             self.publish_minions()
