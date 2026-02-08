@@ -20,6 +20,7 @@ from datetime import datetime, timedelta, tzinfo
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.process
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils.decorators import depends
 
@@ -90,12 +91,33 @@ def poweroff():
     return ret
 
 
-def reboot(at_time=None):
+def _schedule_shutdown(cmd, delay):
+    """
+    Schedule a shutdown command to run after a delay in seconds.
+    """
+    if delay is None or delay <= 0:
+        return __salt__["cmd.run"](cmd, python_shell=False)
+    salt.utils.process.run_delayed(
+        __salt__["cmd.run"],
+        delay,
+        args=(cmd,),
+        kwargs={"python_shell": False},
+        name="system.reboot",
+    )
+    return f"Reboot scheduled in {delay} seconds"
+
+
+def reboot(at_time=None, delay=None):
     """
     Reboot the system
 
     at_time
         The wait time in minutes before the system will be rebooted.
+
+    delay
+        Delay in seconds before rebooting when ``at_time`` is not specified.
+        If not passed, the value of ``system_reboot_delay`` from the minion
+        config is used.
 
     CLI Example:
 
@@ -104,8 +126,11 @@ def reboot(at_time=None):
         salt '*' system.reboot
     """
     cmd = ["shutdown", "-r", (f"{at_time}" if at_time else "now")]
-    ret = __salt__["cmd.run"](cmd, python_shell=False)
-    return ret
+    if at_time is None:
+        delay = salt.utils.platform.reboot_grace_delay(__opts__, delay)
+    else:
+        delay = 0
+    return _schedule_shutdown(cmd, delay)
 
 
 def shutdown(at_time=None):

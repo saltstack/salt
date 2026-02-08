@@ -3,6 +3,7 @@ Functions for identifying which platform a machine is
 """
 
 import contextlib
+import logging
 import multiprocessing
 import os
 import platform
@@ -12,6 +13,8 @@ import sys
 import distro
 
 from salt.utils.decorators import memoize as real_memoize
+
+log = logging.getLogger(__name__)
 
 
 def linux_distribution(full_distribution_name=True):
@@ -191,6 +194,29 @@ def is_openbsd():
     Simple function to return if host is OpenBSD or not
     """
     return sys.platform.startswith("openbsd")
+
+
+def _parse_delay(value, default):
+    try:
+        delay = int(value)
+    except (TypeError, ValueError):
+        log.debug("Invalid delay value %r, using default %s", value, default)
+        return default
+    if delay < 0:
+        log.debug("Negative delay value %s, using default %s", delay, default)
+        return default
+    return delay
+
+
+def reboot_grace_delay(opts=None, override=None, default=1):
+    """
+    Return a safe delay in seconds before issuing a reboot.
+    """
+    if override is not None:
+        return _parse_delay(override, default)
+    if opts and "system_reboot_delay" in opts:
+        return _parse_delay(opts.get("system_reboot_delay"), default)
+    return default
 
 
 @real_memoize

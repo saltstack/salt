@@ -47,9 +47,19 @@ def test_reboot():
     Test to reboot the system with shutdown -r
     """
     cmd_mock = MagicMock(return_value="A")
-    with patch.dict(system.__salt__, {"cmd.run": cmd_mock}):
-        assert system.reboot() == "A"
-    cmd_mock.assert_called_with(["shutdown", "-r", "now"], python_shell=False)
+    delay_mock = MagicMock(return_value=1)
+    run_delayed = MagicMock()
+    with patch.dict(system.__salt__, {"cmd.run": cmd_mock}), patch(
+        "salt.utils.platform.reboot_grace_delay", delay_mock
+    ), patch("salt.utils.process.run_delayed", run_delayed):
+        assert system.reboot() == "Reboot scheduled in 1 seconds"
+    run_delayed.assert_called_with(
+        cmd_mock,
+        1,
+        args=(["shutdown", "-r", "now"],),
+        kwargs={"python_shell": False},
+        name="system.reboot",
+    )
 
 
 def test_reboot_with_delay():
@@ -60,6 +70,20 @@ def test_reboot_with_delay():
     with patch.dict(system.__salt__, {"cmd.run": cmd_mock}):
         assert system.reboot(at_time=5) == "A"
     cmd_mock.assert_called_with(["shutdown", "-r", "5"], python_shell=False)
+
+
+def test_reboot_immediate_with_override():
+    """
+    Test to reboot the system immediately when delay override is 0
+    """
+    cmd_mock = MagicMock(return_value="A")
+    run_delayed = MagicMock()
+    with patch.dict(system.__salt__, {"cmd.run": cmd_mock}), patch(
+        "salt.utils.process.run_delayed", run_delayed
+    ):
+        assert system.reboot(delay=0) == "A"
+    cmd_mock.assert_called_with(["shutdown", "-r", "now"], python_shell=False)
+    run_delayed.assert_not_called()
 
 
 def test_shutdown():

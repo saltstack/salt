@@ -50,6 +50,30 @@ except ImportError:
 _INTERNAL_PROCESS_FINALIZE_FUNCTION_LIST = []
 
 
+def run_delayed(target, delay, args=None, kwargs=None, name="DelayedTarget"):
+    """
+    Run a target callable in a background thread after a delay.
+    """
+    if args is None:
+        args = ()
+    if kwargs is None:
+        kwargs = {}
+    delay = max(0, delay or 0)
+
+    def _runner():
+        if delay:
+            time.sleep(delay)
+        try:
+            target(*args, **kwargs)
+        except Exception:  # pylint: disable=broad-except
+            log.exception("Delayed call %s failed", name)
+
+    thread = threading.Thread(target=_runner, name=name)
+    thread.daemon = True
+    thread.start()
+    return thread
+
+
 def appendproctitle(name):
     """
     Append "name" to the current process title
