@@ -16,7 +16,7 @@ import tempfile
 import time
 import urllib.parse
 
-import salt.modules.selinux
+import salt.ext.tornado.gen
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
@@ -171,6 +171,8 @@ def copyfile(source, dest, backup_mode="", cachedir=""):
     if rcon:
         policy = False
         try:
+            import salt.modules.selinux
+
             policy = salt.modules.selinux.getenforce()
         except (ImportError, CommandExecutionError):
             pass
@@ -269,6 +271,75 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
                     )
                 log.trace("Lock file %s exists, sleeping %f seconds", lock_fn, sleep)
                 time.sleep(sleep)
+            else:
+                # Write the lock file
+                with os.fdopen(fh_, "w"):
+                    pass
+                # Lock successfully acquired
+                log.trace("Write lock %s obtained", lock_fn)
+                obtained_lock = True
+                # Transfer control back to the code inside the with block
+                yield
+                # Exit the loop
+                break
+
+        else:
+            _raise_error(
+                "Timeout of {} seconds exceeded waiting for lock_fn {} "
+                "to be released".format(timeout, lock_fn)
+            )
+
+    except FileLockError:
+        raise
+
+    except Exception as exc:  # pylint: disable=broad-except
+        _raise_error(f"Error encountered obtaining file lock {lock_fn}: {exc}")
+
+    finally:
+        if obtained_lock:
+            os.remove(lock_fn)
+            log.trace("Write lock for %s (%s) released", path, lock_fn)
+
+
+@contextlib.asynccontextmanager
+async def await_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
+    """
+    Obtain a write lock. If one exists, wait for it to release first
+    """
+    if not isinstance(path, str):
+        raise FileLockError("path must be a string")
+    if lock_fn is None:
+        lock_fn = path + ".w"
+    if time_start is None:
+        time_start = time.time()
+    obtained_lock = False
+
+    def _raise_error(msg, race=False):
+        """
+        Raise a FileLockError
+        """
+        raise FileLockError(msg, time_start=time_start)
+
+    try:
+        if os.path.exists(lock_fn) and not os.path.isfile(lock_fn):
+            _raise_error(f"lock_fn {lock_fn} exists and is not a file")
+
+        open_flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+        while time.time() - time_start < timeout:
+            try:
+                # Use os.open() to obtain filehandle so that we can force an
+                # exception if the file already exists. Concept found here:
+                # http://stackoverflow.com/a/10979569
+                fh_ = os.open(lock_fn, open_flags)
+            except OSError as exc:
+                if exc.errno != errno.EEXIST:
+                    _raise_error(
+                        "Error {} encountered obtaining file lock {}: {}".format(
+                            exc.errno, lock_fn, exc.strerror
+                        )
+                    )
+                log.trace("Lock file %s exists, sleeping %f seconds", lock_fn, sleep)
+                await salt.ext.tornado.gen.sleep(sleep)
             else:
                 # Write the lock file
                 with os.fdopen(fh_, "w"):
