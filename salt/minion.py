@@ -1814,7 +1814,8 @@ class Minion(MinionBase):
             return False
         return True
 
-    async def _handle_decoded_payload(self, data):
+    @salt.ext.tornado.gen.coroutine
+    def _handle_decoded_payload(self, data):
         """
         Override this method if you wish to handle the decoded data
         differently.
@@ -1875,9 +1876,10 @@ class Minion(MinionBase):
             queue_lock_path = os.path.join(self.opts["cachedir"], "job_queue.lock")
 
             try:
-                async with salt.utils.files.await_lock(
+                with salt.utils.files.await_lock(
                     queue_lock_path, lock_fn=queue_lock_path, timeout=5
-                ):
+                ) as lock:
+                    yield lock
                     # Use internal subprocess list for accurate, race-free counting
                     # Filter for alive processes to ignore finished ones that haven't been cleaned up yet
                     running_processes = [
@@ -1999,7 +2001,8 @@ class Minion(MinionBase):
         self._process_queue_processing_active = True
         self.io_loop.spawn_callback(self._process_process_queue_async)
 
-    async def _process_process_queue_async(self):
+    @salt.ext.tornado.gen.coroutine
+    def _process_process_queue_async(self):
         """
         Async body of process_process_queue.
         """
@@ -2020,9 +2023,10 @@ class Minion(MinionBase):
             try:
                 # We use a short timeout because we run every 1s.
                 # If we can't get it, we'll try next time.
-                async with salt.utils.files.await_lock(
+                with salt.utils.files.await_lock(
                     queue_lock_path, lock_fn=queue_lock_path, timeout=0.1
-                ):
+                ) as lock:
+                    yield lock
                     # Check actual process count
                     process_count = len(salt.utils.minion.running(self.opts))
                     if process_count >= process_count_max:
@@ -2066,9 +2070,9 @@ class Minion(MinionBase):
                     log.info("Re-submitting queued job %s", data.get("jid"))
 
                     if hasattr(self, "io_loop"):
-                        self.io_loop.add_callback(self._handle_decoded_payload, data)
+                        self.io_loop.spawn_callback(self._handle_decoded_payload, data)
                     else:
-                        self.io_loop.add_callback(self._handle_decoded_payload, data)
+                        self.io_loop.spawn_callback(self._handle_decoded_payload, data)
 
                     # Remove file AFTER submitting
                     try:
@@ -3422,7 +3426,8 @@ class Minion(MinionBase):
         self._state_queue_processing_active = True
         self.io_loop.spawn_callback(self._process_state_queue_async)
 
-    async def _process_state_queue_async(self):
+    @salt.ext.tornado.gen.coroutine
+    def _process_state_queue_async(self):
         """
         Async body of process_state_queue.
         """
@@ -3432,7 +3437,8 @@ class Minion(MinionBase):
                 return
 
             # Acquire lock to check queue
-            async with salt.utils.state.acquire_async_queue_lock(self.opts):
+            with salt.utils.state.acquire_async_queue_lock(self.opts) as lock:
+                yield lock
                 # Check if any state jobs are running
                 # We use saltutil.is_running logic
                 active = self.functions["saltutil.is_running"]("state.*")
@@ -3514,10 +3520,10 @@ class Minion(MinionBase):
                 data["__ignore_process_count_max"] = True
 
                 if hasattr(self, "io_loop"):
-                    self.io_loop.add_callback(self._handle_decoded_payload, data)
+                    self.io_loop.spawn_callback(self._handle_decoded_payload, data)
                 else:
                     # Fallback if io_loop is not explicit (should not happen in Minion)
-                    self.io_loop.add_callback(self._handle_decoded_payload, data)
+                    self.io_loop.spawn_callback(self._handle_decoded_payload, data)
 
         except Exception:  # pylint: disable=broad-exception-caught
             log.critical("State queue processing failed", exc_info=True)
@@ -3645,7 +3651,7 @@ class Minion(MinionBase):
     def _handle_payload(self, payload):
         if payload is not None and payload["enc"] == "aes":
             if self._target_load(payload["load"]):
-                self._handle_decoded_payload(payload["load"])
+                self.io_loop.spawn_callback(self._handle_decoded_payload, payload["load"])
             elif self.opts["zmq_filtering"]:
                 # In the filtering enabled case, we'd like to know when minion sees something it shouldn't
                 log.trace(
