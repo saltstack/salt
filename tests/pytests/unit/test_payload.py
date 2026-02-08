@@ -4,10 +4,12 @@
 """
 
 import copy
+import io
 import datetime
 import logging
 from collections import OrderedDict
 
+import pytest
 import zmq
 
 import salt.exceptions
@@ -234,6 +236,20 @@ def test_format_payload():
     kwargs = {"foo": "bar"}
     payload = salt.payload.format_payload(enc=enc, kwargs=kwargs)
     assert payload == expected
+
+
+def test_load_returns_none_on_deserialization_error():
+    bad = salt.utils.msgpack.dumps({"a": 1}) + salt.utils.msgpack.dumps({"b": 2})
+    fp_ = io.BytesIO(bad)
+    ret = salt.payload.load(fp_, raise_on_error=False)
+    assert ret is None
+
+
+def test_load_raises_on_deserialization_error():
+    bad = salt.utils.msgpack.dumps({"a": 1}) + salt.utils.msgpack.dumps({"b": 2})
+    fp_ = io.BytesIO(bad)
+    with pytest.raises(salt.exceptions.SaltDeserializationError):
+        salt.payload.load(fp_)
 
 
 def test_SREQ_init():

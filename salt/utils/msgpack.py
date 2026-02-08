@@ -45,6 +45,29 @@ else:
 
     exceptions = _exceptions()
 
+
+def is_extra_data_exception(exc):
+    """
+    Return True if the exception is a msgpack ExtraData error.
+    """
+    extra_data = getattr(exceptions, "ExtraData", None)
+    return extra_data is not None and isinstance(exc, extra_data)
+
+
+def format_exception(exc):
+    """
+    Return a helpful string for msgpack exceptions.
+    """
+    if is_extra_data_exception(exc):
+        extra = getattr(exc, "extra", None)
+        try:
+            extra_len = len(extra) if extra is not None else None
+        except TypeError:
+            extra_len = None
+        if extra_len is not None:
+            return f"{exc} (extra {extra_len} bytes)"
+    return str(exc)
+
 # One-to-one mappings
 Packer = msgpack.Packer
 ExtType = msgpack.ExtType

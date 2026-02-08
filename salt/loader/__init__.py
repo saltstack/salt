@@ -1043,6 +1043,20 @@ def _format_cached_grains(cached_grains):
     return cached_grains
 
 
+def _invalidate_grains_cache(cfn, reason=None):
+    """
+    Remove an invalid grains cache file to allow refresh.
+    """
+    if reason:
+        log.warning("Invalid grains cache (%s). Removing %s and refreshing.", reason, cfn)
+    else:
+        log.warning("Invalid grains cache. Removing %s and refreshing.", cfn)
+    try:
+        os.remove(cfn)
+    except OSError as exc:
+        log.debug("Failed to remove grains cache file %s: %s", cfn, exc)
+
+
 def _load_cached_grains(opts, cfn):
     """
     Returns the grains cached in cfn, or None if the cache is too old or is
@@ -1070,16 +1084,20 @@ def _load_cached_grains(opts, cfn):
     log.debug("Retrieving grains from cache")
     try:
         with salt.utils.files.fopen(cfn, "rb") as fp_:
-            cached_grains = salt.utils.data.decode(
-                salt.payload.load(fp_), preserve_tuples=True
-            )
-        if not cached_grains:
-            log.debug("Cached grains are empty, cache might be corrupted. Refreshing.")
-            return None
-
-        return _format_cached_grains(cached_grains)
-    except OSError:
+            cached_grains = salt.payload.load(fp_, raise_on_error=False)
+    except OSError as exc:
+        log.debug("Failed to read grains cache file %s: %s", cfn, exc)
         return None
+    if not cached_grains:
+        _invalidate_grains_cache(cfn, "empty or unreadable")
+        return None
+    try:
+        cached_grains = salt.utils.data.decode(cached_grains, preserve_tuples=True)
+    except Exception as exc:  # pylint: disable=broad-except
+        _invalidate_grains_cache(cfn, f"decode error: {exc}")
+        return None
+
+    return _format_cached_grains(cached_grains)
 
 
 def grains(opts, force_refresh=False, proxy=None, context=None, loaded_base_name=None):

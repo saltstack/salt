@@ -54,7 +54,7 @@ def format_payload(enc, **kwargs):
     return package(payload)
 
 
-def loads(msg, encoding=None, raw=False):
+def loads(msg, encoding=None, raw=False, log_error=True):
     """
     Run the correct loads serialization format
 
@@ -70,6 +70,7 @@ def loads(msg, encoding=None, raw=False):
                      been lost in this case) to what the encoding is
                      set as. In this case, it will fail if any of
                      the contents cannot be converted.
+    :param log_error: Log deserialization failures when True.
     """
     try:
 
@@ -97,14 +98,15 @@ def loads(msg, encoding=None, raw=False):
         if encoding is None and not raw:
             ret = salt.transport.frame.decode_embedded_strs(ret)
     except Exception as exc:  # pylint: disable=broad-except
-        log.critical(
-            "Could not deserialize msgpack message. This often happens "
-            "when trying to read a file not in binary mode. "
-            "To see message payload, enable debug logging and retry. "
-            "Exception: %s",
-            exc,
-        )
-        log.debug("Msgpack deserialization failure on message: %s", msg)
+        if log_error:
+            log.critical(
+                "Could not deserialize msgpack message. This often happens "
+                "when trying to read a file not in binary mode. "
+                "To see message payload, enable debug logging and retry. "
+                "Exception: %s",
+                salt.utils.msgpack.format_exception(exc),
+            )
+            log.debug("Msgpack deserialization failure on message: %s", msg)
         exc_msg = "Could not deserialize msgpack message. See log for more info."
         raise SaltDeserializationError(exc_msg) from exc
     finally:
@@ -200,14 +202,20 @@ def dumps(msg, use_bin_type=False):
         )
 
 
-def load(fn_):
+def load(fn_, raise_on_error=True):
     """
     Run the correct serialization to load a file
     """
     data = fn_.read()
     fn_.close()
-    if data:
-        return loads(data, encoding="utf-8")
+    if not data:
+        return None
+    try:
+        return loads(data, encoding="utf-8", log_error=raise_on_error)
+    except SaltDeserializationError:
+        if raise_on_error:
+            raise
+        return None
 
 
 def dump(msg, fn_):
