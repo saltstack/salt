@@ -455,9 +455,7 @@ def test_process_count_max(minion_opts):
     ), patch(
         "salt.payload.dump", MagicMock()
     ), patch(
-        "filelock.FileLock.acquire", MagicMock()
-    ), patch(
-        "filelock.FileLock.release", MagicMock()
+        "salt.utils.files.wait_lock", MagicMock()
     ), patch(
         "salt.loader.grains", MagicMock(return_value={"id": "foo", "os": "Linux"})
     ):
@@ -1039,7 +1037,7 @@ def test_minion_grains_refresh_pre_exec_false(minion_opts):
             load_grains=False,
         )
         try:
-            ret = minion._handle_decoded_payload(mock_data).result()
+            minion.io_loop.run_sync(lambda: minion._handle_decoded_payload(mock_data))
             grainsfunc.assert_not_called()
         finally:
             minion.destroy()
@@ -1062,7 +1060,7 @@ def test_minion_grains_refresh_pre_exec_true(minion_opts):
             load_grains=False,
         )
         try:
-            ret = minion._handle_decoded_payload(mock_data).result()
+            minion.io_loop.run_sync(lambda: minion._handle_decoded_payload(mock_data))
             grainsfunc.assert_called()
         finally:
             minion.destroy()

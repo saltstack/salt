@@ -7,9 +7,8 @@ Utility functions for state functions
 import copy
 import os
 
-import filelock
-
 import salt.state
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 
 _empty = object()
@@ -20,7 +19,17 @@ def acquire_queue_lock(opts):
     Acquire the state queue lock
     """
     lock_path = os.path.join(opts["cachedir"], "state_queue.lock")
-    return filelock.FileLock(lock_path)
+    # Use a large timeout to mimic infinite blocking of FileLock, as wait_lock defaults to 5s
+    return salt.utils.files.wait_lock(lock_path, lock_fn=lock_path, timeout=86400)
+
+
+def acquire_async_queue_lock(opts):
+    """
+    Acquire the state queue lock asynchronously
+    """
+    lock_path = os.path.join(opts["cachedir"], "state_queue.lock")
+    # Use a large timeout to mimic infinite blocking
+    return salt.utils.files.await_lock(lock_path, lock_fn=lock_path, timeout=86400)
 
 
 def gen_tag(low):

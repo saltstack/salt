@@ -38,8 +38,6 @@ distlib==0.4.0
     # via virtualenv
 distro==1.5.0
     # via -r requirements/base.txt
-filelock-lts-py39==2025.68146.2 ; python_version >= "3.9" and python_version < "3.10"
-    # via -r requirements/base.txt
 filelock==3.19.1
     # via virtualenv
 frozenlist==1.7.0 ; python_version < "3.11"

@@ -303,7 +303,7 @@ def configure_loader_modules(salt_minion_factory):
         yield {
             state: {
                 "__opts__": {
-                    "cachedir": "/D",
+                    "cachedir": salt_minion_factory.config["cachedir"],
                     "saltenv": None,
                     "sock_dir": "/var/run/salt/master",
                     "transport": "zeromq",
@@ -313,6 +313,7 @@ def configure_loader_modules(salt_minion_factory):
                 "__salt__": {
                     "config.get": config.get,
                     "config.option": MagicMock(return_value=""),
+                    "saltutil.is_running": MagicMock(return_value=[]),
                 },
             },
             config: {"__opts__": {}, "__pillar__": {}},
@@ -896,7 +897,9 @@ def test_sls():
                     True,
                     pillar="A",
                 )
-                with patch.object(os.path, "join", return_value="/D/cache.cache.p"):
+                with patch.object(
+                    os.path, "join", return_value="/D/cache.cache.p"
+                ), patch("salt.utils.state.acquire_queue_lock", MagicMock()):
                     with patch.object(os.path, "isfile", return_value=True), patch(
                         "salt.utils.files.fopen", mock_open(b"")
                     ):
@@ -918,6 +921,10 @@ def test_sls():
                         state.__opts__, {"test": True}
                     ), patch(
                         "salt.utils.files.fopen", mock_open()
+                    ), patch(
+                        "salt.modules.state._prior_running_states", return_value=[]
+                    ), patch(
+                        "salt.utils.state.acquire_queue_lock", MagicMock()
                     ):
                         assert state.sls("core,edit.vim dev", None, None, True)
 
