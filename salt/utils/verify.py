@@ -368,6 +368,22 @@ def check_user(user):
     return True
 
 
+def check_user_from_opts(opts, user_key="user", context=None):
+    """
+    Check the configured user from opts and switch if needed.
+    """
+    if not isinstance(opts, dict):
+        return True
+    user = opts.get(user_key)
+    if not user:
+        return True
+    if context:
+        log.debug("Ensuring process user is '%s' for %s", user, context)
+    else:
+        log.debug("Ensuring process user is '%s'", user)
+    return check_user(user)
+
+
 def list_path_traversal(path):
     """
     Returns a full list of directories leading up to, and including, a path.

@@ -3,6 +3,7 @@ import os
 import salt.cli.caller
 import salt.defaults.exitcodes
 import salt.utils.parsers
+import salt.utils.verify
 from salt.config import _expand_glob_path, prepend_root_dir
 
 
@@ -10,6 +11,15 @@ class SaltCall(salt.utils.parsers.SaltCallOptionParser):
     """
     Used to locally execute a salt command
     """
+
+    def _ensure_minion_user(self):
+        """
+        Ensure salt-call runs with the configured minion user.
+        """
+        if not salt.utils.verify.check_user_from_opts(
+            self.config, context="salt-call"
+        ):
+            self.exit(salt.defaults.exitcodes.EX_NOPERM)
 
     def run(self):
         """
@@ -45,6 +55,8 @@ class SaltCall(salt.utils.parsers.SaltCallOptionParser):
             self.config["cachedir"] = cache_dir
             self.config["extension_modules"] = os.path.join(cache_dir, "extmods")
             prepend_root_dir(self.config, ["cachedir", "extension_modules"])
+
+        self._ensure_minion_user()
 
         caller = salt.cli.caller.Caller.factory(self.config)
 

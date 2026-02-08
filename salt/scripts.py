@@ -14,8 +14,10 @@ import time
 import traceback
 from random import randint
 
+import salt.config
 import salt.defaults.exitcodes
 from salt.exceptions import SaltClientError, SaltReqTimeoutError, SaltSystemExit
+import salt.utils.verify
 
 log = logging.getLogger(__name__)
 
@@ -626,6 +628,17 @@ def salt_pip():
         sys.exit(salt.defaults.exitcodes.EX_GENERIC)
     else:
         extras = str(relenv_path / "extras-{}.{}".format(*sys.version_info))
+
+    config_dir = os.environ.get("SALT_CONFIG_DIR")
+    if not config_dir:
+        relenv_config_dir = relenv_path / "etc" / "salt"
+        if relenv_config_dir.is_dir():
+            config_dir = str(relenv_config_dir)
+    minion_config_path = os.path.join(config_dir, "minion") if config_dir else None
+    minion_opts = salt.config.minion_config(minion_config_path)
+    if not salt.utils.verify.check_user_from_opts(minion_opts, context="salt-pip"):
+        sys.exit(salt.defaults.exitcodes.EX_NOPERM)
+
     env = _pip_environment(os.environ.copy(), extras)
     args = _pip_args(sys.argv[1:], extras)
     command = [
