@@ -301,8 +301,8 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
             log.trace("Write lock for %s (%s) released", path, lock_fn)
 
 
-@contextlib.asynccontextmanager
-async def await_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
+@contextlib.contextmanager
+def await_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
     """
     Obtain a write lock. If one exists, wait for it to release first
     """
@@ -339,7 +339,7 @@ async def await_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
                         )
                     )
                 log.trace("Lock file %s exists, sleeping %f seconds", lock_fn, sleep)
-                await salt.ext.tornado.gen.sleep(sleep)
+                yield salt.ext.tornado.gen.sleep(sleep)
             else:
                 # Write the lock file
                 with os.fdopen(fh_, "w"):

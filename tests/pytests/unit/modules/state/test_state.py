@@ -1304,13 +1304,15 @@ def test__wait(max_queue, call_count, ret_value):
 
 @pytest.mark.parametrize(
     "queue,wait_called,ret_value",
-    [(True, True, None), (False, False, True), (1, True, None)],
+    [(True, False, None), (False, False, True), (1, True, None)],
 )
 def test__check_queue(queue, wait_called, ret_value):
     mock_wait = MagicMock()
     with patch("salt.modules.state._wait", mock_wait), patch(
         "salt.modules.state.running", MagicMock(return_value=True)
-    ), patch.dict(state.__context__, {"retcode": "banana"}):
+    ), patch.dict(state.__context__, {"retcode": "banana"}), patch(
+        "salt.utils.state.acquire_queue_lock", MagicMock()
+    ):
         ret = state._check_queue(queue, {})
         assert mock_wait.called is wait_called
         assert ret is ret_value
