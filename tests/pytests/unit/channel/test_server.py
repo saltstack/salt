@@ -415,9 +415,7 @@ async def test_auth_version_downgrade_warning_includes_minion_id(
     ), "Expected minion ID 'my-outdated-minion' in the rejection warning message"
 
 
-async def test_auth_version_downgrade_warning_encrypted_load(
-    req_server, caplog
-):
+async def test_auth_version_downgrade_warning_encrypted_load(req_server, caplog):
     """
     Test that the rejected authentication warning shows 'unknown minion' when
     the load is not a dict (e.g., encrypted payload).
