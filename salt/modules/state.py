@@ -384,7 +384,21 @@ def running(concurrent=False):
     if concurrent:
         return ret
     active = __salt__["saltutil.is_running"]("state.*")
+    
+    # Get the current JID to avoid false positives (self-detection)
+    # This prevents failures when state.apply(queue=False) is called 
+    # but the job has a placeholder in the process table.
+    current_jid = __opts__.get("jid")
+
     for data in active:
+        # Ignore self
+        if current_jid is not None:
+             try:
+                 if int(data.get("jid")) == int(current_jid):
+                     continue
+             except (ValueError, TypeError):
+                 pass
+
         err = (
             'The function "{}" is running as PID {} and was started at {} '
             "with jid {}".format(
@@ -475,6 +489,10 @@ def _prior_running_states(jid):
             continue
 
         try:
+            # Explicitly ignore the current JID to prevent self-queueing loops
+            if int(data_jid) == int(jid):
+                continue
+
             if data_jid < int(jid):
                 ret.append(data)
         except (ValueError, TypeError):
@@ -824,8 +842,10 @@ def apply_(mods=None, **kwargs):
         a value of ``True`` will queue the new state run to begin running once
         the other has finished.
 
-        This option starts a new thread for each queued state run, so use this
-        option sparingly.
+        The queue is implemented as a disk-based FIFO queue, minimizing memory usage
+        regardless of queue depth. Jobs in the state queue are processed by a background
+        thread and will bypass ``process_count_max`` limits when they are
+        ready to execute, ensuring they are not starved by other workloads.
 
         .. versionchanged:: 3006.0
             This parameter can also be set via the ``state_queue`` configuration
@@ -897,8 +917,10 @@ def apply_(mods=None, **kwargs):
         a value of ``True`` will queue the new state run to begin running once
         the other has finished.
 
-        This option starts a new thread for each queued state run, so use this
-        option sparingly.
+        The queue is implemented as a disk-based FIFO queue, minimizing memory usage
+        regardless of queue depth. Jobs in the state queue are processed by a background
+        thread and will bypass ``process_count_max`` limits when they are
+        ready to execute, ensuring they are not starved by other workloads.
 
         .. versionchanged:: 3006.0
             This parameter can also be set via the ``state_queue`` configuration
@@ -1191,8 +1213,10 @@ def highstate(test=None, queue=None, state_events=None, **kwargs):
         a value of ``True`` will queue the new state run to begin running once
         the other has finished.
 
-        This option starts a new thread for each queued state run, so use this
-        option sparingly.
+        The queue is implemented as a disk-based FIFO queue, minimizing memory usage
+        regardless of queue depth. Jobs in the state queue are processed by a background
+        thread and will bypass ``process_count_max`` limits when they are
+        ready to execute, ensuring they are not starved by other workloads.
 
         .. versionchanged:: 3006.0
             This parameter can also be set via the ``state_queue`` configuration
@@ -1401,8 +1425,10 @@ def sls(
         a value of ``True`` will queue the new state run to begin running once
         the other has finished.
 
-        This option starts a new thread for each queued state run, so use this
-        option sparingly.
+        The queue is implemented as a disk-based FIFO queue, minimizing memory usage
+        regardless of queue depth. Jobs in the state queue are processed by a background
+        thread and will bypass ``process_count_max`` limits when they are
+        ready to execute, ensuring they are not starved by other workloads.
 
         .. versionchanged:: 3006.0
             This parameter can also be set via the ``state_queue`` configuration
@@ -1666,8 +1692,10 @@ def top(topfn, test=None, queue=None, **kwargs):
         a value of ``True`` will queue the new state run to begin running once
         the other has finished.
 
-        This option starts a new thread for each queued state run, so use this
-        option sparingly.
+        The queue is implemented as a disk-based FIFO queue, minimizing memory usage
+        regardless of queue depth. Jobs in the state queue are processed by a background
+        thread and will bypass ``process_count_max`` limits when they are
+        ready to execute, ensuring they are not starved by other workloads.
 
         .. versionchanged:: 3006.0
             This parameter can also be set via the ``state_queue`` configuration

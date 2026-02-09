@@ -29,7 +29,9 @@ def acquire_async_queue_lock(opts):
     """
     lock_path = os.path.join(opts["cachedir"], "state_queue.lock")
     # Use a large timeout to mimic infinite blocking
-    return salt.utils.files.await_lock(lock_path, lock_fn=lock_path, timeout=86400)
+    return salt.utils.files.await_lock(
+        lock_path, lock_fn=lock_path, timeout=86400, sleep=0.1
+    )
 
 
 def gen_tag(low):
