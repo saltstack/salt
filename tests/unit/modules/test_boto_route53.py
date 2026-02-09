@@ -3,7 +3,12 @@ import os.path
 import sys
 from collections import namedtuple
 
-import pkg_resources
+try:
+    from importlib.metadata import PackageNotFoundError, version
+except ImportError:
+    import pkg_resources
+
+    version = None
 import pytest
 
 import salt.config
@@ -59,9 +64,21 @@ def _has_required_moto():
     if not HAS_MOTO:
         return False
     else:
-        moto_version = salt.utils.versions.Version(
-            pkg_resources.get_distribution("moto").version
-        )
+        if version:
+            try:
+                moto_ver = version("moto")
+            except PackageNotFoundError:
+                return False
+        else:
+            try:
+                moto_ver = pkg_resources.get_distribution(  # pylint: disable=used-before-assignment
+                    "moto"
+                ).version
+            except (
+                pkg_resources.DistributionNotFound  # pylint: disable=used-before-assignment
+            ):
+                return False
+        moto_version = salt.utils.versions.Version(moto_ver)
         if moto_version < salt.utils.versions.Version(required_moto):
             return False
     return True

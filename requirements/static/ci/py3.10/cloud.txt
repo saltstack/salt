@@ -74,7 +74,7 @@ cachetools==4.2.2
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   google-auth
-cassandra-driver==3.23.0
+cassandra-driver==3.29.3
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/common.in
@@ -106,10 +106,11 @@ cheetah3==3.2.6.post2
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/common.in
-cheroot==8.5.2
+cheroot==11.1.2
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -c requirements/static/ci/py3.10/linux.txt
+    #   -r requirements/static/pkg/linux.in
     #   cherrypy
 cherrypy==18.10.0
     # via
@@ -203,7 +204,7 @@ genshi==0.7.5
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/common.in
-geomet==0.1.2
+geomet==1.1.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   cassandra-driver
@@ -242,10 +243,6 @@ iniconfig==1.0.1
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   pytest
-ipaddress==1.0.22
-    # via
-    #   -c requirements/static/ci/py3.10/linux.txt
-    #   kubernetes
 jaraco.classes==3.2.1
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
@@ -310,7 +307,7 @@ keyring==5.7.1
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/common.in
-kubernetes==3.0.0
+kubernetes==24.2.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/common.in
@@ -381,6 +378,10 @@ netaddr==0.7.19
     #   junos-eznc
 ntlm-auth==1.3.0
     # via requests-ntlm
+oauthlib==3.3.1
+    # via
+    #   -c requirements/static/ci/py3.10/linux.txt
+    #   requests-oauthlib
 oscrypto==1.2.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
@@ -391,7 +392,6 @@ packaging==24.0
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/base.txt
     #   pytest
-    #   wheel
 paramiko==3.4.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
@@ -598,6 +598,10 @@ pyzmq==23.2.0
     #   pytest-salt-factories
 requests-ntlm==1.1.0
     # via pywinrm
+requests-oauthlib==2.0.0
+    # via
+    #   -c requirements/static/ci/py3.10/linux.txt
+    #   kubernetes
 requests==2.32.5 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
@@ -612,6 +616,7 @@ requests==2.32.5 ; python_version >= "3.10"
     #   pyvmomi
     #   pywinrm
     #   requests-ntlm
+    #   requests-oauthlib
     #   responses
     #   vcert
 responses==0.25.7
@@ -652,11 +657,8 @@ six==1.16.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/linux.txt
     #   -c requirements/static/ci/py3.10/linux.txt
-    #   cassandra-driver
-    #   cheroot
     #   etcd3-py
     #   genshi
-    #   geomet
     #   jsonschema
     #   junos-eznc
     #   kazoo
@@ -670,7 +672,6 @@ six==1.16.0
     #   textfsm
     #   transitions
     #   vcert
-    #   websocket-client
 smbprotocol==1.10.1
     # via
     #   -r requirements/static/ci/cloud.in
@@ -749,9 +750,10 @@ watchdog==0.10.3
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/common.in
-websocket-client==0.40.0
+websocket-client==1.3.3
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
+    #   -r requirements/static/ci/common.in
     #   kubernetes
 wempy==0.2.1
     # via
@@ -763,12 +765,6 @@ werkzeug==3.1.3
     #   -r requirements/static/ci/common.in
     #   moto
     #   pytest-httpserver
-wheel==0.46.3
-    # via
-    #   -c requirements/constraints.txt
-    #   -c requirements/static/ci/../pkg/py3.10/linux.txt
-    #   -c requirements/static/ci/py3.10/linux.txt
-    #   -r requirements/base.txt
 xmltodict==0.12.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
@@ -794,5 +790,4 @@ zipp==3.23.0
     #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
-# pip
 # setuptools
