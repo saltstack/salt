@@ -4,6 +4,7 @@ import os
 import signal
 import time
 import uuid
+import contextlib
 
 import pytest
 
@@ -440,6 +441,10 @@ def test_process_count_max(minion_opts):
         m.start = start_mock
         return m
 
+    @contextlib.asynccontextmanager
+    async def mock_await_lock(*args, **kwargs):
+        yield
+
     with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
         "salt.minion.SignalHandlingProcess",
         MagicMock(side_effect=mock_proc_side_effect),
@@ -455,7 +460,7 @@ def test_process_count_max(minion_opts):
     ), patch(
         "salt.payload.dump", MagicMock()
     ), patch(
-        "salt.utils.files.wait_lock", MagicMock()
+        "salt.utils.files.await_lock", side_effect=mock_await_lock
     ), patch(
         "salt.loader.grains", MagicMock(return_value={"id": "foo", "os": "Linux"})
     ):
