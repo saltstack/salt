@@ -12,7 +12,6 @@ import logging
 import multiprocessing
 import os
 import random
-import resource
 import signal
 import stat
 import sys
@@ -1971,6 +1970,9 @@ class Minion(MinionBase):
         Check if we have enough file descriptors available to start a new process safely.
         Returns True if we have headroom, False otherwise.
         """
+        if not HAS_RESOURCE:
+            return True
+
         try:
             soft_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
             if soft_limit == resource.RLIM_INFINITY:
