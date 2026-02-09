@@ -3473,9 +3473,26 @@ class Minion(MinionBase):
 
                 log.info("State queue processing: found %d queued files", len(files))
 
-                # Sort by timestamp (filename)
-                # queued_<timestamp>_<jid>.p
-                files.sort()
+                # Sort by JID to ensure we process in the order expected by the state system's
+                # dependency check (_prior_running_states), which relies on JID comparison.
+                # Filename: queued_<timestamp>_<jid>.p
+                def sort_key(fn):
+                    try:
+                        # Extract JID part (after second underscore, before .p)
+                        parts = fn.split("_")
+                        if len(parts) >= 3:
+                            # parts[2] might contain the start of JID if JID has underscores,
+                            # but standard JIDs are numeric.
+                            # We join everything after timestamp just in case, but strip .p
+                            jid_str = "_".join(parts[2:])
+                            if jid_str.endswith(".p"):
+                                jid_str = jid_str[:-2]
+                            return int(jid_str)
+                    except (ValueError, IndexError):
+                        pass
+                    return float("inf")
+
+                files.sort(key=sort_key)
 
                 # Pick oldest
                 fn = files[0]
