@@ -1197,21 +1197,37 @@ def _set_symlink_ownership(path, user, group, win_owner):
     return _check_symlink_ownership(path, user, group, win_owner)
 
 
-def _symlink_check(name, target, force, user, group, win_owner, follow_symlinks=False):
+def _is_link(path, nostat=False, stat_timeout=None):
+    return __salt__["file.is_link"](
+        path, nostat=nostat, stat_timeout=stat_timeout
+    )
+
+
+def _symlink_check(
+    name,
+    target,
+    force,
+    user,
+    group,
+    win_owner,
+    follow_symlinks=False,
+    nostat=False,
+    stat_timeout=None,
+):
     """
     Check the symlink function
     """
     changes = {}
     exists = os.path.exists if follow_symlinks else os.path.lexists
 
-    if not exists(name) and not __salt__["file.is_link"](name):
+    if not exists(name) and not _is_link(name, nostat=nostat, stat_timeout=stat_timeout):
         changes["new"] = name
         return (
             None,
             f"Symlink {name} to {target} is set for creation",
             changes,
         )
-    if __salt__["file.is_link"](name):
+    if _is_link(name, nostat=nostat, stat_timeout=stat_timeout):
         if __salt__["file.readlink"](name) != target:
             changes["change"] = name
             return (
@@ -1792,6 +1808,8 @@ def symlink(
     disallow_copy_and_unlink=False,
     inherit_user_and_group=False,
     follow_symlinks=True,
+    nostat=False,
+    stat_timeout=None,
     **kwargs,
 ):
     """
@@ -1904,6 +1922,10 @@ def symlink(
         existence checks instead of ``os.path.exists()``.
 
         .. versionadded:: 3007.0
+    nostat (bool):
+        Use parent directory scanning instead of lstat when checking symlinks.
+    stat_timeout (float):
+        Maximum time in seconds to wait for lstat when checking symlinks.
 
     .. code-block:: yaml
 
@@ -1931,7 +1953,7 @@ def symlink(
     if (
         inherit_user_and_group
         and (user is None or group is None)
-        and __salt__["file.is_link"](name)
+        and _is_link(name, nostat=nostat, stat_timeout=stat_timeout)
     ):
         cur_user, cur_group = _get_symlink_ownership(name)
         if user is None:
@@ -2018,7 +2040,15 @@ def symlink(
         return _error(ret, msg)
 
     tresult, tcomment, tchanges = _symlink_check(
-        name, target, force, user, group, win_owner, follow_symlinks
+        name,
+        target,
+        force,
+        user,
+        group,
+        win_owner,
+        follow_symlinks,
+        nostat=nostat,
+        stat_timeout=stat_timeout,
     )
 
     if not os.path.isdir(os.path.dirname(name)):
@@ -2058,7 +2088,7 @@ def symlink(
         ret["changes"] = tchanges
         return ret
 
-    if __salt__["file.is_link"](name):
+    if _is_link(name, nostat=nostat, stat_timeout=stat_timeout):
         # The link exists, verify that it matches the target
         if os.path.normpath(__salt__["file.readlink"](name)) != os.path.normpath(
             target
@@ -2160,7 +2190,13 @@ def symlink(
 
     try:
         __salt__["file.symlink"](
-            target, name, force=force, atomic=atomic, follow_symlinks=follow_symlinks
+            target,
+            name,
+            force=force,
+            atomic=atomic,
+            follow_symlinks=follow_symlinks,
+            nostat=nostat,
+            stat_timeout=stat_timeout,
         )
     except (CommandExecutionError, OSError) as exc:
         ret["result"] = False
@@ -4027,6 +4063,8 @@ def directory(
     force=False,
     backupname=None,
     allow_symlink=True,
+    nostat=False,
+    stat_timeout=None,
     children_only=False,
     win_owner=None,
     win_perms=None,
@@ -4171,6 +4209,12 @@ def directory(
         argument.
 
         .. versionadded:: 2014.7.0
+
+    nostat
+        Use parent directory scanning instead of lstat when checking symlinks.
+
+    stat_timeout
+        Maximum time in seconds to wait for lstat when checking symlinks.
 
     children_only
         If children_only is True the base of a path is excluded when performing
@@ -4426,11 +4470,10 @@ def directory(
     if not os.path.isabs(name):
         return _error(ret, f"Specified file {name} is not an absolute path")
 
+    link_present = _is_link(name, nostat=nostat, stat_timeout=stat_timeout)
     # Check for existing file or symlink
-    if (
-        os.path.isfile(name)
-        or (not allow_symlink and os.path.islink(name))
-        or (force and os.path.islink(name))
+    if os.path.isfile(name) or (not allow_symlink and link_present) or (
+        force and link_present
     ):
         # Was a backupname specified
         if backupname is not None:
@@ -4466,7 +4509,7 @@ def directory(
                 else:
                     os.remove(name)
                     ret["changes"]["forced"] = "File was forcibly replaced"
-            elif __salt__["file.is_link"](name):
+            elif _is_link(name, nostat=nostat, stat_timeout=stat_timeout):
                 if __opts__["test"]:
                     ret["changes"]["forced"] = "Symlink would be forcibly replaced"
                 else:
@@ -4481,7 +4524,7 @@ def directory(
         else:
             if os.path.isfile(name):
                 return _error(ret, f"Specified location {name} exists and is a file")
-            elif os.path.islink(name):
+            elif link_present:
                 return _error(ret, f"Specified location {name} exists and is a symlink")
 
     # Check directory?

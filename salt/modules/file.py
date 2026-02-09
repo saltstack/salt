@@ -3815,7 +3815,7 @@ def is_hardlink(path):
     return res and res["st_nlink"] > 1
 
 
-def is_link(path, nostat=False):
+def is_link(path, nostat=False, stat_timeout=None):
     """
     Check if the path is a symbolic link
 
@@ -3832,6 +3832,12 @@ def is_link(path, nostat=False):
             with a lot of files, but will reduce the chances of hanging.
 
             .. versionadded:: 3008.0
+        stat_timeout (float):
+            Maximum time in seconds to wait for lstat, to avoid hangs on
+            unreachable mounts. If the timeout is exceeded, ``False`` is
+            returned.
+
+            .. versionadded:: 3009.0
 
     Returns:
         bool: ``True`` if a symbolic link, otherwise returns ``False``.
@@ -3846,6 +3852,7 @@ def is_link(path, nostat=False):
     # therefore a custom function will need to be called. This function
     # therefore helps API consistency by providing a single function to call for
     # both operating systems.
+    path = os.path.expanduser(path)
     if nostat:
         parent_directory = os.path.dirname(path)
 
@@ -3855,10 +3862,23 @@ def is_link(path, nostat=False):
                     return item.is_symlink()
         return False
 
-    return os.path.islink(os.path.expanduser(path))
+    timeout_value = None
+    if stat_timeout is not None:
+        try:
+            timeout_value = max(0.0, float(stat_timeout))
+        except (TypeError, ValueError):
+            raise SaltInvocationError("stat_timeout must be a number")
+
+    if timeout_value is not None:
+        lst = salt.utils.files.safe_lstat(path, timeout=timeout_value)
+        return bool(lst) and stat.S_ISLNK(lst.st_mode)
+
+    return os.path.islink(path)
 
 
-def symlink(src, path, force=False, atomic=False, follow_symlinks=True):
+def symlink(
+    src, path, force=False, atomic=False, follow_symlinks=True, nostat=False, stat_timeout=None
+):
     """
     Create a symbolic link (symlink, soft link) to a file
 
@@ -3876,10 +3896,16 @@ def symlink(src, path, force=False, atomic=False, follow_symlinks=True):
             Use atomic file operations to create the symlink
             .. versionadded:: 3006.0
 
-        follow_symlinks (bool):
+    follow_symlinks (bool):
             If set to ``False``, use ``os.path.lexists()`` for existence checks
             instead of ``os.path.exists()``.
             .. versionadded:: 3007.0
+    nostat (bool):
+        Use parent directory scanning instead of lstat for symlink checks.
+        .. versionadded:: 3009.0
+    stat_timeout (float):
+        Maximum time in seconds to wait for lstat when checking symlinks.
+        .. versionadded:: 3009.0
 
     Returns:
         bool: ``True`` if successful, otherwise raises ``CommandExecutionError``
@@ -3900,7 +3926,8 @@ def symlink(src, path, force=False, atomic=False, follow_symlinks=True):
     if not os.path.isabs(path):
         raise SaltInvocationError(f"Link path must be absolute: {path}")
 
-    if os.path.islink(path):
+    is_link_path = is_link(path, nostat=nostat, stat_timeout=stat_timeout)
+    if is_link_path:
         try:
             if os.path.normpath(salt.utils.path.readlink(path)) == os.path.normpath(
                 src
@@ -3918,7 +3945,7 @@ def symlink(src, path, force=False, atomic=False, follow_symlinks=True):
         msg = f"Existing path is not a symlink: {path}"
         raise CommandExecutionError(msg)
 
-    if (os.path.islink(path) or exists(path)) and force and not atomic:
+    if (is_link_path or exists(path)) and force and not atomic:
         os.unlink(path)
     elif atomic:
         link_dir = os.path.dirname(path)

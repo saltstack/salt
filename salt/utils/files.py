@@ -12,6 +12,7 @@ import re
 import shutil
 import stat
 import subprocess
+import threading
 import tempfile
 import time
 import urllib.parse
@@ -688,6 +689,47 @@ def remove(path):
     except OSError as exc:
         if exc.errno != errno.ENOENT:
             raise
+
+
+def safe_lstat(path, timeout=None, follow_symlinks=False):
+    """
+    Perform a stat/lstat with an optional timeout.
+
+    Returns the stat result on success, or ``None`` on error/timeout.
+    """
+    try:
+        timeout_value = float(timeout) if timeout is not None else None
+    except (TypeError, ValueError):
+        timeout_value = None
+
+    result = {}
+
+    def _stat_call():
+        try:
+            if follow_symlinks:
+                result["stat"] = os.stat(path)
+            else:
+                result["stat"] = os.lstat(path)
+        except OSError as exc:
+            result["error"] = exc
+
+    if timeout_value is None:
+        _stat_call()
+        return result.get("stat")
+
+    thread = threading.Thread(
+        target=_stat_call, name="salt.utils.files.safe_lstat", daemon=True
+    )
+    thread.start()
+    thread.join(timeout_value)
+
+    if thread.is_alive():
+        log.warning("Timed out waiting for stat on %s after %ss", path, timeout_value)
+        return None
+    if "error" in result:
+        log.debug("safe_lstat failed for %s: %s", path, result["error"])
+        return None
+    return result.get("stat")
 
 
 @jinja_filter("list_files")
