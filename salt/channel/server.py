@@ -151,9 +151,15 @@ class ReqServerChannel:
         # Enforce minimum authentication protocol version to prevent downgrade attacks
         minimum_version = self.opts.get("minimum_auth_version", 0)
         if minimum_version > 0 and version < minimum_version:
+            load = payload.get("load")
+            if isinstance(load, dict):
+                minion_id = load.get("id", "unknown minion")
+            else:
+                minion_id = "unknown minion"
             log.warning(
-                "Rejected authentication attempt using protocol version %d "
-                "(minimum required: %d)",
+                "Rejected authentication attempt from minion '%s' using "
+                "protocol version %d (minimum required: %d)",
+                minion_id,
                 version,
                 minimum_version,
             )
