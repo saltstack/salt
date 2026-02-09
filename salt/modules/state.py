@@ -384,20 +384,20 @@ def running(concurrent=False):
     if concurrent:
         return ret
     active = __salt__["saltutil.is_running"]("state.*")
-    
+
     # Get the current JID to avoid false positives (self-detection)
-    # This prevents failures when state.apply(queue=False) is called 
+    # This prevents failures when state.apply(queue=False) is called
     # but the job has a placeholder in the process table.
     current_jid = __opts__.get("jid")
 
     for data in active:
         # Ignore self
         if current_jid is not None:
-             try:
-                 if int(data.get("jid")) == int(current_jid):
-                     continue
-             except (ValueError, TypeError):
-                 pass
+            try:
+                if int(data.get("jid")) == int(current_jid):
+                    continue
+            except (ValueError, TypeError):
+                pass
 
         err = (
             'The function "{}" is running as PID {} and was started at {} '
@@ -460,44 +460,8 @@ def _prior_running_states(jid):
     Return a list of dicts of prior calls to state functions.  This function is
     used to queue state calls so only one is run at a time.
     """
-    ret = []
     active = __salt__["saltutil.is_running"]("state.*")
-
-    # Check for queued jobs
-    queue_dir = os.path.join(__opts__["cachedir"], "state_queue")
-    if os.path.exists(queue_dir):
-        for fn in os.listdir(queue_dir):
-            if fn.startswith("queued_") and fn.endswith(".p"):
-                # fn is queued_<timestamp>_<jid>.p
-                parts = fn[:-2].split("_")
-                if len(parts) >= 3:
-                    job_jid = parts[2]
-                    # We use PID 0 or similar to indicate it's not a real process yet,
-                    # but saltutil.is_running structure usually expects a pid.
-                    active.append({"jid": job_jid, "fun": "state.apply", "pid": 0})
-
-    for data in active:
-        try:
-            data_jid = int(data["jid"])
-        except ValueError:
-            continue
-
-        if jid is None:
-            # If no JID is provided (e.g. local call without JID), assume current job is newer
-            # than any running job, so any running job is a "prior" job.
-            ret.append(data)
-            continue
-
-        try:
-            # Explicitly ignore the current JID to prevent self-queueing loops
-            if int(data_jid) == int(jid):
-                continue
-
-            if data_jid < int(jid):
-                ret.append(data)
-        except (ValueError, TypeError):
-            continue
-    return ret
+    return salt.utils.state.check_prior_running_states(__opts__, jid, active)
 
 
 def _check_queue(queue, kwargs):
