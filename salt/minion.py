@@ -3,6 +3,7 @@ Routines to set up a minion
 """
 
 import asyncio
+import errno
 import binascii
 import collections
 import contextlib
@@ -1878,6 +1879,41 @@ class Minion(MinionBase):
                 await asyncio.sleep(10)
                 process_count = len(salt.utils.minion.running(self.opts))
 
+        try:
+            fd_backoff = max(
+                0.1, float(self.opts.get("minion_open_file_backoff", 1.0))
+            )
+        except (TypeError, ValueError):
+            fd_backoff = 1.0
+        try:
+            fd_log_interval = max(
+                1.0, float(self.opts.get("minion_open_file_log_interval", 30.0))
+            )
+        except (TypeError, ValueError):
+            fd_log_interval = 30.0
+
+        while salt.utils.process.should_throttle_open_files(self.opts):
+            now = time.time()
+            last_log = getattr(self, "_last_open_file_log", 0)
+            if (now - last_log) >= fd_log_interval:
+                self._last_open_file_log = now
+                pressure = salt.utils.process.open_file_pressure()
+                if pressure:
+                    count, limit, usage = pressure
+                    log.warning(
+                        "Open file usage %s/%s (%.0f%%) while executing jid %s, waiting...",
+                        count,
+                        limit,
+                        usage * 100.0,
+                        data["jid"],
+                    )
+                else:
+                    log.warning(
+                        "Open file usage at or above limit while executing jid %s, waiting...",
+                        data["jid"],
+                    )
+            await asyncio.sleep(fd_backoff)
+
         # We stash an instance references to allow for the socket
         # communication in Windows. You can't pickle functions, and thus
         # python needs to be able to reconstruct the reference on the other
@@ -1906,10 +1942,33 @@ class Minion(MinionBase):
             )
 
         if multiprocessing_enabled:
-            with default_signals(signal.SIGINT, signal.SIGTERM):
-                # Reset current signals before starting the process in
-                # order not to inherit the current signal handlers
-                process.start()
+            start_retries = self.opts.get("minion_open_file_retries", 3)
+            try:
+                start_retries = max(0, int(start_retries))
+            except (TypeError, ValueError):
+                start_retries = 3
+            for attempt in range(start_retries + 1):
+                with default_signals(signal.SIGINT, signal.SIGTERM):
+                    try:
+                        # Reset current signals before starting the process in
+                        # order not to inherit the current signal handlers
+                        process.start()
+                        break
+                    except OSError as exc:
+                        if exc.errno not in (errno.EMFILE, errno.ENFILE):
+                            raise
+                        if attempt >= start_retries:
+                            log.error(
+                                "Failed to start process for jid %s due to open file limits",
+                                data["jid"],
+                            )
+                            return
+                        log.warning(
+                            "Too many open files to start jid %s, retrying in %ss",
+                            data["jid"],
+                            fd_backoff,
+                        )
+                        await asyncio.sleep(fd_backoff)
         else:
             process.start()
         self.subprocess_list.add(process)

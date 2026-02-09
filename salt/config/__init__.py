@@ -312,6 +312,16 @@ VALID_OPTS = immutabletypes.freeze(
         "multiprocessing": bool,
         # Maximum number of concurrently active processes at any given point in time
         "process_count_max": int,
+        # Ratio of open-file usage above which new jobs will be delayed
+        "minion_open_file_limit_ratio": float,
+        # Minimum number of free file descriptors to keep available
+        "minion_open_file_limit_min": int,
+        # Backoff in seconds when delaying jobs due to open-file pressure
+        "minion_open_file_backoff": float,
+        # Minimum seconds between open-file pressure log messages
+        "minion_open_file_log_interval": float,
+        # Retry count for starting processes when EMFILE/ENFILE is raised
+        "minion_open_file_retries": int,
         # Whether or not the salt minion should run scheduled mine updates
         "mine_enabled": bool,
         # Whether or not scheduled mine updates should be accompanied by a job return for the job cache
@@ -1205,6 +1215,11 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "autosign_timeout": 120,
         "multiprocessing": True,
         "process_count_max": -1,
+        "minion_open_file_limit_ratio": 0.9,
+        "minion_open_file_limit_min": 32,
+        "minion_open_file_backoff": 1.0,
+        "minion_open_file_log_interval": 30.0,
+        "minion_open_file_retries": 3,
         "mine_enabled": True,
         "mine_return_job": False,
         "mine_interval": 60,

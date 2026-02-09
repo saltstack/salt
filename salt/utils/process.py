@@ -50,6 +50,77 @@ except ImportError:
 _INTERNAL_PROCESS_FINALIZE_FUNCTION_LIST = []
 
 
+def get_open_file_limit():
+    """
+    Return the soft open-file limit for this process if available.
+    """
+    if salt.utils.platform.is_windows():
+        return None
+    try:
+        import resource
+    except ImportError:
+        return None
+    soft, _hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    if soft in (-1, resource.RLIM_INFINITY):
+        return None
+    return soft
+
+
+def get_open_file_count():
+    """
+    Return the current number of open files for this process if available.
+    """
+    if HAS_PSUTIL:
+        try:
+            proc = psutil.Process()
+            if hasattr(proc, "num_fds"):
+                return proc.num_fds()
+            if hasattr(proc, "num_handles"):
+                return proc.num_handles()
+        except (psutil.Error, OSError):
+            return None
+    if os.path.isdir("/proc/self/fd"):
+        try:
+            return len(os.listdir("/proc/self/fd"))
+        except OSError:
+            return None
+    return None
+
+
+def open_file_pressure():
+    """
+    Return a tuple of (count, limit, ratio) for open files, or None.
+    """
+    limit = get_open_file_limit()
+    count = get_open_file_count()
+    if limit is None or count is None or limit == 0:
+        return None
+    return count, limit, float(count) / float(limit)
+
+
+def should_throttle_open_files(opts):
+    """
+    Determine if the current open file usage exceeds the configured ratio.
+    """
+    try:
+        ratio = float(opts.get("minion_open_file_limit_ratio", 0.9))
+    except (TypeError, ValueError):
+        ratio = 0.9
+    if ratio <= 0:
+        return False
+    pressure = open_file_pressure()
+    if not pressure:
+        return False
+    count, limit, usage = pressure
+    try:
+        min_free = int(opts.get("minion_open_file_limit_min", 32))
+    except (TypeError, ValueError):
+        min_free = 32
+    if min_free > 0 and (limit - count) <= min_free:
+        return True
+    return usage >= ratio
+
+
 def appendproctitle(name):
     """
     Append "name" to the current process title
