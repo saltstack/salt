@@ -21,5 +21,7 @@ importlib-metadata>=8.7.0
 zipp>=3.19.1
 
 more-itertools>=9.1.0
+# cheroot 8.5.2 fails to build with modern setuptools due to setuptools_scm_git_archive dependency
+cheroot>=10.0.1
 jaraco.text>=4.0.0
 jaraco.functools>=4.1.0
