@@ -149,6 +149,13 @@ def copyfile(source, dest, backup_mode="", cachedir=""):
     # Get current file stats to they can be replicated after the new file is
     # moved to the destination path.
     fstat = None
+    # We must check for platform availability first, or use a conditional import
+    # salt.utils.platform is available, but if this function is called early, it might fail?
+    # Actually, the error says 'salt' variable is used before assignment.
+    # This means 'import salt.utils.platform' is likely missing or 'salt' is not in scope.
+    # But this file starts with 'import salt.utils.platform'.
+    # Ah, 'import salt.utils.platform' is NOT at the top level of this file in the provided context?
+    # Let me check the imports.
     if not salt.utils.platform.is_windows():
         try:
             fstat = os.stat(dest)
@@ -171,9 +178,9 @@ def copyfile(source, dest, backup_mode="", cachedir=""):
     if rcon:
         policy = False
         try:
-            import salt.modules.selinux
+            from salt.modules import selinux
 
-            policy = salt.modules.selinux.getenforce()
+            policy = selinux.getenforce()
         except (ImportError, CommandExecutionError):
             pass
         if policy == "Enforcing":

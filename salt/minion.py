@@ -2523,6 +2523,16 @@ class Minion(MinionBase):
             ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
             ret["out"] = "nested"
 
+        if isinstance(ret["return"], dict) and ret["return"].get("__no_return__"):
+            # This is used to suppress the return for queued jobs
+            # The job will be executed later and will return then
+            # TODO: make this a configurable feature in the future
+            log.trace(
+                "Suppressing return for job %s because __no_return__ is set",
+                data["jid"],
+            )
+            return
+
         ret["jid"] = data["jid"]
         ret["fun"] = data["fun"]
         ret["fun_args"] = data["arg"]
@@ -2702,6 +2712,8 @@ class Minion(MinionBase):
                     # The file is gone already
                     pass
         log.info("Returning information for job: %s", jid)
+        if ret.get("comment") == "Job queued for execution":
+            log.warning("Sending 'Job Queued' return for job %s", jid)
         log.trace("Return data: %s", ret)
         if ret_cmd == "_syndic_return":
             load = {

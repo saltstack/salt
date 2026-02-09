@@ -1,6 +1,9 @@
 import time
+
 import pytest
+
 import salt.utils.files
+
 
 @pytest.fixture(scope="module")
 def loop_sls(base_env_state_tree_root_dir, tmp_path_factory):
@@ -19,6 +22,7 @@ def loop_sls(base_env_state_tree_root_dir, tmp_path_factory):
         f.write(sls_content)
 
     yield sls_name, target_path
+
 
 def test_state_queue_no_loop(salt_cli, salt_minion, loop_sls):
     """
@@ -55,24 +59,26 @@ def test_state_queue_no_loop(salt_cli, salt_minion, loop_sls):
 
     # Reuse the logic from test_state_queue.py regarding blocking job?
     # Simpler: Just run a background sleep via salt_cli
-    
+
     # Run blocking job
-    block_proc = salt_cli.run("cmd.run", "sleep 5", minion_tgt=salt_minion.id, start_timeout=10)
+    block_proc = salt_cli.run(
+        "cmd.run", "sleep 5", minion_tgt=salt_minion.id, start_timeout=10
+    )
     # (This waits... wait, cmd.run blocks the cli but does it block the minion state run?
     # cmd.run is an execution module. state.apply checks running STATES.
     # Does cmd.run block state.apply? Usually no, unless we check 'running' globally.
     # state.apply checks 'state.*'.
     # So we need a STATE blocking job.
-    
+
     # Create blocking state
     # We can just use cmd.run "sleep 5" inside a state.
-    
+
     start = time.time()
-    
+
     # We'll use fire-and-forget or just threading to start blocking state
-    import threading
     import subprocess
     import sys
+    import threading
 
     def run_blocking():
         cmd = [
@@ -85,7 +91,7 @@ def test_state_queue_no_loop(salt_cli, salt_minion, loop_sls):
             "cmd.run",
             "name=sleep 5",
         ]
-        subprocess.run(cmd, capture_output=True)
+        subprocess.run(cmd, capture_output=True, check=False)
 
     t = threading.Thread(target=run_blocking)
     t.start()
@@ -94,16 +100,18 @@ def test_state_queue_no_loop(salt_cli, salt_minion, loop_sls):
     job_running = False
     while time.time() - start < 10:
         ret = salt_cli.run("saltutil.is_running", "state.*", minion_tgt=salt_minion.id)
-        if ret.data and isinstance(ret.data, list) and len(ret.data) > 0: # simplified check
-             job_running = True
-             break
+        if (
+            ret.data and isinstance(ret.data, list) and len(ret.data) > 0
+        ):  # simplified check
+            job_running = True
+            break
         time.sleep(0.5)
-    
+
     assert job_running, "Blocking state failed to start"
 
     # Now run our test state with queue=True
     ret = salt_cli.run("state.apply", sls_name, "queue=True", minion_tgt=salt_minion.id)
-    
+
     # It should say queued
     assert "queued" in ret.stdout.lower() or "queued" in str(ret.data).lower()
 
@@ -118,7 +126,7 @@ def test_state_queue_no_loop(salt_cli, salt_minion, loop_sls):
         if target_path.exists():
             break
         time.sleep(0.5)
-    
+
     assert target_path.exists(), "Target state never ran"
 
     # Now wait a bit more to see if it loops
@@ -127,5 +135,5 @@ def test_state_queue_no_loop(salt_cli, salt_minion, loop_sls):
     # Check execution count
     content = target_path.read_text().strip().splitlines()
     count = len(content)
-    
+
     assert count == 1, f"State ran {count} times! Infinite loop detected."
