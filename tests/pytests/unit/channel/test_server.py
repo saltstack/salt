@@ -379,6 +379,64 @@ def test_handle_message_version_extraction(auth_master_opts):
     ), "Expected minimum auth version to be at least 3"
 
 
+async def test_auth_version_downgrade_warning_includes_minion_id(
+    pki_dir, auth_minion_opts, req_server, setup_accepted_minion, caplog
+):
+    """
+    Test that the rejected authentication warning includes the minion ID.
+
+    When minimum_auth_version rejects a connection, the warning message should
+    include the minion's ID so administrators can identify which minion needs
+    to be upgraded.
+    """
+    with salt.utils.files.fopen(str(pki_dir / "minion" / "minion.pub"), "r") as fp:
+        pub_key = fp.read()
+
+    load = {
+        "cmd": "_auth",
+        "id": "my-outdated-minion",
+        "pub": pub_key,
+        "enc_algo": auth_minion_opts["encryption_algorithm"],
+        "sig_algo": auth_minion_opts["signing_algorithm"],
+    }
+
+    payload = {"enc": "clear", "load": load, "version": 0}
+
+    import logging
+
+    with caplog.at_level(logging.WARNING, logger="salt.channel.server"):
+        ret = await req_server.handle_message(payload)
+
+    assert ret == "bad load"
+    assert any(
+        "my-outdated-minion" in record.message
+        for record in caplog.records
+        if record.levelno == logging.WARNING
+    ), "Expected minion ID 'my-outdated-minion' in the rejection warning message"
+
+
+async def test_auth_version_downgrade_warning_encrypted_load(
+    req_server, caplog
+):
+    """
+    Test that the rejected authentication warning shows 'unknown minion' when
+    the load is not a dict (e.g., encrypted payload).
+    """
+    payload = {"enc": "aes", "load": b"encrypted-blob", "version": 0}
+
+    import logging
+
+    with caplog.at_level(logging.WARNING, logger="salt.channel.server"):
+        ret = await req_server.handle_message(payload)
+
+    assert ret == "bad load"
+    assert any(
+        "unknown minion" in record.message
+        for record in caplog.records
+        if record.levelno == logging.WARNING
+    ), "Expected 'unknown minion' in the rejection warning for encrypted payloads"
+
+
 # Note: The remaining security bypasses (token, TTL, ID mismatch, session keys)
 # are already tested via the parametrized downgrade tests above and the
 # functional tests. The key regression test is ensuring old versions are rejected.
