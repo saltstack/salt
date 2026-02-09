@@ -1068,7 +1068,9 @@ def _load_cached_grains(opts, cfn):
             return None
 
         return _format_cached_grains(cached_grains)
-    except (OSError, SaltDeserializationError):
+    except (OSError, SaltDeserializationError) as error:
+        log.debug("Exception deserializing grains cache: %s", error)
+        log.debug("Cache was not readable or did not deserialize and might be corrupted. Refreshing.")
         return None
 
 
