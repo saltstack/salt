@@ -86,6 +86,69 @@ class AliasedModule:
         return getattr(self.wrapped, name)
 
 
+class SaltModuleProxy:
+    """
+    Resolve module.function access against a salt functions mapping.
+    """
+
+    __slots__ = ("mod", "funcs")
+
+    def __init__(self, mod, funcs):
+        self.mod = mod
+        self.funcs = funcs
+
+    def __getattr__(self, name):
+        try:
+            return self.funcs[f"{self.mod}.{name}"]
+        except KeyError:
+            raise AttributeError(
+                f"No attribute by the name of {name} was found on {self.mod}"
+            )
+
+    def __repr__(self):
+        return f"<SaltModuleProxy module='{self.mod}'>"
+
+
+class SaltFuncsProxy:
+    """
+    Provide dot-notation access to __salt__ for python templates.
+    """
+
+    __slots__ = ("funcs",)
+
+    def __init__(self, funcs):
+        self.funcs = funcs
+
+    def __getitem__(self, name):
+        return self.funcs[name]
+
+    def __contains__(self, name):
+        return name in self.funcs
+
+    def __getattr__(self, name):
+        if name.startswith("__") and name.endswith("__"):
+            raise AttributeError(name)
+        return SaltModuleProxy(name, self.funcs)
+
+    def __repr__(self):
+        return f"<SaltFuncsProxy funcs={self.funcs!r}>"
+
+
+def resolve_named_context(value):
+    if isinstance(value, NamedLoaderContext):
+        return value.value()
+    return value
+
+
+def wrap_salt_funcs(value):
+    value = resolve_named_context(value)
+    if value is None:
+        return value
+    if getattr(value.__class__, "__getattr__", None):
+        return value
+    return SaltFuncsProxy(value)
+
+
 def generate_sls_context(tmplpath, sls):
     """
     Generate SLS/Template Context Items
@@ -677,6 +740,16 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
     sys.modules[name] = mod
 
     # File templates need these set as __var__
+    for key in ("grains", "pillar", "opts", "__grains__", "__pillar__", "__opts__"):
+        if key in kwargs:
+            kwargs[key] = resolve_named_context(kwargs[key])
+
+    if "salt" in kwargs:
+        wrapped_salt = wrap_salt_funcs(kwargs["salt"])
+        kwargs["salt"] = wrapped_salt
+        if "__salt__" in kwargs:
+            kwargs["__salt__"] = wrapped_salt
+
     if "__env__" not in kwargs and "saltenv" in kwargs:
         setattr(mod, "__env__", kwargs["saltenv"])
         builtins = ["salt", "grains", "pillar", "opts"]

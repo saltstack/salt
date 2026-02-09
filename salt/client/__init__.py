@@ -2068,6 +2068,29 @@ class LocalClient:
         self.destroy()
 
 
+class LoadedMod:
+    """
+    Proxy a module namespace on a FunctionWrapper instance.
+    """
+
+    __slots__ = ("mod", "wrapper")
+
+    def __init__(self, mod, wrapper):
+        self.mod = mod
+        self.wrapper = wrapper
+
+    def __getattr__(self, name):
+        try:
+            return self.wrapper[f"{self.mod}.{name}"]
+        except KeyError:
+            raise AttributeError(
+                f"No attribute by the name of {name} was found on {self.mod}"
+            )
+
+    def __repr__(self):
+        return f"<FunctionWrapper module='{self.mod}'>"
+
+
 class FunctionWrapper(dict):
     """
     Create a function wrapper that looks like the functions dict on the minion
@@ -2117,6 +2140,15 @@ class FunctionWrapper(dict):
             return self.local.cmd(self.minion, key, args)
 
         return func
+
+    def __getattr__(self, mod_or_func):
+        """
+        Support dotted module access (e.g. __salt__.cp.get_file_str()).
+        """
+        if mod_or_func.startswith("__") and mod_or_func.endswith("__"):
+            # Don't pretend dunders are set.
+            raise AttributeError(mod_or_func)
+        return LoadedMod(mod_or_func, self)
 
 
 class Caller:

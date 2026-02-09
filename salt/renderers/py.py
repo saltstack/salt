@@ -142,11 +142,14 @@ def render(template, saltenv="base", sls="", tmplpath=None, **kws):
     if not os.path.isfile(template):
         raise SaltRenderError(f"Template {template} is not a file!")
 
+    # Ensure python templates get a __salt__ object that supports dot notation
+    # consistently (including under salt-ssh wrappers).
+    salt_funcs = salt.utils.templates.wrap_salt_funcs(__salt__)
     tmp_data = salt.utils.templates.py(
         template,
         True,
-        __salt__=__salt__,
-        salt=__salt__,
+        __salt__=salt_funcs,
+        salt=salt_funcs,
         __grains__=__grains__,
         grains=__grains__,
         __opts__=__opts__,
