@@ -5,11 +5,16 @@ Utility functions for state functions
 """
 
 import copy
+import logging
 import os
 
+import salt.payload
 import salt.state
 import salt.utils.files
+import salt.utils.process
 from salt.exceptions import CommandExecutionError
+
+log = logging.getLogger(__name__)
 
 _empty = object()
 
@@ -32,6 +37,119 @@ def acquire_async_queue_lock(opts):
     return salt.utils.files.await_lock(
         lock_path, lock_fn=lock_path, timeout=86400, sleep=0.1
     )
+
+
+import errno
+
+
+def get_active_states(opts):
+    """
+    Return a list of active state jobs from the proc directory.
+    Unlike saltutil.is_running, this does NOT filter out the current process.
+    """
+    ret = []
+    proc_dir = os.path.join(opts["cachedir"], "proc")
+    if not os.path.isdir(proc_dir):
+        return ret
+
+    try:
+        proc_files = os.listdir(proc_dir)
+    except OSError as exc:
+        if exc.errno in (errno.EMFILE, errno.ENFILE, errno.ENOMEM):
+            # System is resource constrained, we cannot reliably determine active states.
+            # Re-raising ensures we don't assume "no jobs" and cause a storm.
+            raise
+        log.error("Unable to list proc directory %s: %s", proc_dir, exc)
+        return ret
+
+    for fn_ in proc_files:
+        path = os.path.join(proc_dir, fn_)
+        try:
+            with salt.utils.files.fopen(path, "rb") as fp_:
+                buf = fp_.read()
+
+            if not buf:
+                continue
+
+            try:
+                data = salt.payload.loads(buf)
+            except NameError:
+                # msgpack error
+                continue
+
+            if not isinstance(data, dict):
+                continue
+
+            pid = data.get("pid")
+            if not pid:
+                continue
+
+            if salt.utils.process.os_is_running(pid):
+                if data.get("fun", "").startswith("state."):
+                    ret.append(data)
+
+        except (OSError, ValueError) as exc:
+            # If we run out of FDs while reading a specific file, stop and raise.
+            if isinstance(exc, OSError) and exc.errno in (errno.EMFILE, errno.ENFILE):
+                raise
+            continue
+
+    return ret
+
+
+def check_prior_running_states(opts, jid, active_jobs):
+    """
+    Check for prior running states that would block the execution of the current job.
+    Returns a list of blocking jobs.
+    """
+    ret = []
+    # Work on a copy to avoid side effects
+    active_jobs = list(active_jobs)
+
+    # Check for queued jobs
+    queue_dir = os.path.join(opts["cachedir"], "state_queue")
+    if os.path.exists(queue_dir):
+        for fn in os.listdir(queue_dir):
+            if fn.startswith("queued_") and fn.endswith(".p"):
+                # fn is queued_<timestamp>_<jid>.p
+                parts = fn[:-2].split("_")
+                if len(parts) >= 3:
+                    job_jid = parts[2]
+                    # We use PID 0 or similar to indicate it's not a real process yet,
+                    # but saltutil.is_running structure usually expects a pid.
+                    active_jobs.append({"jid": job_jid, "fun": "state.apply", "pid": 0})
+
+    if active_jobs:
+        # log.debug("check_prior_running_states: checking JID %s against active jobs: %s", jid, active_jobs)
+        pass
+
+    for data in active_jobs:
+        try:
+            data_jid = int(data["jid"])
+        except ValueError:
+            continue
+
+        if jid is None:
+            # If no JID is provided (e.g. local call without JID), assume current job is newer
+            # than any running job, so any running job is a "prior" job.
+            ret.append(data)
+            continue
+
+        try:
+            # Explicitly ignore the current JID to prevent self-queueing loops
+            if int(data_jid) == int(jid):
+                continue
+
+            # If it's a running job (PID > 0), it ALWAYS blocks
+            # If it's a queued job (PID 0), it blocks only if it's OLDER
+            pid = int(data.get("pid", 0))
+            if pid > 0:
+                ret.append(data)
+            elif data_jid < int(jid):
+                ret.append(data)
+        except (ValueError, TypeError):
+            continue
+    return ret
 
 
 def gen_tag(low):
