@@ -57,7 +57,7 @@ if salt.utils.platform.is_windows():
 
     import salt.platform.win
     from salt.utils.win_functions import escape_argument as _cmd_quote
-    from salt.utils.win_runas import runas as win_runas
+    import salt.utils.win_runas as win_runas
 
     HAS_WIN_RUNAS = True
 else:
@@ -100,6 +100,24 @@ def _check_cb(cb_):
         else:
             log.error("log_callback is not callable, ignoring")
     return lambda x: x
+
+
+def _validate_windows_runas(runas):
+    """
+    Validate the requested runas user on Windows systems.
+    """
+    if not runas or not salt.utils.platform.is_windows():
+        return True
+    if not HAS_WIN_RUNAS:
+        raise CommandExecutionError("missing salt/utils/win_runas.py")
+    if not getattr(win_runas, "HAS_WIN32", False):
+        raise CommandExecutionError("This utility requires pywin32")
+    try:
+        win_runas.validate_username(runas, raise_on_error=True)
+    except CommandExecutionError as exc:
+        log.debug("runas validation failed for %s: %s", runas, exc)
+        raise CommandExecutionError(f"Invalid user: {runas}")
+    return True
 
 
 def _python_shell_default(python_shell, __pub_jid):
@@ -788,7 +806,7 @@ def _run(
                 if change_windows_codepage:
                     salt.utils.win_chcp.set_codepage_id(windows_codepage)
                 try:
-                    proc = win_runas(cmd, runas, password, **new_kwargs)
+                    proc = win_runas.runas(cmd, runas, password, **new_kwargs)
                 except (OSError, pywintypes.error) as exc:
                     msg = "Unable to run command '{}' with the context '{}', reason: {}".format(
                         cmd if output_loglevel is not None else "REDACTED",
@@ -3023,10 +3041,7 @@ def script(
 
     win_cwd = False
     if salt.utils.platform.is_windows() and runas:
-        # Let's make sure the user exists first
-        if not __salt__["user.info"](runas):
-            msg = f"Invalid user: {runas}"
-            raise CommandExecutionError(msg)
+        _validate_windows_runas(runas)
         if cwd is None:
             # Create a temp working directory
             cwd = tempfile.mkdtemp(dir=__opts__["cachedir"])

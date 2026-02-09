@@ -364,6 +364,20 @@ def _is_true(val):
     raise ValueError(f"Failed parsing boolean value: {val}")
 
 
+def _validate_windows_runas(runas):
+    if not runas or not salt.utils.platform.is_windows():
+        return True, ""
+    try:
+        import salt.utils.win_runas as win_runas
+    except Exception:  # pylint: disable=broad-except
+        return False, "win_runas is not available"
+    if not getattr(win_runas, "HAS_WIN32", False):
+        return False, "win_runas is not available"
+    if not win_runas.validate_username(runas):
+        return False, f"Invalid user: {runas}"
+    return True, ""
+
+
 def wait(
     name,
     cwd=None,
@@ -872,6 +886,11 @@ def run(
         ret["comment"] = "Invalidly-formatted 'env' parameter. See documentation."
         return ret
 
+    valid_runas, runas_comment = _validate_windows_runas(runas)
+    if not valid_runas:
+        ret["comment"] = runas_comment
+        return ret
+
     cmd_kwargs = copy.deepcopy(kwargs)
     cmd_kwargs.update(
         {
@@ -1156,6 +1175,11 @@ def script(
 
     if runas and salt.utils.platform.is_windows() and not password:
         ret["comment"] = "Must supply a password if runas argument is used on Windows."
+        return ret
+
+    valid_runas, runas_comment = _validate_windows_runas(runas)
+    if not valid_runas:
+        ret["comment"] = runas_comment
         return ret
 
     tmpctx = defaults if defaults else {}

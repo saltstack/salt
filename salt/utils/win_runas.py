@@ -81,6 +81,52 @@ def split_username(username):
     return str(user_name), str(domain)
 
 
+def _is_upn(username):
+    """
+    Return True when the username is in UPN format (user@domain).
+    """
+    return "@" in username and "\\" not in username
+
+
+def resolve_logon_credentials(username):
+    """
+    Resolve logon credentials for Windows logon APIs.
+    """
+    if not isinstance(username, str):
+        username = str(username)
+    is_upn = _is_upn(username)
+    try:
+        _, lookup_domain, _ = win32security.LookupAccountName(None, username)
+    except pywintypes.error as exc:
+        message = win32api.FormatMessage(exc.winerror).rstrip("\n")
+        raise CommandExecutionError(message)
+    user_name, domain_name = split_username(username)
+    logon_name = username if is_upn else user_name
+    logon_domain = "" if is_upn else lookup_domain
+    return {
+        "input": username,
+        "user_name": user_name,
+        "domain_name": domain_name,
+        "logon_name": logon_name,
+        "logon_domain": logon_domain,
+        "lookup_domain": lookup_domain,
+        "is_upn": is_upn,
+    }
+
+
+def validate_username(username, raise_on_error=False):
+    """
+    Validate that a username can be resolved on this host.
+    """
+    try:
+        resolve_logon_credentials(username)
+    except CommandExecutionError:
+        if raise_on_error:
+            raise
+        return False
+    return True
+
+
 def create_env(user_token, inherit, timeout=1):
     """
     CreateEnvironmentBlock might fail when we close a login session and then
@@ -173,13 +219,10 @@ def runas(cmd, username, password=None, **kwargs):
     # Let's make it a string if it's anything other than a string
     if not isinstance(username, str):
         username = str(username)
-    # Validate the domain and sid exist for the username
-    try:
-        _, domain, _ = win32security.LookupAccountName(None, username)
-        username, _ = split_username(username)
-    except pywintypes.error as exc:
-        message = win32api.FormatMessage(exc.winerror).rstrip("\n")
-        raise CommandExecutionError(message)
+    resolved = resolve_logon_credentials(username)
+    domain = resolved["lookup_domain"]
+    logon_name = resolved["logon_name"]
+    logon_domain = resolved["logon_domain"]
 
     # Elevate the token from the current process
     access = win32security.TOKEN_QUERY | win32security.TOKEN_ADJUST_PRIVILEGES
@@ -216,8 +259,8 @@ def runas(cmd, username, password=None, **kwargs):
         # Logon as a system level account, SYSTEM, LOCAL SERVICE, or NETWORK
         # SERVICE.
         user_token = win32security.LogonUser(
-            username,
-            domain,
+            logon_name,
+            logon_domain,
             "",
             win32con.LOGON32_LOGON_SERVICE,
             win32con.LOGON32_PROVIDER_DEFAULT,
@@ -225,15 +268,15 @@ def runas(cmd, username, password=None, **kwargs):
     elif password:
         # Login with a password.
         user_token = win32security.LogonUser(
-            username,
-            domain,
+            logon_name,
+            logon_domain,
             password,
             win32con.LOGON32_LOGON_INTERACTIVE,
             win32con.LOGON32_PROVIDER_DEFAULT,
         )
     else:
         # Login without a password. This always returns an elevated token.
-        user_token = salt.platform.win.logon_msv1_s4u(username).Token
+        user_token = salt.platform.win.logon_msv1_s4u(logon_name).Token
 
     # Get a linked user token to elevate if needed
     elevation_type = win32security.GetTokenInformation(
@@ -374,13 +417,10 @@ def runas_unpriv(cmd, username, password, **kwargs):
     # Let's make it a string if it's anything other than a string
     if not isinstance(username, str):
         username = str(username)
-    # Validate the domain and sid exist for the username
-    try:
-        _, domain, _ = win32security.LookupAccountName(None, username)
-        username, _ = split_username(username)
-    except pywintypes.error as exc:
-        message = win32api.FormatMessage(exc.winerror).rstrip("\n")
-        raise CommandExecutionError(message)
+    resolved = resolve_logon_credentials(username)
+    username = resolved["user_name"]
+    logon_name = resolved["logon_name"]
+    logon_domain = resolved["logon_domain"]
 
     # Create inheritable copy of the stdin
     stdin = salt.platform.win.kernel32.GetStdHandle(
@@ -445,8 +485,8 @@ def runas_unpriv(cmd, username, password, **kwargs):
     try:
         # Run command and return process info structure
         process_info = salt.platform.win.CreateProcessWithLogonW(
-            username=username,
-            domain=domain,
+            username=logon_name,
+            domain=logon_domain,
             password=password,
             logonflags=salt.platform.win.LOGON_WITH_PROFILE,
             applicationname=None,
