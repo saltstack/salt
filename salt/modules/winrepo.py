@@ -17,6 +17,7 @@ import salt.utils.functools
 import salt.utils.gitfs
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.data
 from salt.exceptions import CommandExecutionError, SaltRenderError
 from salt.runners.winrepo import genrepo as _genrepo
 from salt.runners.winrepo import update_git_repos as _update_git_repos
@@ -43,6 +44,16 @@ def __virtual__():
     return (False, "This module only works on Windows.")
 
 
+def _normalize_versions_arg(value):
+    """
+    Normalize the normalize_versions argument for winrepo functions.
+    """
+    normalized = salt.utils.data.is_true(value)
+    if value not in (True, False) and str(value).lower() not in ("0", "false", "no", "off"):
+        log.debug("normalize_versions set to %s; coerced to %s", value, normalized)
+    return normalized
+
+
 def _get_local_repo_dir(saltenv="base"):
     winrepo_source_dir = __opts__["winrepo_source_dir"]
     dirs = []
@@ -53,9 +64,13 @@ def _get_local_repo_dir(saltenv="base"):
     return os.sep.join(dirs)
 
 
-def genrepo():
+def genrepo(normalize_versions=True):
     r"""
     Generate winrepo_cachefile based on sls files in the winrepo_dir
+
+    Args:
+        normalize_versions (bool):
+            Normalize numeric version keys to preserve trailing zeros when possible.
 
     CLI Example:
 
@@ -63,7 +78,10 @@ def genrepo():
 
         salt-call winrepo.genrepo
     """
-    return _genrepo(opts=__opts__, fire_event=False)
+    normalize_versions = _normalize_versions_arg(normalize_versions)
+    return _genrepo(
+        opts=__opts__, fire_event=False, normalize_versions=normalize_versions
+    )
 
 
 def update_git_repos(clean=False):

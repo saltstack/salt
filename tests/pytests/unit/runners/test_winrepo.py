@@ -38,6 +38,16 @@ def winrepo_sls():
           msiexec: False
           locale: en_US
           reboot: False
+    salt_minion_py3:
+      3007.10:
+          full_name: 'Salt Minion 3007.10 (Py3)'
+          installer: 'https://packages.example.invalid/windows/3007.10/Salt-Minion-3007.10-Py3-AMD64-Setup.exe'
+          install_flags: '/S'
+          uninstaller: '%PROGRAMFILES%\\Salt Project\\Salt Minion\\uninst.exe'
+          uninstall_flags: '/S'
+          msiexec: False
+          locale: en_US
+          reboot: False
     """
     )
     return _winrepo_sls
@@ -46,7 +56,11 @@ def winrepo_sls():
 @pytest.fixture
 def winrepo_genrepo_data():
     _winrepo_genrepo_data = {
-        "name_map": {"WinSCP 5.7.4": "winscp_x86", "WinSCP 5.7.5": "winscp_x86"},
+        "name_map": {
+            "WinSCP 5.7.4": "winscp_x86",
+            "WinSCP 5.7.5": "winscp_x86",
+            "Salt Minion 3007.10 (Py3)": "salt_minion_py3",
+        },
         "repo": {
             "winscp_x86": {
                 "5.7.5": {
@@ -69,7 +83,19 @@ def winrepo_genrepo_data():
                     "locale": "en_US",
                     "reboot": False,
                 },
-            }
+            },
+            "salt_minion_py3": {
+                "3007.10": {
+                    "full_name": "Salt Minion 3007.10 (Py3)",
+                    "installer": "https://packages.example.invalid/windows/3007.10/Salt-Minion-3007.10-Py3-AMD64-Setup.exe",
+                    "install_flags": "/S",
+                    "uninstaller": "%PROGRAMFILES%\\Salt Project\\Salt Minion\\uninst.exe",
+                    "uninstall_flags": "/S",
+                    "msiexec": False,
+                    "locale": "en_US",
+                    "reboot": False,
+                },
+            },
         },
     }
     return _winrepo_genrepo_data

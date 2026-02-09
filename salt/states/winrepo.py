@@ -3,6 +3,7 @@ Manage Windows Package Repository
 """
 
 import itertools
+import logging
 
 # Python Libs
 import os
@@ -13,20 +14,25 @@ import salt.config
 # Salt Modules
 import salt.runner
 import salt.syspaths
+import salt.utils.data
 import salt.utils.path
 
 
+log = logging.getLogger(__name__)
 def __virtual__():
     return "winrepo"
 
 
-def genrepo(name, force=False, allow_empty=False):
+def genrepo(name, force=False, allow_empty=False, normalize_versions=True):
     """
     Refresh the winrepo.p file of the repository (salt-run winrepo.genrepo)
 
     If ``force`` is ``True`` no checks will be made and the repository will be
     generated if ``allow_empty`` is ``True`` then the state will not return an
     error if there are 0 packages,
+
+    normalize_versions
+        Normalize numeric version keys to preserve trailing zeros when possible.
 
     .. note::
 
@@ -85,7 +91,12 @@ def genrepo(name, force=False, allow_empty=False):
         return ret
 
     runner = salt.runner.RunnerClient(master_config)
-    runner_ret = runner.cmd("winrepo.genrepo", [])
+    normalize_versions = salt.utils.data.is_true(normalize_versions)
+    if not normalize_versions:
+        log.debug("winrepo.genrepo called with normalize_versions disabled")
+    runner_ret = runner.cmd(
+        "winrepo.genrepo", [], kwarg={"normalize_versions": normalize_versions}
+    )
     ret["changes"] = {"winrepo": runner_ret}
     if isinstance(runner_ret, dict) and runner_ret == {} and not allow_empty:
         os.remove(winrepo_cachefile)

@@ -8,6 +8,7 @@ Runner to manage Windows software repo
 
 import logging
 import os
+import re
 
 import salt.loader
 import salt.minion
@@ -29,6 +30,45 @@ PER_REMOTE_OVERRIDES = ("ssl_verify", "refspecs", "fallback", "proxy")
 # runners and other modules that import salt.runners.winrepo.
 PER_REMOTE_ONLY = salt.utils.gitfs.PER_REMOTE_ONLY
 GLOBAL_ONLY = ("branch",)
+_VERSION_FIELDS = (
+    "full_name",
+    "installer",
+    "installer64",
+    "uninstaller",
+    "uninstaller64",
+    "msiexec",
+)
+_VERSION_PATTERN = re.compile(r"\d+(?:\.\d+)+")
+
+
+def _normalize_version_key(version, repodata):
+    """
+    Normalize a version key, preserving trailing zeros when possible.
+    """
+    if isinstance(version, str):
+        return version
+    if not isinstance(repodata, dict):
+        return str(version)
+    if isinstance(version, float):
+        candidates = []
+        for field in _VERSION_FIELDS:
+            value = repodata.get(field)
+            if not value:
+                continue
+            for match in _VERSION_PATTERN.findall(str(value)):
+                try:
+                    if float(match) == float(version):
+                        candidates.append(match)
+                except ValueError:
+                    continue
+        if candidates:
+            candidates = sorted(
+                set(candidates),
+                key=lambda item: (item.count("."), len(item)),
+                reverse=True,
+            )
+            return candidates[0]
+    return str(version)
 
 
 def _legacy_git():
@@ -37,7 +77,7 @@ def _legacy_git():
     )
 
 
-def genrepo(opts=None, fire_event=True):
+def genrepo(opts=None, fire_event=True, normalize_versions=True):
     """
     Generate winrepo_cachefile based on sls files in the winrepo_dir
 
@@ -83,16 +123,12 @@ def genrepo(opts=None, fire_event=True):
                     revmap = {}
                     for pkgname, versions in config.items():
                         log.debug("Compiling winrepo data for package '%s'", pkgname)
-                        for version, repodata in versions.items():
+                        for version, repodata in list(versions.items()):
                             log.debug(
                                 "Compiling winrepo data for %s version %s",
                                 pkgname,
                                 version,
                             )
-                            if not isinstance(version, str):
-                                config[pkgname][str(version)] = config[pkgname].pop(
-                                    version
-                                )
                             if not isinstance(repodata, dict):
                                 msg = "Failed to compile {}.".format(
                                     os.path.join(root, name)
@@ -111,6 +147,25 @@ def genrepo(opts=None, fire_event=True):
                                             msg,
                                         )
                                 continue
+                            if not isinstance(version, str) and normalize_versions:
+                                normalized = _normalize_version_key(version, repodata)
+                                if normalized != version:
+                                    if normalized in config[pkgname]:
+                                        log.warning(
+                                            "Duplicate winrepo version key '%s' for %s",
+                                            normalized,
+                                            pkgname,
+                                        )
+                                        config[pkgname].pop(version)
+                                    else:
+                                        config[pkgname][normalized] = config[pkgname].pop(
+                                            version
+                                        )
+                                    version = normalized
+                            elif not isinstance(version, str):
+                                config[pkgname][str(version)] = config[pkgname].pop(
+                                    version
+                                )
                             revmap[repodata["full_name"]] = pkgname
                     ret.setdefault("repo", {}).update(config)
                     ret.setdefault("name_map", {}).update(revmap)
