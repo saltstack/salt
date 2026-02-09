@@ -31,6 +31,68 @@ except ImportError:
     # fcntl is not available on windows
     HAS_FCNTL = False
 
+
+# This is a backport of asynccontextmanager for Python < 3.7
+if hasattr(contextlib, "asynccontextmanager"):
+    asynccontextmanager = contextlib.asynccontextmanager
+else:
+    import functools
+
+    class _AsyncGeneratorContextManager:
+        """
+        Async context manager backport for Python < 3.7
+        """
+
+        def __init__(self, func, args, kwargs):
+            self._gen = func(*args, **kwargs)
+
+        async def __aenter__(self):
+            try:
+                return await self._gen.__anext__()
+            except StopAsyncIteration:
+                raise RuntimeError("generator didn't yield") from None
+
+        async def __aexit__(self, exc_type, exc_value, traceback):
+            if exc_type is None:
+                try:
+                    await self._gen.__anext__()
+                except StopAsyncIteration:
+                    return
+                else:
+                    raise RuntimeError("generator didn't stop")
+            else:
+                if exc_value is None:
+                    exc_value = exc_type()
+                try:
+                    await self._gen.athrow(exc_type, exc_value, traceback)
+                except StopAsyncIteration:
+                    return True
+                except RuntimeError as exc:
+                    if exc is exc_value:
+                        return False
+                    if (
+                        isinstance(exc_value, StopAsyncIteration)
+                        and exc.__cause__ is exc_value
+                    ):
+                        return False
+                    raise
+                except Exception as exc:
+                    if exc is exc_value:
+                        return False
+                    raise
+
+    def asynccontextmanager(func):
+        """
+        asynccontextmanager decorator backport
+        """
+
+        @functools.wraps(func)
+        def helper(*args, **kwargs):
+            return _AsyncGeneratorContextManager(func, args, kwargs)
+
+        return helper
+
+
 log = logging.getLogger(__name__)
 
 LOCAL_PROTOS = ("", "file")
@@ -308,7 +370,7 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
             log.trace("Write lock for %s (%s) released", path, lock_fn)
 
 
-@contextlib.asynccontextmanager
+@asynccontextmanager
 async def await_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
     """
     Obtain a write lock. If one exists, wait for it to release first

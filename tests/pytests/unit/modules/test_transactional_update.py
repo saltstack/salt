@@ -542,6 +542,7 @@ def test_sls_queue_true():
             "comment": "Job queued for execution",
             "queued": True,
             "changes": {},
+            "__no_return__": True,
         }
         assert tu.sls("module", queue=True) == expected
 
@@ -605,6 +606,7 @@ def test_highstate_queue_true():
             "comment": "Job queued for execution",
             "queued": True,
             "changes": {},
+            "__no_return__": True,
         }
         assert tu.highstate(queue=True) == expected
 
@@ -692,5 +694,6 @@ def test_single_queue_true():
             "comment": "Job queued for execution",
             "queued": True,
             "changes": {},
+            "__no_return__": True,
         }
         assert tu.single("pkg.installed", name="emacs", queue=True) == expected
