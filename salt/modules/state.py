@@ -524,6 +524,7 @@ def _check_queue(queue, kwargs):
                         "comment": "Job queued for execution",
                         "queued": True,
                         "changes": {},
+                        "__no_return__": True,
                     }
                 except OSError:
                     log.error("Failed to write queue file %s", path)
