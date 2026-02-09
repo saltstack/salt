@@ -1820,7 +1820,12 @@ class Minion(MinionBase):
         Override this method if you wish to handle the decoded data
         differently.
         """
+        yield self._handle_decoded_payload_impl(data)
 
+    async def _handle_decoded_payload_impl(self, data):
+        """
+        Async implementation of _handle_decoded_payload
+        """
         # Ensure payload is unicode. Disregard failure to decode binary blobs.
         if "user" in data:
             log.info(
@@ -1871,15 +1876,14 @@ class Minion(MinionBase):
         # This is used for jobs that have been queued and are now being released
         bypass_process_count_max = data.pop("__ignore_process_count_max", False)
 
-        if process_count_max > 0 and not bypass_process_count_max:
+        if process_count_max > 0:
             # We use a file lock to ensure atomic checking and queueing
             queue_lock_path = os.path.join(self.opts["cachedir"], "job_queue.lock")
 
             try:
-                with salt.utils.files.await_lock(
+                async with salt.utils.files.await_lock(
                     queue_lock_path, lock_fn=queue_lock_path, timeout=5
-                ) as lock:
-                    yield lock
+                ):
                     # Use internal subprocess list for accurate, race-free counting
                     # Filter for alive processes to ignore finished ones that haven't been cleaned up yet
                     running_processes = [
@@ -1887,21 +1891,7 @@ class Minion(MinionBase):
                     ]
                     process_count = len(running_processes)
 
-                    # DEBUG LOG
-                    log.critical(
-                        "DEBUG: JID %s process_count=%s max=%s running=%s keys=%s",
-                        data["jid"],
-                        process_count,
-                        process_count_max,
-                        running_processes,
-                        list(data.keys()),
-                    )
-
-                    # Sanitize data to remove any keys that might cause issues with kwargs injection
-                    if "kwarg" in data:
-                        data.pop("kwarg")
-
-                    if process_count >= process_count_max:
+                    if not bypass_process_count_max and process_count >= process_count_max:
                         log.warning(
                             "Maximum number of processes reached while executing jid %s,"
                             " queuing... (Running: %s, Max: %s)",
@@ -1911,6 +1901,13 @@ class Minion(MinionBase):
                         )
                         self._queue_job(data)
                         return
+
+                    # Sanitize data to remove any keys that might cause issues with kwargs injection
+                    if "kwarg" in data:
+                        data.pop("kwarg")
+
+                    self._invoke_execution(data)
+
             except FileLockError:
                 log.warning(
                     "Failed to acquire job_queue lock for jid %s, queuing anyway.",
@@ -1920,7 +1917,37 @@ class Minion(MinionBase):
                 # Or we could just proceed (unsafe). Queuing is safer for stability.
                 self._queue_job(data)
                 return
+        else:
+            # Sanitize data to remove any keys that might cause issues with kwargs injection
+            if "kwarg" in data:
+                data.pop("kwarg")
+            self._invoke_execution(data)
 
+    def _queue_job(self, data):
+        """
+        Queue a job to disk because process_count_max is reached.
+        """
+        queue_dir = os.path.join(self.opts["cachedir"], "job_queue")
+        if not os.path.exists(queue_dir):
+            try:
+                os.makedirs(queue_dir)
+            except OSError:
+                pass
+
+        # Use timestamp to ensure FIFO ordering
+        # We use microseconds to avoid collisions
+        jid = data.get("jid")
+        fn = f"queued_{int(time.time() * 1000000)}_{jid}.p"
+        path = os.path.join(queue_dir, fn)
+
+        try:
+            with salt.utils.files.fopen(path, "w+b") as fp_:
+                salt.payload.dump(data, fp_)
+            log.info("Queued job %s to %s", jid, path)
+        except OSError:
+            log.error("Failed to write job queue file %s", path)
+
+    def _invoke_execution(self, data):
         # We stash an instance references to allow for the socket
         # communication in Windows. You can't pickle functions, and thus
         # python needs to be able to reconstruct the reference on the other
@@ -1957,30 +1984,6 @@ class Minion(MinionBase):
             process.start()
         self.subprocess_list.add(process)
 
-    def _queue_job(self, data):
-        """
-        Queue a job to disk because process_count_max is reached.
-        """
-        queue_dir = os.path.join(self.opts["cachedir"], "job_queue")
-        if not os.path.exists(queue_dir):
-            try:
-                os.makedirs(queue_dir)
-            except OSError:
-                pass
-
-        # Use timestamp to ensure FIFO ordering
-        # We use microseconds to avoid collisions
-        jid = data.get("jid")
-        fn = f"queued_{int(time.time() * 1000000)}_{jid}.p"
-        path = os.path.join(queue_dir, fn)
-
-        try:
-            with salt.utils.files.fopen(path, "w+b") as fp_:
-                salt.payload.dump(data, fp_)
-            log.info("Queued job %s to %s", jid, path)
-        except OSError:
-            log.error("Failed to write job queue file %s", path)
-
     def setup_process_queue_processing(self):
         """
         Set up the process queue processing.
@@ -2006,6 +2009,12 @@ class Minion(MinionBase):
         """
         Async body of process_process_queue.
         """
+        yield self._process_process_queue_async_impl()
+
+    async def _process_process_queue_async_impl(self):
+        """
+        Async implementation of _process_process_queue_async
+        """
         try:
             queue_dir = os.path.join(self.opts["cachedir"], "job_queue")
             if not os.path.exists(queue_dir):
@@ -2023,10 +2032,9 @@ class Minion(MinionBase):
             try:
                 # We use a short timeout because we run every 1s.
                 # If we can't get it, we'll try next time.
-                with salt.utils.files.await_lock(
+                async with salt.utils.files.await_lock(
                     queue_lock_path, lock_fn=queue_lock_path, timeout=0.1
-                ) as lock:
-                    yield lock
+                ):
                     # Check actual process count
                     process_count = len(salt.utils.minion.running(self.opts))
                     if process_count >= process_count_max:
@@ -3412,7 +3420,7 @@ class Minion(MinionBase):
             # We add the periodic callback directly. The callback itself handles
             # threading to avoid blocking the loop.
             self.add_periodic_callback(
-                "state_queue", self.process_state_queue, interval=1
+                "state_queue", self.process_state_queue, interval=0.3
             )
 
     def process_state_queue(self):
@@ -3431,14 +3439,16 @@ class Minion(MinionBase):
         """
         Async body of process_state_queue.
         """
+        yield self._process_state_queue_async_impl()
+
+    async def _process_state_queue_async_impl(self):
         try:
             queue_dir = os.path.join(self.opts["cachedir"], "state_queue")
             if not os.path.exists(queue_dir):
                 return
 
             # Acquire lock to check queue
-            with salt.utils.state.acquire_async_queue_lock(self.opts) as lock:
-                yield lock
+            async with salt.utils.state.acquire_async_queue_lock(self.opts):
                 # Check if any state jobs are running
                 # We use saltutil.is_running logic
                 active = self.functions["saltutil.is_running"]("state.*")
@@ -3456,12 +3466,12 @@ class Minion(MinionBase):
                     pass
 
                 if not files:
-                    log.info(
+                    log.debug(
                         "State queue processing: no queued files found in %s", queue_dir
                     )
                     return
 
-                log.info("State queue processing: found queued files: %s", files)
+                log.info("State queue processing: found %d queued files", len(files))
 
                 # Sort by timestamp (filename)
                 # queued_<timestamp>_<jid>.p
@@ -3512,7 +3522,8 @@ class Minion(MinionBase):
 
                 try:
                     os.remove(path)
-                except OSError:
+                except OSError as exc:
+                    log.error("Failed to remove queued job file %s: %s", path, exc)
                     pass
 
                 # Mark job to bypass process_count_max checks since it has already waited
@@ -3651,7 +3662,9 @@ class Minion(MinionBase):
     def _handle_payload(self, payload):
         if payload is not None and payload["enc"] == "aes":
             if self._target_load(payload["load"]):
-                self.io_loop.spawn_callback(self._handle_decoded_payload, payload["load"])
+                self.io_loop.spawn_callback(
+                    self._handle_decoded_payload, payload["load"]
+                )
             elif self.opts["zmq_filtering"]:
                 # In the filtering enabled case, we'd like to know when minion sees something it shouldn't
                 log.trace(
