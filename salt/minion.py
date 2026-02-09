@@ -3481,10 +3481,9 @@ class Minion(MinionBase):
                         # Extract JID part (after second underscore, before .p)
                         parts = fn.split("_")
                         if len(parts) >= 3:
-                            # parts[2] might contain the start of JID if JID has underscores,
-                            # but standard JIDs are numeric.
-                            # We join everything after timestamp just in case, but strip .p
-                            jid_str = "_".join(parts[2:])
+                            # state.py uses parts[2] as the JID. We should match this to ensure
+                            # consistent sorting, even if the filename has extra underscores.
+                            jid_str = parts[2]
                             if jid_str.endswith(".p"):
                                 jid_str = jid_str[:-2]
                             return int(jid_str)
