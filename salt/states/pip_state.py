@@ -238,6 +238,7 @@ def _check_if_installed(
     index_url,
     extra_index_url,
     pip_list=False,
+    pre_releases=False,
     **kwargs,
 ):
     """
@@ -281,23 +282,32 @@ def _check_if_installed(
                 return ret
         if force_reinstall is False and upgrade:
             # Check desired version (if any) against currently-installed
-            include_alpha = False
-            include_beta = False
-            include_rc = False
-            if any(version_spec):
-                for spec in version_spec:
-                    if "a" in spec[1]:
-                        include_alpha = True
-                    if "b" in spec[1]:
-                        include_beta = True
-                    if "rc" in spec[1]:
-                        include_rc = True
+            # If pre_releases is True, include all pre-release types
+            if pre_releases:
+                include_alpha = True
+                include_beta = True
+                include_rc = True
+            else:
+                include_alpha = False
+                include_beta = False
+                include_rc = False
+                # Only check version spec for pre-release indicators if pre_releases is False
+                if any(version_spec):
+                    for spec in version_spec:
+                        if "a" in spec[1]:
+                            include_alpha = True
+                        if "b" in spec[1]:
+                            include_beta = True
+                        if "rc" in spec[1]:
+                            include_rc = True
+            # Use pre_releases parameter for cleaner API when available
             available_versions = __salt__["pip.list_all_versions"](
                 prefix,
                 bin_env=bin_env,
-                include_alpha=include_alpha,
-                include_beta=include_beta,
-                include_rc=include_rc,
+                pre_releases=pre_releases,
+                include_alpha=include_alpha if not pre_releases else True,
+                include_beta=include_beta if not pre_releases else True,
+                include_rc=include_rc if not pre_releases else True,
                 user=user,
                 cwd=cwd,
                 index_url=index_url,
@@ -320,7 +330,19 @@ def _check_if_installed(
                     "requirements".format(prefix)
                 )
                 return ret
-            if _pep440_version_cmp(pip_list[prefix], desired_version) == 0:
+            # Compare installed version with desired version
+            # When pre_releases=True, desired_version may include pre-releases
+            version_cmp = _pep440_version_cmp(pip_list[prefix], desired_version)
+            if version_cmp == 0:
+                # Installed version matches desired version exactly
+                ret["result"] = True
+                ret["comment"] = "Python package {} was already installed".format(
+                    state_pkg_name
+                )
+                return ret
+            elif version_cmp == 1:
+                # Installed version is newer than desired version
+                # This can happen with pre-releases - keep the newer installed version
                 ret["result"] = True
                 ret["comment"] = "Python package {} was already installed".format(
                     state_pkg_name
@@ -554,7 +576,9 @@ def installed(
         Current working directory to run pip from
 
     pre_releases
-        Include pre-releases in the available versions
+        Include pre-releases in the available versions. When used with
+        ``upgrade=True``, this allows upgrading to pre-release versions even
+        if they are not explicitly specified in the version requirements.
 
     cert
         Provide a path to an alternate CA bundle
@@ -889,6 +913,7 @@ def installed(
                     index_url,
                     extra_index_url,
                     pip_list,
+                    pre_releases=pre_releases,
                     **kwargs,
                 )
                 # If _check_if_installed result is None, something went wrong with

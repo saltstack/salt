@@ -1616,6 +1616,7 @@ def list_all_versions(
     include_alpha=False,
     include_beta=False,
     include_rc=False,
+    pre_releases=False,
     user=None,
     cwd=None,
     index_url=None,
@@ -1644,6 +1645,12 @@ def list_all_versions(
     include_rc
         Include release candidates versions in the list
 
+    pre_releases
+        Include all pre-release versions (alpha, beta, and release candidates)
+        in the list. When set to True, this overrides individual
+        ``include_alpha``, ``include_beta``, and ``include_rc`` settings.
+        .. versionadded:: 3007.2
+
     user
         The user under which to run pip
 
@@ -1666,6 +1673,12 @@ def list_all_versions(
     """
     cwd = _pip_bin_env(cwd, bin_env)
     cmd = _get_pip_bin(bin_env)
+
+    # If pre_releases is True, include all pre-release types
+    if pre_releases:
+        include_alpha = True
+        include_beta = True
+        include_rc = True
 
     # Is the `pip index` command available
     pip_version = version(bin_env=bin_env, cwd=cwd, user=user)
