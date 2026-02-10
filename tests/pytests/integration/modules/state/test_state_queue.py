@@ -110,32 +110,43 @@ def test_state_queue_true(salt_cli, salt_minion, long_running_sls, quick_sls):
     assert job_running, "Long running job did not appear in saltutil.is_running"
 
     # Now run quick with queue=True
-    # This should return immediately with "Job queued"
-    ret_quick = salt_cli.run(
-        "state.apply",
-        quick_sls_name,
-        "queue=True",
-        minion_tgt=salt_minion.id,
-        timeout=60,
-    )
+    # Since __no_return__: True is set for queued state jobs, this call will block
+    # until it is actually executed. We run it in a thread to verify blocking.
+    quick_ret = {"stdout": "", "returncode": None}
 
-    assert ret_quick.returncode == 0
-    assert (
-        "Job queued for execution" in ret_quick.stdout or "queued" in ret_quick.stdout
-    ), f"Job was not queued. Stdout: {ret_quick.stdout}"
+    def run_quick():
+        ret = salt_cli.run(
+            "state.apply",
+            quick_sls_name,
+            "queue=True",
+            minion_tgt=salt_minion.id,
+            timeout=60,
+        )
+        quick_ret["stdout"] = ret.stdout
+        quick_ret["returncode"] = ret.returncode
 
+    t2 = threading.Thread(target=run_quick)
+    t2.start()
+
+    # Give it a moment to reach the minion and get queued
+    time.sleep(5)
+
+    # Job should be queued and NOT executed yet
     assert not quick_target_path.exists(), "Queued state ran too early!"
+    assert t2.is_alive(), "Quick job thread finished too early (should be blocking)"
 
-    # Wait for long job to finish
+    # Wait for long job thread to finish
     t1.join()
 
-    # Wait for quick job to eventually run
-    start_wait = time.time()
-    while time.time() - start_wait < 30:
-        if quick_target_path.exists():
-            break
-        time.sleep(1)
+    # Now quick job should be de-queued and run
+    t2.join(timeout=30)
+    assert not t2.is_alive(), "Quick job thread did not finish after long job ended"
 
+    assert quick_ret["returncode"] == 0
+    # stdout should contain the actual state results now, not the "queued" message
+    assert (
+        "quick_run" in quick_ret["stdout"]
+    ), f"Unexpected output: {quick_ret['stdout']}"
     assert (
         quick_target_path.exists()
     ), "Queued state did not execute after long job finished"

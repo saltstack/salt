@@ -110,19 +110,41 @@ def test_state_queue_no_loop(salt_cli, salt_minion, loop_sls):
     assert job_running, "Blocking state failed to start"
 
     # Now run our test state with queue=True
-    ret = salt_cli.run("state.apply", sls_name, "queue=True", minion_tgt=salt_minion.id)
+    # Since __no_return__: True is set for queued state jobs, this call will block
+    # until it is actually executed. We run it in a thread to verify.
+    target_ret = {"stdout": "", "returncode": None}
 
-    # It should say queued
-    assert "queued" in ret.stdout.lower() or "queued" in str(ret.data).lower()
+    def run_target():
+        ret = salt_cli.run(
+            "state.apply", sls_name, "queue=True", minion_tgt=salt_minion.id
+        )
+        target_ret["stdout"] = ret.stdout
+        target_ret["returncode"] = ret.returncode
+
+    t2 = threading.Thread(target=run_target)
+    t2.start()
+
+    # Give it a moment to reach the minion and get queued
+    time.sleep(2)
+
+    # It should be blocking and NOT finished yet
+    assert t2.is_alive(), "Target job thread finished too early (should be blocking)"
+    assert not target_path.exists(), "Target state ran too early!"
 
     # Wait for blocking thread
     t.join()
+
+    # Now quick job should be de-queued and run
+    t2.join(timeout=30)
+    assert (
+        not t2.is_alive()
+    ), "Target job thread did not finish after blocking job ended"
 
     # Now wait for execution
     # It should run ONCE.
     # Wait for file to exist
     start_wait = time.time()
-    while time.time() - start_wait < 20:
+    while time.time() - start_wait < 10:
         if target_path.exists():
             break
         time.sleep(0.5)

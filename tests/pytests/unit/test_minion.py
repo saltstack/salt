@@ -1,10 +1,10 @@
+import contextlib
 import copy
 import logging
 import os
 import signal
 import time
 import uuid
-import contextlib
 
 import pytest
 
@@ -124,6 +124,7 @@ def test_send_req_fires_completion_event(event, minion_opts):
             else:
                 rtn = minion._send_req_sync(load, timeout)
 
+            fire_event_called = False
             # get the
             for idx, call in enumerate(event.mock_calls, 1):
                 if "fire_event" in call[0]:
