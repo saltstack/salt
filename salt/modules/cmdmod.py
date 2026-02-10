@@ -57,7 +57,7 @@ if salt.utils.platform.is_windows():
 
     import salt.platform.win
     from salt.utils.win_functions import escape_argument as _cmd_quote
-    from salt.utils.win_runas import runas as win_runas
+    import salt.utils.win_runas as win_runas
 
     HAS_WIN_RUNAS = True
 else:
@@ -788,7 +788,7 @@ def _run(
                 if change_windows_codepage:
                     salt.utils.win_chcp.set_codepage_id(windows_codepage)
                 try:
-                    proc = win_runas(cmd, runas, password, **new_kwargs)
+                    proc = win_runas.runas(cmd, runas, password, **new_kwargs)
                 except (OSError, pywintypes.error) as exc:
                     msg = "Unable to run command '{}' with the context '{}', reason: {}".format(
                         cmd if output_loglevel is not None else "REDACTED",
@@ -3023,16 +3023,21 @@ def script(
 
     win_cwd = False
     if salt.utils.platform.is_windows() and runas:
-        # Let's make sure the user exists first
-        if not __salt__["user.info"](runas):
+        # Resolve the user for domain/UPN support before creating the temp dir
+        try:
+            resolved_runas = win_runas.resolve_logon_credentials(runas)
+        except CommandExecutionError as exc:
             msg = f"Invalid user: {runas}"
-            raise CommandExecutionError(msg)
+            raise CommandExecutionError(msg) from exc
+
         if cwd is None:
             # Create a temp working directory
             cwd = tempfile.mkdtemp(dir=__opts__["cachedir"])
             win_cwd = True
             salt.utils.win_dacl.set_permissions(
-                obj_name=cwd, principal=runas, permissions="full_control"
+                obj_name=cwd,
+                principal=resolved_runas.get("sam_name") or runas,
+                permissions="full_control",
             )
 
     (_, ext) = os.path.splitext(salt.utils.url.split_env(source)[0])

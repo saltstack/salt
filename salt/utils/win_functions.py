@@ -210,6 +210,75 @@ def get_sam_name(username):
     return "\\".join([domain, username])
 
 
+def _candidate_account_names(username):
+    """
+    Build candidate account names to resolve, including UPN and DOMAIN/user forms.
+    """
+    if username is None:
+        return []
+
+    candidate_names = [str(username)]
+    name = candidate_names[0]
+
+    if "/" in name and "\\" not in name:
+        candidate_names.append(name.replace("/", "\\"))
+
+    if (
+        "@" in name
+        and hasattr(win32security, "TranslateName")
+        and hasattr(win32security, "NameUserPrincipal")
+        and hasattr(win32security, "NameSamCompatible")
+    ):
+        try:
+            candidate_names.append(
+                win32security.TranslateName(
+                    name,
+                    win32security.NameUserPrincipal,
+                    win32security.NameSamCompatible,
+                )
+            )
+        except pywintypes.error:
+            pass
+
+    # Preserve order but remove duplicates
+    return list(dict.fromkeys(candidate_names))
+
+
+def resolve_username(username):
+    """
+    Resolve a username into account details usable for validation and logon.
+
+    Returns a dict with account_name, domain, sid, sam_name, and lookup_name.
+    """
+    if not username:
+        raise CommandExecutionError("Username is required")
+
+    last_error = None
+    for candidate in _candidate_account_names(username):
+        try:
+            sid, domain, _ = win32security.LookupAccountName(None, candidate)
+            account_name, lookup_domain, _ = win32security.LookupAccountSid(None, sid)
+            resolved_domain = lookup_domain or domain
+            sam_name = (
+                f"{resolved_domain}\\{account_name}"
+                if resolved_domain
+                else account_name
+            )
+            return {
+                "account_name": account_name,
+                "domain": resolved_domain,
+                "sid": sid,
+                "sam_name": sam_name,
+                "lookup_name": candidate,
+            }
+        except pywintypes.error as exc:
+            last_error = exc
+            continue
+
+    detail = f": {last_error}" if last_error else ""
+    raise CommandExecutionError(f"User {username} not found{detail}")
+
+
 def enable_ctrl_logoff_handler():
     """
     Set the control handler on the console

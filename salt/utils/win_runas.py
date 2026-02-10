@@ -32,6 +32,7 @@ try:
     import winerror
 
     import salt.platform.win
+    import salt.utils.win_functions
 
     HAS_WIN32 = True
 except ImportError:
@@ -78,7 +79,49 @@ def split_username(username):
     # Domain users with Down-Level Logon Name: DOMAIN\user
     if "\\" in user_name:
         domain, user_name = user_name.split("\\", maxsplit=1)
+    elif "/" in user_name:
+        domain, user_name = user_name.split("/", maxsplit=1)
     return str(user_name), str(domain)
+
+
+def resolve_logon_credentials(username):
+    """
+    Resolve a username into values suitable for Windows logon APIs.
+    """
+    if not isinstance(username, str):
+        username = str(username)
+
+    if not HAS_WIN32:
+        raise CommandExecutionError("win_runas requires pywin32 to resolve users")
+
+    resolved = salt.utils.win_functions.resolve_username(username)
+    sam_name = resolved.get("sam_name") or username
+    logon_name, logon_domain = split_username(sam_name)
+
+    return {
+        "input_name": username,
+        "account_name": resolved["account_name"],
+        "domain_name": resolved["domain"],
+        "sid": resolved["sid"],
+        "sam_name": sam_name,
+        "lookup_name": resolved["lookup_name"],
+        "logon_name": logon_name,
+        "logon_domain": logon_domain,
+    }
+
+
+def validate_username(username, raise_on_error=False):
+    """
+    Validate that a username can be resolved on the system.
+    """
+    try:
+        resolve_logon_credentials(username)
+    except CommandExecutionError as exc:
+        if raise_on_error:
+            raise
+        log.error("Invalid user '%s': %s", username, exc)
+        return False
+    return True
 
 
 def create_env(user_token, inherit, timeout=1):
@@ -169,17 +212,10 @@ def runas(cmd, username, password=None, **kwargs):
     Commands are run in with the highest level privileges possible for the
     account provided.
     """
-    # Sometimes this comes in as an int. LookupAccountName can't handle an int
-    # Let's make it a string if it's anything other than a string
-    if not isinstance(username, str):
-        username = str(username)
-    # Validate the domain and sid exist for the username
-    try:
-        _, domain, _ = win32security.LookupAccountName(None, username)
-        username, _ = split_username(username)
-    except pywintypes.error as exc:
-        message = win32api.FormatMessage(exc.winerror).rstrip("\n")
-        raise CommandExecutionError(message)
+    resolved = resolve_logon_credentials(username)
+    username = resolved["account_name"]
+    logon_name = resolved["logon_name"]
+    logon_domain = resolved["logon_domain"]
 
     # Elevate the token from the current process
     access = win32security.TOKEN_QUERY | win32security.TOKEN_ADJUST_PRIVILEGES
@@ -212,12 +248,12 @@ def runas(cmd, username, password=None, **kwargs):
         log.debug("No impersonation token, using unprivileged runas")
         return runas_unpriv(cmd, username, password, **kwargs)
 
-    if domain == "NT AUTHORITY":
+    if logon_domain == "NT AUTHORITY":
         # Logon as a system level account, SYSTEM, LOCAL SERVICE, or NETWORK
         # SERVICE.
         user_token = win32security.LogonUser(
-            username,
-            domain,
+            logon_name,
+            logon_domain,
             "",
             win32con.LOGON32_LOGON_SERVICE,
             win32con.LOGON32_PROVIDER_DEFAULT,
@@ -225,15 +261,15 @@ def runas(cmd, username, password=None, **kwargs):
     elif password:
         # Login with a password.
         user_token = win32security.LogonUser(
-            username,
-            domain,
+            logon_name,
+            logon_domain,
             password,
             win32con.LOGON32_LOGON_INTERACTIVE,
             win32con.LOGON32_PROVIDER_DEFAULT,
         )
     else:
         # Login without a password. This always returns an elevated token.
-        user_token = salt.platform.win.logon_msv1_s4u(username).Token
+        user_token = salt.platform.win.logon_msv1_s4u(logon_name).Token
 
     # Get a linked user token to elevate if needed
     elevation_type = win32security.GetTokenInformation(
@@ -370,17 +406,10 @@ def runas_unpriv(cmd, username, password, **kwargs):
     """
     Runas that works for non-privileged users
     """
-    # Sometimes this comes in as an int. LookupAccountName can't handle an int
-    # Let's make it a string if it's anything other than a string
-    if not isinstance(username, str):
-        username = str(username)
-    # Validate the domain and sid exist for the username
-    try:
-        _, domain, _ = win32security.LookupAccountName(None, username)
-        username, _ = split_username(username)
-    except pywintypes.error as exc:
-        message = win32api.FormatMessage(exc.winerror).rstrip("\n")
-        raise CommandExecutionError(message)
+    resolved = resolve_logon_credentials(username)
+    username = resolved["account_name"]
+    logon_name = resolved["logon_name"]
+    logon_domain = resolved["logon_domain"]
 
     # Create inheritable copy of the stdin
     stdin = salt.platform.win.kernel32.GetStdHandle(
@@ -445,8 +474,8 @@ def runas_unpriv(cmd, username, password, **kwargs):
     try:
         # Run command and return process info structure
         process_info = salt.platform.win.CreateProcessWithLogonW(
-            username=username,
-            domain=domain,
+            username=logon_name,
+            domain=logon_domain,
             password=password,
             logonflags=salt.platform.win.LOGON_WITH_PROFILE,
             applicationname=None,
