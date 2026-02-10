@@ -1,4 +1,3 @@
-import json
 import pathlib
 import subprocess
 import sys
@@ -196,18 +195,15 @@ def test_state_queue_interaction(
     time.sleep(2)
 
     # 2. Start Job B (State, Short, queue=True) -> Should go to STATE QUEUE (conflict)
-    # Use --out=json to parse the return, as highstate outputter might hide queued status
-    ret_b = run_salt_cmd(
-        "state.sls", ["test_interaction", "--out=json"], kw={"queue": True}
+    # Since __no_return__: True is set for queued state jobs, this call will block
+    # until it is actually executed. We run it in the background to continue the test.
+    p2 = run_salt_cmd(
+        "state.sls",
+        ["test_interaction", "--out=json"],
+        kw={"queue": True},
+        background=True,
     )
-
-    try:
-        ret_data = json.loads(ret_b.stdout)
-        # Structure: {minion_id: {result: True, queued: True, ...}}
-        minion_ret = ret_data.get(configured_minion.id, {})
-        assert minion_ret.get("queued") is True, f"Job B was not queued: {ret_b.stdout}"
-    except json.JSONDecodeError:
-        pytest.fail(f"Failed to parse JSON output: {ret_b.stdout}")
+    time.sleep(2)
 
     assert not marker.exists(), "Job B ran immediately despite state conflict!"
 
@@ -230,6 +226,7 @@ def test_state_queue_interaction(
 
     assert marker.exists(), "Job B did not execute after Job A finished"
 
+    p2.terminate()
     p3.wait()
 
 
@@ -272,16 +269,13 @@ def test_state_queue_handoff_to_process_queue(
     time.sleep(2)
 
     # 2. Start Job B (State, Touch, queue=True) -> State Queue (Conflict with A)
-    ret_b = run_salt_cmd(
-        "state.sls", ["test_handoff", "--out=json"], kw={"queue": True}
+    # Background because it will block
+    p2 = run_salt_cmd(
+        "state.sls", ["test_handoff", "--out=json"], kw={"queue": True}, background=True
     )
+    time.sleep(2)
 
-    try:
-        ret_data = json.loads(ret_b.stdout)
-        minion_ret = ret_data.get(configured_minion.id, {})
-        assert minion_ret.get("queued") is True, f"Job B not queued: {ret_b.stdout}"
-    except json.JSONDecodeError:
-        pytest.fail(f"Failed to parse JSON output: {ret_b.stdout}")
+    assert not marker.exists(), "Job B ran immediately despite state conflict!"
 
     # 3. Start Job C (Non-State, Sleep 6) -> Slot 2
     p3 = run_salt_cmd("cmd.run", ["sleep 6"], background=True)
@@ -299,5 +293,6 @@ def test_state_queue_handoff_to_process_queue(
 
     assert marker.exists(), "Job B did not execute in high contention scenario"
 
+    p2.terminate()
     p3.terminate()
     p4.terminate()
