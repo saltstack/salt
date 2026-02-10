@@ -1,6 +1,7 @@
 import pytest
 
 from . import normalize_ret
+from salt.state import _gen_tag
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -127,6 +128,49 @@ def test_onchanges_requisite(state, state_tree):
             ret['cmd_|-test_non_changing_state_|-echo "Should not run"_|-run'].comment
             == "State was not run because none of the onchanges reqs changed"
         )
+
+
+def test_onchanges_same_id_no_recursive_requisite(state, state_tree, tmp_path):
+    """
+    Ensure onchanges works when multiple states share the same ID.
+    """
+    target = tmp_path / "myservice.conf"
+    target_str = target.as_posix()
+    sls_contents = f"""
+    myservice:
+      file.managed:
+        - name: {target_str}
+        - source: salt://myservice.conf
+      test.succeed_with_changes:
+        - name: onchanges-run
+        - onchanges:
+          - file: {target_str}
+    """
+    with pytest.helpers.temp_file(
+        "requisite.sls", sls_contents, state_tree
+    ), pytest.helpers.temp_file("myservice.conf", "config\n", state_tree):
+        ret = state.sls("requisite")
+        assert not ret.failed
+
+        file_tag = _gen_tag(
+            {
+                "state": "file",
+                "__id__": "myservice",
+                "name": target_str,
+                "fun": "managed",
+            }
+        )
+        onchanges_tag = _gen_tag(
+            {
+                "state": "test",
+                "__id__": "myservice",
+                "name": "onchanges-run",
+                "fun": "succeed_with_changes",
+            }
+        )
+        assert ret[file_tag].changes
+        assert ret[onchanges_tag].changes
+        assert "Recursive requisite found" not in ret[onchanges_tag].comment
 
 
 def test_onchanges_requisite_multiple(state, state_tree):

@@ -232,6 +232,17 @@ if any of the watched states changes.
 In the example above, ``cmd.run`` will run only if there are changes in the
 ``file.managed`` state.
 
+.. note::
+
+    When multiple state declarations share the same ID, ``onchanges`` still
+    resolves by the referenced state type and name. If a requisite resolves
+    back to the same state (self-reference), Salt ignores it to avoid
+    recursive requisites and logs a warning. Use distinct IDs if you need to
+    make ordering explicit or if name-based matching is ambiguous. If you
+    prefer ID-based matching, use the ``id`` requisite key explicitly to
+    avoid ambiguity between IDs and names. Running ``state.show_lowstate``
+    can help verify how a requisite resolves during compilation.
+
 An easy mistake to make is using ``onchanges_in`` when ``onchanges`` is the
 correct choice, as seen in this next example.
 

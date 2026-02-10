@@ -237,6 +237,26 @@ class DependencyGraph:
             node_dict["NAME"] = chunk["name"]
         return str(node_dict)
 
+    def _filter_self_reqs(
+        self,
+        node_tag: str,
+        req_tags: Iterable[str],
+        req_type: RequisiteType,
+        low: LowChunk,
+        req_key: str,
+        req_val: str,
+    ) -> set[str]:
+        filtered = {tag for tag in req_tags if tag != node_tag}
+        if len(filtered) != len(req_tags):
+            log.warning(
+                "Ignoring %s requisite on %s that points to itself (%s: %s)",
+                req_type.value,
+                self._chunk_str(low),
+                req_key,
+                req_val,
+            )
+        return filtered
+
     def add_chunk(self, low: LowChunk, allow_aggregate: bool) -> None:
         node_id = _gen_tag(low)
         self.dag.add_node(
@@ -269,12 +289,22 @@ class DependencyGraph:
                 for sls, req_tags in self.sls_to_nodes.items():
                     if fnmatch.fnmatch(sls, req_val):
                         found = True
-                        self._add_reqs(node_tag, has_prereq_node, req_type, req_tags)
+                        req_tags = self._filter_self_reqs(
+                            node_tag, req_tags, req_type, low, req_key, req_val
+                        )
+                        if req_tags:
+                            self._add_reqs(
+                                node_tag, has_prereq_node, req_type, req_tags
+                            )
             else:
                 node_tag = _gen_tag(low)
                 if req_tags := self.sls_to_nodes.get(req_val, []):
                     found = True
-                    self._add_reqs(node_tag, has_prereq_node, req_type, req_tags)
+                    req_tags = self._filter_self_reqs(
+                        node_tag, req_tags, req_type, low, req_key, req_val
+                    )
+                    if req_tags:
+                        self._add_reqs(node_tag, has_prereq_node, req_type, req_tags)
         elif self._is_fnmatch_pattern(req_val):
             # This iterates over every chunk to check
             # if any match instead of doing a look up since
@@ -283,11 +313,21 @@ class DependencyGraph:
             for (state_type, name_or_id), req_tags in self.nodes_lookup_map.items():
                 if req_key == state_type and (fnmatch.fnmatch(name_or_id, req_val)):
                     found = True
-                    self._add_reqs(node_tag, has_prereq_node, req_type, req_tags)
+                    req_tags = self._filter_self_reqs(
+                        node_tag, req_tags, req_type, low, req_key, req_val
+                    )
+                    if req_tags:
+                        self._add_reqs(
+                            node_tag, has_prereq_node, req_type, req_tags
+                        )
         elif req_tags := self.nodes_lookup_map.get((req_key, req_val)):
             found = True
             node_tag = _gen_tag(low)
-            self._add_reqs(node_tag, has_prereq_node, req_type, req_tags)
+            req_tags = self._filter_self_reqs(
+                node_tag, req_tags, req_type, low, req_key, req_val
+            )
+            if req_tags:
+                self._add_reqs(node_tag, has_prereq_node, req_type, req_tags)
         return found
 
     def add_requisites(self, low: LowChunk, disabled_reqs: Sequence[str]) -> str | None:

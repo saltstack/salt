@@ -2686,6 +2686,7 @@ class State:
         """
         reqs = {}
         pending = False
+        prereq_run_dict = self.pre
         for req_type, chunk in self.dependency_dag.get_dependencies(low):
             reqs.setdefault(req_type, []).append(chunk)
         fun_stats = set()
@@ -2701,6 +2702,14 @@ class State:
             for chunk in chunks:
                 tag = _gen_tag(chunk)
                 run_dict_chunk = run_dict.get(tag)
+                if (
+                    run_dict_chunk is None
+                    and r_type_base == RequisiteType.ONCHANGES.value
+                    and chunk.get("__prereq__")
+                ):
+                    # If the requisite only ran in prereq (test) mode, use that
+                    # result for onchanges to avoid recursive unmet requisites.
+                    run_dict_chunk = prereq_run_dict.get(tag)
                 if run_dict_chunk:
                     filtered_run_dict[tag] = run_dict_chunk
             run_dict = filtered_run_dict
