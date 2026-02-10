@@ -4,11 +4,22 @@ from saltfactories.utils import random_string
 import salt.client
 
 
-@pytest.fixture(scope="module")
-def minion_config_overrides():
+@pytest.fixture(
+    scope="module",
+    params=[(True, 5), (False, 5), (True, -1), (False, -1)],
+    ids=[
+        "multiprocessing-max5",
+        "threading-max5",
+        "multiprocessing-unlimited",
+        "threading-unlimited",
+    ],
+)
+def minion_config_overrides(request):
+    multiprocessing, process_count_max = request.param
     return {
-        "process_count_max": 5,
+        "process_count_max": process_count_max,
         "return_retry_tries": 1,
+        "multiprocessing": multiprocessing,
     }
 
 

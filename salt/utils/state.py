@@ -140,12 +140,10 @@ def check_prior_running_states(opts, jid, active_jobs):
             if int(data_jid) == int(jid):
                 continue
 
-            # If it's a running job (PID > 0), it ALWAYS blocks
-            # If it's a queued job (PID 0), it blocks only if it's OLDER
-            pid = int(data.get("pid", 0))
-            if pid > 0:
-                ret.append(data)
-            elif data_jid < int(jid):
+            # Only block if the other job is OLDER than the current one.
+            # This ensures FIFO ordering and prevents deadlocks where two
+            # jobs block each other.
+            if int(data_jid) < int(jid):
                 ret.append(data)
         except (ValueError, TypeError):
             continue

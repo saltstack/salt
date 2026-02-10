@@ -1886,60 +1886,87 @@ class Minion(MinionBase):
                 self.opts, force_refresh=True, proxy=proxy
             )
 
-        process_count_max = self.opts.get("process_count_max")
         # Check if we should bypass the process_count_max check
         # This is used for jobs that have been queued and are now being released
         bypass_process_count_max = data.pop("__ignore_process_count_max", False)
 
-        if process_count_max > 0:
-            # We use a file lock to ensure atomic checking and queueing
-            queue_lock_path = os.path.join(self.opts["cachedir"], "job_queue.lock")
-
-            try:
-                async with salt.utils.files.await_lock(
-                    queue_lock_path, lock_fn=queue_lock_path, timeout=5
-                ):
-                    # Use internal subprocess list for accurate, race-free counting
-                    # Filter for alive processes to ignore finished ones that haven't been cleaned up yet
-                    running_processes = [
-                        p for p in self.subprocess_list.processes if p.is_alive()
-                    ]
-                    process_count = len(running_processes)
-
-                    if (
-                        not bypass_process_count_max
-                        and process_count >= process_count_max
-                    ):
-                        log.warning(
-                            "Maximum number of processes reached while executing jid %s,"
-                            " queuing... (Running: %s, Max: %s)",
-                            data["jid"],
-                            process_count,
-                            process_count_max,
-                        )
-                        self._queue_job(data)
-                        return
-
-                    # Sanitize data to remove any keys that might cause issues with kwargs injection
-                    if "kwarg" in data:
-                        data.pop("kwarg")
-
-                    self._invoke_execution(data)
-
-            except FileLockError:
-                log.warning(
-                    "Failed to acquire job_queue lock for jid %s, queuing anyway.",
-                    data["jid"],
-                )
-                # If we can't get the lock, we assume high contention and queue it to be safe.
-                # Or we could just proceed (unsafe). Queuing is safer for stability.
+        # Enforce resource limits (FDs and Memory) before checking process counts
+        # This safeguard is critical to prevent crashes under high load
+        if not bypass_process_count_max:
+            if not self._has_fd_headroom():
+                log.warning("Insufficient FD headroom, queuing job %s", data["jid"])
                 self._queue_job(data)
                 return
-        else:
-            # Sanitize data to remove any keys that might cause issues with kwargs injection
-            if "kwarg" in data:
-                data.pop("kwarg")
-            self._invoke_execution(data)
+
+            if not self._has_memory_headroom():
+                log.warning("Insufficient memory headroom, queuing job %s", data["jid"])
+                self._queue_job(data)
+                return
+
+        # We use a file lock to ensure atomic checking and queueing
+        queue_lock_path = os.path.join(self.opts["cachedir"], "job_queue.lock")
+
+        try:
+            async with salt.utils.files.await_lock(
+                queue_lock_path, lock_fn=queue_lock_path, timeout=5
+            ):
+                # Use internal subprocess list for accurate, race-free counting
+                # Filter for alive processes to ignore finished ones that haven't been cleaned up yet
+                running_processes = [
+                    p for p in self.subprocess_list.processes if p.is_alive()
+                ]
+                process_count = len(running_processes)
+                process_count_max = self._get_effective_process_count_max()
+
+                if not bypass_process_count_max and process_count >= process_count_max:
+                    log.warning(
+                        "Maximum number of processes reached while executing jid %s,"
+                        " queuing... (Running: %s, Max: %s)",
+                        data["jid"],
+                        process_count,
+                        process_count_max,
+                    )
+                    self._queue_job(data)
+                    return
+
+                # Execute the job and get the process handle
+                proc = self._invoke_execution(data)
+
+                # Write placeholder proc file with the ACTUAL PID to prevent "Invisible Gap"
+                # This ensures that when the child starts and checks 'running()', it sees itself.
+                if proc:
+                    proc_dir = os.path.join(self.opts["cachedir"], "proc")
+                    if not os.path.isdir(proc_dir):
+                        try:
+                            os.makedirs(proc_dir)
+                        except OSError:
+                            pass
+
+                    proc_fn = os.path.join(proc_dir, data["jid"])
+
+                    # Use the real PID from the handle (multiprocessing) or current PID (threading)
+                    real_pid = getattr(proc, "pid", os.getpid())
+                    if real_pid is None:
+                        real_pid = os.getpid()
+
+                    placeholder_data = data.copy()
+                    placeholder_data["pid"] = real_pid
+
+                    try:
+                        with salt.utils.files.fopen(proc_fn, "w+b") as fp_:
+                            salt.payload.dump(placeholder_data, fp_)
+                    except OSError:
+                        log.error("Failed to write placeholder proc file %s", proc_fn)
+
+        except FileLockError:
+            log.warning(
+                "Failed to acquire job_queue lock for jid %s, queuing anyway.",
+                data["jid"],
+            )
+            # If we can't get the lock, we assume high contention and queue it to be safe.
+            # Or we could just proceed (unsafe). Queuing is safer for stability.
+            self._queue_job(data)
+            return
 
     def _queue_job(self, data):
         """
@@ -1965,7 +1992,7 @@ class Minion(MinionBase):
         except OSError:
             log.error("Failed to write job queue file %s", path)
 
-    def _has_fd_headroom(self):
+    def _has_fd_headroom(self, critical_only=False):
         """
         Check if we have enough file descriptors available to start a new process safely.
         Returns True if we have headroom, False otherwise.
@@ -1981,47 +2008,103 @@ class Minion(MinionBase):
             # Count current open FDs
             # This is specific to Linux/Unix with /proc
             if os.path.isdir("/proc/self/fd"):
-                # We simply count the entries in the directory
-                # Note: os.listdir opens a file descriptor for the directory itself,
-                # but closes it before returning.
                 current_fds = len(os.listdir("/proc/self/fd"))
+            else:
+                try:
+                    import psutil
 
-                # Reserve headroom. A python process can easily use 20-50 FDs for basic
-                # libraries, logging, sockets, etc.
-                # If we are launching a new process, we need room for:
-                # 1. The Minion process to open pipes/sockets for communication
-                # 2. The New Process to duplicate FDs and open its own files
-                # We choose 200 as a safe buffer.
-                headroom = 200
+                    p = psutil.Process()
+                    current_fds = p.num_fds()
+                except Exception:  # pylint: disable=broad-exception-caught
+                    return True
 
-                if current_fds + headroom >= soft_limit:
-                    log.warning(
-                        "Proactive Backpressure: FD limit approaching (Used: %d, Limit: %d, Headroom: %d)",
-                        current_fds,
-                        soft_limit,
-                        headroom,
-                    )
-                    return False
+            # Global critical check (always enforced)
+            if current_fds >= soft_limit - 100:
+                log.warning(
+                    "FD critical limit reached (Open: %s, Limit: %s). Pausing queue processing.",
+                    current_fds,
+                    soft_limit,
+                )
+                return False
+
+            if not critical_only:
+                # Check if we are running in threading mode (multiprocessing=False)
+                # If so, we need to be more conservative with file descriptors
+                if not self.opts.get("multiprocessing", True):
+                    # Use 80% of the available file descriptors as the limit (20% headroom)
+                    limit = int(soft_limit * 0.8)
+                    if current_fds >= limit:
+                        log.warning(
+                            "FD limit reached (Open: %s, Limit: %s, Threshold: %s). Pausing queue processing.",
+                            current_fds,
+                            soft_limit,
+                            limit,
+                        )
+                        return False
+
             return True
         except Exception:  # pylint: disable=broad-exception-caught
-            # If we can't check (e.g. non-Linux, permissions), we default to True
-            # and rely on the reactive OSError catching.
             return True
+
+    def _has_memory_headroom(self):
+        """
+        Check if we have enough memory to start a new process.
+        Returns True if we have headroom, False otherwise.
+        """
+        if not HAS_PSUTIL:
+            return True
+
+        try:
+            import psutil
+
+            mem = psutil.virtual_memory()
+            if mem.percent > 95:
+                log.warning(
+                    "Memory limit reached (Used: %s%%). Pausing queue processing.",
+                    mem.percent,
+                )
+                return False
+        except Exception:  # pylint: disable=broad-exception-caught
+            return True
+        return True
+
+    def _get_effective_process_count_max(self):
+        """
+        Calculate the effective process_count_max.
+        If configured value is > 0, use it.
+        If <= 0 (unlimited), calculate a safe limit based on RLIMIT_NOFILE.
+        """
+        limit = self.opts.get("process_count_max")
+        if limit > 0:
+            return limit
+
+        if not HAS_RESOURCE:
+            return 100  # Conservative default
+
+        try:
+            soft_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
+            if soft_limit == resource.RLIM_INFINITY:
+                return 1000  # Large but not unlimited
+        except Exception:  # pylint: disable=broad-exception-caught
+            return 100
+
+        # Conservative estimates:
+        # Threading: 15 FDs per job
+        # Multiprocessing: 5 FDs per job (IPC overhead in parent)
+        is_threading = not self.opts.get("multiprocessing", True)
+        fds_per_job = 15 if is_threading else 5
+
+        # Reserve FDs for the main process base usage
+        reserved = 100
+
+        safe_limit = (soft_limit - reserved) // fds_per_job
+        return max(1, safe_limit)
 
     def _invoke_execution(self, data):
         # We stash an instance references to allow for the socket
         # communication in Windows. You can't pickle functions, and thus
         # python needs to be able to reconstruct the reference on the other
         # side.
-
-        # Proactive check for FD limits
-        if not self._has_fd_headroom():
-            log.warning(
-                "System resource limit approaching (FDs), queuing job %s", data["jid"]
-            )
-            self._system_resource_limit_hit_timestamp = time.time()
-            self._queue_job(data)
-            return
 
         instance = self
         creds_map = None
@@ -2066,7 +2149,7 @@ class Minion(MinionBase):
                         )
                         self._system_resource_limit_hit_timestamp = time.time()
                         self._queue_job(data)
-                        return
+                        return None
                     raise
         else:
             try:
@@ -2085,9 +2168,10 @@ class Minion(MinionBase):
                     )
                     self._system_resource_limit_hit_timestamp = time.time()
                     self._queue_job(data)
-                    return
+                    return None
                 raise
         self.subprocess_list.add(process)
+        return process
 
     def setup_process_queue_processing(self):
         """
@@ -2127,7 +2211,7 @@ class Minion(MinionBase):
 
             # Check process count max first to avoid lock contention if we are obviously full
             # This is an optimization; we check again under lock.
-            process_count_max = self.opts.get("process_count_max")
+            process_count_max = self._get_effective_process_count_max()
             # If process_count_max is <= 0 (unlimited), we still check the queue because we might
             # have queued jobs due to system resource exhaustion (OS limits).
 
@@ -2146,7 +2230,9 @@ class Minion(MinionBase):
                         p for p in self.subprocess_list.processes if p.is_alive()
                     ]
                     process_count = len(running_processes)
-                    if process_count_max > 0 and process_count >= process_count_max:
+                    process_count_max = self._get_effective_process_count_max()
+
+                    if process_count >= process_count_max:
                         return
 
                     # Backpressure: If we recently hit system resource limits, pause processing
@@ -2400,192 +2486,215 @@ class Minion(MinionBase):
                 if f"{executor}.allow_missing_func" in minion_instance.executors
             ]
         )
-        if function_name in minion_instance.functions or allow_missing_funcs is True:
-            try:
-                return_data = minion_instance._execute_job_function(
-                    function_name, function_args, executors, opts, data
-                )
-                log.info(
-                    "Job %s execution finished, return_data: %s",
-                    data["jid"],
-                    return_data,
-                )
-
-                if isinstance(return_data, types.GeneratorType):
-                    ind = 0
-                    iret = {}
-                    for single in return_data:
-                        if isinstance(single, dict) and isinstance(iret, dict):
-                            iret.update(single)
-                        else:
-                            if not iret:
-                                iret = []
-                            iret.append(single)
-                        tag = tagify([data["jid"], "prog", opts["id"], str(ind)], "job")
-                        event_data = {"return": single}
-                        minion_instance._fire_master(event_data, tag)
-                        ind += 1
-                    ret["return"] = iret
-                else:
-                    ret["return"] = return_data
-
-                retcode = minion_instance.functions.pack["__context__"].get(
-                    "retcode", salt.defaults.exitcodes.EX_OK
-                )
-                if retcode == salt.defaults.exitcodes.EX_OK:
-                    # No nonzero retcode in __context__ dunder. Check if return
-                    # is a dictionary with a "result" or "success" key.
-                    try:
-                        func_result = all(
-                            return_data.get(x, True) for x in ("result", "success")
-                        )
-                    except Exception:  # pylint: disable=broad-except
-                        # return data is not a dict
-                        func_result = True
-                    if not func_result:
-                        retcode = salt.defaults.exitcodes.EX_GENERIC
-
-                ret["retcode"] = retcode
-                ret["success"] = retcode == salt.defaults.exitcodes.EX_OK
-            except CommandNotFoundError as exc:
-                msg = f"Command required for '{function_name}' not found"
-                log.debug(msg, exc_info=True)
-                ret["return"] = f"{msg}: {exc}"
-                ret["out"] = "nested"
-                ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
-            except CommandExecutionError as exc:
-                log.error(
-                    "A command in '%s' had a problem: %s",
-                    function_name,
-                    exc,
-                    exc_info_on_loglevel=logging.DEBUG,
-                )
-                ret["return"] = f"ERROR: {exc}"
-                ret["out"] = "nested"
-                ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
-            except SaltInvocationError as exc:
-                log.error(
-                    "Problem executing '%s': %s",
-                    function_name,
-                    exc,
-                    exc_info_on_loglevel=logging.DEBUG,
-                )
-                ret["return"] = f"ERROR executing '{function_name}': {exc}"
-                ret["out"] = "nested"
-                ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
-            except SaltClientError as exc:
-                log.error(
-                    "Problem executing '%s': %s",
-                    function_name,
-                    exc,
-                )
-                ret["return"] = f"ERROR executing '{function_name}': {exc}"
-                ret["out"] = "nested"
-                ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
-            except TypeError as exc:
-                # XXX: This can ba extreemly missleading when something outside of a
-                # execution module call raises a TypeError. Make this it's own
-                # type of exception when we start validating state and
-                # execution argument module inputs.
-                msg = "Passed invalid arguments to {}: {}\n{}".format(
-                    function_name,
-                    exc,
-                    minion_instance.functions[function_name].__doc__ or "",
-                )
-                log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
-                ret["return"] = msg
-                ret["out"] = "nested"
-                ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
-            except Exception:  # pylint: disable=broad-except
-                msg = "The minion function caused an exception"
-                log.warning(msg, exc_info_on_loglevel=True)
-                salt.utils.error.fire_exception(
-                    salt.exceptions.MinionError(msg), opts, job=data
-                )
-                ret["return"] = f"{msg}: {traceback.format_exc()}"
-                ret["out"] = "nested"
-                ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
-        else:
-            docs = minion_instance.functions["sys.doc"](f"{function_name}*")
-            if docs:
-                docs[function_name] = minion_instance.functions.missing_fun_string(
-                    function_name
-                )
-                ret["return"] = docs
-            else:
-                ret["return"] = minion_instance.functions.missing_fun_string(
-                    function_name
-                )
-                mod_name = function_name.split(".")[0]
-                if mod_name in minion_instance.function_errors:
-                    ret["return"] += " Possible reasons: '{}'".format(
-                        minion_instance.function_errors[mod_name]
-                    )
-            ret["success"] = False
-            ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
-            ret["out"] = "nested"
-
-        if isinstance(ret["return"], dict) and ret["return"].get("__no_return__"):
-            # This is used to suppress the return for queued jobs
-            # The job will be executed later and will return then
-            # TODO: make this a configurable feature in the future
-            log.trace(
-                "Suppressing return for job %s because __no_return__ is set",
-                data["jid"],
-            )
-            return
-
-        ret["jid"] = data["jid"]
-        ret["fun"] = data["fun"]
-        ret["fun_args"] = data["arg"]
-        if "user" in data:
-            ret["user"] = data["user"]
-        if "master_id" in data:
-            ret["master_id"] = data["master_id"]
-        if "metadata" in data:
-            if isinstance(data["metadata"], dict):
-                ret["metadata"] = data["metadata"]
-            else:
-                log.warning("The metadata parameter must be a dictionary. Ignoring.")
-        if minion_instance.connected:
-            minion_instance._return_pub(
-                ret,
-                timeout=minion_instance.opts["return_retry_tries"]
-                * minion_instance._return_retry_timer(max=True),
-            )
-
-        # Add default returners from minion config
-        # Should have been converted to comma-delimited string already
-        if isinstance(opts.get("return"), str):
-            if data["ret"]:
-                data["ret"] = ",".join((data["ret"], opts["return"]))
-            else:
-                data["ret"] = opts["return"]
-
-        log.debug("minion return: %s", ret)
-        # TODO: make a list? Seems odd to split it this late :/
-        if data["ret"] and isinstance(data["ret"], str):
-            if "ret_config" in data:
-                ret["ret_config"] = data["ret_config"]
-            if "ret_kwargs" in data:
-                ret["ret_kwargs"] = data["ret_kwargs"]
-            ret["id"] = opts["id"]
-            for returner in set(data["ret"].split(",")):
+        try:
+            if (
+                function_name in minion_instance.functions
+                or allow_missing_funcs is True
+            ):
                 try:
-                    returner_str = f"{returner}.returner"
-                    if returner_str in minion_instance.returners:
-                        minion_instance.returners[returner_str](ret)
+                    return_data = minion_instance._execute_job_function(
+                        function_name, function_args, executors, opts, data
+                    )
+                    log.info(
+                        "Job %s execution finished, return_data: %s",
+                        data["jid"],
+                        return_data,
+                    )
+
+                    if isinstance(return_data, types.GeneratorType):
+                        ind = 0
+                        iret = {}
+                        for single in return_data:
+                            if isinstance(single, dict) and isinstance(iret, dict):
+                                iret.update(single)
+                            else:
+                                if not iret:
+                                    iret = []
+                                iret.append(single)
+                            tag = tagify(
+                                [data["jid"], "prog", opts["id"], str(ind)], "job"
+                            )
+                            event_data = {"return": single}
+                            minion_instance._fire_master(event_data, tag)
+                            ind += 1
+                        ret["return"] = iret
                     else:
-                        returner_err = minion_instance.returners.missing_fun_string(
-                            returner_str
+                        ret["return"] = return_data
+
+                    retcode = minion_instance.functions.pack["__context__"].get(
+                        "retcode", salt.defaults.exitcodes.EX_OK
+                    )
+                    if retcode == salt.defaults.exitcodes.EX_OK:
+                        # No nonzero retcode in __context__ dunder. Check if return
+                        # is a dictionary with a "result" or "success" key.
+                        try:
+                            if isinstance(return_data, dict):
+                                func_result = all(
+                                    return_data.get(x, True)
+                                    for x in ("result", "success")
+                                )
+                            else:
+                                func_result = True
+                        except Exception:  # pylint: disable=broad-except
+                            # return data is not a dict
+                            func_result = True
+                        if not func_result:
+                            retcode = salt.defaults.exitcodes.EX_GENERIC
+
+                    ret["retcode"] = retcode
+                    ret["success"] = retcode == salt.defaults.exitcodes.EX_OK
+                except CommandNotFoundError as exc:
+                    msg = f"Command required for '{function_name}' not found"
+                    log.debug(msg, exc_info=True)
+                    ret["return"] = f"{msg}: {exc}"
+                    ret["out"] = "nested"
+                    ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+                except CommandExecutionError as exc:
+                    log.error(
+                        "A command in '%s' had a problem: %s",
+                        function_name,
+                        exc,
+                        exc_info_on_loglevel=logging.DEBUG,
+                    )
+                    ret["return"] = f"ERROR: {exc}"
+                    ret["out"] = "nested"
+                    ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+                except SaltInvocationError as exc:
+                    log.error(
+                        "Problem executing '%s': %s",
+                        function_name,
+                        exc,
+                        exc_info_on_loglevel=logging.DEBUG,
+                    )
+                    ret["return"] = f"ERROR executing '{function_name}': {exc}"
+                    ret["out"] = "nested"
+                    ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+                except SaltClientError as exc:
+                    log.error(
+                        "Problem executing '%s': %s",
+                        function_name,
+                        exc,
+                    )
+                    ret["return"] = f"ERROR executing '{function_name}': {exc}"
+                    ret["out"] = "nested"
+                    ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+                except TypeError as exc:
+                    # XXX: This can ba extreemly missleading when something outside of a
+                    # execution module call raises a TypeError. Make this it's own
+                    # type of exception when we start validating state and
+                    # execution argument module inputs.
+                    msg = "Passed invalid arguments to {}: {}\n{}".format(
+                        function_name,
+                        exc,
+                        minion_instance.functions[function_name].__doc__ or "",
+                    )
+                    log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
+                    ret["return"] = msg
+                    ret["out"] = "nested"
+                    ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+                except Exception:  # pylint: disable=broad-except
+                    msg = "The minion function caused an exception"
+                    log.warning(msg, exc_info_on_loglevel=True)
+                    salt.utils.error.fire_exception(
+                        salt.exceptions.MinionError(msg), opts, job=data
+                    )
+                    ret["return"] = f"{msg}: {traceback.format_exc()}"
+                    ret["out"] = "nested"
+                    ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+            else:
+                docs = minion_instance.functions["sys.doc"](f"{function_name}*")
+                if docs:
+                    docs[function_name] = minion_instance.functions.missing_fun_string(
+                        function_name
+                    )
+                    ret["return"] = docs
+                else:
+                    ret["return"] = minion_instance.functions.missing_fun_string(
+                        function_name
+                    )
+                    mod_name = function_name.split(".")[0]
+                    if mod_name in minion_instance.function_errors:
+                        ret["return"] += " Possible reasons: '{}'".format(
+                            minion_instance.function_errors[mod_name]
                         )
-                        log.error(
-                            "Returner %s could not be loaded: %s",
-                            returner_str,
-                            returner_err,
+                ret["success"] = False
+                ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+                ret["out"] = "nested"
+
+            if isinstance(ret["return"], dict) and ret["return"].get("__no_return__"):
+                # This is used to suppress the return for queued jobs
+                # The job will be executed later and will return then
+                # TODO: make this a configurable feature in the future
+                log.trace(
+                    "Suppressing return for job %s because __no_return__ is set",
+                    data["jid"],
+                )
+                return
+
+            ret["jid"] = data["jid"]
+            ret["fun"] = data["fun"]
+            ret["fun_args"] = data["arg"]
+            if "user" in data:
+                ret["user"] = data["user"]
+            if "master_id" in data:
+                ret["master_id"] = data["master_id"]
+            if "metadata" in data:
+                if isinstance(data["metadata"], dict):
+                    ret["metadata"] = data["metadata"]
+                else:
+                    log.warning(
+                        "The metadata parameter must be a dictionary. Ignoring."
+                    )
+            if minion_instance.connected:
+                minion_instance._return_pub(
+                    ret,
+                    timeout=minion_instance.opts["return_retry_tries"]
+                    * minion_instance._return_retry_timer(max=True),
+                )
+            else:
+                log.warning(
+                    "Minion not connected, cannot return data for job %s", data["jid"]
+                )
+
+            # Add default returners from minion config
+            # Should have been converted to comma-delimited string already
+            if isinstance(opts.get("return"), str):
+                if data["ret"]:
+                    data["ret"] = ",".join((data["ret"], opts["return"]))
+                else:
+                    data["ret"] = opts["return"]
+
+            log.debug("minion return: %s", ret)
+            # TODO: make a list? Seems odd to split it this late :/
+            if data["ret"] and isinstance(data["ret"], str):
+                if "ret_config" in data:
+                    ret["ret_config"] = data["ret_config"]
+                if "ret_kwargs" in data:
+                    ret["ret_kwargs"] = data["ret_kwargs"]
+                ret["id"] = opts["id"]
+                for returner in set(data["ret"].split(",")):
+                    try:
+                        returner_str = f"{returner}.returner"
+                        if returner_str in minion_instance.returners:
+                            minion_instance.returners[returner_str](ret)
+                        else:
+                            returner_err = minion_instance.returners.missing_fun_string(
+                                returner_str
+                            )
+                            log.error(
+                                "Returner %s could not be loaded: %s",
+                                returner_str,
+                                returner_err,
+                            )
+                    except Exception as exc:  # pylint: disable=broad-except
+                        log.exception(
+                            "The return failed for job %s: %s", data["jid"], exc
                         )
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.exception("The return failed for job %s: %s", data["jid"], exc)
+        finally:
+            try:
+                os.remove(fn_)
+            except OSError:
+                pass
 
     @classmethod
     def _thread_multi_return(cls, minion_instance, opts, data):
@@ -2638,58 +2747,67 @@ class Minion(MinionBase):
             or opts.get("module_executors", ["direct_call"])
         )
 
-        for ind in range(0, num_funcs):
-            function_name = data["fun"][ind]
-            function_args = data["arg"][ind]
-            if not multifunc_ordered:
-                ret["success"][function_name] = False
+        try:
+            for ind in range(0, num_funcs):
+                function_name = data["fun"][ind]
+                function_args = data["arg"][ind]
+                if not multifunc_ordered:
+                    ret["success"][function_name] = False
+                try:
+                    return_data = minion_instance._execute_job_function(
+                        function_name, function_args, executors, opts, data
+                    )
+
+                    key = ind if multifunc_ordered else data["fun"][ind]
+                    ret["return"][key] = return_data
+                    retcode = minion_instance.functions.pack["__context__"].get(
+                        "retcode", 0
+                    )
+                    if retcode == 0:
+                        # No nonzero retcode in __context__ dunder. Check if return
+                        # is a dictionary with a "result" or "success" key.
+                        try:
+                            if isinstance(ret["return"][key], dict):
+                                func_result = all(
+                                    ret["return"][key].get(x, True)
+                                    for x in ("result", "success")
+                                )
+                            else:
+                                func_result = True
+                        except Exception:  # pylint: disable=broad-except
+                            # return data is not a dict
+                            func_result = True
+                        if not func_result:
+                            retcode = 1
+
+                    ret["retcode"][key] = retcode
+                    ret["success"][key] = retcode == 0
+                except Exception as exc:  # pylint: disable=broad-except
+                    trb = traceback.format_exc()
+                    log.warning("The minion function caused an exception: %s", exc)
+                    if multifunc_ordered:
+                        ret["return"][ind] = trb
+                    else:
+                        ret["return"][data["fun"][ind]] = trb
+                ret["jid"] = data["jid"]
+                ret["fun"] = data["fun"]
+                ret["fun_args"] = data["arg"]
+                if "user" in data:
+                    ret["user"] = data["user"]
+            if "metadata" in data:
+                ret["metadata"] = data["metadata"]
+            if minion_instance.connected:
+                log.info("Attempting to return data for job %s", data["jid"])
+                minion_instance._return_pub(ret)
+            else:
+                log.warning(
+                    "Minion not connected, cannot return data for job %s", data["jid"]
+                )
+        finally:
             try:
-                return_data = minion_instance._execute_job_function(
-                    function_name, function_args, executors, opts, data
-                )
-
-                key = ind if multifunc_ordered else data["fun"][ind]
-                ret["return"][key] = return_data
-                retcode = minion_instance.functions.pack["__context__"].get(
-                    "retcode", 0
-                )
-                if retcode == 0:
-                    # No nonzero retcode in __context__ dunder. Check if return
-                    # is a dictionary with a "result" or "success" key.
-                    try:
-                        func_result = all(
-                            ret["return"][key].get(x, True)
-                            for x in ("result", "success")
-                        )
-                    except Exception:  # pylint: disable=broad-except
-                        # return data is not a dict
-                        func_result = True
-                    if not func_result:
-                        retcode = 1
-
-                ret["retcode"][key] = retcode
-                ret["success"][key] = retcode == 0
-            except Exception as exc:  # pylint: disable=broad-except
-                trb = traceback.format_exc()
-                log.warning("The minion function caused an exception: %s", exc)
-                if multifunc_ordered:
-                    ret["return"][ind] = trb
-                else:
-                    ret["return"][data["fun"][ind]] = trb
-            ret["jid"] = data["jid"]
-            ret["fun"] = data["fun"]
-            ret["fun_args"] = data["arg"]
-            if "user" in data:
-                ret["user"] = data["user"]
-        if "metadata" in data:
-            ret["metadata"] = data["metadata"]
-        if minion_instance.connected:
-            log.info("Attempting to return data for job %s", data["jid"])
-            minion_instance._return_pub(ret)
-        else:
-            log.warning(
-                "Minion not connected, cannot return data for job %s", data["jid"]
-            )
+                os.remove(fn_)
+            except OSError:
+                pass
         if data["ret"]:
             if "ret_config" in data:
                 ret["ret_config"] = data["ret_config"]
@@ -2705,14 +2823,13 @@ class Minion(MinionBase):
     def _prepare_return_pub(self, ret, ret_cmd="_return"):
         jid = ret.get("jid", ret.get("__jid__"))
         fun = ret.get("fun", ret.get("__fun__"))
-        if self.opts["multiprocessing"]:
-            fn_ = os.path.join(self.proc_dir, jid)
-            if os.path.isfile(fn_):
-                try:
-                    os.remove(fn_)
-                except OSError:
-                    # The file is gone already
-                    pass
+        fn_ = os.path.join(self.proc_dir, jid)
+        if os.path.isfile(fn_):
+            try:
+                os.remove(fn_)
+            except OSError:
+                # The file is gone already
+                pass
         log.info("Returning information for job: %s", jid)
         if ret.get("comment") == "Job queued for execution":
             log.warning("Sending 'Job Queued' return for job %s", jid)
@@ -2836,14 +2953,13 @@ class Minion(MinionBase):
         for ret in rets:
             jid = ret.get("jid", ret.get("__jid__"))
             fun = ret.get("fun", ret.get("__fun__"))
-            if self.opts["multiprocessing"]:
-                fn_ = os.path.join(self.proc_dir, jid)
-                if os.path.isfile(fn_):
-                    try:
-                        os.remove(fn_)
-                    except OSError:
-                        # The file is gone already
-                        pass
+            fn_ = os.path.join(self.proc_dir, jid)
+            if os.path.isfile(fn_):
+                try:
+                    os.remove(fn_)
+                except OSError:
+                    # The file is gone already
+                    pass
             log.info("Returning information for job: %s", jid)
             load = jids.setdefault(jid, {})
             if ret_cmd == "_syndic_return":
@@ -3797,33 +3913,6 @@ class Minion(MinionBase):
                         "Popping queued job %s from the queue for execution",
                         data.get("jid"),
                     )
-
-                    # Create a placeholder proc file to ensure visibility during the transition
-                    # from queue to execution. This prevents a race condition where a new job
-                    # checks the queue after we remove the file but before the job actually starts.
-                    if "jid" in data:
-                        try:
-                            # Attempt to use the configured proc_dir if available
-                            proc_dir = getattr(
-                                self,
-                                "proc_dir",
-                                os.path.join(self.opts["cachedir"], "proc"),
-                            )
-                            if not os.path.isdir(proc_dir):
-                                # If it doesn't exist yet (unlikely), try to make it or just ignore
-                                pass
-                            else:
-                                proc_path = os.path.join(proc_dir, str(data["jid"]))
-                                with salt.utils.files.fopen(proc_path, "w+b") as fp_:
-                                    data["pid"] = os.getpid()
-                                    salt.payload.dump(data, fp_)
-                        except OSError as exc:
-                            log.error(
-                                "State queue processing: Failed to create placeholder proc file for job %s: %s. Aborting execution to prevent race conditions.",
-                                data.get("jid"),
-                                exc,
-                            )
-                            return
 
                     try:
                         os.remove(path)
