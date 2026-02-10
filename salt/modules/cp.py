@@ -230,6 +230,39 @@ def _render_filenames(path, dest, saltenv, template, **kw):
     return (path, dest)
 
 
+def _normalize_template_context_overrides(context):
+    """
+    Normalize a user-supplied template context without adding missing keys.
+    """
+    normalized = dict(context)
+    for key in ("salt", "opts", "grains", "pillar"):
+        if key not in normalized:
+            continue
+        value = normalized.get(key)
+        if isinstance(value, NamedLoaderContext):
+            value = value.value()
+        if value is None:
+            value = {}
+        normalized[key] = value
+    return normalized
+
+
+def _prepare_template_kwargs(kwargs):
+    """
+    Ensure template rendering kwargs include the standard context keys.
+    """
+    prepared = {} if not kwargs else dict(kwargs)
+    prepared.setdefault("salt", __salt__)
+    prepared.setdefault("pillar", __pillar__)
+    prepared.setdefault("grains", __grains__)
+    prepared.setdefault("opts", __opts__)
+    prepared = salt.utils.templates.normalize_render_context(prepared)
+    context = prepared.get("context")
+    if isinstance(context, dict):
+        prepared["context"] = _normalize_template_context_overrides(context)
+    return prepared
+
+
 def get_file(
     path, dest, saltenv=None, makedirs=False, template=None, gzip=None, **kwargs
 ):
@@ -329,14 +362,7 @@ def get_template(path, dest, template="jinja", saltenv=None, makedirs=False, **k
     if not saltenv:
         saltenv = __opts__["saltenv"] or "base"
 
-    if "salt" not in kwargs:
-        kwargs["salt"] = __salt__
-    if "pillar" not in kwargs:
-        kwargs["pillar"] = __pillar__
-    if "grains" not in kwargs:
-        kwargs["grains"] = __grains__
-    if "opts" not in kwargs:
-        kwargs["opts"] = __opts__
+    kwargs = _prepare_template_kwargs(kwargs)
     with _client() as client:
         return client.get_template(path, dest, template, makedirs, saltenv, **kwargs)
 

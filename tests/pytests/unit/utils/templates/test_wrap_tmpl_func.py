@@ -7,6 +7,8 @@ from pathlib import PurePath, PurePosixPath
 
 import pytest
 
+import salt.loader.context
+import salt.utils.templates
 from salt.utils.templates import wrap_tmpl_func, generate_sls_context
 from tests.support.mock import patch
 
@@ -59,6 +61,30 @@ def test_sls_context_no_call(tmp_path):
         wrapped = wrap_tmpl_func(render)
         res = wrapped(str(slsfile), context=context, tmplpath=str(slsfile))
         generate_sls_context.assert_not_called()
+
+
+def test_jinja_import_with_context_handles_empty_salt(tmp_path):
+    map_file = tmp_path / "map.jinja"
+    map_file.write_text(
+        "{%- set defaults = {'foo': salt.get('missing', 'bar')} -%}"
+    )
+    template = (
+        "{%- from 'map.jinja' import defaults with context -%}"
+        "{{ defaults['foo'] }}"
+    )
+    loader_context = salt.loader.context.LoaderContext()
+    named_salt = loader_context.named_context("__salt__")
+    result = salt.utils.templates.JINJA(
+        template,
+        from_str=True,
+        to_str=True,
+        salt=named_salt,
+        opts={"cachedir": str(tmp_path)},
+        saltenv=None,
+        tmplpath=str(tmp_path / "file.j2"),
+    )
+    assert result["result"] is True
+    assert result["data"] == "bar"
 
 
 def test_generate_sls_context__top_level():

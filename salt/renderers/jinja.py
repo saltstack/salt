@@ -14,6 +14,20 @@ from salt.loader.context import NamedLoaderContext
 log = logging.getLogger(__name__)
 
 
+def _resolve_salt_context():
+    """
+    Resolve __salt__ to a dict for template rendering when loader context is missing.
+    """
+    funcs = __salt__
+    if isinstance(__salt__, NamedLoaderContext):
+        resolved = __salt__.value()
+        if isinstance(resolved, dict):
+            funcs = resolved
+        elif resolved is None:
+            funcs = {}
+    return funcs
+
+
 def _split_module_dicts():
     """
     Create a copy of __salt__ dictionary with module.function and module[function]
@@ -24,9 +38,7 @@ def _split_module_dicts():
 
         {{ salt.cmd.run('uptime') }}
     """
-    funcs = __salt__
-    if isinstance(__salt__, NamedLoaderContext) and isinstance(__salt__.value(), dict):
-        funcs = __salt__.value()
+    funcs = _resolve_salt_context()
     if not isinstance(funcs, dict):
         return funcs
     mod_dict = dict(funcs)

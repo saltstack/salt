@@ -68,6 +68,14 @@ class AliasedLoader:
     def __contains__(self, name):
         return name in self.wrapped
 
+    def get(self, name, default=None):
+        """
+        Provide dict-like access for templates which call salt.get(...).
+        """
+        if self.wrapped is None:
+            return default
+        return self.wrapped.get(name, default)
+
 
 class AliasedModule:
     """
@@ -84,6 +92,27 @@ class AliasedModule:
 
     def __getattr__(self, name):
         return getattr(self.wrapped, name)
+
+
+def normalize_render_context(context, defaults=True):
+    """
+    Ensure common template context keys are present and dict-like.
+    """
+    if context is None:
+        return {}
+    if not isinstance(context, dict):
+        return context
+    normalized = dict(context)
+    for key in ("salt", "opts", "grains", "pillar"):
+        if not defaults and key not in normalized:
+            continue
+        value = normalized.get(key)
+        if isinstance(value, NamedLoaderContext):
+            value = value.value()
+        if value is None:
+            value = {}
+        normalized[key] = value
+    return normalized
 
 
 def generate_sls_context(tmplpath, sls):
@@ -169,14 +198,13 @@ def wrap_tmpl_func(render_str):
         if context is None:
             context = {}
 
-        # Alias cmd.run to cmd.shell to make python_shell=True the default for
-        # templated calls
-        if "salt" in kws:
-            kws["salt"] = AliasedLoader(kws["salt"])
-
         # We want explicit context to overwrite the **kws
         kws.update(context)
-        context = kws
+        context = normalize_render_context(kws)
+        # Alias cmd.run to cmd.shell to make python_shell=True the default for
+        # templated calls
+        if "salt" in context and not isinstance(context["salt"], AliasedLoader):
+            context["salt"] = AliasedLoader(context["salt"])
         assert "opts" in context
         assert "saltenv" in context
 
@@ -340,6 +368,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     :returns str: The string rendered by the template.
     """
+    context = normalize_render_context(context)
     opts = context["opts"]
     saltenv = context["saltenv"]
     loader = None
@@ -464,6 +493,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                 )
                 decoded_context[key] = salt.utils.data.decode(value)
 
+        decoded_context = normalize_render_context(decoded_context)
         jinja_env.globals.update(decoded_context)
         try:
             template = jinja_env.from_string(tmplstr)
