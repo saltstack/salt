@@ -50,8 +50,6 @@ botocore==1.39.4
     #   boto3
     #   moto
     #   s3transfer
-cachetools==5.3.1
-    # via google-auth
 cassandra-driver==3.28.0
     # via -r requirements/static/ci/common.in
 certifi==2024.7.4 ; python_version >= "3.10"
@@ -75,9 +73,10 @@ charset-normalizer==3.2.0
     #   requests
 cheetah3==3.2.6.post1
     # via -r requirements/static/ci/common.in
-cheroot==10.0.0
+cheroot==11.1.2
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
+    #   -r requirements/base.txt
     #   cherrypy
 cherrypy==18.8.0
     # via
@@ -127,6 +126,8 @@ dnspython==2.6.1
     #   python-etcd
 docker==7.1.0 ; python_version >= "3.8"
     # via -r requirements/pytest.txt
+durationpy==0.10
+    # via kubernetes
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
 exceptiongroup==1.1.1
@@ -159,8 +160,6 @@ gitpython==3.1.43 ; sys_platform == "win32"
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
-google-auth==2.27.0
-    # via kubernetes
 idna==3.7
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
@@ -179,8 +178,6 @@ importlib-metadata==8.7.0
     #   -r requirements/base.txt
 iniconfig==2.0.0
     # via pytest
-ipaddress==1.0.23
-    # via kubernetes
 jaraco.collections==4.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
@@ -219,7 +216,7 @@ junit-xml==1.9
     # via -r requirements/static/ci/common.in
 keyring==5.7.1
     # via -r requirements/static/ci/common.in
-kubernetes==3.0.0
+kubernetes==35.0.0
     # via -r requirements/static/ci/common.in
 looseversion==1.3.0
     # via
@@ -261,12 +258,13 @@ multidict==6.0.4
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   aiohttp
     #   yarl
+oauthlib==3.3.1
+    # via requests-oauthlib
 packaging==24.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -r requirements/base.txt
     #   pytest
-    #   wheel
 passlib==1.7.4
     # via -r requirements/static/ci/common.in
 patch==1.16
@@ -295,12 +293,6 @@ psutil==5.9.6 ; python_version >= "3.10"
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-pyasn1-modules==0.3.0
-    # via google-auth
-pyasn1==0.5.1
-    # via
-    #   pyasn1-modules
-    #   rsa
 pycparser==2.21
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
@@ -418,6 +410,8 @@ pyzmq==25.1.2
     #   pytest-salt-factories
 requests-ntlm==1.3.0
     # via pywinrm
+requests-oauthlib==2.0.0
+    # via kubernetes
 requests==2.32.5 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
@@ -428,13 +422,12 @@ requests==2.32.5 ; python_version >= "3.10"
     #   moto
     #   pywinrm
     #   requests-ntlm
+    #   requests-oauthlib
     #   responses
 responses==0.23.1
     # via moto
 rfc3987==1.3.8
     # via -r requirements/static/ci/common.in
-rsa==4.9
-    # via google-auth
 s3transfer==0.13.0
     # via boto3
 sed==0.3.1
@@ -458,7 +451,6 @@ six==1.15.0
     #   python-dateutil
     #   pyvmomi
     #   textfsm
-    #   websocket-client
 smmap==5.0.1
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
@@ -515,8 +507,10 @@ virtualenv==20.36.1
     #   pytest-salt-factories
 watchdog==3.0.0
     # via -r requirements/static/ci/common.in
-websocket-client==0.40.0
-    # via kubernetes
+websocket-client==1.9.0
+    # via
+    #   -r requirements/static/ci/common.in
+    #   kubernetes
 wempy==0.2.1
     # via -r requirements/static/ci/common.in
 werkzeug==3.1.3
@@ -524,11 +518,6 @@ werkzeug==3.1.3
     #   -r requirements/static/ci/common.in
     #   moto
     #   pytest-httpserver
-wheel==0.46.3
-    # via
-    #   -c requirements/constraints.txt
-    #   -c requirements/static/ci/../pkg/py3.10/windows.txt
-    #   -r requirements/base.txt
 wmi==1.5.1 ; sys_platform == "win32"
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
@@ -558,5 +547,4 @@ zipp==3.23.0
     #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
-# pip
 # setuptools

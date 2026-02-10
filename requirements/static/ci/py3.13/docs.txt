@@ -45,6 +45,7 @@ charset-normalizer==3.4.4
 cheroot==11.1.2
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
+    #   -r requirements/base.txt
     #   cherrypy
 cherrypy==18.10.0
     # via
@@ -174,7 +175,6 @@ packaging==24.0
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
     #   sphinx
-    #   wheel
 platformdirs==4.5.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -300,11 +300,6 @@ virtualenv==20.36.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
-wheel==0.46.3
-    # via
-    #   -c requirements/constraints.txt
-    #   -c requirements/static/ci/py3.13/linux.txt
-    #   -r requirements/base.txt
 yarl==1.22.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -320,5 +315,4 @@ zipp==3.23.0
     #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
-# pip
 # setuptools

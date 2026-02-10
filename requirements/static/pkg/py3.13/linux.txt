@@ -25,7 +25,9 @@ cffi==2.0.0
 charset-normalizer==3.4.4
     # via requests
 cheroot==11.1.2
-    # via cherrypy
+    # via
+    #   -r requirements/base.txt
+    #   cherrypy
 cherrypy==18.10.0
     # via -r requirements/base.txt
 contextvars==2.4
@@ -94,9 +96,7 @@ multidict==6.7.0
     #   aiohttp
     #   yarl
 packaging==24.0
-    # via
-    #   -r requirements/base.txt
-    #   wheel
+    # via -r requirements/base.txt
 platformdirs==4.5.1
     # via virtualenv
 portend==3.2.1
@@ -146,10 +146,6 @@ urllib3==2.6.3 ; python_version >= "3.10"
     #   requests
 virtualenv==20.36.1
     # via -r requirements/base.txt
-wheel==0.46.3
-    # via
-    #   -c requirements/constraints.txt
-    #   -r requirements/base.txt
 yarl==1.22.0
     # via aiohttp
 zc.lockfile==4.0
@@ -160,5 +156,4 @@ zipp==3.23.0
     #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
-# pip
 # setuptools
