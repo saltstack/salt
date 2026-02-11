@@ -13,7 +13,7 @@ bcrypt
 boto3>=1.30.0
 boto>=2.47.0
 botocore>=1.30.0
-cassandra-driver>=2.0
+cassandra-driver>=3.25.0
 cffi>=1.14.6
 cherrypy>=17.4.1
 clustershell
@@ -30,11 +30,8 @@ junit-xml>=1.9
 jxmlease; sys_platform != 'win32'
 kazoo; sys_platform != 'win32' and sys_platform != 'darwin'
 keyring==5.7.1
-kubernetes<4.0.0
-# Pin kubernetes==3.0.0, google-auth==2.27.0, and pyasn1-modules==0.3.0 for Python 3.9 to match 3007.x
-# This ensures pyasn1-modules==0.3.0 (requires pyasn1<0.6.0) instead of 0.4.2 (requires pyasn1>=0.6.1)
-kubernetes==3.0.0; python_version == '3.9'
 pyasn1-modules==0.3.0; python_version == '3.9'
+kubernetes>=24.0.0
 libnacl>=1.7.1; sys_platform != 'win32' and sys_platform != 'darwin'
 # markdown-it-py constraint for py3.9: myst-docutils (docs requirement) needs <3.0.0,
 # but netmiko (from napalm, only in py3.9) pulls in rich which wants 3.0.0+
@@ -56,6 +53,7 @@ toml
 vcert==0.9.1; sys_platform != 'win32'
 virtualenv>=20.36.1
 watchdog>=0.9.0
+websocket-client>=1.3.3
 # werkzeug is a dependency of moto
 werkzeug>=3.0.6
 xmldiff>=2.4

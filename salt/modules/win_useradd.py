@@ -811,9 +811,10 @@ def info(name):
 
     if domain_name != ".":
         try:
-            server = win32net.NetGetAnyDCName(None, domain_name)
+            dc_info = win32security.DsGetDcName(None, domain_name)
+            server = dc_info["DomainControllerName"]
             log.debug("Found DC: %s", server)
-        except win32net.error:
+        except pywintypes.error:
             # Restore username to original
             log.debug("DC not found. Using username: %s", str(name))
             user_name = str(name)

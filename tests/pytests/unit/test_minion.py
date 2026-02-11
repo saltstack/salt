@@ -635,7 +635,8 @@ def test_minion_module_refresh_beacons_refresh(minion_opts):
             assert "service.beacon" in minion.beacons.beacons
             minion.destroy()
         finally:
-            minion.destroy()
+            if minion is not None:
+                minion.destroy()
 
 
 def test_beacons_refresh_preserves_interval_map(minion_opts):
@@ -650,10 +651,11 @@ def test_beacons_refresh_preserves_interval_map(minion_opts):
         "salt.utils.process.SignalHandlingProcess.join",
         MagicMock(return_value=True),
     ):
+        minion = None
         try:
             minion = salt.minion.Minion(
                 minion_opts,
-                io_loop=salt.ext.tornado.ioloop.IOLoop(),
+                io_loop=tornado.ioloop.IOLoop.current(),
             )
             minion.schedule = salt.utils.schedule.Schedule(
                 minion_opts, {}, returners={}
@@ -677,7 +679,8 @@ def test_beacons_refresh_preserves_interval_map(minion_opts):
             assert minion.beacons.interval_map["diskusage"] == 30
 
         finally:
-            minion.destroy()
+            if minion is not None:
+                minion.destroy()
 
 
 @pytest.mark.slow_test

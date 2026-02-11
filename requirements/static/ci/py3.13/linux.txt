@@ -94,6 +94,7 @@ cheetah3==3.2.6.post1
 cheroot==11.1.2
     # via
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
+    #   -r requirements/base.txt
     #   cherrypy
 cherrypy==18.10.0
     # via
@@ -138,6 +139,8 @@ dnspython==2.8.0
     #   python-etcd
 docker==7.1.0 ; python_version >= "3.8"
     # via -r requirements/pytest.txt
+durationpy==0.10
+    # via kubernetes
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
 filelock==3.20.3 ; python_version >= "3.10"
@@ -161,8 +164,6 @@ gitdb==4.0.12
     # via gitpython
 gitpython==3.1.46
     # via -r requirements/static/ci/common.in
-google-auth==2.47.0
-    # via kubernetes
 h11==0.16.0
     # via httpcore
 hglib==2.6.2
@@ -193,8 +194,6 @@ iniconfig==2.3.0
     # via pytest
 invoke==2.2.1
     # via paramiko
-ipaddress==1.0.23
-    # via kubernetes
 jaraco.collections==5.2.1
     # via
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
@@ -243,7 +242,7 @@ kazoo==2.10.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
 keyring==5.7.1
     # via -r requirements/static/ci/common.in
-kubernetes==3.0.0
+kubernetes==35.0.0
     # via -r requirements/static/ci/common.in
 libnacl==2.1.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
@@ -291,6 +290,8 @@ multidict==6.7.0
     #   yarl
 ncclient==0.7.0
     # via junos-eznc
+oauthlib==3.3.1
+    # via requests-oauthlib
 oscrypto==1.3.0
     # via certvalidator
 packaging==24.0
@@ -299,7 +300,6 @@ packaging==24.0
     #   -r requirements/base.txt
     #   ansible-core
     #   pytest
-    #   wheel
 paramiko==4.0.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -r requirements/static/ci/common.in
@@ -332,12 +332,6 @@ psutil==7.2.1 ; python_version >= "3.10"
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-pyasn1-modules==0.4.2
-    # via google-auth
-pyasn1==0.6.2
-    # via
-    #   pyasn1-modules
-    #   rsa
 pycparser==3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
@@ -462,6 +456,8 @@ referencing==0.37.0
     # via
     #   jsonschema
     #   jsonschema-specifications
+requests-oauthlib==2.0.0
+    # via kubernetes
 requests==2.32.5 ; python_version >= "3.10"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
@@ -472,6 +468,7 @@ requests==2.32.5 ; python_version >= "3.10"
     #   kubernetes
     #   moto
     #   python-consul
+    #   requests-oauthlib
     #   responses
     #   twilio
     #   vcert
@@ -489,8 +486,6 @@ rpm-vercmp==0.1.2 ; sys_platform == "linux"
     # via
     #   -c requirements/static/ci/../pkg/py3.13/linux.txt
     #   -r requirements/base.txt
-rsa==4.9.1
-    # via google-auth
 s3transfer==0.16.0
     # via boto3
 scp==0.15.0
@@ -512,7 +507,6 @@ six==1.17.0
     #   python-dateutil
     #   transitions
     #   vcert
-    #   websocket-client
 slack-bolt==1.27.0
     # via -r requirements/static/ci/linux.in
 slack-sdk==3.39.0
@@ -567,8 +561,10 @@ virtualenv==20.36.1
     #   pytest-salt-factories
 watchdog==6.0.0
     # via -r requirements/static/ci/common.in
-websocket-client==0.40.0
-    # via kubernetes
+websocket-client==1.9.0
+    # via
+    #   -r requirements/static/ci/common.in
+    #   kubernetes
 wempy==0.2.1
     # via -r requirements/static/ci/common.in
 werkzeug==3.1.5
@@ -576,11 +572,6 @@ werkzeug==3.1.5
     #   -r requirements/static/ci/common.in
     #   moto
     #   pytest-httpserver
-wheel==0.46.3
-    # via
-    #   -c requirements/constraints.txt
-    #   -c requirements/static/ci/../pkg/py3.13/linux.txt
-    #   -r requirements/base.txt
 xmldiff==2.7.0
     # via -r requirements/static/ci/common.in
 xmltodict==1.0.2
@@ -604,5 +595,4 @@ zipp==3.23.0
     #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
-# pip
 # setuptools
