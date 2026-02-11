@@ -320,7 +320,14 @@ def _systemctl_cmd(action, name=None, systemd_scope=False, no_block=False, root=
         and salt.utils.systemd.has_scope(__context__)
         and __salt__["config.get"]("systemd.scope", True)
     ):
-        ret.extend([salt.utils.path.which("systemd-run"), "--scope"])
+        if systemd_run_path := salt.utils.path.which("systemd-run"):
+            ret.extend([systemd_run_path, "--scope"])
+        else:
+            raise CommandExecutionError(
+                "systemd-run is required for running systemctl with --scope, but it was not found on the system. "
+                "Make sure systemd-run is installed and in the system's PATH "
+                "or disable it using the 'systemd.scope' config option."
+            )
     ret.append(salt.utils.path.which("systemctl"))
     if no_block:
         ret.append("--no-block")
