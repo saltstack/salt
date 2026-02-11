@@ -2191,7 +2191,7 @@ class Minion(MinionBase):
         self._process_queue_processing_active = True
         self.io_loop.spawn_callback(self._process_process_queue_async)
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _process_process_queue_async(self):
         """
         Async body of process_process_queue.
@@ -3769,7 +3769,7 @@ class Minion(MinionBase):
         self._state_queue_processing_active = True
         self.io_loop.spawn_callback(self._process_state_queue_async)
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _process_state_queue_async(self):
         """
         Async body of process_state_queue.
