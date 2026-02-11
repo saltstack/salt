@@ -40,7 +40,7 @@
 %define fish_dir %{_datadir}/fish/vendor_functions.d
 
 Name:    salt
-Version: 3006.20
+Version: 3006.21
 Release: 0
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
@@ -754,6 +754,15 @@ if [ $1 -ge 1 ] ; then
 fi
 
 %changelog
+* Wed Feb 11 2026 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.21
+
+# Fixed
+
+- Fix user.info when querying domain users. Uses DsGetDcName for more
+  dependable domain controller lookup. [#68612](https://github.com/saltstack/salt/issues/68612)
+- Fixed minion instability and resource exhaustion under high load by implementing resource-aware job queuing and backpressure. Added `process_count_max` enforcement and disk-based queuing to prevent unbounded process spawning and file descriptor exhaustion. [#68703](https://github.com/saltstack/salt/issues/68703)
+
+
 * Thu Feb 05 2026 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.20
 
 # Fixed

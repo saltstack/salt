@@ -7,6 +7,16 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+## 3006.21 (2026-02-11)
+
+
+### Fixed
+
+- Fix user.info when querying domain users. Uses DsGetDcName for more
+  dependable domain controller lookup. [#68612](https://github.com/saltstack/salt/issues/68612)
+- Fixed minion instability and resource exhaustion under high load by implementing resource-aware job queuing and backpressure. Added `process_count_max` enforcement and disk-based queuing to prevent unbounded process spawning and file descriptor exhaustion. [#68703](https://github.com/saltstack/salt/issues/68703)
+
+
 ## 3006.20 (2026-02-05)
 
 
