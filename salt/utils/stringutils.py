@@ -6,6 +6,7 @@ import base64
 import difflib
 import errno
 import fnmatch
+import inspect
 import logging
 import os
 import re
@@ -16,6 +17,21 @@ import unicodedata
 from salt.utils.decorators.jinja import jinja_filter
 
 log = logging.getLogger(__name__)
+
+
+def build_docstring(text):
+    """
+    Normalize a docstring payload for runtime assignment.
+
+    This helper lets callers avoid invalid escape sequence warnings on Python
+    3.12+ by assigning ``__doc__`` from a raw string instead of using a literal
+    function docstring with backslashes.
+    """
+    if text is None:
+        return None
+    if not isinstance(text, str):
+        raise TypeError(f"expected str for docstring, got {type(text)}")
+    return inspect.cleandoc(text).strip("\n")
 
 
 @jinja_filter("to_bytes")
