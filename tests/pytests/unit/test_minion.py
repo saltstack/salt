@@ -1,4 +1,4 @@
-import asyncio
+import contextlib
 import copy
 import logging
 import os
@@ -133,6 +133,7 @@ def test_send_req_fires_completion_event(event, minion_opts):
                 else:
                     rtn = minion._send_req_sync(load, timeout)
 
+                fire_event_called = False
                 # get the
                 for idx, call in enumerate(event.mock_calls, 1):
                     if "fire_event" in call[0]:
@@ -467,52 +468,68 @@ async def test_process_count_max(minion_opts, io_loop):
     Tests that the _handle_decoded_payload function does not spawn more than the configured amount of processes,
     as per process_count_max.
     """
+    start_mock = MagicMock(return_value=True)
+
+    def mock_proc_side_effect(*args, **kwargs):
+        m = MagicMock(name="MockProcess")
+        m.is_alive.return_value = True
+        m.start = start_mock
+        return m
+
+    @contextlib.asynccontextmanager
+    async def mock_await_lock(*args, **kwargs):
+        yield
+
     with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
-        "salt.utils.process.SignalHandlingProcess.start",
+        "salt.minion.SignalHandlingProcess",
+        MagicMock(side_effect=mock_proc_side_effect),
+    ), patch(
+        "salt.minion.SignalHandlingProcess.join",
         MagicMock(return_value=True),
     ), patch(
-        "salt.utils.process.SignalHandlingProcess.join",
-        MagicMock(return_value=True),
+        "os.path.exists", MagicMock(return_value=True)
     ), patch(
-        "salt.utils.minion.running", MagicMock(return_value=[])
+        "os.makedirs", MagicMock()
     ), patch(
-        "asyncio.sleep",
-        MagicMock(return_value=asyncio.Future()),
+        "salt.utils.files.fopen", MagicMock()
+    ), patch(
+        "salt.payload.dump", MagicMock()
+    ), patch(
+        "salt.utils.files.await_lock", side_effect=mock_await_lock
+    ), patch(
+        "salt.loader.grains", MagicMock(return_value={"id": "foo", "os": "Linux"})
     ):
         process_count_max = 10
         minion_opts["__role"] = "minion"
         minion_opts["minion_jid_queue_hwm"] = 100
         minion_opts["process_count_max"] = process_count_max
+        # cachedir needed for lock
+        minion_opts["cachedir"] = "/tmp/salt_test_cache"
 
         minion = salt.minion.Minion(minion_opts, jid_queue=[], io_loop=io_loop)
         try:
-
-            # mock gen.sleep to throw a special Exception when called, so that we detect it
-            class SleepCalledException(Exception):
-                """Thrown when sleep is called"""
-
-            asyncio.sleep.return_value.set_exception(asyncio.TimeoutError())
-
-            # up until process_count_max: gen.sleep does not get called, processes are started normally
+            # up until process_count_max: processes are started normally
             for i in range(process_count_max):
-                mock_data = {"fun": "foo.bar", "jid": i}
-                await minion._handle_decoded_payload(mock_data)
-                assert (
-                    salt.utils.process.SignalHandlingProcess.start.call_count == i + 1
+                mock_data = {"fun": "foo.bar", "jid": str(i)}
+                io_loop.run_sync(
+                    lambda data=mock_data: minion._handle_decoded_payload(data)
                 )
+                assert start_mock.call_count == i + 1
                 assert len(minion.jid_queue) == i + 1
-                salt.utils.minion.running.return_value += [i]
 
-            # above process_count_max: gen.sleep does get called, JIDs are created but no new processes are started
-            mock_data = {"fun": "foo.bar", "jid": process_count_max + 1}
+            # above process_count_max: Queue logic kicks in
+            mock_data = {"fun": "foo.bar", "jid": str(process_count_max + 1)}
 
-            with pytest.raises(asyncio.exceptions.TimeoutError):
-                await minion._handle_decoded_payload(mock_data)
-            assert (
-                salt.utils.process.SignalHandlingProcess.start.call_count
-                == process_count_max
-            )
+            # Run execution
+            io_loop.run_sync(lambda: minion._handle_decoded_payload(mock_data))
+
+            # Assert NO new process started
+            assert start_mock.call_count == process_count_max
+            # Assert Job was queued (payload dumped)
+            assert salt.payload.dump.called
+            # Assert JID added to active queue (deduplication cache)
             assert len(minion.jid_queue) == process_count_max + 1
+
         finally:
             minion.destroy()
 
@@ -1055,7 +1072,7 @@ async def test_minion_grains_refresh_pre_exec_false(minion_opts):
             load_grains=False,
         )
         try:
-            ret = await minion._handle_decoded_payload(mock_data)
+            minion.io_loop.run_sync(lambda: minion._handle_decoded_payload(mock_data))
             grainsfunc.assert_not_called()
         finally:
             minion.destroy()
@@ -1078,7 +1095,7 @@ async def test_minion_grains_refresh_pre_exec_true(minion_opts):
             load_grains=False,
         )
         try:
-            ret = await minion._handle_decoded_payload(mock_data)
+            minion.io_loop.run_sync(lambda: minion._handle_decoded_payload(mock_data))
             grainsfunc.assert_called()
         finally:
             minion.destroy()
