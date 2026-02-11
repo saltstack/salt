@@ -36,7 +36,7 @@ def salt_master(salt_master_factory):
         yield factory
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def salt_minion(salt_master, minion_config_overrides):
     factory = salt_master.salt_minion_daemon(
         random_string("minion-"),

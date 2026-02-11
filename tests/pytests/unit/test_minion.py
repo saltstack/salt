@@ -477,7 +477,7 @@ def test_process_count_max(minion_opts):
         try:
             # up until process_count_max: processes are started normally
             for i in range(process_count_max):
-                mock_data = {"fun": "foo.bar", "jid": i}
+                mock_data = {"fun": "foo.bar", "jid": str(i)}
                 io_loop.run_sync(
                     lambda data=mock_data: minion._handle_decoded_payload(data)
                 )
@@ -485,7 +485,7 @@ def test_process_count_max(minion_opts):
                 assert len(minion.jid_queue) == i + 1
 
             # above process_count_max: Queue logic kicks in
-            mock_data = {"fun": "foo.bar", "jid": process_count_max + 1}
+            mock_data = {"fun": "foo.bar", "jid": str(process_count_max + 1)}
 
             # Run execution
             io_loop.run_sync(lambda: minion._handle_decoded_payload(mock_data))
