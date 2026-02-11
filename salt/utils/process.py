@@ -672,6 +672,57 @@ class ProcessManager:
                     log.trace("Process restart of %s", pid)
                     self.restart_process(pid)
 
+    def _proc_is_alive(self, proc):
+        """
+        Best-effort, non-blocking liveness check for a multiprocessing Process.
+
+        During interpreter shutdown and/or signal handling, calling into
+        multiprocessing internals can raise unexpected exceptions. We prefer a
+        conservative approach here to keep shutdown paths robust.
+        """
+        try:
+            return proc.is_alive()
+        except Exception:  # pylint: disable=broad-except
+            # If we cannot determine liveness, assume it's still alive so we
+            # don't prematurely remove it from our internal map.
+            return True
+
+    def _safe_join(self, proc, timeout=0):
+        """
+        Attempt to join a multiprocessing Process without propagating teardown errors.
+
+        Python can import stdlib modules during Process.join(). In rare shutdown
+        re-entrancy scenarios this can raise ImportError (see #68573). Treat such
+        failures as non-fatal and fall back to exitcode-based reaping.
+        """
+        try:
+            proc.join(timeout)
+            return True
+        except ImportError as exc:
+            log.debug("Ignoring ImportError from Process.join(): %s", exc, exc_info=True)
+            return False
+        except Exception:  # pylint: disable=broad-except
+            log.debug("Ignoring unexpected exception from Process.join()", exc_info=True)
+            return False
+
+    def _reap_children_nonblocking(self):
+        """
+        Reap any dead children without calling Process.join().
+
+        Accessing ``exitcode`` will poll the underlying Popen object without
+        importing ``multiprocessing.connection.wait``.
+        """
+        for pid, p_map in self._process_map.copy().items():
+            proc = p_map.get("Process")
+            if proc is None:
+                continue
+            try:
+                if proc.exitcode is not None:
+                    del self._process_map[pid]
+            except Exception:  # pylint: disable=broad-except
+                # Keep process in map if we can't determine exit status.
+                continue
+
     def kill_children(self, *args, **kwargs):
         """
         Kill all of the children
@@ -716,15 +767,25 @@ class ProcessManager:
                         # Race condition
                         pass
 
+        safe_join = kwargs.pop("safe_join", True)
         end_time = time.time() + self.wait_for_kill  # when to die
 
         log.trace("Waiting to kill process manager children")
         while self._process_map and time.time() < end_time:
             for pid, p_map in self._process_map.copy().items():
                 log.trace("Joining pid %s: %s", pid, p_map["Process"])
-                p_map["Process"].join(0)
+                proc = p_map.get("Process")
+                if proc is None:
+                    continue
+                joined = False
+                if safe_join:
+                    joined = self._safe_join(proc, 0)
+                if not joined:
+                    # Fall back to non-blocking exitcode poll. This avoids
+                    # stdlib import side-effects during teardown.
+                    self._reap_children_nonblocking()
 
-                if not p_map["Process"].is_alive():
+                if not self._proc_is_alive(proc):
                     # The process is no longer alive, remove it from the process map dictionary
                     try:
                         del self._process_map[pid]

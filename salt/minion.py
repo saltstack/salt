@@ -1244,7 +1244,16 @@ class MinionManager(MinionBase):
             minion.process_manager.stop_restarting()
             minion.process_manager.send_signal_to_processes(signum)
             # kill any remaining processes
-            minion.process_manager.kill_children()
+            try:
+                # Avoid propagating rare shutdown ImportErrors coming from the
+                # multiprocessing join/wait path (see #68573).
+                minion.process_manager.kill_children(safe_join=True)
+            except ImportError:
+                # Do not block shutdown; best-effort cleanup is acceptable here.
+                log.debug(
+                    "Ignoring ImportError while reaping MinionManager processes",
+                    exc_info=True,
+                )
             minion.destroy()
         if self.event_publisher is not None:
             self.event_publisher.close()

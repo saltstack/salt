@@ -13,6 +13,7 @@ import pytest
 import salt._logging
 import salt.utils.platform
 import salt.utils.process
+from tests.support.mock import MagicMock
 from tests.support.mock import patch
 from tests.support.unit import TestCase
 
@@ -138,6 +139,34 @@ class TestProcessManager(TestCase):
         time.sleep(2)
         process_manager.check_children()
         assert initial_pid != next(iter(process_manager._process_map.keys()))
+
+    def test_kill_children_importerror_from_join_is_ignored(self):
+        """
+        Regression test for #68573.
+
+        Under rare shutdown re-entrancy, ``multiprocessing`` may raise an ImportError
+        when ``Process.join()`` triggers imports (for example, importing
+        ``multiprocessing.connection.wait`` while the module is partially
+        initialized). ``ProcessManager.kill_children()`` should not crash in that
+        case and should continue best-effort cleanup.
+        """
+
+        process_manager = salt.utils.process.ProcessManager(wait_for_kill=0.01)
+        self.addCleanup(process_manager.terminate)
+
+        proc = MagicMock()
+        proc.pid = 12345
+        proc.is_alive.return_value = False
+        proc.exitcode = 0
+        proc.join.side_effect = ImportError(
+            "cannot import name 'wait' from partially initialized module "
+            "'multiprocessing.connection'"
+        )
+
+        process_manager._process_map[proc.pid] = {"Process": proc, "tgt": None, "args": [], "kwargs": {}}
+        # Should not raise, and should clean up the internal process map
+        process_manager.kill_children(safe_join=True)
+        assert process_manager._process_map == {}
 
     @incr
     def test_counter(self):

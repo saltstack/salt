@@ -1097,7 +1097,18 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         if hasattr(self, "process_manager"):
             self.process_manager.stop_restarting()
             self.process_manager.send_signal_to_processes(signum)
-            self.process_manager.kill_children()
+            try:
+                # During shutdown, Process.join() can trigger imports inside
+                # multiprocessing which may fail if stdlib modules are partially
+                # initialized due to signal re-entrancy (see #68573).
+                self.process_manager.kill_children(safe_join=True)
+            except ImportError:
+                # Be conservative and avoid failing shutdown. The process manager
+                # will fall back to non-blocking exitcode polling where needed.
+                log.debug(
+                    "Ignoring ImportError while reaping ReqServer processes",
+                    exc_info=True,
+                )
 
     # pylint: disable=W1701
     def __del__(self):
