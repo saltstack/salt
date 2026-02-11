@@ -16,6 +16,35 @@ import salt.utils.versions
 log = logging.getLogger(__name__)
 
 
+def onedir_missing_pkg_bindings():
+    """
+    Return True when running from a bundled (onedir) Python which is missing
+    common OS package-manager Python bindings.
+
+    This is primarily used to decide when to enable salt-ssh fallbacks which can
+    query package versions via CLI tools (rpm/dpkg) instead of Python bindings.
+    """
+    if not check_bundled():
+        return False
+
+    # These imports are optional and may not exist in onedir builds.
+    try:
+        import rpm  # pylint: disable=import-error,unused-import
+
+        return False
+    except ImportError:
+        pass
+
+    try:
+        import apt_pkg  # pylint: disable=import-error,unused-import
+
+        return False
+    except ImportError:
+        pass
+
+    return True
+
+
 def rtag(opts):
     """
     Return the rtag file location. This file is used to ensure that we don't

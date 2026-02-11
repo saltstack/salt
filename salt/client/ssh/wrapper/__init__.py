@@ -255,7 +255,26 @@ class FunctionWrapper(MutableMapping):
                 **self.kwargs,
             )
             stdout, stderr, retcode = single.cmd_block()
-            return parse_ret(stdout, stderr, retcode, result_only=True)
+            try:
+                return parse_ret(stdout, stderr, retcode, result_only=True)
+            except SSHCommandExecutionError as exc:
+                # Provide a more actionable error message for a common salt-ssh
+                # failure mode in bundled (onedir) environments.
+                if cmd == "pkg.version" and "is not available" in (exc.stderr or ""):
+                    hint = (
+                        "\n\nHint: On salt-ssh with bundled (onedir) Python, "
+                        "OS package backends can fail to load if optional system "
+                        "bindings are missing. Salt provides a fallback for "
+                        "read-only package queries to keep `pkg.version` "
+                        "available during template rendering."
+                    )
+                    raise SSHCommandExecutionError(
+                        stdout=exc.stdout,
+                        stderr=(exc.stderr or "") + hint,
+                        retcode=exc.retcode,
+                        parsed=exc.parsed,
+                    ) from exc
+                raise
 
         return caller
 
