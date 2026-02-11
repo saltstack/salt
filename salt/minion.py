@@ -1833,7 +1833,7 @@ class Minion(MinionBase):
         Override this method if you wish to handle the decoded data
         differently.
         """
-        yield self._handle_decoded_payload_impl(data)
+        await self._handle_decoded_payload_impl(data)
 
     async def _handle_decoded_payload_impl(self, data):
         """

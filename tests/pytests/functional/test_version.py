@@ -30,6 +30,7 @@ def test_salt_extensions_in_versions_report(tmp_path, salt_extension):
         venv.install("pyyaml")
         venv.install("looseversion")
         venv.install("packaging")
+        venv.install("tornado")
         # Install our extension into the virtualenv
         venv.install(str(salt_extension.srcdir))
         installed_packages = venv.get_installed_packages()
@@ -58,6 +59,7 @@ def test_salt_extensions_absent_in_versions_report(tmp_path, salt_extension):
         venv.install("looseversion")
         venv.install("packaging")
         venv.install("distro")
+        venv.install("tornado")
         installed_packages = venv.get_installed_packages()
         assert salt_extension.name not in installed_packages
         ret = venv.run_code(

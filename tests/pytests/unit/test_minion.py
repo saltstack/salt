@@ -463,7 +463,7 @@ async def test_handle_decoded_payload_jid_queue_reduced_minion_jid_queue_hwm(
 
 
 @pytest.mark.slow_test
-async def test_process_count_max(minion_opts, io_loop):
+def test_process_count_max(minion_opts, io_loop):
     """
     Tests that the _handle_decoded_payload function does not spawn more than the configured amount of processes,
     as per process_count_max.
@@ -1055,7 +1055,7 @@ def test_config_cache_path_overrides():
     assert mminion.opts["cachedir"] == cachedir
 
 
-async def test_minion_grains_refresh_pre_exec_false(minion_opts):
+def test_minion_grains_refresh_pre_exec_false(minion_opts):
     """
     Minion does not refresh grains when grains_refresh_pre_exec is False
     """
@@ -1078,7 +1078,7 @@ async def test_minion_grains_refresh_pre_exec_false(minion_opts):
             minion.destroy()
 
 
-async def test_minion_grains_refresh_pre_exec_true(minion_opts):
+def test_minion_grains_refresh_pre_exec_true(minion_opts):
     """
     Minion refreshes grains when grains_refresh_pre_exec is True
     """
