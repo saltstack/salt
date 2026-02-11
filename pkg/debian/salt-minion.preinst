@@ -26,17 +26,57 @@ case "$1" in
     . /usr/share/debconf/confmodule
     PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush();")
 
+    # Determine the service user/group to preserve across upgrades.
+    # Precedence:
+    #   1) Existing debconf selection (if any)
+    #   2) Configured user in /etc/salt/minion (if any)
+    #   3) Owner of current pidfile (if available)
+    #   4) Package default ($SALT_USER/$SALT_GROUP)
+
+    if db_get salt-minion/user; then
+        DB_USER="$RET"
+    else
+        DB_USER=""
+    fi
+
+    CFG_USER=""
+    if [ -r /etc/salt/minion ]; then
+        CFG_USER="$(sed -n -E 's/^[[:space:]]*user:[[:space:]]*([^#[:space:]]+).*/\1/p' /etc/salt/minion | head -n 1)"
+    fi
+
     # Reset permissions to fix previous installs
     if [ -f /run/salt-minion.pid ]
     then
         CUR_USER=$(ls -dl /run/salt-minion.pid | cut -d ' ' -f 3)
         CUR_GROUP=$(ls -dl /run/salt-minion.pid | cut -d ' ' -f 4)
     else
-        CUR_USER=$SALT_USER
-        CUR_GROUP=$SALT_GROUP
+        CUR_USER=""
+        CUR_GROUP=""
     fi
-    db_set salt-minion/user $CUR_USER
-    chown -R $CUR_USER:$CUR_GROUP /etc/salt/pki/minion /etc/salt/minion.d \
+
+    # Preserve explicitly configured user if present
+    if [ -n "$DB_USER" ] && [ "$DB_USER" != "salt" ]; then
+        CHOSEN_USER="$DB_USER"
+    elif [ -n "$CFG_USER" ]; then
+        CHOSEN_USER="$CFG_USER"
+    elif [ -n "$CUR_USER" ]; then
+        CHOSEN_USER="$CUR_USER"
+    else
+        CHOSEN_USER="$SALT_USER"
+    fi
+
+    # Default group to the user's primary group if possible
+    CHOSEN_GROUP="$(id -gn "$CHOSEN_USER" 2>/dev/null || true)"
+    if [ -z "$CHOSEN_GROUP" ]; then
+        CHOSEN_GROUP="$CUR_GROUP"
+    fi
+    if [ -z "$CHOSEN_GROUP" ]; then
+        CHOSEN_GROUP="$SALT_GROUP"
+    fi
+
+    db_set salt-minion/user "$CHOSEN_USER" || true
+    db_fset salt-minion/user seen true || true
+    chown -R $CHOSEN_USER:$CHOSEN_GROUP /etc/salt/pki/minion /etc/salt/minion.d \
                                   /var/log/salt/minion /var/cache/salt/minion \
                                   /var/run/salt/minion \
                                   || true

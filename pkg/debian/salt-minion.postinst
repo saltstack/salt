@@ -21,22 +21,39 @@ set -e
 case "$1" in
   configure)
     . /usr/share/debconf/confmodule
-    if db_get salt-minion/user
-    then
-      if [ "$RET" != "root" ]; then
-        if [ ! -e "/var/log/salt/minion" ]; then
-          touch /var/log/salt/minion
-          chmod 640 /var/log/salt/minion
-        fi
-        if [ ! -e "/var/log/salt/key" ]; then
-          touch /var/log/salt/key
-          chmod 640 /var/log/salt/key
-        fi
-        chown -R $RET:$RET /etc/salt/pki/minion /etc/salt/minion.d \
-                           /var/log/salt/minion /var/cache/salt/minion \
-                           /var/run/salt/minion \
-                           || true
+    # Honor debconf user, and fall back to configured user in /etc/salt/minion.
+    if db_get salt-minion/user; then
+      DB_USER="$RET"
+    else
+      DB_USER=""
+    fi
+    CFG_USER=""
+    if [ -r /etc/salt/minion ]; then
+        CFG_USER="$(sed -n -E 's/^[[:space:]]*user:[[:space:]]*([^#[:space:]]+).*/\1/p' /etc/salt/minion | head -n 1)"
+    fi
+    if [ -n "$CFG_USER" ] && [ "$DB_USER" = "salt" ]; then
+        DB_USER="$CFG_USER"
+        db_set salt-minion/user "$DB_USER" || true
+    fi
+    db_fset salt-minion/user seen true || true
+
+    if [ -n "$DB_USER" ] && [ "$DB_USER" != "root" ]; then
+      DB_GROUP="$(id -gn "$DB_USER" 2>/dev/null || true)"
+      if [ -z "$DB_GROUP" ]; then
+          DB_GROUP="$DB_USER"
       fi
+      if [ ! -e "/var/log/salt/minion" ]; then
+        touch /var/log/salt/minion
+        chmod 640 /var/log/salt/minion
+      fi
+      if [ ! -e "/var/log/salt/key" ]; then
+        touch /var/log/salt/key
+        chmod 640 /var/log/salt/key
+      fi
+      chown -R $DB_USER:$DB_GROUP /etc/salt/pki/minion /etc/salt/minion.d \
+                         /var/log/salt/minion /var/cache/salt/minion \
+                         /var/run/salt/minion \
+                         || true
     fi
   ;;
 

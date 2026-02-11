@@ -21,21 +21,39 @@ set -e
 case "$1" in
   configure)
     . /usr/share/debconf/confmodule
+    # Honor debconf user, and fall back to configured user in /etc/salt/master.
     if db_get salt-master/user; then
-      if [ "$RET" != "root" ]; then
-        if [ ! -e "/var/log/salt/master" ]; then
-          touch /var/log/salt/master
-          chmod 640 /var/log/salt/master
-        fi
-        if [ ! -e "/var/log/salt/key" ]; then
-          touch /var/log/salt/key
-          chmod 640 /var/log/salt/key
-        fi
-        chown -R $RET:$RET /etc/salt/pki/master /etc/salt/master.d \
-                           /var/log/salt/master /var/log/salt/key \
-                           /var/cache/salt/master /var/run/salt/master \
-                           || true
+        DB_USER="$RET"
+    else
+        DB_USER=""
+    fi
+    CFG_USER=""
+    if [ -r /etc/salt/master ]; then
+        CFG_USER="$(sed -n -E 's/^[[:space:]]*user:[[:space:]]*([^#[:space:]]+).*/\1/p' /etc/salt/master | head -n 1)"
+    fi
+    if [ -n "$CFG_USER" ] && [ "$DB_USER" = "salt" ]; then
+        DB_USER="$CFG_USER"
+        db_set salt-master/user "$DB_USER" || true
+    fi
+    db_fset salt-master/user seen true || true
+
+    if [ -n "$DB_USER" ] && [ "$DB_USER" != "root" ]; then
+      DB_GROUP="$(id -gn "$DB_USER" 2>/dev/null || true)"
+      if [ -z "$DB_GROUP" ]; then
+          DB_GROUP="$DB_USER"
       fi
+      if [ ! -e "/var/log/salt/master" ]; then
+        touch /var/log/salt/master
+        chmod 640 /var/log/salt/master
+      fi
+      if [ ! -e "/var/log/salt/key" ]; then
+        touch /var/log/salt/key
+        chmod 640 /var/log/salt/key
+      fi
+      chown -R $DB_USER:$DB_GROUP /etc/salt/pki/master /etc/salt/master.d \
+                         /var/log/salt/master /var/log/salt/key \
+                         /var/cache/salt/master /var/run/salt/master \
+                         || true
     fi
   ;;
   abort-upgrade|abort-remove|abort-deconfigure)
