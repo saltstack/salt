@@ -1,2 +1,0 @@
-# pylint: skip-file
-foo

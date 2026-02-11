@@ -16,7 +16,8 @@ import tempfile
 import time
 import urllib.parse
 
-import salt.modules.selinux
+import tornado.gen
+
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
@@ -30,6 +31,68 @@ try:
 except ImportError:
     # fcntl is not available on windows
     HAS_FCNTL = False
+
+
+# This is a backport of asynccontextmanager for Python < 3.7
+if hasattr(contextlib, "asynccontextmanager"):
+    asynccontextmanager = contextlib.asynccontextmanager
+else:
+    import functools
+
+    class _AsyncGeneratorContextManager:
+        """
+        Async context manager backport for Python < 3.7
+        """
+
+        def __init__(self, func, args, kwargs):
+            self._gen = func(*args, **kwargs)
+
+        async def __aenter__(self):
+            try:
+                return await self._gen.__anext__()
+            except StopAsyncIteration:
+                raise RuntimeError("generator didn't yield") from None
+
+        async def __aexit__(self, exc_type, exc_value, traceback):
+            if exc_type is None:
+                try:
+                    await self._gen.__anext__()
+                except StopAsyncIteration:
+                    return
+                else:
+                    raise RuntimeError("generator didn't stop")
+            else:
+                if exc_value is None:
+                    exc_value = exc_type()
+                try:
+                    await self._gen.athrow(exc_type, exc_value, traceback)
+                except StopAsyncIteration:
+                    return True
+                except RuntimeError as exc:
+                    if exc is exc_value:
+                        return False
+                    if (
+                        isinstance(exc_value, StopAsyncIteration)
+                        and exc.__cause__ is exc_value
+                    ):
+                        return False
+                    raise
+                except Exception as exc:
+                    if exc is exc_value:
+                        return False
+                    raise
+
+    def asynccontextmanager(func):
+        """
+        asynccontextmanager decorator backport
+        """
+
+        @functools.wraps(func)
+        def helper(*args, **kwargs):
+            return _AsyncGeneratorContextManager(func, args, kwargs)
+
+        return helper
+
 
 log = logging.getLogger(__name__)
 
@@ -149,6 +212,13 @@ def copyfile(source, dest, backup_mode="", cachedir=""):
     # Get current file stats to they can be replicated after the new file is
     # moved to the destination path.
     fstat = None
+    # We must check for platform availability first, or use a conditional import
+    # salt.utils.platform is available, but if this function is called early, it might fail?
+    # Actually, the error says 'salt' variable is used before assignment.
+    # This means 'import salt.utils.platform' is likely missing or 'salt' is not in scope.
+    # But this file starts with 'import salt.utils.platform'.
+    # Ah, 'import salt.utils.platform' is NOT at the top level of this file in the provided context?
+    # Let me check the imports.
     if not salt.utils.platform.is_windows():
         try:
             fstat = os.stat(dest)
@@ -171,7 +241,9 @@ def copyfile(source, dest, backup_mode="", cachedir=""):
     if rcon:
         policy = False
         try:
-            policy = salt.modules.selinux.getenforce()
+            from salt.modules import selinux
+
+            policy = selinux.getenforce()
         except (ImportError, CommandExecutionError):
             pass
         if policy == "Enforcing":
@@ -269,6 +341,75 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
                     )
                 log.trace("Lock file %s exists, sleeping %f seconds", lock_fn, sleep)
                 time.sleep(sleep)
+            else:
+                # Write the lock file
+                with os.fdopen(fh_, "w"):
+                    pass
+                # Lock successfully acquired
+                log.trace("Write lock %s obtained", lock_fn)
+                obtained_lock = True
+                # Transfer control back to the code inside the with block
+                yield
+                # Exit the loop
+                break
+
+        else:
+            _raise_error(
+                "Timeout of {} seconds exceeded waiting for lock_fn {} "
+                "to be released".format(timeout, lock_fn)
+            )
+
+    except FileLockError:
+        raise
+
+    except Exception as exc:  # pylint: disable=broad-except
+        _raise_error(f"Error encountered obtaining file lock {lock_fn}: {exc}")
+
+    finally:
+        if obtained_lock:
+            os.remove(lock_fn)
+            log.trace("Write lock for %s (%s) released", path, lock_fn)
+
+
+@asynccontextmanager
+async def await_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
+    """
+    Obtain a write lock. If one exists, wait for it to release first
+    """
+    if not isinstance(path, str):
+        raise FileLockError("path must be a string")
+    if lock_fn is None:
+        lock_fn = path + ".w"
+    if time_start is None:
+        time_start = time.time()
+    obtained_lock = False
+
+    def _raise_error(msg, race=False):
+        """
+        Raise a FileLockError
+        """
+        raise FileLockError(msg, time_start=time_start)
+
+    try:
+        if os.path.exists(lock_fn) and not os.path.isfile(lock_fn):
+            _raise_error(f"lock_fn {lock_fn} exists and is not a file")
+
+        open_flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+        while time.time() - time_start < timeout:
+            try:
+                # Use os.open() to obtain filehandle so that we can force an
+                # exception if the file already exists. Concept found here:
+                # http://stackoverflow.com/a/10979569
+                fh_ = os.open(lock_fn, open_flags)
+            except OSError as exc:
+                if exc.errno != errno.EEXIST:
+                    _raise_error(
+                        "Error {} encountered obtaining file lock {}: {}".format(
+                            exc.errno, lock_fn, exc.strerror
+                        )
+                    )
+                log.trace("Lock file %s exists, sleeping %f seconds", lock_fn, sleep)
+                await tornado.gen.sleep(sleep)
             else:
                 # Write the lock file
                 with os.fdopen(fh_, "w"):

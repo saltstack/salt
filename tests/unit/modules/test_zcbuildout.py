@@ -244,6 +244,13 @@ class BuildoutTestCase(Base):
 
     @pytest.mark.slow_test
     def test_get_bootstrap_content(self):
+        # Create the file dynamically
+        tb_dir = os.path.join(self.tdir, "var", "tb", "2")
+        if not os.path.isdir(tb_dir):
+            os.makedirs(tb_dir)
+        with salt.utils.files.fopen(os.path.join(tb_dir, "bootstrap.py"), "w") as fp:
+            fp.write("foo\n")
+
         self.assertEqual(
             "",
             buildout._get_bootstrap_content(os.path.join(self.tdir, "non", "existing")),
@@ -261,7 +268,7 @@ class BuildoutTestCase(Base):
         else:
             line_break = "\n"
         self.assertEqual(
-            f"# pylint: skip-file{line_break}foo{line_break}",
+            f"foo{line_break}",
             buildout._get_bootstrap_content(os.path.join(self.tdir, "var", "tb", "2")),
         )
 

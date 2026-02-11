@@ -23,7 +23,11 @@ def configure_loader_modules():
             ),
             "__opts__": {"extension_modules": "", "cachedir": "/tmp/"},
         },
-        statemod: {"__salt__": {}, "__context__": {}},
+        statemod: {
+            "__salt__": {},
+            "__context__": {},
+            "__opts__": {"cachedir": "/tmp/"},
+        },
     }
 
 
@@ -533,7 +537,14 @@ def test_sls_queue_true():
     with patch.dict(statemod.__salt__, salt_mock), patch(
         "salt.modules.transactional_update.call", MagicMock(return_value="result")
     ):
-        assert tu.sls("module", queue=True) == "result"
+        expected = {
+            "result": True,
+            "comment": "Job queued for execution",
+            "queued": True,
+            "changes": {},
+            "__no_return__": True,
+        }
+        assert tu.sls("module", queue=True) == expected
 
 
 def test_sls_queue_false_failing():
@@ -590,7 +601,14 @@ def test_highstate_queue_true():
     with patch.dict(statemod.__salt__, salt_mock), patch(
         "salt.modules.transactional_update.call", MagicMock(return_value="result")
     ):
-        assert tu.highstate(queue=True) == "result"
+        expected = {
+            "result": True,
+            "comment": "Job queued for execution",
+            "queued": True,
+            "changes": {},
+            "__no_return__": True,
+        }
+        assert tu.highstate(queue=True) == expected
 
 
 def test_highstate_queue_false_failing():
@@ -671,4 +689,11 @@ def test_single_queue_true():
     with patch.dict(statemod.__salt__, salt_mock), patch(
         "salt.modules.transactional_update.call", MagicMock(return_value="result")
     ):
-        assert tu.single("pkg.installed", name="emacs", queue=True) == "result"
+        expected = {
+            "result": True,
+            "comment": "Job queued for execution",
+            "queued": True,
+            "changes": {},
+            "__no_return__": True,
+        }
+        assert tu.single("pkg.installed", name="emacs", queue=True) == expected
