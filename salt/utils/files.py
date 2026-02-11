@@ -2,6 +2,7 @@
 Functions for working with files
 """
 
+import asyncio
 import codecs
 import contextlib
 import errno
@@ -15,8 +16,6 @@ import subprocess
 import tempfile
 import time
 import urllib.parse
-
-import tornado.gen
 
 import salt.utils.path
 import salt.utils.platform
@@ -409,7 +408,7 @@ async def await_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
                         )
                     )
                 log.trace("Lock file %s exists, sleeping %f seconds", lock_fn, sleep)
-                await tornado.gen.sleep(sleep)
+                await asyncio.sleep(sleep)
             else:
                 # Write the lock file
                 with os.fdopen(fh_, "w"):
