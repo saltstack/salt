@@ -322,8 +322,21 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
         raise FileLockError(msg, time_start=time_start)
 
     try:
+        # Defensive check: Clean up corrupted lock files (e.g., directories from OverlayFS races)
         if os.path.exists(lock_fn) and not os.path.isfile(lock_fn):
-            _raise_error(f"lock_fn {lock_fn} exists and is not a file")
+            log.warning(
+                "Lock %s exists but is not a file (%s), cleaning up. "
+                "This may indicate an OverlayFS race or filesystem issue.",
+                lock_fn,
+                "directory" if os.path.isdir(lock_fn) else "other",
+            )
+            try:
+                if os.path.isdir(lock_fn):
+                    shutil.rmtree(lock_fn)
+                else:
+                    os.remove(lock_fn)
+            except OSError as exc:
+                _raise_error(f"Failed to clean up corrupted lock {lock_fn}: {exc}")
 
         open_flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
         while time.time() - time_start < timeout:
@@ -391,8 +404,21 @@ async def await_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
         raise FileLockError(msg, time_start=time_start)
 
     try:
+        # Defensive check: Clean up corrupted lock files (e.g., directories from OverlayFS races)
         if os.path.exists(lock_fn) and not os.path.isfile(lock_fn):
-            _raise_error(f"lock_fn {lock_fn} exists and is not a file")
+            log.warning(
+                "Lock %s exists but is not a file (%s), cleaning up. "
+                "This may indicate an OverlayFS race or filesystem issue.",
+                lock_fn,
+                "directory" if os.path.isdir(lock_fn) else "other",
+            )
+            try:
+                if os.path.isdir(lock_fn):
+                    shutil.rmtree(lock_fn)
+                else:
+                    os.remove(lock_fn)
+            except OSError as exc:
+                _raise_error(f"Failed to clean up corrupted lock {lock_fn}: {exc}")
 
         open_flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
         while time.time() - time_start < timeout:
