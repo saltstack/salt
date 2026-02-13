@@ -838,7 +838,10 @@ class AsyncAuth:
                 # Notify the bus about creds change
                 if self.opts.get("auth_events") is True:
                     with salt.utils.event.get_event(
-                        self.opts.get("__role"), opts=self.opts, listen=False
+                        self.opts.get("__role"),
+                        opts=self.opts,
+                        listen=False,
+                        io_loop=self.io_loop,
                     ) as event:
                         event.fire_event(
                             {"key": key, "creds": creds},
