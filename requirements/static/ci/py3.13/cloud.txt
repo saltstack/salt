@@ -639,7 +639,7 @@ smmap==5.0.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   gitdb
-sqlparse==0.5.1
+sqlparse==0.5.4
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
