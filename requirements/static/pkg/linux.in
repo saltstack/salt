@@ -1,6 +1,5 @@
 # This file only exists to trigger the right static compiled requirements destination.
 # Any non hard dependencies of Salt for linux can go here
-cherrypy>=18.7.0
 # cheroot 8.5.2 fails to build with modern setuptools due to setuptools_scm_git_archive dependency
 cheroot>=10.0.1
 pycparser>=2.21; python_version >= '3.9'
@@ -9,5 +8,4 @@ python-gnupg>=0.4.4
 rpm-vercmp
 setproctitle>=1.2.3
 importlib-metadata>=8.7.0
-cryptography>=42.0.0
 more-itertools>=9.1.0
