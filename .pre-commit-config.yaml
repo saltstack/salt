@@ -794,6 +794,7 @@ repos:
         args:
           - requirements/darwin.txt
           - requirements/pytest.txt
+          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/darwin.in
           - requirements/static/pkg/darwin.in
@@ -812,6 +813,7 @@ repos:
         args:
           - requirements/darwin.txt
           - requirements/pytest.txt
+          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/darwin.in
           - requirements/static/pkg/darwin.in
@@ -830,6 +832,7 @@ repos:
         args:
           - requirements/darwin.txt
           - requirements/pytest.txt
+          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/darwin.in
           - requirements/static/pkg/darwin.in
@@ -848,6 +851,7 @@ repos:
         args:
           - requirements/darwin.txt
           - requirements/pytest.txt
+          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/darwin.in
           - requirements/static/pkg/darwin.in
@@ -866,6 +870,7 @@ repos:
         args:
           - requirements/darwin.txt
           - requirements/pytest.txt
+          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/darwin.in
           - requirements/static/pkg/darwin.in
@@ -956,6 +961,7 @@ repos:
         args:
           - requirements/windows.txt
           - requirements/pytest.txt
+          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/windows.in
           - requirements/static/pkg/windows.in
@@ -974,6 +980,7 @@ repos:
         args:
           - requirements/windows.txt
           - requirements/pytest.txt
+          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/windows.in
           - requirements/static/pkg/windows.in
@@ -992,6 +999,7 @@ repos:
         args:
           - requirements/windows.txt
           - requirements/pytest.txt
+          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/windows.in
           - requirements/static/pkg/windows.in
@@ -1010,6 +1018,7 @@ repos:
         args:
           - requirements/windows.txt
           - requirements/pytest.txt
+          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/windows.in
           - requirements/static/pkg/windows.in
@@ -1028,6 +1037,7 @@ repos:
         args:
           - requirements/windows.txt
           - requirements/pytest.txt
+          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/windows.in
           - requirements/static/pkg/windows.in
