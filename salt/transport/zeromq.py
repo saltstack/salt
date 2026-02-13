@@ -671,20 +671,14 @@ class AsyncReqMessageClient:
                     future.set_exception(exc)
 
             if future.done():
-                if isinstance(future.exception, SaltReqTimeoutError):
-                    log.trace("Request timed out while sending. reconnecting.")
-                else:
-                    log.trace(
-                        "The request ended with an error while sending. reconnecting."
-                    )
-                self.close()
-                self.connect()
                 send_recv_running = False
                 break
 
             received = False
             ready = False
             while True:
+                if future.done():
+                    break
                 try:
                     # Time is in milliseconds.
                     ready = yield socket.poll(300, zmq.POLLIN)
@@ -718,14 +712,6 @@ class AsyncReqMessageClient:
                     break
 
             if future.done():
-                if isinstance(future.exception, SaltReqTimeoutError):
-                    log.trace(
-                        "Request timed out while waiting for a response. reconnecting."
-                    )
-                else:
-                    log.trace("The request ended with an error. reconnecting.")
-                self.close()
-                self.connect()
                 send_recv_running = False
             elif received:
                 data = salt.payload.loads(recv)

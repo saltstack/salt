@@ -745,6 +745,11 @@ class MinionBase:
                     try:
                         yield pub_channel.connect()
                         conn = True
+                        # If we reached here, we are connected. We set pub_channel to None
+                        # so that the finally block doesn't close it, but we keep a reference
+                        # in the returnable variable.
+                        ret_pub_channel = pub_channel
+                        pub_channel = None
                         break
                     except SaltClientError as exc:
                         last_exc = exc
@@ -761,9 +766,14 @@ class MinionBase:
                                 " any)",
                                 opts["master"],
                             )
-                        pub_channel.close()
-                        pub_channel = None
                         continue
+                    finally:
+                        if pub_channel:
+                            pub_channel.close()
+
+                if conn:
+                    pub_channel = ret_pub_channel
+                    break
 
                 if not conn:
                     if attempts == tries:
@@ -774,8 +784,6 @@ class MinionBase:
                             "No master could be reached or all masters "
                             "denied the minion's connection attempt."
                         )
-                        if pub_channel:
-                            pub_channel.close()
                         # If the code reaches this point, 'last_exc'
                         # should already be set.
                         raise last_exc  # pylint: disable=E0702
@@ -1680,7 +1688,9 @@ class Minion(MinionBase):
                 minion_privkey_path, salt.serializers.msgpack.serialize(load)
             )
             load["sig"] = sig
-        with salt.utils.event.get_event("minion", opts=self.opts, listen=True) as event:
+        with salt.utils.event.get_event(
+            "minion", opts=self.opts, listen=True, io_loop=self.io_loop
+        ) as event:
             request_id = str(uuid.uuid4())
             log.trace("Send request to main id=%s", request_id)
             event.fire_event(
@@ -1708,7 +1718,9 @@ class Minion(MinionBase):
                 minion_privkey_path, salt.serializers.msgpack.serialize(load)
             )
             load["sig"] = sig
-        with salt.utils.event.get_event("minion", opts=self.opts, listen=True) as event:
+        with salt.utils.event.get_event(
+            "minion", opts=self.opts, listen=True, io_loop=self.io_loop
+        ) as event:
             request_id = str(uuid.uuid4())
             log.trace("Send request to main id=%s", request_id)
             yield event.fire_event_async(
@@ -3210,7 +3222,9 @@ class Minion(MinionBase):
                 async_pillar.destroy()
         self.matchers_refresh()
         self.beacons_refresh()
-        with salt.utils.event.get_event("minion", opts=self.opts, listen=False) as evt:
+        with salt.utils.event.get_event(
+            "minion", opts=self.opts, listen=False, io_loop=self.io_loop
+        ) as evt:
             evt.fire_event(
                 {"complete": True},
                 tag=salt.defaults.events.MINION_PILLAR_REFRESH_COMPLETE,
@@ -3403,7 +3417,7 @@ class Minion(MinionBase):
                     )
                     raise salt.ext.tornado.gen.Return()
                 with salt.utils.event.get_event(
-                    "minion", opts=self.opts, listen=False
+                    "minion", opts=self.opts, listen=False, io_loop=self.io_loop
                 ) as event:
                     yield event.fire_event_async(
                         {"ret": ret},
@@ -3690,7 +3704,10 @@ class Minion(MinionBase):
                     log.critical("The beacon errored: ", exc_info=True)
                 if beacons:
                     with salt.utils.event.get_event(
-                        "minion", opts=self.opts, listen=False
+                        "minion",
+                        opts=self.opts,
+                        listen=False,
+                        io_loop=self.io_loop,
                     ) as event:
                         event.fire_event({"beacons": beacons}, "__beacons_return")
 
@@ -4125,6 +4142,9 @@ class Minion(MinionBase):
         Tear down the minion
         """
         self._running = False
+        if hasattr(self, "process_manager") and self.process_manager is not None:
+            self.process_manager.stop_restarting()
+            self.process_manager.kill_children()
         if hasattr(self, "schedule"):
             del self.schedule
         if hasattr(self, "pub_channel") and self.pub_channel is not None:
