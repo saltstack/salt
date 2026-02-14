@@ -78,9 +78,9 @@ context. The `grains` can be used from within sls modules:
     apache:
       pkg.installed:
         {% if grains['os'] == 'RedHat' %}
-        - name: httpd
+        name: httpd
         {% elif grains['os'] == 'Ubuntu' %}
-        - name: apache2
+        name: apache2
         {% endif %}
 
 Using Environment Variables in SLS modules
@@ -97,8 +97,8 @@ variable in a Salt state.
 
    Create a file with contents from an environment variable:
      file.managed:
-       - name: /tmp/hello
-       - contents: {{ salt['environ.get']('MYENVVAR') }}
+       name: /tmp/hello
+       contents: {{ salt['environ.get']('MYENVVAR') }}
 
 Error checking:
 
@@ -109,8 +109,8 @@ Error checking:
 
    Create a file with contents from an environment variable:
      file.managed:
-       - name: /tmp/hello
-       - contents: {{ salt['environ.get']('MYENVVAR') }}
+       name: /tmp/hello
+       contents: {{ salt['environ.get']('MYENVVAR') }}
 
    {% else %}
 
@@ -138,7 +138,7 @@ The following example illustrates calling the ``group_to_gid`` function in the
 
     moe:
       user.present:
-        - gid: {{ salt['file.group_to_gid']('some_group_that_exists') }}
+        gid: {{ salt['file.group_to_gid']('some_group_that_exists') }}
 
 One way to think about this might be that the ``gid`` key is being assigned
 a value equivalent to the following python pseudo-code:
@@ -191,7 +191,7 @@ using an :ref:`include-declaration`. For example:
 
     django:
       pkg.installed:
-        - require:
+        require:
           - pkg: python-dateutil
 
 Extend declaration
@@ -224,7 +224,7 @@ vhosts file is changed:
 
     /etc/httpd/extra/httpd-vhosts.conf:
       file.managed:
-        - source: salt://apache/httpd-vhosts.conf
+        source: salt://apache/httpd-vhosts.conf
 
 .. include:: /_incl/extend_with_require_watch.rst
 
@@ -252,8 +252,8 @@ follows:
 
     mywebsite:
       file.managed:
-        - name: /etc/httpd/extra/httpd-vhosts.conf
-        - source: salt://apache/httpd-vhosts.conf
+        name: /etc/httpd/extra/httpd-vhosts.conf
+        source: salt://apache/httpd-vhosts.conf
 
 Names declaration
 -----------------
@@ -267,7 +267,7 @@ can be rewritten without the loop:
 
     stooges:
       user.present:
-        - names:
+        names:
           - moe
           - larry
           - curly
