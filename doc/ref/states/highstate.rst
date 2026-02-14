@@ -170,15 +170,15 @@ INVALID:
 Function arg declaration
 ------------------------
 
-A argument consisting of keyword and value which is to be passed to the named
+An argument consisting of keyword and value which is to be passed to the named
 :ref:`function-declaration` as a parameter. The type of each value must be
 the data type expected by the function.
-The function arguments can be specified as a dictionary or as a list with each
-item as single item dictionary.
+The function arguments can be specified as one dictionary or as a list with each
+item as a dictionary containing a single keyword and value.
 
 Occurs under a :ref:`function-declaration`.
 
-For example in the following state declaration ``user``, ``group``, and
+For example, in the following state declaration ``user``, ``group``, and
 ``mode`` are passed as arguments to the :mod:`managed
 <salt.states.file.managed>` function in the ``file`` state module by
 specifying the arguments as a dictionary:
@@ -206,7 +206,7 @@ In this example the arguments are specified as a list of single item dictionarie
 Requisite declaration
 ---------------------
 
-A key value pair of key that is a :ref:`requisite type <requisite-types>`
+A key value pair of a key that is a :ref:`requisite type <requisite-types>`
 with a value that is a list containing :ref:`requisite references <requisite-reference>`.
 
 Used to build the action dependency tree. While Salt states are made to
@@ -218,15 +218,15 @@ Occurs as a component in a :ref:`state-declaration`.
 .. code-block:: yaml
 
     <Requisite type declaration>:
-        - <Requisite Reference>
-        - <Requisite Reference>
+      - <Requisite Reference>
+      - <Requisite Reference>
 
 .. code-block:: yaml
 
     require:  # requisite type
-        - file: /etc/http/conf/http.conf
-        - service: httpd
-        - httpd
+      - file: /etc/http/conf/http.conf
+      - service: httpd
+      - httpd
 
 See requisites: :ref:`Requisites <requisites>`
 
@@ -361,9 +361,9 @@ dictionary level.
         baseurl: http://mirror.rackspace.com/ius/stable/CentOS/6/$basearch
         gpgkey: http://dl.iuscommunity.org/pub/ius/IUS-COMMUNITY-GPG-KEY
         names:
-            - ius
-            - ius-devel:
-              - baseurl: http://mirror.rackspace.com/ius/development/CentOS/6/$basearch
+          - ius
+          - ius-devel:
+            - baseurl: http://mirror.rackspace.com/ius/development/CentOS/6/$basearch
 
 .. _extend-declaration:
 
@@ -430,7 +430,14 @@ components.
         <Requisite Declaration>s...
 
     # traditional declaration
+    <ID Declaration>:
+      <State Module Declaration>:
+        - <Function Declaration>
+        - <Function Arg Declaration>s...
+        - <Name or Names Declaration>
+        - <Requisite Declaration>s...
 
+    # traditional declaration with mutiple states for single id
     <ID Declaration>:
       <State Module Declaration>:
         - <Function Declaration>

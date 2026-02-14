@@ -54,9 +54,9 @@ Requisites typically need two pieces of information for matching:
     nginx:
       pkg.installed: []
       file.managed:
-        - name: /etc/nginx/nginx.conf
+        name: /etc/nginx/nginx.conf
       service.running:
-        - require:
+        require:
           - pkg: nginx
           - file: /etc/nginx/nginx.conf
 
@@ -727,10 +727,10 @@ be installed. Thus allowing for a requisite to be defined "after the fact".
     {% for cfile in salt['pillar.get']('nginx:config_files') %}
     /etc/nginx/conf.d/{{ cfile }}:
       file.managed:
-        - source: salt://nginx/configs/{{ cfile }}
-        - require:
+        source: salt://nginx/configs/{{ cfile }}
+        require:
           - pkg: nginx
-        - listen_in:
+        listen_in:
           - service: nginx
     {% endfor %}
 

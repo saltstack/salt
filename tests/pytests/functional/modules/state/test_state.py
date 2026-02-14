@@ -671,6 +671,46 @@ def test_sls_with_state_args_list(state, state_tree):
             assert staterun.result is True
 
 
+def test_sls_state_args_formats_equality(state, state_tree):
+    """
+    Check the low data from sls files with state arguments of different
+    formats and verify they result the same.
+    """
+    sls_contents_list = [
+        """
+        testname:
+          test:
+            - nop
+            - name: testing
+        """,
+        """
+        testname:
+          test.nop:
+            - name: testing
+        """,
+        """
+        testname:
+          test.nop:
+            name: testing
+        """,
+    ]
+    expected_result = [
+        {
+            "__env__": "base",
+            "__id__": "testname",
+            "__sls__": "testing",
+            "fun": "nop",
+            "name": "testing",
+            "order": 10000,
+            "state": "test",
+        }
+    ]
+    for sls_contents in sls_contents_list:
+        with pytest.helpers.temp_file("testing.sls", sls_contents, state_tree):
+            ret = state.show_low_sls("testing")
+            assert ret == expected_result
+
+
 def test_issues_7905_and_8174_sls_syntax_error(state, state_tree):
     """
     Call sls file with yaml syntax error.
@@ -711,6 +751,7 @@ def test_issues_7905_and_8174_sls_syntax_error(state, state_tree):
             "A: command not found" in staterun.changes["stderr"]
             or "'A' is not recognized as an internal or external command"
             in staterun.changes["stderr"]
+            or "A: not found" in staterun.changes["stderr"]
         )
 
         ret = state.sls("badlist2")
@@ -1169,8 +1210,8 @@ def _state_requires_env(loaders, state_tree):
         """
         This should not fail on spawning platforms:
           requires_env.test_it:
-            name: foo
-            parallel: true
+            - name: foo
+            - parallel: true
         """
     )
     with pytest.helpers.temp_file(

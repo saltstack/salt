@@ -26,7 +26,15 @@ import re
 import site
 import time
 import traceback
-from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
+from collections.abc import (
+    Callable,
+    Hashable,
+    Iterable,
+    Iterator,
+    Mapping,
+    MutableMapping,
+    Sequence,
+)
 from typing import Any, TypeVar
 
 import salt.channel.client
@@ -396,20 +404,25 @@ def _state_args_kv_iter(
         yield from obj.items()
         return
 
-    if not isinstance(obj, Iterable):
+    try:
+        for i, item in enumerate(obj):
+            if isinstance(item, Mapping):
+                yield from item.items()
+            elif isinstance(item, str):
+                yield ("fun", item)
+            else:
+                log.warning(
+                    "Ignoring argument item %s with unsupported element type %r at index %d of %s of state %s",
+                    item,
+                    type(item),
+                    i,
+                    obj,
+                    id_,
+                )
+    except TypeError as ex:
         raise TypeError(
             f"expected a mapping or a list of str/mapping for state arguments of state {id_} instead of {type(obj)!r} {obj}"
-        )
-
-    for i, item in enumerate(obj):
-        if isinstance(item, Mapping):
-            yield from item.items()
-        elif isinstance(item, str):
-            yield ("fun", item)
-        else:
-            raise TypeError(
-                f"unsupported element type {type(item)!r} at index {i} of {obj} of state {id_}"
-            )
+        ) from ex
 
 
 def _verify_high(high: dict) -> list[str]:
@@ -4322,33 +4335,31 @@ class BaseHighState:
         Take a state and apply the iorder system
         """
         if self.opts["state_auto_order"]:
-            for name in state:
-                for s_dec in state[name]:
-                    if not isinstance(s_dec, str):
+            for body in state.values():
+                if not isinstance(body, dict):
+                    # Include's or excludes as lists?
+                    continue
+                for state_mod_decl, args in body.items():
+                    if not isinstance(state_mod_decl, str):
                         # PyDSL OrderedDict?
                         continue
-
-                    if not isinstance(state[name], dict):
-                        # Include's or excludes as lists?
+                    if state_mod_decl.startswith("_"):
                         continue
-                    if not isinstance(state[name][s_dec], list):
-                        # Bad syntax, let the verify seq pick it up later on
+                    if isinstance(args, MutableMapping):
+                        if "order" not in args:
+                            args["order"] = self.iorder
+                            self.iorder += 1
                         continue
-
+                    if not isinstance(args, list):
+                        # quite certainly a syntax error, managed elsewhere
+                        continue
                     found = False
-                    if s_dec.startswith("_"):
-                        continue
-
-                    for arg in state[name][s_dec]:
-                        if isinstance(arg, dict):
-                            if len(arg) > 0:
-                                if next(iter(arg.keys())) == "order":
-                                    found = True
+                    for arg in args:
+                        if isinstance(arg, dict) and "order" in arg:
+                            found = True
+                            break
                     if not found:
-                        if not isinstance(state[name][s_dec], list):
-                            # quite certainly a syntax error, managed elsewhere
-                            continue
-                        state[name][s_dec].append({"order": self.iorder})
+                        args.append({"order": self.iorder})
                         self.iorder += 1
         return state
 
@@ -4399,18 +4410,18 @@ class BaseHighState:
                             "declarations of the same type"
                         )
                         continue
-                    state[id_][state_name] = state[id_].pop(key)
+                    body[state_name] = body.pop(key)
                     if isinstance(value, dict):
-                        state[id_][state_name]["fun"] = function_name
+                        body[state_name]["fun"] = function_name
                     else:
-                        state[id_][state_name].append(function_name)
+                        body[state_name].append(function_name)
                     state_keys.add(state_name)
                     continue
                 state_keys.add(key)
             if "__sls__" not in body:
-                state[id_]["__sls__"] = sls
+                body["__sls__"] = sls
             if "__env__" not in body:
-                state[id_]["__env__"] = saltenv
+                body["__env__"] = saltenv
 
     def _handle_extend(self, state, sls, saltenv, errors):
         """
