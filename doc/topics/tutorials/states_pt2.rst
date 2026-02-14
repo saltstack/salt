@@ -27,7 +27,7 @@ You can specify multiple :ref:`state-declaration` under an
     apache:
       pkg.installed: []
       service.running:
-        - require:
+        require:
           - pkg: apache
 
 Try stopping Apache before running :py:func:`state.apply
@@ -57,7 +57,7 @@ installed and running. Include the following at the bottom of your
     apache:
       pkg.installed: []
       service.running:
-        - require:
+        require:
           - pkg: apache
 
     /var/www/index.html:                        # ID declaration
@@ -129,14 +129,14 @@ Verify that Apache is now serving your custom HTML.
 
         /etc/httpd/extra/httpd-vhosts.conf:
           file.managed:
-            - source: salt://webserver/httpd-vhosts.conf
+            source: salt://webserver/httpd-vhosts.conf
 
         apache:
           pkg.installed: []
           service.running:
-            - watch:
+            watch:
               - file: /etc/httpd/extra/httpd-vhosts.conf
-            - require:
+            require:
               - pkg: apache
 
     If the pkg and service names differ on your OS or distro of choice you can

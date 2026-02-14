@@ -30,7 +30,7 @@ A statement can be declared in the following forms (both are equivalent):
 
   source.s_localhost:
     syslog_ng.config:
-      - config:
+      config:
           - tcp:
             - ip: "127.0.0.1"
             - port: 1233
@@ -39,7 +39,7 @@ A statement can be declared in the following forms (both are equivalent):
 
   s_localhost:
     syslog_ng.config:
-      - config:
+      config:
           source:
             - tcp:
               - ip: "127.0.0.1"
@@ -66,71 +66,71 @@ The following configuration is an example, how a complete syslog-ng configuratio
     # Set the location of the configuration file
     set_location:
       module.run:
-        - name: syslog_ng.set_config_file
-        - m_name: "/home/tibi/install/syslog-ng/etc/syslog-ng.conf"
+        name: syslog_ng.set_config_file
+        m_name: "/home/tibi/install/syslog-ng/etc/syslog-ng.conf"
 
     # The syslog-ng and syslog-ng-ctl binaries are here. You needn't use
     # this method if these binaries can be found in a directory in your PATH.
     set_bin_path:
       module.run:
-        - name: syslog_ng.set_binary_path
-        - m_name: "/home/tibi/install/syslog-ng/sbin"
+        name: syslog_ng.set_binary_path
+        m_name: "/home/tibi/install/syslog-ng/sbin"
 
     # Writes the first lines into the config file, also erases its previous
     # content
     write_version:
       module.run:
-        - name: syslog_ng.write_version
-        - m_name: "3.6"
+        name: syslog_ng.write_version
+        m_name: "3.6"
 
     # There is a shorter form to set the above variables
     set_variables:
       module.run:
-        - name: syslog_ng.set_parameters
-        - version: "3.6"
-        - binary_path: "/home/tibi/install/syslog-ng/sbin"
-        - config_file: "/home/tibi/install/syslog-ng/etc/syslog-ng.conf"
+        name: syslog_ng.set_parameters
+        version: "3.6"
+        binary_path: "/home/tibi/install/syslog-ng/sbin"
+        config_file: "/home/tibi/install/syslog-ng/etc/syslog-ng.conf"
 
 
     # Some global options
     options.global_options:
       syslog_ng.config:
-        - config:
+        config:
             - time_reap: 30
             - mark_freq: 10
             - keep_hostname: "yes"
 
     source.s_localhost:
       syslog_ng.config:
-        - config:
+        config:
             - tcp:
               - ip: "127.0.0.1"
               - port: 1233
 
     destination.d_log_server:
       syslog_ng.config:
-        - config:
+        config:
             - tcp:
               - "127.0.0.1"
               - port: 1234
 
     log.l_log_to_central_server:
       syslog_ng.config:
-        - config:
+        config:
             - source: s_localhost
             - destination: d_log_server
 
     some_comment:
       module.run:
-        - name: syslog_ng.write_config
-        - config: |
+        name: syslog_ng.write_config
+        config: |
             # Multi line
             # comment
 
     # Another mode to use comments or existing configuration snippets
     config.other_comment_form:
       syslog_ng.config:
-        - config: |
+        config: |
             # Multi line
             # comment
 
@@ -234,7 +234,7 @@ Simple source
     s_tail:
       # Salt will call the source function of syslog_ng module
       syslog_ng.config:
-        - config:
+        config:
             source:
               - file:
                 - file: ''"/var/log/apache/access.log"''
@@ -249,7 +249,7 @@ OR
 
     s_tail:
       syslog_ng.config:
-        - config:
+        config:
             source:
                 - file:
                   - ''"/var/log/apache/access.log"''
@@ -264,7 +264,7 @@ OR
 
     source.s_tail:
       syslog_ng.config:
-        - config:
+        config:
             - file:
               - ''"/var/log/apache/access.log"''
               - follow_freq : 1
@@ -289,7 +289,7 @@ Complex source
 
     s_gsoc2014:
       syslog_ng.config:
-        - config:
+        config:
             source:
               - tcp:
                 - ip: 0.0.0.0
@@ -311,7 +311,7 @@ Filter
 
     f_json:
       syslog_ng.config:
-        - config:
+        config:
             filter:
               - match:
                 - ''"@json:"''
@@ -334,7 +334,7 @@ Template
 
     t_demo_filetemplate:
       syslog_ng.config:
-        -config:
+        config:
             template:
               - template:
                 - '"$ISODATE $HOST $MSG\n"'
@@ -357,7 +357,7 @@ Rewrite
 
     r_set_message_to_MESSAGE:
       syslog_ng.config:
-        - config:
+        config:
             rewrite:
               - set:
                 - '"${.json.message}"'
@@ -378,7 +378,7 @@ Global options
 
     global_options:
       syslog_ng.config:
-        - config:
+        config:
             options:
               - time_reap: 30
               - mark_freq: 10
@@ -428,7 +428,7 @@ Log
 
     l_gsoc2014:
       syslog_ng.config:
-        - config:
+        config:
             log:
               - source: s_gsoc2014
               - junction:

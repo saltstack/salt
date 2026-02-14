@@ -119,23 +119,23 @@ Here is an example of a Salt State:
 
     salt:
       pkg.latest:
-        - name: salt
+        name: salt
       service.running:
-        - names:
+        names:
           - salt-master
           - salt-minion
-        - require:
+        require:
           - pkg: salt
-        - watch:
+        watch:
           - file: /etc/salt/minion
 
     /etc/salt/minion:
       file.managed:
-        - source: salt://salt/minion
-        - user: root
-        - group: root
-        - mode: 644
-        - require:
+        source: salt://salt/minion
+        user: root
+        group: root
+        mode: 644
+        require:
           - pkg: salt
 
 This short stanza will ensure that vim is installed, Salt is installed and up
@@ -221,13 +221,13 @@ the following state file which we'll call ``pep8.sls``:
 
     python-pip:
       cmd.run:
-        - name: |
+        name: |
             easy_install --script-dir=/usr/bin -U pip
-        - cwd: /
+        cwd: /
 
     pep8:
       pip.installed:
-        - require:
+        require:
           - cmd: python-pip
 
 
@@ -301,14 +301,14 @@ The modified state file would now be:
 
     python-pip:
       cmd.run:
-        - name: |
+        name: |
             easy_install --script-dir=/usr/bin -U pip
-        - cwd: /
-        - reload_modules: true
+        cwd: /
+        reload_modules: true
 
     pep8:
       pip.installed:
-        - require:
+        require:
           - cmd: python-pip
 
 
