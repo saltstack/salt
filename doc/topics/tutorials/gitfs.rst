@@ -209,7 +209,7 @@ including by installing XCode_.
 
         GitPython:
           pip.installed:
-            - name: 'GitPython < 2.0.9'
+            name: 'GitPython < 2.0.9'
 
 gitcli
 ------
@@ -892,14 +892,14 @@ Consider the following example top file and SLS file:
 
     manage_mystuff:
       pkg.installed:
-        - name: mystuff
+        name: mystuff
       file.managed:
-        - name: /etc/mystuff.conf
-        - source: salt://mystuff/files/mystuff.conf
+        name: /etc/mystuff.conf
+        source: salt://mystuff/files/mystuff.conf
       service.running:
-        - name: mystuffd
-        - enable: True
-        - watch:
+        name: mystuffd
+        enable: True
+        watch:
           - file: /etc/mystuff.conf
 
 Imagine for a moment that you need to change your ``mystuff.conf``. So, you go

@@ -189,7 +189,7 @@ PATH using a :mod:`file.symlink <salt.states.file.symlink>` state.
 
     /usr/bin/foo:
       file.symlink:
-        - target: /usr/local/bin/foo
+        target: /usr/local/bin/foo
 
 .. _which-version:
 
@@ -240,10 +240,10 @@ via a :py:func:`file.managed <salt.states.file.managed>` state, using the
 
     /etc/my_super_secret_file:
       file.managed:
-        - user: secret
-        - group: secret
-        - mode: 600
-        - contents_pillar: secret_files:my_super_secret_file
+        user: secret
+        group: secret
+        mode: 600
+        contents_pillar: secret_files:my_super_secret_file
 
 In this example, the source file would be located in a directory called
 ``secret_files`` underneath the file_tree path for the minion. The syntax for
@@ -295,17 +295,17 @@ so the restart runs detached from the state run:
 
     Upgrade Salt Minion:
       pkg.installed:
-        - name: salt-minion
+        name: salt-minion
 
     Restart Salt Minion:
       cmd.run:
     {%- if grains['kernel'] == 'Windows' %}
-        - name: 'salt-call --local service.restart salt-minion'
+        name: 'salt-call --local service.restart salt-minion'
     {%- else %}
-        - name: 'salt-call --local service.restart salt-minion'
+        name: 'salt-call --local service.restart salt-minion'
     {%- endif %}
-        - bg: True
-        - onchanges:
+        bg: True
+        onchanges:
           - pkg: Upgrade Salt Minion
 
 ``--local`` keeps the call self-contained so the restart does not depend on a
@@ -357,15 +357,15 @@ needs to run on the master):
 
     Wait for salt minion:
       loop.until_no_eval:
-        - name: saltutil.runner
-        - expected:
+        name: saltutil.runner
+        expected:
             - my_minion
-        - args:
+        args:
             - manage.up
-        - kwargs:
+        kwargs:
             tgt: my_minion
-        - period: 3
-        - init_wait: 3
+        period: 3
+        init_wait: 3
 
 This will, after an initial delay of 3 seconds, execute the `manage.up`-runner
 targeted specifically for `my_minion`. It will do this every `period` seconds

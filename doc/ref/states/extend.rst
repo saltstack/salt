@@ -41,11 +41,11 @@ Original: ``salt://http/init.sls``
     apache:
       pkg.installed: []
       file:
-        - name: /etc/httpd/conf/httpd.conf
-        - source: salt://http/httpd.conf
+        name: /etc/httpd/conf/httpd.conf
+        source: salt://http/httpd.conf
       service.running:
-        - name: httpd
-        - watch:
+        name: httpd
+        watch:
           - file: apache
 
 Original: ``salt://ssh/init.sls``
@@ -55,7 +55,7 @@ Original: ``salt://ssh/init.sls``
     ssh-server:
       pkg.installed: []
       service.running:
-        - name: sshd
+        name: sshd
 
 Extending SLS: ``salt://profile/webserver_extend.sls``
 
@@ -68,17 +68,17 @@ Extending SLS: ``salt://profile/webserver_extend.sls``
     extend:
       apache:
         file:
-          - name: /etc/httpd/conf/httpd.conf
-          - source: salt://http/httpd2.conf
+          name: /etc/httpd/conf/httpd.conf
+          source: salt://http/httpd2.conf
 
       ssh-server:
         service:
-          - watch:
+          watch:
             - file: /etc/ssh/banner
 
     /etc/ssh/banner:
       file.managed:
-        - source: salt://ssh/banner
+        source: salt://ssh/banner
 
 Behavior for this example
 -------------------------
@@ -102,8 +102,8 @@ Replace a mapping (overwrite):
     extend:
       apache:
         file:
-          - name: /etc/httpd/conf/httpd.conf
-          - source: salt://http/httpd2.conf
+          name: /etc/httpd/conf/httpd.conf
+          source: salt://http/httpd2.conf
 
 Append to a requisite list (merge):
 
@@ -112,7 +112,7 @@ Append to a requisite list (merge):
     extend:
       ssh-server:
         service:
-          - watch:
+          watch:
             - file: /etc/ssh/banner
 
 Extend is a Top Level Declaration
@@ -130,13 +130,13 @@ twice then only one of the extend blocks will be read. So this is WRONG:
     extend:
       apache:
         file:
-          - name: /etc/httpd/conf/httpd.conf
-          - source: salt://http/httpd2.conf
+          name: /etc/httpd/conf/httpd.conf
+          source: salt://http/httpd2.conf
     # Second extend will overwrite the first!! Only make one
     extend:
       ssh-server:
         service:
-          - watch:
+          watch:
             - file: /etc/ssh/banner
 
 
@@ -156,8 +156,8 @@ cleanly defined like so:
 
     /etc/ssh/banner:
       file.managed:
-        - source: salt://ssh/banner
-        - watch_in:
+        source: salt://ssh/banner
+        watch_in:
           - service: ssh-server
 
 :ref:`State Requisites <requisites>`

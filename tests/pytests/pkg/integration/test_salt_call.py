@@ -76,7 +76,7 @@ def test_sls(salt_call_cli, salt_master, fixture_name, request):
     """
     Test calling a sls file
     """
-    min_version_required = Version("3008.0")
+    min_version_required = Version("3009.0")
     current_version = Version(salt.version.__version__)
     if fixture_name == "state_name_dict_arg" and current_version < min_version_required:
         pytest.skip(
