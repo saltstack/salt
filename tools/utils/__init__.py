@@ -59,6 +59,7 @@ class OS:
     arch: str = attr.ib()
     display_name: str = attr.ib(default=None)
     pkg_type: str = attr.ib(default=None)
+    enabled: bool = attr.ib(default=True)
 
     @arch.default
     def _default_arch(self):
