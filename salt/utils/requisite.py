@@ -11,9 +11,8 @@ import sys
 from collections import defaultdict
 from collections.abc import Generator, Iterable, Sequence
 from enum import Enum, auto
+from heapq import heappop, heappush
 from typing import TYPE_CHECKING, Any
-
-import networkx as nx
 
 log = logging.getLogger(__name__)
 
@@ -89,6 +88,248 @@ class RequisiteType(str, Enum):
     LISTEN = auto()
 
 
+class DiGraphCycle(Exception):
+    """
+    Custom DiGrapCycle exception raised on detecting cycle.
+    """
+
+
+class MultiDiGraph:
+    """
+    Custom multigraph implementation replacing networkx.MultiDiGraph.
+
+    A directed multigraph allows multiple edges between the same pair of nodes,
+    each identified by a unique key. This implementation provides the specific
+    API needed by the DependencyGraph class.
+    """
+
+    def __init__(self):
+        # Node attributes: node_id -> {attr_name: value}
+        self._nodes: dict[str, dict[str, Any]] = {}
+
+        # Adjacency lists for efficient edge traversal
+        # source -> target -> edge_key -> edge_data
+        self._out_edges: dict[str, dict[str, dict[Any, dict[str, Any]]]] = defaultdict(
+            lambda: defaultdict(dict)
+        )
+        self._in_edges: dict[str, dict[str, dict[Any, dict[str, Any]]]] = defaultdict(
+            lambda: defaultdict(dict)
+        )
+
+    def __bool__(self):
+        """
+        Return true if MultiDiGraph is not empty.
+        """
+        return bool(self._nodes)
+
+    @property
+    def nodes(self) -> dict[str, dict[str, Any]]:
+        """
+        Return the nodes dictionary for attribute access.
+        """
+        return self._nodes
+
+    def add_node(self, node_id: str, **attrs) -> None:
+        """
+        Add a node with optional attributes.
+        """
+        if node_id not in self._nodes:
+            self._nodes[node_id] = {}
+        self._nodes[node_id].update(attrs)
+
+    def add_edge(self, source: str, target: str, key: Any, **data) -> None:
+        """
+        Add an edge from source to target with a given key and optional data.
+
+        Args:
+            source: Source node identifier
+            target: Target node identifier
+            key: Edge key (allows multiple edges between same node pair)
+            **data: Optional edge attributes
+        """
+        # Ensure nodes exist
+        if source not in self._nodes:
+            self.add_node(source)
+        if target not in self._nodes:
+            self.add_node(target)
+
+        # Add edge to both adjacency lists
+        self._out_edges[source][target][key] = data
+        self._in_edges[target][source][key] = data
+
+    def in_edges(
+        self, node: str, keys: bool = False, data: bool = False
+    ) -> Generator[tuple, None, None]:
+        """
+        Return an iterator over the incoming edges of node.
+
+        Args:
+            node: The node identifier
+            keys: If True, include edge keys in the output
+            data: If True, include edge data in the output
+
+        Yields:
+            Tuples of (source, target) if keys=False and data=False
+            Tuples of (source, target, key) if keys=True and data=False
+            Tuples of (source, target, key, edge_data) if keys=True and data=True
+        """
+        for source, keys_dict in self._in_edges.get(node, {}).items():
+            for edge_key, edge_data in keys_dict.items():
+                if keys and data:
+                    yield (source, node, edge_key, edge_data)
+                elif keys:
+                    yield (source, node, edge_key)
+                else:
+                    yield (source, node)
+
+    def out_edges(
+        self, node: str, keys: bool = False, data: bool = False
+    ) -> Generator[tuple, None, None]:
+        """
+        Return an iterator over the outgoing edges of node.
+
+        Args:
+            node: The node identifier
+            keys: If True, include edge keys in the output
+            data: If True, include edge data in the output
+
+        Yields:
+            Tuples of (source, target) if keys=False and data=False
+            Tuples of (source, target, key) if keys=True and data=False
+            Tuples of (source, target, key, edge_data) if keys=True and data=True
+        """
+        for target, keys_dict in self._out_edges.get(node, {}).items():
+            for edge_key, edge_data in keys_dict.items():
+                if keys and data:
+                    yield (node, target, edge_key, edge_data)
+                elif keys:
+                    yield (node, target, edge_key)
+                else:
+                    yield (node, target)
+
+    def has_path(self, source: str, target: str) -> bool:
+        """
+        Check if there is a path from source to target using DFS.
+
+        Args:
+            source: Source node identifier
+            target: Target node identifier
+
+        Returns:
+            True if a path exists, False otherwise
+        """
+        if source == target:
+            return True
+        if source not in self._nodes or target not in self._nodes:
+            return False
+
+        visited = set()
+        stack = [source]
+
+        while stack:
+            node = stack.pop()
+            if node == target:
+                return True
+            if node in visited:
+                continue
+            visited.add(node)
+
+            for child in self._out_edges.get(node, {}):
+                if child not in visited:
+                    stack.append(child)
+
+        return False
+
+    def find_cycle(self) -> list[tuple[str, str, Any]]:
+        """
+        Find a cycle in the graph using DFS with back-edge detection.
+
+        Returns:
+            List of (source, target, key) tuples forming the cycle.
+            Empty list if no cycle exists.
+        """
+        WHITE, GRAY, BLACK = 0, 1, 2
+        color = {node: WHITE for node in self._nodes}
+        parent = {}
+        parent_key = {}
+
+        def dfs_visit(node):
+            color[node] = GRAY
+            for target, keys_dict in self._out_edges.get(node, {}).items():
+                for edge_key in keys_dict:
+                    if color[target] == GRAY:
+                        # Found back edge - reconstruct cycle
+                        cycle = [(node, target, edge_key)]
+                        current = node
+                        while current != target:
+                            prev = parent[current]
+                            cycle.append((prev, current, parent_key[current]))
+                            current = prev
+                        return list(reversed(cycle))
+                    elif color[target] == WHITE:
+                        parent[target] = node
+                        parent_key[target] = edge_key
+                        if cycle := dfs_visit(target):
+                            return cycle
+            color[node] = BLACK
+            return None
+
+        for node in self._nodes:
+            if color[node] == WHITE:
+                if cycle := dfs_visit(node):
+                    return cycle
+
+        return []
+
+    def lexicographical_topological_sort(self, key):
+        """
+        Topological sort with lexicographical ordering via custom key function.
+
+        Uses Kahn's algorithm with a priority queue to ensure nodes are processed
+        in lexicographical order when multiple nodes have no remaining dependencies.
+
+        Args:
+            key: A function that takes a node identifier and returns a sort key
+
+        Yields:
+            Node identifiers in topologically sorted, lexicographical order
+
+        Raises:
+            ValueError: If the graph contains a cycle
+        """
+        # Capture the initial node count before iteration
+        # (the graph may be modified during iteration)
+        initial_node_count = len(self._nodes)
+
+        # Calculate in-degrees (count edges, not just neighbors, for multigraph)
+        in_degree = {node: 0 for node in self._nodes}
+        for target, source_edges in self._in_edges.items():
+            for source, keys_dict in source_edges.items():
+                in_degree[target] += len(keys_dict)
+
+        # Priority queue: (key_value, node)
+        heap = []
+        for node in self._nodes:
+            if in_degree[node] == 0:
+                heappush(heap, (key(node), node))
+
+        processed_count = 0
+        while heap:
+            _, node = heappop(heap)
+            yield node
+            processed_count += 1
+
+            # Reduce in-degree for neighbors
+            for target, keys_dict in self._out_edges.get(node, {}).items():
+                in_degree[target] -= len(keys_dict)
+                if in_degree[target] == 0:
+                    heappush(heap, (key(target), target))
+
+        if processed_count != initial_node_count:
+            # Cycle detected
+            raise DiGraphCycle("Graph contains a cycle")
+
+
 class DependencyGraph:
     """
     Class used to track dependencies (requisites) among salt states.
@@ -102,7 +343,7 @@ class DependencyGraph:
     __slots__ = ("dag", "nodes_lookup_map", "sls_to_nodes")
 
     def __init__(self) -> None:
-        self.dag = nx.MultiDiGraph()
+        self.dag = MultiDiGraph()
         # a mapping to node_id to be able to find nodes with
         # specific state type (module name), names, and/or IDs
         self.nodes_lookup_map: dict[tuple[str, str], set[str]] = {}
@@ -358,7 +599,7 @@ class DependencyGraph:
         :param cap: the maximum order value configured in the states
         :return: the ordered chunks
         """
-        dag: nx.MultiDiGraph = self.dag
+        dag: MultiDiGraph = self.dag
         # dict for tracking topo order and for mapping each node that
         # was aggregated to the aggregated node that replaces it
         topo_order = {}
@@ -374,7 +615,7 @@ class DependencyGraph:
 
         # Iterate over the nodes in topological order to get the correct
         # ordering which takes requisites into account
-        for node in nx.lexicographical_topological_sort(dag, key=_get_order):
+        for node in dag.lexicographical_topological_sort(key=_get_order):
             topo_order[node] = None
             data = dag.nodes[node]
             if not data.get("allow_aggregate"):
@@ -392,7 +633,7 @@ class DependencyGraph:
                 # that there is no path from the current node to the
                 # node in the group; so we only need to check the path
                 # from the group node to the current node
-                reachable = nx.has_path(dag, agg_node or first_node, node)
+                reachable = dag.has_path(agg_node or first_node, node)
                 if not reachable:
                     # If not, add the node to the group
                     if agg_node is None:
@@ -427,24 +668,16 @@ class DependencyGraph:
         """
         Find the cycles if the graph is not a Directed Acyclic Graph
         """
-        dag = self.dag
-        try:
-            cycle_edges = []
-            for dependency, dependent, req_type in nx.find_cycle(dag):
-                dependency_chunk = self.dag.nodes[dependency]["chunk"]
-                dependent_chunk = self.dag.nodes[dependent]["chunk"]
-                if (
-                    req_type not in dependent_chunk
-                    and req_type == RequisiteType.REQUIRE
-                ):
-                    # show the original prereq requisite for the require edges
-                    # added for the prereq
-                    req_type = RequisiteType.PREREQ
-                cycle_edges.append((dependent_chunk, req_type, dependency_chunk))
-            return cycle_edges
-        except nx.NetworkXNoCycle:
-            # If the graph is a DAG, return an empty list
-            return []
+        cycle_edges = []
+        for dependency, dependent, req_type in self.dag.find_cycle():
+            dependency_chunk = self.dag.nodes[dependency]["chunk"]
+            dependent_chunk = self.dag.nodes[dependent]["chunk"]
+            if req_type not in dependent_chunk and req_type == RequisiteType.REQUIRE:
+                # show the original prereq requisite for the require edges
+                # added for the prereq
+                req_type = RequisiteType.PREREQ
+            cycle_edges.append((dependent_chunk, req_type, dependency_chunk))
+        return cycle_edges
 
     def get_aggregate_chunks(self, low: LowChunk) -> list[LowChunk]:
         """

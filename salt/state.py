@@ -29,8 +29,6 @@ import traceback
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from typing import Any, Union
 
-import networkx as nx
-
 import salt.channel.client
 import salt.fileclient
 import salt.loader
@@ -60,7 +58,7 @@ from salt.serializers.msgpack import deserialize as msgpack_deserialize
 from salt.serializers.msgpack import serialize as msgpack_serialize
 from salt.template import compile_template, compile_template_str
 from salt.utils.datastructures import DefaultOrderedDict, HashableOrderedDict
-from salt.utils.requisite import DependencyGraph, RequisiteType
+from salt.utils.requisite import DependencyGraph, DiGraphCycle, RequisiteType
 
 log = logging.getLogger(__name__)
 
@@ -625,7 +623,7 @@ class Compiler:
         try:
             # Get nodes in topological order also sorted by order attribute
             sorted_chunks = self.dependency_dag.aggregate_and_order_chunks(cap)
-        except nx.NetworkXUnfeasible:
+        except DiGraphCycle:
             sorted_chunks = []
             cycle_edges = self.dependency_dag.get_cycles_str()
             errors.append(f"Recursive requisites were found: {cycle_edges}")
@@ -1542,7 +1540,7 @@ class State:
         try:
             # Get nodes in topological order also sorted by order attribute
             sorted_chunks = self.dependency_dag.aggregate_and_order_chunks(cap)
-        except nx.NetworkXUnfeasible:
+        except DiGraphCycle:
             sorted_chunks = []
             cycle_edges = self.dependency_dag.get_cycles_str()
             errors.append(f"Recursive requisites were found: {cycle_edges}")
