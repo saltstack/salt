@@ -43,7 +43,7 @@ pyinotify>=0.9.6; sys_platform != 'win32' and sys_platform != 'darwin' and platf
 python-etcd>0.4.2
 pyvmomi
 rfc3987
-sqlparse>=0.4.4
+sqlparse>=0.5.5
 strict_rfc3339>=0.7
 textfsm
 toml
