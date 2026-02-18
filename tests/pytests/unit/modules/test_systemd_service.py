@@ -768,18 +768,6 @@ def test_firstboot_error():
     with patch.dict(systemd.__salt__, salt_mock):
         with pytest.raises(CommandExecutionError):
             assert systemd.firstboot()
-        # Test other.service (should not include --no-block)
-        assert operation_func("other.service")
-        mock_salt["cmd.run_all"].assert_called_with(
-            [
-                "/usr/bin/systemd-run",
-                "--scope",
-                "/usr/bin/systemctl",
-                expected_command,
-                "other.service",
-            ],
-            python_shell=False,
-        )
 
 
 def test_systemctl_cmd_with_scope_and_systemd_run_found():
@@ -792,9 +780,9 @@ def test_systemctl_cmd_with_scope_and_systemd_run_found():
     which_mock = MagicMock(side_effect=lambda x: "/usr/bin/" + x)
 
     with patch.object(salt.utils.systemd, "has_scope", has_scope_mock):
-        with patch.dict(systemd_service.__salt__, {"config.get": config_mock}):
+        with patch.dict(systemd.__salt__, {"config.get": config_mock}):
             with patch("salt.utils.path.which", which_mock):
-                ret = systemd_service._systemctl_cmd(
+                ret = systemd._systemctl_cmd(
                     "status", "sshd", systemd_scope=True
                 )
                 assert ret == [
@@ -822,10 +810,10 @@ def test_systemctl_cmd_with_scope_and_systemd_run_not_found():
         return "/usr/bin/" + cmd
 
     with patch.object(salt.utils.systemd, "has_scope", has_scope_mock):
-        with patch.dict(systemd_service.__salt__, {"config.get": config_mock}):
+        with patch.dict(systemd.__salt__, {"config.get": config_mock}):
             with patch("salt.utils.path.which", which_side_effect):
                 with pytest.raises(
                     CommandExecutionError,
                     match="systemd-run is required.*but it was not found.*",
                 ):
-                    systemd_service._systemctl_cmd("status", "sshd", systemd_scope=True)
+                    systemd._systemctl_cmd("status", "sshd", systemd_scope=True)
