@@ -1202,6 +1202,30 @@ async def test_connect_master_general_exception_error(minion_opts, connect_maste
     assert minion.connect_master.calls == 2
 
 
+async def test_connect_master_transient_typeerror_retries(minion_opts, connect_master_mock):
+    """
+    Ensure transient transport TypeError failures are retried during connection.
+    """
+    minion_opts["acceptance_wait_time"] = 0
+    mm = salt.minion.MinionManager(minion_opts)
+    minion = salt.minion.Minion(minion_opts)
+    connect_master_mock.exc = lambda: TypeError("'NoneType' object is not iterable")
+    minion.connect_master = connect_master_mock
+    minion.destroy = MagicMock()
+
+    await mm._connect_minion(minion)
+    minion.destroy.assert_called_once()
+    assert minion.connect_master.calls == 2
+
+
+def test_should_retry_connection_exception_typeerror():
+    """
+    Ensure the helper marks known transient transport errors as retryable.
+    """
+    exc = TypeError("'NoneType' object is not iterable")
+    assert salt.minion.Minion._should_retry_connection_exception(exc)
+
+
 async def test_minion_manager_async_stop(io_loop, minion_opts, tmp_path):
     """
     Ensure MinionManager's stop method works correctly and calls the

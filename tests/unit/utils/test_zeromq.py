@@ -24,3 +24,22 @@ class UtilsTestCase(TestCase):
             self.assertRaises(
                 SaltSystemExit, salt.utils.zeromq.check_ipc_path_max_len, "1" * 1024
             )
+
+
+def test_is_retryable_connection_error_tornado_callbacks_race():
+    exc = TypeError("'NoneType' object is not iterable")
+    assert salt.utils.zeromq.is_retryable_connection_error(exc)
+
+
+def test_is_retryable_connection_error_walks_exception_chain():
+    try:
+        try:
+            raise TypeError("'NoneType' object is not iterable")
+        except TypeError as exc:
+            raise RuntimeError("wrapper") from exc
+    except RuntimeError as exc:
+        assert salt.utils.zeromq.is_retryable_connection_error(exc)
+
+
+def test_is_retryable_connection_error_non_retryable():
+    assert not salt.utils.zeromq.is_retryable_connection_error(ValueError("fatal"))

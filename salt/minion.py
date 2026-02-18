@@ -519,6 +519,22 @@ class MinionBase:
                 )  # pylint: disable=no-member
         return []
 
+    @staticmethod
+    def _should_retry_connection_exception(exc):
+        """
+        Decide if a connection-related exception should trigger retry logic.
+        """
+        return salt.transport.is_retryable_connection_error(exc)
+
+    @staticmethod
+    def _next_auth_wait(auth_wait, auth_wait_step, max_auth_wait):
+        """
+        Increase auth wait time up to the configured maximum.
+        """
+        if auth_wait < max_auth_wait:
+            return min(auth_wait + auth_wait_step, max_auth_wait)
+        return auth_wait
+
     async def eval_master(
         self, opts, timeout=60, safe=True, failed=False, failback=False
     ):
@@ -744,21 +760,38 @@ class MinionBase:
                         await pub_channel.connect()
                         conn = True
                         break
-                    except SaltClientError as exc:
-                        last_exc = exc
-                        if exc.strerror.startswith("Could not access"):
-                            log.info(
-                                "Failed to initiate connection with Master %s: check"
-                                " ownership/permissions. Error message: %s",
+                    except Exception as exc:  # pylint: disable=broad-except
+                        if isinstance(exc, SaltClientError):
+                            last_exc = exc
+                            if exc.strerror.startswith("Could not access"):
+                                log.info(
+                                    "Failed to initiate connection with Master %s: check"
+                                    " ownership/permissions. Error message: %s",
+                                    opts["master"],
+                                    exc,
+                                )
+                            else:
+                                log.info(
+                                    "Master %s could not be reached, trying next master"
+                                    " (if any)",
+                                    opts["master"],
+                                )
+                        elif self._should_retry_connection_exception(exc):
+                            last_exc = SaltClientError(
+                                "Transient transport error while connecting to master "
+                                f"{opts['master']}: "
+                                f"{salt.transport.format_connection_error(exc)}"
+                            )
+                            log.warning(
+                                "Master %s had a transient transport error (%s), "
+                                "trying next master (if any)",
                                 opts["master"],
-                                exc,
+                                salt.transport.format_connection_error(exc),
                             )
                         else:
-                            log.info(
-                                "Master %s could not be reached, trying next master (if"
-                                " any)",
-                                opts["master"],
-                            )
+                            if pub_channel:
+                                pub_channel.close()
+                            raise
                         pub_channel.close()
                         pub_channel = None
                         continue
@@ -790,6 +823,7 @@ class MinionBase:
                     " Ignoring."
                 )
             pub_channel = None
+            last_exc = None
             while True:
                 if attempts != 0:
                     # Give up a little time between connection attempts
@@ -827,12 +861,32 @@ class MinionBase:
                     self.tok = pub_channel.auth.gen_token(b"salt")
                     self.connected = True
                     return (opts["master"], pub_channel)
-                except SaltClientError:
+                except Exception as exc:  # pylint: disable=broad-except
+                    retryable = isinstance(exc, SaltClientError) or self._should_retry_connection_exception(exc)
+                    if not retryable:
+                        if pub_channel:
+                            pub_channel.close()
+                        raise
+                    if isinstance(exc, SaltClientError):
+                        last_exc = exc
+                    else:
+                        last_exc = SaltClientError(
+                            "Transient transport error while connecting to master "
+                            f"{opts['master']}: "
+                            f"{salt.transport.format_connection_error(exc)}"
+                        )
+                        log.warning(
+                            "Transient transport error while connecting to master %s: %s",
+                            opts["master"],
+                            salt.transport.format_connection_error(exc),
+                        )
                     if pub_channel:
                         pub_channel.close()
                     if attempts == tries:
                         # Exhausted all attempts. Return exception.
                         self.connected = False
+                        if last_exc:
+                            raise last_exc
                         raise
 
     def _discover_masters(self):
@@ -1169,8 +1223,9 @@ class MinionManager(MinionBase):
                     exc_info=True,
                 )
                 last = time.time()
-                if auth_wait < self.max_auth_wait:
-                    auth_wait += self.auth_wait
+                auth_wait = minion._next_auth_wait(
+                    auth_wait, self.auth_wait, self.max_auth_wait
+                )
                 await asyncio.sleep(auth_wait)
             except SaltMasterUnresolvableError:
                 minion.destroy()
@@ -1182,9 +1237,24 @@ class MinionManager(MinionBase):
                 )
                 log.error(err)
                 break
-            except Exception as e:  # pylint: disable=broad-except
+            except Exception as exc:  # pylint: disable=broad-except
                 minion.destroy()
                 failed = True
+                if minion._should_retry_connection_exception(exc):
+                    log.warning(
+                        "Transient transport error while connecting to %s; "
+                        "retrying in %s seconds: %s",
+                        minion.opts["master"],
+                        auth_wait,
+                        salt.transport.format_connection_error(exc),
+                        exc_info=True,
+                    )
+                    last = time.time()
+                    auth_wait = minion._next_auth_wait(
+                        auth_wait, self.auth_wait, self.max_auth_wait
+                    )
+                    await asyncio.sleep(auth_wait)
+                    continue
                 log.critical(
                     "Unexpected error while connecting to %s",
                     minion.opts["master"],
@@ -1440,8 +1510,20 @@ class Minion(MinionBase):
             self.opts, io_loop=self.io_loop
         )
         log.debug("Connecting minion's long-running req channel")
-        await self.req_channel.connect()
-        await self._post_master_init(master)
+        try:
+            await self.req_channel.connect()
+            await self._post_master_init(master)
+        except Exception as exc:  # pylint: disable=broad-except
+            if self.req_channel:
+                self.req_channel.close()
+                self.req_channel = None
+            if self._should_retry_connection_exception(exc):
+                raise SaltClientError(
+                    "Transient transport error while connecting minion request channel"
+                    f" to master {self.opts.get('master')}: "
+                    f"{salt.transport.format_connection_error(exc)}"
+                ) from exc
+            raise
 
     async def handle_payload(self, payload, reply_func):
         self.payloads.append(payload)
@@ -3716,18 +3798,34 @@ class SyndicManager(MinionBase):
                     opts["master"],
                 )
                 last = time.time()
-                if auth_wait < self.max_auth_wait:
-                    auth_wait += self.auth_wait
+                auth_wait = self._next_auth_wait(
+                    auth_wait, self.auth_wait, self.max_auth_wait
+                )
                 await asyncio.sleep(auth_wait)  # TODO: log?
             except (KeyboardInterrupt, SystemExit):  # pylint: disable=try-except-raise
                 raise
-            except Exception:  # pylint: disable=broad-except
+            except Exception as exc:  # pylint: disable=broad-except
                 failed = True
+                if self._should_retry_connection_exception(exc):
+                    log.warning(
+                        "Transient transport error while connecting syndic to %s; "
+                        "retrying in %s seconds: %s",
+                        opts["master"],
+                        auth_wait,
+                        salt.transport.format_connection_error(exc),
+                        exc_info=True,
+                    )
+                    auth_wait = self._next_auth_wait(
+                        auth_wait, self.auth_wait, self.max_auth_wait
+                    )
+                    await asyncio.sleep(auth_wait)
+                    continue
                 log.critical(
                     "Unexpected error while connecting to %s",
                     opts["master"],
                     exc_info=True,
                 )
+                break
 
         return syndic
 
