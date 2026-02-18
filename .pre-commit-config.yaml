@@ -1180,10 +1180,10 @@ repos:
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
           - requirements/static/ci/docs.in
-          - requirements/static/ci/py3.9/linux.txt
           - --python-platform=linux
           - --python-version=3.9
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.9/linux.txt
           - -o=requirements/static/ci/py3.9/docs.txt
 
       - id: pip-compile
@@ -1194,10 +1194,10 @@ repos:
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
           - requirements/static/ci/docs.in
-          - requirements/static/ci/py3.10/linux.txt
           - --python-platform=linux
           - --python-version=3.10
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.10/linux.txt
           - -o=requirements/static/ci/py3.10/docs.txt
 
       - id: pip-compile
@@ -1208,10 +1208,10 @@ repos:
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
           - requirements/static/ci/docs.in
-          - requirements/static/ci/py3.11/linux.txt
           - --python-platform=linux
           - --python-version=3.11
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.11/linux.txt
           - -o=requirements/static/ci/py3.11/docs.txt
 
       - id: pip-compile
@@ -1222,10 +1222,10 @@ repos:
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
           - requirements/static/ci/docs.in
-          - requirements/static/ci/py3.12/linux.txt
           - --python-platform=linux
           - --python-version=3.12
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.12/linux.txt
           - -o=requirements/static/ci/py3.12/docs.txt
 
       - id: pip-compile
@@ -1236,10 +1236,10 @@ repos:
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
           - requirements/static/ci/docs.in
-          - requirements/static/ci/py3.13/linux.txt
           - --python-platform=linux
           - --python-version=3.13
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.13/linux.txt
           - -o=requirements/static/ci/py3.13/docs.txt
 
   # <---- Doc CI Requirements ----------------------------------------------------------------------------------------
@@ -1254,10 +1254,10 @@ repos:
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
           - requirements/static/ci/lint.in
-          - requirements/static/ci/py3.9/linux.txt
           - --python-platform=linux
           - --python-version=3.9
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.9/linux.txt
           - -o=requirements/static/ci/py3.9/lint.txt
 
       - id: pip-compile
@@ -1268,7 +1268,6 @@ repos:
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
           - requirements/static/ci/lint.in
-          - requirements/static/ci/py3.10/linux.txt
           - --python-platform=linux
           - --python-version=3.10
           - --no-emit-index-url
@@ -1283,10 +1282,10 @@ repos:
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
           - requirements/static/ci/lint.in
-          - requirements/static/ci/py3.11/linux.txt
           - --python-platform=linux
           - --python-version=3.11
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.11/linux.txt
           - -o=requirements/static/ci/py3.11/lint.txt
 
       - id: pip-compile
@@ -1297,10 +1296,10 @@ repos:
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
           - requirements/static/ci/lint.in
-          - requirements/static/ci/py3.12/linux.txt
           - --python-platform=linux
           - --python-version=3.12
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.12/linux.txt
           - -o=requirements/static/ci/py3.12/lint.txt
 
       - id: pip-compile
@@ -1311,10 +1310,10 @@ repos:
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
           - requirements/static/ci/lint.in
-          - requirements/static/ci/py3.13/linux.txt
           - --python-platform=linux
           - --python-version=3.13
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.13/linux.txt
           - -o=requirements/static/ci/py3.13/lint.txt
 
   # <---- Lint CI Requirements ---------------------------------------------------------------------------------------
