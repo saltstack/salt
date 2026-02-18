@@ -455,12 +455,9 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
-          - requirements/zeromq.txt
           - requirements/pytest.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/linux.in
-          - requirements/static/pkg/linux.in
           - requirements/static/pkg/py3.9/linux.txt
           - --python-platform=linux
           - --python-version=3.9
@@ -474,12 +471,9 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
-          - requirements/zeromq.txt
           - requirements/pytest.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/linux.in
-          - requirements/static/pkg/linux.in
           - requirements/static/pkg/py3.10/linux.txt
           - --python-platform=linux
           - --python-version=3.10
@@ -493,12 +487,9 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
-          - requirements/zeromq.txt
           - requirements/pytest.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/linux.in
-          - requirements/static/pkg/linux.in
           - requirements/static/pkg/py3.11/linux.txt
           - --python-platform=linux
           - --python-version=3.11
@@ -512,12 +503,9 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
-          - requirements/zeromq.txt
           - requirements/pytest.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/linux.in
-          - requirements/static/pkg/linux.in
           - requirements/static/pkg/py3.12/linux.txt
           - --python-platform=linux
           - --python-version=3.12
@@ -531,12 +519,9 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
-          - requirements/zeromq.txt
           - requirements/pytest.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/linux.in
-          - requirements/static/pkg/linux.in
           - requirements/static/pkg/py3.13/linux.txt
           - --python-platform=linux
           - --python-version=3.13
@@ -557,6 +542,7 @@ repos:
           - --python-platform=linux
           - --python-version=3.9
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.9/linux.txt
           - -o=requirements/static/ci/py3.9/linux-crypto.txt
 
       - id: pip-compile
@@ -571,6 +557,7 @@ repos:
           - --python-platform=linux
           - --python-version=3.10
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.10/linux.txt
           - -o=requirements/static/ci/py3.10/linux-crypto.txt
 
       - id: pip-compile
@@ -585,6 +572,7 @@ repos:
           - --python-platform=linux
           - --python-version=3.11
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.11/linux.txt
           - -o=requirements/static/ci/py3.11/linux-crypto.txt
 
       - id: pip-compile
@@ -599,6 +587,7 @@ repos:
           - --python-platform=linux
           - --python-version=3.12
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.12/linux.txt
           - -o=requirements/static/ci/py3.12/linux-crypto.txt
 
       - id: pip-compile
@@ -613,6 +602,7 @@ repos:
           - --python-platform=linux
           - --python-version=3.13
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.13/linux.txt
           - -o=requirements/static/ci/py3.13/linux-crypto.txt
 
       ############### FreeBSD CI Requirements ###############
@@ -623,12 +613,9 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
           - requirements/pytest.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/freebsd.in
-          - requirements/static/pkg/freebsd.in
           - requirements/static/pkg/py3.9/freebsd.txt
           - --universal
           - --python-version=3.9
@@ -642,12 +629,9 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
           - requirements/pytest.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/freebsd.in
-          - requirements/static/pkg/freebsd.in
           - requirements/static/pkg/py3.10/freebsd.txt
           - --universal
           - --python-version=3.10
@@ -661,12 +645,9 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
           - requirements/pytest.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/freebsd.in
-          - requirements/static/pkg/freebsd.in
           - requirements/static/pkg/py3.11/freebsd.txt
           - --universal
           - --python-version=3.11
@@ -680,12 +661,9 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
           - requirements/pytest.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/freebsd.in
-          - requirements/static/pkg/freebsd.in
           - requirements/static/pkg/py3.12/freebsd.txt
           - --universal
           - --python-version=3.12
@@ -699,12 +677,9 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
           - requirements/pytest.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/freebsd.in
-          - requirements/static/pkg/freebsd.in
           - requirements/static/pkg/py3.13/freebsd.txt
           - --universal
           - --python-version=3.13
@@ -725,6 +700,7 @@ repos:
           - --universal
           - --python-version=3.9
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.9/freebsd.txt
           - -o=requirements/static/ci/py3.9/freebsd-crypto.txt
 
       - id: pip-compile
@@ -740,6 +716,7 @@ repos:
           - --universal
           - --python-version=3.10
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.10/freebsd.txt
           - -o=requirements/static/ci/py3.10/freebsd-crypto.txt
 
       - id: pip-compile
@@ -754,6 +731,7 @@ repos:
           - --universal
           - --python-version=3.11
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.11/freebsd.txt
           - -o=requirements/static/ci/py3.11/freebsd-crypto.txt
 
       - id: pip-compile
@@ -768,6 +746,7 @@ repos:
           - --universal
           - --python-version=3.12
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.12/freebsd.txt
           - -o=requirements/static/ci/py3.12/freebsd-crypto.txt
 
       - id: pip-compile
@@ -782,6 +761,7 @@ repos:
           - --universal
           - --python-version=3.13
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.13/freebsd.txt
           - -o=requirements/static/ci/py3.13/freebsd-crypto.txt
 
       ############### Darwin CI Requirements ###############
@@ -792,12 +772,9 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/darwin.txt
           - requirements/pytest.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/darwin.in
-          - requirements/static/pkg/darwin.in
           - requirements/static/pkg/py3.9/darwin.txt
           - --python-platform=macos
           - --python-version=3.9
@@ -811,12 +788,9 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/darwin.txt
           - requirements/pytest.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/darwin.in
-          - requirements/static/pkg/darwin.in
           - requirements/static/pkg/py3.10/darwin.txt
           - --python-platform=macos
           - --python-version=3.10
@@ -830,12 +804,9 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/darwin.txt
           - requirements/pytest.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/darwin.in
-          - requirements/static/pkg/darwin.in
           - requirements/static/pkg/py3.11/darwin.txt
           - --python-platform=macos
           - --python-version=3.11
@@ -849,12 +820,9 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/darwin.txt
           - requirements/pytest.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/darwin.in
-          - requirements/static/pkg/darwin.in
           - requirements/static/pkg/py3.12/darwin.txt
           - --python-platform=macos
           - --python-version=3.12
@@ -868,12 +836,9 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/darwin.txt
           - requirements/pytest.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/darwin.in
-          - requirements/static/pkg/darwin.in
           - requirements/static/pkg/py3.13/darwin.txt
           - --python-platform=macos
           - --python-version=3.13
@@ -893,6 +858,7 @@ repos:
           - --python-platform=macos
           - --python-version=3.9
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.9/darwin.txt
           - -o=requirements/static/ci/py3.9/darwin-crypto.txt
 
       - id: pip-compile
@@ -907,6 +873,7 @@ repos:
           - --python-platform=macos
           - --python-version=3.10
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.10/darwin.txt
           - -o=requirements/static/ci/py3.10/darwin-crypto.txt
 
       - id: pip-compile
@@ -921,6 +888,7 @@ repos:
           - --python-platform=macos
           - --python-version=3.11
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.11/darwin.txt
           - -o=requirements/static/ci/py3.11/darwin-crypto.txt
 
       - id: pip-compile
@@ -935,6 +903,7 @@ repos:
           - --python-platform=macos
           - --python-version=3.12
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.12/darwin.txt
           - -o=requirements/static/ci/py3.12/darwin-crypto.txt
 
       - id: pip-compile
@@ -949,6 +918,7 @@ repos:
           - --python-platform=macos
           - --python-version=3.13
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.13/darwin.txt
           - -o=requirements/static/ci/py3.13/darwin-crypto.txt
 
       ############### Windows CI Requirements ###############
@@ -959,12 +929,9 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/windows.txt
           - requirements/pytest.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/windows.in
-          - requirements/static/pkg/windows.in
           - requirements/static/pkg/py3.9/windows.txt
           - --python-platform=windows
           - --python-version=3.9
@@ -978,12 +945,9 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/windows.txt
           - requirements/pytest.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/windows.in
-          - requirements/static/pkg/windows.in
           - requirements/static/pkg/py3.10/windows.txt
           - --python-platform=windows
           - --python-version=3.10
@@ -997,12 +961,9 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/windows.txt
           - requirements/pytest.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/windows.in
-          - requirements/static/pkg/windows.in
           - requirements/static/pkg/py3.11/windows.txt
           - --python-platform=windows
           - --python-version=3.11
@@ -1016,12 +977,9 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/windows.txt
           - requirements/pytest.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/windows.in
-          - requirements/static/pkg/windows.in
           - requirements/static/pkg/py3.12/windows.txt
           - --python-platform=windows
           - --python-version=3.12
@@ -1035,12 +993,9 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/windows.txt
           - requirements/pytest.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/windows.in
-          - requirements/static/pkg/windows.in
           - requirements/static/pkg/py3.13/windows.txt
           - --python-platform=windows
           - --python-version=3.13
@@ -1060,6 +1015,7 @@ repos:
           - --python-platform=windows
           - --python-version=3.9
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.9/windows.txt
           - -o=requirements/static/ci/py3.9/windows-crypto.txt
 
       - id: pip-compile
@@ -1074,6 +1030,7 @@ repos:
           - --python-platform=windows
           - --python-version=3.10
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.10/windows.txt
           - -o=requirements/static/ci/py3.10/windows-crypto.txt
 
       - id: pip-compile
@@ -1088,6 +1045,7 @@ repos:
           - --python-platform=windows
           - --python-version=3.11
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.11/windows.txt
           - -o=requirements/static/ci/py3.11/windows-crypto.txt
 
       - id: pip-compile
@@ -1102,6 +1060,7 @@ repos:
           - --python-platform=windows
           - --python-version=3.12
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.12/windows.txt
           - -o=requirements/static/ci/py3.12/windows-crypto.txt
 
       - id: pip-compile
@@ -1116,6 +1075,7 @@ repos:
           - --python-platform=windows
           - --python-version=3.13
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.13/windows.txt
           - -o=requirements/static/ci/py3.13/windows-crypto.txt
 
   # <---- CI Requirements --------------------------------------------------------------------------------------------
@@ -1130,16 +1090,14 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
           - requirements/pytest.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/cloud.in
-          - requirements/static/pkg/linux.in
           - requirements/static/pkg/py3.9/linux.txt
           - --python-platform=linux
           - --python-version=3.9
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.9/linux.txt
           - -o=requirements/static/ci/py3.9/cloud.txt
 
       - id: pip-compile
@@ -1149,16 +1107,14 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
           - requirements/pytest.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/cloud.in
-          - requirements/static/pkg/linux.in
           - requirements/static/pkg/py3.10/linux.txt
           - --python-platform=linux
           - --python-version=3.10
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.10/linux.txt
           - -o=requirements/static/ci/py3.10/cloud.txt
 
       - id: pip-compile
@@ -1168,16 +1124,14 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
           - requirements/pytest.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/cloud.in
-          - requirements/static/pkg/linux.in
           - requirements/static/pkg/py3.11/linux.txt
           - --python-platform=linux
           - --python-version=3.11
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.11/linux.txt
           - -o=requirements/static/ci/py3.11/cloud.txt
 
       - id: pip-compile
@@ -1187,16 +1141,14 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
           - requirements/pytest.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/cloud.in
-          - requirements/static/pkg/linux.in
           - requirements/static/pkg/py3.12/linux.txt
           - --python-platform=linux
           - --python-version=3.12
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.12/linux.txt
           - -o=requirements/static/ci/py3.12/cloud.txt
 
       - id: pip-compile
@@ -1206,16 +1158,14 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
           - requirements/pytest.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/cloud.in
-          - requirements/static/pkg/linux.in
           - requirements/static/pkg/py3.13/linux.txt
           - --python-platform=linux
           - --python-version=3.13
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.13/linux.txt
           - -o=requirements/static/ci/py3.13/cloud.txt
 
   # <---- Cloud CI Requirements --------------------------------------------------------------------------------------
@@ -1229,13 +1179,12 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/docs.in
           - requirements/static/pkg/py3.9/linux.txt
           - --python-platform=linux
           - --python-version=3.9
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.9/linux.txt
           - -o=requirements/static/ci/py3.9/docs.txt
 
       - id: pip-compile
@@ -1245,13 +1194,12 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/docs.in
           - requirements/static/pkg/py3.10/linux.txt
           - --python-platform=linux
           - --python-version=3.10
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.10/linux.txt
           - -o=requirements/static/ci/py3.10/docs.txt
 
       - id: pip-compile
@@ -1261,13 +1209,12 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/docs.in
           - requirements/static/pkg/py3.11/linux.txt
           - --python-platform=linux
           - --python-version=3.11
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.11/linux.txt
           - -o=requirements/static/ci/py3.11/docs.txt
 
       - id: pip-compile
@@ -1277,13 +1224,12 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/docs.in
           - requirements/static/pkg/py3.12/linux.txt
           - --python-platform=linux
           - --python-version=3.12
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.12/linux.txt
           - -o=requirements/static/ci/py3.12/docs.txt
 
       - id: pip-compile
@@ -1293,13 +1239,12 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/docs.in
           - requirements/static/pkg/py3.13/linux.txt
           - --python-platform=linux
           - --python-version=3.13
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.13/linux.txt
           - -o=requirements/static/ci/py3.13/docs.txt
 
   # <---- Doc CI Requirements ----------------------------------------------------------------------------------------
@@ -1313,16 +1258,14 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/lint.in
           - requirements/static/ci/linux.in
-          - requirements/static/pkg/linux.in
           - requirements/static/pkg/py3.9/linux.txt
           - --python-platform=linux
           - --python-version=3.9
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.9/linux.txt
           - -o=requirements/static/ci/py3.9/lint.txt
 
       - id: pip-compile
@@ -1332,16 +1275,14 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/lint.in
           - requirements/static/ci/linux.in
-          - requirements/static/pkg/linux.in
           - requirements/static/pkg/py3.10/linux.txt
           - --python-platform=linux
           - --python-version=3.10
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.10/linux.txt
           - -o=requirements/static/ci/py3.10/lint.txt
 
       - id: pip-compile
@@ -1351,16 +1292,14 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/lint.in
           - requirements/static/ci/linux.in
-          - requirements/static/pkg/linux.in
           - requirements/static/pkg/py3.11/linux.txt
           - --python-platform=linux
           - --python-version=3.11
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.11/linux.txt
           - -o=requirements/static/ci/py3.11/lint.txt
 
       - id: pip-compile
@@ -1370,16 +1309,14 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/lint.in
           - requirements/static/ci/linux.in
-          - requirements/static/pkg/linux.in
           - requirements/static/pkg/py3.12/linux.txt
           - --python-platform=linux
           - --python-version=3.12
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.12/linux.txt
           - -o=requirements/static/ci/py3.12/lint.txt
 
       - id: pip-compile
@@ -1389,16 +1326,14 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0", "setuptools>=81.0.0"]
         args:
-          - requirements/base.txt
-          - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/lint.in
           - requirements/static/ci/linux.in
-          - requirements/static/pkg/linux.in
           - requirements/static/pkg/py3.13/linux.txt
           - --python-platform=linux
           - --python-version=3.13
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.13/linux.txt
           - -o=requirements/static/ci/py3.13/lint.txt
 
   # <---- Lint CI Requirements ---------------------------------------------------------------------------------------
@@ -1415,6 +1350,7 @@ repos:
           - --python-platform=linux
           - --python-version=3.9
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.9/linux.txt
           - -o=requirements/static/ci/py3.9/changelog.txt
 
       - id: pip-compile
@@ -1428,6 +1364,7 @@ repos:
           - --python-platform=linux
           - --python-version=3.10
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.10/linux.txt
           - -o=requirements/static/ci/py3.10/changelog.txt
 
       - id: pip-compile
@@ -1441,6 +1378,7 @@ repos:
           - --python-platform=linux
           - --python-version=3.11
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.11/linux.txt
           - -o=requirements/static/ci/py3.11/changelog.txt
 
       - id: pip-compile
@@ -1454,6 +1392,7 @@ repos:
           - --python-platform=linux
           - --python-version=3.12
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.12/linux.txt
           - -o=requirements/static/ci/py3.12/changelog.txt
 
       - id: pip-compile
@@ -1467,6 +1406,7 @@ repos:
           - --python-platform=linux
           - --python-version=3.13
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.13/linux.txt
           - -o=requirements/static/ci/py3.13/changelog.txt
 
   # <---- Changelog --------------------------------------------------------------------------------------------------
@@ -1484,6 +1424,7 @@ repos:
           - --python-platform=linux
           - --python-version=3.9
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.9/linux.txt
           - -o=requirements/static/ci/py3.9/tools.txt
 
       - id: pip-compile
@@ -1497,6 +1438,7 @@ repos:
           - --python-platform=linux
           - --python-version=3.10
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.10/linux.txt
           - -o=requirements/static/ci/py3.10/tools.txt
 
       - id: pip-compile
@@ -1510,6 +1452,7 @@ repos:
           - --python-platform=linux
           - --python-version=3.11
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.11/linux.txt
           - -o=requirements/static/ci/py3.11/tools.txt
 
       - id: pip-compile
@@ -1523,6 +1466,7 @@ repos:
           - --python-platform=linux
           - --python-version=3.12
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.12/linux.txt
           - -o=requirements/static/ci/py3.12/tools.txt
 
       - id: pip-compile
@@ -1536,6 +1480,7 @@ repos:
           - --python-platform=linux
           - --python-version=3.13
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.13/linux.txt
           - -o=requirements/static/ci/py3.13/tools.txt
 
       ################## Tools VirusTotal #################
@@ -1551,6 +1496,7 @@ repos:
           - --python-platform=linux
           - --python-version=3.9
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.9/linux.txt
           - -o=requirements/static/ci/py3.9/tools-virustotal.txt
 
       - id: pip-compile
@@ -1564,6 +1510,7 @@ repos:
           - --python-platform=linux
           - --python-version=3.10
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.10/linux.txt
           - -o=requirements/static/ci/py3.10/tools-virustotal.txt
 
       - id: pip-compile
@@ -1577,6 +1524,7 @@ repos:
           - --python-platform=linux
           - --python-version=3.11
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.11/linux.txt
           - -o=requirements/static/ci/py3.11/tools-virustotal.txt
 
       - id: pip-compile
@@ -1590,6 +1538,7 @@ repos:
           - --python-platform=linux
           - --python-version=3.12
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.12/linux.txt
           - -o=requirements/static/ci/py3.12/tools-virustotal.txt
 
       - id: pip-compile
@@ -1603,6 +1552,7 @@ repos:
           - --python-platform=linux
           - --python-version=3.13
           - --no-emit-index-url
+          - -c=requirements/static/ci/py3.13/linux.txt
           - -o=requirements/static/ci/py3.13/tools-virustotal.txt
 
   # <---- Tools -----------------------------------------------------------------------------------------------------
