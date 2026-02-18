@@ -782,9 +782,7 @@ def test_systemctl_cmd_with_scope_and_systemd_run_found():
     with patch.object(salt.utils.systemd, "has_scope", has_scope_mock):
         with patch.dict(systemd.__salt__, {"config.get": config_mock}):
             with patch("salt.utils.path.which", which_mock):
-                ret = systemd._systemctl_cmd(
-                    "status", "sshd", systemd_scope=True
-                )
+                ret = systemd._systemctl_cmd("status", "sshd", systemd_scope=True)
                 assert ret == [
                     "/usr/bin/systemd-run",
                     "--scope",
