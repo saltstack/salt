@@ -176,11 +176,6 @@ multidict==6.0.4
     #   yarl
 myst-docutils==1.0.0
     # via -r requirements/static/ci/docs.in
-networkx==3.1
-    # via
-    #   -c requirements/constraints.txt
-    #   -c requirements/static/ci/py3.11/linux.txt
-    #   -r requirements/base.txt
 packaging==24.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt

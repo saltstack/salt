@@ -243,11 +243,6 @@ multidict==6.0.4
     #   -c requirements/static/pkg/py3.11/windows.txt
     #   aiohttp
     #   yarl
-networkx==3.1
-    # via
-    #   -c requirements/constraints.txt
-    #   -c requirements/static/pkg/py3.11/windows.txt
-    #   -r requirements/base.txt
 oauthlib==3.3.1
     # via requests-oauthlib
 packaging==24.0
