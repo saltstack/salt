@@ -26,7 +26,7 @@ jaraco.text>=4.0.0
 Jinja2>=3.1.5
 jmespath
 looseversion
-lxml>=4.6.3; sys_platform == 'win32'
+lxml>=6.0.2; sys_platform == 'win32'
 MarkupSafe<3.0.0
 msgpack>=1.0.0
 # Packaging 24.1 imports annotations from __future__ which breaks salt ssh
