@@ -5722,4 +5722,3 @@ def test_red_os_os_grains():
         "osmajorrelease": 1,
     }
     _run_os_grains_tests(_os_release_data, {}, expectation)
-
