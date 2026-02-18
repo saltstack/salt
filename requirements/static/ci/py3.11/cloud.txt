@@ -360,12 +360,6 @@ netaddr==0.8.0
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/cloud.in
     #   junos-eznc
-networkx==3.1
-    # via
-    #   -c requirements/constraints.txt
-    #   -c requirements/static/ci/py3.11/linux.txt
-    #   -c requirements/static/pkg/py3.11/linux.txt
-    #   -r requirements/base.txt
 oauthlib==3.3.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt

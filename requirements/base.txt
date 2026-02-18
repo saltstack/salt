@@ -31,7 +31,6 @@ lxml>=6.0.2; sys_platform == 'win32'
 MarkupSafe<3.0.0
 msgpack>=1.0.0 ; python_version < '3.13'
 msgpack>=1.1.0 ; python_version >= '3.13'
-networkx
 # Packaging 24.1 imports annotations from __future__ which breaks salt ssh
 # tests on target hosts with older python versions.
 packaging>=21.3; python_version < '3.11'
