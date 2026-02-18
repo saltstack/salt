@@ -36,4 +36,5 @@ timelib>=0.3.0; python_version >= '3.11'
 urllib3>=1.26.20,<2.0.0; python_version < '3.10'
 urllib3>=2.6.3; python_version >= '3.10'
 # For venv module to work without ensurepip
-virtualenv
+virtualenv<20.35.0; python_version <= '3.9'
+virtualenv>=20.35.0; python_version >= '3.10'

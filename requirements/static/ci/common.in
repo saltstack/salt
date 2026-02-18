@@ -1,7 +1,6 @@
 # Requirements in this file apply to all platforms.
 # We can also exclude platforms from the requirements using markers, but if a requirement only applies
 # to a particular platform, please add it to the corresponding `<platform>.in` file in this directory.
---constraint=../pkg/py{py_version}/{platform}.txt
 
 
 apache-libcloud>=1.5.0; sys_platform != 'win32'
@@ -15,8 +14,6 @@ dnspython
 etcd3-py==0.1.6
 # aiohttp is a dependency of etcd3-py
 aiohttp>=3.10.2
-filelock>=3.19.1 ; python_version < '3.10'
-filelock>=3.20.3 ; python_version >= '3.10'
 gitpython>=3.1.37
 jmespath>=1.1.0
 jsonschema
