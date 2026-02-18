@@ -2364,8 +2364,18 @@ def add_repo_key(
                 keyfile = key.name
                 if keyfile.endswith(".decrypted"):
                     keyfile = keyfile[:-10]
-            shutil.copyfile(str(key), str(keydir / keyfile))
+
+            dest_key = keydir / keyfile
+            shutil.copyfile(str(key), str(dest_key))
+
+            # Ensure _apt can read the keyring even under restrictive umask (e.g. 077)
+            try:
+                dest_key.chmod(0o644)
+            except OSError:
+                log.debug("Unable to chmod %s to 0644", dest_key, exc_info=True)
+
             return True
+
         else:
             cmd.extend(["add", cached_source_path])
     elif text:
@@ -2407,7 +2417,13 @@ def add_repo_key(
     cmd_ret = _call_apt(cmd, **kwargs)
 
     if cmd_ret["retcode"] == 0:
+        dest_key = keydir / keyfile
+        try:
+            dest_key.chmod(0o644)
+        except OSError:
+            log.debug("Unable to chmod %s to 0644", dest_key, exc_info=True)
         return True
+
     log.error("Unable to add repo key: %s", cmd_ret["stderr"])
     return False
 
