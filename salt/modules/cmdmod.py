@@ -357,7 +357,7 @@ def _run(
         # when run from sudo or another environment where the euid is
         # changed ~ will expand to the home of the original uid and
         # the euid might not have access to it. See issue #1844
-        if not os.access(cwd, os.R_OK):
+        if not os.access(cwd, os.R_OK) or not os.path.isdir(cwd):
             cwd = "/"
             if salt.utils.platform.is_windows():
                 cwd = os.path.abspath(os.sep)

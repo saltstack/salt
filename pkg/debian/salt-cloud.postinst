@@ -24,7 +24,11 @@ case "$1" in
     then
       if [ "$RET" != "root" ]; then
         PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush;")
-        chown -R $RET:$RET /etc/salt/cloud.deploy.d /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy
+        # Only set ownership on fresh install, preserve on upgrade
+        if [ -z "$2" ]; then
+            chown -R $RET:$RET /etc/salt/cloud.deploy.d /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy
+            chown -R $RET:$RET /opt/saltstack/salt || true
+        fi
       fi
     fi
   ;;
