@@ -4,7 +4,7 @@ cherrypy>=18.7.0
 # cheroot 8.5.2 fails to build with modern setuptools due to setuptools_scm_git_archive dependency
 cheroot>=10.0.1
 pycparser>=2.21; python_version >= '3.9'
-pyopenssl>=23.2.0,<25.0.0
+pyopenssl>=25.0.0
 python-dateutil>=2.8.0
 python-gnupg>=0.4.4
 rpm-vercmp
