@@ -60,6 +60,11 @@ class OS:
     display_name: str = attr.ib(default=None)
     pkg_type: str = attr.ib(default=None)
     enabled: bool = attr.ib(default=True)
+    runner: str = attr.ib()
+
+    @runner.default
+    def _default_runner(self):
+        return self.slug
 
     @arch.default
     def _default_arch(self):
@@ -90,6 +95,8 @@ class Linux(OS):
             "arch": self.arch,
             "display_name": self.display_name,
             "pkg_type": self.pkg_type,
+            "enabled": self.enabled,
+            "runner": self.runner,
             "fips": self.fips,
             "container": self.container,
             "job_name": self.job_name,
@@ -106,12 +113,7 @@ class LinuxPkg(Linux):
 
 @attr.s(frozen=True, slots=True)
 class MacOS(OS):
-    runner: str = attr.ib()
     platform: str = attr.ib(default="macos")
-
-    @runner.default
-    def _default_runner(self):
-        return self.slug
 
     @property
     def job_name(self):
@@ -124,6 +126,7 @@ class MacOS(OS):
             "arch": self.arch,
             "display_name": self.display_name,
             "pkg_type": self.pkg_type,
+            "enabled": self.enabled,
             "runner": self.runner,
             "job_name": self.job_name,
         }
@@ -155,6 +158,8 @@ class Windows(OS):
             "arch": self.arch,
             "display_name": self.display_name,
             "pkg_type": self.pkg_type,
+            "enabled": self.enabled,
+            "runner": self.runner,
             "job_name": self.job_name,
         }
 
@@ -406,10 +411,10 @@ def get_platform_and_arch_from_slug(slug: str) -> tuple[str, str]:
         arch = "amd64"
     elif "macos" in slug:
         platform = "macos"
-        if "macos-13" in slug and "xlarge" in slug:
-            arch = "arm64"
-        else:
+        if "intel" in slug:
             arch = "x86_64"
+        else:
+            arch = "arm64"
     else:
         platform = "linux"
         if "arm64" in slug:
