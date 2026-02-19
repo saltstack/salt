@@ -567,6 +567,7 @@ def onedir_dependencies(
                 "--use-pep517",
                 "--no-cache-dir",
                 "--no-binary=:all:",
+                "--only-binary=maturin",
             ]
         )
 
