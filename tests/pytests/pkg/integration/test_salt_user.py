@@ -60,6 +60,7 @@ def pkg_paths_salt_user():
     return [
         "/etc/salt/cloud.deploy.d",
         "/var/log/salt/cloud",
+        "/opt/saltstack/salt",
         "/opt/saltstack/salt/lib/python{}.{}/site-packages/salt/cloud/deploy".format(
             *sys.version_info
         ),
@@ -183,6 +184,13 @@ def test_pkg_paths(
         # Fails on upgrade tests but there is no way to check that we are running an upgrade test.
         pytest.skip("Package path ownership fails on photon 5")
 
+    # Determine the expected owner for the minion and installation directory.
+    # We check the minion configuration to see if a specific user is set.
+    expected_minion_user = "root"
+    ret = salt_call_cli.run("--local", "config.get", "user")
+    if ret.returncode == 0 and ret.data:
+        expected_minion_user = ret.data
+
     salt_user_subdirs = []
 
     for _path in pkg_paths:
@@ -191,12 +199,42 @@ def test_pkg_paths(
         for dirpath, sub_dirs, files in os.walk(pkg_path):
             path = pathlib.Path(dirpath)
 
-            # Directories owned by salt:salt or their subdirs/files
+            # Special handling for /opt/saltstack/salt
+            if str(path).startswith("/opt/saltstack/salt"):
+                assert path.owner() in ("root", "salt", expected_minion_user)
+                if path.owner() == "salt":
+                    assert path.group() == "salt"
+                elif path.owner() == expected_minion_user:
+                    assert path.group() == expected_minion_user
+                else:
+                    assert path.group() == "root"
+
+                salt_user_subdirs.extend(
+                    [str(path.joinpath(sub_dir)) for sub_dir in sub_dirs]
+                )
+                for file in files:
+                    file_path = path.joinpath(file)
+                    if str(file_path) not in pkg_paths_salt_user_exclusions:
+                        assert file_path.owner() in (
+                            "root",
+                            "salt",
+                            expected_minion_user,
+                        )
+                        if file_path.owner() == "salt":
+                            assert file_path.group() == "salt"
+                        elif file_path.owner() == expected_minion_user:
+                            assert file_path.group() == expected_minion_user
+                        else:
+                            assert file_path.group() == "root"
+                continue
+
+            # Standard path handling
             if (
                 str(path) in pkg_paths_salt_user or str(path) in salt_user_subdirs
             ) and str(path) not in pkg_paths_salt_user_exclusions:
                 assert path.owner() == "salt"
                 assert path.group() == "salt"
+
                 salt_user_subdirs.extend(
                     [str(path.joinpath(sub_dir)) for sub_dir in sub_dirs]
                 )

@@ -27,7 +27,11 @@ case "$1" in
           touch /var/log/salt/syndic
           chmod 640 /var/log/salt/syndic
         fi
-        chown $RET:$RET /var/log/salt/syndic
+        # Only set ownership on fresh install, preserve on upgrade
+        if [ -z "$2" ]; then
+            chown $RET:$RET /var/log/salt/syndic
+            chown -R $RET:$RET /opt/saltstack/salt || true
+        fi
       fi
     fi
   ;;
