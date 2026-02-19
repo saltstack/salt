@@ -7,7 +7,7 @@
 apache-libcloud>=1.5.0; sys_platform != 'win32'
 boto3>=1.25.0
 boto>=2.47.0
-cassandra-driver>=3.25.0
+cryptography>=46.0.5
 cffi>=1.14.6
 cherrypy>=17.4.1
 clustershell
@@ -18,7 +18,7 @@ aiohttp>=3.10.2
 filelock>=3.19.1 ; python_version < '3.10'
 filelock>=3.20.3 ; python_version >= '3.10'
 gitpython>=3.1.37
-jmespath
+jmespath>=1.1.0
 jsonschema
 junos-eznc; sys_platform != 'win32' and python_version <= '3.10'
 jxmlease; sys_platform != 'win32'

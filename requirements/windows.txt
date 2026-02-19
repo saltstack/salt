@@ -2,7 +2,7 @@
 
 -r zeromq.txt
 
-pywin32>=305
+pywin32>=308
 wmi>=1.5.1
 pythonnet>=3.0.1
 cffi>=1.14.5
@@ -13,7 +13,7 @@ lxml>=6.0.2
 pyasn1>=0.6.2
 pycparser>=2.21
 pymssql>=2.2.11
-pyopenssl>=23.2.0,<25.0.0
+pyopenssl>=25.0.0
 python-dateutil>=2.8.1
 python-gnupg>=0.4.7
 requests>=2.25.1
