@@ -16,6 +16,7 @@ common:
     - "**/site-packages/*/tests"
     - "**/site-packages/ansible_collections/*/*/test"
     - "**/site-packages/ansible_collections/*/*/tests"
+    - "**/site-packages/virtualenv/seed/wheels/embed/*.whl"
     # Bundled Tornado Test Suite
     - "**/salt/ext/tornado/test"
   file_patterns: &common_file_patterns
