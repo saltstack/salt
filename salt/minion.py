@@ -535,6 +535,28 @@ class MinionBase:
             return min(auth_wait + auth_wait_step, max_auth_wait)
         return auth_wait
 
+    def _handle_invalid_master_key(self, exc, opts=None):
+        """
+        Provide actionable logging for invalid master key errors.
+        """
+        if not salt.utils.minion.is_invalid_master_key_error(exc):
+            return False
+        target_opts = opts or self.opts
+        master_key_path = salt.utils.minion.master_pubkey_path(target_opts)
+        refreshed = salt.utils.minion.refresh_master_pubkey_if_invalid(target_opts)
+        if refreshed:
+            log.warning(
+                "Removed empty or invalid master key at %s; retrying authentication",
+                master_key_path,
+            )
+        else:
+            log.error(
+                "Invalid master key detected. Verify the master key at %s. If the "
+                "master key rotated, remove this file to re-authenticate.",
+                master_key_path,
+            )
+        return True
+
     async def eval_master(
         self, opts, timeout=60, safe=True, failed=False, failback=False
     ):
@@ -1215,6 +1237,7 @@ class MinionManager(MinionBase):
             except SaltClientError as exc:
                 minion.destroy()
                 failed = True
+                minion._handle_invalid_master_key(exc)
                 log.error(
                     "Error while bringing up minion for multi-master. Is "
                     "master at %s responding? The error message was %s",
@@ -3792,6 +3815,7 @@ class SyndicManager(MinionBase):
                 break
             except SaltClientError as exc:
                 failed = True
+                self._handle_invalid_master_key(exc, opts=opts)
                 log.error(
                     "Error while bringing up syndic for multi-syndic. Is the "
                     "master at %s responding?",

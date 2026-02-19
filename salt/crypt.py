@@ -38,6 +38,7 @@ import salt.utils.platform
 import salt.utils.rsax931
 import salt.utils.sdb
 import salt.utils.stringutils
+import salt.utils.minion
 import salt.utils.user
 import salt.utils.verify
 import salt.version
@@ -1420,17 +1421,24 @@ class AsyncAuth:
         :return: An empty string on verification failure. On success, the decrypted AES message in the payload.
         """
         m_pub_fn = os.path.join(self.opts["pki_dir"], self.mpub)
-        m_pub_exists = os.path.isfile(m_pub_fn)
+        local_master_pub = salt.utils.minion.read_master_pubkey(m_pub_fn)
+        if local_master_pub is None:
+            log.error("Unable to read master pubkey at %s", m_pub_fn)
+            return ""
+        payload_master_pub = salt.utils.minion.normalize_master_pubkey(
+            payload.get("pub_key")
+        )
+        m_pub_exists = bool(local_master_pub)
         if m_pub_exists and master_pub and not self.opts["open_mode"]:
-            with salt.utils.files.fopen(m_pub_fn) as fp_:
-                local_master_pub = clean_key(fp_.read())
-
-            if payload["pub_key"] != local_master_pub:
+            if payload_master_pub != local_master_pub:
                 if not self.check_auth_deps(payload):
                     return ""
 
                 if self.opts["verify_master_pubkey_sign"]:
                     if self.verify_signing_master(payload):
+                        salt.utils.minion.write_master_pubkey(
+                            m_pub_fn, payload.get("pub_key", payload_master_pub)
+                        )
                         return self.extract_aes(payload, master_pub=False)
                     else:
                         return ""
@@ -1476,8 +1484,9 @@ class AsyncAuth:
                 if not m_pub_exists:
                     # the minion has not received any masters pubkey yet, write
                     # the newly received pubkey to minion_master.pub
-                    with salt.utils.files.fopen(m_pub_fn, "wb+") as fp_:
-                        fp_.write(salt.utils.stringutils.to_bytes(payload["pub_key"]))
+                    salt.utils.minion.write_master_pubkey(
+                        m_pub_fn, payload.get("pub_key", payload_master_pub)
+                    )
                 return self.extract_aes(payload, master_pub=False)
 
     def _finger_fail(self, finger, master_key):
