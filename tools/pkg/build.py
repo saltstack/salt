@@ -815,6 +815,34 @@ def salt_onedir(
             "ppbt",
         )
 
+    # Update virtualenv embedded wheels
+    embed_dir = pathlib.Path(site_packages) / "virtualenv" / "seed" / "wheels" / "embed"
+    # clear existing wheels
+    if embed_dir.exists():
+        for file in embed_dir.glob("*.whl"):
+            try:
+                file.unlink()
+            except Exception as e:
+                log.error("Error deleting %s: %s", file.name, e)
+    else:
+        embed_dir.mkdir(parents=True, exist_ok=True)
+
+    # download new virtualenv embedded wheels
+    env["PIP_CONSTRAINT"] = str(
+        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
+    )
+    ctx.run(
+        str(python_executable),
+        "-m",
+        "pip",
+        "download",
+        "setuptools",
+        "pip",
+        "wheel",
+        "--dest",
+        str(embed_dir),
+    )
+
 
 def _check_pkg_build_files_exist(ctx: Context, **kwargs):
     for name, path in kwargs.items():

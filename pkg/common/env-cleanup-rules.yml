@@ -5,7 +5,6 @@ common:
     - "**/site-packages/ansible/plugins/test/**"
   dir_patterns: &common_dir_patterns
     - "**/__pycache__"
-    - "**/lib/python3.*/virtualenv/seed/wheels/embed/*.whl"
     - "**/lib/python3.*/ensurepip"
     - "**/lib/python3.*/idlelib"
     - "**/lib/python3.*/test"
@@ -64,7 +63,6 @@ ci:
       - "**/site-packages/win32com/test"
     file_patterns: &ci_windows_file_patterns
       - *common_file_patterns
-      - "**/site-packages/virtualenv/seed/wheels/embed/*.whl"
       # Help files
       - "**/*.chm"
       - "**/Scripts/wmitest*"
