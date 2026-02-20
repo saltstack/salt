@@ -476,22 +476,31 @@ namespace MinionConfigurationExtension {
             session.Log("...Waiting 6 seconds for graceful shutdown...");
             System.Threading.Thread.Sleep(6000);
 
-            string installDir = session["INSTALLDIR"];
-            session.Log("...Targeting processes in: " + installDir);
+            // This is an immediate custom action, access properties directly
+            string installDir = "";
+            try {
+                installDir = cutil.get_property_IMCAC(session, "INSTALLDIR");
+            } catch (Exception) {
+                session.Log("...INSTALLDIR not found. Falling back to default WMI search.");
+            }
+            string wmi_query = "SELECT ProcessID, ExecutablePath, CommandLine FROM Win32_Process WHERE (CommandLine LIKE '%salt-minion%' OR CommandLine LIKE '%salt-call%') AND NOT CommandLine LIKE '%msiexec%'";
+            if (!string.IsNullOrEmpty(installDir)) {
+                session.Log("...Targeting processes in: " + installDir);
+                // Broaden the query to include anything running from the installation directory
+                wmi_query = "SELECT ProcessID, ExecutablePath, CommandLine FROM Win32_Process WHERE (ExecutablePath LIKE '" + installDir.Replace("\\", "\\\\") + "%' OR CommandLine LIKE '%salt-minion%' OR CommandLine LIKE '%salt-call%') AND NOT CommandLine LIKE '%msiexec%'";
+            }
 
-            using (
-                var wmi_searcher = new ManagementObjectSearcher(
-                    "SELECT ProcessID, ExecutablePath, CommandLine FROM Win32_Process WHERE (ExecutablePath LIKE '" + installDir.Replace("\\", "\\\\") + "%' OR CommandLine LIKE '%salt-minion%' OR CommandLine LIKE '%salt-call%') AND NOT CommandLine LIKE '%msiexec%'"
-                )
-            ) {
+            using (var wmi_searcher = new ManagementObjectSearcher(wmi_query)) {
                 foreach (ManagementObject wmi_obj in wmi_searcher.Get()) {
                     try {
                         if (wmi_obj["ProcessID"] == null) continue;
                         String ProcessID = wmi_obj["ProcessID"].ToString();
                         Int32 pid = Int32.Parse(ProcessID);
-                        String ExecutablePath = wmi_obj["ExecutablePath"] != null ? wmi_obj["ExecutablePath"].ToString() : "Unknown";
-                        String CommandLine = wmi_obj["CommandLine"] != null ? wmi_obj["CommandLine"].ToString() : "Unknown";
 
+                        // Don't kill ourselves or the installer
+                        if (pid == Process.GetCurrentProcess().Id) continue;
+
+                        String ExecutablePath = wmi_obj["ExecutablePath"] != null ? wmi_obj["ExecutablePath"].ToString() : "Unknown";
                         session.Log("...killing process: PID=" + ProcessID + " Path=" + ExecutablePath);
                         Process proc = Process.GetProcessById(pid);
                         proc.Kill();

@@ -1241,23 +1241,22 @@ Function ${un}uninstallSalt
         Abort
     ${EndIf}
 
-    # Give the minion enough time to finish its internal stop_async (graceful shutdown).
-    # salt/minion.py:MinionManager.stop_async has a static 5-second sleep to allow
-    # the I/O loop to process and send any remaining "return" messages to the Master.
-    # We wait 6 seconds here to ensure that we don't aggressively kill the process
-    # while it is still performing its legitimate cleanup. After this window,
-    # we proceed to kill any lingering or orphan processes that would otherwise
-    # lock DLLs (like pywin32 or cryptography) and cause a "Frankenstein" installation.
-    ${LogMsg} "Waiting 6 seconds for graceful shutdown..."
-    Sleep 6000
-    ${LogMsg} "Killing remaining processes"
-    nsExec::ExecToStack 'powershell -Command "Get-Process | Where-Object { ($_.Path -like \"*$INSTDIR*\") -or ($_.Name -like \"salt*\") -or ($_.Name -like \"python*\") } | Stop-Process -Force -ErrorAction SilentlyContinue"'
-    pop $0
-    pop $1
+        # Give the minion enough time to finish its internal stop_async (graceful shutdown).
+        # salt/minion.py:MinionManager.stop_async has a static 5-second sleep to allow
+        # the I/O loop to process and send any remaining "return" messages to the Master.
+        # We wait 6 seconds here to ensure that we don't aggressively kill the process
+        # while it is still performing its legitimate cleanup. After this window,
+        # we proceed to kill any lingering or orphan processes that would otherwise
+        # lock DLLs (like pywin32 or cryptography) and cause a "Frankenstein" installation.
+        ${LogMsg} "Waiting 6 seconds for graceful shutdown..."
+        Sleep 6000
+        ${LogMsg} "Killing remaining processes in $INSTDIR"
+        nsExec::ExecToStack 'powershell -Command "$p = \"$INSTDIR\".Replace(\"\\\", \"\\\\\"); Get-Process | Where-Object { ($_.Path -like \"$p*\") -and ($_.Id -ne $PID) } | Stop-Process -Force -ErrorAction SilentlyContinue"'
+        pop $0
+        pop $1
 
-    doneSSM:
-
-    # Remove files
+        doneSSM:
+        # Remove files
     ${LogMsg} "Deleting files"
     ClearErrors
     ${LogMsg} "Deleting files: $INSTDIR\multi-minion*"
@@ -1269,8 +1268,11 @@ Function ${un}uninstallSalt
     ClearErrors
     ${LogMsg} "Deleting files: $INSTDIR\salt*"
     Delete "$INSTDIR\salt*"
-    IfErrors 0 ssmBin
-    ${LogMsg} "FAILED"
+    ${If} ${Errors}
+        ${LogMsg} "FAILED to delete critical Salt binaries in $INSTDIR. Files might be locked."
+        MessageBox MB_OK|MB_ICONEXCLAMATION "FAILED to delete critical Salt binaries in $INSTDIR. Files might be locked. Please ensure all Salt processes are stopped and try again." /SD IDOK IDOK
+        Abort
+    ${EndIf}
 
     ssmBin:
     ClearErrors
