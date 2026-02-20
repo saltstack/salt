@@ -1071,7 +1071,7 @@ def _load_cached_grains(opts, cfn):
     except (OSError, SaltDeserializationError):
         log.debug(
             "Grains cache was not readable or did not deserialize and might be corrupted. Refreshing.",
-            exc_info=True
+            exc_info=True,
         )
         return None
 
