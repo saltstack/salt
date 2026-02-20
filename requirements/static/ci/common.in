@@ -43,7 +43,7 @@ rfc3987
 sqlparse>=0.4.4
 strict_rfc3339>=0.7
 toml
-vcert~=0.7.0; sys_platform != 'win32'
+vcert~=0.9.0; sys_platform != 'win32'
 virtualenv>=20.36.1
 watchdog>=0.9.0
 websocket-client>=1.3.3
