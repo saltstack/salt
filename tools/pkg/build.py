@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import pathlib
+import re
 import shutil
 import tarfile
 import zipfile
@@ -842,6 +843,39 @@ def salt_onedir(
         "--dest",
         str(embed_dir),
     )
+
+    # Update __init__.py with the new versions
+
+    # 1. Identify the new wheel versions on disk
+    wheels = list(embed_dir.glob("*.whl"))
+
+    def get_latest(name):
+        # Finds the wheel with the highest version number for a given package name
+        matches = [w.name for w in wheels if w.name.startswith(name + "-")]
+        return sorted(matches, reverse=True)[0] if matches else None
+
+    new_pip = get_latest("pip")
+    new_setuptools = get_latest("setuptools")
+    new_wheel = get_latest("wheel")
+
+    if not all([new_pip, new_setuptools]):
+        log.debug("Error: Could not find new wheels to map in __init__.py")
+    else:
+
+        # 2. Read the current __init__.py content
+        init_file = embed_dir / "__init__.py"
+        content = init_file.read_text()
+
+        # 3. Use Regex to replace the specific filenames globally in the BUNDLE_SUPPORT dict
+        # This targets the specific quoted strings for each package type
+        content = re.sub(r'("pip":\s*")([^"]+)"', f'\\1{new_pip}"', content)
+        content = re.sub(r'("setuptools":\s*")([^"]+)"', f'\\1{new_setuptools}"', content)
+        content = re.sub(r'("wheel":\s*")([^"]+)"', f'\\1{new_wheel}"', content)
+
+        # 4. Write the updated file back
+        init_file.write_text(content)
+        log.debug(f"Updated {init_file.name} with:")
+        log.debug(f"Pip: {new_pip}\nSetuptools: {new_setuptools}\nWheel: {new_wheel}")
 
 
 def _check_pkg_build_files_exist(ctx: Context, **kwargs):
