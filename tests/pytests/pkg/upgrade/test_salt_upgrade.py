@@ -73,6 +73,10 @@ def salt_test_upgrade(
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
     install_salt.install(upgrade=True)
 
+    if platform.is_windows():
+        # Give the system a moment to fully release all file locks after the installer finishes
+        time.sleep(10)
+
     start = time.monotonic()
     while True:
         ret = salt_call_cli.run("--local", "test.version", _timeout=10)

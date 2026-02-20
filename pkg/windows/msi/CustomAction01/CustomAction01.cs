@@ -483,30 +483,44 @@ namespace MinionConfigurationExtension {
             } catch (Exception) {
                 session.Log("...INSTALLDIR not found. Falling back to default WMI search.");
             }
-            string wmi_query = "SELECT ProcessID, ExecutablePath, CommandLine FROM Win32_Process WHERE (CommandLine LIKE '%salt-minion%' OR CommandLine LIKE '%salt-call%') AND NOT CommandLine LIKE '%msiexec%'";
+            string wmi_query = "SELECT ProcessID, ExecutablePath, CommandLine FROM Win32_Process WHERE (CommandLine LIKE '%salt-minion%' OR CommandLine LIKE '%salt-call%' OR CommandLine LIKE '%ssm.exe%') AND NOT CommandLine LIKE '%msiexec%'";
             if (!string.IsNullOrEmpty(installDir)) {
                 session.Log("...Targeting processes in: " + installDir);
                 // Broaden the query to include anything running from the installation directory
-                wmi_query = "SELECT ProcessID, ExecutablePath, CommandLine FROM Win32_Process WHERE (ExecutablePath LIKE '" + installDir.Replace("\\", "\\\\") + "%' OR CommandLine LIKE '%salt-minion%' OR CommandLine LIKE '%salt-call%') AND NOT CommandLine LIKE '%msiexec%'";
+                wmi_query = "SELECT ProcessID, ExecutablePath, CommandLine FROM Win32_Process WHERE (ExecutablePath LIKE '" + installDir.Replace("\\", "\\\\") + "%' OR CommandLine LIKE '%salt-minion%' OR CommandLine LIKE '%salt-call%' OR CommandLine LIKE '%ssm.exe%') AND NOT CommandLine LIKE '%msiexec%'";
             }
 
-            using (var wmi_searcher = new ManagementObjectSearcher(wmi_query)) {
-                foreach (ManagementObject wmi_obj in wmi_searcher.Get()) {
-                    try {
-                        if (wmi_obj["ProcessID"] == null) continue;
-                        String ProcessID = wmi_obj["ProcessID"].ToString();
-                        Int32 pid = Int32.Parse(ProcessID);
+            // Perform multiple passes to ensure stubborn or child processes are caught
+            for (int attempt = 1; attempt <= 3; attempt++) {
+                session.Log("...Kill attempt " + attempt + " of 3");
+                using (var wmi_searcher = new ManagementObjectSearcher(wmi_query)) {
+                    int killedCount = 0;
+                    foreach (ManagementObject wmi_obj in wmi_searcher.Get()) {
+                        try {
+                            if (wmi_obj["ProcessID"] == null) continue;
+                            String ProcessID = wmi_obj["ProcessID"].ToString();
+                            Int32 pid = Int32.Parse(ProcessID);
 
-                        // Don't kill ourselves or the installer
-                        if (pid == Process.GetCurrentProcess().Id) continue;
+                            // Don't kill ourselves or the installer
+                            if (pid == Process.GetCurrentProcess().Id) continue;
 
-                        String ExecutablePath = wmi_obj["ExecutablePath"] != null ? wmi_obj["ExecutablePath"].ToString() : "Unknown";
-                        session.Log("...killing process: PID=" + ProcessID + " Path=" + ExecutablePath);
-                        Process proc = Process.GetProcessById(pid);
-                        proc.Kill();
-                    } catch (Exception exc) {
-                        session.Log("...failed to kill process: " + exc.Message);
+                            String ExecutablePath = wmi_obj["ExecutablePath"] != null ? wmi_obj["ExecutablePath"].ToString() : "Unknown";
+                            session.Log("...killing process: PID=" + ProcessID + " Path=" + ExecutablePath);
+                            Process proc = Process.GetProcessById(pid);
+                            proc.Kill();
+                            killedCount++;
+                        } catch (Exception exc) {
+                            session.Log("...failed to kill process: " + exc.Message);
+                        }
                     }
+                    if (killedCount == 0) {
+                        session.Log("...No matching processes found to kill.");
+                        break;
+                    }
+                }
+                if (attempt < 3) {
+                    session.Log("...Waiting 2 seconds before next kill attempt...");
+                    System.Threading.Thread.Sleep(2000);
                 }
             }
             session.Log("...END kill_python_exe");
