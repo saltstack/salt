@@ -21,7 +21,7 @@ common:
   file_patterns: &common_file_patterns
     - "*.pyc"
     - "*.pyo"
-    - "**/lib/python3.*/virtualenv/seed/wheels/embed/*.whl"
+    - "**/site-packages/virtualenv/seed/wheels/embed/*.whl"
     - "**/test/test_*.py*"
     - "**/test/**/test_*.py*"
     - "**/tests/test_*.py*"
@@ -64,7 +64,6 @@ ci:
       - "**/site-packages/win32com/test"
     file_patterns: &ci_windows_file_patterns
       - *common_file_patterns
-      - "**/site-packages/virtualenv/seed/wheels/embed/*.whl"
       # Help files
       - "**/*.chm"
       - "**/Scripts/wmitest*"
