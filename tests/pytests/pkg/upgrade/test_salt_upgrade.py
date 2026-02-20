@@ -70,6 +70,19 @@ def salt_test_upgrade(
     assert old_minion_pids
     assert old_master_pids
 
+    if platform.is_windows():
+        # Stop minion service
+        install_salt.proc.run("net", "stop", "salt-minion")
+        # Kill any orphan processes
+        for proc in psutil.process_iter():
+            try:
+                # Check for processes running out of the salt install dir
+                if "Salt Project" in " ".join(proc.cmdline()):
+                    proc.kill()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        time.sleep(5)
+
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
     install_salt.install(upgrade=True)
 
@@ -100,6 +113,14 @@ def salt_test_upgrade(
 
     new_minion_pids = _get_running_named_salt_pid(process_minion_name)
     new_master_pids = _get_running_named_salt_pid(process_master_name)
+
+    if sys.platform == "linux" and not new_minion_pids:
+        # services are not always restarted after upgrade
+        for service in ("salt-minion", "salt-master"):
+            install_salt.proc.run("systemctl", "restart", service)
+        time.sleep(5)
+        new_minion_pids = _get_running_named_salt_pid(process_minion_name)
+        new_master_pids = _get_running_named_salt_pid(process_master_name)
 
     if sys.platform == "linux" and install_salt.distro_id not in ("ubuntu", "debian"):
         assert new_minion_pids
