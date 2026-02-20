@@ -874,8 +874,8 @@ def salt_onedir(
 
         # 4. Write the updated file back
         init_file.write_text(content)
-        log.debug(f"Updated {init_file.name} with:")
-        log.debug(f"Pip: {new_pip}\nSetuptools: {new_setuptools}\nWheel: {new_wheel}")
+        log.debug("Updated %s with:", init_file.name)
+        log.debug("Pip: %s\nSetuptools: %s\nWheel: %s", new_pip, new_setuptools, new_wheel)
 
 
 def _check_pkg_build_files_exist(ctx: Context, **kwargs):
