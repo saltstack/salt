@@ -34,11 +34,21 @@ def salt_systemd_setup(
 def salt_test_upgrade(
     salt_call_cli,
     install_salt,
+    salt_master,
+    salt_minion,
 ):
     """
     Test upgrade of Salt packages for Minion and Master
     """
     log.info("**** salt_test_upgrade - start *****")
+
+    if platform.is_windows():
+        # Terminate the master and minion processes so they don't lock files in the install dir
+        # We must do this before any installer activity.
+        log.info("Terminating salt-master and salt-minion before upgrade")
+        salt_master.terminate()
+        salt_minion.terminate()
+
     # Verify previous install version salt-minion is setup correctly and works
     ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
@@ -180,12 +190,21 @@ def _get_installed_salt_packages():
     return packages
 
 
-def test_salt_upgrade(salt_call_cli, install_salt, debian_disable_policy_rcd):
+def test_salt_upgrade(
+    salt_call_cli, install_salt, debian_disable_policy_rcd, salt_master, salt_minion
+):
     """
     Test an upgrade of Salt, Minion and Master
     """
     if not install_salt.upgrade:
         pytest.skip("Not testing an upgrade, do not run")
+
+    if platform.is_windows():
+        # Terminate the master and minion processes so they don't lock files in the install dir
+        # We must do this before any installer activity.
+        log.info("Terminating salt-master and salt-minion before upgrade")
+        salt_master.terminate()
+        salt_minion.terminate()
 
     original_py_version = install_salt.package_python_version()
 
@@ -200,7 +219,7 @@ def test_salt_upgrade(salt_call_cli, install_salt, debian_disable_policy_rcd):
     assert "Authentication information could" in use_lib.stderr
 
     # perform Salt package upgrade test
-    salt_test_upgrade(salt_call_cli, install_salt)
+    salt_test_upgrade(salt_call_cli, install_salt, salt_master, salt_minion)
 
     # Verify only one Salt package is installed after upgrade (Windows)
     if platform.is_windows():

@@ -1241,32 +1241,56 @@ Function ${un}uninstallSalt
         Abort
     ${EndIf}
 
-    # Give the minion enough time to finish its internal stop_async (graceful shutdown).
-    # salt/minion.py:MinionManager.stop_async has a static 5-second sleep to allow
-    # the I/O loop to process and send any remaining "return" messages to the Master.
-    # We wait 6 seconds here to ensure that we don't aggressively kill the process
-    # while it is still performing its legitimate cleanup. After this window,
-    # we proceed to kill any lingering or orphan processes that would otherwise
-    # lock DLLs (like pywin32 or cryptography) and cause a "Frankenstein" installation.
-    ${LogMsg} "Waiting 6 seconds for graceful shutdown..."
-    Sleep 6000
+        # Give the minion enough time to finish its internal stop_async (graceful shutdown).
+
+        # salt/minion.py:MinionManager.stop_async has a static 5-second sleep to allow
+
+        # the I/O loop to process and send any remaining "return" messages to the Master.
+
+        # We wait 6 seconds here to ensure that we don't aggressively kill the process
+
+        # while it is still performing its legitimate cleanup. After this window,
+
+        # we proceed to kill any lingering or orphan processes that would otherwise
+
+        # lock DLLs (like pywin32 or cryptography) and cause a "Frankenstein" installation.
+
+        ${LogMsg} "Waiting 6 seconds for graceful shutdown..."
+
+        Sleep 6000
+
+
 
     # Perform multiple passes to ensure stubborn or child processes are caught
-    ${LogMsg} "Killing remaining processes in $INSTDIR (Pass 1 of 3)"
-    nsExec::ExecToStack 'powershell -Command "$p = \"$INSTDIR\".Replace(\"\\\", \"\\\\\"); Get-Process | Where-Object { (($_.Path -like \"$p*\") -or ($_.Name -like \"ssm*\") -or ($_.Name -like \"salt*\")) -and ($_.Id -ne $PID) } | Stop-Process -Force -ErrorAction SilentlyContinue"'
-    Sleep 2000
-
-    ${LogMsg} "Killing remaining processes in $INSTDIR (Pass 2 of 3)"
-    nsExec::ExecToStack 'powershell -Command "$p = \"$INSTDIR\".Replace(\"\\\", \"\\\\\"); Get-Process | Where-Object { (($_.Path -like \"$p*\") -or ($_.Name -like \"ssm*\") -or ($_.Name -like \"salt*\")) -and ($_.Id -ne $PID) } | Stop-Process -Force -ErrorAction SilentlyContinue"'
-    Sleep 2000
-
-    ${LogMsg} "Killing remaining processes in $INSTDIR (Pass 3 of 3)"
-    nsExec::ExecToStack 'powershell -Command "$p = \"$INSTDIR\".Replace(\"\\\", \"\\\\\"); Get-Process | Where-Object { (($_.Path -like \"$p*\") -or ($_.Name -like \"ssm*\") -or ($_.Name -like \"salt*\")) -and ($_.Id -ne $PID) } | Stop-Process -Force -ErrorAction SilentlyContinue"'
-
+    # Pass 1: Aggressive taskkill
+    ${LogMsg} "Killing remaining processes (Pass 1 of 3)"
+    nsExec::ExecToStack 'taskkill /F /IM ssm.exe /T'
+    nsExec::ExecToStack 'taskkill /F /IM salt-minion.exe /T'
+    nsExec::ExecToStack 'taskkill /F /IM salt-call.exe /T'
+    nsExec::ExecToStack `powershell -Command "$p = '$INSTDIR'.Replace('\', '\\'); Get-Process | Where-Object { ($_.Path -like '$p*') -or ($_.Name -eq 'ssm') } | ForEach-Object { Write-Output \"Killing: $($_.Name) ($($_.Id))\"; Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }"`
     pop $0
     pop $1
+    ${LogMsg} "Kill log: $1"
+    Sleep 2000
+
+    # Pass 2: PowerShell follow-up
+    ${LogMsg} "Killing remaining processes (Pass 2 of 3)"
+    nsExec::ExecToStack `powershell -Command "$p = '$INSTDIR'.Replace('\', '\\'); Get-Process | Where-Object { ($_.Path -like '$p*') -or ($_.Name -eq 'ssm') } | ForEach-Object { Write-Output \"Killing: $($_.Name) ($($_.Id))\"; Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }"`
+    pop $0
+    pop $1
+    ${LogMsg} "Kill log: $1"
+    Sleep 2000
+
+    # Pass 3: Final check
+    ${LogMsg} "Killing remaining processes (Pass 3 of 3)"
+    nsExec::ExecToStack `powershell -Command "$p = '$INSTDIR'.Replace('\', '\\'); Get-Process | Where-Object { ($_.Path -like '$p*') -or ($_.Name -eq 'ssm') } | ForEach-Object { Write-Output \"Killing: $($_.Name) ($($_.Id))\"; Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }"`
+    pop $0
+    pop $1
+    ${LogMsg} "Kill log: $1"
 
     doneSSM:
+
+
         # Remove files
     ${LogMsg} "Deleting files"
     ClearErrors
