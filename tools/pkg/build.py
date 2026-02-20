@@ -868,14 +868,28 @@ def salt_onedir(
 
         # 3. Use Regex to replace the specific filenames globally in the BUNDLE_SUPPORT dict
         # This targets the specific quoted strings for each package type
-        content = re.sub(r'("pip":\s*")([^"]+)"', f'\\1{new_pip}"', content)
-        content = re.sub(r'("setuptools":\s*")([^"]+)"', f'\\1{new_setuptools}"', content)
-        content = re.sub(r'("wheel":\s*")([^"]+)"', f'\\1{new_wheel}"', content)
+        content = re.sub(
+            r'("pip":\s*")([^"]+)"',
+            f'\\1{new_pip}"',
+            content,
+        )
+        content = re.sub(
+            r'("setuptools":\s*")([^"]+)"',
+            f'\\1{new_setuptools}"',
+            content,
+        )
+        content = re.sub(
+            r'("wheel":\s*")([^"]+)"',
+            f'\\1{new_wheel}"',
+            content,
+        )
 
         # 4. Write the updated file back
         init_file.write_text(content)
         log.debug("Updated %s with:", init_file.name)
-        log.debug("Pip: %s\nSetuptools: %s\nWheel: %s", new_pip, new_setuptools, new_wheel)
+        log.debug(
+            "Pip: %s\nSetuptools: %s\nWheel: %s", new_pip, new_setuptools, new_wheel
+        )
 
 
 def _check_pkg_build_files_exist(ctx: Context, **kwargs):
