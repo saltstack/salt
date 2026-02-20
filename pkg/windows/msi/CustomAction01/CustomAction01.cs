@@ -486,8 +486,8 @@ namespace MinionConfigurationExtension {
             string wmi_query = "SELECT ProcessID, ExecutablePath, CommandLine FROM Win32_Process WHERE (CommandLine LIKE '%salt-minion%' OR CommandLine LIKE '%salt-call%' OR CommandLine LIKE '%ssm.exe%') AND NOT CommandLine LIKE '%msiexec%'";
             if (!string.IsNullOrEmpty(installDir)) {
                 session.Log("...Targeting processes in: " + installDir);
-                // Broaden the query to include anything running from the installation directory
-                wmi_query = "SELECT ProcessID, ExecutablePath, CommandLine FROM Win32_Process WHERE (ExecutablePath LIKE '" + installDir.Replace("\\", "\\\\") + "%' OR CommandLine LIKE '%salt-minion%' OR CommandLine LIKE '%salt-call%' OR CommandLine LIKE '%ssm.exe%') AND NOT CommandLine LIKE '%msiexec%'";
+                // Broaden the query to include anything running from the installation directory OR explicitly named ssm
+                wmi_query = "SELECT ProcessID, ExecutablePath, CommandLine FROM Win32_Process WHERE (ExecutablePath LIKE '" + installDir.Replace("\\", "\\\\") + "%' OR CommandLine LIKE '%salt-minion%' OR CommandLine LIKE '%salt-call%' OR CommandLine LIKE '%ssm.exe%' OR ExecutablePath LIKE '%ssm.exe') AND NOT CommandLine LIKE '%msiexec%'";
             }
 
             // Perform multiple passes to ensure stubborn or child processes are caught

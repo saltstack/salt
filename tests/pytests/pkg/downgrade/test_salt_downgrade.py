@@ -35,10 +35,16 @@ def _get_running_named_salt_pid(process_name):
     return pids
 
 
-def test_salt_downgrade_minion(salt_call_cli, install_salt):
+def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_minion):
     """
     Test a downgrade of Salt Minion.
     """
+    if platform.is_windows():
+        # Terminate the master and minion processes so they don't lock files in the install dir
+        # We must do this before any installer activity.
+        salt_master.terminate()
+        salt_minion.terminate()
+
     is_restart_fixed = packaging.version.parse(
         install_salt.prev_version
     ) < packaging.version.parse("3006.9")
