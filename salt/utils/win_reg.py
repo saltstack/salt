@@ -98,6 +98,10 @@ class Registry:  # pylint: disable=R0903
     """
 
     def __init__(self):
+        if not HAS_WINDOWS_MODULES:
+            raise CommandExecutionError(
+                "Registry functionality requires 'pywin32' to be installed."
+            )
         self.hkeys = {
             "HKEY_CURRENT_CONFIG": win32con.HKEY_CURRENT_CONFIG,
             "HKEY_CLASSES_ROOT": win32con.HKEY_CLASSES_ROOT,
