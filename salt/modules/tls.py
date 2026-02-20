@@ -581,10 +581,14 @@ def validate(cert, ca_name, crl_file):
             ca_keyp = f"{ca_dir}/{ca_name}_ca_cert.key"
             try:
                 with salt.utils.files.fopen(ca_keyp, "rb") as fhr:
-                    ca_key = serialization.load_pem_private_key(fhr.read(), password=None)
+                    ca_key = serialization.load_pem_private_key(
+                        fhr.read(), password=None
+                    )
 
                 ca_x509 = x509.load_pem_x509_certificate(
-                    OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, ca_cert)
+                    OpenSSL.crypto.dump_certificate(
+                        OpenSSL.crypto.FILETYPE_PEM, ca_cert
+                    )
                 )
 
                 builder = x509.CertificateRevocationListBuilder()
@@ -603,11 +607,17 @@ def validate(cert, ca_name, crl_file):
                                 serial = int(fields[3], 16)
                                 if serial.bit_length() >= 160:
                                     serial = serial & ((1 << 159) - 1)
-                                revocation_date = datetime.strptime(fields[2], two_digit_year_fmt)
+                                revocation_date = datetime.strptime(
+                                    fields[2], two_digit_year_fmt
+                                )
                                 revoked_builder = x509.RevokedCertificateBuilder()
                                 revoked_builder = revoked_builder.serial_number(serial)
-                                revoked_builder = revoked_builder.revocation_date(revocation_date)
-                                builder = builder.add_revoked_certificate(revoked_builder.build())
+                                revoked_builder = revoked_builder.revocation_date(
+                                    revocation_date
+                                )
+                                builder = builder.add_revoked_certificate(
+                                    revoked_builder.build()
+                                )
 
                 # Sign the CRL
                 crl = builder.sign(private_key=ca_key, algorithm=hashes.SHA256())
@@ -643,7 +653,7 @@ def validate(cert, ca_name, crl_file):
             return {
                 "valid": False,
                 "error": "certificate revoked",
-                "error_cert": cert_obj
+                "error_cert": cert_obj,
             }
 
     context = OpenSSL.crypto.X509StoreContext(store, cert_obj)
@@ -1698,11 +1708,13 @@ def create_pkcs12(ca_name, CN, passphrase="", cacert_path=None, replace=False):
         key=key.to_cryptography_key(),
         cert=cert.to_cryptography(),
         cas=[ca_cert.to_cryptography()],
-        encryption_algorithm=serialization.BestAvailableEncryption(
-            salt.utils.stringutils.to_bytes(passphrase)
-        )
-        if passphrase
-        else serialization.NoEncryption(),
+        encryption_algorithm=(
+            serialization.BestAvailableEncryption(
+                salt.utils.stringutils.to_bytes(passphrase)
+            )
+            if passphrase
+            else serialization.NoEncryption()
+        ),
     )
 
     with salt.utils.files.fopen(
@@ -2084,7 +2096,9 @@ def revoke_cert(
                     fields = line.split("\t")
                     revoked = OpenSSL.crypto.Revoked()
                     revoked.set_serial(salt.utils.stringutils.to_bytes(fields[3]))
-                    revoke_date_2_digit = datetime.strptime(fields[2], two_digit_year_fmt)
+                    revoke_date_2_digit = datetime.strptime(
+                        fields[2], two_digit_year_fmt
+                    )
                     revoked.set_rev_date(
                         salt.utils.stringutils.to_bytes(
                             revoke_date_2_digit.strftime(four_digit_year_fmt)
