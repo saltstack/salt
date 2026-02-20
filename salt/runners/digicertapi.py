@@ -43,7 +43,6 @@ import tempfile
 from collections.abc import Sequence
 
 import salt.cache
-import salt.syspaths as syspaths
 import salt.utils.files
 import salt.utils.http
 import salt.utils.json

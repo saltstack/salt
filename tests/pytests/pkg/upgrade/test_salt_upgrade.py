@@ -70,19 +70,6 @@ def salt_test_upgrade(
     assert old_minion_pids
     assert old_master_pids
 
-    if platform.is_windows():
-        # Stop minion service
-        install_salt.proc.run("net", "stop", "salt-minion")
-        # Kill any orphan processes
-        for proc in psutil.process_iter():
-            try:
-                # Check for processes running out of the salt install dir
-                if "Salt Project" in " ".join(proc.cmdline()):
-                    proc.kill()
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                continue
-        time.sleep(5)
-
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
     install_salt.install(upgrade=True)
 

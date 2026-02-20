@@ -83,19 +83,6 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
     old_minion_pids = _get_running_named_salt_pid(process_name)
     assert old_minion_pids
 
-    if platform.is_windows():
-        # Stop minion service
-        install_salt.proc.run("net", "stop", "salt-minion")
-        # Kill any orphan processes
-        for proc in psutil.process_iter():
-            try:
-                # Check for processes running out of the salt install dir
-                if "Salt Project" in " ".join(proc.cmdline()):
-                    proc.kill()
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                continue
-        time.sleep(5)
-
     # Downgrade Salt to the previous version and test
     install_salt.install(downgrade=True)
 
