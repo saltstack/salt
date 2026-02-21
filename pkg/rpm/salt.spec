@@ -40,7 +40,7 @@
 %define fish_dir %{_datadir}/fish/vendor_functions.d
 
 Name:    salt
-Version: 3006.21
+Version: 3006.22
 Release: 0
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
@@ -754,6 +754,26 @@ if [ $1 -ge 1 ] ; then
 fi
 
 %changelog
+* Sat Feb 21 2026 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.22
+
+# Fixed
+
+- Fix nftables module check function doesn't understand that braces are optional [#67078](https://github.com/saltstack/salt/issues/67078)
+- Fix issue with upstream Netbox API which changed api/ipam/prefixes output to use "scope" FK instead of "site" [#68375](https://github.com/saltstack/salt/issues/68375)
+- Fixed SyntaxWarning for invalid escape sequence '\d' in salt/ext/tornado/util.py
+  on Python 3.12+ by converting the re_unescape docstring to a raw string. [#68568](https://github.com/saltstack/salt/issues/68568)
+- Raise exception if systemd-run is not found when scope is enabled
+
+  Instead of returning None when the systemd-run command is not found
+  — which causes the command to fail with an unclear error —
+  an exception is now raised, helping to identify the real issue. [#68720](https://github.com/saltstack/salt/issues/68720)
+- Remove bundled wheels from virtualenv [#68740](https://github.com/saltstack/salt/issues/68740)
+
+# Added
+
+- Add an option in the chocolatey state and module so that the viruscheck flag can be controlled. [#68558](https://github.com/saltstack/salt/issues/68558)
+
+
 * Wed Feb 11 2026 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.21
 
 # Fixed
