@@ -39,12 +39,6 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
     """
     Test a downgrade of Salt Minion.
     """
-    if platform.is_windows():
-        # Terminate the master and minion processes so they don't lock files in the install dir
-        # We must do this before any installer activity.
-        salt_master.terminate()
-        salt_minion.terminate()
-
     is_restart_fixed = packaging.version.parse(
         install_salt.prev_version
     ) < packaging.version.parse("3006.9")
@@ -87,7 +81,12 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
         process_name = "salt-minion"
 
     old_minion_pids = _get_running_named_salt_pid(process_name)
-    assert old_minion_pids
+    if not platform.is_windows():
+        assert old_minion_pids
+
+    if platform.is_windows():
+        salt_master.terminate()
+        salt_minion.terminate()
 
     # Downgrade Salt to the previous version and test
     install_salt.install(downgrade=True)

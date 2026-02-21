@@ -42,13 +42,6 @@ def salt_test_upgrade(
     """
     log.info("**** salt_test_upgrade - start *****")
 
-    if platform.is_windows():
-        # Terminate the master and minion processes so they don't lock files in the install dir
-        # We must do this before any installer activity.
-        log.info("Terminating salt-master and salt-minion before upgrade")
-        salt_master.terminate()
-        salt_minion.terminate()
-
     # Verify previous install version salt-minion is setup correctly and works
     ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
@@ -67,7 +60,7 @@ def salt_test_upgrade(
         ret.stdout.strip().split()[1]
     ) < packaging.version.parse(install_salt.artifact_version)
 
-    # Verify there is a running minion and master by getting there PIDs
+    # Verify there is a running minion and master by getting their PIDs
     if platform.is_windows():
         process_master_name = "cli_salt_master.py"
         process_minion_name = "salt-minion.exe"
@@ -77,8 +70,15 @@ def salt_test_upgrade(
 
     old_minion_pids = _get_running_named_salt_pid(process_minion_name)
     old_master_pids = _get_running_named_salt_pid(process_master_name)
-    assert old_minion_pids
-    assert old_master_pids
+    if not platform.is_windows():
+        assert old_minion_pids
+        assert old_master_pids
+
+    if platform.is_windows():
+        # Terminate master and minion so they don't lock files during the upgrade.
+        log.info("Terminating salt-master and salt-minion before upgrade")
+        salt_master.terminate()
+        salt_minion.terminate()
 
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
     install_salt.install(upgrade=True)
@@ -198,13 +198,6 @@ def test_salt_upgrade(
     """
     if not install_salt.upgrade:
         pytest.skip("Not testing an upgrade, do not run")
-
-    if platform.is_windows():
-        # Terminate the master and minion processes so they don't lock files in the install dir
-        # We must do this before any installer activity.
-        log.info("Terminating salt-master and salt-minion before upgrade")
-        salt_master.terminate()
-        salt_minion.terminate()
 
     original_py_version = install_salt.package_python_version()
 
