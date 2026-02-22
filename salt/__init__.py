@@ -9,6 +9,8 @@ import re
 import sys
 import warnings
 
+import salt.utils.versions
+
 # Aweful hack to keep salt-ssh tests passing with tornado >=6.4.2. Salt ssh
 # needs to be transitioned to use a relenv environemnt by default. This should
 # be removed when salt-ssh uses relenv or we no longer want salt-ssh to support
@@ -77,13 +79,25 @@ warnings.filterwarnings(
     # never show up
 )
 
-# Filter the backports package UserWarning about being re-imported
-warnings.filterwarnings(
-    "ignore",
-    "^Module backports was already imported from (.*), but (.*) is being added to sys.path$",
-    UserWarning,
-    append=True,
-)
+def _setup_backports_compat():
+    """
+    Ensure the optional backports namespace exists for legacy imports.
+    """
+    try:
+        salt.utils.versions.ensure_backports_compat()
+    except Exception:  # pylint: disable=broad-except
+        return False
+    return "backports" in sys.modules
+
+
+if _setup_backports_compat():
+    # Filter the backports package UserWarning about being re-imported
+    warnings.filterwarnings(
+        "ignore",
+        "^Module backports was already imported from (.*), but (.*) is being added to sys.path$",
+        UserWarning,
+        append=True,
+    )
 
 # Filter the setuptools UserWarning until we stop relying on distutils
 warnings.filterwarnings(

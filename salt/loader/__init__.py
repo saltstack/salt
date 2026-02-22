@@ -34,6 +34,20 @@ from .lazy import SALT_BASE_PATH, FilterDictWrapper, LazyLoader
 
 log = logging.getLogger(__name__)
 
+
+_BACKPORTS_COMPAT_READY = False
+
+
+def _ensure_backports_compat():
+    global _BACKPORTS_COMPAT_READY
+    if _BACKPORTS_COMPAT_READY:
+        return
+    try:
+        salt.utils.versions.ensure_backports_compat()
+    except Exception:  # pylint: disable=broad-except
+        log.debug("Failed to set up backports compatibility", exc_info=True)
+    _BACKPORTS_COMPAT_READY = True
+
 # Because on the cloud drivers we do `from salt.cloud.libcloudfuncs import *`
 # which simplifies code readability, it adds some unsupported functions into
 # the driver's module scope.
@@ -127,6 +141,7 @@ def _module_dirs(
     base_path=None,
     load_extensions=True,
 ):
+    _ensure_backports_compat()
     if tag is None:
         tag = ext_type
     sys_types = [os.path.join(base_path or str(SALT_BASE_PATH), int_type or ext_type)]

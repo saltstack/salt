@@ -8,11 +8,13 @@
 """
 
 import datetime
+import importlib.util
 import inspect
 import logging
 import numbers
 import os
 import sys
+import types
 import warnings
 
 import looseversion
@@ -21,6 +23,47 @@ import packaging.version
 import salt.version
 
 log = logging.getLogger(__name__)
+
+
+def _resolve_backports_ssl_match_hostname():
+    """
+    Return a module-like object that provides match_hostname and CertificateError.
+    """
+    try:
+        import ssl
+
+        if hasattr(ssl, "match_hostname") and hasattr(ssl, "CertificateError"):
+            module = types.ModuleType("backports.ssl_match_hostname")
+            module.match_hostname = ssl.match_hostname
+            module.CertificateError = ssl.CertificateError
+            return module
+    except Exception:  # pylint: disable=broad-except
+        pass
+    try:
+        from salt.ext import ssl_match_hostname as salt_ssl_match_hostname
+
+        return salt_ssl_match_hostname
+    except Exception:  # pylint: disable=broad-except
+        return None
+
+
+def ensure_backports_compat():
+    """
+    Ensure the optional 'backports' namespace package is importable.
+    """
+    if "backports" in sys.modules:
+        return False
+    if importlib.util.find_spec("backports") is not None:
+        return False
+    backports_pkg = types.ModuleType("backports")
+    backports_pkg.__path__ = []
+    sys.modules["backports"] = backports_pkg
+    ssl_match = _resolve_backports_ssl_match_hostname()
+    if ssl_match is not None:
+        sys.modules.setdefault("backports.ssl_match_hostname", ssl_match)
+        setattr(backports_pkg, "ssl_match_hostname", ssl_match)
+    log.debug("Injected backports namespace stubs for compatibility")
+    return True
 
 
 class Version(packaging.version.Version):
