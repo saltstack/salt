@@ -1,9 +1,7 @@
---constraint=../pkg/py{py_version}/{platform}.txt
-
 pygit2>=1.10.1
 yamllint
 mercurial
 hglib
 # Pin versions to match 3007.x
-apache-libcloud==3.7.0
-gitpython==3.1.43
+apache-libcloud>=3.8.0
+gitpython>=3.1.46

@@ -1402,7 +1402,11 @@ def private_key_managed(
                     real_name, passphrase=passphrase, get_encoding=True
                 )
             except SaltInvocationError as err:
-                if "Bad decrypt" in str(err):
+                err_str = str(err)
+                if (
+                    "Bad decrypt" in err_str
+                    or "Could not deserialize key data" in err_str
+                ):
                     if not overwrite:
                         raise CommandExecutionError(
                             "The provided passphrase cannot decrypt the private key. "
@@ -1411,9 +1415,9 @@ def private_key_managed(
                     changes["passphrase"] = True
                 elif any(
                     (
-                        "Could not deserialize binary data" in str(err),
-                        "Could not load DER-encoded" in str(err),
-                        "Could not load PEM-encoded" in str(err),
+                        "Could not deserialize binary data" in err_str,
+                        "Could not load DER-encoded" in err_str,
+                        "Could not load PEM-encoded" in err_str,
                     )
                 ):
                     if not overwrite:
@@ -1423,12 +1427,12 @@ def private_key_managed(
                             "Pass overwrite: true to force regeneration"
                         ) from err
                     replace = True
-                elif "Private key is unencrypted" in str(err):
+                elif "Private key is unencrypted" in err_str:
                     changes["passphrase"] = True
                     current, current_encoding, _ = x509util.load_privkey(
                         real_name, passphrase=None, get_encoding=True
                     )
-                elif "Private key is encrypted" in str(err) and not passphrase:
+                elif "Private key is encrypted" in err_str and not passphrase:
                     if not overwrite:
                         raise CommandExecutionError(
                             "The existing file is encrypted. Pass overwrite: true "

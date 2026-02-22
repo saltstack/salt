@@ -43,7 +43,6 @@ import tempfile
 from collections.abc import Sequence
 
 import salt.cache
-import salt.syspaths as syspaths
 import salt.utils.files
 import salt.utils.http
 import salt.utils.json
@@ -337,7 +336,7 @@ def get_certificate(
 
     if common_name:
         bank = "digicert/domains"
-        cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
+        cache = salt.cache.Cache(__opts__, __opts__.get("cachedir"))
         try:
             data = cache.fetch(bank, common_name)
         except TypeError:
@@ -506,7 +505,7 @@ def order_certificate(
     )
     if "errors" not in qdata["dict"]:
         bank = "digicert/domains"
-        cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
+        cache = salt.cache.Cache(__opts__, __opts__.get("cachedir"))
         data = cache.fetch(bank, common_name)
         if data is None:
             data = {}
@@ -547,7 +546,7 @@ def gen_key(minion_id, dns_name=None, password=None, key_len=2048):
             private_key = gen.exportKey("PEM", password)
         if dns_name is not None:
             bank = "digicert/domains"
-            cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
+            cache = salt.cache.Cache(__opts__, __opts__.get("cachedir"))
             try:
                 data = cache.fetch(bank, dns_name)
                 data["private_key"] = private_key
@@ -617,7 +616,7 @@ def gen_csr(
     os.chmod(tmpdir, 0o700)
 
     bank = "digicert/domains"
-    cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
+    cache = salt.cache.Cache(__opts__, __opts__.get("cachedir"))
     data = cache.fetch(bank, dns_name)
     if data is None:
         data = {}
@@ -670,7 +669,7 @@ def _id_map(minion_id, dns_name):
     Maintain a relationship between a minion and a dns name
     """
     bank = "digicert/minions"
-    cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
+    cache = salt.cache.Cache(__opts__, __opts__.get("cachedir"))
     dns_names = cache.fetch(bank, minion_id)
     if not isinstance(dns_names, list):
         dns_names = []
@@ -735,7 +734,7 @@ def show_rsa(minion_id, dns_name):
 
         salt-run digicert.show_rsa myminion domain.example.com
     """
-    cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
+    cache = salt.cache.Cache(__opts__, __opts__.get("cachedir"))
     bank = "digicert/domains"
     data = cache.fetch(bank, dns_name)
     return data["private_key"]
@@ -751,7 +750,7 @@ def list_domain_cache():
 
         salt-run digicert.list_domain_cache
     """
-    cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
+    cache = salt.cache.Cache(__opts__, __opts__.get("cachedir"))
     return cache.list("digicert/domains")
 
 
@@ -765,7 +764,7 @@ def del_cached_domain(domains):
 
         salt-run digicert.del_cached_domain domain1.example.com,domain2.example.com
     """
-    cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
+    cache = salt.cache.Cache(__opts__, __opts__.get("cachedir"))
     if isinstance(domains, str):
         domains = domains.split(",")
     if not isinstance(domains, list):

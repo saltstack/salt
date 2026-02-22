@@ -1243,11 +1243,82 @@ Function ${un}uninstallSalt
 
     ${EndIf}
 
-    # Remove files
-    ${LogMsg} "Deleting individual files"
+        # Give the minion enough time to finish its internal stop_async (graceful shutdown).
+
+        # salt/minion.py:MinionManager.stop_async has a static 5-second sleep to allow
+
+        # the I/O loop to process and send any remaining "return" messages to the Master.
+
+        # We wait 6 seconds here to ensure that we don't aggressively kill the process
+
+        # while it is still performing its legitimate cleanup. After this window,
+
+        # we proceed to kill any lingering or orphan processes that would otherwise
+
+        # lock DLLs (like pywin32 or cryptography) and cause a "Frankenstein" installation.
+
+        ${LogMsg} "Waiting 6 seconds for graceful shutdown..."
+
+        Sleep 6000
+
+
+
+    # Perform multiple passes to ensure stubborn or child processes are caught
+    # Pass 1: Aggressive taskkill
+    # Note: These are not hard errors, so we don't check for errors
+    ${LogMsg} "Killing remaining processes (Pass 1 of 3)"
+    nsExec::ExecToStack 'taskkill /F /IM ssm.exe /T'
+    nsExec::ExecToStack 'taskkill /F /IM salt-minion.exe /T'
+    nsExec::ExecToStack 'taskkill /F /IM salt-call.exe /T'
+    nsExec::ExecToStack `powershell -Command "$p = '$INSTDIR'.Replace('\', '\\'); Get-Process | Where-Object { ($_.Path -like '$p*') -or ($_.Name -eq 'ssm') } | ForEach-Object { Write-Output \"Killing: $($_.Name) ($($_.Id))\"; Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }"`
+    pop $0
+    pop $1
+    ${LogMsg} "Kill log: $1"
+    Sleep 2000
+
+    # Pass 2: PowerShell follow-up
+    ${LogMsg} "Killing remaining processes (Pass 2 of 3)"
+    nsExec::ExecToStack `powershell -Command "$p = '$INSTDIR'.Replace('\', '\\'); Get-Process | Where-Object { ($_.Path -like '$p*') -or ($_.Name -eq 'ssm') } | ForEach-Object { Write-Output \"Killing: $($_.Name) ($($_.Id))\"; Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }"`
+    pop $0
+    pop $1
+    ${LogMsg} "Kill log: $1"
+    Sleep 2000
+
+    # Pass 3: Final check
+    ${LogMsg} "Killing remaining processes (Pass 3 of 3)"
+    nsExec::ExecToStack `powershell -Command "$p = '$INSTDIR'.Replace('\', '\\'); Get-Process | Where-Object { ($_.Path -like '$p*') -or ($_.Name -eq 'ssm') } | ForEach-Object { Write-Output \"Killing: $($_.Name) ($($_.Id))\"; Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }"`
+    pop $0
+    pop $1
+    ${LogMsg} "Kill log: $1"
+
+    doneSSM:
+
+
+        # Remove files
+    ${LogMsg} "Deleting files"
+    ClearErrors
+    ${LogMsg} "Deleting files: $INSTDIR\multi-minion*"
     Delete "$INSTDIR\multi-minion*"
     Delete "$INSTDIR\salt*"
-    Delete "$INSTDIR\ssm.exe"
+    ${If} ${Errors}
+        ${LogMsg} "FAILED to delete critical Salt binaries in $INSTDIR. Files might be locked."
+        MessageBox MB_OK|MB_ICONEXCLAMATION "FAILED to delete critical Salt binaries in $INSTDIR. Files might be locked. Please ensure all Salt processes are stopped and try again." /SD IDOK IDOK
+        Abort
+    ${EndIf}
+
+    ssmBin:
+    ClearErrors
+    ${LogMsg} "Deleting file: $SSMBin"
+    Delete "$SSMBin"
+    ${If} ${Errors}
+        ${LogMsg} "FAILED to delete $SSMBin. File might be locked."
+        MessageBox MB_OK|MB_ICONEXCLAMATION "FAILED to delete critical Salt service manager ($SSMBin). File might be locked. Please ensure all Salt processes are stopped and try again." /SD IDOK IDOK
+        Abort
+    ${EndIf}
+
+    uninstBin:
+    ClearErrors
+    ${LogMsg} "Deleting file: $INSTDIR\uninst.exe"
     Delete "$INSTDIR\uninst.exe"
     Delete "$INSTDIR\vcredist.exe"
     ${LogMsg} "Deleting directories"
@@ -1255,7 +1326,47 @@ Function ${un}uninstallSalt
     RMDir /r "$INSTDIR\Include"
     RMDir /r "$INSTDIR\Lib"
     RMDir /r "$INSTDIR\libs"
-    RMDir /r "$INSTDIR\Scripts"
+    ${If} ${Errors}
+        ${LogMsg} "FAILED to delete $INSTDIR\Lib. Files might be locked."
+        MessageBox MB_OK|MB_ICONEXCLAMATION "FAILED to delete critical Salt libraries in $INSTDIR\Lib. Files might be locked. Please ensure all Salt processes are stopped and try again." /SD IDOK IDOK
+        Abort
+    ${EndIf}
+
+    removeLibs:
+    ClearErrors
+    ${LogMsg} "Deleting directory: $INSTDIR\libs"
+    RMDir /r "$INSTDIR\libs"
+    IfErrors 0 removeScripts
+    ${LogMsg} "FAILED"
+
+    removeScripts:
+    ClearErrors
+    ${LogMsg} "Deleting directory: $INSTDIR\Scripts"
+    RMDir /r "$INSTDIR\Scripts"  # Relenv puts bins in Scripts
+    ${If} ${Errors}
+        ${LogMsg} "FAILED to delete $INSTDIR\Scripts. Files might be locked."
+        MessageBox MB_OK|MB_ICONEXCLAMATION "FAILED to delete critical Salt scripts in $INSTDIR\Scripts. Files might be locked. Please ensure all Salt processes are stopped and try again." /SD IDOK IDOK
+        Abort
+    ${EndIf}
+
+    removeBin:
+    ClearErrors
+    ${LogMsg} "Deleting directory: $INSTDIR\bin"
+    RMDir /r "$INSTDIR\bin"      # Older versions use bin
+    ${If} ${Errors}
+        ${LogMsg} "FAILED to delete $INSTDIR\bin. Files might be locked."
+        MessageBox MB_OK|MB_ICONEXCLAMATION "FAILED to delete critical Salt binaries in $INSTDIR\bin. Files might be locked. Please ensure all Salt processes are stopped and try again." /SD IDOK IDOK
+        Abort
+    ${EndIf}
+
+    removeConfigs:
+    ClearErrors
+    ${LogMsg} "Deleting directory: $INSTDIR\configs"
+    RMDir /r "$INSTDIR\configs"  # Sometimes this gets left behind
+    IfErrors 0 removeDone
+    ${LogMsg} "FAILED"
+
+    removeDone:
 
     # Remove everything in the 64 bit registry
 

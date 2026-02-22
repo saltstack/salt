@@ -197,16 +197,14 @@ IMCAC - Immediate Custom Action - It's immediate
         stopSalt to release log file, installValidate requires access to all
         files, including the log file
       -->
-      <Custom Action="stopSalt"                 Before="InstallValidate"          >1</Custom>
+      <Custom Action="stopSalt"                 Before="kill_python_exe"          >1</Custom>
 
       <!--
       On uninstall or upgrade: stop salt python.exe processes that would lock dll's
-      - This will only run on silent installs. /quiet or /qn
-      - All other installs will display a dialog box of process that need to be closed
+      - This must run before InstallValidate to ensure that the installer does not see files in use
       -->
-      <Custom Action="kill_python_exe"          After="StopServices"              >(REMOVE ~= "ALL") or WIX_UPGRADE_DETECTED</Custom>
+      <Custom Action="kill_python_exe"          Before="InstallValidate"          >(REMOVE ~= "ALL") or WIX_UPGRADE_DETECTED</Custom>
 
-      <!-- ReadConfig_IMCAC must be called before CostInitialize so features can depend on properties set-->
       <Custom Action="ReadConfig_IMCAC"         Before="CostInitialize"           >NOT Installed</Custom>
       <Custom Action="del_NSIS_DECAC"           After="InstallInitialize"         >nsis_install_found</Custom>
 
@@ -242,7 +240,7 @@ IMCAC - Immediate Custom Action - It's immediate
     <CustomAction Id="DeleteConfig_DECAC"   BinaryKey="MinionConfigExt" DllEntry="DeleteConfig_DECAC"     Execute="deferred" Return="check" Impersonate="no" />
     <CustomAction Id="DeleteConfig2_DECAC"  BinaryKey="MinionConfigExt" DllEntry="DeleteConfig_DECAC"     Execute="deferred" Return="check" Impersonate="no" />
     <CustomAction Id="BackupConfig_DECAC"   BinaryKey="MinionConfigExt" DllEntry="BackupConfig_DECAC"     Execute="deferred" Return="check" Impersonate="no" />
-    <CustomAction Id="kill_python_exe"      BinaryKey="MinionConfigExt" DllEntry="kill_python_exe"        Execute="deferred" Return="check" Impersonate="no" />
+    <CustomAction Id="kill_python_exe"      BinaryKey="MinionConfigExt" DllEntry="kill_python_exe"        Execute="immediate" Return="ignore" />
     <!-- Custom Action Data Helper for deferred custom actions  -->
     <!-- master and id must be named like in YAML configuration -->
     <!-- Send all this stuff down to the sandbox -->

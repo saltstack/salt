@@ -1234,7 +1234,11 @@ class MinionManager(MinionBase):
         and any remaining events to be processed before stopping the minions.
         """
 
-        # Sleep to allow any remaining events to be processed
+        # Sleep to allow any remaining events to be processed.
+        # This gives the minion time to send final "return" messages to the Master.
+        # Ideally, we would dynamically wait for all pending messages to be flushed
+        # from the I/O loop instead of using a static sleep amount, but for now
+        # this 5-second window handles most cases.
         yield tornado.gen.sleep(5)
 
         # Continue to stop the minions
