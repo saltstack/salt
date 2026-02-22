@@ -1,4 +1,6 @@
 # This file only exists to trigger the right static compiled requirements destination.
+# Don't add any requirements here, add them in requirements/base.txt
+# If they are linux specific, place "; sys_platform == 'linux'" in front of the requirement.
 # Any non hard dependencies of Salt for linux can go here
 cherrypy>=18.7.0
 # cheroot 8.5.2 fails to build with modern setuptools due to setuptools_scm_git_archive dependency

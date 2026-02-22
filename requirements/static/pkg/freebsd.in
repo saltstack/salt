@@ -1,5 +1,6 @@
 # This file only exists to trigger the right static compiled requirements destination
 # Any non hard dependencies of Salt for FreeBSD can go here
+# If they are freebsd specific, place "; sys_platform == 'freebsd'" in front of the requirement.
 cherrypy>=18.7.0
 cryptography>=41.0.3
 pycparser>=2.21; python_version >= '3.9'

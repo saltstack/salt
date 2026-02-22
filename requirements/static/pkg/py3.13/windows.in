@@ -1,0 +1,4 @@
+# Python 3.13 specific package constraints
+# This file is used when compiling requirements for Python 3.13
+
+cherrypy>=18.7.0
