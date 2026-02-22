@@ -66,6 +66,7 @@ from salt.serializers.configparser import deserialize
 from salt.utils.win_lgpo_reg import (
     CLASS_INFO,
     REG_POL_HEADER,
+    normalize_policy_value,
     read_reg_pol_file,
     search_reg_pol,
     write_reg_pol_data,
@@ -9703,6 +9704,7 @@ def get_policy(
     return_value_only=True,
     return_full_policy_names=True,
     hierarchical_return=False,
+    normalize=False,
 ):
     r"""
     Get the current settings for a single policy on the machine
@@ -9741,6 +9743,11 @@ def get_policy(
 
         hierarchical_return (:obj:`bool`, optional):
             Returns a hierarchical view of the policy showing its parents.
+
+            Default is ``False``.
+
+        normalize (:obj:`bool`, optional):
+            Normalize returned values for reliable comparisons.
 
             Default is ``False``.
 
@@ -9796,13 +9803,16 @@ def get_policy(
                     ]
                     break
     if policy_definition:
+        setting_value = _get_policy_info_setting(policy_definition)
+        if normalize:
+            setting_value = normalize_policy_value(setting_value)
         if return_value_only:
-            return _get_policy_info_setting(policy_definition)
+            return setting_value
         if return_full_policy_names:
             key_name = policy_definition["Policy"]
         else:
             key_name = policy_name
-        setting = {key_name: _get_policy_info_setting(policy_definition)}
+        setting = {key_name: setting_value}
         if hierarchical_return:
             if "lgpo_section" in policy_definition:
                 first_item = True
@@ -9831,6 +9841,8 @@ def get_policy(
             return_full_policy_names=return_full_policy_names,
             hierarchical_return=hierarchical_return,
         )
+        if normalize:
+            setting = normalize_policy_value(setting)
         if return_value_only:
             for key in setting:
                 return setting[key]

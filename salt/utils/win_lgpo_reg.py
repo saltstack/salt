@@ -11,6 +11,7 @@ import struct
 import salt.modules.win_file
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.win_reg
 from salt.exceptions import CommandExecutionError
 
@@ -70,6 +71,54 @@ def __virtual__():
         return False, "LGPO_REG Util: Missing win32 modules"
 
     return __virtualname__
+
+
+_NUMERIC_RE = re.compile(r"^-?\d+$")
+_BOOL_STRINGS = {"true": True, "false": False}
+
+
+def _normalize_policy_key(value):
+    if isinstance(value, bytes):
+        value = salt.utils.stringutils.to_unicode(value)
+    if isinstance(value, str):
+        return value.replace("\x00", "")
+    return value
+
+
+def _normalize_policy_scalar(value):
+    if isinstance(value, bytes):
+        value = salt.utils.stringutils.to_unicode(value)
+    if isinstance(value, str):
+        value = value.replace("\x00", "")
+        stripped = value.strip()
+        if not stripped:
+            return stripped
+        lowered = stripped.lower()
+        if lowered in _BOOL_STRINGS:
+            return _BOOL_STRINGS[lowered]
+        if _NUMERIC_RE.match(stripped):
+            try:
+                return int(stripped)
+            except ValueError:
+                return stripped
+        return stripped
+    return value
+
+
+def normalize_policy_value(value):
+    """
+    Normalize policy values for reliable comparisons.
+    """
+    if isinstance(value, dict):
+        normalized = {}
+        for key, val in value.items():
+            normalized[_normalize_policy_key(key)] = normalize_policy_value(val)
+        return normalized
+    if isinstance(value, list):
+        return [normalize_policy_value(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(normalize_policy_value(item) for item in value)
+    return _normalize_policy_scalar(value)
 
 
 def search_reg_pol(search_string, policy_data):

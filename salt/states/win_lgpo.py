@@ -215,6 +215,7 @@ import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.versions
 import salt.utils.win_functions
+import salt.utils.win_lgpo_reg
 
 log = logging.getLogger(__name__)
 __virtualname__ = "lgpo"
@@ -235,6 +236,12 @@ def _compare_policies(new_policy, current_policy):
     Helper function that returns ``True`` if the policies are the same,
     otherwise ``False``
     """
+    new_policy = _convert_to_unicode(
+        salt.utils.win_lgpo_reg.normalize_policy_value(new_policy)
+    )
+    current_policy = _convert_to_unicode(
+        salt.utils.win_lgpo_reg.normalize_policy_value(current_policy)
+    )
     # Compared dicts, lists, and strings
     if isinstance(new_policy, (str, int)):
         return new_policy == current_policy
@@ -426,6 +433,7 @@ def set_(
                         policy_class=p_class,
                         adml_language=adml_language,
                         return_value_only=True,
+                        normalize=True,
                     )
                     # Validate element names
                     if isinstance(p_data["requested_policy"][p_name], dict):
@@ -497,17 +505,18 @@ def set_(
                         current_policy[class_map[p_class]][p_name] = resolved_names
 
                     changes = False
+                    requested_policy_check = salt.utils.win_lgpo_reg.normalize_policy_value(
+                        p_data["requested_policy"][p_name]
+                    )
+                    current_policy_check = salt.utils.win_lgpo_reg.normalize_policy_value(
+                        current_policy[class_map[p_class]][p_name]
+                    )
                     requested_policy_json = salt.utils.json.dumps(
-                        p_data["requested_policy"][p_name], sort_keys=True
+                        requested_policy_check, sort_keys=True
                     )
                     current_policy_json = salt.utils.json.dumps(
-                        current_policy[class_map[p_class]][p_name], sort_keys=True
+                        current_policy_check, sort_keys=True
                     )
-
-                    requested_policy_check = salt.utils.json.loads(
-                        requested_policy_json
-                    )
-                    current_policy_check = salt.utils.json.loads(current_policy_json)
 
                     # Are the requested and current policies identical
                     policies_are_equal = _compare_policies(
@@ -580,6 +589,7 @@ def set_(
                                 policy_class=p_class,
                                 adml_language=adml_language,
                                 return_value_only=True,
+                                normalize=True,
                             )
                 ret["changes"] = salt.utils.dictdiffer.deep_diff(
                     old=current_policy, new=new_policy
