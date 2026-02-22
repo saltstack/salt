@@ -13,7 +13,7 @@ import salt.utils.dictupdate
 pytestmark = [
     pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows"),
     pytest.mark.usefixtures("pillar_tree_nested"),
-    pytest.mark.slow_test,
+    # pytest.mark.slow_test,
 ]
 
 

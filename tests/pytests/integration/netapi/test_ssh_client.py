@@ -12,7 +12,7 @@ from tests.support.helpers import (
 from tests.support.mock import patch
 
 pytestmark = [
-    pytest.mark.slow_test,
+    # pytest.mark.slow_test,
     pytest.mark.requires_sshd_server,
     pytest.mark.skipif(
         'grains["osfinger"].startswith(("Arch Linux"))',
