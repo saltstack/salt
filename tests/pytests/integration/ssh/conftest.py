@@ -6,10 +6,7 @@ from tests.support.pytest.helpers import reap_stray_processes
 
 @pytest.fixture(scope="package", autouse=True)
 def _auto_skip_on_system_python_too_recent(grains):
-    if (
-        grains["osfinger"] in ("Fedora Linux-40", "Ubuntu-24.04", "Debian-13")
-        or grains["os_family"] == "Arch"
-    ):
+    if grains["os_family"] == "Arch":
         pytest.skip(
             "System ships with a version of python that is too recent for salt-ssh tests",
             # Actually, the problem is that the tornado we ship is not prepared for Python 3.12,

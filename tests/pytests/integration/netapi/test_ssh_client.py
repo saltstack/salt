@@ -12,10 +12,10 @@ from tests.support.helpers import (
 from tests.support.mock import patch
 
 pytestmark = [
-    pytest.mark.slow_test,
+    # pytest.mark.slow_test,
     pytest.mark.requires_sshd_server,
     pytest.mark.skipif(
-        'grains["osfinger"].startswith(("Fedora Linux-40", "Ubuntu-24.04", "Arch Linux"))',
+        'grains["osfinger"].startswith(("Arch Linux"))',
         reason="System ships with a version of python that is too recent for salt-ssh tests",
         # Actually, the problem is that the tornado we ship is not prepared for Python 3.12,
         # and it imports `ssl` and checks if the `match_hostname` function is defined, which

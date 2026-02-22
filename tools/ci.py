@@ -572,6 +572,7 @@ def _os_test_filter(osdef, transport, chunk, arm_runner, requested_slugs):
         "photonos-5-arm64",
         "ubuntu-22.04",
         "ubuntu-22.04-arm64",
+        "fedora-42",
     ):
         return False
     return True
