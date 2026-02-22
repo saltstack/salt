@@ -723,7 +723,7 @@ class LoadBalancerWorker(SaltMessageServer):
                         break
                     continue
                 # 'self.io_loop' initialized in super class
-                # 'salt.ext.tornado.tcpserver.TCPServer'.
+                # 'tornado.tcpserver.TCPServer'.
                 # 'self._handle_connection' defined in same super class.
                 self.io_loop.spawn_callback(
                     self._handle_connection, client_socket, address

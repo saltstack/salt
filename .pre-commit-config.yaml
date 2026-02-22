@@ -1681,7 +1681,32 @@ repos:
         alias: rewrite-tests
         name: Rewrite Salt's Test Suite
         files: ^tests/.*\.py$
-        args: [--silent, -E, fix_asserts, -E, fix_docstrings]
+        # Exclude fix_tornado_imports to prevent rewriting tornado -> salt.ext.tornado
+        args: [--silent, -E, fix_asserts, -E, fix_docstrings, -E, fix_tornado_imports]
+        exclude: >
+            (?x)^(
+                tests/pytests/unit/utils/test_versions.py|
+                tests/pytests/functional/transport/tcp/test_pub_server.py
+            )$
+
+  - repo: local
+    hooks:
+      - id: enforce-tornado-imports
+        name: Enforce Tornado Imports
+        # Replace salt.ext.tornado with tornado
+        entry: bash -c 'sed -i "s/salt\.ext\.tornado/tornado/g" "$@"' --
+        language: system
+        files: \.py$
+        types: [python]
+        exclude: >
+            (?x)^(
+                salt/ext/.*
+            )$
+        exclude: >
+            (?x)^(
+                tests/pytests/unit/utils/test_versions.py|
+                tests/pytests/functional/transport/tcp/test_pub_server.py
+            )$
 
   - repo: https://github.com/timothycrosley/isort
     rev: 5.13.2
@@ -1768,12 +1793,12 @@ repos:
           - types-requests
           - python-tools-scripts==0.20.0
 
-  - repo: https://github.com/saltstack/mirrors-nox
-    rev: v2022.11.21
+  - repo: local
     hooks:
-      - id: nox
-        alias: lint-salt
+      - id: lint-salt
         name: Lint Salt
+        entry: bash -c 'env -u NOX_FORCE_COLOR -u NOX_NO_COLOR -u FORCE_COLOR -u NO_COLOR nox "$@"' --
+        language: python
         files: ^((setup|noxfile)|(salt|tools)/.*)\.py$
         exclude: >
             (?x)^(
@@ -1785,21 +1810,23 @@ repos:
           - lint-salt-pre-commit
           - --
         additional_dependencies:
+          - nox==2022.11.21
           - setuptools<58.0
           - pip>=20.2.4,<21.2
 
-  - repo: https://github.com/saltstack/mirrors-nox
-    rev: v2022.11.21
+  - repo: local
     hooks:
-      - id: nox
-        alias: lint-tests
+      - id: lint-tests
         name: Lint Tests
+        entry: bash -c 'env -u NOX_FORCE_COLOR -u NOX_NO_COLOR -u FORCE_COLOR -u NO_COLOR nox "$@"' --
+        language: python
         files: ^tests/.*\.py$
         args:
           - -e
           - lint-tests-pre-commit
           - --
         additional_dependencies:
+          - nox==2022.11.21
           - setuptools<58.0
           - pip>=20.2.4,<21.2
   # <---- Pre-Commit -------------------------------------------------------------------------------------------------

@@ -17,7 +17,7 @@ common:
     - "**/site-packages/ansible_collections/*/*/test"
     - "**/site-packages/ansible_collections/*/*/tests"
     # Bundled Tornado Test Suite
-    - "**/salt/ext/tornado/test"
+
   file_patterns: &common_file_patterns
     - "*.pyc"
     - "*.pyo"
