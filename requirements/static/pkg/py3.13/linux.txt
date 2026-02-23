@@ -120,7 +120,7 @@ propcache==0.4.1
     # via
     #   aiohttp
     #   yarl
-psutil==7.2.1
+psutil==7.2.2
     # via -r requirements/base.txt
 pyasn1==0.6.2
     # via -r requirements/base.txt
@@ -175,8 +175,6 @@ smmap==5.0.2
 tempora==5.8.1
     # via portend
 timelib==0.3.0
-    # via -r requirements/base.txt
-tornado==6.5.4
     # via -r requirements/base.txt
 urllib3==2.6.3
     # via

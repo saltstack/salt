@@ -127,7 +127,7 @@ propcache==0.4.1
     # via
     #   aiohttp
     #   yarl
-psutil==7.2.1
+psutil==7.2.2
     # via -r requirements/base.txt
 pyasn1==0.6.2
     # via -r requirements/base.txt
@@ -166,7 +166,11 @@ pywin32==311 ; sys_platform == 'win32'
     #   wmi
 pyyaml==6.0.3
     # via -r requirements/base.txt
-pyzmq==27.1.0
+pyzmq==25.0.2 ; sys_platform == 'win32'
+    # via -r requirements/zeromq.txt
+pyzmq==25.1.2 ; sys_platform == 'darwin'
+    # via -r requirements/zeromq.txt
+pyzmq==27.1.0 ; sys_platform != 'darwin' and sys_platform != 'win32'
     # via -r requirements/zeromq.txt
 requests==2.32.5
     # via
@@ -191,8 +195,6 @@ tempora==5.8.1
     # via portend
 timelib==0.3.0
     # via -r requirements/base.txt
-tornado==6.5.4
-    # via -r requirements/base.txt
 urllib3==2.6.3
     # via
     #   -r requirements/base.txt
@@ -203,7 +205,7 @@ vultr==1.0.1
     # via -r requirements/base.txt
 wmi==1.5.1 ; sys_platform == 'win32'
     # via -r requirements/base.txt
-xmltodict==1.0.3 ; sys_platform == 'win32'
+xmltodict==1.0.4 ; sys_platform == 'win32'
     # via -r requirements/base.txt
 yarl==1.22.0
     # via aiohttp

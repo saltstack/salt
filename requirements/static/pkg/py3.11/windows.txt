@@ -31,7 +31,7 @@ cheroot==11.1.2
     #   cherrypy
 cherrypy==18.8.0
     # via -r requirements/base.txt
-clr-loader==0.2.6
+clr-loader==0.2.10
     # via pythonnet
 contextvars==2.4
     # via -r requirements/base.txt
@@ -63,7 +63,7 @@ immutables==0.21
     # via
     #   -r requirements/base.txt
     #   contextvars
-importlib-metadata==8.7.0
+importlib-metadata==8.7.1
     # via -r requirements/base.txt
 jaraco-collections==4.1.0
     # via cherrypy
@@ -118,7 +118,7 @@ propcache==0.3.2
     # via
     #   aiohttp
     #   yarl
-psutil==5.9.6
+psutil==7.2.2
     # via -r requirements/base.txt
 pyasn1==0.6.2
     # via -r requirements/base.txt
@@ -128,27 +128,27 @@ pycparser==2.21
     #   cffi
 pycryptodomex==3.19.1
     # via -r requirements/crypto.txt
-pymssql==2.3.1
+pymssql==2.3.13
     # via -r requirements/base.txt
-pymysql==1.1.0
+pymysql==1.1.2
     # via -r requirements/base.txt
 pyopenssl==25.3.0
     # via -r requirements/base.txt
-python-dateutil==2.8.2
+python-dateutil==2.9.0.post0
     # via -r requirements/base.txt
-python-gnupg==0.5.2
+python-gnupg==0.5.6
     # via -r requirements/base.txt
-pythonnet==3.0.3
+pythonnet==3.0.5
     # via -r requirements/base.txt
 pytz==2024.1
     # via tempora
-pywin32==306
+pywin32==311
     # via
     #   -r requirements/base.txt
     #   wmi
 pyyaml==6.0.1
     # via -r requirements/base.txt
-pyzmq==25.1.2
+pyzmq==25.0.2
     # via -r requirements/zeromq.txt
 requests==2.32.5
     # via
@@ -161,15 +161,13 @@ setuptools==82.0.0
     # via
     #   -c requirements/constraints.txt
     #   zc-lockfile
-six==1.15.0
+six==1.17.0
     # via python-dateutil
 smmap==5.0.1
     # via gitdb
 tempora==5.3.0
     # via portend
 timelib==0.3.0
-    # via -r requirements/base.txt
-tornado==6.5.4
     # via -r requirements/base.txt
 typing-extensions==4.14.1
     # via
@@ -185,7 +183,7 @@ vultr==1.0.1
     # via -r requirements/base.txt
 wmi==1.5.1
     # via -r requirements/base.txt
-xmltodict==0.13.0
+xmltodict==1.0.4
     # via -r requirements/base.txt
 yarl==1.20.1
     # via aiohttp

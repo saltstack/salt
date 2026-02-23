@@ -53,7 +53,6 @@ boto3==1.42.33
     #   moto
 botocore==1.42.33
     # via
-    #   -r requirements/static/ci/common.in
     #   boto3
     #   moto
     #   s3transfer
@@ -104,7 +103,7 @@ contextvars==2.4
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.txt
     #   -r requirements/base.txt
-croniter==2.0.5 ; sys_platform != 'win32'
+croniter==6.0.0 ; sys_platform != 'win32'
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.txt
     #   -r requirements/base.txt
@@ -325,7 +324,7 @@ propcache==0.3.2
     #   -c requirements/static/pkg/py3.11/freebsd.txt
     #   aiohttp
     #   yarl
-psutil==5.9.6
+psutil==7.2.2
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.txt
     #   -r requirements/base.txt
@@ -456,7 +455,12 @@ pyyaml==6.0.1
     #   responses
     #   yamllint
     #   yamlloader
-pyzmq==25.1.2
+pyzmq==25.0.2 ; sys_platform == 'win32'
+    # via
+    #   -c requirements/static/pkg/py3.11/freebsd.txt
+    #   -r requirements/zeromq.txt
+    #   pytest-salt-factories
+pyzmq==25.1.2 ; sys_platform != 'win32'
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.txt
     #   -r requirements/zeromq.txt
@@ -533,10 +537,6 @@ timelib==0.3.0
     #   -r requirements/base.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.in
-tornado==6.5.4
-    # via
-    #   -c requirements/static/pkg/py3.11/freebsd.txt
-    #   -r requirements/base.txt
 transitions==0.9.3 ; sys_platform != 'win32'
     # via junos-eznc
 trustme==1.1.0
@@ -589,7 +589,7 @@ wmi==1.5.1 ; sys_platform == 'win32'
     #   -r requirements/base.txt
 xmldiff==2.7.0
     # via -r requirements/static/ci/common.in
-xmltodict==1.0.3
+xmltodict==1.0.4
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.txt
     #   -r requirements/base.txt
