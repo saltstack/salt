@@ -128,7 +128,7 @@ pywin32==311
     #   wmi
 pyyaml==6.0.1
     # via -r requirements/base.txt
-pyzmq==27.1.0
+pyzmq==25.0.2
     # via -r requirements/zeromq.txt
 requests==2.31.0
     # via
@@ -156,7 +156,7 @@ urllib3==1.26.20
     #   -r requirements/base.txt
     #   -r requirements/windows.txt
     #   requests
-virtualenv==20.34.0
+virtualenv==20.39.0
     # via -r requirements/base.txt
 wheel==0.46.3
     # via -r requirements/windows.txt

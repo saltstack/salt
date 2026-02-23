@@ -396,7 +396,7 @@ pyyaml==6.0.1
     #   pytest-salt-factories
     #   responses
     #   yamllint
-pyzmq==27.1.0
+pyzmq==25.0.2
     # via
     #   -c requirements/static/pkg/py3.9/windows.txt
     #   -r requirements/zeromq.txt
@@ -488,7 +488,7 @@ urllib3==1.26.20
     #   python-etcd
     #   requests
     #   responses
-virtualenv==20.34.0
+virtualenv==20.39.0
     # via
     #   -c requirements/static/pkg/py3.9/windows.txt
     #   -r requirements/base.txt

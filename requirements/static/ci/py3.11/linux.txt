@@ -411,7 +411,7 @@ pyyaml==6.0.1
     #   pytest-salt-factories
     #   responses
     #   yamllint
-pyzmq==27.1.0
+pyzmq==23.2.0
     # via
     #   -c requirements/static/pkg/py3.11/linux.txt
     #   -r requirements/zeromq.txt

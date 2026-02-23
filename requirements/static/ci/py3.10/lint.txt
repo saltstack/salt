@@ -536,7 +536,7 @@ pyyaml==6.0.1
     #   responses
     #   yamllint
     #   yamlordereddictloader
-pyzmq==27.1.0
+pyzmq==23.2.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -c requirements/static/pkg/py3.10/linux.txt

@@ -284,6 +284,10 @@ psutil==5.8.0
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
+py==1.11.0 ; implementation_name == 'pypy' and sys_platform == 'linux'
+    # via
+    #   -c requirements/static/pkg/py3.11/freebsd.txt
+    #   pyzmq
 pycparser==2.21
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.txt
@@ -384,7 +388,22 @@ pyyaml==6.0.1
     #   pytest-salt-factories
     #   responses
     #   yamllint
-pyzmq==27.1.0
+pyzmq==23.2.0 ; sys_platform == 'linux'
+    # via
+    #   -c requirements/static/pkg/py3.11/freebsd.txt
+    #   -r requirements/zeromq.txt
+    #   pytest-salt-factories
+pyzmq==25.0.2 ; sys_platform == 'win32'
+    # via
+    #   -c requirements/static/pkg/py3.11/freebsd.txt
+    #   -r requirements/zeromq.txt
+    #   pytest-salt-factories
+pyzmq==25.1.2 ; sys_platform == 'darwin'
+    # via
+    #   -c requirements/static/pkg/py3.11/freebsd.txt
+    #   -r requirements/zeromq.txt
+    #   pytest-salt-factories
+pyzmq==27.1.0 ; sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32'
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.txt
     #   -r requirements/zeromq.txt

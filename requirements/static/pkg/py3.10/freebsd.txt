@@ -90,6 +90,8 @@ portend==2.4
     # via cherrypy
 psutil==5.8.0
     # via -r requirements/base.txt
+py==1.11.0 ; implementation_name == 'pypy' and sys_platform == 'linux'
+    # via pyzmq
 pycparser==2.21
     # via
     #   -r requirements/static/pkg/freebsd.in
@@ -110,7 +112,11 @@ pytz==2022.1
     #   tempora
 pyyaml==6.0.1
     # via -r requirements/base.txt
-pyzmq==27.1.0
+pyzmq==23.2.0 ; sys_platform == 'linux'
+    # via -r requirements/zeromq.txt
+pyzmq==25.0.2 ; sys_platform == 'win32'
+    # via -r requirements/zeromq.txt
+pyzmq==25.1.2 ; sys_platform == 'darwin'
     # via -r requirements/zeromq.txt
 requests==2.32.5
     # via -r requirements/base.txt

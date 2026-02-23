@@ -108,7 +108,7 @@ pytz==2022.1
     #   tempora
 pyyaml==6.0.1
     # via -r requirements/base.txt
-pyzmq==27.1.0
+pyzmq==23.2.0
     # via -r requirements/zeromq.txt
 requests==2.31.0
     # via -r requirements/base.txt
@@ -131,7 +131,7 @@ urllib3==1.26.20
     # via
     #   -r requirements/base.txt
     #   requests
-virtualenv==20.34.0
+virtualenv==20.39.0
     # via -r requirements/base.txt
 zc-lockfile==1.4
     # via cherrypy

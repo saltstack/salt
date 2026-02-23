@@ -458,7 +458,7 @@ pyyaml==6.0.1
     #   responses
     #   yamllint
     #   yamlordereddictloader
-pyzmq==27.1.0
+pyzmq==23.2.0
     # via
     #   -c requirements/static/pkg/py3.9/linux.txt
     #   -r requirements/zeromq.txt
@@ -585,7 +585,7 @@ urllib3==1.26.20
     #   responses
 vcert==0.9.1
     # via -r requirements/static/ci/common.in
-virtualenv==20.34.0
+virtualenv==20.39.0
     # via
     #   -c requirements/static/pkg/py3.9/linux.txt
     #   -r requirements/base.txt

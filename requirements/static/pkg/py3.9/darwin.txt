@@ -116,7 +116,7 @@ urllib3==1.26.20
     # via
     #   -r requirements/base.txt
     #   requests
-virtualenv==20.34.0
+virtualenv==20.39.0
     # via -r requirements/base.txt
 zc-lockfile==2.0
     # via cherrypy
