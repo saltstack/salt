@@ -77,7 +77,9 @@ immutables==0.21
     #   -r requirements/base.txt
     #   contextvars
 importlib-metadata==8.7.0
-    # via sphinx
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   sphinx
 jaraco-classes==3.2.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -262,7 +264,9 @@ zc-lockfile==1.4
     #   -c requirements/static/ci/py3.9/linux.txt
     #   cherrypy
 zipp==3.23.0
-    # via importlib-metadata
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   importlib-metadata
 
 # The following packages were excluded from the output:
 # setuptools

@@ -158,6 +158,7 @@ repos:
           - --python-platform=linux
           - --python-version=3.9
           - --no-emit-index-url
+          - --unsafe-package=setuptools
           - -o=requirements/static/pkg/py3.9/linux.txt
 
       - id: pip-compile
@@ -173,6 +174,7 @@ repos:
           - --no-emit-index-url
           - --python-platform=linux
           - --python-version=3.10
+          - --unsafe-package=setuptools
           - -o=requirements/static/pkg/py3.10/linux.txt
 
       - id: pip-compile
@@ -188,6 +190,7 @@ repos:
           - --no-emit-index-url
           - --python-platform=linux
           - --python-version=3.11
+          - --unsafe-package=setuptools
           - -o=requirements/static/pkg/py3.11/linux.txt
 
       - id: pip-compile
@@ -203,6 +206,7 @@ repos:
           - --no-emit-index-url
           - --python-platform=linux
           - --python-version=3.12
+          - --unsafe-package=setuptools
           - -o=requirements/static/pkg/py3.12/linux.txt
 
       - id: pip-compile
@@ -218,6 +222,7 @@ repos:
           - --no-emit-index-url
           - --python-platform=linux
           - --python-version=3.13
+          - --unsafe-package=setuptools
           - -o=requirements/static/pkg/py3.13/linux.txt
 
       ############### FreeBSD PKG Requirements ###############
@@ -234,6 +239,7 @@ repos:
           - --universal
           - --python-version=3.9
           - --no-emit-index-url
+          - --unsafe-package=setuptools
           - -o=requirements/static/pkg/py3.9/freebsd.txt
 
       - id: pip-compile
@@ -249,6 +255,7 @@ repos:
           - --universal
           - --python-version=3.10
           - --no-emit-index-url
+          - --unsafe-package=setuptools
           - -o=requirements/static/pkg/py3.10/freebsd.txt
 
       - id: pip-compile
@@ -264,6 +271,7 @@ repos:
           - --universal
           - --python-version=3.11
           - --no-emit-index-url
+          - --unsafe-package=setuptools
           - -o=requirements/static/pkg/py3.11/freebsd.txt
 
       - id: pip-compile
@@ -279,6 +287,7 @@ repos:
           - --universal
           - --python-version=3.12
           - --no-emit-index-url
+          - --unsafe-package=setuptools
           - -o=requirements/static/pkg/py3.12/freebsd.txt
 
       - id: pip-compile
@@ -294,6 +303,7 @@ repos:
           - --universal
           - --python-version=3.13
           - --no-emit-index-url
+          - --unsafe-package=setuptools
           - -o=requirements/static/pkg/py3.13/freebsd.txt
 
       ############### Darwin PKG Requirements ###############
@@ -310,6 +320,7 @@ repos:
           - --python-platform=macos
           - --python-version=3.9
           - --no-emit-index-url
+          - --unsafe-package=setuptools
           - -o=requirements/static/pkg/py3.9/darwin.txt
 
       - id: pip-compile
@@ -325,6 +336,7 @@ repos:
           - --python-platform=macos
           - --python-version=3.10
           - --no-emit-index-url
+          - --unsafe-package=setuptools
           - -o=requirements/static/pkg/py3.10/darwin.txt
 
       - id: pip-compile
@@ -340,6 +352,7 @@ repos:
           - --python-platform=macos
           - --python-version=3.11
           - --no-emit-index-url
+          - --unsafe-package=setuptools
           - -o=requirements/static/pkg/py3.11/darwin.txt
 
       - id: pip-compile
@@ -355,6 +368,7 @@ repos:
           - --python-platform=macos
           - --python-version=3.12
           - --no-emit-index-url
+          - --unsafe-package=setuptools
           - -o=requirements/static/pkg/py3.12/darwin.txt
 
       - id: pip-compile
@@ -370,6 +384,7 @@ repos:
           - --python-platform=macos
           - --python-version=3.13
           - --no-emit-index-url
+          - --unsafe-package=setuptools
           - -o=requirements/static/pkg/py3.13/darwin.txt
 
       ############### Windows PKG Requirements ###############
@@ -385,6 +400,7 @@ repos:
           - --python-platform=windows
           - --python-version=3.9
           - --no-emit-index-url
+          - --unsafe-package=setuptools
           - -o=requirements/static/pkg/py3.9/windows.txt
 
       - id: pip-compile
@@ -399,6 +415,7 @@ repos:
           - --python-platform=windows
           - --python-version=3.10
           - --no-emit-index-url
+          - --unsafe-package=setuptools
           - -o=requirements/static/pkg/py3.10/windows.txt
 
       - id: pip-compile
@@ -413,6 +430,7 @@ repos:
           - --python-platform=windows
           - --python-version=3.11
           - --no-emit-index-url
+          - --unsafe-package=setuptools
           - -o=requirements/static/pkg/py3.11/windows.txt
 
       - id: pip-compile
@@ -427,6 +445,7 @@ repos:
           - --python-platform=windows
           - --python-version=3.12
           - --no-emit-index-url
+          - --unsafe-package=setuptools
           - -o=requirements/static/pkg/py3.12/windows.txt
 
       - id: pip-compile
@@ -441,6 +460,7 @@ repos:
           - --python-platform=windows
           - --python-version=3.13
           - --no-emit-index-url
+          - --unsafe-package=setuptools
           - -o=requirements/static/pkg/py3.13/windows.txt
 
   # <---- Packaging Requirements -------------------------------------------------------------------------------------
@@ -460,6 +480,7 @@ repos:
           - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/linux.in
+          - requirements/static/pkg/linux.in
           - --python-platform=linux
           - --python-version=3.9
           - --no-emit-index-url
@@ -479,6 +500,7 @@ repos:
           - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/linux.in
+          - requirements/static/pkg/linux.in
           - --python-platform=linux
           - --python-version=3.10
           - --no-emit-index-url
@@ -498,6 +520,7 @@ repos:
           - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/linux.in
+          - requirements/static/pkg/linux.in
           - --python-platform=linux
           - --python-version=3.11
           - --no-emit-index-url
@@ -517,6 +540,7 @@ repos:
           - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/linux.in
+          - requirements/static/pkg/linux.in
           - --python-platform=linux
           - --python-version=3.12
           - --no-emit-index-url
@@ -536,6 +560,7 @@ repos:
           - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/linux.in
+          - requirements/static/pkg/linux.in
           - --python-platform=linux
           - --python-version=3.13
           - --no-emit-index-url
@@ -793,6 +818,7 @@ repos:
           - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/darwin.in
+          - requirements/static/pkg/darwin.in
           - --python-platform=macos
           - --python-version=3.9
           - --no-emit-index-url
@@ -813,6 +839,7 @@ repos:
           - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/darwin.in
+          - requirements/static/pkg/darwin.in
           - --python-platform=macos
           - --python-version=3.10
           - --no-emit-index-url
@@ -833,6 +860,7 @@ repos:
           - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/darwin.in
+          - requirements/static/pkg/darwin.in
           - --python-platform=macos
           - --python-version=3.11
           - --no-emit-index-url
@@ -853,6 +881,7 @@ repos:
           - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/darwin.in
+          - requirements/static/pkg/darwin.in
           - --python-platform=macos
           - --python-version=3.12
           - --no-emit-index-url
@@ -873,6 +902,7 @@ repos:
           - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/darwin.in
+          - requirements/static/pkg/darwin.in
           - --python-platform=macos
           - --python-version=3.13
           - --no-emit-index-url
@@ -960,6 +990,7 @@ repos:
           - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/windows.in
+          - requirements/static/pkg/windows.in
           - --python-platform=windows
           - --python-version=3.9
           - --no-emit-index-url
@@ -980,6 +1011,7 @@ repos:
           - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/windows.in
+          - requirements/static/pkg/windows.in
           - --python-platform=windows
           - --python-version=3.10
           - --no-emit-index-url
@@ -1000,6 +1032,7 @@ repos:
           - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/windows.in
+          - requirements/static/pkg/windows.in
           - --python-platform=windows
           - --python-version=3.11
           - --no-emit-index-url
@@ -1020,6 +1053,7 @@ repos:
           - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/windows.in
+          - requirements/static/pkg/windows.in
           - --python-platform=windows
           - --python-version=3.12
           - --no-emit-index-url
@@ -1040,6 +1074,7 @@ repos:
           - requirements/zeromq.txt
           - requirements/static/ci/common.in
           - requirements/static/ci/windows.in
+          - requirements/static/pkg/windows.in
           - --python-platform=windows
           - --python-version=3.13
           - --no-emit-index-url

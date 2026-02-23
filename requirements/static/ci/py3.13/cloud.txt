@@ -207,6 +207,7 @@ immutables==0.21
     #   contextvars
 importlib-metadata==8.7.1
     # via
+    #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/static/pkg/linux.in
 iniconfig==2.0.0
@@ -496,6 +497,7 @@ python-etcd==0.4.5
     #   -r requirements/static/ci/common.in
 python-gnupg==0.5.6
     # via
+    #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/static/pkg/linux.in
 pytz==2025.2
@@ -566,6 +568,7 @@ rpds-py==0.20.0
     #   referencing
 rpm-vercmp==0.1.2
     # via
+    #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/static/pkg/linux.in
 rsa==4.9
@@ -582,6 +585,7 @@ semantic-version==2.10.0
     #   etcd3-py
 setproctitle==1.3.7
     # via
+    #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/static/pkg/linux.in
 six==1.17.0
@@ -694,6 +698,7 @@ zc-lockfile==4.0
     #   cherrypy
 zipp==3.23.0
     # via
+    #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   importlib-metadata
 
