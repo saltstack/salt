@@ -53,7 +53,7 @@ virtualenv
 wmi>=1.5.1; sys_platform == 'win32'
 xmltodict>=0.13.0; sys_platform == 'win32'
 zipp>=3.19.1
-apache-libcloud>=2.4.0
+apache-libcloud>=3.8.0
 idna>=2.8
 linode-python>=1.1.1
 more-itertools>=9.1.0
