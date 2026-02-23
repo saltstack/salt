@@ -579,6 +579,80 @@ InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
 ShowUnInstDetails show
 
+
+Section -copy_prereqs
+    # Copy prereqs to the Plugins Directory
+    # These files are downloaded by build_pkg.bat
+    # This directory gets removed upon completion
+    SetOutPath "$PLUGINSDIR\"
+    File /r "..\..\prereqs\"
+SectionEnd
+
+
+# Install Visual C++ Redistributable 2022
+# Hidden section (-) to install VCRedist
+Section -install_vcredist_2022
+
+    Var /GLOBAL VcRedistName
+    # Determine which architecture needs to be installed
+    ${if} ${runningx64}
+        strcpy $VcRedistName "vcredist_x64_2022"
+    ${else}
+        strcpy $VcRedistName "vcredist_x86_2022"
+    ${endif}
+    detailPrint "Selected $VcRedistName installer"
+
+    # Install
+    Call InstallVCRedist
+
+SectionEnd
+
+
+Function InstallVCRedist
+
+    # If an output variable is specified ($0 in the case below), ExecWait
+    # sets the variable with the exit code (and only sets the error flag if
+    # an error occurs; if an error occurs, the contents of the user
+    # variable are undefined).
+    # http://nsis.sourceforge.net/Reference/ExecWait
+    ClearErrors
+    detailPrint "Installing $VcRedistName..."
+    ExecWait '"$PLUGINSDIR\$VcRedistName.exe" /install /quiet /norestart' $0
+
+    IfErrors 0 CheckVcRedistErrorCode
+
+    detailPrint "An error occurred during installation of $VcRedistName"
+    MessageBox MB_OK|MB_ICONEXCLAMATION \
+        "$VcRedistName failed to install. Try installing the package \
+        manually.$\n$\n\
+        The installer will now close." \
+        /SD IDOK
+        Quit
+
+    CheckVcRedistErrorCode:
+    # Check for Reboot Error Code (3010)
+    ${If} $0 == 3010
+        detailPrint "$VcRedistName installed but requires a restart to complete."
+        detailPrint "Reboot and run Salt install again"
+        MessageBox MB_OK|MB_ICONINFORMATION \
+            "$VcRedistName installed but requires a restart to complete." \
+            /SD IDOK
+
+    # Check for any other errors
+    ${ElseIfNot} $0 == 0
+        detailPrint "An error occurred during installation of $VcRedistName"
+        detailPrint "Error: $0"
+        MessageBox MB_OK|MB_ICONEXCLAMATION \
+            "$VcRedistName failed to install. Try installing the package \
+            mnually.$\n\
+            ErrorCode: $0$\n\
+            The installer will now close." \
+            /SD IDOK
+    ${EndIf}
+
+FunctionEnd
+
+
 Section "Install" Install01
 
     ${If} $MoveExistingConfig == 1
@@ -689,6 +763,7 @@ Function .onInit
         ${EndIf}
     ${EndIf}
 
+    InitPluginsDir
     Call parseInstallerCommandLineSwitches
 
     # Uninstall msi-installed salt
@@ -1241,25 +1316,16 @@ Function ${un}uninstallSalt
         Abort
     ${EndIf}
 
-        # Give the minion enough time to finish its internal stop_async (graceful shutdown).
+    # Give the minion enough time to finish its internal stop_async (graceful shutdown).
+    # salt/minion.py:MinionManager.stop_async has a static 5-second sleep to allow
+    # the I/O loop to process and send any remaining "return" messages to the Master.
+    # We wait 6 seconds here to ensure that we don't aggressively kill the process
+    # while it is still performing its legitimate cleanup. After this window,
+    # we proceed to kill any lingering or orphan processes that would otherwise
+    # lock DLLs (like pywin32 or cryptography) and cause a "Frankenstein" installation.
 
-        # salt/minion.py:MinionManager.stop_async has a static 5-second sleep to allow
-
-        # the I/O loop to process and send any remaining "return" messages to the Master.
-
-        # We wait 6 seconds here to ensure that we don't aggressively kill the process
-
-        # while it is still performing its legitimate cleanup. After this window,
-
-        # we proceed to kill any lingering or orphan processes that would otherwise
-
-        # lock DLLs (like pywin32 or cryptography) and cause a "Frankenstein" installation.
-
-        ${LogMsg} "Waiting 6 seconds for graceful shutdown..."
-
-        Sleep 6000
-
-
+    ${LogMsg} "Waiting 6 seconds for graceful shutdown..."
+    Sleep 6000
 
     # Perform multiple passes to ensure stubborn or child processes are caught
     # Pass 1: Aggressive taskkill
@@ -1290,8 +1356,7 @@ Function ${un}uninstallSalt
 
     doneSSM:
 
-
-        # Remove files
+    # Remove files
     ${LogMsg} "Deleting files"
     ClearErrors
     ${LogMsg} "Deleting files: $INSTDIR\multi-minion*"
