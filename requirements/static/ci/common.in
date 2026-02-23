@@ -2,7 +2,6 @@
 # We can also exclude platforms from the requirements using markers, but if a requirement only applies
 # to a particular platform, please add it to the corresponding `<platform>.in` file in this directory.
 
-
 apache-libcloud>=1.5.0; sys_platform != 'win32'
 boto3>=1.25.0
 boto>=2.47.0
@@ -41,7 +40,6 @@ sqlparse>=0.4.4
 strict_rfc3339>=0.7
 toml
 vcert~=0.9.0; sys_platform != 'win32'
-virtualenv>=20.36.1
 watchdog>=0.9.0
 websocket-client>=1.3.3
 # werkzeug is a dependency of moto

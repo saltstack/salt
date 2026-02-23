@@ -1,5 +1,3 @@
---constraint=constraints.txt
-
 # Dependencies are listed alphabetically by package name.
 # Multiple entries for the same package (with different version constraints) are grouped together.
 
@@ -9,7 +7,6 @@ cherrypy>=18.10.0
 # We need contextvars for salt-ssh
 contextvars
 croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'
-cryptography>=46.0.5
 distro>=1.0.1
 frozenlist>=1.3.0; python_version < '3.11'
 frozenlist>=1.5.0; python_version >= '3.11'
