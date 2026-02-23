@@ -60,7 +60,7 @@ contextvars==2.4
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/base.txt
-croniter==2.0.5
+croniter==6.0.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/base.txt
@@ -207,7 +207,7 @@ propcache==0.3.2
     #   -c requirements/static/ci/py3.11/linux.txt
     #   aiohttp
     #   yarl
-psutil==5.9.6
+psutil==7.2.2
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/base.txt
@@ -307,10 +307,6 @@ tempora==5.3.0
     #   -c requirements/static/ci/py3.11/linux.txt
     #   portend
 timelib==0.3.0
-    # via
-    #   -c requirements/static/ci/py3.11/linux.txt
-    #   -r requirements/base.txt
-tornado==6.5.4
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/base.txt

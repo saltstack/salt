@@ -67,7 +67,6 @@ boto3==1.39.4
     #   moto
 botocore==1.39.4
     # via
-    #   -r requirements/static/ci/common.in
     #   boto3
     #   moto
     #   s3transfer
@@ -111,7 +110,7 @@ contextvars==2.4
     # via
     #   -c requirements/static/pkg/py3.10/linux.txt
     #   -r requirements/base.txt
-croniter==2.0.5
+croniter==6.0.0
     # via
     #   -c requirements/static/pkg/py3.10/linux.txt
     #   -r requirements/base.txt
@@ -342,7 +341,7 @@ propcache==0.3.2
     #   -c requirements/static/pkg/py3.10/linux.txt
     #   aiohttp
     #   yarl
-psutil==5.9.6
+psutil==7.2.2
     # via
     #   -c requirements/static/pkg/py3.10/linux.txt
     #   -r requirements/base.txt
@@ -560,10 +559,6 @@ toml==0.10.2
     # via -r requirements/static/ci/common.in
 tomli==2.2.1
     # via pytest
-tornado==6.5.4
-    # via
-    #   -c requirements/static/pkg/py3.10/linux.txt
-    #   -r requirements/base.txt
 transitions==0.9.0
     # via junos-eznc
 trustme==1.1.0

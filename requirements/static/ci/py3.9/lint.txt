@@ -79,7 +79,6 @@ boto3==1.42.33
 botocore==1.42.33
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
     #   boto3
     #   moto
     #   s3transfer
@@ -142,7 +141,7 @@ contextvars==2.4
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -c requirements/static/pkg/py3.9/linux.txt
     #   -r requirements/base.txt
-croniter==2.0.5
+croniter==6.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -c requirements/static/pkg/py3.9/linux.txt
@@ -488,7 +487,7 @@ propcache==0.3.2
     #   -c requirements/static/pkg/py3.9/linux.txt
     #   aiohttp
     #   yarl
-psutil==5.9.6
+psutil==5.9.8
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -c requirements/static/pkg/py3.9/linux.txt
@@ -781,11 +780,6 @@ tomli==2.2.1
     #   pylint
 tomlkit==0.12.3
     # via pylint
-tornado==6.5.4
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -c requirements/static/pkg/py3.9/linux.txt
-    #   -r requirements/base.txt
 transitions==0.9.3
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
