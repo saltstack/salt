@@ -138,7 +138,7 @@ pycparser==3.0
     #   cffi
 pycryptodomex==3.23.0
     # via -r requirements/crypto.txt
-pymssql==2.3.13 ; sys_platform == 'win32'
+pymssql==2.3.11 ; sys_platform == 'win32'
     # via -r requirements/base.txt
 pymysql==1.1.2 ; sys_platform == 'win32'
     # via -r requirements/base.txt

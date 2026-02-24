@@ -18,7 +18,7 @@ import salt.utils.files
 from salt.exceptions import CommandExecutionError
 
 try:
-    import spwd
+    import spwd  # pylint: disable=deprecated-module
 except ImportError:
     pass
 

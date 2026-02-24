@@ -24,7 +24,7 @@ except ImportError:
     HAS_RANDOM = False
 
 try:
-    import crypt
+    import crypt  # pylint: disable=deprecated-module
 
     HAS_CRYPT = True
 except (ImportError, PermissionError):
