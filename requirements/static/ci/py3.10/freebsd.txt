@@ -355,7 +355,7 @@ pyfakefs==5.3.1
     # via -r requirements/pytest.txt
 pyinotify==0.9.6 ; platform_system != 'openbsd' and sys_platform != 'darwin' and sys_platform != 'win32'
     # via -r requirements/static/ci/common.in
-pymssql==2.3.13 ; sys_platform == 'win32'
+pymssql==2.3.11 ; sys_platform == 'win32'
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.txt
     #   -r requirements/base.txt
