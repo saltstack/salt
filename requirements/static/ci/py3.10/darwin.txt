@@ -475,7 +475,7 @@ smmap==5.0.2
     # via
     #   -c requirements/static/pkg/py3.10/darwin.txt
     #   gitdb
-sqlparse==0.5.0
+sqlparse==0.5.5
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in
@@ -537,7 +537,7 @@ websocket-client==1.9.0
     #   kubernetes
 wempy==0.2.1
     # via -r requirements/static/ci/common.in
-werkzeug==3.1.5
+werkzeug==3.1.6
     # via
     #   -r requirements/static/ci/common.in
     #   moto
