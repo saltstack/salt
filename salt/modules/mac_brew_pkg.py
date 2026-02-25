@@ -181,6 +181,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     for package in package_info["casks"]:
         pkg_version = package["installed"]
+        if pkg_version is None:
+            pkg_version = ""
         pkg_names = {package["full_token"], package["token"]}
         pkg_tap = package.get("tap", None)
         # The following name is appended to maintain backward compatibility
