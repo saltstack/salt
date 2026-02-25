@@ -492,6 +492,102 @@ def test_list_pkgs_homebrew_cask_pakages():
         assert mac_brew.list_pkgs(versions_as_list=True) == expected_pkgs
 
 
+def test_list_pkgs_cask_null_installed_version():
+    """
+    Tests that a cask with "installed": null gets version set to "unknown"
+    instead of raising an error or storing None.
+
+    This covers the fix: if pkg_version is None: pkg_version = "unknown"
+    """
+
+    def _call_brew_with_null_installed(*cmd, failhard=True):
+        if cmd == ("info", "--json=v2", "--installed"):
+            return {
+                "stdout": textwrap.dedent(
+                    """\
+                    {
+                      "casks": [
+                        {
+                          "full_token": "discord",
+                          "token": "discord",
+                          "tap": "homebrew/cask",
+                          "installed": null
+                        }
+                      ],
+                      "formulae": []
+                    }
+                    """
+                ),
+                "retcode": 0,
+                "stderr": "",
+            }
+        return {}
+
+    expected_pkgs = {
+        "homebrew/cask/discord": "",
+        "discord": "",
+    }
+
+    with (
+        patch("salt.modules.mac_brew_pkg._call_brew", _call_brew_with_null_installed),
+        patch.dict(
+            mac_brew.__salt__,
+            {
+                "pkg_resource.add_pkg": custom_add_pkg,
+                "pkg_resource.sort_pkglist": MagicMock(),
+            },
+        ),
+    ):
+        assert mac_brew.list_pkgs(versions_as_list=True) == expected_pkgs
+
+
+def test_list_pkgs_cask_null_full_token():
+    """
+    Tests that a cask with "full_token": null does not produce a None key
+    in the returned package dict.
+
+    This covers the fix: [pkg for pkg in pkg_names if pkg is not None]
+    """
+
+    def _call_brew_with_null_full_token(*cmd, failhard=True):
+        if cmd == ("info", "--json=v2", "--installed"):
+            return {
+                "stdout": textwrap.dedent(
+                    """\
+                    {
+                      "casks": [
+                        {
+                          "full_token": null,
+                          "token": "discord",
+                          "tap": "homebrew/cask",
+                          "installed": "0.0.293"
+                        }
+                      ],
+                      "formulae": []
+                    }
+                    """
+                ),
+                "retcode": 0,
+                "stderr": "",
+            }
+        return {}
+
+    with (
+        patch("salt.modules.mac_brew_pkg._call_brew", _call_brew_with_null_full_token),
+        patch.dict(
+            mac_brew.__salt__,
+            {
+                "pkg_resource.add_pkg": custom_add_pkg,
+                "pkg_resource.sort_pkglist": MagicMock(),
+            },
+        ),
+    ):
+        pkgs = mac_brew.list_pkgs(versions_as_list=True)
+        assert None not in pkgs
+        assert "discord" in pkgs
+        assert pkgs["discord"] == "0.0.293"
+
+
 def test_list_pkgs_no_context():
     """
     Tests removed implementation
