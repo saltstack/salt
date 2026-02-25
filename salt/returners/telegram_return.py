@@ -5,6 +5,7 @@ The following fields can be set in the minion conf file::
 
     telegram.chat_id (required)
     telegram.token (required)
+    telegram.thread_id (optional)
 
 Telegram settings may also be configured as:
 
@@ -13,6 +14,11 @@ Telegram settings may also be configured as:
     telegram:
       chat_id: 000000000
       token: 000000000:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      thread_id: 0000
+
+The ``telegram.thread_id`` is optional and can be used to specify a thread
+    in a Telegram chat to send the message to. To send messages to the main
+    chat, simply omit the ``telegram.thread_id``.
 
 To use the Telegram return, append '--return telegram' to the salt command.
 
@@ -48,7 +54,7 @@ def _get_options(ret=None):
     :return:        Dictionary containing the data and options needed to send
                     them to telegram.
     """
-    attrs = {"chat_id": "chat_id", "token": "token"}
+    attrs = {"chat_id": "chat_id", "token": "token", "thread_id": "thread_id"}
 
     _options = salt.returners.get_returner_options(
         __virtualname__, ret, attrs, __salt__=__salt__, __opts__=__opts__
@@ -68,6 +74,7 @@ def returner(ret):
 
     chat_id = _options.get("chat_id")
     token = _options.get("token")
+    thread_id = _options.get("thread_id")
 
     if not chat_id:
         log.error("telegram.chat_id not defined in salt config")
@@ -80,4 +87,6 @@ def returner(ret):
         ret.get("id"), ret.get("fun"), ret.get("fun_args"), ret.get("jid"), returns
     )
 
-    return __salt__["telegram.post_message"](message, chat_id=chat_id, token=token)
+    return __salt__["telegram.post_message"](
+        message, chat_id=chat_id, token=token, thread_id=thread_id
+    )
