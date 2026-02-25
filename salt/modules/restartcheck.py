@@ -132,8 +132,13 @@ def _deleted_files():
                 dirpath = "/proc/" + str(pinfo["pid"]) + "/fd/"
                 listdir = os.listdir(dirpath)
                 maplines = maps.readlines()
-        except OSError:
-            yield False
+        except (
+            OSError,
+            psutil.NoSuchProcess,
+            psutil.ZombieProcess,
+            psutil.AccessDenied,
+        ):
+            continue
 
         # /proc/PID/maps
         mapline = re.compile(
@@ -181,10 +186,12 @@ def _deleted_files():
                     if val not in deleted_files:
                         deleted_files.append(val)
                         yield val
-        except OSError:
-            pass
-
-        except psutil.NoSuchProcess:
+        except (
+            OSError,
+            psutil.NoSuchProcess,
+            psutil.ZombieProcess,
+            psutil.AccessDenied,
+        ):
             pass
 
 
