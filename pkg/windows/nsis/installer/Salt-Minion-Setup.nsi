@@ -597,13 +597,19 @@ Section -install_vcredist_2022
     # Determine which architecture needs to be installed
     ${if} ${runningx64}
         strcpy $VcRedistName "vcredist_x64_2022"
+        ReadRegDWORD $1 HKLM "SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64" "Installed"
     ${else}
         strcpy $VcRedistName "vcredist_x86_2022"
+        ReadRegDWORD $1 HKLM "SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x86" "Installed"
     ${endif}
     detailPrint "Selected $VcRedistName installer"
 
-    # Install
-    Call InstallVCRedist
+    # Skip install if VCRedist is already present
+    ${If} $1 == 1
+        detailPrint "$VcRedistName already installed, skipping"
+    ${Else}
+        Call InstallVCRedist
+    ${EndIf}
 
 SectionEnd
 
