@@ -149,7 +149,7 @@ repos:
       ############### Linux PKG Requirements ###############
       - id: pip-compile
         alias: compile-pkg-linux-3.9-zmq-requirements
-        name: Linux Packaging Py3.9 Requirements
+        name: Linux Packaging Py3.9 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(linux\.in|py3\.9/linux\.txt))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
