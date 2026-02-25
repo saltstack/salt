@@ -33,7 +33,7 @@ msgpack>=1.0.0
 packaging==24.0
 psutil<6.0.0; python_version <= '3.9'
 psutil>=5.0.0; python_version >= '3.10'
-pymssql>=2.2.11; sys_platform == 'win32'
+pymssql>=2.3.11; sys_platform == 'win32'
 pymysql>=1.0.2; sys_platform == 'win32'
 pyopenssl>=25.0.0
 python-dateutil>=2.8.1
@@ -54,7 +54,7 @@ virtualenv
 wmi>=1.5.1; sys_platform == 'win32'
 xmltodict>=0.13.0; sys_platform == 'win32'
 zipp>=3.19.1
-apache-libcloud>=2.4.0
+apache-libcloud>=3.8.0
 idna>=2.8
 linode-python>=1.1.1
 more-itertools>=9.1.0

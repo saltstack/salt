@@ -6,7 +6,7 @@ import time
 import pytest
 
 from salt.beacons import telegram_bot_msg
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import patch
 
 telegram = pytest.importorskip("telegram")
 
@@ -55,28 +55,24 @@ def test_validate_valid_config(*args, **kwargs):
 
 
 def test_call_no_updates():
-    with patch("salt.beacons.telegram_bot_msg.telegram") as telegram_api:
+    with patch("salt.beacons.telegram_bot_msg._get_updates") as mock_get_updates:
         token = "abc"
         config = [{"token": token, "accept_from": ["tester"]}]
-        inst = MagicMock(name="telegram.Bot()")
-        telegram_api.Bot = MagicMock(name="telegram", return_value=inst)
-        inst.get_updates.return_value = []
+        mock_get_updates.return_value = []
 
         ret = telegram_bot_msg.validate(config)
         assert ret == (True, "Valid beacon configuration.")
 
         ret = telegram_bot_msg.beacon(config)
-        telegram_api.Bot.assert_called_once_with(token)
+        mock_get_updates.assert_any_call(token, limit=100, timeout=0)
         assert ret == []
 
 
 def test_call_telegram_return_no_updates_for_user():
-    with patch("salt.beacons.telegram_bot_msg.telegram") as telegram_api:
+    with patch("salt.beacons.telegram_bot_msg._get_updates") as mock_get_updates:
         token = "abc"
         username = "tester"
         config = [{"token": token, "accept_from": [username]}]
-        inst = MagicMock(name="telegram.Bot()")
-        telegram_api.Bot = MagicMock(name="telegram", return_value=inst)
 
         log.debug("telegram %s", telegram)
         username = "different_user"
@@ -86,23 +82,21 @@ def test_call_telegram_return_no_updates_for_user():
         message = telegram.Message(message_id=1, from_user=user, date=date, chat=chat)
         update = telegram.Update(update_id=1, message=message)
 
-        inst.get_updates.return_value = [update]
+        mock_get_updates.return_value = [update]
 
         ret = telegram_bot_msg.validate(config)
         assert ret == (True, "Valid beacon configuration.")
 
         ret = telegram_bot_msg.beacon(config)
-        telegram_api.Bot.assert_called_once_with(token)
+        mock_get_updates.assert_any_call(token, limit=100, timeout=0)
         assert ret == []
 
 
 def test_call_telegram_returning_updates():
-    with patch("salt.beacons.telegram_bot_msg.telegram") as telegram_api:
+    with patch("salt.beacons.telegram_bot_msg._get_updates") as mock_get_updates:
         token = "abc"
         username = "tester"
         config = [{"token": token, "accept_from": [username]}]
-        inst = MagicMock(name="telegram.Bot()")
-        telegram_api.Bot = MagicMock(name="telegram", return_value=inst)
 
         user = telegram.User(id=1, first_name="", username=username, is_bot=True)
         chat = telegram.Chat(1, "private", username=username)
@@ -110,12 +104,12 @@ def test_call_telegram_returning_updates():
         message = telegram.Message(message_id=1, from_user=user, date=date, chat=chat)
         update = telegram.Update(update_id=1, message=message)
 
-        inst.get_updates.return_value = [update]
+        mock_get_updates.return_value = [update]
 
         ret = telegram_bot_msg.validate(config)
         assert ret == (True, "Valid beacon configuration.")
 
         ret = telegram_bot_msg.beacon(config)
-        telegram_api.Bot.assert_called_once_with(token)
+        mock_get_updates.assert_any_call(token, limit=100, timeout=0)
         assert ret
         assert ret[0]["msgs"][0] == message.to_dict()

@@ -614,19 +614,20 @@ def onedir_dependencies(
     )
 
     env = os.environ.copy()
-    install_args = ["-v"]
+    install_args = [
+        "-v",
+        "--use-pep517",
+        "--no-cache-dir",
+        "--only-binary=maturin,apache-libcloud,pymssql",
+    ]
     if platform == "windows":
         python_bin = env_scripts_dir / "python"
     else:
         env["RELENV_BUILDENV"] = "1"
         python_bin = env_scripts_dir / "python3"
-        install_args.extend(
-            [
-                "--use-pep517",
-                "--no-cache-dir",
-                "--no-binary=:all:",
-                "--only-binary=maturin,cassandra-driver",
-            ]
+        install_args.append("--no-binary=:all:")
+        install_args.append(
+            "--only-binary=maturin,apache-libcloud,pymssql,cassandra-driver"
         )
 
     # Cryptography needs openssl dir set to link to the proper openssl libs.

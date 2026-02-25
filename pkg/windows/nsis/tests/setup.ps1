@@ -12,7 +12,7 @@ setup.ps1
 param(
     [Parameter(Mandatory=$false)]
     [Alias("c")]
-# Don't pretify the output of the Write-Result
+# Don't prettify the output of the Write-Result
     [Switch] $CICD
 )
 

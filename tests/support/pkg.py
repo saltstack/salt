@@ -491,18 +491,6 @@ class SaltPkgInstall:
                 )
                 log.info("MSI returncode: %s", ret.returncode)
                 assert ret.returncode in [0, 3010]
-
-                if upgrade:
-                    # MSI major upgrades with mismatched component GUIDs can
-                    # remove files that should be kept. Running a repair
-                    # ensures all files from the new product are on disk.
-                    repair_cmd = f'msiexec.exe /qn /fa "{pkg}" /norestart'
-                    repair_ret = subprocess.run(
-                        repair_cmd,
-                        shell=True,  # nosec
-                        check=False,
-                    )
-                    log.info("MSI repair returncode: %s", repair_ret.returncode)
             else:
                 log.error("Invalid package: %s", pkg)
                 return False
@@ -622,39 +610,29 @@ class SaltPkgInstall:
             log.debug("Windows SSM binary not found at %s", self.ssm_bin)
             return
 
-        for service in ("salt-minion", "salt-master", "salt-syndic"):
-            stop = self.proc.run(
-                str(self.ssm_bin), "stop", service, "confirm", _timeout=120
+        stop = self.proc.run(
+            str(self.ssm_bin), "stop", "salt-minion", "confirm", _timeout=120
+        )
+        # 1062: The service has not been started.
+        if stop.returncode not in (0, 1062):
+            log.debug(
+                "Stopping service salt-minion returned %s",
+                stop.returncode,
             )
-            # 1062: The service has not been started.
-            if stop.returncode not in (0, 1062):
-                log.debug(
-                    "Stopping service %s returned %s",
-                    service,
-                    stop.returncode,
-                )
 
         deadline = time.time() + 120
-        running = set()
-        tracked = {name.lower() for name in ("salt-minion.exe", "salt-master.exe")}
         while time.time() < deadline:
             running = {
                 (proc.info["name"] or "").lower()
                 for proc in psutil.process_iter(["name"])
-                if (proc.info["name"] or "").lower() in tracked
+                if (proc.info["name"] or "").lower() == "salt-minion.exe"
             }
             if not running:
                 break
-            log.debug(
-                "Waiting for Salt processes to exit before upgrade: %s",
-                sorted(running),
-            )
+            log.debug("Waiting for salt-minion process to exit before upgrade")
             time.sleep(2)
         else:
-            log.warning(
-                "Salt processes still running before upgrade: %s",
-                sorted(running),
-            )
+            log.warning("salt-minion process still running before upgrade")
 
     def _install_ssm_service(self, service="minion"):
         """

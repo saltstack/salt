@@ -130,6 +130,15 @@ IMCAC - Immediate Custom Action - It's immediate
       </RegistryKey>
     </Component>
 
+    <!-- Detect if VCRedist 2022 is already installed -->
+    <Property Id="VCREDIST_INSTALLED">
+      <?if $(var.WIN64)=yes ?>
+        <RegistrySearch Root="HKLM" Key="SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64" Name="Installed" Type="raw" Id="vc1" Win64="yes" />
+      <?else ?>
+        <RegistrySearch Root="HKLM" Key="SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x86" Name="Installed" Type="raw" Id="vc2" />
+      <?endif ?>
+    </Property>
+
     <!-- Search registry for NSIS install  -->
     <Property         Id="NSIS_UNINSTALLSTRING">
       <RegistrySearch Root="HKLM" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Salt Minion" Name="UninstallString" Type="raw" Win64="no"  Id="n1" />
@@ -270,7 +279,10 @@ IMCAC - Immediate Custom Action - It's immediate
     <!-- Leaving registry keys would mean the product is still installed -->
     <Feature Id="ProductFeature" Title="Minion" Level="1">
       <ComponentGroupRef Id="ProductComponents" />
-      <Feature Id="VC143" Title="VC++ 2022" AllowAdvertise="no" Display="hidden"><MergeRef Id="MSM_VC143_CRT" /></Feature>
+      <Feature Id="VC143" Title="VC++ 2022" AllowAdvertise="no" Display="hidden">
+        <MergeRef Id="MSM_VC143_CRT" />
+        <Condition Level="0"><![CDATA[VCREDIST_INSTALLED = "#1"]]></Condition>
+      </Feature>
     </Feature>
 
     <!-- Get the config file template from the msi store only if no config is present -->

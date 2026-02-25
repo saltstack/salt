@@ -140,6 +140,8 @@ repos:
           - check
 
   # ----- Packaging Requirements ------------------------------------------------------------------------------------>
+  # IMPORTANT: We do not pin setuptools here to avoid conflicts with requirements/constraints.txt.
+  # This allows uv to resolve a version of setuptools that satisfies the constraints.
   - repo: https://github.com/astral-sh/uv-pre-commit
     rev: 0.10.2
     hooks:
@@ -150,7 +152,7 @@ repos:
         name: Linux Packaging Py3.9 Requirements
         files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(linux\.in|py3\.9/linux\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -165,7 +167,7 @@ repos:
         name: Linux Packaging Py3.10 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(linux\.in|py3\.10/linux\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -180,7 +182,7 @@ repos:
         name: Linux Packaging Py3.11 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(linux\.in|py3\.11/linux\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -195,7 +197,7 @@ repos:
         name: Linux Packaging Py3.12 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(linux\.in|py3\.12/linux\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -210,7 +212,7 @@ repos:
         name: Linux Packaging Py3.13 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(linux\.in|py3\.13/linux\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -226,7 +228,7 @@ repos:
         name: FreeBSD Packaging Py3.9 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(freebsd\.in|py3\.9/freebsd\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -241,7 +243,7 @@ repos:
         name: FreeBSD Packaging Py3.10 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(freebsd\.in|py3\.10/freebsd\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -256,7 +258,7 @@ repos:
         name: FreeBSD Packaging Py3.11 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(freebsd\.in|py3\.11/freebsd\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -271,7 +273,7 @@ repos:
         name: FreeBSD Packaging Py3.12 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(freebsd\.in|py3\.12/freebsd\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -286,7 +288,7 @@ repos:
         name: FreeBSD Packaging Py3.13 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(freebsd\.in|py3\.13/freebsd\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -302,7 +304,7 @@ repos:
         name: Darwin Packaging Py3.9 ZeroMQ Requirements
         files: ^(requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.9/darwin\.txt)))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -317,7 +319,7 @@ repos:
         name: Darwin Packaging Py3.10 ZeroMQ Requirements
         files: ^(requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.10/darwin\.txt)))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -332,7 +334,7 @@ repos:
         name: Darwin Packaging Py3.11 ZeroMQ Requirements
         files: ^(requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.11/darwin\.txt)))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -347,7 +349,7 @@ repos:
         name: Darwin Packaging Py3.12 ZeroMQ Requirements
         files: ^(requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.12/darwin\.txt)))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -362,7 +364,7 @@ repos:
         name: Darwin Packaging Py3.13 ZeroMQ Requirements
         files: ^(requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.13/darwin\.txt)))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -378,7 +380,7 @@ repos:
         name: Windows Packaging Py3.9 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.9/windows\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/windows.txt
           - requirements/static/pkg/windows.in
@@ -392,7 +394,7 @@ repos:
         name: Windows Packaging Py3.10 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.10/windows\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/windows.txt
           - requirements/static/pkg/windows.in
@@ -406,7 +408,7 @@ repos:
         name: Windows Packaging Py3.11 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.11/windows\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/windows.txt
           - requirements/static/pkg/windows.in
@@ -420,7 +422,7 @@ repos:
         name: Windows Packaging Py3.12 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.12/windows\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/windows.txt
           - requirements/static/pkg/windows.in
@@ -434,7 +436,7 @@ repos:
         name: Windows Packaging Py3.13 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.13/windows\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/windows.txt
           - requirements/static/pkg/windows.in
@@ -453,7 +455,7 @@ repos:
         name: Linux CI Py3.9 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in)|py3\.9/linux\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/pytest.txt
@@ -472,7 +474,7 @@ repos:
         name: Linux CI Py3.10 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in)|py3\.10/linux\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/pytest.txt
@@ -491,7 +493,7 @@ repos:
         name: Linux CI Py3.11 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in)|py3\.11/linux\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/pytest.txt
@@ -510,7 +512,7 @@ repos:
         name: Linux CI Py3.12 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in)|py3\.12/linux\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/pytest.txt
@@ -529,7 +531,7 @@ repos:
         name: Linux CI Py3.13 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in)|py3\.13/linux\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/pytest.txt
@@ -550,7 +552,7 @@ repos:
         name: Linux CI Py3.9 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.9/linux-crypto\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/crypto.in
           - --python-platform=linux
@@ -563,7 +565,7 @@ repos:
         name: Linux CI Py3.10 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.10/linux-crypto\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/crypto.in
           - --python-platform=linux
@@ -576,7 +578,7 @@ repos:
         name: Linux CI Py3.11 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.11/linux-crypto\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/crypto.in
           - --python-platform=linux
@@ -589,7 +591,7 @@ repos:
         name: Linux CI Py3.12 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.12/linux-crypto\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/crypto.in
           - --python-platform=linux
@@ -602,7 +604,7 @@ repos:
         name: Linux CI Py3.13 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.13/linux-crypto\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/crypto.in
           - --python-platform=linux
@@ -616,7 +618,7 @@ repos:
         name: FreeBSD CI Py3.9 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.in|py3\.9/freebsd\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/pytest.txt
@@ -636,7 +638,7 @@ repos:
         name: FreeBSD CI Py3.10 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.in|py3\.10/freebsd\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/pytest.txt
@@ -656,7 +658,7 @@ repos:
         name: FreeBSD CI Py3.11 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.in|py3\.11/freebsd\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/pytest.txt
@@ -676,7 +678,7 @@ repos:
         name: FreeBSD CI Py3.12 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.in|py3\.12/freebsd\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/pytest.txt
@@ -696,7 +698,7 @@ repos:
         name: FreeBSD CI Py3.13 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.in|py3\.13/freebsd\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/pytest.txt
@@ -718,7 +720,7 @@ repos:
         files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.9/freebsd-crypto\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/crypto.in
           - --universal
@@ -732,7 +734,7 @@ repos:
         files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.10/freebsd-crypto\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/crypto.in
           - --universal
@@ -745,7 +747,7 @@ repos:
         name: FreeBSD CI Py3.11 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.11/freebsd-crypto\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/crypto.in
           - --universal
@@ -758,7 +760,7 @@ repos:
         name: FreeBSD CI Py3.12 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.12/freebsd-crypto\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/crypto.in
           - --universal
@@ -771,7 +773,7 @@ repos:
         name: FreeBSD CI Py3.13 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.13/freebsd-crypto\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/crypto.in
           - --universal
@@ -785,7 +787,7 @@ repos:
         name: Darwin CI Py3.9 ZeroMQ Requirements
         files: ^(requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.in|py3\.9/darwin\.txt)))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/darwin.txt
@@ -805,7 +807,7 @@ repos:
         name: Darwin CI Py3.10 ZeroMQ Requirements
         files: ^(requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.in|py3\.10/darwin\.txt)))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/darwin.txt
@@ -825,7 +827,7 @@ repos:
         name: Darwin CI Py3.11 ZeroMQ Requirements
         files: ^(requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.in|py3\.11/darwin\.txt)))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/darwin.txt
@@ -845,7 +847,7 @@ repos:
         name: Darwin CI Py3.12 ZeroMQ Requirements
         files: ^(requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.in|py3\.12/darwin\.txt)))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/darwin.txt
@@ -865,7 +867,7 @@ repos:
         name: Darwin CI Py3.13 ZeroMQ Requirements
         files: ^(requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.in|py3\.13/darwin\.txt)))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/darwin.txt
@@ -886,7 +888,7 @@ repos:
         name: Darwin CI Py3.9 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.9/darwin-crypto\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/crypto.in
           - --python-platform=macos
@@ -899,7 +901,7 @@ repos:
         name: Darwin CI Py3.10 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.10/darwin-crypto\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/crypto.in
           - --python-platform=macos
@@ -912,7 +914,7 @@ repos:
         name: Darwin CI Py3.11 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.11/darwin-crypto\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/crypto.in
           - --python-platform=macos
@@ -925,7 +927,7 @@ repos:
         name: Darwin CI Py3.12 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.12/darwin-crypto\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/crypto.in
           - --python-platform=macos
@@ -938,7 +940,7 @@ repos:
         name: Darwin CI Py3.13 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.13/darwin-crypto\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/crypto.in
           - --python-platform=macos
@@ -952,7 +954,7 @@ repos:
         name: Windows CI Py3.9 ZeroMQ Requirements
         files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|py3\.9/windows\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/pytest.txt
@@ -972,7 +974,7 @@ repos:
         name: Windows CI Py3.10 ZeroMQ Requirements
         files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|py3\.10/windows\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/pytest.txt
@@ -992,7 +994,7 @@ repos:
         name: Windows CI Py3.11 ZeroMQ Requirements
         files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|py3\.11/windows\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/pytest.txt
@@ -1012,7 +1014,7 @@ repos:
         name: Windows CI Py3.12 ZeroMQ Requirements
         files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|py3\.12/windows\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/pytest.txt
@@ -1032,7 +1034,7 @@ repos:
         name: Windows CI Py3.13 ZeroMQ Requirements
         files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|py3\.13/windows\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/pytest.txt
@@ -1053,7 +1055,7 @@ repos:
         name: Windows CI Py3.9 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.9/windows-crypto\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/crypto.in
           - --python-platform=windows
@@ -1066,7 +1068,7 @@ repos:
         name: Windows CI Py3.10 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.10/windows-crypto\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/crypto.in
           - --python-platform=windows
@@ -1079,7 +1081,7 @@ repos:
         name: Windows CI Py3.11 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.11/windows-crypto\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/crypto.in
           - --python-platform=windows
@@ -1092,7 +1094,7 @@ repos:
         name: Windows CI Py3.12 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.12/windows-crypto\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/crypto.in
           - --python-platform=windows
@@ -1105,7 +1107,7 @@ repos:
         name: Windows CI Py3.13 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.13/windows-crypto\.txt))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/crypto.in
           - --python-platform=windows
@@ -1123,7 +1125,7 @@ repos:
         name: Cloud CI Py3.9 Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((cloud|common)\.in|py3\.9/cloud\.txt)))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/pytest.txt
@@ -1144,7 +1146,7 @@ repos:
         name: Cloud CI Py3.10 Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((cloud|common)\.in|py3\.10/cloud\.txt)))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/pytest.txt
@@ -1165,7 +1167,7 @@ repos:
         name: Cloud CI Py3.11 Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((cloud|common)\.in|py3\.11/cloud\.txt)))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/pytest.txt
@@ -1186,7 +1188,7 @@ repos:
         name: Cloud CI Py3.12 Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((cloud|common)\.in|py3\.12/cloud\.txt)))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/pytest.txt
@@ -1207,7 +1209,7 @@ repos:
         name: Cloud CI Py3.13 Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((cloud|common)\.in|py3\.13/cloud\.txt)))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/pytest.txt
@@ -1232,7 +1234,7 @@ repos:
         name: Docs CI Py3.9 Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -1249,7 +1251,7 @@ repos:
         name: Docs CI Py3.10 Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -1266,7 +1268,7 @@ repos:
         name: Docs CI Py3.11 Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -1283,7 +1285,7 @@ repos:
         name: Docs CI Py3.12 Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -1300,7 +1302,7 @@ repos:
         name: Docs CI Py3.13 Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -1321,7 +1323,7 @@ repos:
         name: Lint CI Py3.9 Requirements
         files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(linux\.in|common\.in|lint\.in|py3\.9/linux\.txt)))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -1342,7 +1344,7 @@ repos:
         name: Lint CI Py3.10 Requirements
         files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(linux\.in|common\.in|lint\.in|py3\.10/linux\.txt)))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -1363,7 +1365,7 @@ repos:
         name: Lint CI Py3.11 Requirements
         files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(linux\.in|common\.in|lint\.in|py3\.11/linux\.txt)))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -1384,7 +1386,7 @@ repos:
         name: Lint CI Py3.12 Requirements
         files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(linux\.in|common\.in|lint\.in|py3\.12/linux\.txt)))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -1405,7 +1407,7 @@ repos:
         name: Lint CI Py3.13 Requirements
         files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(linux\.in|common\.in|lint\.in|py3\.13/linux\.txt)))$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
@@ -1429,7 +1431,7 @@ repos:
         name: Changelog CI Py3.9 Requirements
         files: ^requirements/static/ci/(changelog\.in|py3\.9/(changelog|linux)\.txt)$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/changelog.in
           - --python-platform=linux
@@ -1444,7 +1446,7 @@ repos:
         name: Changelog CI Py3.10 Requirements
         files: ^requirements/static/ci/(changelog\.in|py3\.10/(changelog|linux)\.txt)$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/changelog.in
           - --python-platform=linux
@@ -1459,7 +1461,7 @@ repos:
         name: Changelog CI Py3.11 Requirements
         files: ^requirements/static/ci/(changelog\.in|py3\.11/(changelog|linux)\.txt)$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/changelog.in
           - --python-platform=linux
@@ -1474,7 +1476,7 @@ repos:
         name: Changelog CI Py3.12 Requirements
         files: ^requirements/static/ci/(changelog\.in|py3\.12/(changelog|linux)\.txt)$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/changelog.in
           - --python-platform=linux
@@ -1489,7 +1491,7 @@ repos:
         name: Changelog CI Py3.13 Requirements
         files: ^requirements/static/ci/(changelog\.in|py3\.13/(changelog|linux)\.txt)$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/changelog.in
           - --python-platform=linux
@@ -1508,7 +1510,7 @@ repos:
         name: Linux CI Py3.9 Tools Requirements
         files: ^requirements/static/ci/(tools\.in|py3.9/(tools|linux)\.txt)$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/tools.in
           - --python-platform=linux
@@ -1521,7 +1523,7 @@ repos:
         name: Linux CI Py3.10 Tools Requirements
         files: ^requirements/static/ci/(tools\.in|py3.10/(tools|linux)\.txt)$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/tools.in
           - --python-platform=linux
@@ -1534,7 +1536,7 @@ repos:
         name: Linux CI Py3.11 Tools Requirements
         files: ^requirements/static/ci/(tools\.in|py3.11/(tools|linux)\.txt)$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/tools.in
           - --python-platform=linux
@@ -1547,7 +1549,7 @@ repos:
         name: Linux CI Py3.12 Tools Requirements
         files: ^requirements/static/ci/(tools\.in|py3.12/(tools|linux)\.txt)$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/tools.in
           - --python-platform=linux
@@ -1560,7 +1562,7 @@ repos:
         name: Linux CI Py3.13 Tools Requirements
         files: ^requirements/static/ci/(tools\.in|py3.13/(tools|linux)\.txt)$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/tools.in
           - --python-platform=linux
@@ -1575,7 +1577,7 @@ repos:
         name: Linux CI Py3.9 Tools virustotal Requirements
         files: ^requirements/static/ci/(tools(-virustotal)?\.in|py3.9/(tools(-virustotal)?|linux)\.txt)$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/tools-virustotal.in
           - --python-platform=linux
@@ -1589,7 +1591,7 @@ repos:
         name: Linux CI Py3.10 Tools virustotal Requirements
         files: ^requirements/static/ci/(tools(-virustotal)?\.in|py3.10/(tools(-virustotal)?|linux)\.txt)$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/tools-virustotal.in
           - --python-platform=linux
@@ -1603,7 +1605,7 @@ repos:
         name: Linux CI Py3.11 Tools virustotal Requirements
         files: ^requirements/static/ci/(tools(-virustotal)?\.in|py3.11/(tools(-virustotal)?|linux)\.txt)$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/tools-virustotal.in
           - --python-platform=linux
@@ -1617,7 +1619,7 @@ repos:
         name: Linux CI Py3.12 Tools virustotal Requirements
         files: ^requirements/static/ci/(tools(-virustotal)?\.in|py3.12/(tools(-virustotal)?|linux)\.txt)$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/tools-virustotal.in
           - --python-platform=linux
@@ -1631,7 +1633,7 @@ repos:
         name: Linux CI Py3.13 Tools virustotal Requirements
         files: ^requirements/static/ci/(tools(-virustotal)?\.in|py3.13/(tools(-virustotal)?|linux)\.txt)$
         pass_filenames: false
-        additional_dependencies: ["pip<26.0", "setuptools<75.0.0"]
+        additional_dependencies: ["pip<26.0"]
         args:
           - requirements/static/ci/tools-virustotal.in
           - --python-platform=linux

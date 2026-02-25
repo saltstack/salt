@@ -595,13 +595,19 @@ Section -install_vcredist_2022
     # Determine which architecture needs to be installed
     ${if} ${runningx64}
         strcpy $VcRedistName "vcredist_x64_2022"
+        ReadRegDWORD $1 HKLM "SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64" "Installed"
     ${else}
         strcpy $VcRedistName "vcredist_x86_2022"
+        ReadRegDWORD $1 HKLM "SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x86" "Installed"
     ${endif}
     detailPrint "Selected $VcRedistName installer"
 
-    # Install
-    Call InstallVCRedist
+    # Skip install if VCRedist is already present
+    ${If} $1 == 1
+        detailPrint "$VcRedistName already installed, skipping"
+    ${Else}
+        Call InstallVCRedist
+    ${EndIf}
 
 SectionEnd
 
@@ -1243,25 +1249,16 @@ Function ${un}uninstallSalt
 
     ${EndIf}
 
-        # Give the minion enough time to finish its internal stop_async (graceful shutdown).
+    # Give the minion enough time to finish its internal stop_async (graceful shutdown).
+    # salt/minion.py:MinionManager.stop_async has a static 5-second sleep to allow
+    # the I/O loop to process and send any remaining "return" messages to the Master.
+    # We wait 6 seconds here to ensure that we don't aggressively kill the process
+    # while it is still performing its legitimate cleanup. After this window,
+    # we proceed to kill any lingering or orphan processes that would otherwise
+    # lock DLLs (like pywin32 or cryptography) and cause a "Frankenstein" installation.
 
-        # salt/minion.py:MinionManager.stop_async has a static 5-second sleep to allow
-
-        # the I/O loop to process and send any remaining "return" messages to the Master.
-
-        # We wait 6 seconds here to ensure that we don't aggressively kill the process
-
-        # while it is still performing its legitimate cleanup. After this window,
-
-        # we proceed to kill any lingering or orphan processes that would otherwise
-
-        # lock DLLs (like pywin32 or cryptography) and cause a "Frankenstein" installation.
-
-        ${LogMsg} "Waiting 6 seconds for graceful shutdown..."
-
-        Sleep 6000
-
-
+    ${LogMsg} "Waiting 6 seconds for graceful shutdown..."
+    Sleep 6000
 
     # Perform multiple passes to ensure stubborn or child processes are caught
     # Pass 1: Aggressive taskkill
@@ -1293,8 +1290,7 @@ Function ${un}uninstallSalt
 
     doneSSM:
 
-
-        # Remove files
+    # Remove files
     ${LogMsg} "Deleting files"
     ClearErrors
     ${LogMsg} "Deleting files: $INSTDIR\multi-minion*"

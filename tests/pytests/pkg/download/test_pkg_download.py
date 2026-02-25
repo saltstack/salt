@@ -395,9 +395,20 @@ def setup_windows(
                 proc_name = ""
                 for proc in processes:
                     try:
-                        if proc in (p.name() for p in psutil.process_iter()):
-                            proc_name = proc
-                    except psutil.NoSuchProcess:
+                        for p in psutil.process_iter():
+                            try:
+                                if proc == p.name():
+                                    proc_name = proc
+                                    break
+                            except (
+                                psutil.NoSuchProcess,
+                                psutil.ZombieProcess,
+                                psutil.AccessDenied,
+                            ):
+                                continue
+                        if proc_name:
+                            break
+                    except Exception:  # pylint: disable=broad-except
                         continue
 
                 # We need to give the process time to exit. We'll timeout after
@@ -406,12 +417,22 @@ def setup_windows(
                     elapsed_time = 0
                     while elapsed_time < timeout:
                         try:
-                            if proc_name not in (
-                                p.name() for p in psutil.process_iter()
-                            ):
+                            found = False
+                            for p in psutil.process_iter():
+                                try:
+                                    if proc_name == p.name():
+                                        found = True
+                                        break
+                                except (
+                                    psutil.NoSuchProcess,
+                                    psutil.ZombieProcess,
+                                    psutil.AccessDenied,
+                                ):
+                                    continue
+                            if not found:
                                 break
-                        except psutil.NoSuchProcess:
-                            continue
+                        except Exception:  # pylint: disable=broad-except
+                            pass
                         elapsed_time += 0.1
                         time.sleep(0.1)
 
