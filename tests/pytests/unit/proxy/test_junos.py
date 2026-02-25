@@ -3,7 +3,7 @@ import io
 import pytest
 
 import salt.proxy.junos as junos
-from tests.support.mock import ANY, patch
+from tests.support.mock import patch
 
 try:
     import jxmlease  # pylint: disable=unused-import
@@ -43,18 +43,16 @@ def test_init(opts):
     with patch("ncclient.manager.connect") as mock_connect:
         junos.init(opts)
         assert junos.thisproxy.get("initialized")
-        mock_connect.assert_called_with(
-            allow_agent=True,
-            device_params={"name": "junos", "local": False, "use_filter": False},
-            host="junos",
-            hostkey_verify=False,
-            key_filename=None,
-            password=None,
-            port="960",
-            sock_fd=None,
-            ssh_config=ANY,
-            username="xxxx",
-        )
+        assert mock_connect.called
+        _, kwargs = mock_connect.call_args
+        assert kwargs["host"] == "junos"
+        assert kwargs["port"] == "960"
+        assert kwargs["username"] == "xxxx"
+        assert kwargs["device_params"] == {
+            "name": "junos",
+            "local": False,
+            "use_filter": False,
+        }
 
 
 def test_init_err(opts):

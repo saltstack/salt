@@ -424,7 +424,7 @@ jobs:
           PYTHONUTF8: "1"
         run: >
           nox --force-color -f noxfile.py -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }}
-          ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
+          ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}} --log-level=debug --log-cli-level=debug
 
       - name: Prepare Test Run Artifacts
         id: download-artifacts-from-vm
