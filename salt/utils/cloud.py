@@ -82,7 +82,7 @@ try:
 
     # Verify WinRM 0.3.0 or greater
 
-    version = importlib.metadata.version("winrm")
+    version = importlib.metadata.version("pywinrm")
     if not salt.utils.versions.compare(version, ">=", WINRM_MIN_VER):
         HAS_WINRM = False
     else:
