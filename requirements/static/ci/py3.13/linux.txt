@@ -18,9 +18,9 @@ aiosignal==1.4.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   aiohttp
-ansible==13.2.0
+ansible==13.4.0
     # via -r requirements/static/ci/linux.in
-ansible-core==2.20.1
+ansible-core==2.20.3
     # via ansible
 anyio==4.12.1
     # via httpx
