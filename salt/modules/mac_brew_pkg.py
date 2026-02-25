@@ -190,7 +190,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             # Tap is null when the package is from homebrew/cask.
             pkg_tap = "homebrew/cask"
         pkg_names.add("/".join([pkg_tap, package["token"]]))
-        for pkg_name in pkg_names:
+        for pkg_name in [pkg for pkg in pkg_names if pkg is not None]:
             __salt__["pkg_resource.add_pkg"](ret, pkg_name, pkg_version)
 
     __salt__["pkg_resource.sort_pkglist"](ret)
