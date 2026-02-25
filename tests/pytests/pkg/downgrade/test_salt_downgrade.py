@@ -21,7 +21,7 @@ def _get_running_named_salt_pid(process_name):
         cmd_line = ""
         try:
             cmd_line = " ".join(str(element) for element in proc.cmdline())
-        except (psutil.ZombieProcess, psutil.AccessDenied):
+        except (psutil.ZombieProcess, psutil.NoSuchProcess, psutil.AccessDenied):
             # Even though it's a zombie process, it still has a cmdl_string and
             # a pid, so we'll use it
             pass
