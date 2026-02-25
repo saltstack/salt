@@ -38,7 +38,7 @@ def _get_proc_cmdline(proc):
     """
     try:
         return salt.utils.data.decode(proc.cmdline())
-    except (psutil.NoSuchProcess, psutil.AccessDenied):
+    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
         return []
 
 
@@ -50,7 +50,7 @@ def _get_proc_create_time(proc):
     """
     try:
         return salt.utils.data.decode(proc.create_time())
-    except (psutil.NoSuchProcess, psutil.AccessDenied):
+    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
         return None
 
 
@@ -62,7 +62,7 @@ def _get_proc_name(proc):
     """
     try:
         return salt.utils.data.decode(proc.name())
-    except (psutil.NoSuchProcess, psutil.AccessDenied):
+    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
         return []
 
 
@@ -74,7 +74,7 @@ def _get_proc_status(proc):
     """
     try:
         return salt.utils.data.decode(proc.status())
-    except (psutil.NoSuchProcess, psutil.AccessDenied):
+    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
         return None
 
 
@@ -86,7 +86,7 @@ def _get_proc_username(proc):
     """
     try:
         return salt.utils.data.decode(proc.username())
-    except (psutil.NoSuchProcess, psutil.AccessDenied, KeyError):
+    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess, KeyError):
         return None
 
 
