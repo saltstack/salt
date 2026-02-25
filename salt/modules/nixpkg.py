@@ -2,7 +2,7 @@
 Work with Nix packages
 ======================
 
-.. versionadded:: 3007.14
+.. versionadded:: 3008.0
 
 Does not require the machine to be Nixos, just have Nix installed and available
 to use for the user running this command. Their profile must be located in
