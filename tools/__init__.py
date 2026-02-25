@@ -49,6 +49,9 @@ ptscripts.register_tools_module("tools.precommit.loader")
 ptscripts.register_tools_module("tools.release", venv_config=RELEASE_VENV_CONFIG)
 ptscripts.register_tools_module("tools.testsuite")
 ptscripts.register_tools_module("tools.testsuite.download")
+ptscripts.register_tools_module("tools.testsuite.pytest")
+ptscripts.register_tools_module("tools.testsuite.ci_failure")
+ptscripts.register_tools_module("tools.testsuite.container_test")
 
 for name in ("boto3", "botocore", "urllib3"):
     logging.getLogger(name).setLevel(logging.INFO)
