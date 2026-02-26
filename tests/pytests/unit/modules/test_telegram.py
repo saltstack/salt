@@ -60,6 +60,7 @@ def configure_loader_modules():
                     "telegram": {
                         "chat_id": "123456789",
                         "token": "000000000:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                        "thread_id": "2",
                     }
                 }
             ),
