@@ -1303,6 +1303,10 @@ class Minion(MinionBase):
             except OSError:
                 pass
 
+        # Clean up orphaned running_ files from crashed minions
+        # These can be left behind if minion crashes after rename but before cleanup
+        self._cleanup_orphaned_queue_files()
+
         self.timeout = timeout
         self.safe = safe
 
@@ -1391,6 +1395,42 @@ class Minion(MinionBase):
         self.process_manager._handle_signals(signum, sigframe)
         time.sleep(1)
         sys.exit(0)
+
+    def _cleanup_orphaned_queue_files(self):
+        """
+        Clean up orphaned running_ queue files that may have been left behind
+        if the minion crashed after renaming queued_ to running_ but before cleanup.
+        """
+        for queue_name in ("state_queue", "job_queue"):
+            queue_dir = os.path.join(self.opts["cachedir"], queue_name)
+            if not os.path.exists(queue_dir):
+                continue
+
+            try:
+                for fn in os.listdir(queue_dir):
+                    if not fn.startswith("running_") or not fn.endswith(".p"):
+                        continue
+
+                    path = os.path.join(queue_dir, fn)
+                    try:
+                        # Check if file is older than 5 minutes (300 seconds)
+                        # This gives running jobs time to complete and clean up
+                        stat_info = os.stat(path)
+                        age_seconds = time.time() - stat_info.st_mtime
+
+                        if age_seconds > 300:  # 5 minutes
+                            log.info(
+                                "Removing orphaned running queue file: %s (age: %.1fs)",
+                                path,
+                                age_seconds,
+                            )
+                            os.remove(path)
+                    except OSError as exc:
+                        log.debug(
+                            "Could not check/cleanup running file %s: %s", path, exc
+                        )
+            except OSError as exc:
+                log.debug("Could not list queue directory %s: %s", queue_dir, exc)
 
     def sync_connect_master(self, timeout=None, failed=False):
         """
@@ -2295,6 +2335,23 @@ class Minion(MinionBase):
                     # Process up to slots_available files
                     for fn in files[:slots_available]:
                         path = os.path.join(queue_dir, fn)
+
+                        # Re-check process count before processing each job (count may have changed)
+                        current_process_count = len(
+                            [p for p in self.subprocess_list.processes if p.is_alive()]
+                        )
+                        current_process_count_max = (
+                            self._get_effective_process_count_max()
+                        )
+
+                        if current_process_count >= current_process_count_max:
+                            log.debug(
+                                "Process queue processing: Process count changed, stopping batch. "
+                                "Current: %d, Max: %d",
+                                current_process_count,
+                                current_process_count_max,
+                            )
+                            break
 
                         try:
                             with salt.utils.files.fopen(path, "rb") as fp_:

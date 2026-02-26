@@ -502,6 +502,113 @@ def test_process_count_max(minion_opts):
 
 
 @pytest.mark.slow_test
+async def test_process_queue_rechecks_count_per_job(minion_opts):
+    """
+    Test that job queue processing re-checks process count before each individual job,
+    preventing race conditions where process count changes during batch processing.
+    """
+    minion_opts["process_count_max"] = 2
+
+    with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
+        "salt.utils.process.SignalHandlingProcess.start", MagicMock(return_value=True)
+    ), patch("salt.payload.dump"), patch("salt.utils.atomicfile.atomic_rename"), patch(
+        "salt.minion.Minion._get_effective_process_count_max", return_value=2
+    ), patch(
+        "os.path.exists", return_value=True
+    ), patch(
+        "os.listdir"
+    ), patch(
+        "salt.utils.files.fopen"
+    ):
+
+        minion = salt.minion.Minion(minion_opts)
+
+        try:
+            # Mock subprocess list to simulate changing process counts
+            mock_process1 = MagicMock()
+            mock_process1.is_alive.return_value = True
+            mock_process2 = MagicMock()
+            mock_process2.is_alive.return_value = True
+
+            # Initially 1 process running (room for 1 more)
+            minion.subprocess_list.processes = [mock_process1]
+
+            # Mock directory listing to return multiple queued files
+            with patch(
+                "os.listdir",
+                return_value=["queued_1234567890_11111.p", "queued_1234567890_22222.p"],
+            ):
+                # Mock file reading
+                mock_file_data = {"jid": "11111", "fun": "test.ping"}
+                with patch(
+                    "salt.payload.load", return_value=mock_file_data
+                ), patch.object(minion, "_handle_decoded_payload") as mock_handle:
+
+                    # Process the queue
+                    await minion._process_process_queue_async_impl()
+
+                    # First job should be processed (we had room for 1)
+                    assert mock_handle.call_count == 1
+
+                    # Now simulate second process starting (no more room)
+                    minion.subprocess_list.processes = [mock_process1, mock_process2]
+
+                    # Reset mock for second batch
+                    mock_handle.reset_mock()
+
+                    # Process again - should not process any more jobs
+                    await minion._process_process_queue_async_impl()
+
+                    # No additional jobs should be processed due to count check
+                    assert mock_handle.call_count == 0
+
+        finally:
+            minion.destroy()
+
+
+@pytest.mark.slow_test
+def test_cleanup_orphaned_queue_files(minion_opts):
+    """
+    Test that orphaned running_ queue files are cleaned up on minion startup.
+    This prevents stale files from blocking future jobs after minion crashes.
+    """
+    with patch("os.path.exists", return_value=True), patch(
+        "os.listdir"
+    ) as mock_listdir, patch("os.stat") as mock_stat, patch(
+        "os.remove"
+    ) as mock_remove, patch(
+        "time.time", return_value=1000
+    ):  # Current time = 1000
+
+        # Mock old running_ file (modified 400 seconds ago = 600, so > 300 second threshold)
+        mock_listdir.return_value = ["running_1234567890_11111.p"]
+        mock_stat.return_value.st_mtime = 600  # 400 seconds old
+
+        minion = salt.minion.Minion(minion_opts)
+
+        try:
+            # Call the cleanup method directly
+            minion._cleanup_orphaned_queue_files()
+
+            # Verify old file was removed
+            mock_remove.assert_called_once()
+
+            # Reset for testing recent file
+            mock_remove.reset_mock()
+            mock_stat.return_value.st_mtime = (
+                800  # Only 200 seconds old (< 300 threshold)
+            )
+
+            minion._cleanup_orphaned_queue_files()
+
+            # Recent file should NOT be removed
+            mock_remove.assert_not_called()
+
+        finally:
+            minion.destroy()
+
+
+@pytest.mark.slow_test
 async def test_beacons_before_connect(minion_opts):
     """
     Tests that the 'beacons_before_connect' option causes the beacons to be initialized before connect.
