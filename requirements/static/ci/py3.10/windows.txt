@@ -314,7 +314,7 @@ pyfakefs==5.3.1
     # via -r requirements/pytest.txt
 pygit2==1.18.2
     # via -r requirements/static/ci/windows.in
-pymssql==2.3.13
+pymssql==2.3.11
     # via
     #   -c requirements/static/pkg/py3.10/windows.txt
     #   -r requirements/base.txt
