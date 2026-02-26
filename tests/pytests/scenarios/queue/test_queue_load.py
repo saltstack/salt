@@ -249,7 +249,7 @@ def test_stale_lock_recovery(salt_master, salt_minion, salt_client, sleep_sls):
     Verify that the Minion recovers from stale lock files on startup.
     """
     log.info("Starting Edge Case: Stale lock recovery")
-    lock_path = os.path.join(salt_minion.config["cachedir"], "job_queue.lock")
+    lock_path = os.path.join(salt_minion.config["cachedir"], "salt_queues.lock")
 
     # Stop minion, create stale lock, start minion
     with salt_minion.stopped():

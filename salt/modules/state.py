@@ -24,6 +24,7 @@ import salt.defaults.exitcodes
 import salt.payload
 import salt.state
 import salt.utils.args
+import salt.utils.atomicfile
 import salt.utils.data
 import salt.utils.event
 import salt.utils.files
@@ -516,8 +517,10 @@ def _check_queue(queue, kwargs):
                 path = os.path.join(queue_dir, fn)
 
                 try:
-                    with salt.utils.files.fopen(path, "w+b") as fp_:
+                    tmp_path = path + ".tmp"
+                    with salt.utils.files.fopen(tmp_path, "w+b") as fp_:
                         salt.payload.dump(payload, fp_)
+                    salt.utils.atomicfile.atomic_rename(tmp_path, path)
 
                     return {
                         "result": True,
