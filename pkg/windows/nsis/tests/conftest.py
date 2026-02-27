@@ -75,7 +75,7 @@ def reg_key_exists(hive=winreg.HKEY_LOCAL_MACHINE, key=None):
     try:
         with winreg.OpenKey(hive, key, 0, winreg.KEY_READ):
             return True
-    except:
+    except Exception:
         return False
 
 
