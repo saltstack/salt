@@ -21,21 +21,21 @@ _empty = object()
 
 def acquire_queue_lock(opts):
     """
-    Acquire the Salt queue lock (protects both state_queue and job_queue)
+    Acquire the state queue lock
     """
-    lock_path = os.path.join(opts["cachedir"], "salt_queues.lock")
+    lock_path = os.path.join(opts["cachedir"], "state_queue.lock")
     # Use a large timeout to mimic infinite blocking of FileLock, as wait_lock defaults to 5s
     return salt.utils.files.wait_lock(lock_path, lock_fn=lock_path, timeout=86400)
 
 
 def acquire_async_queue_lock(opts):
     """
-    Acquire the Salt queue lock asynchronously (protects both state_queue and job_queue)
+    Acquire the job queue lock asynchronously
     """
-    lock_path = os.path.join(opts["cachedir"], "salt_queues.lock")
-    # Use a large timeout to mimic infinite blocking
+    lock_path = os.path.join(opts["cachedir"], "job_queue.lock")
+    # Use very short timeout - if we can't get the lock quickly, skip and try again later
     return salt.utils.files.await_lock(
-        lock_path, lock_fn=lock_path, timeout=86400, sleep=0.1
+        lock_path, lock_fn=lock_path, timeout=0.1, sleep=0.01
     )
 
 
@@ -106,44 +106,22 @@ def check_prior_running_states(opts, jid, active_jobs):
     # Work on a copy to avoid side effects
     active_jobs = list(active_jobs)
 
-    # Check for queued jobs - must hold lock to read queue state atomically
-    with acquire_queue_lock(opts):
-        for queue_name in ("state_queue", "job_queue"):
-            queue_dir = os.path.join(opts["cachedir"], queue_name)
-            if not os.path.exists(queue_dir):
-                continue
-            for fn in os.listdir(queue_dir):
-                if (
-                    fn.startswith("queued_") or fn.startswith("running_")
-                ) and fn.endswith(".p"):
-                    # fn is queued_<timestamp>_<jid>.p or running_<timestamp>_<jid>.p
-                    parts = fn[:-2].split("_")
-                    if len(parts) >= 3:
-                        job_jid = parts[2]
-                        # We only care about state jobs in job_queue
-                        if queue_name == "job_queue":
-                            try:
-                                path = os.path.join(queue_dir, fn)
-                                with salt.utils.files.fopen(path, "rb") as fp_:
-                                    data = salt.payload.load(fp_)
-                                    if not data or not str(
-                                        data.get("fun", "")
-                                    ).startswith("state."):
-                                        continue
-                            except Exception:  # pylint: disable=broad-except
-                                continue
-                        # We use PID 0 or similar to indicate it's not a real process yet,
-                        # but saltutil.is_running structure usually expects a pid.
-                        active_jobs.append(
-                            {"jid": job_jid, "fun": "state.apply", "pid": 0}
-                        )
+    # Check for queued jobs
+    queue_dir = os.path.join(opts["cachedir"], "state_queue")
+    if os.path.exists(queue_dir):
+        for fn in os.listdir(queue_dir):
+            if fn.startswith("queued_") and fn.endswith(".p"):
+                # fn is queued_<timestamp>_<jid>.p
+                parts = fn[:-2].split("_")
+                if len(parts) >= 3:
+                    job_jid = parts[2]
+                    # We use PID 0 or similar to indicate it's not a real process yet,
+                    # but saltutil.is_running structure usually expects a pid.
+                    active_jobs.append({"jid": job_jid, "fun": "state.apply", "pid": 0})
 
     if active_jobs:
-        log.debug(
-            "check_prior_running_states: checking JID %s against active jobs: %s",
-            jid,
-            active_jobs,
-        )
+        # log.debug("check_prior_running_states: checking JID %s against active jobs: %s", jid, active_jobs)
+        pass
 
     for data in active_jobs:
         try:
