@@ -68,7 +68,6 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
-    FileLockError,
     SaltClientError,
     SaltDaemonNotRunning,
     SaltException,
@@ -1947,75 +1946,84 @@ class Minion(MinionBase):
                 self._queue_job(data)
                 return
 
-        # We use the shared queue lock to ensure atomic checking and queueing
-        try:
-            async with salt.utils.state.acquire_async_queue_lock(self.opts):
-                # Use internal subprocess list for accurate, race-free counting
-                # Filter for alive processes to ignore finished ones that haven't been cleaned up yet
-                running_processes = [
-                    p for p in self.subprocess_list.processes if p.is_alive()
-                ]
-                process_count = len(running_processes)
-                process_count_max = self._get_effective_process_count_max()
+        # Check process count and potentially queue - only acquire lock when needed
+        if not bypass_process_count_max:
+            # Use internal subprocess list for accurate counting
+            # This is racy but acceptable for the common case
+            running_processes = [
+                p for p in self.subprocess_list.processes if p.is_alive()
+            ]
+            process_count = len(running_processes)
+            process_count_max = self._get_effective_process_count_max()
 
-                if not bypass_process_count_max and process_count >= process_count_max:
+            if process_count >= process_count_max:
+                # At process limit - need to acquire lock for atomic queuing
+                try:
+                    async with salt.utils.state.acquire_async_queue_lock(self.opts):
+                        # Re-check count under lock to avoid race
+                        running_processes = [
+                            p for p in self.subprocess_list.processes if p.is_alive()
+                        ]
+                        process_count = len(running_processes)
+                        process_count_max = self._get_effective_process_count_max()
+
+                        if process_count >= process_count_max:
+                            log.warning(
+                                "Maximum number of processes reached while executing jid %s,"
+                                " queuing... (Running: %s, Max: %s)",
+                                data["jid"],
+                                process_count,
+                                process_count_max,
+                            )
+                            self._queue_job(data)
+                            return
+                except salt.exceptions.FileLockError:
                     log.warning(
-                        "Maximum number of processes reached while executing jid %s,"
-                        " queuing... (Running: %s, Max: %s)",
+                        "Failed to acquire job_queue lock for jid %s, queuing anyway.",
                         data["jid"],
-                        process_count,
-                        process_count_max,
                     )
+                    # If we can't get the lock, we assume high contention and queue it to be safe.
+                    # Or we could just proceed (unsafe). Queuing is safer for stability.
                     self._queue_job(data)
                     return
 
-                # Execute the job and get the process handle
-                proc = self._invoke_execution(data)
+        # Execute the job and get the process handle
+        proc = self._invoke_execution(data)
 
-                # Write placeholder proc file with the ACTUAL PID to prevent "Invisible Gap"
-                # This ensures that when the child starts and checks 'running()', it sees itself.
-                if proc:
-                    proc_dir = os.path.join(self.opts["cachedir"], "proc")
-                    if not os.path.isdir(proc_dir):
-                        try:
-                            os.makedirs(proc_dir)
-                        except OSError:
-                            pass
+        # Write placeholder proc file with the ACTUAL PID to prevent "Invisible Gap"
+        # This ensures that when the child starts and checks 'running()', it sees itself.
+        if proc:
+            proc_dir = os.path.join(self.opts["cachedir"], "proc")
+            if not os.path.isdir(proc_dir):
+                try:
+                    os.makedirs(proc_dir)
+                except OSError:
+                    pass
 
-                    proc_fn = os.path.join(proc_dir, data["jid"])
+            proc_fn = os.path.join(proc_dir, data["jid"])
 
-                    # Use the real PID from the handle (multiprocessing) or current PID (threading)
-                    real_pid = getattr(proc, "pid", os.getpid())
-                    if real_pid is None:
-                        real_pid = os.getpid()
+            # Use the real PID from the handle (multiprocessing) or current PID (threading)
+            real_pid = getattr(proc, "pid", os.getpid())
+            if real_pid is None:
+                real_pid = os.getpid()
 
-                    placeholder_data = data.copy()
-                    placeholder_data["pid"] = real_pid
+            placeholder_data = data.copy()
+            placeholder_data["pid"] = real_pid
 
-                    try:
-                        with salt.utils.files.fopen(proc_fn, "w+b") as fp_:
-                            salt.payload.dump(placeholder_data, fp_)
-                    except OSError:
-                        log.error("Failed to write placeholder proc file %s", proc_fn)
+            try:
+                with salt.utils.files.fopen(proc_fn, "w+b") as fp_:
+                    salt.payload.dump(placeholder_data, fp_)
+            except OSError:
+                log.error("Failed to write placeholder proc file %s", proc_fn)
 
-                # Now that the placeholder proc file is written, we can safely delete
-                # the running_ queue file to close the "invisible gap".
-                for qf in ("_job_queue_file", "_state_queue_file"):
-                    if qf in data:
-                        try:
-                            os.remove(data[qf])
-                        except OSError:
-                            pass
-
-        except FileLockError:
-            log.warning(
-                "Failed to acquire job_queue lock for jid %s, queuing anyway.",
-                data["jid"],
-            )
-            # If we can't get the lock, we assume high contention and queue it to be safe.
-            # Or we could just proceed (unsafe). Queuing is safer for stability.
-            self._queue_job(data)
-            return
+        # Now that the placeholder proc file is written, we can safely delete
+        # the running_ queue file to close the "invisible gap".
+        for qf in ("_job_queue_file", "_state_queue_file"):
+            if qf in data:
+                try:
+                    os.remove(data[qf])
+                except OSError:
+                    pass
 
     def _queue_job(self, data):
         """

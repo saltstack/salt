@@ -4,7 +4,7 @@ import salt.loader.context
 import salt.modules.state as statemod
 import salt.modules.transactional_update as tu
 from salt.exceptions import CommandExecutionError
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, mock_open, patch
 
 pytestmark = [
     pytest.mark.skip_on_windows(reason="Not supported on Windows"),
@@ -27,6 +27,7 @@ def configure_loader_modules():
             "__salt__": {},
             "__context__": {},
             "__opts__": {"cachedir": "/tmp/"},
+            "__utils__": {"atomicfile.atomic_rename": MagicMock()},
         },
     }
 
@@ -536,6 +537,14 @@ def test_sls_queue_true():
     }
     with patch.dict(statemod.__salt__, salt_mock), patch(
         "salt.modules.transactional_update.call", MagicMock(return_value="result")
+    ), patch("salt.utils.state.acquire_queue_lock"), patch(
+        "salt.utils.atomicfile.atomic_rename"
+    ), patch(
+        "salt.utils.files.fopen", mock_open()
+    ), patch(
+        "salt.payload.dump"
+    ), patch(
+        "salt.utils.jid.gen_jid", return_value="test_jid"
     ):
         expected = {
             "result": True,
@@ -600,6 +609,14 @@ def test_highstate_queue_true():
     }
     with patch.dict(statemod.__salt__, salt_mock), patch(
         "salt.modules.transactional_update.call", MagicMock(return_value="result")
+    ), patch("salt.utils.state.acquire_queue_lock"), patch(
+        "salt.utils.atomicfile.atomic_rename"
+    ), patch(
+        "salt.utils.files.fopen", mock_open()
+    ), patch(
+        "salt.payload.dump"
+    ), patch(
+        "salt.utils.jid.gen_jid", return_value="test_jid"
     ):
         expected = {
             "result": True,
@@ -688,6 +705,14 @@ def test_single_queue_true():
     }
     with patch.dict(statemod.__salt__, salt_mock), patch(
         "salt.modules.transactional_update.call", MagicMock(return_value="result")
+    ), patch("salt.utils.state.acquire_queue_lock"), patch(
+        "salt.utils.atomicfile.atomic_rename"
+    ), patch(
+        "salt.utils.files.fopen", mock_open()
+    ), patch(
+        "salt.payload.dump"
+    ), patch(
+        "salt.utils.jid.gen_jid", return_value="test_jid"
     ):
         expected = {
             "result": True,
