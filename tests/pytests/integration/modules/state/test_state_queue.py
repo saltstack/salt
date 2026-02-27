@@ -45,6 +45,7 @@ def test_state_queue_true(salt_cli, salt_minion, long_running_sls, quick_sls):
     """
     Test that state.apply with queue=True queues the job and runs it after the current one finishes.
     """
+
     quick_sls_name, quick_target_path = quick_sls
 
     # Ensure target doesn't exist
