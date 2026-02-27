@@ -863,13 +863,17 @@ def test_sls():
     """
     arg = "core,edit.vim dev"
     ret = ["Pillar failed to render with the following messages:", "E", "1"]
-    with patch.object(state, "running", return_value=True):
+    with patch.object(state, "running", return_value=True), patch(
+        "salt.utils.state.acquire_queue_lock", MagicMock()
+    ):
         with patch.dict(state.__context__, {"retcode": 1}):
             assert state.sls("core,edit.vim dev") is True
 
     with patch.object(
         state, "_wait", side_effect=[True, True, True, True, True, True]
-    ), patch.object(state, "_disabled", side_effect=[["A"], [], [], [], [], []]):
+    ), patch.object(state, "_disabled", side_effect=[["A"], [], [], [], [], []]), patch(
+        "salt.utils.state.acquire_queue_lock", MagicMock()
+    ):
         with patch.dict(state.__context__, {"retcode": 1}):
             assert state.sls("core,edit.vim dev", None, None, True) == ["A"]
 
@@ -877,7 +881,7 @@ def test_sls():
             state,
             "_get_pillar_errors",
             side_effect=[["E", "1"], None, None, None, None],
-        ):
+        ), patch("salt.utils.state.acquire_queue_lock", MagicMock()):
             with patch.dict(state.__context__, {"retcode": 5}), patch.dict(
                 state.__pillar__, {"_errors": ["E", "1"]}
             ):
@@ -887,7 +891,9 @@ def test_sls():
                 salt.utils.state,
                 "get_sls_opts",
                 return_value={"test": "", "saltenv": None},
-            ), patch.object(salt.utils.args, "test_mode", return_value=True):
+            ), patch.object(salt.utils.args, "test_mode", return_value=True), patch(
+                "salt.utils.state.acquire_queue_lock", MagicMock()
+            ):
                 pytest.raises(
                     SaltInvocationError,
                     state.sls,
@@ -906,7 +912,8 @@ def test_sls():
                         assert state.sls(arg, None, None, True, cache=True)
 
                     MockState.HighState.flag = True
-                    assert state.sls("core,edit.vim dev", None, None, True)
+                    with patch("salt.utils.state.acquire_queue_lock", MagicMock()):
+                        assert state.sls("core,edit.vim dev", None, None, True)
 
                     MockState.HighState.flag = False
                     with patch.object(
