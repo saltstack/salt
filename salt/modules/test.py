@@ -346,6 +346,12 @@ def fib(num):
 
         salt '*' test.fib 3
     """
+    # Remove the limit on the number of digits in an int,
+    # as Fibonacci numbers grow very quickly.
+    # The default limit for integer string conversion is 4300 digits,
+    # which means that num > 20577 will fail with a ValueError.
+    sys.set_int_max_str_digits(0)
+
     num = int(num)
     if num < 0:
         raise ValueError("Negative number is not allowed!")
