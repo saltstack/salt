@@ -130,6 +130,15 @@ IMCAC - Immediate Custom Action - It's immediate
       </RegistryKey>
     </Component>
 
+    <!-- Detect if VCRedist 2022 is already installed -->
+    <Property Id="VCREDIST_INSTALLED">
+      <?if $(var.WIN64)=yes ?>
+        <RegistrySearch Root="HKLM" Key="SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64" Name="Installed" Type="raw" Id="vc1" Win64="yes" />
+      <?else ?>
+        <RegistrySearch Root="HKLM" Key="SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x86" Name="Installed" Type="raw" Id="vc2" />
+      <?endif ?>
+    </Property>
+
     <!-- Search registry for NSIS install  -->
     <Property         Id="NSIS_UNINSTALLSTRING">
       <RegistrySearch Root="HKLM" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Salt Minion" Name="UninstallString" Type="raw" Win64="no"  Id="n1" />
@@ -197,16 +206,14 @@ IMCAC - Immediate Custom Action - It's immediate
         stopSalt to release log file, installValidate requires access to all
         files, including the log file
       -->
-      <Custom Action="stopSalt"                 Before="InstallValidate"          >1</Custom>
+      <Custom Action="stopSalt"                 Before="kill_python_exe"          >1</Custom>
 
       <!--
       On uninstall or upgrade: stop salt python.exe processes that would lock dll's
-      - This will only run on silent installs. /quiet or /qn
-      - All other installs will display a dialog box of process that need to be closed
+      - This must run before InstallValidate to ensure that the installer does not see files in use
       -->
-      <Custom Action="kill_python_exe"          After="StopServices"              >(REMOVE ~= "ALL") or WIX_UPGRADE_DETECTED</Custom>
+      <Custom Action="kill_python_exe"          Before="InstallValidate"          >(REMOVE ~= "ALL") or WIX_UPGRADE_DETECTED</Custom>
 
-      <!-- ReadConfig_IMCAC must be called before CostInitialize so features can depend on properties set-->
       <Custom Action="ReadConfig_IMCAC"         Before="CostInitialize"           >NOT Installed</Custom>
       <Custom Action="del_NSIS_DECAC"           After="InstallInitialize"         >nsis_install_found</Custom>
 
@@ -242,7 +249,7 @@ IMCAC - Immediate Custom Action - It's immediate
     <CustomAction Id="DeleteConfig_DECAC"   BinaryKey="MinionConfigExt" DllEntry="DeleteConfig_DECAC"     Execute="deferred" Return="check" Impersonate="no" />
     <CustomAction Id="DeleteConfig2_DECAC"  BinaryKey="MinionConfigExt" DllEntry="DeleteConfig_DECAC"     Execute="deferred" Return="check" Impersonate="no" />
     <CustomAction Id="BackupConfig_DECAC"   BinaryKey="MinionConfigExt" DllEntry="BackupConfig_DECAC"     Execute="deferred" Return="check" Impersonate="no" />
-    <CustomAction Id="kill_python_exe"      BinaryKey="MinionConfigExt" DllEntry="kill_python_exe"        Execute="deferred" Return="check" Impersonate="no" />
+    <CustomAction Id="kill_python_exe"      BinaryKey="MinionConfigExt" DllEntry="kill_python_exe"        Execute="immediate" Return="ignore" />
     <!-- Custom Action Data Helper for deferred custom actions  -->
     <!-- master and id must be named like in YAML configuration -->
     <!-- Send all this stuff down to the sandbox -->
@@ -251,6 +258,15 @@ IMCAC - Immediate Custom Action - It's immediate
     <CustomAction Id="DeleteConfig2_CADH" Property="DeleteConfig2_DECAC" Value="CLEAN_INSTALL=[CLEAN_INSTALL];REMOVE_CONFIG=[REMOVE_CONFIG];INSTALLDIR=[INSTALLDIR];ROOTDIR=[ROOTDIR];" />
     <CustomAction Id="MoveInsecureConfig_CADH" Property="MoveInsecureConfig_DECAC" Value="INSECURE_CONFIG_FOUND=[INSECURE_CONFIG_FOUND];" />
 
+    <!-- Install VC++ runtime -->
+    <DirectoryRef Id="TARGETDIR">
+    <!-- Visual C++ runtimes depend on the target platform -->
+    <?if $(var.WIN64)=yes ?>
+      <Merge Id="MSM_VC143_CRT" SourceFile="$(var.WEBCACHE_DIR)\Microsoft_VC143_CRT_x64.msm" DiskId="1" Language="0" />
+    <?else ?>
+      <Merge Id="MSM_VC143_CRT" SourceFile="$(var.WEBCACHE_DIR)\Microsoft_VC143_CRT_x86.msm" DiskId="1" Language="0" />
+    <?endif ?>
+    </DirectoryRef>
     <!-- Add INSTALLDIR to the system Path -->
     <DirectoryRef Id="TARGETDIR">
       <Component Id="INSTALLDIR_System_Path" Guid="A9F54641-91F8-4AFB-B812-9409E6EA0192">
@@ -263,6 +279,10 @@ IMCAC - Immediate Custom Action - It's immediate
     <!-- Leaving registry keys would mean the product is still installed -->
     <Feature Id="ProductFeature" Title="Minion" Level="1">
       <ComponentGroupRef Id="ProductComponents" />
+      <Feature Id="VC143" Title="VC++ 2022" AllowAdvertise="no" Display="hidden">
+        <MergeRef Id="MSM_VC143_CRT" />
+        <Condition Level="0"><![CDATA[VCREDIST_INSTALLED = "#1"]]></Condition>
+      </Feature>
     </Feature>
 
     <!-- Get the config file template from the msi store only if no config is present -->

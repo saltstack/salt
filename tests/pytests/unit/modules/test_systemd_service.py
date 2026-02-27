@@ -2,6 +2,7 @@ import pytest
 
 import salt.modules.systemd_service as systemd_service
 import salt.utils.systemd
+from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
 
 pytestmark = [
@@ -111,3 +112,52 @@ def test_operation_no_block_default(operation, expected_command, grains):
             ],
             python_shell=False,
         )
+
+
+def test_systemctl_cmd_with_scope_and_systemd_run_found():
+    """
+    Test _systemctl_cmd includes systemd-run --scope when systemd_scope is True
+    and systemd-run is available.
+    """
+    has_scope_mock = MagicMock(return_value=True)
+    config_mock = MagicMock(return_value=True)
+    which_mock = MagicMock(side_effect=lambda x: "/usr/bin/" + x)
+
+    with patch.object(salt.utils.systemd, "has_scope", has_scope_mock):
+        with patch.dict(systemd_service.__salt__, {"config.get": config_mock}):
+            with patch("salt.utils.path.which", which_mock):
+                ret = systemd_service._systemctl_cmd(
+                    "status", "sshd", systemd_scope=True
+                )
+                assert ret == [
+                    "/usr/bin/systemd-run",
+                    "--scope",
+                    "/usr/bin/systemctl",
+                    "status",
+                    "sshd.service",
+                    "-n",
+                    "0",
+                ]
+
+
+def test_systemctl_cmd_with_scope_and_systemd_run_not_found():
+    """
+    Test _systemctl_cmd raises CommandExecutionError when systemd_scope is True
+    but systemd-run is not found on the system.
+    """
+    has_scope_mock = MagicMock(return_value=True)
+    config_mock = MagicMock(return_value=True)
+
+    def which_side_effect(cmd):
+        if cmd == "systemd-run":
+            return None
+        return "/usr/bin/" + cmd
+
+    with patch.object(salt.utils.systemd, "has_scope", has_scope_mock):
+        with patch.dict(systemd_service.__salt__, {"config.get": config_mock}):
+            with patch("salt.utils.path.which", which_side_effect):
+                with pytest.raises(
+                    CommandExecutionError,
+                    match="systemd-run is required.*but it was not found.*",
+                ):
+                    systemd_service._systemctl_cmd("status", "sshd", systemd_scope=True)

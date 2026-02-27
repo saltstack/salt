@@ -465,25 +465,62 @@ namespace MinionConfigurationExtension {
             // Get full path and command line from running process
             // see https://github.com/saltstack/salt/issues/42862
             session.Log("...BEGIN kill_python_exe (CustomAction01.cs)");
-            using (
-                var wmi_searcher = new ManagementObjectSearcher(
-                    "SELECT ProcessID, ExecutablePath, CommandLine FROM Win32_Process WHERE CommandLine LIKE '%salt-minion%' AND NOT CommandLine LIKE '%msiexec%'"
-                )
-            ) {
-                foreach (ManagementObject wmi_obj in wmi_searcher.Get()) {
-                    String ProcessID = wmi_obj["ProcessID"].ToString();
-                    Int32 pid = Int32.Parse(ProcessID);
-                    String ExecutablePath = wmi_obj["ExecutablePath"].ToString();
-                    String CommandLine = wmi_obj["CommandLine"].ToString();
-                    session.Log("...kill_python_exe " + ExecutablePath + " " + CommandLine);
-                    Process proc11 = Process.GetProcessById(pid);
-                    try {
-                        proc11.Kill();
-                    } catch (Exception exc) {
-                        session.Log("...kill_python_exe " + ExecutablePath + " " + CommandLine);
-                        session.Log(exc.ToString());
-                        // ignore wmiresults without these properties
+
+            // Give the minion enough time to finish its internal stop_async (graceful shutdown).
+            // salt/minion.py:MinionManager.stop_async has a static 5-second sleep to allow
+            // the I/O loop to process and send any remaining "return" messages to the Master.
+            // We wait 6 seconds here to ensure that we don't aggressively kill the process
+            // while it is still performing its legitimate cleanup. After this window,
+            // we proceed to kill any lingering or orphan processes that would otherwise
+            // lock DLLs (like pywin32 or cryptography) and cause a "Frankenstein" installation.
+            session.Log("...Waiting 6 seconds for graceful shutdown...");
+            System.Threading.Thread.Sleep(6000);
+
+            // This is an immediate custom action, access properties directly
+            string installDir = "";
+            try {
+                installDir = cutil.get_property_IMCAC(session, "INSTALLDIR");
+            } catch (Exception) {
+                session.Log("...INSTALLDIR not found. Falling back to default WMI search.");
+            }
+            string wmi_query = "SELECT ProcessID, ExecutablePath, CommandLine FROM Win32_Process WHERE (CommandLine LIKE '%salt-minion%' OR CommandLine LIKE '%salt-call%' OR CommandLine LIKE '%ssm.exe%') AND NOT CommandLine LIKE '%msiexec%'";
+            if (!string.IsNullOrEmpty(installDir)) {
+                session.Log("...Targeting processes in: " + installDir);
+                // Broaden the query to include anything running from the installation directory OR explicitly named ssm
+                wmi_query = "SELECT ProcessID, ExecutablePath, CommandLine FROM Win32_Process WHERE (ExecutablePath LIKE '" + installDir.Replace("\\", "\\\\") + "%' OR CommandLine LIKE '%salt-minion%' OR CommandLine LIKE '%salt-call%' OR CommandLine LIKE '%ssm.exe%' OR ExecutablePath LIKE '%ssm.exe') AND NOT CommandLine LIKE '%msiexec%'";
+            }
+
+            // Perform multiple passes to ensure stubborn or child processes are caught
+            for (int attempt = 1; attempt <= 3; attempt++) {
+                session.Log("...Kill attempt " + attempt + " of 3");
+                using (var wmi_searcher = new ManagementObjectSearcher(wmi_query)) {
+                    int killedCount = 0;
+                    foreach (ManagementObject wmi_obj in wmi_searcher.Get()) {
+                        try {
+                            if (wmi_obj["ProcessID"] == null) continue;
+                            String ProcessID = wmi_obj["ProcessID"].ToString();
+                            Int32 pid = Int32.Parse(ProcessID);
+
+                            // Don't kill ourselves or the installer
+                            if (pid == Process.GetCurrentProcess().Id) continue;
+
+                            String ExecutablePath = wmi_obj["ExecutablePath"] != null ? wmi_obj["ExecutablePath"].ToString() : "Unknown";
+                            session.Log("...killing process: PID=" + ProcessID + " Path=" + ExecutablePath);
+                            Process proc = Process.GetProcessById(pid);
+                            proc.Kill();
+                            killedCount++;
+                        } catch (Exception exc) {
+                            session.Log("...failed to kill process: " + exc.Message);
+                        }
                     }
+                    if (killedCount == 0) {
+                        session.Log("...No matching processes found to kill.");
+                        break;
+                    }
+                }
+                if (attempt < 3) {
+                    session.Log("...Waiting 2 seconds before next kill attempt...");
+                    System.Threading.Thread.Sleep(2000);
                 }
             }
             session.Log("...END kill_python_exe");

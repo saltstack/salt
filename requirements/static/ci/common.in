@@ -1,54 +1,59 @@
 # Requirements in this file apply to all platforms.
 # We can also exclude platforms from the requirements using markers, but if a requirement only applies
 # to a particular platform, please add it to the corresponding `<platform>.in` file in this directory.
---constraint=../pkg/py{py_version}/{platform}.txt
 
-apache-libcloud>=1.5.0; sys_platform != 'win32'
+# aiohttp is a dependency of etcd3-py
+aiohttp>=3.10.2
+apache-libcloud>=3.8.0; sys_platform != 'win32'
+# bcrypt is an extra requirement for passlib, and we shouldn't use extras, like, passlib[bcrypt]
+# since that will break using the compiled static requirements files as contraints file
+bcrypt
 boto3>=1.25.0
 boto>=2.47.0
-cassandra-driver>=3.25.0
+cryptography>=46.0.5
 cffi>=1.14.6
 cherrypy>=17.4.1
 clustershell
 dnspython
 etcd3-py==0.1.6
-# aiohttp is a dependency of etcd3-py
-aiohttp>=3.10.2
 filelock>=3.19.1 ; python_version < '3.10'
 filelock>=3.20.3 ; python_version >= '3.10'
 gitpython>=3.1.37
-jmespath
+google-auth==2.35.0; python_version == '3.9'
+jmespath>=1.1.0
 jsonschema
-junos-eznc; sys_platform != 'win32' and python_version <= '3.10'
+junos-eznc; sys_platform != 'win32'
+junit-xml>=1.9
 jxmlease; sys_platform != 'win32'
 kazoo; sys_platform != 'win32' and sys_platform != 'darwin'
 keyring==5.7.1
+pyasn1-modules==0.4.0; python_version == '3.9'
 kubernetes>=24.0.0
 libnacl>=1.7.1; sys_platform != 'win32' and sys_platform != 'darwin'
+# markdown-it-py constraint for py3.9: myst-docutils (docs requirement) needs <3.0.0,
+# but netmiko (from napalm, only in py3.9) pulls in rich which wants 3.0.0+
+markdown-it-py<3.0.0; python_version == '3.9'
 moto>=5.0.0
 # Napalm pulls in pyeapi which does not work on Py3.10
 napalm; sys_platform != 'win32' and python_version < '3.10'
 paramiko>=2.10.1; sys_platform != 'win32' and sys_platform != 'darwin'
-# bcrypt is an extra requirement for passlib, and we shouldn't use extras, like, passlib[bcrypt]
-# since that will break using the compiled static requirements files as contraints file
-bcrypt
 passlib>=1.7.4
 pynacl>=1.5.0
-pycparser>=2.21; python_version >= '3.9'
 pyinotify>=0.9.6; sys_platform != 'win32' and sys_platform != 'darwin' and platform_system != "openbsd"
 python-etcd>0.4.2
 pyvmomi
 rfc3987
 sqlparse>=0.4.4
 strict_rfc3339>=0.7
+textfsm
 toml
-vcert~=0.7.0; sys_platform != 'win32'
+vcert~=0.9.0; sys_platform != 'win32'
 virtualenv>=20.36.1
 watchdog>=0.9.0
 websocket-client>=1.3.3
 # werkzeug is a dependency of moto
-werkzeug>=3.0.6
-textfsm
+werkzeug>=3.1.5
+xmldiff>=2.4
 # Available template libraries that can be used
 genshi>=0.7.3
 cheetah3>=3.2.2

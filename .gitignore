@@ -143,3 +143,12 @@ nox.*.tar.xz
 /pkg/debian/debhelper-build-stamp
 
 .tools-venvs
+
+# AI Agent instruction files (templates are in agents/)
+/CLAUDE.md
+/GEMINI.md
+/CURSOR.md
+/COPILOT.md
+/.cursorrules
+/.aiderignore
+/aider.conf.yml

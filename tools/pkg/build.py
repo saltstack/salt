@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import pathlib
+import re
 import shutil
 import tarfile
 import zipfile
@@ -555,19 +556,19 @@ def onedir_dependencies(
     )
 
     env = os.environ.copy()
-    install_args = ["-v"]
+    install_args = [
+        "-v",
+        "--use-pep517",
+        "--no-cache-dir",
+        "--only-binary=maturin,apache-libcloud,pymssql",
+    ]
     if platform == "windows":
         python_bin = env_scripts_dir / "python"
     else:
         env["RELENV_BUILDENV"] = "1"
         python_bin = env_scripts_dir / "python3"
-        install_args.extend(
-            [
-                "--use-pep517",
-                "--no-cache-dir",
-                "--no-binary=:all:",
-            ]
-        )
+        install_args.append("--no-binary=:all:")
+        install_args.append("--only-binary=maturin,apache-libcloud,pymssql")
 
     # Cryptography needs openssl dir set to link to the proper openssl libs.
     if platform == "macos":
@@ -813,6 +814,81 @@ def salt_onedir(
             "uninstall",
             "-y",
             "ppbt",
+        )
+
+    # Update virtualenv embedded wheels
+    embed_dir = pathlib.Path(site_packages) / "virtualenv" / "seed" / "wheels" / "embed"
+    # clear existing wheels
+    if embed_dir.exists():
+        for file in embed_dir.glob("*.whl"):
+            try:
+                file.unlink()
+            except Exception as e:
+                log.error("Error deleting %s: %s", file.name, e)
+    else:
+        embed_dir.mkdir(parents=True, exist_ok=True)
+
+    # download new virtualenv embedded wheels
+    env["PIP_CONSTRAINT"] = str(
+        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
+    )
+    ctx.run(
+        str(python_executable),
+        "-m",
+        "pip",
+        "download",
+        "setuptools",
+        "pip",
+        "wheel",
+        "--dest",
+        str(embed_dir),
+    )
+
+    # Update __init__.py with the new versions
+
+    # 1. Identify the new wheel versions on disk
+    wheels = list(embed_dir.glob("*.whl"))
+
+    def get_latest(name):
+        # Finds the wheel with the highest version number for a given package name
+        matches = [w.name for w in wheels if w.name.startswith(name + "-")]
+        return sorted(matches, reverse=True)[0] if matches else None
+
+    new_pip = get_latest("pip")
+    new_setuptools = get_latest("setuptools")
+    new_wheel = get_latest("wheel")
+
+    if not all([new_pip, new_setuptools]):
+        log.debug("Error: Could not find new wheels to map in __init__.py")
+    else:
+
+        # 2. Read the current __init__.py content
+        init_file = embed_dir / "__init__.py"
+        content = init_file.read_text()
+
+        # 3. Use Regex to replace the specific filenames globally in the BUNDLE_SUPPORT dict
+        # This targets the specific quoted strings for each package type
+        content = re.sub(
+            r'("pip":\s*")([^"]+)"',
+            f'\\1{new_pip}"',
+            content,
+        )
+        content = re.sub(
+            r'("setuptools":\s*")([^"]+)"',
+            f'\\1{new_setuptools}"',
+            content,
+        )
+        content = re.sub(
+            r'("wheel":\s*")([^"]+)"',
+            f'\\1{new_wheel}"',
+            content,
+        )
+
+        # 4. Write the updated file back
+        init_file.write_text(content)
+        log.debug("Updated %s with:", init_file.name)
+        log.debug(
+            "Pip: %s\nSetuptools: %s\nWheel: %s", new_pip, new_setuptools, new_wheel
         )
 
 

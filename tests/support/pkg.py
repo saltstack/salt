@@ -455,18 +455,22 @@ class SaltPkgInstall:
         if downgrade:
             self.install_previous(downgrade=downgrade)
             return True
-        pkg = str(pathlib.Path(self.pkgs[0]).resolve())
+        pkg = None
+        if platform.is_windows() and self.file_ext:
+            for p in self.pkgs:
+                if p.endswith(self.file_ext):
+                    pkg = str(pathlib.Path(p).resolve())
+                    break
+        if pkg is None:
+            pkg = str(pathlib.Path(self.pkgs[0]).resolve())
         if platform.is_windows():
             if upgrade:
                 self.root = self.install_dir.parent
                 self.bin_dir = self.install_dir
                 self.ssm_bin = self.install_dir / "ssm.exe"
                 self._ensure_windows_services_stopped()
-                # Add a small delay after stopping services to ensure all file handles
-                # are released and processes are fully terminated before running installer
                 time.sleep(3)
             if pkg.endswith("exe"):
-                # Install the package
                 log.info("Installing: %s", str(pkg))
                 ret = self.proc.run(
                     str(pkg),
@@ -476,28 +480,43 @@ class SaltPkgInstall:
                 )
                 self._check_retcode(ret)
             elif pkg.endswith("msi"):
-                # Install the package
                 log.info("Installing: %s", str(pkg))
                 # self.proc.run always makes the command a list even when shell
                 # is true, meaning shell being true will never work correctly.
+                msi_cmd = f'msiexec.exe /qn /i "{pkg}" /norestart START_MINION=""'
                 ret = subprocess.run(
-                    f'msiexec.exe /qn /i {pkg} /norestart START_MINION=""',
+                    msi_cmd,
                     shell=True,  # nosec
                     check=False,
                 )
+                log.info("MSI returncode: %s", ret.returncode)
                 assert ret.returncode in [0, 3010]
             else:
                 log.error("Invalid package: %s", pkg)
                 return False
 
-            # Remove the service installed by the installer
             log.debug("Removing installed salt-minion service")
-            self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
+            self.proc.run(str(self.ssm_bin), "stop", "salt-minion", "confirm")
+            subprocess.run(
+                "sc.exe delete salt-minion",
+                shell=True,  # nosec
+                check=False,
+            )
+            # Wait for Windows to fully purge the service entry
+            for _ in range(30):
+                ret = subprocess.run(
+                    "sc.exe query salt-minion",
+                    shell=True,  # nosec
+                    check=False,
+                    capture_output=True,
+                )
+                if ret.returncode != 0:
+                    break
+                time.sleep(1)
 
             # Add installation to the path
             self.update_process_path()
 
-            # Install the service using our config
             if self.pkg_system_service:
                 self._install_ssm_service()
 
@@ -591,39 +610,29 @@ class SaltPkgInstall:
             log.debug("Windows SSM binary not found at %s", self.ssm_bin)
             return
 
-        for service in ("salt-minion", "salt-master", "salt-syndic"):
-            stop = self.proc.run(
-                str(self.ssm_bin), "stop", service, "confirm", _timeout=120
+        stop = self.proc.run(
+            str(self.ssm_bin), "stop", "salt-minion", "confirm", _timeout=120
+        )
+        # 1062: The service has not been started.
+        if stop.returncode not in (0, 1062):
+            log.debug(
+                "Stopping service salt-minion returned %s",
+                stop.returncode,
             )
-            # 1062: The service has not been started.
-            if stop.returncode not in (0, 1062):
-                log.debug(
-                    "Stopping service %s returned %s",
-                    service,
-                    stop.returncode,
-                )
 
         deadline = time.time() + 120
-        running = set()
-        tracked = {name.lower() for name in ("salt-minion.exe", "salt-master.exe")}
         while time.time() < deadline:
             running = {
                 (proc.info["name"] or "").lower()
                 for proc in psutil.process_iter(["name"])
-                if (proc.info["name"] or "").lower() in tracked
+                if (proc.info["name"] or "").lower() == "salt-minion.exe"
             }
             if not running:
                 break
-            log.debug(
-                "Waiting for Salt processes to exit before upgrade: %s",
-                sorted(running),
-            )
+            log.debug("Waiting for salt-minion process to exit before upgrade")
             time.sleep(2)
         else:
-            log.warning(
-                "Salt processes still running before upgrade: %s",
-                sorted(running),
-            )
+            log.warning("salt-minion process still running before upgrade")
 
     def _install_ssm_service(self, service="minion"):
         """
@@ -994,6 +1003,11 @@ class SaltPkgInstall:
 
     def uninstall(self):
         pkg = self.pkgs[0]
+        if platform.is_windows() and self.file_ext:
+            for p in self.pkgs:
+                if p.endswith(self.file_ext):
+                    pkg = p
+                    break
         if platform.is_windows():
             log.info("Uninstalling %s", pkg)
             if pkg.endswith("exe"):

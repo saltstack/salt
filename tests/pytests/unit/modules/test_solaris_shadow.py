@@ -15,7 +15,7 @@ except ImportError:
     missing_pwd = True
 
 try:
-    import spwd  # pylint: disable=unused-import
+    import spwd  # pylint: disable=unused-import,deprecated-module
 
     missing_spwd = False
 except ImportError:

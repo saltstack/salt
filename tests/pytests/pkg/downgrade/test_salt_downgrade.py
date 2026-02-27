@@ -21,7 +21,7 @@ def _get_running_named_salt_pid(process_name):
         cmd_line = ""
         try:
             cmd_line = " ".join(str(element) for element in proc.cmdline())
-        except (psutil.ZombieProcess, psutil.AccessDenied):
+        except (psutil.ZombieProcess, psutil.NoSuchProcess, psutil.AccessDenied):
             # Even though it's a zombie process, it still has a cmdl_string and
             # a pid, so we'll use it
             pass
@@ -35,7 +35,7 @@ def _get_running_named_salt_pid(process_name):
     return pids
 
 
-def test_salt_downgrade_minion(salt_call_cli, install_salt):
+def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_minion):
     """
     Test a downgrade of Salt Minion.
     """
@@ -81,7 +81,12 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt):
         process_name = "salt-minion"
 
     old_minion_pids = _get_running_named_salt_pid(process_name)
-    assert old_minion_pids
+    if not platform.is_windows():
+        assert old_minion_pids
+
+    if platform.is_windows():
+        salt_master.terminate()
+        salt_minion.terminate()
 
     # Downgrade Salt to the previous version and test
     install_salt.install(downgrade=True)

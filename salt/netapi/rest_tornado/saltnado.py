@@ -185,7 +185,7 @@ a return like::
 .. |500| replace:: internal server error
 """
 
-import cgi
+import cgi  # pylint: disable=deprecated-module
 import fnmatch
 import logging
 import time
