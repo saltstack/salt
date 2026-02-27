@@ -150,7 +150,7 @@ def test_list_available_packages_with_pre_releases_flags(
     )
 
     has_prerelease = any(map(lambda v: v.is_prerelease, map(parse_version, versions)))
-    if any(include_alpha, include_beta, include_rc):
+    if any([include_alpha, include_beta, include_rc]):
         assert has_prerelease
     else:
         assert not has_prerelease
