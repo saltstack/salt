@@ -1376,11 +1376,13 @@ class TestCheckPriorRunningStates:
                 opts, "12345", active_jobs
             )
 
-            # Verify directory was listed
-            mock_listdir.assert_called_once_with(
-                os.path.join(opts["cachedir"], "state_queue")
-            )
+            # Verify directories were listed
+            assert mock_listdir.call_count == 2
+            mock_listdir.assert_any_call(os.path.join(opts["cachedir"], "state_queue"))
+            mock_listdir.assert_any_call(os.path.join(opts["cachedir"], "job_queue"))
 
             # Verify we got results (should include the queued job as a conflict)
             assert isinstance(result, list)
-            assert len(result) == 1  # Should find the queued job as a conflict
+            # Since mock_listdir returns the same for both calls in this mock setup,
+            # it finds the same file twice.
+            assert len(result) == 2

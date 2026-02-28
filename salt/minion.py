@@ -1294,7 +1294,7 @@ class Minion(MinionBase):
 
         # Clean up stale queue lock that might have been left behind if the minion
         # was killed forcefully (SIGKILL). This ensures recovery on restart.
-        lock_path = os.path.join(self.opts["cachedir"], "salt_queues.lock")
+        lock_path = os.path.join(self.opts["cachedir"], "minion_queue.lock")
         if os.path.isfile(lock_path):
             try:
                 os.remove(lock_path)

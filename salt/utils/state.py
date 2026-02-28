@@ -23,7 +23,7 @@ def acquire_queue_lock(opts):
     """
     Acquire the state queue lock
     """
-    lock_path = os.path.join(opts["cachedir"], "state_queue.lock")
+    lock_path = os.path.join(opts["cachedir"], "minion_queue.lock")
     # Use a large timeout to mimic infinite blocking of FileLock, as wait_lock defaults to 5s
     return salt.utils.files.wait_lock(lock_path, lock_fn=lock_path, timeout=86400)
 
@@ -32,7 +32,7 @@ def acquire_async_queue_lock(opts):
     """
     Acquire the job queue lock asynchronously
     """
-    lock_path = os.path.join(opts["cachedir"], "job_queue.lock")
+    lock_path = os.path.join(opts["cachedir"], "minion_queue.lock")
     # Use timeout that allows queue processing to work but doesn't hang tests
     return salt.utils.files.await_lock(
         lock_path, lock_fn=lock_path, timeout=5.0, sleep=0.1
@@ -106,27 +106,45 @@ def check_prior_running_states(opts, jid, active_jobs):
     # Work on a copy to avoid side effects
     active_jobs = list(active_jobs)
 
-    # Check for queued jobs
-    queue_dir = os.path.join(opts["cachedir"], "state_queue")
-    if os.path.exists(queue_dir):
-        for fn in os.listdir(queue_dir):
-            if fn.startswith("queued_") and fn.endswith(".p"):
-                # fn is queued_<timestamp>_<jid>.p
-                parts = fn[:-2].split("_")
-                if len(parts) >= 3:
-                    job_jid = parts[2]
-                    # We use PID 0 or similar to indicate it's not a real process yet,
-                    # but saltutil.is_running structure usually expects a pid.
-                    active_jobs.append({"jid": job_jid, "fun": "state.apply", "pid": 0})
+    # Check for queued jobs in BOTH state_queue and job_queue
+    # Also check for 'running_' files to close the "Invisible Gap"
+    for queue_name in ("state_queue", "job_queue"):
+        queue_dir = os.path.join(opts["cachedir"], queue_name)
+        if not os.path.exists(queue_dir):
+            continue
+
+        try:
+            for fn in os.listdir(queue_dir):
+                # We check for both 'queued_' and 'running_'
+                # 'running_' files are those that have been popped from the queue
+                # but haven't yet written their PID to the proc directory.
+                if (
+                    fn.startswith("queued_") or fn.startswith("running_")
+                ) and fn.endswith(".p"):
+                    # fn is <prefix>_<timestamp>_<jid>.p
+                    parts = fn[:-2].split("_")
+                    if len(parts) >= 3:
+                        # The JID is the third part
+                        job_jid = parts[2]
+                        # If the JID itself contains underscores (uncommon but possible),
+                        # it might be split further. Re-join just in case.
+                        if len(parts) > 3:
+                            job_jid = "_".join(parts[2:])
+
+                        # We use PID 0 to indicate it's not a real process yet
+                        active_jobs.append(
+                            {"jid": job_jid, "fun": "state.apply", "pid": 0}
+                        )
+        except OSError as exc:
+            log.error("Unable to list queue directory %s: %s", queue_dir, exc)
 
     if active_jobs:
         # log.debug("check_prior_running_states: checking JID %s against active jobs: %s", jid, active_jobs)
         pass
 
     for data in active_jobs:
-        try:
-            data_jid = int(data["jid"])
-        except ValueError:
+        data_jid = data.get("jid")
+        if data_jid is None:
             continue
 
         if jid is None:
@@ -137,13 +155,15 @@ def check_prior_running_states(opts, jid, active_jobs):
 
         try:
             # Explicitly ignore the current JID to prevent self-queueing loops
-            if int(data_jid) == int(jid):
+            if str(data_jid) == str(jid):
                 continue
 
             # Only block if the other job is OLDER than the current one.
             # This ensures FIFO ordering and prevents deadlocks where two
             # jobs block each other.
-            if int(data_jid) < int(jid):
+            # Salt JIDs are usually timestamp-based strings (e.g. 20230524100000)
+            # which sort correctly as strings OR ints.
+            if str(data_jid) < str(jid):
                 ret.append(data)
         except (ValueError, TypeError):
             continue
