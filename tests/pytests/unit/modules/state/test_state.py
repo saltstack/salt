@@ -1332,54 +1332,40 @@ class TestCheckPriorRunningStates:
     Test the check_prior_running_states function race condition fixes.
     """
 
-    @patch("salt.utils.state.acquire_queue_lock")
-    def test_check_prior_running_states_lock_protection(self, mock_acquire_lock):
+    def test_check_prior_running_states_basic_functionality(self):
         """
-        Test that check_prior_running_states acquires the queue lock for thread-safe reads.
-        This prevents race conditions when multiple processes read queue directories concurrently.
+        Test that check_prior_running_states works correctly without locks.
+        The function reads queue directories to find conflicting jobs.
         """
-        mock_lock = MagicMock()
-        mock_acquire_lock.return_value.__enter__ = mock_lock.__enter__
-        mock_acquire_lock.return_value.__exit__ = mock_lock.__exit__
-
         # Test with empty directories
         opts = {"cachedir": "/tmp"}
         active_jobs = []
 
         result = salt.utils.state.check_prior_running_states(opts, "12345", active_jobs)
 
-        # Verify lock was acquired
-        mock_acquire_lock.assert_called_once_with(opts)
+        # Verify it returns a list
         assert isinstance(result, list)
+        assert result == []  # No conflicts with empty inputs
 
-    @patch("salt.utils.state.acquire_queue_lock")
     @patch("os.path.exists")
     @patch("os.listdir")
     @patch("salt.utils.files.fopen")
-    def test_check_prior_running_states_reads_both_queues(
-        self, mock_fopen, mock_listdir, mock_exists, mock_acquire_lock
+    def test_check_prior_running_states_reads_state_queue(
+        self, mock_fopen, mock_listdir, mock_exists
     ):
         """
-        Test that check_prior_running_states reads both state_queue and job_queue directories
-        while holding the lock, ensuring consistent reads across both queues.
+        Test that check_prior_running_states reads the state_queue directory
+        to find queued jobs that would conflict with the current job.
         """
-        # Mock the lock
-        mock_lock = MagicMock()
-        mock_acquire_lock.return_value.__enter__ = mock_lock.__enter__
-        mock_acquire_lock.return_value.__exit__ = mock_lock.__exit__
-
         # Mock directory existence
         mock_exists.return_value = True
 
-        # Mock directory listing - simulate both queues having files
-        mock_listdir.side_effect = [
-            ["queued_1234567890_11111.p", "running_1234567890_22222.p"],  # state_queue
-            ["queued_1234567890_33333.p"],  # job_queue
-        ]
+        # Mock directory listing - simulate state_queue having queued files
+        mock_listdir.return_value = ["queued_1234567890_11111.p"]
 
-        # Mock file opening for job_queue state check
+        # Mock file opening for state queue check
         mock_file = MagicMock()
-        mock_payload = {"fun": "state.apply", "arg": ["test"]}
+        mock_payload = {"fun": "state.apply", "arg": ["test"], "jid": "11111"}
         with patch("salt.payload.load", return_value=mock_payload):
             mock_fopen.return_value.__enter__.return_value = mock_file
 
@@ -1390,11 +1376,11 @@ class TestCheckPriorRunningStates:
                 opts, "12345", active_jobs
             )
 
-            # Verify lock was acquired exactly once
-            mock_acquire_lock.assert_called_once_with(opts)
+            # Verify directory was listed
+            mock_listdir.assert_called_once_with(
+                os.path.join(opts["cachedir"], "state_queue")
+            )
 
-            # Verify both directories were listed
-            assert mock_listdir.call_count == 2
-
-            # Verify we got results (should include the queued jobs)
+            # Verify we got results (should include the queued job as a conflict)
             assert isinstance(result, list)
+            assert len(result) == 1  # Should find the queued job as a conflict
