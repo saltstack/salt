@@ -2000,7 +2000,7 @@ class Minion(MinionBase):
                 except OSError:
                     pass
 
-            proc_fn = os.path.join(proc_dir, data["jid"])
+            proc_fn = os.path.join(proc_dir, str(data["jid"]))
 
             # Use the real PID from the handle (multiprocessing) or current PID (threading)
             real_pid = getattr(proc, "pid", os.getpid())
@@ -2535,7 +2535,7 @@ class Minion(MinionBase):
         minion side execution.
         """
         minion_instance.gen_modules()
-        fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
+        fn_ = os.path.join(minion_instance.proc_dir, str(data["jid"]))
 
         if opts.get("multiprocessing", True):
             salt.utils.process.appendproctitle(f"{cls.__name__}._thread_return")
@@ -2779,7 +2779,7 @@ class Minion(MinionBase):
         minion side execution.
         """
         minion_instance.gen_modules()
-        fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
+        fn_ = os.path.join(minion_instance.proc_dir, str(data["jid"]))
 
         if opts.get("multiprocessing", True):
             salt.utils.process.appendproctitle(f"{cls.__name__}._thread_multi_return")
@@ -2899,7 +2899,7 @@ class Minion(MinionBase):
     def _prepare_return_pub(self, ret, ret_cmd="_return"):
         jid = ret.get("jid", ret.get("__jid__"))
         fun = ret.get("fun", ret.get("__fun__"))
-        fn_ = os.path.join(self.proc_dir, jid)
+        fn_ = os.path.join(self.proc_dir, str(jid))
         if os.path.isfile(fn_):
             try:
                 os.remove(fn_)
@@ -3029,7 +3029,7 @@ class Minion(MinionBase):
         for ret in rets:
             jid = ret.get("jid", ret.get("__jid__"))
             fun = ret.get("fun", ret.get("__fun__"))
-            fn_ = os.path.join(self.proc_dir, jid)
+            fn_ = os.path.join(self.proc_dir, str(jid))
             if os.path.isfile(fn_):
                 try:
                     os.remove(fn_)
@@ -3866,10 +3866,6 @@ class Minion(MinionBase):
                         pass
 
                     if not files:
-                        log.trace(
-                            "State queue processing: no queued files found in %s",
-                            queue_dir,
-                        )
                         return
 
                     # Sort by JID to ensure we process in the order expected by the state system's

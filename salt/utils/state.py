@@ -33,9 +33,9 @@ def acquire_async_queue_lock(opts):
     Acquire the job queue lock asynchronously
     """
     lock_path = os.path.join(opts["cachedir"], "job_queue.lock")
-    # Use very short timeout - if we can't get the lock quickly, skip and try again later
+    # Use timeout that allows queue processing to work but doesn't hang tests
     return salt.utils.files.await_lock(
-        lock_path, lock_fn=lock_path, timeout=0.1, sleep=0.01
+        lock_path, lock_fn=lock_path, timeout=5.0, sleep=0.1
     )
 
 

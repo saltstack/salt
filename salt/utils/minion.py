@@ -41,7 +41,7 @@ def cache_jobs(opts, jid, ret):
     """
     Write job information to cache
     """
-    fn_ = os.path.join(opts["cachedir"], "minion_jobs", jid, "return.p")
+    fn_ = os.path.join(opts["cachedir"], "minion_jobs", str(jid), "return.p")
     jdir = os.path.dirname(fn_)
     if not os.path.isdir(jdir):
         os.makedirs(jdir)

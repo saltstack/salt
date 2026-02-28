@@ -513,7 +513,7 @@ def _check_queue(queue, kwargs):
 
                 # Use timestamp to ensure FIFO ordering
                 # We use microseconds to avoid collisions
-                fn = f"queued_{int(time.time() * 1000000)}_{jid}.p"
+                fn = f"queued_{int(time.time() * 1000000)}_{new_jid}.p"
                 path = os.path.join(queue_dir, fn)
 
                 try:
