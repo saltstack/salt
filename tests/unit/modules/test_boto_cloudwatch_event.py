@@ -212,7 +212,7 @@ class BotoCloudWatchEventTestCase(
             Name=rule_name,
             Description=rule_desc,
             ScheduleExpression=rule_sched,
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertTrue(result["created"])
 
@@ -225,7 +225,7 @@ class BotoCloudWatchEventTestCase(
             Name=rule_name,
             Description=rule_desc,
             ScheduleExpression=rule_sched,
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(
             result.get("error", {}).get("message"), error_message.format("put_rule")

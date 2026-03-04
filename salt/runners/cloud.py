@@ -140,7 +140,7 @@ def action(
     provider=None,
     instance=None,
     opts=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Execute a single action on the given map/provider/instance

@@ -54,7 +54,7 @@ def test_extpillar_stack1():
             "opts:saltenv": {  # **kwargs
                 "dev": "/path/to/dev/static.cfg",
             }
-        }
+        },
     )
     assert fake_dict == result
 
@@ -65,7 +65,7 @@ def test_extpillar_stack1():
             "opts:saltenv": {  # **kwargs
                 "__env__": "/path/to/__env__/dynamic.cfg",
             }
-        }
+        },
     )
     assert fake_dict == result
 

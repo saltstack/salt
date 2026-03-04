@@ -1117,7 +1117,7 @@ def test_build_interface(test_interfaces):
                         iface_type=iface["iface_type"],
                         enabled=iface["enabled"],
                         interface_file=tfile.name,
-                        **iface["build_interface"]
+                        **iface["build_interface"],
                     )
                     == iface["return"]
                 )

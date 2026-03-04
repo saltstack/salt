@@ -20,7 +20,7 @@ def render(template_file, saltenv="base", sls="", argline="", context=None, **kw
         saltenv=saltenv,
         sls=sls,
         context=context,
-        **kws
+        **kws,
     )
     if not tmp_data.get("result", False):
         raise SaltRenderError(
