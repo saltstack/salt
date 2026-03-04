@@ -18,9 +18,9 @@ aiosignal==1.4.0
     # via
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   aiohttp
-ansible==12.0.0
+ansible==13.4.0
     # via -r requirements/static/ci/linux.in
-ansible-core==2.19.2
+ansible-core==2.20.3
     # via ansible
 anyio==4.1.0
     # via httpcore
@@ -593,7 +593,7 @@ websocket-client==1.9.0
     #   kubernetes
 wempy==0.2.1
     # via -r requirements/static/ci/common.in
-werkzeug==3.1.5
+werkzeug==3.1.6
     # via
     #   -r requirements/static/ci/common.in
     #   moto

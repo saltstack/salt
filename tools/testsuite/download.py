@@ -261,7 +261,7 @@ def download_artifact(
             "help": "The workflow run ID from where to download artifacts from",
         },
         "slug": {
-            "help": "Slug of the test run (examples: debian-11, macos-13, windows-2022)",
+            "help": "Slug of the test run (examples: debian-11, macos-15-intel, windows-2022)",
         },
         "repository": {
             "help": "The repository to query, e.g. saltstack/salt",

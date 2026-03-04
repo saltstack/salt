@@ -23,11 +23,11 @@ aiosignal==1.4.0
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -c requirements/static/pkg/py3.11/linux.txt
     #   aiohttp
-ansible==12.0.0
+ansible==12.3.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/linux.in
-ansible-core==2.19.2
+ansible-core==2.19.7
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   ansible
@@ -763,7 +763,7 @@ wempy==0.2.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
-werkzeug==3.1.5
+werkzeug==3.1.6
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
