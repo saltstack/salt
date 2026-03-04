@@ -412,6 +412,8 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
+          - requirements/base.txt
+          - requirements/zeromq.txt
           - requirements/windows.txt
           - requirements/static/pkg/windows.in
           - --python-platform=windows
@@ -428,6 +430,8 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
+          - requirements/base.txt
+          - requirements/zeromq.txt
           - requirements/windows.txt
           - requirements/static/pkg/windows.in
           - --python-platform=windows
@@ -444,6 +448,8 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
+          - requirements/base.txt
+          - requirements/zeromq.txt
           - requirements/windows.txt
           - requirements/static/pkg/windows.in
           - --python-platform=windows
@@ -460,6 +466,8 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
+          - requirements/base.txt
+          - requirements/zeromq.txt
           - requirements/windows.txt
           - requirements/static/pkg/windows.in
           - --python-platform=windows
@@ -476,6 +484,8 @@ repos:
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
+          - requirements/base.txt
+          - requirements/zeromq.txt
           - requirements/windows.txt
           - requirements/static/pkg/windows.in
           - --python-platform=windows
