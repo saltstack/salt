@@ -618,6 +618,8 @@ fi
 
 %posttrans
 # (Re)generate pycache in posttrans, so we're sure any old libraries have been uninstalled.
+find /opt/saltstack/salt/lib -type f -name '*.pyc' -delete
+find /opt/saltstack/salt/lib -type d -name __pycache__ -empty -delete
 /opt/saltstack/salt/bin/python3 -m compileall -qq /opt/saltstack/salt/lib
 
 
@@ -695,8 +697,8 @@ fi
 %preun
 if [ $1 -eq 0 ]; then
   # Uninstall
-  find /opt/saltstack/salt -type f -name \*\.pyc -print0 | xargs --null --no-run-if-empty rm
-  find /opt/saltstack/salt -type d -name __pycache__ -empty -print0 | xargs --null --no-run-if-empty rmdir
+  find /opt/saltstack/salt -type f -name '*.pyc' -delete
+  find /opt/saltstack/salt -type d -name __pycache__ -empty -delete
 fi
 
 %postun master
