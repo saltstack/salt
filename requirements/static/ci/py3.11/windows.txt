@@ -387,8 +387,6 @@ timelib==0.3.0
     # via -r requirements/base.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.in
-tornado==6.5.4
-    # via -r requirements/base.txt
 trustme==1.1.0
     # via -r requirements/pytest.txt
 typing-extensions==4.14.1

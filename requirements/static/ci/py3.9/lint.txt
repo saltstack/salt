@@ -775,11 +775,6 @@ tomli==2.2.1
     #   pylint
 tomlkit==0.12.3
     # via pylint
-tornado==6.5.4
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -c requirements/static/pkg/py3.9/linux.txt
-    #   -r requirements/base.txt
 transitions==0.9.3
     # via
     #   -c requirements/static/ci/py3.9/linux.txt

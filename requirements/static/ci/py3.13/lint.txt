@@ -686,11 +686,6 @@ toml==0.10.2
     #   -r requirements/static/ci/lint.in
 tomlkit==0.14.0
     # via pylint
-tornado==6.5.4
-    # via
-    #   -c requirements/static/ci/py3.13/linux.txt
-    #   -c requirements/static/pkg/py3.13/linux.txt
-    #   -r requirements/base.txt
 transitions==0.9.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
