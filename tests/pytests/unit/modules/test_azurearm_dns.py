@@ -149,7 +149,7 @@ def test_record_set_create_or_update(credentials):
         "A",
         arecords=[{"ipv4_address": "10.0.0.1"}],
         ttl=300,
-        **credentials
+        **credentials,
     )
 
     for key, val in record_set_kwargs.items():

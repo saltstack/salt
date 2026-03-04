@@ -157,7 +157,7 @@ def get_blob(storage_conn=None, **kwargs):
         return storage_conn.get_blob_to_path(
             file_path=kwargs["local_path"],
             open_mode=kwargs.get("open_mode", "wb"),
-            **blob_kwargs
+            **blob_kwargs,
         )
     elif "return_content" in kwargs:
         return storage_conn.get_blob_to_bytes(**blob_kwargs)
