@@ -115,7 +115,6 @@ SALT_BASE_REQUIREMENTS = [
     os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "base.txt"),
     # pyzmq needs to be installed regardless of the salt transport
     os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "zeromq.txt"),
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "crypto.txt"),
 ]
 SALT_LINUX_LOCKED_REQS = [
     # Linux packages defined locked requirements
@@ -697,6 +696,9 @@ class Install(install):
             return first_call
         return second_call
 
+    def do_egg_install(self):
+        raise NotImplementedError("Support for egg-based install has been removed.")
+
 
 class InstallLib(install_lib):
     def run(self):
@@ -849,38 +851,7 @@ class SaltDistribution(distutils.dist.Distribution):
         # Salt version
         self.with_salt_version = None
 
-        self.name = "salt-ssh" if PACKAGED_FOR_SALT_SSH else "salt"
         self.salt_version = SALT_VERSION
-        self.description = (
-            "Portable, distributed, remote execution and configuration management"
-            " system"
-        )
-        with open(SALT_LONG_DESCRIPTION_FILE, encoding="utf-8") as f:
-            self.long_description = f.read()
-        self.long_description_content_type = "text/x-rst"
-        self.python_requires = ">=3.6"
-        self.classifiers = [
-            "Programming Language :: Python",
-            "Programming Language :: Cython",
-            "Programming Language :: Python :: 3",
-            "Programming Language :: Python :: 3 :: Only",
-            "Programming Language :: Python :: 3.7",
-            "Programming Language :: Python :: 3.8",
-            "Programming Language :: Python :: 3.9",
-            "Programming Language :: Python :: 3.10",
-            "Development Status :: 5 - Production/Stable",
-            "Environment :: Console",
-            "Intended Audience :: Developers",
-            "Intended Audience :: Information Technology",
-            "Intended Audience :: System Administrators",
-            "License :: OSI Approved :: Apache Software License",
-            "Operating System :: POSIX :: Linux",
-            "Topic :: System :: Clustering",
-            "Topic :: System :: Distributed Computing",
-        ]
-        self.author = "Thomas S Hatch"
-        self.author_email = "thatch45@gmail.com"
-        self.url = "https://saltproject.io"
         self.cmdclass.update(
             {
                 "test": TestCommand,
@@ -900,12 +871,21 @@ class SaltDistribution(distutils.dist.Distribution):
         if HAS_BDIST_WHEEL:
             self.cmdclass["bdist_wheel"] = BDistWheel
 
-        self.license = "Apache Software License 2.0"
         self.packages = self.discover_packages()
         self.zip_safe = False
 
         if HAS_ESKY:
             self.setup_esky()
+
+        # Setup our property functions after class initialization and
+        # after parsing the command line since most are set to None
+        # ATTENTION: This should be the last step before returning the args or
+        # some of the requirements won't be correctly set
+        for funcname in dir(self):
+            if not funcname.startswith("_property_"):
+                continue
+            property_name = funcname.split("_property_", 1)[-1]
+            setattr(self, property_name, getattr(self, funcname))
 
         self.update_metadata()
 
@@ -1057,48 +1037,19 @@ class SaltDistribution(distutils.dist.Distribution):
                 for reqfile in SALT_WINDOWS_LOCKED_REQS:
                     install_requires += _parse_requirements_file(reqfile)
             else:
-                for reqfile in SALT_BASE_REQUIREMENTS:
+                for reqfile in SALT_LINUX_LOCKED_REQS:
                     install_requires += _parse_requirements_file(reqfile)
         return install_requires
 
     @property
-    def _property_scripts(self):
-        # Scripts common to all scenarios
-        scripts = ["scripts/salt-call"]
-        if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
-            scripts.append("scripts/salt-ssh")
-            if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
-                return scripts
-            scripts.extend(["scripts/salt-cloud", "scripts/spm"])
-            return scripts
-
-        if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
-            scripts.extend(
-                [
-                    "scripts/salt-cp",
-                    "scripts/salt-minion",
-                ]
+    def _property_extras_require(self):
+        return {
+            "crypto": _parse_requirements_file(
+                os.path.join(
+                    os.path.abspath(SETUP_DIRNAME), "requirements", "crypto.txt"
+                )
             )
-            return scripts
-
-        # *nix, so, we need all scripts
-        scripts.extend(
-            [
-                "scripts/salt",
-                "scripts/salt-api",
-                "scripts/salt-cloud",
-                "scripts/salt-cp",
-                "scripts/salt-key",
-                "scripts/salt-master",
-                "scripts/salt-minion",
-                "scripts/salt-proxy",
-                "scripts/salt-run",
-                "scripts/salt-ssh",
-                "scripts/salt-syndic",
-                "scripts/spm",
-            ]
-        )
-        return scripts
+        }
 
     @property
     def _property_entry_points(self):
@@ -1275,16 +1226,6 @@ class SaltDistribution(distutils.dist.Distribution):
                 "'both', 'ssh', or 'none' not '{}'".format(self.salt_transport)
             )
 
-        # Setup our property functions after class initialization and
-        # after parsing the command line since most are set to None
-        # ATTENTION: This should be the last step before returning the args or
-        # some of the requirements won't be correctly set
-        for funcname in dir(self):
-            if not funcname.startswith("_property_"):
-                continue
-            property_name = funcname.split("_property_", 1)[-1]
-            setattr(self, property_name, getattr(self, funcname))
-
         return args
 
     # <---- Overridden Methods ---------------------------------------------------------------------------------------
@@ -1296,5 +1237,10 @@ class SaltDistribution(distutils.dist.Distribution):
 if __name__ == "__main__":
     warnings.warn(
         "Warning: distutils is deprecated and shall be removed in Python 3.12, advise migrate to using setuptools"
+    )
+    warnings.warn(
+        "In Salt 3009, the `setup.py` file will be stripped of it's custom additions and migrated to a plain "
+        "`pyproject.toml` python package or whatever is found best during the process of removing the customizations. "
+        "If you're relying on these customizations please stop as your workflow will break in the future."
     )
     setup(distclass=SaltDistribution)
