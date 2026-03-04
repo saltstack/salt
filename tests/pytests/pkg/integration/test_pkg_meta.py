@@ -108,6 +108,7 @@ def test_requires(
         "pre,interp: /bin/sh",
         "post,interp: /bin/sh",
         "preun,interp: /bin/sh",
+        "interp,posttrans: /bin/sh",
         "manual: /usr/sbin/groupadd",
         "manual: /usr/sbin/useradd",
         "manual: /usr/sbin/usermod",
