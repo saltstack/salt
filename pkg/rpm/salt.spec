@@ -530,7 +530,6 @@ fi
 %post
 ln -s -f /opt/saltstack/salt/spm %{_bindir}/spm
 ln -s -f /opt/saltstack/salt/salt-pip %{_bindir}/salt-pip
-/opt/saltstack/salt/bin/python3 -m compileall -qq /opt/saltstack/salt/lib
 
 
 %post cloud
@@ -615,6 +614,11 @@ else
   # Initial installation
   /bin/systemctl preset salt-api.service >/dev/null 2>&1 || :
 fi
+
+
+%posttrans
+# (Re)generate pycache in posttrans, so we're sure any old libraries have been uninstalled.
+/opt/saltstack/salt/bin/python3 -m compileall -qq /opt/saltstack/salt/lib
 
 
 %posttrans cloud
