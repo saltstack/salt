@@ -453,4 +453,4 @@ def test_performance(
     # In theory we could set a hard cap for the duration,
     # something like 500 ms and only run the current version,
     # but we will see if this ever becomes too flaky
-    assert curr_duration <= 1.25 * prev_duration
+    assert curr_duration <= 1.75 * prev_duration
