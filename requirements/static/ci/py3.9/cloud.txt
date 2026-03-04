@@ -351,6 +351,7 @@ mako==1.3.10
     #   -r requirements/static/ci/common.in
 markdown-it-py==2.2.0
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
     #   rich

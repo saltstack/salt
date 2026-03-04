@@ -24,8 +24,10 @@ jmespath==1.0.1
     # via
     #   boto3
     #   botocore
-markdown-it-py==3.0.0
-    # via rich
+markdown-it-py==2.2.0
+    # via
+    #   -c requirements/constraints.txt
+    #   rich
 markupsafe==2.1.3
     # via
     #   -r requirements/static/ci/tools.in
