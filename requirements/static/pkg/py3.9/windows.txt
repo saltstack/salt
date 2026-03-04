@@ -99,8 +99,10 @@ looseversion==1.3.0
     # via -r requirements/base.txt
 lxml==6.0.2
     # via -r requirements/base.txt
-markdown-it-py==3.0.0
-    # via rich
+markdown-it-py==2.2.0
+    # via
+    #   -c requirements/constraints.txt
+    #   rich
 markupsafe==2.1.5
     # via
     #   -r requirements/base.txt
