@@ -536,10 +536,6 @@ toml==0.10.2
     # via -r requirements/static/ci/common.in
 tomli==2.2.1 ; python_full_version < '3.11'
     # via pytest
-tornado==6.5.4
-    # via
-    #   -c requirements/static/pkg/py3.10/freebsd.txt
-    #   -r requirements/base.txt
 transitions==0.9.0 ; sys_platform != 'win32'
     # via junos-eznc
 trustme==1.1.0

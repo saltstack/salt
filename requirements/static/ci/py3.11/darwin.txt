@@ -482,10 +482,6 @@ timelib==0.3.0
     #   -r requirements/base.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.in
-tornado==6.5.4
-    # via
-    #   -c requirements/static/pkg/py3.11/darwin.txt
-    #   -r requirements/base.txt
 transitions==0.9.3
     # via junos-eznc
 trustme==1.1.0
