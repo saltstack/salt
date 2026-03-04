@@ -1362,12 +1362,13 @@ repos:
       - id: pip-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.9 Requirements
-        files: ^requirements/(constraints\.txt|(base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
+        files: ^requirements/(constraints\.txt|(base|zeromq|pytest|crypto)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/static/ci/docs.in
           - --python-platform=linux
           - --python-version=3.9
@@ -1381,12 +1382,13 @@ repos:
       - id: pip-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.10 Requirements
-        files: ^requirements/(constraints\.txt|(base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
+        files: ^requirements/(constraints\.txt|(base|zeromq|pytest|crypto)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/static/ci/docs.in
           - --python-platform=linux
           - --python-version=3.10
@@ -1400,12 +1402,13 @@ repos:
       - id: pip-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.11 Requirements
-        files: ^requirements/(constraints\.txt|(base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
+        files: ^requirements/(constraints\.txt|(base|zeromq|pytest|crypto)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/static/ci/docs.in
           - --python-platform=linux
           - --python-version=3.11
@@ -1419,12 +1422,13 @@ repos:
       - id: pip-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.12 Requirements
-        files: ^requirements/(constraints\.txt|(base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
+        files: ^requirements/(constraints\.txt|(base|zeromq|pytest|crypto)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/static/ci/docs.in
           - --python-platform=linux
           - --python-version=3.12
@@ -1438,12 +1442,13 @@ repos:
       - id: pip-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.13 Requirements
-        files: ^requirements/(constraints\.txt|(base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
+        files: ^requirements/(constraints\.txt|(base|zeromq|pytest|crypto)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/static/ci/docs.in
           - --python-platform=linux
           - --python-version=3.13
