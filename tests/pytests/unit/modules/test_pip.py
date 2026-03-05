@@ -1458,8 +1458,8 @@ def test_list_freeze_parse_command(python_binary):
                 use_vt=False,
             )
             assert ret == {
-                "SaltTesting-dev": "git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8",
-                "M2Crypto": "0.21.1",
+                "salttesting-dev": "git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8",
+                "m2crypto": "0.21.1",
                 "bbfreeze-loader": "1.1.0",
                 "bbfreeze": "1.1.0",
                 "pip": mock_version,
@@ -1503,8 +1503,8 @@ def test_list_freeze_parse_command_with_all(python_binary):
                 use_vt=False,
             )
             assert ret == {
-                "SaltTesting-dev": "git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8",
-                "M2Crypto": "0.21.1",
+                "salttesting-dev": "git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8",
+                "m2crypto": "0.21.1",
                 "bbfreeze-loader": "1.1.0",
                 "bbfreeze": "1.1.0",
                 "pip": "9.0.1",
@@ -1543,6 +1543,48 @@ def test_list_freeze_parse_command_with_prefix(python_binary):
                 use_vt=False,
             )
             assert ret == {"bbfreeze-loader": "1.1.0", "bbfreeze": "1.1.0"}
+
+
+def test_list_freeze_parse_normalizes_package_names(python_binary):
+    """
+    list_freeze_parse must return normalized package names (lowercase, hyphens)
+    consistent with list_(), so that pip_list lookups work correctly regardless
+    of how the name appears in `pip freeze` output (underscores, mixed case, etc.).
+    """
+    eggs = [
+        "requests_oauthlib==1.3.0",
+        "My_Package==2.0.0",
+        "Pillow==10.0.0",
+    ]
+    mock = MagicMock(return_value={"retcode": 0, "stdout": "\n".join(eggs)})
+    with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
+        with patch("salt.modules.pip.version", MagicMock(return_value="6.1.1")):
+            ret = pip.list_freeze_parse()
+            assert ret == {
+                "requests-oauthlib": "1.3.0",
+                "my-package": "2.0.0",
+                "pillow": "10.0.0",
+                "pip": "6.1.1",
+            }
+
+
+def test_list_freeze_parse_prefix_matches_normalized_name(python_binary):
+    """
+    list_freeze_parse must match packages by normalized prefix even when the
+    freeze output uses underscores but the caller uses hyphens (or vice versa).
+    This ensures _check_if_installed does not produce false negatives.
+    """
+    eggs = [
+        "requests_oauthlib==1.3.0",
+        "requests==2.31.0",
+        "other_pkg==0.1.0",
+    ]
+    mock = MagicMock(return_value={"retcode": 0, "stdout": "\n".join(eggs)})
+    with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
+        with patch("salt.modules.pip.version", MagicMock(return_value="6.1.1")):
+            # A hyphenated prefix must match an underscore-named package
+            ret = pip.list_freeze_parse(prefix="requests-oauthlib")
+            assert ret == {"requests-oauthlib": "1.3.0"}
 
 
 def test_list_upgrades_legacy(python_binary):

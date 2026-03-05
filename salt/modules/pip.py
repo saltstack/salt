@@ -1277,7 +1277,9 @@ def list_freeze_parse(
     cwd = _pip_bin_env(cwd, bin_env)
     packages = {}
 
-    if prefix is None or "pip".startswith(prefix):
+    normal_prefix = normalize(prefix) if prefix else None
+
+    if prefix is None or "pip".startswith(normal_prefix):
         packages["pip"] = version(bin_env, cwd)
 
     for line in freeze(
@@ -1311,11 +1313,12 @@ def list_freeze_parse(
             logger.error("Can't parse line '%s'", line)
             continue
 
+        normal_name = normalize(name)
         if prefix:
-            if name.lower().startswith(prefix.lower()):
-                packages[name] = version_
+            if normal_name.startswith(normal_prefix):
+                packages[normal_name] = version_
         else:
-            packages[name] = version_
+            packages[normal_name] = version_
 
     return packages
 
