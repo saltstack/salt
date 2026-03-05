@@ -156,6 +156,7 @@ repos:
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/static/pkg/linux.in
           - --python-platform=linux
           - --python-version=3.9
@@ -173,6 +174,7 @@ repos:
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/static/pkg/linux.in
           - --constraint
           - requirements/constraints.txt
@@ -190,6 +192,7 @@ repos:
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/static/pkg/linux.in
           - --constraint
           - requirements/constraints.txt
@@ -207,6 +210,7 @@ repos:
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/static/pkg/linux.in
           - --constraint
           - requirements/constraints.txt
@@ -224,6 +228,7 @@ repos:
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/static/pkg/linux.in
           - --constraint
           - requirements/constraints.txt
@@ -242,6 +247,7 @@ repos:
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/static/pkg/freebsd.in
           - --universal
           - --python-version=3.9
@@ -259,6 +265,7 @@ repos:
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/static/pkg/freebsd.in
           - --universal
           - --python-version=3.10
@@ -276,6 +283,7 @@ repos:
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/static/pkg/freebsd.in
           - --universal
           - --python-version=3.11
@@ -293,6 +301,7 @@ repos:
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/static/pkg/freebsd.in
           - --universal
           - --python-version=3.12
@@ -310,6 +319,7 @@ repos:
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/static/pkg/freebsd.in
           - --universal
           - --python-version=3.13
@@ -328,6 +338,7 @@ repos:
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/static/pkg/darwin.in
           - --python-platform=macos
           - --python-version=3.9
@@ -345,6 +356,7 @@ repos:
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/static/pkg/darwin.in
           - --python-platform=macos
           - --python-version=3.10
@@ -362,6 +374,7 @@ repos:
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/static/pkg/darwin.in
           - --python-platform=macos
           - --python-version=3.11
@@ -379,6 +392,7 @@ repos:
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/static/pkg/darwin.in
           - --python-platform=macos
           - --python-version=3.12
@@ -396,6 +410,7 @@ repos:
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/static/pkg/darwin.in
           - --python-platform=macos
           - --python-version=3.13
@@ -414,6 +429,7 @@ repos:
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/windows.txt
           - requirements/static/pkg/windows.in
           - --python-platform=windows
@@ -432,6 +448,7 @@ repos:
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/windows.txt
           - requirements/static/pkg/windows.in
           - --python-platform=windows
@@ -450,6 +467,7 @@ repos:
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/windows.txt
           - requirements/static/pkg/windows.in
           - --python-platform=windows
@@ -468,6 +486,7 @@ repos:
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/windows.txt
           - requirements/static/pkg/windows.in
           - --python-platform=windows
@@ -486,6 +505,7 @@ repos:
         args:
           - requirements/base.txt
           - requirements/zeromq.txt
+          - requirements/crypto.txt
           - requirements/windows.txt
           - requirements/static/pkg/windows.in
           - --python-platform=windows

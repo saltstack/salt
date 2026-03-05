@@ -338,6 +338,10 @@ pycparser==3.0
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
     #   cffi
+pycryptodomex==3.23.0
+    # via
+    #   -c requirements/static/pkg/py3.13/freebsd.txt
+    #   -r requirements/static/ci/common.in
 pyfakefs==6.0.0
     # via -r requirements/pytest.txt
 pygments==2.19.2

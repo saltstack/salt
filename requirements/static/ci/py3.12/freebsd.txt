@@ -337,6 +337,10 @@ pycparser==2.21
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
     #   cffi
+pycryptodomex==3.23.0
+    # via
+    #   -c requirements/static/pkg/py3.12/freebsd.txt
+    #   -r requirements/static/ci/common.in
 pyfakefs==5.3.1
     # via -r requirements/pytest.txt
 pyinotify==0.9.6 ; platform_system != 'openbsd' and sys_platform != 'darwin' and sys_platform != 'win32'

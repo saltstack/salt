@@ -316,6 +316,10 @@ pycparser==3.0
     #   -c requirements/static/pkg/py3.11/windows.txt
     #   -r requirements/base.txt
     #   cffi
+pycryptodomex==3.23.0
+    # via
+    #   -c requirements/static/pkg/py3.11/windows.txt
+    #   -r requirements/static/ci/common.in
 pyfakefs==5.3.1
     # via -r requirements/pytest.txt
 pygit2==1.19.1
