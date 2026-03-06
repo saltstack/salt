@@ -10,8 +10,11 @@ from packaging.version import parse as parse_version
 
 import salt.utils.platform
 from salt.exceptions import CommandNotFoundError
+from salt.modules import cmdmod
+from salt.modules import pip as pipmod
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.helpers import VirtualEnv, patched_environ
+from tests.support.mock import MagicMock
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -19,6 +22,55 @@ pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False),
 ]
+
+
+def mock_pip_versions_cmds(*args, **kwargs):
+    """Function to mock cmd.run_all for pip commands that get package versions but pass-thru other invocations.
+
+    Used by `test_list_available_packages_with_pre_releases_flags` because otherwise we must rely on the presence of
+    pre-release versions of a package in an uncontrolled package index.
+
+    This can be removed if there were an index that we could guarantee had pre-release versions of a package for any
+    caller.
+    """
+
+    def _is_pip_versions_cmd(cmd):
+        pip_args = None
+        for i, arg in enumerate(cmd):
+            if arg == "pip" or arg.endswith("salt-pip"):
+                pip_args = cmd[i + 1 :]
+        if pip_args is None:
+            return False
+        if pip_args[0] == "--use-deprecated=legacy-resolver":
+            pip_args = pip_args[1:]
+        if (
+            pip_args[:2] == ["index", "versions"]
+            or pip_args[0] == "install"
+            and pip_args[1].endswith("==versions")
+        ):
+            return True
+        return False
+
+    if _is_pip_versions_cmd(args[0]):
+        versions = "1.0.0, 1.0.1rc1, 1.0.2b1, 1.0.3.a1"
+        return {
+            "stdout": "\n".join(
+                [
+                    f"Available versions: {versions}",
+                    f"Could not find a version (from versions: {versions})",
+                ]
+            )
+        }
+    return cmdmod.run_all(*args, **kwargs)
+
+
+@pytest.fixture
+def configure_loader_modules():
+    return {
+        pipmod: {
+            "__salt__": {"cmd.run_all": MagicMock(side_effect=mock_pip_versions_cmds)}
+        }
+    }
 
 
 @pytest.fixture
@@ -137,12 +189,11 @@ def test_list_available_packages_with_pre_releases_flags(
 ):
     """Tests that pre-release versions are returned when flags enable them.
 
-    Note: relies on PyPI hosting pre-release versions of `typing-extensions`.
+    Note: relies on the `configure_loader_modules` fixture to mock the versions we test with.
     """
     venv.install("-U", pip_version)
-    package_name = "typing-extensions"
-    versions = pip.list_all_versions(
-        package_name,
+    versions = pipmod.list_all_versions(
+        "foo",
         bin_env=str(venv.venv_bin_dir),
         include_alpha=include_alpha,
         include_beta=include_beta,
