@@ -90,7 +90,7 @@ class RequisiteType(str, Enum):
 
 class DiGraphCycle(Exception):
     """
-    Custom DiGrapCycle exception raised on detecting cycle.
+    Custom DiGraphCycle exception raised on detecting cycle.
     """
 
 
