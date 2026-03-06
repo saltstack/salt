@@ -1660,7 +1660,17 @@ class VirtualEnv:
         shutil.rmtree(str(self.venv_dir), ignore_errors=True)
 
     def install(self, *args, **kwargs):
-        return self.run(self.venv_python, "-m", "pip", "install", *args, **kwargs)
+        pip_install_args = [self.venv_python, "-m", "pip", "install"]
+        for arg in args:
+            if arg == RUNTIME_VARS.CODE_DIR or (
+                os.path.exists(arg) and os.path.isdir(arg)
+            ):
+                continue
+            # If we're here, it's a package requirement, not a local path
+            pip_install_args.append("--only-binary=:all:")
+            break
+        pip_install_args.extend(args)
+        return self.run(*pip_install_args, **kwargs)
 
     def uninstall(self, *args, **kwargs):
         return self.run(

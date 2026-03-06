@@ -1,22 +1,40 @@
 import getpass
 import subprocess
 import time
-import venv
 from pathlib import Path
 
 import pytest
+
+try:
+    import virtualenv
+
+    HAS_VIRTUALENV = True
+except ImportError:
+    HAS_VIRTUALENV = False
+
+pytestmark = [
+    pytest.mark.skipif(HAS_VIRTUALENV is False, reason="virtualenv is not installed"),
+]
 
 
 @pytest.fixture(scope="module")
 def test_venv(tmp_path_factory):
     venv_dir = tmp_path_factory.mktemp("venv")
-    venv.create(venv_dir, with_pip=True)
+    virtualenv.cli_run([str(venv_dir)])
     python_bin = venv_dir / "bin" / "python"
     # Install the current salt package
     # We use the root of the repo which is 3 levels up from this file's directory
     repo_root = Path(__file__).resolve().parents[3]
     subprocess.run(
-        [str(python_bin), "-m", "pip", "install", str(repo_root)], check=True
+        [
+            str(python_bin),
+            "-m",
+            "pip",
+            "install",
+            "--only-binary=:all:",
+            str(repo_root),
+        ],
+        check=True,
     )
     return venv_dir
 
