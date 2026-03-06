@@ -28,6 +28,12 @@ from setuptools.command.develop import develop
 from setuptools.command.install import install
 from setuptools.command.sdist import sdist
 
+sys.path.append(
+    os.path.join(os.path.abspath(os.path.dirname(__file__)), "tools", "pkg")
+)
+
+import salt_build_backend
+
 # pylint: enable=no-name-in-module
 
 
@@ -1002,54 +1008,20 @@ class SaltDistribution(distutils.dist.Distribution):
         return data_files
 
     @property
-    def _property_install_requires(self):
-        install_requires = []
-        if USE_STATIC_REQUIREMENTS is True:
-            # We've been explicitly asked to use static requirements
-            if IS_OSX_PLATFORM:
-                for reqfile in SALT_OSX_LOCKED_REQS:
-                    install_requires += _parse_requirements_file(reqfile)
+    def _property_version(self):
+        return salt_build_backend.get_salt_version()
 
-            elif IS_WINDOWS_PLATFORM:
-                for reqfile in SALT_WINDOWS_LOCKED_REQS:
-                    install_requires += _parse_requirements_file(reqfile)
-            else:
-                for reqfile in SALT_LINUX_LOCKED_REQS:
-                    install_requires += _parse_requirements_file(reqfile)
-            return install_requires
-        elif USE_STATIC_REQUIREMENTS is False:
-            # We've been explicitly asked NOT to use static requirements
-            if IS_OSX_PLATFORM:
-                for reqfile in SALT_OSX_REQS:
-                    install_requires += _parse_requirements_file(reqfile)
-            elif IS_WINDOWS_PLATFORM:
-                for reqfile in SALT_WINDOWS_REQS:
-                    install_requires += _parse_requirements_file(reqfile)
-            else:
-                for reqfile in SALT_BASE_REQUIREMENTS:
-                    install_requires += _parse_requirements_file(reqfile)
-        else:
-            # This is the old and default behavior
-            if IS_OSX_PLATFORM:
-                for reqfile in SALT_OSX_LOCKED_REQS:
-                    install_requires += _parse_requirements_file(reqfile)
-            elif IS_WINDOWS_PLATFORM:
-                for reqfile in SALT_WINDOWS_LOCKED_REQS:
-                    install_requires += _parse_requirements_file(reqfile)
-            else:
-                for reqfile in SALT_LINUX_LOCKED_REQS:
-                    install_requires += _parse_requirements_file(reqfile)
-        return install_requires
+    @property
+    def _property_scripts(self):
+        return salt_build_backend.get_scripts()
+
+    @property
+    def _property_install_requires(self):
+        return salt_build_backend.get_install_requires()
 
     @property
     def _property_extras_require(self):
-        return {
-            "crypto": _parse_requirements_file(
-                os.path.join(
-                    os.path.abspath(SETUP_DIRNAME), "requirements", "crypto.txt"
-                )
-            )
-        }
+        return salt_build_backend.get_extras_require()
 
     @property
     def _property_entry_points(self):
