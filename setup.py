@@ -1009,19 +1009,19 @@ class SaltDistribution(distutils.dist.Distribution):
 
     @property
     def _property_version(self):
-        return salt_build_backend.get_salt_version()
+        return salt_build_backend.get_salt_version(self)
 
     @property
     def _property_scripts(self):
-        return salt_build_backend.get_scripts()
+        return salt_build_backend.get_scripts(self)
 
     @property
     def _property_install_requires(self):
-        return salt_build_backend.get_install_requires()
+        return salt_build_backend.get_install_requires(self)
 
     @property
     def _property_extras_require(self):
-        return salt_build_backend.get_extras_require()
+        return salt_build_backend.get_extras_require(self)
 
     @property
     def _property_entry_points(self):
