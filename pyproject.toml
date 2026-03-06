@@ -1,5 +1,11 @@
 [build-system]
-requires = ["setuptools>=62.0", "wheel"]
+requires = [
+    "setuptools>=62.0",
+    "wheel",
+    "looseversion",
+    "packaging",
+    "importlib-metadata>=8.7.0",
+]
 build-backend = "salt_build_backend"
 backend-path = ["tools/pkg"]
 

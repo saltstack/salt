@@ -1,6 +1,11 @@
 import os
 import sys
 
+# Add project root to sys.path
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
 from setuptools import build_meta as _orig
 
 # PEP 517 hooks
@@ -30,9 +35,8 @@ def _parse_requirements_file(requirements_file):
     return parsed_requirements
 
 
-def get_salt_version():
-    setup_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-    salt_version_module = os.path.join(setup_dir, "salt", "version.py")
+def get_salt_version(dist=None):
+    salt_version_module = os.path.join(PROJECT_ROOT, "salt", "version.py")
     # We can't import salt.version directly because dependencies might not be there
     # But we can exec it in a controlled environment
     g = {"__opts__": {}, "__file__": salt_version_module}
@@ -43,8 +47,7 @@ def get_salt_version():
     return str(g["__saltstack_version__"])
 
 
-def get_install_requires():
-    setup_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+def get_install_requires(dist=None):
     use_static = os.environ.get("USE_STATIC_REQUIREMENTS") == "1"
 
     is_osx = sys.platform.startswith("darwin")
@@ -55,7 +58,7 @@ def get_install_requires():
         if is_osx:
             req_files = [
                 os.path.join(
-                    setup_dir,
+                    PROJECT_ROOT,
                     "requirements",
                     "static",
                     "pkg",
@@ -66,7 +69,7 @@ def get_install_requires():
         elif is_windows:
             req_files = [
                 os.path.join(
-                    setup_dir,
+                    PROJECT_ROOT,
                     "requirements",
                     "static",
                     "pkg",
@@ -77,7 +80,7 @@ def get_install_requires():
         else:
             req_files = [
                 os.path.join(
-                    setup_dir,
+                    PROJECT_ROOT,
                     "requirements",
                     "static",
                     "pkg",
@@ -88,49 +91,65 @@ def get_install_requires():
     else:
         # Base requirements
         req_files = [
-            os.path.join(setup_dir, "requirements", "base.txt"),
-            os.path.join(setup_dir, "requirements", "zeromq.txt"),
+            os.path.join(PROJECT_ROOT, "requirements", "base.txt"),
+            os.path.join(PROJECT_ROOT, "requirements", "zeromq.txt"),
         ]
         if is_osx:
-            req_files.append(os.path.join(setup_dir, "requirements", "darwin.txt"))
+            req_files.append(os.path.join(PROJECT_ROOT, "requirements", "darwin.txt"))
         elif is_windows:
-            req_files.append(os.path.join(setup_dir, "requirements", "windows.txt"))
+            req_files.append(os.path.join(PROJECT_ROOT, "requirements", "windows.txt"))
 
     for req_file in req_files:
         reqs.extend(_parse_requirements_file(req_file))
     return reqs
 
 
-def get_extras_require():
-    setup_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-    crypto_req = os.path.join(setup_dir, "requirements", "crypto.txt")
+def get_extras_require(dist=None):
+    crypto_req = os.path.join(PROJECT_ROOT, "requirements", "crypto.txt")
     extras = {}
     if os.path.exists(crypto_req):
         extras["crypto"] = _parse_requirements_file(crypto_req)
     return extras
 
 
-def get_scripts():
+def get_scripts(dist=None):
     is_windows = sys.platform.startswith("win")
     scripts = ["scripts/salt-call"]
-    if is_windows:
-        scripts.extend(["scripts/salt-cp", "scripts/salt-minion", "scripts/salt-pip"])
-    else:
-        scripts.extend(
-            [
-                "scripts/salt",
-                "scripts/salt-api",
-                "scripts/salt-cloud",
-                "scripts/salt-cp",
-                "scripts/salt-key",
-                "scripts/salt-master",
-                "scripts/salt-minion",
-                "scripts/salt-run",
-                "scripts/salt-ssh",
-                "scripts/salt-syndic",
-                "scripts/spm",
-                "scripts/salt-proxy",
-                "scripts/salt-pip",
-            ]
+
+    ssh_packaging = False
+    if dist:
+        ssh_packaging = getattr(dist, "ssh_packaging", False)
+    if not ssh_packaging:
+        ssh_packaging = os.path.exists(
+            os.path.join(PROJECT_ROOT, "salt", "_ssh_packaging")
         )
+
+    if ssh_packaging:
+        scripts.append("scripts/salt-ssh")
+        if is_windows and not os.environ.get("SALT_BUILD_ALL_BINS"):
+            return scripts
+        scripts.extend(["scripts/salt-cloud", "scripts/spm"])
+        return scripts
+
+    if is_windows and not os.environ.get("SALT_BUILD_ALL_BINS"):
+        scripts.extend(["scripts/salt-cp", "scripts/salt-minion"])
+        return scripts
+
+    # *nix or SALT_BUILD_ALL_BINS, so, we need all scripts
+    scripts.extend(
+        [
+            "scripts/salt",
+            "scripts/salt-api",
+            "scripts/salt-cloud",
+            "scripts/salt-cp",
+            "scripts/salt-key",
+            "scripts/salt-master",
+            "scripts/salt-minion",
+            "scripts/salt-proxy",
+            "scripts/salt-run",
+            "scripts/salt-ssh",
+            "scripts/salt-syndic",
+            "scripts/spm",
+        ]
+    )
     return scripts
