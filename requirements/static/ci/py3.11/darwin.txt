@@ -90,10 +90,6 @@ cherrypy==18.8.0
     #   -r requirements/static/ci/common.in
 clustershell==1.9.3
     # via -r requirements/static/ci/common.in
-contextvars==2.4
-    # via
-    #   -c requirements/static/pkg/py3.11/darwin.txt
-    #   -r requirements/base.txt
 croniter==6.0.0
     # via
     #   -c requirements/static/pkg/py3.11/darwin.txt
@@ -167,7 +163,6 @@ immutables==0.21
     # via
     #   -c requirements/static/pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
-    #   contextvars
 importlib-metadata==8.7.1
     # via
     #   -c requirements/static/pkg/py3.11/darwin.txt

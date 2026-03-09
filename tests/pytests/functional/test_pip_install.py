@@ -31,7 +31,6 @@ def test_venv(tmp_path_factory):
             "-m",
             "pip",
             "install",
-            "--only-binary=:all:",
             str(repo_root),
         ],
         check=True,
