@@ -31,8 +31,6 @@ cherrypy==18.10.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.in
-contextvars==2.4
-    # via -r requirements/base.txt
 croniter==6.0.0
     # via -r requirements/base.txt
 cryptography==46.0.5
@@ -61,9 +59,7 @@ idna==3.11
     #   requests
     #   yarl
 immutables==0.21
-    # via
-    #   -r requirements/base.txt
-    #   contextvars
+    # via -r requirements/base.txt
 importlib-metadata==8.7.1
     # via
     #   -r requirements/base.txt

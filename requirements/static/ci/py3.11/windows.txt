@@ -95,10 +95,6 @@ colorama==0.4.6
     #   -c requirements/static/pkg/py3.11/windows.txt
     #   click
     #   pytest
-contextvars==2.4
-    # via
-    #   -c requirements/static/pkg/py3.11/windows.txt
-    #   -r requirements/base.txt
 cryptography==46.0.5
     # via
     #   -c requirements/static/pkg/py3.11/windows.txt
@@ -168,7 +164,6 @@ immutables==0.21
     # via
     #   -c requirements/static/pkg/py3.11/windows.txt
     #   -r requirements/base.txt
-    #   contextvars
 importlib-metadata==8.7.1
     # via
     #   -c requirements/static/pkg/py3.11/windows.txt
