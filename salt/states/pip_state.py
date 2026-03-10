@@ -849,9 +849,7 @@ def installed(
                 )
             if editable:
                 comments.append(
-                    'Package will be installed in editable mode (i.e. setuptools "develop mode") from {}.'.format(
-                        editable
-                    )
+                    f'Package will be installed in editable mode (i.e. setuptools "develop mode") from {editable}.'
                 )
             ret["comment"] = " ".join(comments)
             return ret
