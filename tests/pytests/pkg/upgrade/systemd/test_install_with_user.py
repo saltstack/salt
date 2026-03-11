@@ -322,20 +322,6 @@ def test_salt_user_ownership_preserved_on_upgrade(
     help_ret = call_cli.run("--help")
     supports_priv = "--priv" in help_ret.stdout
 
-    # Capture the debug log created by RPM scriptlets
-    log.info("Capturing RPM upgrade debug log")
-    try:
-        if os.path.exists("/var/log/salt-upgrade-debug.log"):
-            with salt.utils.files.fopen("/var/log/salt-upgrade-debug.log", "r") as f:
-                log_content = f.read()
-            log.info("=== RPM UPGRADE DEBUG LOG START ===")
-            log.info(log_content)
-            log.info("=== RPM UPGRADE DEBUG LOG END ===")
-        else:
-            log.warning("/var/log/salt-upgrade-debug.log does not exist")
-    except OSError as e:
-        log.warning("Could not read /var/log/salt-upgrade-debug.log: %s", e)
-
     # Verify we upgraded successfully
     if supports_priv:
         ret = call_cli.run("--local", "--priv=root", "test.version")
