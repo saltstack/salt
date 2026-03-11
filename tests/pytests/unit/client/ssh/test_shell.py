@@ -273,3 +273,18 @@ def test_scp_command_execution_uses_custom_path():
         args, _ = mock_run_cmd.call_args
         assert "/custom/scp" in args[0]
         assert "source_file.txt example.com:/path/dest_file.txt" in args[0]
+
+
+def test_ssh_using_user_with_backslash():
+    _shell = shell.Shell(
+        opts={"_ssh_version": (4, 9)},
+        host="host.example.org",
+        user="exampledomain\\user",
+        passwd="password",
+    )
+    with patch.object(
+        _shell, "_run_cmd", return_value=(None, None, None)
+    ) as mock_run_cmd:
+        cmd_string = _shell.exec_cmd("whoami")
+        args, _ = mock_run_cmd.call_args
+        assert " User='exampledomain\\user' " in args[0]
