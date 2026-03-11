@@ -42,6 +42,7 @@ import salt.serializers.msgpack
 import salt.syspaths
 import salt.transport
 import salt.utils.args
+import salt.utils.atomicfile
 import salt.utils.context
 import salt.utils.data
 import salt.utils.dictdiffer
@@ -67,7 +68,6 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
-    FileLockError,
     SaltClientError,
     SaltDaemonNotRunning,
     SaltException,
@@ -1292,16 +1292,19 @@ class Minion(MinionBase):
         # this means that the parent class doesn't know *which* master we connect to
         super().__init__(opts)
 
-        # Clean up stale queue locks that might have been left behind if the minion
+        # Clean up stale queue lock that might have been left behind if the minion
         # was killed forcefully (SIGKILL). This ensures recovery on restart.
-        for lock_name in ("state_queue.lock", "job_queue.lock"):
-            lock_path = os.path.join(self.opts["cachedir"], lock_name)
-            if os.path.isfile(lock_path):
-                try:
-                    os.remove(lock_path)
-                    log.info("Removed stale lock file: %s", lock_path)
-                except OSError:
-                    pass
+        lock_path = os.path.join(self.opts["cachedir"], "minion_queue.lock")
+        if os.path.isfile(lock_path):
+            try:
+                os.remove(lock_path)
+                log.info("Removed stale lock file: %s", lock_path)
+            except OSError:
+                pass
+
+        # Clean up orphaned running_ files from crashed minions
+        # These can be left behind if minion crashes after rename but before cleanup
+        self._cleanup_orphaned_queue_files()
 
         self.timeout = timeout
         self.safe = safe
@@ -1391,6 +1394,42 @@ class Minion(MinionBase):
         self.process_manager._handle_signals(signum, sigframe)
         time.sleep(1)
         sys.exit(0)
+
+    def _cleanup_orphaned_queue_files(self):
+        """
+        Clean up orphaned running_ queue files that may have been left behind
+        if the minion crashed after renaming queued_ to running_ but before cleanup.
+        """
+        for queue_name in ("state_queue", "job_queue"):
+            queue_dir = os.path.join(self.opts["cachedir"], queue_name)
+            if not os.path.exists(queue_dir):
+                continue
+
+            try:
+                for fn in os.listdir(queue_dir):
+                    if not fn.startswith("running_") or not fn.endswith(".p"):
+                        continue
+
+                    path = os.path.join(queue_dir, fn)
+                    try:
+                        # Check if file is older than 5 minutes (300 seconds)
+                        # This gives running jobs time to complete and clean up
+                        stat_info = os.stat(path)
+                        age_seconds = time.time() - stat_info.st_mtime
+
+                        if age_seconds > 300:  # 5 minutes
+                            log.info(
+                                "Removing orphaned running queue file: %s (age: %.1fs)",
+                                path,
+                                age_seconds,
+                            )
+                            os.remove(path)
+                    except OSError as exc:
+                        log.debug(
+                            "Could not check/cleanup running file %s: %s", path, exc
+                        )
+            except OSError as exc:
+                log.debug("Could not list queue directory %s: %s", queue_dir, exc)
 
     def sync_connect_master(self, timeout=None, failed=False):
         """
@@ -1907,70 +1946,84 @@ class Minion(MinionBase):
                 self._queue_job(data)
                 return
 
-        # We use a file lock to ensure atomic checking and queueing
-        queue_lock_path = os.path.join(self.opts["cachedir"], "job_queue.lock")
+        # Check process count and potentially queue - only acquire lock when needed
+        if not bypass_process_count_max:
+            # Use internal subprocess list for accurate counting
+            # This is racy but acceptable for the common case
+            running_processes = [
+                p for p in self.subprocess_list.processes if p.is_alive()
+            ]
+            process_count = len(running_processes)
+            process_count_max = self._get_effective_process_count_max()
 
-        try:
-            async with salt.utils.files.await_lock(
-                queue_lock_path, lock_fn=queue_lock_path, timeout=5
-            ):
-                # Use internal subprocess list for accurate, race-free counting
-                # Filter for alive processes to ignore finished ones that haven't been cleaned up yet
-                running_processes = [
-                    p for p in self.subprocess_list.processes if p.is_alive()
-                ]
-                process_count = len(running_processes)
-                process_count_max = self._get_effective_process_count_max()
+            if process_count >= process_count_max:
+                # At process limit - need to acquire lock for atomic queuing
+                try:
+                    async with salt.utils.state.acquire_async_queue_lock(self.opts):
+                        # Re-check count under lock to avoid race
+                        running_processes = [
+                            p for p in self.subprocess_list.processes if p.is_alive()
+                        ]
+                        process_count = len(running_processes)
+                        process_count_max = self._get_effective_process_count_max()
 
-                if not bypass_process_count_max and process_count >= process_count_max:
+                        if process_count >= process_count_max:
+                            log.warning(
+                                "Maximum number of processes reached while executing jid %s,"
+                                " queuing... (Running: %s, Max: %s)",
+                                data["jid"],
+                                process_count,
+                                process_count_max,
+                            )
+                            self._queue_job(data)
+                            return
+                except salt.exceptions.FileLockError:
                     log.warning(
-                        "Maximum number of processes reached while executing jid %s,"
-                        " queuing... (Running: %s, Max: %s)",
+                        "Failed to acquire job_queue lock for jid %s, queuing anyway.",
                         data["jid"],
-                        process_count,
-                        process_count_max,
                     )
+                    # If we can't get the lock, we assume high contention and queue it to be safe.
+                    # Or we could just proceed (unsafe). Queuing is safer for stability.
                     self._queue_job(data)
                     return
 
-                # Execute the job and get the process handle
-                proc = self._invoke_execution(data)
+        # Execute the job and get the process handle
+        proc = self._invoke_execution(data)
 
-                # Write placeholder proc file with the ACTUAL PID to prevent "Invisible Gap"
-                # This ensures that when the child starts and checks 'running()', it sees itself.
-                if proc:
-                    proc_dir = os.path.join(self.opts["cachedir"], "proc")
-                    if not os.path.isdir(proc_dir):
-                        try:
-                            os.makedirs(proc_dir)
-                        except OSError:
-                            pass
+        # Write placeholder proc file with the ACTUAL PID to prevent "Invisible Gap"
+        # This ensures that when the child starts and checks 'running()', it sees itself.
+        if proc:
+            proc_dir = os.path.join(self.opts["cachedir"], "proc")
+            if not os.path.isdir(proc_dir):
+                try:
+                    os.makedirs(proc_dir)
+                except OSError:
+                    pass
 
-                    proc_fn = os.path.join(proc_dir, data["jid"])
+            proc_fn = os.path.join(proc_dir, str(data["jid"]))
 
-                    # Use the real PID from the handle (multiprocessing) or current PID (threading)
-                    real_pid = getattr(proc, "pid", os.getpid())
-                    if real_pid is None:
-                        real_pid = os.getpid()
+            # Use the real PID from the handle (multiprocessing) or current PID (threading)
+            real_pid = getattr(proc, "pid", os.getpid())
+            if real_pid is None:
+                real_pid = os.getpid()
 
-                    placeholder_data = data.copy()
-                    placeholder_data["pid"] = real_pid
+            placeholder_data = data.copy()
+            placeholder_data["pid"] = real_pid
 
-                    try:
-                        with salt.utils.files.fopen(proc_fn, "w+b") as fp_:
-                            salt.payload.dump(placeholder_data, fp_)
-                    except OSError:
-                        log.error("Failed to write placeholder proc file %s", proc_fn)
+            try:
+                with salt.utils.files.fopen(proc_fn, "w+b") as fp_:
+                    salt.payload.dump(placeholder_data, fp_)
+            except OSError:
+                log.error("Failed to write placeholder proc file %s", proc_fn)
 
-        except FileLockError:
-            log.warning(
-                "Failed to acquire job_queue lock for jid %s, queuing anyway.",
-                data["jid"],
-            )
-            # If we can't get the lock, we assume high contention and queue it to be safe.
-            # Or we could just proceed (unsafe). Queuing is safer for stability.
-            self._queue_job(data)
-            return
+        # Now that the placeholder proc file is written, we can safely delete
+        # the running_ queue file to close the "invisible gap".
+        for qf in ("_job_queue_file", "_state_queue_file"):
+            if qf in data:
+                try:
+                    os.remove(data[qf])
+                except OSError:
+                    pass
 
     def _queue_job(self, data):
         """
@@ -1990,8 +2043,10 @@ class Minion(MinionBase):
         path = os.path.join(queue_dir, fn)
 
         try:
-            with salt.utils.files.fopen(path, "w+b") as fp_:
+            tmp_path = path + ".tmp"
+            with salt.utils.files.fopen(tmp_path, "w+b") as fp_:
                 salt.payload.dump(data, fp_)
+            salt.utils.atomicfile.atomic_rename(tmp_path, path)
             log.info("Queued job %s to %s", jid, path)
         except OSError:
             log.error("Failed to write job queue file %s", path)
@@ -2079,7 +2134,7 @@ class Minion(MinionBase):
         If <= 0 (unlimited), calculate a safe limit based on RLIMIT_NOFILE.
         """
         limit = self.opts.get("process_count_max")
-        if limit > 0:
+        if limit is not None and limit > 0:
             return limit
 
         if not HAS_RESOURCE:
@@ -2219,15 +2274,11 @@ class Minion(MinionBase):
             # If process_count_max is <= 0 (unlimited), we still check the queue because we might
             # have queued jobs due to system resource exhaustion (OS limits).
 
-            # Acquire lock
-            queue_lock_path = os.path.join(self.opts["cachedir"], "job_queue.lock")
-
+            # Acquire shared queue lock (protects both state_queue and job_queue)
             try:
                 # We use a short timeout because we run every 1s.
                 # If we can't get it, we'll try next time.
-                async with salt.utils.files.await_lock(
-                    queue_lock_path, lock_fn=queue_lock_path, timeout=0.1
-                ):
+                async with salt.utils.state.acquire_async_queue_lock(self.opts):
                     # Check actual process count
                     # Use internal subprocess list for accurate counting
                     running_processes = [
@@ -2293,6 +2344,23 @@ class Minion(MinionBase):
                     for fn in files[:slots_available]:
                         path = os.path.join(queue_dir, fn)
 
+                        # Re-check process count before processing each job (count may have changed)
+                        current_process_count = len(
+                            [p for p in self.subprocess_list.processes if p.is_alive()]
+                        )
+                        current_process_count_max = (
+                            self._get_effective_process_count_max()
+                        )
+
+                        if current_process_count >= current_process_count_max:
+                            log.debug(
+                                "Process queue processing: Process count changed, stopping batch. "
+                                "Current: %d, Max: %d",
+                                current_process_count,
+                                current_process_count_max,
+                            )
+                            break
+
                         try:
                             with salt.utils.files.fopen(path, "rb") as fp_:
                                 data = salt.payload.load(fp_)
@@ -2328,9 +2396,13 @@ class Minion(MinionBase):
                                 self._handle_decoded_payload, data
                             )
 
-                        # Remove file AFTER submitting
+                        # Rename file to running_ to avoid duplicate execution
+                        # and to close the invisible gap for check_prior_running_states
+                        running_fn = fn.replace("queued_", "running_", 1)
+                        running_path = os.path.join(queue_dir, running_fn)
                         try:
-                            os.remove(path)
+                            os.rename(path, running_path)
+                            data["_job_queue_file"] = running_path
                         except OSError:
                             pass
 
@@ -2463,7 +2535,7 @@ class Minion(MinionBase):
         minion side execution.
         """
         minion_instance.gen_modules()
-        fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
+        fn_ = os.path.join(minion_instance.proc_dir, str(data["jid"]))
 
         if opts.get("multiprocessing", True):
             salt.utils.process.appendproctitle(f"{cls.__name__}._thread_return")
@@ -2707,7 +2779,7 @@ class Minion(MinionBase):
         minion side execution.
         """
         minion_instance.gen_modules()
-        fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
+        fn_ = os.path.join(minion_instance.proc_dir, str(data["jid"]))
 
         if opts.get("multiprocessing", True):
             salt.utils.process.appendproctitle(f"{cls.__name__}._thread_multi_return")
@@ -2827,7 +2899,7 @@ class Minion(MinionBase):
     def _prepare_return_pub(self, ret, ret_cmd="_return"):
         jid = ret.get("jid", ret.get("__jid__"))
         fun = ret.get("fun", ret.get("__fun__"))
-        fn_ = os.path.join(self.proc_dir, jid)
+        fn_ = os.path.join(self.proc_dir, str(jid))
         if os.path.isfile(fn_):
             try:
                 os.remove(fn_)
@@ -2957,7 +3029,7 @@ class Minion(MinionBase):
         for ret in rets:
             jid = ret.get("jid", ret.get("__jid__"))
             fun = ret.get("fun", ret.get("__fun__"))
-            fn_ = os.path.join(self.proc_dir, jid)
+            fn_ = os.path.join(self.proc_dir, str(jid))
             if os.path.isfile(fn_):
                 try:
                     os.remove(fn_)
@@ -3794,10 +3866,6 @@ class Minion(MinionBase):
                         pass
 
                     if not files:
-                        log.trace(
-                            "State queue processing: no queued files found in %s",
-                            queue_dir,
-                        )
                         return
 
                     # Sort by JID to ensure we process in the order expected by the state system's
@@ -3918,10 +3986,15 @@ class Minion(MinionBase):
                         data.get("jid"),
                     )
 
+                    # Rename file to running_ to close the invisible gap
+                    running_fn = fn.replace("queued_", "running_", 1)
+                    running_path = os.path.join(queue_dir, running_fn)
                     try:
-                        os.remove(path)
+                        os.rename(path, running_path)
+                        data["_state_queue_file"] = running_path
                     except OSError as exc:
-                        log.error("Failed to remove queued job file %s: %s", path, exc)
+                        log.error("Failed to rename queued job file %s: %s", path, exc)
+                        return
 
                     # Mark job to bypass process_count_max checks since it has already waited
                     # its turn in the State queue and we don't want it to starve.

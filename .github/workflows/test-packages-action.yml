@@ -319,7 +319,7 @@ jobs:
 
   test-windows:
     name: ${{ matrix.display_name }} ${{ matrix.pkg_type }} ${{ matrix.tests-chunk }} ${{ matrix.version }}
-    runs-on: ${{ matrix.slug }}
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
     strategy:

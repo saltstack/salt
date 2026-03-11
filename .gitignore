@@ -152,3 +152,4 @@ nox.*.tar.xz
 /.cursorrules
 /.aiderignore
 /aider.conf.yml
+/.gemini
