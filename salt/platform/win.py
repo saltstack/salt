@@ -1352,7 +1352,6 @@ def prepend_cmd(win_shell, cmd):
     else:
         args = cmd
 
-    args = args.replace('"', '""')
     new_cmd = f'{win_shell} /c "{args}"'
 
     return new_cmd
