@@ -129,6 +129,11 @@ clustershell==1.9.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
+contextvars==2.4
+    # via
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   -r requirements/base.txt
 croniter==6.0.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -235,6 +240,7 @@ immutables==0.21
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt
+    #   contextvars
 importlib-metadata==8.7.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt

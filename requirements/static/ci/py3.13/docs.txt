@@ -52,6 +52,10 @@ cherrypy==18.10.0
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/docs.in
+contextvars==2.4
+    # via
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   -r requirements/base.txt
 croniter==6.0.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -101,6 +105,7 @@ immutables==0.21
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
+    #   contextvars
 importlib-metadata==8.7.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt

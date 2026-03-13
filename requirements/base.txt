@@ -8,7 +8,7 @@ cffi>=2.0.0
 cheroot>=10.0.1
 cherrypy>=18.6.1
 # We need contextvars for salt-ssh
-contextvars; python_version < "3.7"
+contextvars
 croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'
 cryptography>=46.0.5
 distro>=1.0.1

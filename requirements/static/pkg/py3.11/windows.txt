@@ -37,6 +37,8 @@ clr-loader==0.2.10
     # via pythonnet
 colorama==0.4.6
     # via click
+contextvars==2.4
+    # via -r requirements/base.txt
 cryptography==46.0.5
     # via
     #   -r requirements/base.txt
@@ -64,7 +66,9 @@ idna==3.11
     #   requests
     #   yarl
 immutables==0.21
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   contextvars
 importlib-metadata==8.7.1
     # via -r requirements/base.txt
 jaraco-collections==5.2.1
