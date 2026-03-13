@@ -99,6 +99,10 @@ clustershell==1.9.3
     # via -r requirements/static/ci/common.in
 colorama==0.4.6 ; sys_platform == 'win32'
     # via pytest
+contextvars==2.4
+    # via
+    #   -c requirements/static/pkg/py3.11/freebsd.txt
+    #   -r requirements/base.txt
 croniter==6.0.0 ; sys_platform != 'win32'
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.txt
@@ -173,6 +177,7 @@ immutables==0.21
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.txt
     #   -r requirements/base.txt
+    #   contextvars
 importlib-metadata==8.7.0
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.txt
