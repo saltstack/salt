@@ -97,7 +97,9 @@ def test_check_queue_queues_job_when_conflict():
         "salt.utils.files.fopen", mock_open()
     ) as mock_file, patch(
         "salt.payload.dump"
-    ) as mock_dump:
+    ) as mock_dump, patch(
+        "salt.utils.atomicfile.atomic_rename"
+    ) as mock_rename:
 
         ret = state._check_queue(True, kwargs)
 
@@ -177,7 +179,9 @@ def test_check_queue_detects_queued_file_as_conflict():
         "salt.utils.files.fopen", mock_open()
     ) as mock_file, patch(
         "salt.payload.dump"
-    ) as mock_dump:
+    ) as mock_dump, patch(
+        "salt.utils.atomicfile.atomic_rename"
+    ) as mock_rename:
 
         ret = state._check_queue(True, kwargs)
 

@@ -1,5 +1,3 @@
---constraint=py{py_version}/linux.txt
-
 towncrier==22.12.0
 looseversion
 packaging

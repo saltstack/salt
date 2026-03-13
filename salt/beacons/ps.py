@@ -68,8 +68,8 @@ def beacon(config):
     for proc in psutil.process_iter():
         try:
             _name = proc.name()
-        except psutil.NoSuchProcess:
-            # The process is now gone
+        except (psutil.NoSuchProcess, psutil.ZombieProcess, psutil.AccessDenied):
+            # The process is now gone or we can't access it
             continue
         if _name not in procs:
             procs.append(_name)

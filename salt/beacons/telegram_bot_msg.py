@@ -5,6 +5,8 @@ Requires the python-telegram-bot library
 
 """
 
+import asyncio
+import inspect
 import logging
 
 import salt.utils.beacons
@@ -21,6 +23,25 @@ log = logging.getLogger(__name__)
 
 
 __virtualname__ = "telegram_bot_msg"
+
+
+async def _async_get_updates(token, **kwargs):
+    """
+    Asynchronous helper to get updates from Telegram Bot
+    """
+    async with telegram.Bot(token) as bot:
+        return await bot.get_updates(**kwargs)
+
+
+def _get_updates(token, **kwargs):
+    """
+    Synchronous wrapper for getting updates, handles both v13 and v20+
+    """
+    if HAS_TELEGRAM and inspect.iscoroutinefunction(telegram.Bot.get_updates):
+        return asyncio.run(_async_get_updates(token, **kwargs))
+    else:
+        bot = telegram.Bot(token)
+        return bot.get_updates(**kwargs)
 
 
 def __virtual__():
@@ -82,8 +103,7 @@ def beacon(config):
     output = {}
     output["msgs"] = []
 
-    bot = telegram.Bot(config["token"])
-    updates = bot.get_updates(limit=100, timeout=0)
+    updates = _get_updates(config["token"], limit=100, timeout=0)
 
     log.debug("Num updates: %d", len(updates))
     if not updates:
@@ -101,7 +121,7 @@ def beacon(config):
             output["msgs"].append(message.to_dict())
 
     # mark in the server that previous messages are processed
-    bot.get_updates(offset=latest_update_id + 1)
+    _get_updates(config["token"], offset=latest_update_id + 1)
 
     log.debug("Emitting %d messages.", len(output["msgs"]))
     if output["msgs"]:

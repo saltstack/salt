@@ -1,7 +1,5 @@
 # Cloud tests requirements
---constraint=py{py_version}/linux.txt
-
-apache-libcloud>=2.5.0
+apache-libcloud>=3.8.0
 netaddr
 profitbricks
 pypsexec

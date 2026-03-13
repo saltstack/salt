@@ -292,27 +292,29 @@ Private key:
     - algo: ec
     - backup: true
     - new: true
-    - encoding: pkcs12
+    - encoding: pem
+    - pkcs12_encryption_compat: true
     {{% if salt['file.file_exists']('{tmp_path}/priv.key') -%}}
     - prereq:
-      - x509: {tmp_path}/cert.pem
+      - x509: {tmp_path}/cert.p12
     {{%- endif %}}
 
 Certificate:
   x509.certificate_managed:
-    - name: {tmp_path}/cert
+    - name: {tmp_path}/cert.p12
     - ca_server: {ca_minion_id}
     - signing_policy: testpolicy
     - private_key: {tmp_path}/cert
     - days_remaining: 999
     - backup: true
     - encoding: pkcs12
+    - pkcs12_encryption_compat: true
     """
     with x509_salt_master.state_tree.base.temp_file("manage_cert.sls", state):
         ret = x509_salt_call_cli.run("state.apply", "manage_cert")
         assert ret.returncode == 0
         assert ret.data[next(iter(ret.data))]["changes"]
-        assert (tmp_path / "cert").exists()
+        assert (tmp_path / "cert.p12").exists()
         yield
 
 
@@ -694,16 +696,44 @@ def test_privkey_new_with_prereq(x509_salt_call_cli, tmp_path):
     CRYPTOGRAPHY_VERSION[0] < 36,
     reason="Complete PKCS12 deserialization requires cryptography v36+",
 )
-def test_privkey_new_with_prereq_pkcs12(x509_salt_call_cli, tmp_path):
-    cert_cur = _get_cert(tmp_path / "cert", encoding="pkcs12").cert.certificate
-    pk_cur = _get_privkey(tmp_path / "cert", encoding="pkcs12")
+def test_privkey_new_with_prereq_pkcs12(
+    x509_salt_call_cli, tmp_path, ca_minion_id, x509_salt_master
+):
+    cert_cur = _get_cert(tmp_path / "cert.p12", encoding="pkcs12").cert.certificate
+    pk_cur = _get_privkey(tmp_path / "cert.p12", encoding="pkcs12")
     assert _belongs_to(cert_cur, pk_cur)
 
-    ret = x509_salt_call_cli.run("state.apply", "manage_cert")
-    assert ret.returncode == 0
-    assert ret.data[next(iter(ret.data))]["changes"]
-    cert_new = _get_cert(tmp_path / "cert", encoding="pkcs12").cert.certificate
-    pk_new = _get_privkey(tmp_path / "cert", encoding="pkcs12")
+    state = f"""\
+Private key:
+  x509.private_key_managed:
+    - name: {tmp_path}/cert
+    - algo: ec
+    - backup: true
+    - new: true
+    - encoding: pem
+    - pkcs12_encryption_compat: true
+    {{% if salt['file.file_exists']('{tmp_path}/cert') -%}}
+    - prereq:
+      - x509: {tmp_path}/cert.p12
+    {{%- endif %}}
+
+Certificate:
+  x509.certificate_managed:
+    - name: {tmp_path}/cert.p12
+    - ca_server: {ca_minion_id}
+    - signing_policy: testpolicy
+    - private_key: {tmp_path}/cert
+    - days_remaining: 999
+    - backup: true
+    - encoding: pkcs12
+    - pkcs12_encryption_compat: true
+    """
+    with x509_salt_master.state_tree.base.temp_file("manage_cert.sls", state):
+        ret = x509_salt_call_cli.run("state.apply", "manage_cert")
+        assert ret.returncode == 0
+        assert ret.data[next(iter(ret.data))]["changes"]
+    cert_new = _get_cert(tmp_path / "cert.p12", encoding="pkcs12").cert.certificate
+    pk_new = _get_privkey(tmp_path / "cert.p12", encoding="pkcs12")
     assert _belongs_to(cert_new, pk_new)
     assert not _belongs_to(cert_new, pk_cur)
 
