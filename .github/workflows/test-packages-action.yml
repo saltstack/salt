@@ -145,6 +145,11 @@ jobs:
         run: |
           /usr/bin/docker start ${{ github.run_id }}_salt-test-pkg
 
+      - name: Fix PhotonOS password expiration
+        if: startsWith(matrix.slug, 'photonos-')
+        run: |
+          docker exec ${{ github.run_id }}_salt-test-pkg chage -I -1 -m 0 -M 99999 -E -1 root
+
       - name: Decompress .nox Directory
         run: |
           docker exec ${{ github.run_id}}_salt-test-pkg python3 -m nox --force-color -e decompress-dependencies -- linux ${{ matrix.arch }}
