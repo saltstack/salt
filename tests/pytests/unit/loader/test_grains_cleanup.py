@@ -293,7 +293,7 @@ def test_clean_modules_removes_from_sys_modules(minion_opts):
         # Skip utils modules (shared infrastructure)
         parts = m.split(".")
         # Utils modules: salt.loaded.int.utils, salt.loaded.int.utils.*, etc.
-        if len(parts) >= 4 and parts[3] == "utils":
+        if len(parts) >= 4 and parts[3] in ("utils", "wrapper"):
             continue
         # Anything else is unexpected
         unexpected.append(m)

@@ -264,6 +264,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     for package in package_info["casks"]:
         pkg_version = package["installed"]
+        if pkg_version is None:
+            pkg_version = ""
         pkg_names = {package["full_token"], package["token"]}
         pkg_tap = package.get("tap", None)
         # The following name is appended to maintain backward compatibility
@@ -273,7 +275,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             # Tap is null when the package is from homebrew/cask.
             pkg_tap = "homebrew/cask"
         pkg_names.add("/".join([pkg_tap, package["token"]]))
-        for pkg_name in pkg_names:
+        for pkg_name in [pkg for pkg in pkg_names if pkg is not None]:
             __salt__["pkg_resource.add_pkg"](ret, pkg_name, pkg_version)
 
     __salt__["pkg_resource.sort_pkglist"](ret)

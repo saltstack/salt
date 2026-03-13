@@ -122,66 +122,76 @@ def _deleted_files():
     for proc in psutil.process_iter():  # pylint: disable=too-many-nested-blocks
         try:
             pinfo = proc.as_dict(attrs=["pid", "name"])
-            try:
-                with salt.utils.files.fopen(
-                    "/proc/{}/maps".format(pinfo["pid"])
-                ) as maps:  # pylint: disable=resource-leakage
-                    dirpath = "/proc/" + str(pinfo["pid"]) + "/fd/"
-                    listdir = os.listdir(dirpath)
-                    maplines = maps.readlines()
-            except OSError:
-                yield False
+        except (psutil.NoSuchProcess, psutil.ZombieProcess, psutil.AccessDenied):
+            continue
 
-            # /proc/PID/maps
-            mapline = re.compile(
-                r"^[\da-f]+-[\da-f]+ [r-][w-][x-][sp-] "
-                r"[\da-f]+ [\da-f]{2}:[\da-f]{2} (\d+) *(.+)( \(deleted\))?\n$"
-            )
+        try:
+            with salt.utils.files.fopen(
+                "/proc/{}/maps".format(pinfo["pid"])
+            ) as maps:  # pylint: disable=resource-leakage
+                dirpath = "/proc/" + str(pinfo["pid"]) + "/fd/"
+                listdir = os.listdir(dirpath)
+                maplines = maps.readlines()
+        except (
+            OSError,
+            psutil.NoSuchProcess,
+            psutil.ZombieProcess,
+            psutil.AccessDenied,
+        ):
+            continue
 
-            for line in maplines:
-                line = salt.utils.stringutils.to_unicode(line)
-                matched = mapline.match(line)
-                if not matched:
-                    continue
-                path = matched.group(2)
-                if not path:
-                    continue
-                valid = _valid_deleted_file(path)
-                if not valid:
-                    continue
-                val = (pinfo["name"], pinfo["pid"], path[0:-10])
-                if val not in deleted_files:
-                    deleted_files.append(val)
-                    yield val
+        # /proc/PID/maps
+        mapline = re.compile(
+            r"^[\da-f]+-[\da-f]+ [r-][w-][x-][sp-] "
+            r"[\da-f]+ [\da-f]{2}:[\da-f]{2} (\d+) *(.+)( \(deleted\))?\n$"
+        )
 
-            # /proc/PID/fd
-            try:
-                for link in listdir:
-                    path = dirpath + link
-                    readlink = os.readlink(path)
-                    filenames = []
+        for line in maplines:
+            line = salt.utils.stringutils.to_unicode(line)
+            matched = mapline.match(line)
+            if not matched:
+                continue
+            path = matched.group(2)
+            if not path:
+                continue
+            valid = _valid_deleted_file(path)
+            if not valid:
+                continue
+            val = (pinfo["name"], pinfo["pid"], path[0:-10])
+            if val not in deleted_files:
+                deleted_files.append(val)
+                yield val
 
-                    if os.path.isfile(readlink):
-                        filenames.append(readlink)
-                    elif os.path.isdir(readlink) and readlink != "/":
-                        for root, dummy_dirs, files in salt.utils.path.os_walk(
-                            readlink, followlinks=True
-                        ):
-                            for name in files:
-                                filenames.append(os.path.join(root, name))
+        # /proc/PID/fd
+        try:
+            for link in listdir:
+                path = dirpath + link
+                readlink = os.readlink(path)
+                filenames = []
 
-                    for filename in filenames:
-                        valid = _valid_deleted_file(filename)
-                        if not valid:
-                            continue
-                        val = (pinfo["name"], pinfo["pid"], filename)
-                        if val not in deleted_files:
-                            deleted_files.append(val)
-                            yield val
-            except OSError:
-                pass
+                if os.path.isfile(readlink):
+                    filenames.append(readlink)
+                elif os.path.isdir(readlink) and readlink != "/":
+                    for root, dummy_dirs, files in salt.utils.path.os_walk(
+                        readlink, followlinks=True
+                    ):
+                        for name in files:
+                            filenames.append(os.path.join(root, name))
 
-        except psutil.NoSuchProcess:
+                for filename in filenames:
+                    valid = _valid_deleted_file(filename)
+                    if not valid:
+                        continue
+                    val = (pinfo["name"], pinfo["pid"], filename)
+                    if val not in deleted_files:
+                        deleted_files.append(val)
+                        yield val
+        except (
+            OSError,
+            psutil.NoSuchProcess,
+            psutil.ZombieProcess,
+            psutil.AccessDenied,
+        ):
             pass
 
 

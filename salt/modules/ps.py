@@ -38,7 +38,7 @@ def _get_proc_cmdline(proc):
     """
     try:
         return salt.utils.data.decode(proc.cmdline())
-    except (psutil.NoSuchProcess, psutil.AccessDenied):
+    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
         return []
 
 
@@ -50,7 +50,7 @@ def _get_proc_create_time(proc):
     """
     try:
         return salt.utils.data.decode(proc.create_time())
-    except (psutil.NoSuchProcess, psutil.AccessDenied):
+    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
         return None
 
 
@@ -62,7 +62,7 @@ def _get_proc_name(proc):
     """
     try:
         return salt.utils.data.decode(proc.name())
-    except (psutil.NoSuchProcess, psutil.AccessDenied):
+    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
         return []
 
 
@@ -74,7 +74,7 @@ def _get_proc_status(proc):
     """
     try:
         return salt.utils.data.decode(proc.status())
-    except (psutil.NoSuchProcess, psutil.AccessDenied):
+    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
         return None
 
 
@@ -86,7 +86,7 @@ def _get_proc_username(proc):
     """
     try:
         return salt.utils.data.decode(proc.username())
-    except (psutil.NoSuchProcess, psutil.AccessDenied, KeyError):
+    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess, KeyError):
         return None
 
 
@@ -756,15 +756,16 @@ def status(status):
         raise SaltInvocationError("Filter is required for ps.status")
     else:
         try:
-            list_of_processes = psutil.process_iter(["pid", "name", "status"])
-            ret = [
-                proc.as_dict(("pid", "name"))
-                for proc in list_of_processes
-                # It's possible in the future we may want to filter by `in`
-                # instead - which will allow the user to request a number of
-                # statuses. But for now this is how it was originally written.
-                if proc.info["status"] == status
-            ]
+            for proc in psutil.process_iter(["pid", "name", "status"]):
+                try:
+                    if proc.info["status"] == status:
+                        ret.append(proc.as_dict(("pid", "name")))
+                except (
+                    psutil.NoSuchProcess,
+                    psutil.AccessDenied,
+                    psutil.ZombieProcess,
+                ):
+                    continue
         except (psutil.AccessDenied, psutil.NoSuchProcess):
             # AccessDenied may be returned from old versions of psutil on Windows systems
             raise CommandExecutionError("Psutil did not return a list of processes")

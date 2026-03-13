@@ -24,6 +24,7 @@ import salt.defaults.exitcodes
 import salt.payload
 import salt.state
 import salt.utils.args
+import salt.utils.atomicfile
 import salt.utils.data
 import salt.utils.event
 import salt.utils.files
@@ -33,6 +34,7 @@ import salt.utils.jid
 import salt.utils.json
 import salt.utils.msgpack
 import salt.utils.platform
+import salt.utils.process
 import salt.utils.state
 import salt.utils.stringutils
 import salt.utils.url
@@ -125,11 +127,15 @@ def _wait(jid, max_queue=0):
     """
     if jid is None:
         jid = salt.utils.jid.gen_jid(__opts__)
-    states = _prior_running_states(jid)
+
+    with salt.utils.state.acquire_queue_lock(__opts__):
+        states = _prior_running_states(jid)
+
     if not max_queue or len(states) < max_queue:
         while states:
             time.sleep(1)
-            states = _prior_running_states(jid)
+            with salt.utils.state.acquire_queue_lock(__opts__):
+                states = _prior_running_states(jid)
         return True
     return False
 
@@ -379,7 +385,21 @@ def running(concurrent=False):
     if concurrent:
         return ret
     active = __salt__["saltutil.is_running"]("state.*")
+
+    # Get the current JID to avoid false positives (self-detection)
+    # This prevents failures when state.apply(queue=False) is called
+    # but the job has a placeholder in the process table.
+    current_jid = __opts__.get("jid")
+
     for data in active:
+        # Ignore self
+        if current_jid is not None:
+            try:
+                if int(data.get("jid")) == int(current_jid):
+                    continue
+            except (ValueError, TypeError):
+                pass
+
         err = (
             'The function "{}" is running as PID {} and was started at {} '
             "with jid {}".format(
@@ -393,22 +413,56 @@ def running(concurrent=False):
     return ret
 
 
+def _acquire_queue_lock():
+    """
+    Acquire the state queue lock
+    """
+    return salt.utils.state.acquire_queue_lock(__opts__)
+
+
+def _set_queue_flag(jid):
+    """
+    Set a flag to indicate that the state run is checking the queue
+    """
+    if jid is None:
+        return
+    queue_dir = os.path.join(__opts__["cachedir"], "state_queue")
+    queue_path = os.path.join(queue_dir, str(jid))
+    if not os.path.exists(queue_dir):
+        try:
+            os.makedirs(queue_dir)
+        except OSError:
+            pass
+
+    with _acquire_queue_lock():
+        with salt.utils.files.fopen(queue_path, "w+") as fp_:
+            fp_.write(str(os.getpid()))
+
+
+def _clear_queue_flag(jid):
+    """
+    Clear the queue flag
+    """
+    if jid is None:
+        return
+    queue_dir = os.path.join(__opts__["cachedir"], "state_queue")
+    queue_path = os.path.join(queue_dir, str(jid))
+
+    with _acquire_queue_lock():
+        if os.path.exists(queue_path):
+            try:
+                os.remove(queue_path)
+            except OSError:
+                pass
+
+
 def _prior_running_states(jid):
     """
     Return a list of dicts of prior calls to state functions.  This function is
     used to queue state calls so only one is run at a time.
     """
-
-    ret = []
     active = __salt__["saltutil.is_running"]("state.*")
-    for data in active:
-        try:
-            data_jid = int(data["jid"])
-        except ValueError:
-            continue
-        if data_jid < int(jid):
-            ret.append(data)
-    return ret
+    return salt.utils.state.check_prior_running_states(__opts__, jid, active)
 
 
 def _check_queue(queue, kwargs):
@@ -420,11 +474,82 @@ def _check_queue(queue, kwargs):
         queue = __salt__["config.option"]("state_queue", False)
 
     if queue is True:
-        _wait(kwargs.get("__pub_jid"))
+        jid = kwargs.get("__pub_jid")
+        if jid is None:
+            # If running locally (salt-call), JID might be in opts or not present.
+            # Fallback to __opts__['jid'] to ensure we have a JID for comparison.
+            jid = __opts__.get("jid")
+
+        with salt.utils.state.acquire_queue_lock(__opts__):
+            states = _prior_running_states(jid)
+            if states:
+                # Conflict found, queue the job
+                queue_dir = os.path.join(__opts__["cachedir"], "state_queue")
+                if not os.path.exists(queue_dir):
+                    try:
+                        os.makedirs(queue_dir)
+                    except OSError:
+                        pass
+
+                # Construct payload to persist
+                # We need to save enough info to re-execute the job
+                # Generate a new JID for the queued execution to ensure it is unique
+                new_jid = salt.utils.jid.gen_jid(__opts__)
+
+                # Remove 'queue' from kwargs to prevent re-queuing logic when executed
+                kwarg = {k: v for k, v in kwargs.items() if not k.startswith("__pub_")}
+                if "queue" in kwarg:
+                    del kwarg["queue"]
+
+                payload = {
+                    "fun": kwargs.get("__pub_fun"),
+                    "arg": kwargs.get("__pub_arg", []),
+                    "tgt": kwargs.get("__pub_tgt"),
+                    "jid": new_jid,
+                    "ret": kwargs.get("__pub_ret", ""),
+                    "user": kwargs.get("__pub_user", "root"),
+                    "kwarg": kwarg,
+                }
+
+                # Use timestamp to ensure FIFO ordering
+                # We use microseconds to avoid collisions
+                fn = f"queued_{int(time.time() * 1000000)}_{new_jid}.p"
+                path = os.path.join(queue_dir, fn)
+
+                try:
+                    tmp_path = path + ".tmp"
+                    with salt.utils.files.fopen(tmp_path, "w+b") as fp_:
+                        salt.payload.dump(payload, fp_)
+                    salt.utils.atomicfile.atomic_rename(tmp_path, path)
+
+                    return {
+                        "result": True,
+                        "comment": "Job queued for execution",
+                        "queued": True,
+                        "changes": {},
+                        "__no_return__": True,
+                    }
+                except OSError:
+                    log.error("Failed to write queue file %s", path)
+                    return {
+                        "result": False,
+                        "comment": "Failed to queue job: unable to write queue file",
+                        "changes": {},
+                    }
+            else:
+                # No conflict, we can run.
+                pass
+
     else:
         queue_ret = False
         if not isinstance(queue, bool) and isinstance(queue, int):
-            queue_ret = _wait(kwargs.get("__pub_jid"), max_queue=queue)
+            jid = kwargs.get("__pub_jid")
+            # For max_queue (int), we retain blocking behavior but use lock
+            _set_queue_flag(jid)
+            try:
+                queue_ret = _wait(jid, max_queue=queue)
+            finally:
+                _clear_queue_flag(jid)
 
         if not queue_ret:
             conflict = running(concurrent=kwargs.get("concurrent", False))
@@ -685,8 +810,10 @@ def apply_(mods=None, **kwargs):
         a value of ``True`` will queue the new state run to begin running once
         the other has finished.
 
-        This option starts a new thread for each queued state run, so use this
-        option sparingly.
+        The queue is implemented as a disk-based FIFO queue, minimizing memory usage
+        regardless of queue depth. Jobs in the state queue are processed by a background
+        thread and will bypass ``process_count_max`` limits when they are
+        ready to execute, ensuring they are not starved by other workloads.
 
         .. versionchanged:: 3006.0
             This parameter can also be set via the ``state_queue`` configuration
@@ -758,8 +885,10 @@ def apply_(mods=None, **kwargs):
         a value of ``True`` will queue the new state run to begin running once
         the other has finished.
 
-        This option starts a new thread for each queued state run, so use this
-        option sparingly.
+        The queue is implemented as a disk-based FIFO queue, minimizing memory usage
+        regardless of queue depth. Jobs in the state queue are processed by a background
+        thread and will bypass ``process_count_max`` limits when they are
+        ready to execute, ensuring they are not starved by other workloads.
 
         .. versionchanged:: 3006.0
             This parameter can also be set via the ``state_queue`` configuration
@@ -1052,8 +1181,10 @@ def highstate(test=None, queue=None, state_events=None, **kwargs):
         a value of ``True`` will queue the new state run to begin running once
         the other has finished.
 
-        This option starts a new thread for each queued state run, so use this
-        option sparingly.
+        The queue is implemented as a disk-based FIFO queue, minimizing memory usage
+        regardless of queue depth. Jobs in the state queue are processed by a background
+        thread and will bypass ``process_count_max`` limits when they are
+        ready to execute, ensuring they are not starved by other workloads.
 
         .. versionchanged:: 3006.0
             This parameter can also be set via the ``state_queue`` configuration
@@ -1262,8 +1393,10 @@ def sls(
         a value of ``True`` will queue the new state run to begin running once
         the other has finished.
 
-        This option starts a new thread for each queued state run, so use this
-        option sparingly.
+        The queue is implemented as a disk-based FIFO queue, minimizing memory usage
+        regardless of queue depth. Jobs in the state queue are processed by a background
+        thread and will bypass ``process_count_max`` limits when they are
+        ready to execute, ensuring they are not starved by other workloads.
 
         .. versionchanged:: 3006.0
             This parameter can also be set via the ``state_queue`` configuration
@@ -1527,8 +1660,10 @@ def top(topfn, test=None, queue=None, **kwargs):
         a value of ``True`` will queue the new state run to begin running once
         the other has finished.
 
-        This option starts a new thread for each queued state run, so use this
-        option sparingly.
+        The queue is implemented as a disk-based FIFO queue, minimizing memory usage
+        regardless of queue depth. Jobs in the state queue are processed by a background
+        thread and will bypass ``process_count_max`` limits when they are
+        ready to execute, ensuring they are not starved by other workloads.
 
         .. versionchanged:: 3006.0
             This parameter can also be set via the ``state_queue`` configuration
