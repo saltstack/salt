@@ -125,7 +125,7 @@ pycparser==2.22
     #   cffi
 pycryptodomex==3.21.0
     # via -r requirements/crypto.txt
-pymssql==2.3.13
+pymssql==2.3.11
     # via -r requirements/base.txt
 pymysql==1.1.1
     # via -r requirements/base.txt

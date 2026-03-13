@@ -39,7 +39,7 @@ packaging==24.0; python_version >= '3.11'
 psutil<6.0.0; python_version <= '3.9'
 psutil>=5.0.0; python_version >= '3.10'
 pymssql>=2.2.1; sys_platform == 'win32' and python_version < '3.11'
-pymssql>=2.3.11; sys_platform == 'win32' and python_version >= '3.11'
+pymssql==2.3.11; sys_platform == 'win32' and python_version >= '3.11'
 pymysql>=1.0.2; sys_platform == 'win32'
 pyopenssl>=25.0.0
 python-dateutil>=2.8.1
