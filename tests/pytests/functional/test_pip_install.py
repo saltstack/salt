@@ -1,4 +1,5 @@
 import getpass
+import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -15,6 +16,11 @@ except ImportError:
 pytestmark = [
     pytest.mark.skipif(HAS_VIRTUALENV is False, reason="virtualenv is not installed"),
 ]
+
+if shutil.which("gcc") is None and shutil.which("cc") is None:
+    pytestmark.append(
+        pytest.mark.skip(reason="A C compiler is required to build some dependencies")
+    )
 
 
 @pytest.fixture(scope="module")
