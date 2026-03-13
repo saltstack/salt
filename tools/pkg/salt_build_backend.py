@@ -93,6 +93,7 @@ def get_install_requires(dist=None):
         req_files = [
             os.path.join(PROJECT_ROOT, "requirements", "base.txt"),
             os.path.join(PROJECT_ROOT, "requirements", "zeromq.txt"),
+            os.path.join(PROJECT_ROOT, "requirements", "crypto.txt"),
         ]
         if is_osx:
             req_files.append(os.path.join(PROJECT_ROOT, "requirements", "darwin.txt"))
@@ -110,6 +111,67 @@ def get_extras_require(dist=None):
     if os.path.exists(crypto_req):
         extras["crypto"] = _parse_requirements_file(crypto_req)
     return extras
+
+
+def get_entry_points(dist=None):
+    is_windows = sys.platform.startswith("win")
+    entrypoints = {
+        "pyinstaller40": [
+            "hook-dirs = salt.utils.pyinstaller:get_hook_dirs",
+        ],
+    }
+    # console scripts common to all scenarios
+    scripts = [
+        "salt-call = salt.scripts:salt_call",
+    ]
+
+    ssh_packaging = False
+    if dist:
+        ssh_packaging = getattr(dist, "ssh_packaging", False)
+    if not ssh_packaging:
+        ssh_packaging = os.path.exists(
+            os.path.join(PROJECT_ROOT, "salt", "_ssh_packaging")
+        )
+
+    if ssh_packaging:
+        scripts.append("salt-ssh = salt.scripts:salt_ssh")
+        if is_windows and not os.environ.get("SALT_BUILD_ALL_BINS"):
+            return {"console_scripts": scripts}
+        scripts.append("salt-cloud = salt.scripts:salt_cloud")
+        entrypoints["console_scripts"] = scripts
+        return entrypoints
+
+    if is_windows and not os.environ.get("SALT_BUILD_ALL_BINS"):
+        scripts.extend(
+            [
+                "salt-cp = salt.scripts:salt_cp",
+                "salt-minion = salt.scripts:salt_minion",
+                "salt-pip = salt.scripts:salt_pip",
+            ]
+        )
+        entrypoints["console_scripts"] = scripts
+        return entrypoints
+
+    # *nix, so, we need all scripts
+    scripts.extend(
+        [
+            "salt = salt.scripts:salt_main",
+            "salt-api = salt.scripts:salt_api",
+            "salt-cloud = salt.scripts:salt_cloud",
+            "salt-cp = salt.scripts:salt_cp",
+            "salt-key = salt.scripts:salt_key",
+            "salt-master = salt.scripts:salt_master",
+            "salt-minion = salt.scripts:salt_minion",
+            "salt-run = salt.scripts:salt_run",
+            "salt-ssh = salt.scripts:salt_ssh",
+            "salt-syndic = salt.scripts:salt_syndic",
+            "spm = salt.scripts:salt_spm",
+            "salt-proxy = salt.scripts:salt_proxy",
+            "salt-pip = salt.scripts:salt_pip",
+        ]
+    )
+    entrypoints["console_scripts"] = scripts
+    return entrypoints
 
 
 def get_scripts(dist=None):

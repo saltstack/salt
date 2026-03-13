@@ -1025,54 +1025,7 @@ class SaltDistribution(distutils.dist.Distribution):
 
     @property
     def _property_entry_points(self):
-        entrypoints = {
-            "pyinstaller40": [
-                "hook-dirs = salt.utils.pyinstaller:get_hook_dirs",
-            ],
-        }
-        # console scripts common to all scenarios
-        scripts = [
-            "salt-call = salt.scripts:salt_call",
-        ]
-        if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
-            scripts.append("salt-ssh = salt.scripts:salt_ssh")
-            if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
-                return {"console_scripts": scripts}
-            scripts.append("salt-cloud = salt.scripts:salt_cloud")
-            entrypoints["console_scripts"] = scripts
-            return entrypoints
-
-        if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
-            scripts.extend(
-                [
-                    "salt-cp = salt.scripts:salt_cp",
-                    "salt-minion = salt.scripts:salt_minion",
-                    "salt-pip = salt.scripts:salt_pip",
-                ]
-            )
-            entrypoints["console_scripts"] = scripts
-            return entrypoints
-
-        # *nix, so, we need all scripts
-        scripts.extend(
-            [
-                "salt = salt.scripts:salt_main",
-                "salt-api = salt.scripts:salt_api",
-                "salt-cloud = salt.scripts:salt_cloud",
-                "salt-cp = salt.scripts:salt_cp",
-                "salt-key = salt.scripts:salt_key",
-                "salt-master = salt.scripts:salt_master",
-                "salt-minion = salt.scripts:salt_minion",
-                "salt-run = salt.scripts:salt_run",
-                "salt-ssh = salt.scripts:salt_ssh",
-                "salt-syndic = salt.scripts:salt_syndic",
-                "spm = salt.scripts:salt_spm",
-                "salt-proxy = salt.scripts:salt_proxy",
-                "salt-pip = salt.scripts:salt_pip",
-            ]
-        )
-        entrypoints["console_scripts"] = scripts
-        return entrypoints
+        return salt_build_backend.get_entry_points(self)
 
     # <---- Dynamic Data ---------------------------------------------------------------------------------------------
 

@@ -255,10 +255,6 @@ kubernetes==35.0.0
     # via -r requirements/static/ci/common.in
 libnacl==2.1.0
     # via -r requirements/static/ci/common.in
-linode-python==1.1.1
-    # via
-    #   -c requirements/static/pkg/py3.9/linux.txt
-    #   -r requirements/base.txt
 looseversion==1.3.0
     # via
     #   -c requirements/static/pkg/py3.9/linux.txt
@@ -387,6 +383,7 @@ pycparser==2.21
 pycryptodomex==3.23.0
     # via
     #   -c requirements/static/pkg/py3.9/linux.txt
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
 pyeapi==1.0.4
     # via napalm
@@ -596,10 +593,6 @@ textfsm==2.1.0
     #   napalm
     #   netmiko
     #   ntc-templates
-timelib==0.3.0
-    # via
-    #   -c requirements/static/pkg/py3.9/linux.txt
-    #   -r requirements/base.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.in
 tomli==2.2.1
