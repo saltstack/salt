@@ -77,7 +77,7 @@ def salt_test_upgrade(
     if platform.is_windows():
         # Terminate master and minion so they don't lock files during the upgrade.
         log.info("Terminating salt-master and salt-minion before upgrade")
-        salt_master.terminate()
+
         salt_minion.terminate()
 
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test

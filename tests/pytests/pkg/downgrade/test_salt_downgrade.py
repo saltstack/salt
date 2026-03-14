@@ -95,7 +95,7 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
         assert old_minion_pids
 
     if platform.is_windows():
-        salt_master.terminate()
+
         salt_minion.terminate()
 
     if platform.is_windows():
