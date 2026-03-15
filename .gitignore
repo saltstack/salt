@@ -1,3 +1,4 @@
+## Python
 /build
 /src
 __pycache__/
@@ -16,7 +17,6 @@ MANIFEST
 .pytest_cache
 Pipfile.lock
 .mypy_cache/*
-.tools-venvs/
 
 # virtualenv
 # - ignores directories of a virtualenv when you create it right on
@@ -49,7 +49,11 @@ Pipfile.lock
 coverage.xml
 htmlcov/
 
-# IDE files
+# UV
+uv.lock
+
+## IDE files
+## Suggestion: add these to your global gitignore file
 /.settings
 /.project
 /.pydevproject
@@ -58,8 +62,31 @@ htmlcov/
 .ropeproject
 *_flymake.py
 /*.iml
+# Sublime Text
 *.sublime-project
 *.sublime-workspace
+# Vim's default session file
+Session.vim
+# Pycharm
+.idea
+venv/
+.venv/
+# VS Code
+.vscode
+
+## Testing
+# Allow a user to set their own _version.txt for testing
+_version.txt
+# Ignore auto generated _syspaths.py file
+_syspaths.py
+# Ignore grains file written out during tests
+tests/integration/files/conf/grains
+/salt/_syspaths.py
+# Ignore file cache created by jinja tests
+tests/unit/templates/roots
+# Ignore the log directory created by tests
+/logs
+tests/integration/cloud/providers/logs
 
 # ignore ctags file
 tags
@@ -73,62 +100,30 @@ tags
 *.mo
 .doctrees
 
-# Allow a user to set their own _version.txt for testing
-_version.txt
-
-# Ignore auto generated _syspaths.py file
-_syspaths.py
-
-# Ignore grains file written out during tests
-tests/integration/files/conf/grains
-/salt/_syspaths.py
-
 # ignore the local root
 /root/**
-
-# Ignore file cache created by jinja tests
-tests/unit/templates/roots
-
-# Pycharm
-.idea
-venv/
-.venv/
-
-# VS Code
-.vscode
-
-# Ignore the log directory created by tests
-/logs
-tests/integration/cloud/providers/logs
 
 # Private keys from the integration tests
 tests/integration/cloud/providers/pki/minions
 /helpers/
 
-# Ignore tox virtualenvs
+## Tox/Nox virtualenvs
 /.tox/
-
-# Ignore nox virtualenvs
 /.nox/
-
-# Ignore pyenv files
-.python-version
-
-/artifacts/
-requirements/static/*/py*/*.log
-
-# Vim's default session file
-Session.vim
-
-# VM task state directory
-.vms-state/
-
+.tools-venvs/
 # Nox requirements archives
 nox.*.tar.bzip2
 nox.*.tar.gz
 nox.*.tar.xz
 
-# Debian packages
+# Ignore the artifacts directory created by the build system
+/artifacts/
+requirements/static/*/py*/*.log
+
+# VM task state directory
+.vms-state/
+
+## Debian packages
 /debian
 /pkg/debian/.debhelper
 /pkg/debian/*substvars
@@ -143,5 +138,3 @@ nox.*.tar.xz
 /pkg/debian/salt-ssh
 /pkg/debian/salt-syndic
 /pkg/debian/debhelper-build-stamp
-
-.tools-venvs

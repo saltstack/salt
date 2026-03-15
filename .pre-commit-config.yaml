@@ -692,7 +692,6 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-freebsd-crypto-3.9-requirements
         name: FreeBSD CI Py3.9 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
         files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.9/freebsd-crypto\.txt))$
         pass_filenames: false
         args:
