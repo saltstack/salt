@@ -1112,17 +1112,19 @@ def test_minion_grains_refresh_pre_exec_false(minion_opts):
     with patch("salt.loader.grains") as grainsfunc, patch(
         "salt.minion.Minion._target", MagicMock(return_value=True)
     ):
+        loop = tornado.ioloop.IOLoop()
         minion = salt.minion.Minion(
             minion_opts,
             jid_queue=None,
-            io_loop=tornado.ioloop.IOLoop(),
+            io_loop=loop,
             load_grains=False,
         )
         try:
-            minion.io_loop.run_sync(lambda: minion._handle_decoded_payload(mock_data))
+            loop.run_sync(lambda: minion._handle_decoded_payload(mock_data))
             grainsfunc.assert_not_called()
         finally:
             minion.destroy()
+            loop.close(all_fds=True)
 
 
 def test_minion_grains_refresh_pre_exec_true(minion_opts):
@@ -1135,17 +1137,19 @@ def test_minion_grains_refresh_pre_exec_true(minion_opts):
     with patch("salt.loader.grains") as grainsfunc, patch(
         "salt.minion.Minion._target", MagicMock(return_value=True)
     ):
+        loop = tornado.ioloop.IOLoop()
         minion = salt.minion.Minion(
             minion_opts,
             jid_queue=None,
-            io_loop=tornado.ioloop.IOLoop(),
+            io_loop=loop,
             load_grains=False,
         )
         try:
-            minion.io_loop.run_sync(lambda: minion._handle_decoded_payload(mock_data))
+            loop.run_sync(lambda: minion._handle_decoded_payload(mock_data))
             grainsfunc.assert_called()
         finally:
             minion.destroy()
+            loop.close(all_fds=True)
 
 
 @pytest.mark.skip_on_darwin(

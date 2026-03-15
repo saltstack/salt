@@ -516,6 +516,8 @@ def test_get_tops(thin_ctx):
         "requests",
         "urllib3",
     ]
+    if sys.version_info < (3, 13):
+        base_tops.append("backports")
     if salt.utils.thin.has_immutables:
         base_tops.extend(["immutables"])
     tops = []
@@ -628,6 +630,8 @@ def test_get_tops_extra_mods(thin_ctx):
         "foo",
         "bar.py",
     ]
+    if sys.version_info < (3, 13):
+        base_tops.append("backports")
     if salt.utils.thin.has_immutables:
         base_tops.extend(["immutables"])
     libs = salt.utils.thin.find_site_modules("contextvars")
@@ -748,6 +752,8 @@ def test_get_tops_so_mods(thin_ctx):
         "foo.so",
         "bar.so",
     ]
+    if sys.version_info < (3, 13):
+        base_tops.append("backports")
     if salt.utils.thin.has_immutables:
         base_tops.extend(["immutables"])
     libs = salt.utils.thin.find_site_modules("contextvars")

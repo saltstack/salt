@@ -133,7 +133,7 @@ def _wait(jid, max_queue=0):
 
     if not max_queue or len(states) < max_queue:
         while states:
-            time.sleep(1)
+            time.sleep(0.2)
             with salt.utils.state.acquire_queue_lock(__opts__):
                 states = _prior_running_states(jid)
         return True

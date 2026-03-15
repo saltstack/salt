@@ -100,8 +100,7 @@ except ImportError:
     # Python 3.13+ doesn't have backports package
     backports = None
 
-concurrent = None
-
+import concurrent.futures as concurrent
 
 log = logging.getLogger(__name__)
 
@@ -686,18 +685,14 @@ def _discover_saltexts(allowlist=None, blocklist=None):
                 dist_name = next(
                     iter(
                         file.parent.name
-                        for file in entry_point.dist.files
+                        for file in entry_point.dist.files or []
                         if file.parent.suffix == ".dist-info"
                     )
                 )
             except StopIteration:
-                # This should never happen since we have the data to arrive here
-                log.debug(
-                    "Skipping entry point '%s' of '%s': Failed discovering dist-info",
-                    entry_point.name,
-                    entry_point.dist.name,
-                )
-                continue
+                # This can happen if dist.files is None (e.g. editable install)
+                # Fallback to dist.name
+                dist_name = entry_point.dist.name
             loaded_saltexts[entry_point.dist.name] = {
                 "name": dist_name,
                 "entrypoints": {},

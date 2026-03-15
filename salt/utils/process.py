@@ -1189,16 +1189,20 @@ class SubprocessList:
     def cleanup(self):
         with self.lock:
             for proc in self.processes[:]:
-                proc.join(0.01)
-                if hasattr(proc, "exitcode"):
-                    # Only processes have exitcode and a close method, threads
-                    # do not.
-                    if proc.exitcode is None:
-                        continue
-                    proc.close()
-                else:
-                    if proc.is_alive():
-                        continue
+                try:
+                    proc.join(0.01)
+                    if hasattr(proc, "exitcode"):
+                        # Only processes have exitcode and a close method, threads
+                        # do not.
+                        if proc.exitcode is None:
+                            continue
+                        proc.close()
+                    else:
+                        if proc.is_alive():
+                            continue
+                except (ValueError, OSError):
+                    # Process may be closed or already cleaned up
+                    pass
                 self.processes.remove(proc)
                 self.count -= 1
                 log.debug("Subprocess %s cleaned up", proc.name)

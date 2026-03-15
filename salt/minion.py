@@ -1995,41 +1995,6 @@ class Minion(MinionBase):
         # Execute the job and get the process handle
         proc = self._invoke_execution(data)
 
-        # Write placeholder proc file with the ACTUAL PID to prevent "Invisible Gap"
-        # This ensures that when the child starts and checks 'running()', it sees itself.
-        if proc:
-            proc_dir = os.path.join(self.opts["cachedir"], "proc")
-            if not os.path.isdir(proc_dir):
-                try:
-                    os.makedirs(proc_dir)
-                except OSError:
-                    pass
-
-            proc_fn = os.path.join(proc_dir, str(data["jid"]))
-
-            # Use the real PID from the handle (multiprocessing) or current PID (threading)
-            real_pid = getattr(proc, "pid", os.getpid())
-            if real_pid is None:
-                real_pid = os.getpid()
-
-            placeholder_data = data.copy()
-            placeholder_data["pid"] = real_pid
-
-            try:
-                with salt.utils.files.fopen(proc_fn, "w+b") as fp_:
-                    salt.payload.dump(placeholder_data, fp_)
-            except OSError:
-                log.error("Failed to write placeholder proc file %s", proc_fn)
-
-        # Now that the placeholder proc file is written, we can safely delete
-        # the running_ queue file to close the "invisible gap".
-        for qf in ("_job_queue_file", "_state_queue_file"):
-            if qf in data:
-                try:
-                    os.remove(data[qf])
-                except OSError:
-                    pass
-
     def _queue_job(self, data):
         """
         Queue a job to disk because process_count_max is reached.
@@ -2041,8 +2006,8 @@ class Minion(MinionBase):
             except OSError:
                 pass
 
-        # Use timestamp to ensure FIFO ordering
-        # We use microseconds to avoid collisions
+        # Use timestamp first to ensure strict FIFO ordering
+        # and suffix with JID to ensure uniqueness
         jid = data.get("jid")
         fn = f"queued_{int(time.time() * 1000000)}_{jid}.p"
         path = os.path.join(queue_dir, fn)
@@ -2243,7 +2208,7 @@ class Minion(MinionBase):
         """
         if "process_queue" not in self.periodic_callbacks:
             self.add_periodic_callback(
-                "process_queue", self.process_process_queue, interval=0.3
+                "process_queue", self.process_process_queue, interval=0.2
             )
 
     def process_process_queue(self):
@@ -2255,14 +2220,13 @@ class Minion(MinionBase):
             return
 
         self._process_queue_processing_active = True
-        self.io_loop.spawn_callback(self._process_process_queue_async)
+        self.io_loop.create_task(self._process_process_queue_async())
 
-    @tornado.gen.coroutine
-    def _process_process_queue_async(self):
+    async def _process_process_queue_async(self):
         """
         Async body of process_process_queue.
         """
-        yield self._process_process_queue_async_impl()
+        await self._process_process_queue_async_impl()
 
     async def _process_process_queue_async_impl(self):
         """
@@ -2387,27 +2351,31 @@ class Minion(MinionBase):
                                 pass
                             continue
 
+                        # Extract JID from filename to ensure the execution JID matches the
+                        # queuing JID used for ordering.
+                        try:
+                            parts = fn.split("_")
+                            if len(parts) >= 3:
+                                jid_str = parts[2]
+                                if jid_str.endswith(".p"):
+                                    jid_str = jid_str[:-2]
+                                data["jid"] = jid_str
+                        except (ValueError, IndexError):
+                            pass
+
                         # Mark to bypass checks (we already checked count)
                         data["__ignore_process_count_max"] = True
 
                         log.info("Re-submitting queued job %s", data.get("jid"))
 
                         if hasattr(self, "io_loop"):
-                            self.io_loop.spawn_callback(
-                                self._handle_decoded_payload, data
-                            )
+                            self.io_loop.create_task(self._handle_decoded_payload(data))
                         else:
-                            self.io_loop.spawn_callback(
-                                self._handle_decoded_payload, data
-                            )
+                            self.io_loop.create_task(self._handle_decoded_payload(data))
 
-                        # Rename file to running_ to avoid duplicate execution
-                        # and to close the invisible gap for check_prior_running_states
-                        running_fn = fn.replace("queued_", "running_", 1)
-                        running_path = os.path.join(queue_dir, running_fn)
+                        # Remove from queue
                         try:
-                            os.rename(path, running_path)
-                            data["_job_queue_file"] = running_path
+                            os.remove(path)
                         except OSError:
                             pass
 
@@ -2539,32 +2507,32 @@ class Minion(MinionBase):
         minion_instance.gen_modules()
         fn_ = os.path.join(minion_instance.proc_dir, str(data["jid"]))
 
-        if opts.get("multiprocessing", True):
-            salt.utils.process.appendproctitle(f"{cls.__name__}._thread_return")
-
-        sdata = {"pid": os.getpid()}
-        sdata.update(data)
-        log.info("Starting a new job %s with PID %s", data["jid"], sdata["pid"])
-        with salt.utils.files.fopen(fn_, "w+b") as fp_:
-            fp_.write(salt.payload.dumps(sdata))
-        ret = {"success": False}
-        function_name = data["fun"]
-        function_args = data["arg"]
-        executors = (
-            data.get("module_executors")
-            or getattr(minion_instance, "module_executors", [])
-            or opts.get("module_executors", ["direct_call"])
-        )
-        allow_missing_funcs = any(
-            [
-                minion_instance.executors[f"{executor}.allow_missing_func"](
-                    function_name
-                )
-                for executor in executors
-                if f"{executor}.allow_missing_func" in minion_instance.executors
-            ]
-        )
         try:
+            if opts.get("multiprocessing", True):
+                salt.utils.process.appendproctitle(f"{cls.__name__}._thread_return")
+
+            sdata = {"pid": os.getpid()}
+            sdata.update(data)
+            log.info("Starting a new job %s with PID %s", data["jid"], sdata["pid"])
+            with salt.utils.files.fopen(fn_, "w+b") as fp_:
+                fp_.write(salt.payload.dumps(sdata))
+            ret = {"success": False}
+            function_name = data["fun"]
+            function_args = data["arg"]
+            executors = (
+                data.get("module_executors")
+                or getattr(minion_instance, "module_executors", [])
+                or opts.get("module_executors", ["direct_call"])
+            )
+            allow_missing_funcs = any(
+                [
+                    minion_instance.executors[f"{executor}.allow_missing_func"](
+                        function_name
+                    )
+                    for executor in executors
+                    if f"{executor}.allow_missing_func" in minion_instance.executors
+                ]
+            )
             if (
                 function_name in minion_instance.functions
                 or allow_missing_funcs is True
@@ -3851,16 +3819,16 @@ class Minion(MinionBase):
             return
 
         self._state_queue_processing_active = True
-        self.io_loop.spawn_callback(self._process_state_queue_async)
+        self.io_loop.create_task(self._process_state_queue_async())
 
-    @tornado.gen.coroutine
-    def _process_state_queue_async(self):
+    async def _process_state_queue_async(self):
         """
         Async body of process_state_queue.
         """
-        yield self._process_state_queue_async_impl()
+        await self._process_state_queue_async_impl()
 
     async def _process_state_queue_async_impl(self):
+        log.trace("State queue processing firing")
         try:
             queue_dir = os.path.join(self.opts["cachedir"], "state_queue")
             if not os.path.exists(queue_dir):
@@ -3880,6 +3848,8 @@ class Minion(MinionBase):
 
                     if not files:
                         return
+
+                    log.debug("State queue processing: found queued files: %s", files)
 
                     # Sort by JID to ensure we process in the order expected by the state system's
                     # dependency check (_prior_running_states), which relies on JID comparison.
@@ -3973,10 +3943,7 @@ class Minion(MinionBase):
                         return
 
                     # Extract JID from filename to ensure the execution JID matches the
-                    # queuing JID used for ordering. Ideally these would match in the
-                    # payload, but state.py generates a new JID for the payload while
-                    # using the original JID for the filename. This mismatch causes
-                    # the loop (Running New > Queued Old).
+                    # queuing JID used for ordering.
                     try:
                         parts = fn.split("_")
                         if len(parts) >= 3:
@@ -3999,25 +3966,21 @@ class Minion(MinionBase):
                         data.get("jid"),
                     )
 
-                    # Rename file to running_ to close the invisible gap
-                    running_fn = fn.replace("queued_", "running_", 1)
-                    running_path = os.path.join(queue_dir, running_fn)
-                    try:
-                        os.rename(path, running_path)
-                        data["_state_queue_file"] = running_path
-                    except OSError as exc:
-                        log.error("Failed to rename queued job file %s: %s", path, exc)
-                        return
-
                     # Mark job to bypass process_count_max checks since it has already waited
                     # its turn in the State queue and we don't want it to starve.
                     data["__ignore_process_count_max"] = True
 
                     if hasattr(self, "io_loop"):
-                        self.io_loop.spawn_callback(self._handle_decoded_payload, data)
+                        self.io_loop.create_task(self._handle_decoded_payload(data))
                     else:
                         # Fallback if io_loop is not explicit (should not happen in Minion)
-                        self.io_loop.spawn_callback(self._handle_decoded_payload, data)
+                        self.io_loop.create_task(self._handle_decoded_payload(data))
+
+                    # Remove from queue
+                    try:
+                        os.remove(path)
+                    except OSError:
+                        pass
 
             except (OSError, salt.exceptions.FileLockError) as exc:
                 if isinstance(exc, salt.exceptions.FileLockError) or (
@@ -4096,7 +4059,7 @@ class Minion(MinionBase):
         self.setup_scheduler()
         self.setup_state_queue_processing()
         self.setup_process_queue_processing()
-        self.add_periodic_callback("cleanup", self.cleanup_subprocesses)
+        self.add_periodic_callback("cleanup", self.cleanup_subprocesses, interval=0.2)
 
         # schedule the stuff that runs every interval
         ping_interval = self.opts.get("ping_interval", 0) * 60
