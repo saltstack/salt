@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 import salt_tools.utils
 import salt_tools.utils.gh
 from ptscripts import Context, command_group
-from tools.precommit.workflows import (
+from salt_tools.precommit.workflows import (
     PLATFORMS,
     TEST_SALT_LISTING,
     TEST_SALT_PKG_LISTING,

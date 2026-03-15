@@ -8,9 +8,9 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+import salt_tools.precommit.workflows
 import salt_tools.utils
 import salt_tools.utils.gh
-import tools.precommit.workflows
 from ptscripts import Context, command_group
 from salt_tools.utils import ExitCode
 
@@ -51,7 +51,7 @@ ts = command_group(name="ts", help="Test Suite Related Commands", description=__
         "slug": {
             "help": "The OS slug",
             "required": True,
-            "choices": sorted(tools.precommit.workflows.slugs()),
+            "choices": sorted(salt_tools.precommit.workflows.slugs()),
         },
         "pkg": {
             "help": "Also download package test artifacts",

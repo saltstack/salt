@@ -20,7 +20,7 @@ import salt_tools.utils
 import salt_tools.utils.gh
 import yaml
 from ptscripts import Context, command_group
-from tools.precommit.workflows import TEST_SALT_LISTING, TEST_SALT_PKG_LISTING
+from salt_tools.precommit.workflows import TEST_SALT_LISTING, TEST_SALT_PKG_LISTING
 
 if sys.version_info < (3, 11):
     from typing_extensions import NotRequired, TypedDict
@@ -400,7 +400,8 @@ def define_cache_seed(ctx: Context, static_cache_seed: str, randomize: bool = Fa
             gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
         except Exception as exc:
             ctx.error(
-                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc  # type: ignore[arg-type]
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n",
+                exc,  # type: ignore[arg-type]
             )
             ctx.exit(1)
 
@@ -473,7 +474,8 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
                 codecov_args.extend(["--parent", pr_event_data["base"]["sha"]])
         except Exception as exc:
             ctx.error(
-                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc  # type: ignore[arg-type]
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n",
+                exc,  # type: ignore[arg-type]
             )
 
     sleep_time = 15
@@ -952,7 +954,6 @@ def workflow_config(
             ]
         for version in str_releases:
             for platform in platforms:
-
                 if platform == "windows" and "3006" in version:
                     # The salt_master_cli.py script used by the windows pakcage
                     # tests doesn't play nice with trying to go from 3006.x to

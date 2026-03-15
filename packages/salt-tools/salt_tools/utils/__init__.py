@@ -29,7 +29,7 @@ if sys.version_info < (3, 11):
 else:
     from typing import TypedDict  # pylint: disable=no-name-in-module
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
+REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent.parent
 GPG_KEY_FILENAME = "SALT-PROJECT-GPG-PUBKEY-2023"
 SPB_ENVIRONMENT = os.environ.get("SPB_ENVIRONMENT") or "test"
 STAGING_BUCKET_NAME = f"salt-project-{SPB_ENVIRONMENT}-salt-artifacts-staging"
@@ -83,7 +83,7 @@ class Linux(OS):
 
     @property
     def job_name(self):
-        return f"test-{ self.slug.replace('.', '') }{'-fips' if self.fips else ''}"
+        return f"test-{self.slug.replace('.', '')}{'-fips' if self.fips else ''}"
 
     def as_dict(self):
         return {
@@ -100,10 +100,9 @@ class Linux(OS):
 
 @attr.s(frozen=True, slots=True)
 class LinuxPkg(Linux):
-
     @property
     def job_name(self):
-        return f"test-pkg-{ self.slug.replace('.', '') }{ '-fips' if self.fips else ''}"
+        return f"test-pkg-{self.slug.replace('.', '')}{'-fips' if self.fips else ''}"
 
 
 @attr.s(frozen=True, slots=True)
@@ -117,7 +116,7 @@ class MacOS(OS):
 
     @property
     def job_name(self):
-        return f"test-{ self.slug.replace('.', '') }"
+        return f"test-{self.slug.replace('.', '')}"
 
     def as_dict(self):
         return {
@@ -133,10 +132,9 @@ class MacOS(OS):
 
 @attr.s(frozen=True, slots=True)
 class MacOSPkg(MacOS):
-
     @property
     def job_name(self):
-        return f"test-pkg-{ self.slug.replace('.', '') }"
+        return f"test-pkg-{self.slug.replace('.', '')}"
 
 
 @attr.s(frozen=True, slots=True)
@@ -148,7 +146,7 @@ class Windows(OS):
 
     @property
     def job_name(self):
-        return f"test-{ self.slug.replace('.', '') }"
+        return f"test-{self.slug.replace('.', '')}"
 
     def as_dict(self):
         return {
@@ -163,10 +161,9 @@ class Windows(OS):
 
 @attr.s(frozen=True, slots=True)
 class WindowsPkg(Windows):
-
     @property
     def job_name(self):
-        return f"test-pkg-{ self.slug.replace('.', '') }-{ self.pkg_type.lower() }"
+        return f"test-pkg-{self.slug.replace('.', '')}-{self.pkg_type.lower()}"
 
 
 class PlatformDefinitions(TypedDict):

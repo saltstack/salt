@@ -7,7 +7,7 @@ import pathlib
 
 import salt_tools.utils
 from ptscripts import Context, command_group
-from tools.precommit import SALT_INTERNAL_LOADERS_PATHS
+from salt_tools.precommit import SALT_INTERNAL_LOADERS_PATHS
 
 SALT_CODE_DIR = salt_tools.utils.REPO_ROOT / "salt"
 
