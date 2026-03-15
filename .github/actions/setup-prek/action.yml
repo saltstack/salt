@@ -1,0 +1,21 @@
+---
+name: setup-prek
+description: Setup 'prek'
+
+inputs:
+  version:
+    description: Prek version to install
+    required: true
+    default: 0.3.5
+
+runs:
+  using: composite
+  steps:
+    - name: Install Prek
+      shell: bash
+      run: |
+        uv pip install prek==${{ inputs.version }}
+    - name: Install Prek Hooks
+      shell: bash
+      run: |
+        prek install --install-hooks
