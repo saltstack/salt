@@ -21,6 +21,8 @@ import tarfile
 import tempfile
 
 import nox.command
+from nox import Session, options
+from nox_uv import session  # noqa: F401
 
 # fmt: off
 if __name__ == "__main__":
@@ -90,6 +92,8 @@ _PYTHON_VERSIONS = ("3", "3.8", "3.9", "3.10", "3.11")
 # Nox options
 #  Reuse existing virtualenvs
 nox.options.reuse_existing_virtualenvs = True
+# Use UV as the venv backend for all sessions
+options.default_venv_backend = "uv"
 
 # Change current directory to REPO_ROOT
 os.chdir(str(REPO_ROOT))

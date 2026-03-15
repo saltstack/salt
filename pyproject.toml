@@ -90,7 +90,7 @@ dependencies = [
     "zipp>=3.19.1",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     # Testing
     "mock>=3.0.0",
@@ -118,14 +118,44 @@ dev = [
     "pyupgrade>=3.0.0",
     # Security
     "bandit>=1.7.0",
-    # Task runner
-    "nox>=2023.0.0",
-    # Pre-commit
-    "pre-commit>=3.0.0",
     # Documentation
     "sphinx>=5.0.0",
     "sphinx-rtd-theme>=1.0.0",
 ]
+nox = [
+    # Task runner with UV support
+    "nox>=2023.0.0; python_version >= '3.9'",
+    "nox-uv>=0.7.0; python_version >= '3.9'",
+]
+test = [
+    "mock>=3.0.0",
+    "pytest>=7.2.0",
+    "pytest-salt-factories>=1.0.3",
+    "pytest-helpers-namespace>=2019.1.8",
+    "pytest-subtests",
+    "pytest-timeout>=2.3.1",
+    "pytest-httpserver",
+    "pytest-custom-exit-code>=0.3",
+    "flaky",
+    "pyfakefs",
+    "trustme",
+    "pytest-skip-markers>=1.5.2; python_version >= '3.8'",
+    "pytest-skip-markers<=1.5.1; python_version < '3.8'",
+    "pytest-shell-utilities<=1.9.0; python_version <= '3.9'",
+    "pytest-shell-utilities>=1.9.7; python_version >= '3.10'",
+    "docker>=7.1.0; python_version >= '3.8'",
+    "docker<7.1.0; python_version < '3.8'",
+]
+lint = [
+    "black>=23.0.0",
+    "isort>=5.0.0",
+    "pylint>=2.16.0",
+    "mypy>=1.0.0",
+    "pyupgrade>=3.0.0",
+    "bandit>=1.7.0",
+]
+docs = ["sphinx>=5.0.0", "sphinx-rtd-theme>=1.0.0"]
+precommit = ["pre-commit>=3.0.0"]
 
 [project.urls]
 Homepage = "https://saltproject.io"
