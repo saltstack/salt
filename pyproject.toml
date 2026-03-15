@@ -219,12 +219,10 @@ show_error_codes = true
 warn_return_any = true
 warn_unused_configs = true
 
-[tool.mypy."tools.*"]
+[tool.mypy-tools]
 ignore_missing_imports = true
-
-[tool.mypy."tools.precommit.docstrings"]
 follow_imports = "silent"
 
-[tool.mypy."salt.*"]
-follow_imports = "silent"
+[tool.mypy-salt]
 ignore_missing_imports = true
+follow_imports = "silent"

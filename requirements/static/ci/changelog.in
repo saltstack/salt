@@ -1,5 +1,0 @@
---constraint=./py{py_version}/{platform}.txt
-
-towncrier==22.12.0
-looseversion
-packaging

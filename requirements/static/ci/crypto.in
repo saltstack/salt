@@ -1,4 +1,0 @@
---constraint=./py{py_version}/{platform}.txt
-
-m2crypto
-pycryptodome

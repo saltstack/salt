@@ -72,7 +72,7 @@ Session.vim
 venv/
 .venv/
 # VS Code
-.vscode
+.vscode/
 
 ## Testing
 # Allow a user to set their own _version.txt for testing

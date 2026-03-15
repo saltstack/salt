@@ -1,4 +1,0 @@
--r base.txt
--r crypto.txt
-pyzmq>=25.1.2 ; python_version < '3.13'
-pyzmq>=26.2.0 ; python_version >= '3.13'
