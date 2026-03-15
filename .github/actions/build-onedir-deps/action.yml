@@ -30,8 +30,8 @@ runs:
       shell: bash
       run: |
         HASH=$(python3 .github/scripts/hash-files.py \
+          'pyproject.toml' \
           '.relenv/**/*.xz' \
-          'requirements/static/pkg/*/*.txt' \
           'tools/pkg/build.py' \
           '.github/actions/build-onedir-deps/action.yml' \
           '.github/workflows/build-deps-onedir-*.yml' \

@@ -40,8 +40,11 @@ Pipfile.lock
 /venv/
 /doc/man/*
 
+## Build
 # setuptools stuff
 *.egg-info
+# Artifacts directory created by the build system
+/artifacts/
 
 # code coverage outputs genereated by coverage.py
 .coverage
@@ -116,9 +119,7 @@ nox.*.tar.bzip2
 nox.*.tar.gz
 nox.*.tar.xz
 
-# Ignore the artifacts directory created by the build system
-/artifacts/
-requirements/static/*/py*/*.log
+
 
 # VM task state directory
 .vms-state/

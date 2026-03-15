@@ -110,11 +110,6 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
 
-      - name: PyPi Proxy
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        run: |
-          sed -i '7s;^;--index-url=${{ vars.PIP_INDEX_URL }} --trusted-host ${{ vars.PIP_TRUSTED_HOST }} --extra-index-url=${{ vars.PIP_EXTRA_INDEX_URL }}\n;' requirements/static/ci/*/*.txt
-
       - name: Setup Python Tools Scripts
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         uses: ./.github/actions/setup-python-tools-scripts

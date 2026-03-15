@@ -105,13 +105,10 @@ def debian(
             )
             env_args.append(f"--prepend-path={cargo_home_bin}")
 
-    env = os.environ.copy()
-    env["PIP_CONSTRAINT"] = str(
-        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
-    )
-
+    # With uv and pyproject.toml, dependencies are managed automatically
+    # No need for PIP_CONSTRAINT or requirements files
     ctx.run("ln", "-sf", "pkg/debian/", ".")
-    ctx.run("debuild", *env_args, "-uc", "-us", env=env)
+    ctx.run("debuild", *env_args, "-uc", "-us")
 
     ctx.info("Done")
 
@@ -182,14 +179,10 @@ def rpm(
         for key, value in new_env.items():
             os.environ[key] = value
 
-    env = os.environ.copy()
-    env["PIP_CONSTRAINT"] = str(
-        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
-    )
+    # With uv and pyproject.toml, dependencies are managed automatically
+    # No need for PIP_CONSTRAINT or requirements files
     spec_file = checkout / "pkg" / "rpm" / "salt.spec"
-    ctx.run(
-        "rpmbuild", "-bb", f"--define=_salt_src {checkout}", str(spec_file), env=env
-    )
+    ctx.run("rpmbuild", "-bb", f"--define=_salt_src {checkout}", str(spec_file))
     if key_id:
         if onci:
             path = "/github/home/rpmbuild/RPMS/"
@@ -642,47 +635,20 @@ def onedir_dependencies(
             "relenv[toolchain]",
         )
 
-    version_info = ctx.run(
-        str(python_bin),
-        "-c",
-        "import sys; print('{}.{}'.format(*sys.version_info))",
-        capture=True,
-    )
-    requirements_version = version_info.stdout.strip().decode()
-    requirements_file = (
-        tools.utils.REPO_ROOT
-        / "requirements"
-        / "static"
-        / "pkg"
-        / f"py{requirements_version}"
-        / f"{platform if platform != 'macos' else 'darwin'}.txt"
-    )
-    _check_pkg_build_files_exist(ctx, requirements_file=requirements_file)
-
-    env["PIP_CONSTRAINT"] = str(
-        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
-    )
+    # Use uv to install dependencies from pyproject.toml and uv.lock
+    # This provides platform-aware, reproducible installs across all platforms
     ctx.run(
-        str(python_bin),
-        "-m",
-        "pip",
-        "install",
-        "-U",
-        "setuptools",
-        "pip",
-        "wheel",
-        env=env,
+        "uv",
+        "sync",
     )
-    ctx.run(
-        str(python_bin),
-        "-m",
-        "pip",
-        "install",
-        *install_args,
-        "-r",
-        str(requirements_file),
-        env=env,
-    )
+    # Install any additional platform-specific requirements if needed
+    if install_args:
+        ctx.run(
+            "uv",
+            "pip",
+            "install",
+            *install_args,
+        )
 
 
 @build.command(

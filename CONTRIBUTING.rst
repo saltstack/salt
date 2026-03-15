@@ -177,8 +177,9 @@ official Salt repo you'll never get ``upstream`` or ``origin`` confused.
 
 Set up ``pre-commit`` and ``nox``
 ---------------------------------
-Here at Salt we use `pre-commit <https://pre-commit.com/>`__ and
-`nox <https://nox.thea.codes/en/stable/>`__ to make it easier for
+Here at Salt we use `pre-commit <https://pre-commit.com/>`__,
+`nox <https://nox.thea.codes/en/stable/>`__, and
+`uv <https://docs.astral.sh/uv/>`__ to make it easier for
 contributors to get quick feedback, for quality control, and to increase
 the chance that your merge request will get reviewed and merged. Nox
 enables us to run multiple different test configurations, as well as
@@ -186,18 +187,25 @@ other common tasks. You can think of it as Make with superpowers.
 Pre-commit does what it sounds like: it configures some Git pre-commit
 hooks to run ``black`` for formatting, ``isort`` for keeping our imports
 sorted, and ``pylint`` to catch issues like unused imports, among
-others. You can easily install them in your virtualenv with:
+others. UV is a fast, modern Python package manager that manages our
+dependencies consistently across all environments.
+
+First, install ``uv``:
 
 ::
 
-   python -m pip install pre-commit nox
-   pre-commit install
+   # On Linux
+   curl -LsSf https://astral.sh/uv/install.sh | sh
 
-.. warning::
-    Currently there is an issue with the pip-tools-compile pre-commit hook on Windows.
-    The details around this issue are included here:
-    https://github.com/saltstack/salt/issues/56642.
-    Please ensure you export ``SKIP=pip-tools-compile`` to skip pip-tools-compile.
+   # On macOS with Homebrew
+   brew install uv
+
+Next, install your development dependencies and set up pre-commit:
+
+::
+
+   uv sync
+   uv run pre-commit install
 
 Now before each commit, it will ensure that your code at least *looks*
 right before you open a pull request. And with that step, it's time to
@@ -341,48 +349,39 @@ documentation:
 
        rm -rf .nox
 
-#. Install `pyenv` for the version of Python needed to run the docs. As of the
-   time of writing, the Salt docs theme is not compatible with Python 3.10, so
-   you'll need to run 3.9 or earlier. For example:
+#. Make sure you have ``uv`` installed:
 
    ::
 
-       pyenv install 3.9.18
-       pyenv virtualenv 3.9.18 salt-docs
-       echo 'salt-docs' > .python-version
+       # On Linux
+       curl -LsSf https://astral.sh/uv/install.sh | sh
 
-#. Activate `pyenv` if it's not auto-activated:
+       # On macOS with Homebrew
+       brew install uv
 
-   ::
-
-       pyenv exec pip install -U pip setuptools wheel
-
-#. Install `nox` into your pyenv environment, which is the utility that will
-   build the Salt documentation:
+#. Install the Salt environment with development dependencies:
 
    ::
 
-       pyenv exec pip install nox
-
+       uv sync
 
 Since we use ``nox``, you can build your docs and view them in your browser
 with this one-liner:
 
 ::
 
-   python -m nox -e 'docs-html(compress=False, clean=False)'; cd doc/_build/html; python -m webbrowser http://localhost:8000/contents.html; python -m http.server
+       uv run nox -s docs
 
 The first time you build the docs, it will take a while because there are a
 *lot* of modules. Maybe you should go grab some dessert if you already finished
-that sandwich. But once nox and Sphinx are done building the docs, python should
-launch your default browser with the URL
-http://localhost:8000/contents.html. Now you can navigate to your docs
-and ensure your changes exist. If you make changes, you can simply run
-this:
+that sandwich. But once nox and Sphinx are done building the docs, a browser
+should automatically open with the URL http://localhost:8000/contents.html.
+Now you can navigate to your docs and ensure your changes exist. If you make
+changes, you can simply re-run the command:
 
 ::
 
-   cd -; python -m nox -e 'docs-html(compress=False, clean=False)'; cd doc/_build/html; python -m http.server
+       uv run nox -s docs
 
 And then refresh your browser to get your updated docs. This one should
 be quite a bit faster since Sphinx won't need to rebuild everything.

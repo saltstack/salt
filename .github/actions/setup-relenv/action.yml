@@ -31,10 +31,15 @@ runs:
 
   steps:
 
+    - name: Setup UV
+      uses: astral-sh/setup-uv@v1
+      with:
+        version: "latest"
+
     - name: Install Relenv
       shell: bash
       run: |
-        python3 -m pip install relenv==${{ inputs.version }}
+        uv pip install relenv==${{ inputs.version }}
 
     - name: Cache Relenv Data Directory
       uses: ./.github/actions/cache
@@ -48,11 +53,11 @@ runs:
       env:
         RELENV_FETCH_VERSION: "${{ inputs.version }}"
       run: |
-        python3 -m pip install relenv[toolchain]
+        uv pip install relenv[toolchain]
 
     - name: Fetch Native Python Build
       shell: bash
       env:
         RELENV_FETCH_VERSION: "${{ inputs.version }}"
       run: |
-        python3 -m relenv fetch --arch=${{ inputs.arch }} --python=${{ inputs.python-version }}
+        uv run relenv fetch --arch=${{ inputs.arch }} --python=${{ inputs.python-version }}

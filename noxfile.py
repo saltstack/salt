@@ -223,14 +223,17 @@ def _install_requirements(
     onedir=False,
 ):
     """Install dependencies using UV.
-    
+
     UV reads from pyproject.toml and uv.lock for deterministic, reproducible installs.
     The old requirements_type parameter is kept for backward compatibility but unused.
     """
     if onedir and IS_LINUX:
         # For onedir packaging on Linux, install relenv[toolchain]
         session.run(
-            "uv", "pip", "install", "relenv[toolchain]",
+            "uv",
+            "pip",
+            "install",
+            "relenv[toolchain]",
             external=True,
             silent=PIP_INSTALL_SILENT,
         )
@@ -242,7 +245,8 @@ def _install_requirements(
     # This installs all runtime + dev dependencies (from [project.optional-dependencies.dev])
     session.log("Installing dependencies using uv sync...")
     session.run(
-        "uv", "sync",
+        "uv",
+        "sync",
         external=True,
         silent=PIP_INSTALL_SILENT,
     )
@@ -251,7 +255,10 @@ def _install_requirements(
         session.log(f"Installing extra requirements: {', '.join(extra_requirements)}")
         for extra_req in extra_requirements:
             session.run(
-                "uv", "pip", "install", extra_req,
+                "uv",
+                "pip",
+                "install",
+                extra_req,
                 external=True,
                 silent=PIP_INSTALL_SILENT,
             )
@@ -264,7 +271,10 @@ def _install_requirements(
         )
         for extra_req in EXTRA_REQUIREMENTS_INSTALL.split():
             session.run(
-                "uv", "pip", "install", extra_req,
+                "uv",
+                "pip",
+                "install",
+                extra_req,
                 external=True,
                 silent=PIP_INSTALL_SILENT,
             )
@@ -290,7 +300,10 @@ def _install_coverage_requirement(session):
                     # finish within 1 to 2 hours.
                     coverage_requirement = "coverage==5.5"
         session.run(
-            "uv", "pip", "install", coverage_requirement,
+            "uv",
+            "pip",
+            "install",
+            coverage_requirement,
             external=True,
             silent=PIP_INSTALL_SILENT,
         )
