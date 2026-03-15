@@ -541,7 +541,7 @@ Now you can run your tests:
 
 ::
 
-   python -m nox -e "test-3(coverage=False)" -- tests/pytests/unit/cli/test_batch.py
+   uv run --group test nox -e "test-3(coverage=False)" -- tests/pytests/unit/cli/test_batch.py
 
 It's a good idea to install
 `espeak <https://github.com/espeak-ng/espeak-ng>`__ or use ``say`` on
@@ -550,14 +550,14 @@ this:
 
 ::
 
-   python -m nox -e "test-3(coverage=False)" -- tests/pytests/unit/cli/test_batch.py; espeak "Tests done, woohoo!"
+   uv run --group test nox -e "test-3(coverage=False)" -- tests/pytests/unit/cli/test_batch.py; espeak "Tests done, woohoo!"
 
 That way you don't have to keep monitoring the actual test run.
 
 
 ::
 
-   python -m nox -e "test-3(coverage=False)" -- --core-tests
+   uv run --group test nox -e "test-3(coverage=False)" -- --core-tests
 
 You can enable or disable test groups locally by passing their respected flag:
 

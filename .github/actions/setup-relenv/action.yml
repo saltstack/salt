@@ -39,21 +39,13 @@ runs:
     - name: Install Relenv
       shell: bash
       run: |
-        uv pip install relenv==${{ inputs.version }}
+        uv sync --frozen --group build
 
     - name: Cache Relenv Data Directory
       uses: ./.github/actions/cache
       with:
         path: ${{ github.workspace }}/.relenv
         key: ${{ inputs.cache-seed }}|relenv|${{ inputs.version }}|${{ inputs.python-version }}|${{ inputs.platform }}|${{ inputs.arch }}
-
-    - name: Fetch Toolchain
-      if: ${{ inputs.platform == 'linux' }}
-      shell: bash
-      env:
-        RELENV_FETCH_VERSION: "${{ inputs.version }}"
-      run: |
-        uv pip install relenv[toolchain]
 
     - name: Fetch Native Python Build
       shell: bash

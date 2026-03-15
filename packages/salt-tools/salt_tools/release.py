@@ -13,11 +13,10 @@ import tempfile
 import time
 
 import boto3
+import tools.utils
 import virustotal3.core
 from botocore.exceptions import ClientError
 from ptscripts import Context, command_group
-
-import tools.utils
 
 log = logging.getLogger(__name__)
 

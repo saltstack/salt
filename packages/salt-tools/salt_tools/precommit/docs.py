@@ -11,9 +11,8 @@ import os
 import pathlib
 import re
 
-from ptscripts import Context, command_group
-
 import tools.utils
+from ptscripts import Context, command_group
 
 DOCS_DIR = tools.utils.REPO_ROOT / "doc"
 SALT_CODE_DIR = tools.utils.REPO_ROOT / "salt"

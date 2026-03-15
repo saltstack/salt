@@ -17,11 +17,10 @@ import sys
 import tarfile
 import tempfile
 
+import tools.utils
 import yaml
 from ptscripts import Context, command_group
 from ptscripts.models import VirtualEnvPipConfig
-
-import tools.utils
 
 log = logging.getLogger(__name__)
 

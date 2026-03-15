@@ -11,10 +11,9 @@ import pathlib
 import shutil
 import sys
 
+import tools.utils
 from ptscripts import Context, command_group
 from ptscripts.models import VirtualEnvPipConfig
-
-import tools.utils
 
 log = logging.getLogger(__name__)
 

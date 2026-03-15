@@ -1,0 +1,15 @@
+[project]
+name = "ptscripts"
+description = "Generic python scripts for Salt development."
+dynamic = ["version"]
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.8"
+dependencies = [
+    "pydantic~=2.0",
+    "rich~=13.0",
+    "typing-extensions~=4.0; python_version < '3.11'",
+]
+
+[project.scripts]
+tools = "ptscripts.__main__:main"

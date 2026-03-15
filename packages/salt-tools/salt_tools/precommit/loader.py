@@ -5,9 +5,8 @@ Salt loader checks
 import ast
 import pathlib
 
-from ptscripts import Context, command_group
-
 import tools.utils
+from ptscripts import Context, command_group
 from tools.precommit import SALT_INTERNAL_LOADERS_PATHS
 
 SALT_CODE_DIR = tools.utils.REPO_ROOT / "salt"

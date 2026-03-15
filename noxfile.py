@@ -20,9 +20,10 @@ import sys
 import tarfile
 import tempfile
 
-import nox.command
-from nox import Session, options
-from nox_uv import session  # noqa: F401
+from nox import Session, options, parametrize
+from nox.command import CommandFailed
+from nox.virtualenv import VirtualEnv
+from nox_uv import session
 
 # fmt: off
 if __name__ == "__main__":
@@ -32,9 +33,6 @@ if __name__ == "__main__":
     sys.stderr.flush()
     exit(1)
 # fmt: on
-
-import nox  # isort:skip
-from nox.command import CommandFailed  # isort:skip
 
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent
@@ -91,9 +89,9 @@ _PYTHON_VERSIONS = ("3", "3.8", "3.9", "3.10", "3.11")
 
 # Nox options
 #  Reuse existing virtualenvs
-nox.options.reuse_existing_virtualenvs = True
+options.reuse_existing_virtualenvs = True
 # Use UV as the venv backend for all sessions
-nox.options.default_venv_backend = "uv"
+options.default_venv_backend = "uv"
 
 # Change current directory to REPO_ROOT
 os.chdir(str(REPO_ROOT))
@@ -107,14 +105,14 @@ RUNTESTS_LOGFILE = ARTIFACTS_DIR.joinpath(
 os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
 
 
-def session_warn(session, message):
+def session_warn(session: Session, message: str):
     try:
         session.warn(message)
     except AttributeError:
         session.log(f"WARNING: {message}")
 
 
-def session_run_always(session, *command, **kwargs):
+def session_run_always(session: Session, *command, **kwargs):
     """
     Patch nox to allow running some commands which would be skipped if --install-only is passed.
     """
@@ -134,7 +132,9 @@ def session_run_always(session, *command, **kwargs):
             session._runner.global_config.install_only = old_install_only_value
 
 
-def find_session_runner(session, name, python_version, onedir=False, **kwargs):
+def find_session_runner(
+    session: Session, name: str, python_version: str, onedir: bool = False, **kwargs
+):
     if onedir:
         name += f"-onedir-{ONEDIR_PYTHON_PATH}"
     else:
@@ -505,10 +505,10 @@ def _report_coverage(
         )
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="test-parametrized")
-@nox.parametrize("coverage", [False, True])
-@nox.parametrize("transport", ["zeromq", "tcp"])
-@nox.parametrize("crypto", [None, "m2crypto", "pycryptodome"])
+@session(python=_PYTHON_VERSIONS, name="test-parametrized")
+@parametrize("coverage", [False, True])
+@parametrize("transport", ["zeromq", "tcp"])
+@parametrize("crypto", [None, "m2crypto", "pycryptodome"])
 def test_parametrized(session, coverage, transport, crypto):
     """
     DO NOT CALL THIS NOX SESSION DIRECTLY
@@ -542,8 +542,8 @@ def test_parametrized(session, coverage, transport, crypto):
     _pytest(session, coverage=coverage, cmd_args=cmd_args)
 
 
-@nox.session(python=_PYTHON_VERSIONS)
-@nox.parametrize("coverage", [False, True])
+@session(python=_PYTHON_VERSIONS)
+@parametrize("coverage", [False, True])
 def test(session, coverage):
     """
     pytest session with zeromq transport and default crypto
@@ -560,8 +560,8 @@ def test(session, coverage):
     )
 
 
-@nox.session(python=_PYTHON_VERSIONS)
-@nox.parametrize("coverage", [False, True])
+@session(python=_PYTHON_VERSIONS)
+@parametrize("coverage", [False, True])
 def pytest(session, coverage):
     """
     pytest session with zeromq transport and default crypto
@@ -579,8 +579,8 @@ def pytest(session, coverage):
     session.notify(session_name.replace("pytest-", "test-"))
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="test-tcp")
-@nox.parametrize("coverage", [False, True])
+@session(python=_PYTHON_VERSIONS, name="test-tcp")
+@parametrize("coverage", [False, True])
 def test_tcp(session, coverage):
     """
     pytest session with TCP transport and default crypto
@@ -597,8 +597,8 @@ def test_tcp(session, coverage):
     )
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-tcp")
-@nox.parametrize("coverage", [False, True])
+@session(python=_PYTHON_VERSIONS, name="pytest-tcp")
+@parametrize("coverage", [False, True])
 def pytest_tcp(session, coverage):
     """
     pytest session with TCP transport and default crypto
@@ -616,8 +616,8 @@ def pytest_tcp(session, coverage):
     session.notify(session_name.replace("pytest-", "test-"))
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="test-zeromq")
-@nox.parametrize("coverage", [False, True])
+@session(python=_PYTHON_VERSIONS, name="test-zeromq")
+@parametrize("coverage", [False, True])
 def test_zeromq(session, coverage):
     """
     pytest session with zeromq transport and default crypto
@@ -634,8 +634,8 @@ def test_zeromq(session, coverage):
     )
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-zeromq")
-@nox.parametrize("coverage", [False, True])
+@session(python=_PYTHON_VERSIONS, name="pytest-zeromq")
+@parametrize("coverage", [False, True])
 def pytest_zeromq(session, coverage):
     """
     pytest session with zeromq transport and default crypto
@@ -653,8 +653,8 @@ def pytest_zeromq(session, coverage):
     session.notify(session_name.replace("pytest-", "test-"))
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="test-m2crypto")
-@nox.parametrize("coverage", [False, True])
+@session(python=_PYTHON_VERSIONS, name="test-m2crypto")
+@parametrize("coverage", [False, True])
 def test_m2crypto(session, coverage):
     """
     pytest session with zeromq transport and m2crypto
@@ -671,8 +671,8 @@ def test_m2crypto(session, coverage):
     )
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-m2crypto")
-@nox.parametrize("coverage", [False, True])
+@session(python=_PYTHON_VERSIONS, name="pytest-m2crypto")
+@parametrize("coverage", [False, True])
 def pytest_m2crypto(session, coverage):
     """
     pytest session with zeromq transport and m2crypto
@@ -690,8 +690,8 @@ def pytest_m2crypto(session, coverage):
     session.notify(session_name.replace("pytest-", "test-"))
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="test-tcp-m2crypto")
-@nox.parametrize("coverage", [False, True])
+@session(python=_PYTHON_VERSIONS, name="test-tcp-m2crypto")
+@parametrize("coverage", [False, True])
 def test_tcp_m2crypto(session, coverage):
     """
     pytest session with TCP transport and m2crypto
@@ -708,8 +708,8 @@ def test_tcp_m2crypto(session, coverage):
     )
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-tcp-m2crypto")
-@nox.parametrize("coverage", [False, True])
+@session(python=_PYTHON_VERSIONS, name="pytest-tcp-m2crypto")
+@parametrize("coverage", [False, True])
 def pytest_tcp_m2crypto(session, coverage):
     """
     pytest session with TCP transport and m2crypto
@@ -727,8 +727,8 @@ def pytest_tcp_m2crypto(session, coverage):
     session.notify(session_name.replace("pytest-", "test-"))
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="test-zeromq-m2crypto")
-@nox.parametrize("coverage", [False, True])
+@session(python=_PYTHON_VERSIONS, name="test-zeromq-m2crypto")
+@parametrize("coverage", [False, True])
 def test_zeromq_m2crypto(session, coverage):
     """
     pytest session with zeromq transport and m2crypto
@@ -745,8 +745,8 @@ def test_zeromq_m2crypto(session, coverage):
     )
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-zeromq-m2crypto")
-@nox.parametrize("coverage", [False, True])
+@session(python=_PYTHON_VERSIONS, name="pytest-zeromq-m2crypto")
+@parametrize("coverage", [False, True])
 def pytest_zeromq_m2crypto(session, coverage):
     """
     pytest session with zeromq transport and m2crypto
@@ -764,8 +764,8 @@ def pytest_zeromq_m2crypto(session, coverage):
     session.notify(session_name.replace("pytest-", "test-"))
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="test-pycryptodome")
-@nox.parametrize("coverage", [False, True])
+@session(python=_PYTHON_VERSIONS, name="test-pycryptodome")
+@parametrize("coverage", [False, True])
 def test_pycryptodome(session, coverage):
     """
     pytest session with zeromq transport and pycryptodome
@@ -782,8 +782,8 @@ def test_pycryptodome(session, coverage):
     )
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-pycryptodome")
-@nox.parametrize("coverage", [False, True])
+@session(python=_PYTHON_VERSIONS, name="pytest-pycryptodome")
+@parametrize("coverage", [False, True])
 def pytest_pycryptodome(session, coverage):
     """
     pytest session with zeromq transport and pycryptodome
@@ -801,8 +801,8 @@ def pytest_pycryptodome(session, coverage):
     session.notify(session_name.replace("pytest-", "test-"))
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="test-tcp-pycryptodome")
-@nox.parametrize("coverage", [False, True])
+@session(python=_PYTHON_VERSIONS, name="test-tcp-pycryptodome")
+@parametrize("coverage", [False, True])
 def test_tcp_pycryptodome(session, coverage):
     """
     pytest session with TCP transport and pycryptodome
@@ -819,8 +819,8 @@ def test_tcp_pycryptodome(session, coverage):
     )
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-tcp-pycryptodome")
-@nox.parametrize("coverage", [False, True])
+@session(python=_PYTHON_VERSIONS, name="pytest-tcp-pycryptodome")
+@parametrize("coverage", [False, True])
 def pytest_tcp_pycryptodome(session, coverage):
     """
     pytest session with TCP transport and pycryptodome
@@ -838,8 +838,8 @@ def pytest_tcp_pycryptodome(session, coverage):
     session.notify(session_name.replace("pytest-", "test-"))
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="test-zeromq-pycryptodome")
-@nox.parametrize("coverage", [False, True])
+@session(python=_PYTHON_VERSIONS, name="test-zeromq-pycryptodome")
+@parametrize("coverage", [False, True])
 def test_zeromq_pycryptodome(session, coverage):
     """
     pytest session with zeromq transport and pycryptodome
@@ -856,8 +856,8 @@ def test_zeromq_pycryptodome(session, coverage):
     )
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-zeromq-pycryptodome")
-@nox.parametrize("coverage", [False, True])
+@session(python=_PYTHON_VERSIONS, name="pytest-zeromq-pycryptodome")
+@parametrize("coverage", [False, True])
 def pytest_zeromq_pycryptodome(session, coverage):
     """
     pytest session with zeromq transport and pycryptodome
@@ -875,8 +875,8 @@ def pytest_zeromq_pycryptodome(session, coverage):
     session.notify(session_name.replace("pytest-", "test-"))
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="test-cloud")
-@nox.parametrize("coverage", [False, True])
+@session(python=_PYTHON_VERSIONS, name="test-cloud")
+@parametrize("coverage", [False, True])
 def test_cloud(session, coverage):
     """
     pytest cloud tests session
@@ -912,8 +912,8 @@ def test_cloud(session, coverage):
     _pytest(session, coverage=coverage, cmd_args=cmd_args)
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-cloud")
-@nox.parametrize("coverage", [False, True])
+@session(python=_PYTHON_VERSIONS, name="pytest-cloud")
+@parametrize("coverage", [False, True])
 def pytest_cloud(session, coverage):
     """
     pytest cloud tests session
@@ -931,8 +931,8 @@ def pytest_cloud(session, coverage):
     session.notify(session_name.replace("pytest-", "test-"))
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="test-tornado")
-@nox.parametrize("coverage", [False, True])
+@session(python=_PYTHON_VERSIONS, name="test-tornado")
+@parametrize("coverage", [False, True])
 def test_tornado(session, coverage):
     """
     pytest tornado tests session
@@ -949,8 +949,8 @@ def test_tornado(session, coverage):
     _pytest(session, coverage=coverage, cmd_args=session.posargs)
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="pytest-tornado")
-@nox.parametrize("coverage", [False, True])
+@session(python=_PYTHON_VERSIONS, name="pytest-tornado")
+@parametrize("coverage", [False, True])
 def pytest_tornado(session, coverage):
     """
     pytest tornado tests session
@@ -1136,7 +1136,7 @@ def _ci_test(session, transport, onedir=False):
         )
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="ci-test")
+@session(python=_PYTHON_VERSIONS, name="ci-test")
 def ci_test(session):
     transport = os.environ.get("SALT_TRANSPORT") or "zeromq"
     valid_transports = ("zeromq", "tcp")
@@ -1148,12 +1148,12 @@ def ci_test(session):
     _ci_test(session, transport)
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="ci-test-tcp")
+@session(python=_PYTHON_VERSIONS, name="ci-test-tcp")
 def ci_test_tcp(session):
     _ci_test(session, "tcp")
 
 
-@nox.session(
+@session(
     python=str(ONEDIR_PYTHON_PATH),
     name="ci-test-onedir",
     venv_params=["--system-site-packages"],
@@ -1177,7 +1177,7 @@ def ci_test_onedir(session):
     _ci_test(session, "zeromq", onedir=True)
 
 
-@nox.session(
+@session(
     python=str(ONEDIR_PYTHON_PATH),
     name="ci-test-onedir-tcp",
     venv_params=["--system-site-packages"],
@@ -1193,17 +1193,17 @@ def ci_test_onedir_tcp(session):
     _ci_test(session, "tcp", onedir=True)
 
 
-@nox.session(python="3", name="report-coverage")
+@session(python="3", name="report-coverage")
 def report_coverage(session):
     _report_coverage(session, combine=True, cli_report=True)
 
 
-@nox.session(python="3", name="coverage-report")
+@session(python="3", name="coverage-report")
 def coverage_report(session):
     _report_coverage(session, combine=True, cli_report=True)
 
 
-@nox.session(python=False, name="decompress-dependencies")
+@session(python=False, name="decompress-dependencies")
 def decompress_dependencies(session):
     if not session.posargs:
         session.error(
@@ -1345,7 +1345,7 @@ def decompress_dependencies(session):
                     pass
 
 
-@nox.session(python=False, name="compress-dependencies")
+@session(python=False, name="compress-dependencies")
 def compress_dependencies(session):
     if not session.posargs:
         session.error(
@@ -1387,11 +1387,11 @@ def compress_dependencies(session):
     )
 
 
-@nox.session(
+@session(
     python=str(ONEDIR_PYTHON_PATH),
     name="pre-archive-cleanup",
 )
-@nox.parametrize("pkg", [False, True])
+@parametrize("pkg", [False, True])
 def pre_archive_cleanup(session, pkg):
     """
     Call `tools pkg pre-archive-cleanup <path>`
@@ -1422,12 +1422,12 @@ def pre_archive_cleanup(session, pkg):
     session_run_always(session, *cmdline)
 
 
-@nox.session(python="3", name="combine-coverage")
+@session(python="3", name="combine-coverage")
 def combine_coverage(session):
     _report_coverage(session, combine=True, cli_report=False)
 
 
-@nox.session(
+@session(
     python=str(ONEDIR_PYTHON_PATH),
     name="combine-coverage-onedir",
     venv_params=["--system-site-packages"],
@@ -1436,7 +1436,7 @@ def combine_coverage_onedir(session):
     _report_coverage(session, combine=True, cli_report=False)
 
 
-@nox.session(python="3", name="create-html-coverage-report")
+@session(python="3", name="create-html-coverage-report")
 def create_html_coverage_report(session):
     _report_coverage(session, combine=True, cli_report=False, html_report=True)
 
@@ -1450,12 +1450,12 @@ def _create_xml_coverage_reports(session):
     _report_coverage(session, combine=True, cli_report=False, xml_report=True)
 
 
-@nox.session(python="3", name="create-xml-coverage-reports")
+@session(python="3", name="create-xml-coverage-reports")
 def create_xml_coverage_reports(session):
     _create_xml_coverage_reports(session)
 
 
-@nox.session(
+@session(
     python=str(ONEDIR_PYTHON_PATH),
     name="create-xml-coverage-reports-onedir",
     venv_params=["--system-site-packages"],
@@ -1464,12 +1464,12 @@ def create_xml_coverage_reports_onedir(session):
     _create_xml_coverage_reports(session)
 
 
-@nox.session(python="3", name="create-json-coverage-reports")
+@session(python="3", name="create-json-coverage-reports")
 def create_json_coverage_reports(session):
     _report_coverage(session, combine=True, cli_report=False, json_report=True)
 
 
-@nox.session(
+@session(
     python=str(ONEDIR_PYTHON_PATH),
     name="create-json-coverage-reports-onedir",
     venv_params=["--system-site-packages"],
@@ -1550,7 +1550,7 @@ def _lint_pre_commit(session, rcfile, flags, paths):
     )
 
 
-@nox.session(python="3")
+@session(python="3")
 def lint(session):
     """
     Run PyLint against Salt and it's test suite.
@@ -1559,7 +1559,7 @@ def lint(session):
     session.notify(f"lint-tests-{session.python}")
 
 
-@nox.session(python="3", name="lint-salt")
+@session(python="3", name="lint-salt")
 def lint_salt(session):
     """
     Run PyLint against Salt.
@@ -1573,7 +1573,7 @@ def lint_salt(session):
     _lint(session, ".pylintrc", flags, paths)
 
 
-@nox.session(python="3", name="lint-tests")
+@session(python="3", name="lint-tests")
 def lint_tests(session):
     """
     Run PyLint against Salt and it's test suite.
@@ -1586,7 +1586,7 @@ def lint_tests(session):
     _lint(session, ".pylintrc", flags, paths)
 
 
-@nox.session(python=False, name="lint-salt-pre-commit")
+@session(python=False, name="lint-salt-pre-commit")
 def lint_salt_pre_commit(session):
     """
     Run PyLint against Salt.
@@ -1599,7 +1599,7 @@ def lint_salt_pre_commit(session):
     _lint_pre_commit(session, ".pylintrc", flags, paths)
 
 
-@nox.session(python=False, name="lint-tests-pre-commit")
+@session(python=False, name="lint-tests-pre-commit")
 def lint_tests_pre_commit(session):
     """
     Run PyLint against Salt and it's test suite.
@@ -1612,10 +1612,10 @@ def lint_tests_pre_commit(session):
     _lint_pre_commit(session, ".pylintrc", flags, paths)
 
 
-@nox.session(python="3")
-@nox.parametrize("clean", [False, True])
-@nox.parametrize("update", [False, True])
-@nox.parametrize("compress", [False, True])
+@session(python="3")
+@parametrize("clean", [False, True])
+@parametrize("update", [False, True])
+@parametrize("compress", [False, True])
 def docs(session, compress, update, clean):
     """
     Build Salt's Documentation
@@ -1633,9 +1633,9 @@ def docs(session, compress, update, clean):
     )
 
 
-@nox.session(name="docs-html", python="3")
-@nox.parametrize("clean", [False, True])
-@nox.parametrize("compress", [False, True])
+@session(name="docs-html", python="3")
+@parametrize("clean", [False, True])
+@parametrize("compress", [False, True])
 def docs_html(session, compress, clean):
     """
     Build Salt's HTML Documentation
@@ -1670,10 +1670,10 @@ def docs_html(session, compress, clean):
     os.chdir("..")
 
 
-@nox.session(name="docs-man", python="3")
-@nox.parametrize("clean", [False, True])
-@nox.parametrize("update", [False, True])
-@nox.parametrize("compress", [False, True])
+@session(name="docs-man", python="3")
+@parametrize("clean", [False, True])
+@parametrize("update", [False, True])
+@parametrize("compress", [False, True])
 def docs_man(session, compress, update, clean):
     """
     Build Salt's Manpages Documentation
@@ -1711,9 +1711,9 @@ def docs_man(session, compress, update, clean):
     os.chdir("..")
 
 
-@nox.session(name="changelog", python="3")
-@nox.parametrize("draft", [False, True])
-@nox.parametrize("force", [False, True])
+@session(name="changelog", python="3")
+@parametrize("draft", [False, True])
+@parametrize("force", [False, True])
 def changelog(session, draft, force):
     """
     Generate salt's changelog
@@ -1793,7 +1793,7 @@ class Recompress:
         shutil.move(str(d_targz), str(targz))
 
 
-@nox.session(python="3")
+@session(python="3")
 def build(session):
     """
     Build source and binary distributions based off the current commit author date UNIX timestamp.
@@ -1848,14 +1848,11 @@ def build(session):
     session.run("python", "-m", "twine", "check", "dist/*")
 
 
-@nox.session(
+@session(
     python=str(ONEDIR_PYTHON_PATH),
     name="ci-test-onedir-pkgs",
-    venv_params=["--system-site-packages"],
 )
 def ci_test_onedir_pkgs(session):
-    from nox.virtualenv import VirtualEnv
-
     session_warn(session, "Replacing VirtualEnv instance...")
 
     ci_test_onedir_path = REPO_ROOT / ".nox" / "ci-test-onedir"

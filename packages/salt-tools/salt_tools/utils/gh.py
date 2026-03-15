@@ -10,9 +10,8 @@ import tempfile
 import zipfile
 from typing import TYPE_CHECKING
 
-from ptscripts import Context
-
 import tools.utils
+from ptscripts import Context
 from tools.utils import ExitCode
 
 

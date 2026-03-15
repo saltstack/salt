@@ -7,9 +7,8 @@ import sys
 from datetime import datetime
 from typing import Any
 
-from ptscripts import Context
-
 import tools.utils
+from ptscripts import Context
 
 try:
     import boto3

@@ -12,10 +12,9 @@ import sys
 import tarfile
 from typing import TYPE_CHECKING
 
-from ptscripts import Context, command_group
-
 import tools.utils
 import tools.utils.gh
+from ptscripts import Context, command_group
 from tools.precommit.workflows import (
     PLATFORMS,
     TEST_SALT_LISTING,

@@ -9,10 +9,9 @@ import logging
 import shutil
 from typing import TYPE_CHECKING, Literal, cast
 
+import tools.utils
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from ptscripts import Context, command_group
-
-import tools.utils
 from tools.utils import (
     Linux,
     LinuxPkg,

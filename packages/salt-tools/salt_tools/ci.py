@@ -16,11 +16,10 @@ import sys
 import time
 from typing import TYPE_CHECKING, Any, Literal
 
-import yaml
-from ptscripts import Context, command_group
-
 import tools.utils
 import tools.utils.gh
+import yaml
+from ptscripts import Context, command_group
 from tools.precommit.workflows import TEST_SALT_LISTING, TEST_SALT_PKG_LISTING
 
 if sys.version_info < (3, 11):

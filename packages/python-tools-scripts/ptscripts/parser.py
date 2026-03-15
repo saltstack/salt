@@ -22,12 +22,11 @@ from typing import TYPE_CHECKING, Any, Concatenate, NoReturn, ParamSpec, TypeVar
 
 import requests
 import rich
-from rich.console import Console
-from rich.theme import Theme
-
 from ptscripts import logs, process
 from ptscripts.models import VirtualEnvConfig, VirtualEnvPipConfig
 from ptscripts.virtualenv import VirtualEnv
+from rich.console import Console
+from rich.theme import Theme
 
 if sys.version_info < (3, 11):
     from typing_extensions import NotRequired, TypedDict
@@ -41,7 +40,12 @@ try:
 except ImportError:
     import importlib_metadata
 
-    __version__ = importlib_metadata.version("python-tools-scripts")
+    try:
+        __version__ = importlib_metadata.version("python-tools-scripts")
+    except Exception:
+        __version__ = "unknown"
+except Exception:
+    __version__ = "unknown"
 
 if TYPE_CHECKING:
     from argparse import ArgumentParser, Namespace, _SubParsersAction

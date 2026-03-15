@@ -5,10 +5,9 @@
 import pathlib
 import re
 
+import tools.utils
 import yaml
 from ptscripts import Context, command_group
-
-import tools.utils
 
 FILENAME_MAP_PATH = tools.utils.REPO_ROOT / "tests" / "filename_map.yml"
 

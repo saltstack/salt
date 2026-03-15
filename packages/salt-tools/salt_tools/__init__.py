@@ -1,37 +1,14 @@
-import json
 import logging
 import pathlib
 import sys
-import textwrap
 
 import ptscripts
-from ptscripts.models import DefaultPipConfig, VirtualEnvPipConfig
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
-REQUIREMENTS_FILES_PATH = REPO_ROOT / "requirements"
-STATIC_REQUIREMENTS_PATH = REQUIREMENTS_FILES_PATH / "static"
-CI_REQUIREMENTS_FILES_PATH = (
-    STATIC_REQUIREMENTS_PATH / "ci" / "py{}.{}".format(*sys.version_info)
-)
-DEFAULT_REQS_CONFIG = DefaultPipConfig(
-    install_args=[
-        f"--constraint={REQUIREMENTS_FILES_PATH / 'constraints.txt'}",
-    ],
-    requirements_files=[
-        CI_REQUIREMENTS_FILES_PATH / "tools.txt",
-    ],
-)
-RELEASE_VENV_CONFIG = VirtualEnvPipConfig(
-    pip_requirement="pip>=24.2",
-    install_args=[
-        f"--constraint={REQUIREMENTS_FILES_PATH / 'constraints.txt'}",
-    ],
-    requirements_files=[
-        CI_REQUIREMENTS_FILES_PATH / "tools-virustotal.txt",
-    ],
-    add_as_extra_site_packages=True,
-)
-ptscripts.set_default_config(DEFAULT_REQS_CONFIG)
+
+# Don't set up any default config - trust that the current venv is set up correctly
+# with dev dependencies already installed (pydantic, rich, etc.)
+
 ptscripts.register_tools_module("tools.changelog")
 ptscripts.register_tools_module("tools.ci")
 ptscripts.register_tools_module("tools.container")
@@ -46,7 +23,7 @@ ptscripts.register_tools_module("tools.precommit.docs")
 ptscripts.register_tools_module("tools.precommit.docstrings")
 ptscripts.register_tools_module("tools.precommit.filemap")
 ptscripts.register_tools_module("tools.precommit.loader")
-ptscripts.register_tools_module("tools.release", venv_config=RELEASE_VENV_CONFIG)
+ptscripts.register_tools_module("tools.release")
 ptscripts.register_tools_module("tools.testsuite")
 ptscripts.register_tools_module("tools.testsuite.download")
 

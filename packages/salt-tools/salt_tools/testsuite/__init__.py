@@ -8,11 +8,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from ptscripts import Context, command_group
-
 import tools.precommit.workflows
 import tools.utils
 import tools.utils.gh
+from ptscripts import Context, command_group
 from tools.utils import ExitCode
 
 log = logging.getLogger(__name__)

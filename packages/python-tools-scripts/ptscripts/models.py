@@ -9,9 +9,8 @@ import tempfile
 from functools import cached_property
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, Field
-
 from ptscripts.utils import cast_to_pathlib_path, file_digest
+from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
     from ptscripts.parser import Context

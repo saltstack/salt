@@ -7,11 +7,10 @@ from __future__ import annotations
 
 import logging
 
-from ptscripts import Context, command_group
-
 import tools.precommit.workflows
 import tools.utils
 import tools.utils.gh
+from ptscripts import Context, command_group
 
 log = logging.getLogger(__name__)
 

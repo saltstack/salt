@@ -1,0 +1,12 @@
+[project]
+name = "salt-tools"
+description = "Salt specific scripts for development and qualification."
+dynamic = ["version"]
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.8"
+dependencies = ["ptscripts"]
+
+[tool.uv.sources]
+salt-tools = { workspace = true }
+ptscripts = { workspace = true }
