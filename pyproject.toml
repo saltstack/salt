@@ -160,6 +160,13 @@ lint = [
 ]
 docs = ["sphinx>=5.0.0", "sphinx-rtd-theme>=1.0.0"]
 precommit = ["pre-commit>=3.0.0"]
+build = [
+    # Build-time dependencies for onedir package creation
+    "relenv>=0.22.0; sys_platform == 'linux'",
+    # ppbt is included in relenv[toolchain] on Linux builds
+    # It's only needed when building Python modules that require compilation
+    "ppbt; sys_platform == 'linux'",
+]
 
 [project.urls]
 Homepage = "https://saltproject.io"
@@ -177,7 +184,7 @@ backend-path = ["."]
 build-backend = "salt_build.backend"
 
 [tool.setuptools]
-packages = ["salt"]
+packages = ["salt", "ptscripts"]
 package-dir = { "" = "." }
 
 [tool.setuptools.package-data]

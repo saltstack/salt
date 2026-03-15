@@ -15,11 +15,10 @@ import tarfile
 import zipfile
 from typing import TYPE_CHECKING
 
+import tools.utils
 from ptscripts import Context, command_group
 
-import tools.utils
-
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 # Define the command group
 build = command_group(
@@ -105,8 +104,6 @@ def debian(
             )
             env_args.append(f"--prepend-path={cargo_home_bin}")
 
-    # With uv and pyproject.toml, dependencies are managed automatically
-    # No need for PIP_CONSTRAINT or requirements files
     ctx.run("ln", "-sf", "pkg/debian/", ".")
     ctx.run("debuild", *env_args, "-uc", "-us")
 
@@ -179,8 +176,6 @@ def rpm(
         for key, value in new_env.items():
             os.environ[key] = value
 
-    # With uv and pyproject.toml, dependencies are managed automatically
-    # No need for PIP_CONSTRAINT or requirements files
     spec_file = checkout / "pkg" / "rpm" / "salt.spec"
     ctx.run("rpmbuild", "-bb", f"--define=_salt_src {checkout}", str(spec_file))
     if key_id:
@@ -466,22 +461,6 @@ def windows(
         )
         ctx.run("smctl.exe", "windows", "certsync", check=False)
 
-        # sign_cmd = ["signtool.exe", "sign"]
-        # if debug_signing:
-        #    sign_cmd.extend(["/v", "/debug"])
-
-        # sign_cmd.extend(
-        #    [
-        #        "/sha1",
-        #        os.environ["WIN_SIGN_CERT_SHA1_HASH"],
-        #        "/tr",
-        #        "http://timestamp.digicert.com",
-        #        "/td",
-        #        "SHA256",
-        #        "/fd",
-        #        "SHA256",
-        #    ]
-        # )
         sign_cmd = [
             "smctl.exe",
             "sign",
@@ -624,31 +603,8 @@ def onedir_dependencies(
     if platform == "macos":
         env["OPENSSL_DIR"] = f"{dest}"
 
-    if platform == "linux":
-        # This installs the ppbt package. We'll remove it after installing all
-        # of our python packages.
-        ctx.run(
-            str(python_bin),
-            "-m",
-            "pip",
-            "install",
-            "relenv[toolchain]",
-        )
-
-    # Use uv to install dependencies from pyproject.toml and uv.lock
-    # This provides platform-aware, reproducible installs across all platforms
-    ctx.run(
-        "uv",
-        "sync",
-    )
-    # Install any additional platform-specific requirements if needed
-    if install_args:
-        ctx.run(
-            "uv",
-            "pip",
-            "install",
-            *install_args,
-        )
+    # Install dependencies using uv (build group includes ppbt/relenv[toolchain] on Linux via pyproject.toml markers)
+    ctx.run("uv", "sync", "--frozen", "--group", "build")
 
 
 @build.command(
@@ -761,14 +717,6 @@ def salt_onedir(
     else:
         env["RELENV_PIP_DIR"] = "1"
         pip_bin = env_scripts_dir / "pip3"
-        if platform == "linux":
-            # This installs the ppbt package. We'll remove it after installing all
-            # of our python packages.
-            ctx.run(
-                str(pip_bin),
-                "install",
-                "relenv[toolchain]",
-            )
 
         ctx.run(
             str(pip_bin),
