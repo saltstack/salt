@@ -24,7 +24,110 @@ classifiers = [
     "Topic :: System :: Clustering",
     "Topic :: System :: Distributed Computing",
 ]
-requires-python = ">=3.5"
+requires-python = ">=3.8"
+dependencies = [
+    # Core dependencies (migrated from requirements/base.txt)
+    "aiohttp>=3.13.3; python_version >= '3.11'",
+    "certifi==2023.07.22; python_version < '3.10'",
+    "certifi>=2024.7.4; python_version >= '3.10'",
+    "cffi>=2.0.0; python_version >= '3.11'",
+    "cherrypy>=18.6.1",
+    "contextvars; python_version < '3.7'",
+    "croniter>=0.3.0,!=0.3.22; sys_platform != 'win32'",
+    "cryptography>=41.0.3; python_version < '3.11'",
+    "cryptography>=42.0.0; python_version >= '3.11' and python_version < '3.13'",
+    "cryptography==42.0.2; python_version >= '3.13'",
+    "distro>=1.0.1",
+    "frozenlist>=1.3.0; python_version < '3.11'",
+    "frozenlist>=1.5.0; python_version >= '3.11'",
+    "gitpython>=3.1.37; sys_platform == 'win32'",
+    "immutables>=0.21; python_version < '3.7'",
+    "importlib-metadata>=3.3.0; python_version < '3.11'",
+    "importlib-metadata>=8.7.0; python_version >= '3.11'",
+    "jaraco.functools>=4.1.0",
+    "jaraco.text>=4.0.0",
+    "Jinja2>=3.1.5",
+    "jmespath",
+    "looseversion",
+    "lxml>=4.6.3; sys_platform == 'win32' and python_version < '3.11'",
+    "lxml>=5.3.2; sys_platform == 'win32' and python_version >= '3.11'",
+    "MarkupSafe",
+    "more-itertools>=8.3.0; sys_platform == 'darwin' and python_version >= '3.11'",
+    "msgpack>=1.0.0; python_version < '3.13'",
+    "msgpack>=1.1.0; python_version >= '3.13'",
+    "networkx",
+    "packaging>=21.3; python_version < '3.11'",
+    "packaging==24.0; python_version >= '3.11'",
+    "psutil<6.0.0; python_version <= '3.9'",
+    "psutil>=5.0.0; python_version >= '3.10'",
+    "pycryptodomex>=3.9.8",
+    "pymssql>=2.2.1; sys_platform == 'win32' and python_version < '3.11'",
+    "pymssql>=2.2.11; sys_platform == 'win32' and python_version >= '3.11' and python_version < '3.13'",
+    "pymssql>=2.3.5; sys_platform == 'win32' and python_version >= '3.13'",
+    "pymysql>=1.0.2; sys_platform == 'win32'",
+    "pyopenssl>=20.0.1; python_version < '3.11'",
+    "pyopenssl>=24.0.0; python_version >= '3.11'",
+    "python-dateutil>=2.8.1",
+    "python-gnupg>=0.4.7",
+    "pythonnet>=3.0.1; sys_platform == 'win32' and python_version < '3.11'",
+    "pythonnet>=3.0.4; sys_platform == 'win32' and python_version >= '3.11' and python_version < '3.13'",
+    "pywin32>=305; sys_platform == 'win32'",
+    "PyYAML",
+    "pyzmq>=25.1.2; python_version < '3.13'",
+    "pyzmq>=26.2.0; python_version >= '3.13'",
+    "requests>=2.25.1; python_version < '3.10'",
+    "requests<2.32.0; python_version >= '3.10' and python_version < '3.11'",
+    "requests>=2.32.5; python_version >= '3.11'",
+    "rpm-vercmp; sys_platform == 'linux'",
+    "setproctitle>=1.2.3",
+    "timelib>=0.2.5; python_version < '3.11'",
+    "timelib>=0.3.0; python_version >= '3.11'",
+    "tornado>=6.3.3; python_version < '3.11'",
+    "tornado>=6.5.4; python_version >= '3.11'",
+    "urllib3>=1.26.20,<2.0.0; python_version < '3.10'",
+    "urllib3>=1.26.0,<2.0.0; python_version >= '3.10' and python_version < '3.11'",
+    "urllib3>=2.6.2; python_version >= '3.11'",
+    "wmi>=1.5.1; sys_platform == 'win32'",
+    "xmltodict>=0.13.0; sys_platform == 'win32'",
+    "zipp>=3.19.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    # Testing
+    "mock>=3.0.0",
+    "docker>=7.1.0; python_version >= '3.8'",
+    "docker<7.1.0; python_version < '3.8'",
+    "pytest>=7.2.0",
+    "pytest-salt-factories>=1.0.3",
+    "pytest-helpers-namespace>=2019.1.8",
+    "pytest-subtests",
+    "pytest-timeout>=2.3.1",
+    "pytest-httpserver",
+    "pytest-custom-exit-code>=0.3",
+    "flaky",
+    "pyfakefs",
+    "trustme",
+    "pytest-skip-markers>=1.5.2; python_version >= '3.8'",
+    "pytest-skip-markers<=1.5.1; python_version < '3.8'",
+    "pytest-shell-utilities<=1.9.0; python_version <= '3.9'",
+    "pytest-shell-utilities>=1.9.7; python_version >= '3.10'",
+    # Code formatting and linting
+    "black>=23.0.0",
+    "isort>=5.0.0",
+    "pylint>=2.16.0",
+    "mypy>=1.0.0",
+    "pyupgrade>=3.0.0",
+    # Security
+    "bandit>=1.7.0",
+    # Task runner
+    "nox>=2023.0.0",
+    # Pre-commit
+    "pre-commit>=3.0.0",
+    # Documentation
+    "sphinx>=5.0.0",
+    "sphinx-rtd-theme>=1.0.0",
+]
 
 [project.urls]
 Homepage = "https://saltproject.io"
@@ -37,7 +140,7 @@ Discord = "https://discord.com/invite/J7b7EscrAs"
 # based on platform and environment.
 
 [build-system]
-requires = ["setuptools>=61", "wheel"]
+requires = ["setuptools>=61", "wheel", "twine", "build>=0.7.0"]
 backend-path = ["."]
 build-backend = "salt_build.backend"
 

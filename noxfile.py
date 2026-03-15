@@ -1840,8 +1840,8 @@ def build(session):
     if SKIP_REQUIREMENTS_INSTALL is False:
         session.install(
             "--progress-bar=off",
-            "-r",
-            "requirements/build.txt",
+            "twine",
+            "build>=0.7.0",
             silent=PIP_INSTALL_SILENT,
         )
 

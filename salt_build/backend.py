@@ -7,13 +7,10 @@ This module extends setuptools to handle Salt-specific build logic:
 - Custom build hooks
 """
 
-import configparser
 import io
 import os
 import subprocess
 import sys
-import tempfile
-from datetime import datetime
 from pathlib import Path
 
 import setuptools.build_meta as _orig
@@ -207,10 +204,29 @@ def prepare_metadata_for_build_wheel(metadata_directory, config_settings=None):
     return dist_info
 
 
+def build_editable(wheel_directory, config_settings=None, metadata_directory=None):
+    """Build an editable wheel with proper version and entry points handling."""
+    # Ensure version file exists before building
+    _write_salt_version()
+
+    # Build the editable wheel
+    wheel_name = _orig.build_editable(
+        wheel_directory, config_settings, metadata_directory
+    )
+    return wheel_name
+
+
+def get_requires_for_build_editable(config_settings=None):
+    """Get requirements for building editable wheel."""
+    return _orig.get_requires_for_build_editable(config_settings)
+
+
 __all__ = [
     "build_wheel",
     "build_sdist",
+    "build_editable",
     "get_requires_for_build_wheel",
     "get_requires_for_build_sdist",
+    "get_requires_for_build_editable",
     "prepare_metadata_for_build_wheel",
 ]
