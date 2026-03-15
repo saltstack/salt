@@ -82,7 +82,7 @@ Installing `tools`
 
 .. code-block: bash
 
-    python -m pip install -r requirements/static/ci/py3.10/tools.txt
+    uv sync
 
 
 If you want to see what output towncrier will produce before generating the change log

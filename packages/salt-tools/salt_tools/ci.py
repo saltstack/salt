@@ -16,8 +16,8 @@ import sys
 import time
 from typing import TYPE_CHECKING, Any, Literal
 
-import tools.utils
-import tools.utils.gh
+import salt_tools.utils
+import salt_tools.utils.gh
 import yaml
 from ptscripts import Context, command_group
 from tools.precommit.workflows import TEST_SALT_LISTING, TEST_SALT_PKG_LISTING
@@ -120,9 +120,9 @@ def process_changed_files(ctx: Context, event_name: str, changed_files: pathlib.
                     loaded_data.remove(entry)
                 try:
                     entry = (
-                        tools.utils.REPO_ROOT.joinpath(entry)
+                        salt_tools.utils.REPO_ROOT.joinpath(entry)
                         .resolve()
-                        .relative_to(tools.utils.REPO_ROOT)
+                        .relative_to(salt_tools.utils.REPO_ROOT)
                     )
                 except ValueError:
                     ctx.error(
@@ -178,7 +178,7 @@ def get_releases(ctx: Context, repository: str = "saltstack/salt"):
     """
     Generate the latest salt release.
     """
-    releases = tools.utils.get_salt_releases(ctx, repository)
+    releases = salt_tools.utils.get_salt_releases(ctx, repository)
     str_releases = [str(version) for version in releases]
     latest = str_releases[-1]
 
@@ -228,7 +228,7 @@ def get_release_changelog_target(ctx: Context, event_name: str):
         assert github_output is not None
 
     shared_context = yaml.safe_load(
-        tools.utils.SHARED_WORKFLOW_CONTEXT_FILEPATH.read_text()
+        salt_tools.utils.SHARED_WORKFLOW_CONTEXT_FILEPATH.read_text()
     )
     release_branches = shared_context["release_branches"]
 
@@ -266,7 +266,7 @@ def _get_pr_test_labels_from_api(
         headers = {
             "Accept": "application/vnd.github+json",
         }
-        github_token = tools.utils.gh.get_github_token(ctx)
+        github_token = salt_tools.utils.gh.get_github_token(ctx)
         if github_token is not None:
             headers["Authorization"] = f"Bearer {github_token}"
         web.headers.update(headers)
@@ -281,7 +281,7 @@ def _get_pr_test_labels_from_api(
 
 
 def _get_pr_test_labels_from_event_payload(
-    gh_event: dict[str, Any]
+    gh_event: dict[str, Any],
 ) -> list[tuple[str, str]]:
     """
     Get the pull-request test labels.
@@ -318,13 +318,13 @@ def _filter_test_labels(labels: list[dict[str, Any]]) -> list[tuple[str, str]]:
 )
 def get_testing_releases(
     ctx: Context,
-    releases: list[tools.utils.Version],
+    releases: list[salt_tools.utils.Version],
     salt_version: str = None,
 ):
     """
     Get a list of releases to use for the upgrade and downgrade tests.
     """
-    parsed_salt_version = tools.utils.Version(salt_version)
+    parsed_salt_version = salt_tools.utils.Version(salt_version)
     # We want the latest 4 major versions, removing the oldest if this version is a new major
     num_major_versions = 4
     if parsed_salt_version.minor == 0:
@@ -616,12 +616,14 @@ def _define_testrun(ctx, changed_files, labels, full):
         ctx.info("Full test run chosen because the label `test:full` is set.\n")
         testrun = TestRun(type="full", skip_code_coverage=False)
     else:
-        testrun_changed_files_path = tools.utils.REPO_ROOT / "testrun-changed-files.txt"
+        testrun_changed_files_path = (
+            salt_tools.utils.REPO_ROOT / "testrun-changed-files.txt"
+        )
         testrun = TestRun(
             type="changed",
             skip_code_coverage=False,
             from_filenames=str(
-                testrun_changed_files_path.relative_to(tools.utils.REPO_ROOT)
+                testrun_changed_files_path.relative_to(salt_tools.utils.REPO_ROOT)
             ),
         )
         ctx.info(f"Writing {testrun_changed_files_path.name} ...")
@@ -810,11 +812,11 @@ def workflow_config(
         full = True
         slugs = os.environ.get("FULL_TESTRUN_SLUGS", "")
         if not slugs:
-            slugs = tools.utils.get_cicd_shared_context()["full-testrun-slugs"]
+            slugs = salt_tools.utils.get_cicd_shared_context()["full-testrun-slugs"]
     else:
         slugs = os.environ.get("PR_TESTRUN_SLUGS", "")
         if not slugs:
-            slugs = tools.utils.get_cicd_shared_context()["pr-testrun-slugs"]
+            slugs = salt_tools.utils.get_cicd_shared_context()["pr-testrun-slugs"]
 
     requested_slugs = _environment_slugs(
         ctx,
@@ -891,12 +893,12 @@ def workflow_config(
     ctx.info(f"{'==== end artifact matrix ====':^80s}")
 
     # Get salt releases.
-    releases = tools.utils.get_salt_releases(ctx)
+    releases = salt_tools.utils.get_salt_releases(ctx)
     str_releases = [str(version) for version in releases]
     latest = str_releases[-1]
 
     # Get testing releases.
-    parsed_salt_version = tools.utils.Version(salt_version)
+    parsed_salt_version = salt_tools.utils.Version(salt_version)
     # We want the latest 4 major versions, removing the oldest if this version is a new major
     num_major_versions = 4
     if parsed_salt_version.minor == 0:

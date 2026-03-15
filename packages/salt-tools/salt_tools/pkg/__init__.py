@@ -17,7 +17,7 @@ import sys
 import tarfile
 import tempfile
 
-import tools.utils
+import salt_tools.utils
 import yaml
 from ptscripts import Context, command_group
 from ptscripts.models import VirtualEnvPipConfig
@@ -117,14 +117,14 @@ def set_salt_version(
     """
     Write the Salt version to 'salt/_version.txt'
     """
-    salt_version_file = tools.utils.REPO_ROOT / "salt" / "_version.txt"
+    salt_version_file = salt_tools.utils.REPO_ROOT / "salt" / "_version.txt"
     if salt_version_file.exists():
         if not overwrite:
             ctx.error("The 'salt/_version.txt' file already exists")
             ctx.exit(1)
         salt_version_file.unlink()
     if salt_version is None:
-        if not tools.utils.REPO_ROOT.joinpath(".git").exists():
+        if not salt_tools.utils.REPO_ROOT.joinpath(".git").exists():
             ctx.error(
                 "Apparently not running from a Salt repository checkout. "
                 "Unable to discover the Salt version."
@@ -141,7 +141,7 @@ def set_salt_version(
             config=VirtualEnvPipConfig(
                 pip_requirement="pip>=24.2",
                 requirements_files=[
-                    tools.utils.REPO_ROOT / "requirements" / "base.txt",
+                    salt_tools.utils.REPO_ROOT / "requirements" / "base.txt",
                 ],
             ),
         ) as venv:
@@ -163,14 +163,14 @@ def set_salt_version(
                 ctx.exit(ret.returncode)
             salt_version = ret.stdout.strip().decode()
 
-    if not tools.utils.REPO_ROOT.joinpath("salt").is_dir():
+    if not salt_tools.utils.REPO_ROOT.joinpath("salt").is_dir():
         ctx.error(
             "The path 'salt/' is not a directory. Unable to write 'salt/_version.txt'"
         )
         ctx.exit(1)
 
     try:
-        tools.utils.REPO_ROOT.joinpath("salt/_version.txt").write_text(
+        salt_tools.utils.REPO_ROOT.joinpath("salt/_version.txt").write_text(
             salt_version, encoding="utf-8"
         )
     except Exception as exc:
@@ -179,10 +179,12 @@ def set_salt_version(
 
     ctx.info(f"Successfuly wrote {salt_version!r} to 'salt/_version.txt'")
 
-    version_instance = tools.utils.Version(salt_version)
+    version_instance = salt_tools.utils.Version(salt_version)
     if release and not version_instance.is_prerelease:
         with open(
-            tools.utils.REPO_ROOT / "salt" / "version.py", "r+", encoding="utf-8"
+            salt_tools.utils.REPO_ROOT / "salt" / "version.py",
+            "r+",
+            encoding="utf-8",
         ) as rwfh:
             contents = rwfh.read()
             match = f"info=({version_instance.major}, {version_instance.minor}))"
@@ -244,7 +246,7 @@ def pre_archive_cleanup(ctx: Context, cleanup_path: str, pkg: bool = False):
     When running on Windows and macOS, some additional cleanup is also done.
     """
     with open(
-        str(tools.utils.REPO_ROOT / "pkg" / "common" / "env-cleanup-rules.yml"),
+        str(salt_tools.utils.REPO_ROOT / "pkg" / "common" / "env-cleanup-rules.yml"),
         encoding="utf-8",
     ) as rfh:
         patterns = yaml.safe_load(rfh.read())
@@ -377,7 +379,7 @@ def generate_hashes(ctx: Context, files: list[pathlib.Path]):
     venv_config=VirtualEnvPipConfig(
         pip_requirement="pip>=24.2",
         requirements_files=[
-            tools.utils.REPO_ROOT / "requirements" / "build.txt",
+            salt_tools.utils.REPO_ROOT / "requirements" / "build.txt",
         ],
     ),
 )
@@ -402,20 +404,20 @@ def source_tarball(ctx: Context):
         "-m",
         "build",
         "--sdist",
-        str(tools.utils.REPO_ROOT),
+        str(salt_tools.utils.REPO_ROOT),
         env=env,
         check=True,
     )
     # Recreate sdist to be reproducible
     recompress = Recompress(timestamp)
-    for targz in tools.utils.REPO_ROOT.joinpath("dist").glob("*.tar.gz"):
-        ctx.info(f"Re-compressing {targz.relative_to(tools.utils.REPO_ROOT)} ...")
+    for targz in salt_tools.utils.REPO_ROOT.joinpath("dist").glob("*.tar.gz"):
+        ctx.info(f"Re-compressing {targz.relative_to(salt_tools.utils.REPO_ROOT)} ...")
         recompress.recompress(targz)
     sha256sum = shutil.which("sha256sum")
     if sha256sum:
         packages = [
-            str(pkg.relative_to(tools.utils.REPO_ROOT))
-            for pkg in tools.utils.REPO_ROOT.joinpath("dist").iterdir()
+            str(pkg.relative_to(salt_tools.utils.REPO_ROOT))
+            for pkg in salt_tools.utils.REPO_ROOT.joinpath("dist").iterdir()
         ]
         ctx.run("sha256sum", *packages)
     ctx.run("python3", "-m", "twine", "check", "dist/*", check=True)
@@ -426,7 +428,7 @@ def source_tarball(ctx: Context):
     venv_config=VirtualEnvPipConfig(
         pip_requirement="pip>=24.2",
         requirements_files=[
-            tools.utils.REPO_ROOT / "requirements" / "build.txt",
+            salt_tools.utils.REPO_ROOT / "requirements" / "build.txt",
         ],
     ),
     arguments={

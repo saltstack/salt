@@ -12,8 +12,8 @@ import sys
 import tarfile
 from typing import TYPE_CHECKING
 
-import tools.utils
-import tools.utils.gh
+import salt_tools.utils
+import salt_tools.utils.gh
 from ptscripts import Context, command_group
 from tools.precommit.workflows import (
     PLATFORMS,
@@ -85,7 +85,7 @@ def download_onedir_artifact(
         assert run_id is not None
         assert platform is not None
 
-    exitcode = tools.utils.gh.download_onedir_artifact(
+    exitcode = salt_tools.utils.gh.download_onedir_artifact(
         ctx=ctx, run_id=run_id, platform=platform, arch=arch, repository=repository
     )
     ctx.exit(exitcode)
@@ -132,7 +132,7 @@ def download_nox_artifact(
         assert arch is not None
         assert platform is not None
 
-    exitcode = tools.utils.gh.download_nox_artifact(
+    exitcode = salt_tools.utils.gh.download_nox_artifact(
         ctx=ctx,
         run_id=run_id,
         platform=platform,
@@ -173,7 +173,7 @@ def download_pkgs_artifact(
         assert run_id is not None
         assert slug is not None
 
-    exitcode = tools.utils.gh.download_pkgs_artifact(
+    exitcode = salt_tools.utils.gh.download_pkgs_artifact(
         ctx=ctx, run_id=run_id, slug=slug, repository=repository
     )
     ctx.exit(exitcode)
@@ -228,7 +228,7 @@ def download_artifact(
     if run_id is not None:
         actual_run_id = run_id
     else:
-        potential_run_id = tools.utils.gh.discover_run_id(
+        potential_run_id = salt_tools.utils.gh.discover_run_id(
             ctx, branch=branch, nightly=nightly, pr=pr, repository=repository
         )
         if potential_run_id is not None:
@@ -236,7 +236,7 @@ def download_artifact(
         else:
             ctx.exit(1, "Could not discover run ID")
 
-    succeeded = tools.utils.gh.download_artifact(
+    succeeded = salt_tools.utils.gh.download_artifact(
         ctx,
         dest,
         actual_run_id,
@@ -318,7 +318,7 @@ def test_artifacts(
         for _ in pkgdef:
             artifacts.append(("artifacts/pkg/", f"salt-*-{_.arch}-{_.pkg_type}"))
     for dest, artifact_name in artifacts:
-        succeeded = tools.utils.gh.download_artifact(
+        succeeded = salt_tools.utils.gh.download_artifact(
             ctx,
             pathlib.Path(dest),
             int(run_id),

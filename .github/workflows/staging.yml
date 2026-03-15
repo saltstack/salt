@@ -181,7 +181,7 @@ jobs:
         shell: bash
         run: |
           HASH=$(python3 .github/scripts/hash-files.py \
-            'requirements/**/*.txt' \
+            'pyproject.toml' \
             'cicd/golden-images.json' \
             'noxfile.py' \
             'pkg/common/env-cleanup-rules.yml' \

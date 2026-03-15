@@ -8,11 +8,11 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+import salt_tools.utils
+import salt_tools.utils.gh
 import tools.precommit.workflows
-import tools.utils
-import tools.utils.gh
 from ptscripts import Context, command_group
-from tools.utils import ExitCode
+from salt_tools.utils import ExitCode
 
 log = logging.getLogger(__name__)
 
@@ -113,12 +113,12 @@ def setup_testsuite(
     )
 
     if run_id is None:
-        run_id = tools.utils.gh.discover_run_id(
+        run_id = salt_tools.utils.gh.discover_run_id(
             ctx, branch=branch, nightly=nightly, pr=pr
         )
 
     if run_id is None:
-        run_id = tools.utils.gh.discover_run_id(
+        run_id = salt_tools.utils.gh.discover_run_id(
             ctx,
             branch=branch,
             nightly=nightly,
@@ -133,12 +133,12 @@ def setup_testsuite(
             )
         ctx.exit(1)
 
-    exitcode = tools.utils.gh.download_onedir_artifact(
+    exitcode = salt_tools.utils.gh.download_onedir_artifact(
         ctx, run_id=run_id, platform=platform, arch=arch, repository=repository
     )
     if exitcode and exitcode != ExitCode.SOFT_FAIL:
         ctx.exit(exitcode)
-    exitcode = tools.utils.gh.download_nox_artifact(
+    exitcode = salt_tools.utils.gh.download_nox_artifact(
         ctx,
         run_id=run_id,
         platform=platform,
@@ -149,7 +149,7 @@ def setup_testsuite(
     if exitcode and exitcode != ExitCode.SOFT_FAIL:
         ctx.exit(exitcode)
     if pkg:
-        exitcode = tools.utils.gh.download_pkgs_artifact(
+        exitcode = salt_tools.utils.gh.download_pkgs_artifact(
             ctx,
             run_id=run_id,
             slug=slug,

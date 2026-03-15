@@ -5,11 +5,11 @@ Salt loader checks
 import ast
 import pathlib
 
-import tools.utils
+import salt_tools.utils
 from ptscripts import Context, command_group
 from tools.precommit import SALT_INTERNAL_LOADERS_PATHS
 
-SALT_CODE_DIR = tools.utils.REPO_ROOT / "salt"
+SALT_CODE_DIR = salt_tools.utils.REPO_ROOT / "salt"
 
 cgroup = command_group(name="salt-loaders", help=__doc__, parent="pre-commit")
 
@@ -92,7 +92,7 @@ def check_virtual(
             errors += 1
             exitcode = 1
             ctx.error(
-                f"The salt loader module {path.relative_to(tools.utils.REPO_ROOT)} defines "
+                f"The salt loader module {path.relative_to(salt_tools.utils.REPO_ROOT)} defines "
                 "a __virtual__() function but does not define a __virtualname__ attribute"
             )
     if exitcode:

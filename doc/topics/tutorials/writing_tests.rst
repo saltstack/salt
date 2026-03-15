@@ -405,11 +405,7 @@ in the following docs:
 Add a python module dependency to the test run
 ----------------------------------------------
 
-The test dependencies for python modules are managed under the ``requirements/static/ci``
-directory. You will need to add your module to the appropriate file under ``requirements/static/ci``.
-When ``pre-commit`` is run it will create all of the needed requirement files
-under ``requirements/static/ci/py3{6,7,8,9}``. Nox will then use these files to install
-the requirements for the tests.
+The test dependencies for python modules are managed  in ``pyproject.toml``.
 
 Add a system dependency to the test run
 ---------------------------------------

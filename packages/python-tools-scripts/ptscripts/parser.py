@@ -59,7 +59,7 @@ RetType = TypeVar("RetType")
 OriginalFunc = Callable[Param, RetType]
 DecoratedFunc = Callable[Concatenate[str, Param], RetType]
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class ArgumentOptions(TypedDict):
@@ -530,7 +530,7 @@ class Parser:
         self.options = options
         if "func" not in options:
             self.context.exit(1, "No command was passed.")
-        log.debug("CLI parsed options %s", options)
+        logger.debug("CLI parsed options %s", options)
         options.func(options)
 
     def __getattr__(self, attr: str) -> Any:  # noqa: ANN401
@@ -754,7 +754,9 @@ class CommandGroup:
             flags = kwargs.pop("flags", None)
             if flags is None:
                 flags = [f"--{parameter.name.replace('_', '-')}"]
-            log.debug("Adding Command %r. Flags: %s; KwArgs: %s", name, flags, kwargs)
+            logger.debug(
+                "Adding Command %r. Flags: %s; KwArgs: %s", name, flags, kwargs
+            )
             command.add_argument(*flags, **kwargs)  # type: ignore[arg-type]
 
         command.set_defaults(func=partial(self, func, venv_config=venv_config))

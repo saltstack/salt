@@ -70,68 +70,33 @@ in a Month of
 Lunches <https://www.manning.com/books/learn-git-in-a-month-of-lunches>`__.
 
 
-pyenv, Virtual Environments, and you
+Virtual Environments
 ------------------------------------
-We recommend `pyenv <https://github.com/pyenv/pyenv>`__, since it allows
+We recommend `UV <https://github.com/astral-sh/uv>`__, since it allows
 installing multiple different Python versions, which is important for
 testing Salt across all the versions of Python that we support.
 
-On Linux
+On Linux or Mac
 ^^^^^^^^
-Install pyenv:
+Install UV by running the following command:
 
 ::
 
-   git clone https://github.com/pyenv/pyenv.git ~/.pyenv
-   export PATH="$HOME/.pyenv/bin:$PATH"
-   git clone https://github.com/pyenv/pyenv-virtualenv.git $(pyenv root)/plugins/pyenv-virtualenv
-
-On Mac
-^^^^^^
-Install pyenv using brew:
-
-::
-
-   brew update
-   brew install pyenv
-   brew install pyenv-virtualenv
+   curl -LsSf https://astral.sh/uv/install.sh | sh
 
 --------------
 
-Now add pyenv to your ``.bashrc``:
+Now activate a virtual environment (venv):
 
 ::
 
-   echo 'export PATH="$HOME/.pyenv/bin:$PATH"' >> ~/.bashrc
-   pyenv init 2>> ~/.bashrc
-   pyenv virtualenv-init 2>> ~/.bashrc
+   uv venv
 
-For other shells, see `the pyenv
-instructions <https://github.com/pyenv/pyenv#basic-github-checkout>`__.
-
-Go ahead and restart your shell. Now you should be able to install a new
-version of Python:
+Now you should be able to install a new version of Python:
 
 ::
 
-   pyenv install 3.9.18
-
-If that fails, don't panic! You're probably just missing some build
-dependencies. Check out `pyenv common build
-problems <https://github.com/pyenv/pyenv/wiki/Common-build-problems>`__.
-
-Now that you've got your version of Python installed, you can create a
-new virtual environment with this command:
-
-::
-
-   pyenv virtualenv 3.9.18 salt
-
-Then activate it:
-
-::
-
-   pyenv activate salt
+   uv python install
 
 Sweet! Now you're ready to clone Salt so you can start hacking away! If
 you get stuck at any point, check out the resources at the beginning of
@@ -175,7 +140,7 @@ official Salt repo you'll never get ``upstream`` or ``origin`` confused.
    changes from ``salt/upstream``.
 
 
-Set up ``pre-commit`` and ``nox``
+Set up ``prek`` and ``nox``
 ---------------------------------
 Here at Salt we use
 `uv <https://docs.astral.sh/uv/>`__ as our package manager,
@@ -339,41 +304,39 @@ documentation:
 
 #. Install the documentation dependencies. For example, on Ubuntu:
 
-   ::
+   .. code-block:: console
 
-       sudo apt-get update
-
-       sudo apt-get install -y enchant-2 git gcc imagemagick make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev xz-utils inkscape
+      sudo apt-get update
+      sudo apt-get install -y enchant-2 git gcc imagemagick make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev xz-utils inkscape
 
 #. Navigate to the folder where you store your Salt repository and remove any
    `.nox` directories that might be in that folder:
 
-   ::
+   .. code-block:: console
 
-       rm -rf .nox
+      $ rm -rf .nox
 
 #. Make sure you have ``uv`` installed:
 
-   ::
+   .. code-block:: console
 
-       # On Linux
-       curl -LsSf https://astral.sh/uv/install.sh | sh
-
-       # On macOS with Homebrew
-       brew install uv
+      # On Linux
+      curl -LsSf https://astral.sh/uv/install.sh | sh
+      # On macOS with Homebrew
+      brew install uv
 
 #. Install the Salt environment with development dependencies:
 
-   ::
+   .. code-block:: console
 
-       uv sync
+      uv sync
 
 Since we use ``nox``, you can build your docs and view them in your browser
 with this one-liner:
 
-::
+.. code-block:: console
 
-       uv run nox -s docs
+   uv run nox -s docs
 
 The first time you build the docs, it will take a while because there are a
 *lot* of modules. Maybe you should go grab some dessert if you already finished
@@ -382,9 +345,9 @@ should automatically open with the URL http://localhost:8000/contents.html.
 Now you can navigate to your docs and ensure your changes exist. If you make
 changes, you can simply re-run the command:
 
-::
+.. code-block:: console
 
-       uv run nox -s docs
+   uv run nox -s docs
 
 And then refresh your browser to get your updated docs. This one should
 be quite a bit faster since Sphinx won't need to rebuild everything.
@@ -392,9 +355,9 @@ be quite a bit faster since Sphinx won't need to rebuild everything.
 Alternatively, you could build the docs on your local machine and then preview
 the build output. To build the docs locally:
 
-::
+.. code-block:: console
 
-    pyenv exec nox -e 'docs-html(compress=False, clean=True)'
+   uv run nox -e 'docs-html(compress=False, clean=True)'
 
 The output from this command will put the preview files in: ``doc > _build > html``.
 
@@ -413,9 +376,9 @@ If you're going to hack on the Salt codebase you're going to want to be
 able to run Salt locally. The first thing you need to do is install Salt
 as an editable pip install:
 
-::
+.. code-block:: console
 
-   python -m pip install -e .
+   uv sync
 
 This will let you make changes to Salt without having to re-install it.
 
@@ -425,13 +388,13 @@ can specify which user to run as. To configure that, just copy the
 master and minion configs. We have .gitignore setup to ignore the
 ``local/`` directory, so we can put all of our personal files there.
 
-::
+.. code-block:: console
 
    mkdir -p local/etc/salt/
 
 Create a master config file as ``local/etc/salt/master``:
 
-::
+.. code-block:: console
 
    cat <<EOF >local/etc/salt/master
    user: $(whoami)
@@ -442,7 +405,7 @@ Create a master config file as ``local/etc/salt/master``:
 
 And a minion config as ``local/etc/salt/minion``:
 
-::
+.. code-block:: console
 
    cat <<EOF >local/etc/salt/minion
    user: $(whoami)
@@ -455,27 +418,27 @@ And a minion config as ``local/etc/salt/minion``:
 Now you can start your Salt master and minion, specifying the config
 dir.
 
-::
+.. code-block:: console
 
    salt-master --config-dir=local/etc/salt/ --log-level=debug --daemon
    salt-minion --config-dir=local/etc/salt/ --log-level=debug --daemon
 
 Now you should be able to accept the minion key:
 
-::
+.. code-block:: console
 
    salt-key -c local/etc/salt -Ay
 
 And check that your master/minion are communicating:
 
-::
+.. code-block:: console
 
    salt -c local/etc/salt \* test.version
 
 Rather than running ``test.version`` from your master, you can run it
 from the minion instead:
 
-::
+.. code-block:: console
 
    salt-call -c local/etc/salt test.version
 
@@ -487,7 +450,7 @@ you've got Salt running, you can hack away on the Salt codebase!
 If you need to restart Salt for some reason, if you've made changes and
 they don't appear to be reflected, this is one option:
 
-::
+.. code-block:: console
 
    kill -INT $(pgrep -f salt-master)
    kill -INT $(pgrep -f salt-minion)
@@ -533,13 +496,13 @@ As previously mentioned, we use ``nox``, and that's how we run our
 tests. You should have it installed by this point but if not you can
 install it with this:
 
-::
+.. code-block:: console
 
    uv sync --group test
 
 Now you can run your tests:
 
-::
+.. code-block:: console
 
    uv run --group test nox -e "test-3(coverage=False)" -- tests/pytests/unit/cli/test_batch.py
 
@@ -548,14 +511,14 @@ It's a good idea to install
 Mac if you're running some long-running tests. You can do something like
 this:
 
-::
+.. code-block:: console
 
    uv run --group test nox -e "test-3(coverage=False)" -- tests/pytests/unit/cli/test_batch.py; espeak "Tests done, woohoo!"
 
 That way you don't have to keep monitoring the actual test run.
 
 
-::
+.. code-block:: console
 
    uv run --group test nox -e "test-3(coverage=False)" -- --core-tests
 
@@ -593,7 +556,7 @@ contributor, all that means is that you need to add a file to the
 ``salt/changelog`` directory, using the ``<issue #>.<type>.md`` format. For
 instance, if you fixed issue 123, you would do:
 
-::
+.. code-block:: console
 
    echo "Made sys.doc inform when no minions return" > changelog/123.fixed.md
 
@@ -701,32 +664,14 @@ File descriptor limit
 You might need to raise your file descriptor limit. You can check it
 with:
 
-::
+.. code-block:: console
 
    ulimit -n
 
 If the value is less than 3072, you should increase it with:
 
-::
+.. code-block:: console
 
    ulimit -n 3072
    # For c-shell:
    limit descriptors 3072
-
-
-Pygit2 or other dependency install fails
-----------------------------------------
-You may see some failure messages when installing requirements. You can
-directly access your nox environment and possibly install pygit (or
-other dependency) that way. When you run nox, you'll see a message like
-this:
-
-::
-
-   nox > Re-using existing virtual environment at .nox/pytest-parametrized-3-crypto-none-transport-zeromq-coverage-false.
-
-For this, you would be able to install with:
-
-::
-
-   .nox/pytest-parametrized-3-crypto-none-transport-zeromq-coverage-false/bin/python -m pip install pygit2

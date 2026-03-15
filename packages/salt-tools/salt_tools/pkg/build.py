@@ -15,7 +15,7 @@ import tarfile
 import zipfile
 from typing import TYPE_CHECKING
 
-import tools.utils
+import salt_tools.utils
 from ptscripts import Context, command_group
 
 logger = logging.getLogger(__name__)
@@ -72,7 +72,7 @@ def debian(
             )
             ctx.exit(1)
         ctx.info("Building the package from the source files")
-        shared_constants = tools.utils.get_cicd_shared_context()
+        shared_constants = salt_tools.utils.get_cicd_shared_context()
         if not python_version:
             python_version = shared_constants["python_version"]
         if not relenv_version:
@@ -159,7 +159,7 @@ def rpm(
             )
             ctx.exit(1)
         ctx.info("Building the package from the source files")
-        shared_constants = tools.utils.get_cicd_shared_context()
+        shared_constants = salt_tools.utils.get_cicd_shared_context()
         if not python_version:
             python_version = shared_constants["python_version"]
         if not relenv_version:
@@ -256,7 +256,7 @@ def macos(
 
     if not onedir:
         # Prep the salt onedir if not building from an existing one
-        shared_constants = tools.utils.get_cicd_shared_context()
+        shared_constants = salt_tools.utils.get_cicd_shared_context()
         if not python_version:
             python_version = shared_constants["python_version"]
         if not relenv_version:
@@ -349,7 +349,7 @@ def windows(
         assert salt_version is not None
         assert arch is not None
 
-    shared_constants = tools.utils.get_cicd_shared_context()
+    shared_constants = salt_tools.utils.get_cicd_shared_context()
     if not python_version:
         python_version = shared_constants["python_version"]
     if not relenv_version:
@@ -539,7 +539,7 @@ def onedir_dependencies(
     if platform != "macos" and arch == "arm64":
         arch = "aarch64"
 
-    shared_constants = tools.utils.get_cicd_shared_context()
+    shared_constants = salt_tools.utils.get_cicd_shared_context()
     if not python_version:
         python_version = shared_constants["python_version"]
     if not relenv_version:
@@ -643,7 +643,7 @@ def salt_onedir(
     if platform == "darwin":
         platform = "macos"
 
-    shared_constants = tools.utils.get_cicd_shared_context()
+    shared_constants = salt_tools.utils.get_cicd_shared_context()
     if not relenv_version:
         relenv_version = shared_constants["relenv_version"]
     if TYPE_CHECKING:
@@ -769,9 +769,11 @@ def salt_onedir(
     extras_dir.mkdir(exist_ok=True)
 
     for fname in ("_salt_onedir_extras.py", "_salt_onedir_extras.pth"):
-        src = tools.utils.REPO_ROOT / "pkg" / "common" / "onedir" / fname
+        src = salt_tools.utils.REPO_ROOT / "pkg" / "common" / "onedir" / fname
         dst = pathlib.Path(site_packages) / fname
-        ctx.info(f"Copying '{src.relative_to(tools.utils.REPO_ROOT)}' to '{dst}' ...")
+        ctx.info(
+            f"Copying '{src.relative_to(salt_tools.utils.REPO_ROOT)}' to '{dst}' ..."
+        )
         shutil.copyfile(src, dst)
 
     if platform == "linux":

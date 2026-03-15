@@ -272,7 +272,7 @@ def get_salt_releases(
     Return a list of salt versions
     """
     # Deferred import
-    import tools.utils.gh
+    import salt_tools.utils.gh
 
     ctx.info(f"Collecting salt releases from repository '{repository}'")
 
@@ -281,7 +281,7 @@ def get_salt_releases(
         headers = {
             "Accept": "application/vnd.github+json",
         }
-        github_token = tools.utils.gh.get_github_token(ctx)
+        github_token = salt_tools.utils.gh.get_github_token(ctx)
         if github_token is not None:
             headers["Authorization"] = f"Bearer {github_token}"
         web.headers.update(headers)

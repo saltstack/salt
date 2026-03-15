@@ -15,13 +15,13 @@ import subprocess
 import sys
 from typing import TYPE_CHECKING
 
-import tools.utils
+import salt_tools.utils
 from ptscripts import Context, command_group
 from tools.precommit import SALT_INTERNAL_LOADERS_PATHS
 
-SALT_CODE_DIR = tools.utils.REPO_ROOT / "salt"
+SALT_CODE_DIR = salt_tools.utils.REPO_ROOT / "salt"
 SALT_MODULES_PATH = SALT_CODE_DIR / "modules"
-THIS_FILE = pathlib.Path(__file__).relative_to(tools.utils.REPO_ROOT)
+THIS_FILE = pathlib.Path(__file__).relative_to(salt_tools.utils.REPO_ROOT)
 
 MISSING_DOCSTRINGS = {
     "salt/auth/django.py": ["is_connection_usable"],
@@ -867,7 +867,7 @@ def check_docstrings(
     exitcode = 0
     warnings = 0
     for path in _files:
-        if str(path).startswith(str(tools.utils.REPO_ROOT / "salt" / "ext")):
+        if str(path).startswith(str(salt_tools.utils.REPO_ROOT / "salt" / "ext")):
             continue
         contents = path.read_text()
         try:
@@ -880,7 +880,7 @@ def check_docstrings(
                     exitcode = 1
                     ctx.error(
                         "The module '{}' does not provide a proper `{}` version: {!r} is not valid.".format(
-                            path.relative_to(tools.utils.REPO_ROOT),
+                            path.relative_to(salt_tools.utils.REPO_ROOT),
                             *error,
                         )
                     )
@@ -914,7 +914,7 @@ def check_docstrings(
                     continue
 
                 funcname = funcdef.name
-                relpath = str(path.relative_to(tools.utils.REPO_ROOT))
+                relpath = str(path.relative_to(salt_tools.utils.REPO_ROOT))
 
                 # We're dealing with a salt loader module
                 if funcname.startswith("_"):
@@ -934,7 +934,7 @@ def check_docstrings(
                         annotate(
                             ctx,
                             "warning",
-                            path.relative_to(tools.utils.REPO_ROOT),
+                            path.relative_to(salt_tools.utils.REPO_ROOT),
                             funcdef.lineno,
                             funcdef.body[0].lineno,
                             "Missing docstring",
@@ -948,7 +948,7 @@ def check_docstrings(
                     annotate(
                         ctx,
                         "error",
-                        path.relative_to(tools.utils.REPO_ROOT),
+                        path.relative_to(salt_tools.utils.REPO_ROOT),
                         funcdef.lineno,
                         funcdef.body[0].lineno,
                         "Missing docstring",
@@ -990,7 +990,7 @@ def check_docstrings(
                         annotate(
                             ctx,
                             "warning",
-                            path.relative_to(tools.utils.REPO_ROOT),
+                            path.relative_to(salt_tools.utils.REPO_ROOT),
                             funcdef.lineno,
                             funcdef.body[0].lineno,
                             "Missing 'CLI Example:' in docstring",
@@ -1004,7 +1004,7 @@ def check_docstrings(
                     annotate(
                         ctx,
                         "error",
-                        path.relative_to(tools.utils.REPO_ROOT),
+                        path.relative_to(salt_tools.utils.REPO_ROOT),
                         funcdef.lineno,
                         funcdef.body[0].lineno,
                         "Missing 'CLI Example:' in docstring",
@@ -1038,13 +1038,13 @@ def check_docstrings(
                         "\n"
                         "    salt '*' <insert example here>\n".format(
                             funcdef.name,
-                            path.relative_to(tools.utils.REPO_ROOT),
+                            path.relative_to(salt_tools.utils.REPO_ROOT),
                         )
                     )
                     annotate(
                         ctx,
                         "warning",
-                        path.relative_to(tools.utils.REPO_ROOT),
+                        path.relative_to(salt_tools.utils.REPO_ROOT),
                         funcdef.lineno,
                         funcdef.body[0].lineno,
                         "Wrong format in 'CLI Example:' in docstring.\n"

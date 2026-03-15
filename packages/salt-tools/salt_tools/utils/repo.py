@@ -3,24 +3,13 @@ from __future__ import annotations
 
 import json
 import pathlib
-import sys
 from datetime import datetime
 from typing import Any
 
-import tools.utils
+import boto3
+import salt_tools.utils
+from botocore.exceptions import ClientError
 from ptscripts import Context
-
-try:
-    import boto3
-    from botocore.exceptions import ClientError
-except ImportError:
-    print(
-        "\nPlease run 'python -m pip install -r "
-        "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
-        file=sys.stderr,
-        flush=True,
-    )
-    raise
 
 
 class UpdateProgress:
@@ -50,7 +39,7 @@ def get_repo_json_file_contents(
         )
         size = ret["ContentLength"]
         with repo_json_path.open("wb") as wfh:
-            with tools.utils.create_progress_bar(file_progress=True) as progress:
+            with salt_tools.utils.create_progress_bar(file_progress=True) as progress:
                 task = progress.add_task(description="Downloading...", total=size)
             s3.download_fileobj(
                 Bucket=bucket_name,

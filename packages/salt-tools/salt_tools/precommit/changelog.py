@@ -10,7 +10,7 @@ import pathlib
 import re
 import sys
 
-import tools.utils
+import salt_tools.utils
 from ptscripts import Context, command_group
 from ptscripts.models import VirtualEnvPipConfig
 
@@ -37,7 +37,7 @@ changelog = command_group(
     venv_config=VirtualEnvPipConfig(
         pip_requirement="pip>=24.2",
         requirements_files=[
-            tools.utils.REPO_ROOT
+            salt_tools.utils.REPO_ROOT
             / "requirements"
             / "static"
             / "ci"
@@ -61,11 +61,11 @@ def check_changelog_entries(ctx: Context, files: list[pathlib.Path]):
     """
     Run pre-commit checks on changelog snippets.
     """
-    docs_path = tools.utils.REPO_ROOT / "doc"
+    docs_path = salt_tools.utils.REPO_ROOT / "doc"
     tests_integration_files_path = (
-        tools.utils.REPO_ROOT / "tests" / "integration" / "files"
+        salt_tools.utils.REPO_ROOT / "tests" / "integration" / "files"
     )
-    changelog_entries_path = tools.utils.REPO_ROOT / "changelog"
+    changelog_entries_path = salt_tools.utils.REPO_ROOT / "changelog"
     exitcode = 0
     for entry in files:
         path = pathlib.Path(entry).resolve()
@@ -79,7 +79,7 @@ def check_changelog_entries(ctx: Context, files: list[pathlib.Path]):
             if not CHANGELOG_ENTRY_RE.match(path.name):
                 ctx.error(
                     "The changelog entry '{}' should have one of the following extensions: {}.".format(
-                        path.relative_to(tools.utils.REPO_ROOT),
+                        path.relative_to(salt_tools.utils.REPO_ROOT),
                         ", ".join(f"{ext}.md" for ext in CHANGELOG_TYPES),
                     ),
                 )
@@ -87,8 +87,8 @@ def check_changelog_entries(ctx: Context, files: list[pathlib.Path]):
                 continue
             if path.suffix != ".md":
                 ctx.error(
-                    f"Please rename '{path.relative_to(tools.utils.REPO_ROOT)}' to "
-                    f"'{path.relative_to(tools.utils.REPO_ROOT)}.md'"
+                    f"Please rename '{path.relative_to(salt_tools.utils.REPO_ROOT)}' to "
+                    f"'{path.relative_to(salt_tools.utils.REPO_ROOT)}.md'"
                 )
                 exitcode = 1
                 continue
@@ -117,7 +117,7 @@ def check_changelog_entries(ctx: Context, files: list[pathlib.Path]):
                 pass
             ctx.error(
                 "The changelog entry '{}' should have one of the following extensions: {}.".format(
-                    path.relative_to(tools.utils.REPO_ROOT),
+                    path.relative_to(salt_tools.utils.REPO_ROOT),
                     ", ".join(f"{ext}.md" for ext in CHANGELOG_TYPES),
                 )
             )
@@ -135,14 +135,14 @@ def check_changelog_entries(ctx: Context, files: list[pathlib.Path]):
             ctx.error(
                 "The changelog entry '{}' should be placed under '{}/', not '{}'".format(
                     path.name,
-                    changelog_entries_path.relative_to(tools.utils.REPO_ROOT),
-                    path.relative_to(tools.utils.REPO_ROOT).parent,
+                    changelog_entries_path.relative_to(salt_tools.utils.REPO_ROOT),
+                    path.relative_to(salt_tools.utils.REPO_ROOT).parent,
                 )
             )
         if path.suffix != ".md":
             ctx.error(
-                f"Please rename '{path.relative_to(tools.utils.REPO_ROOT)}' to "
-                f"'{path.relative_to(tools.utils.REPO_ROOT)}.md'"
+                f"Please rename '{path.relative_to(salt_tools.utils.REPO_ROOT)}' to "
+                f"'{path.relative_to(salt_tools.utils.REPO_ROOT)}.md'"
             )
             exitcode = 1
     ctx.exit(exitcode)

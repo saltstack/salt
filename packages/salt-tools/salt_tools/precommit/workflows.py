@@ -9,10 +9,10 @@ import logging
 import shutil
 from typing import TYPE_CHECKING, Literal, cast
 
-import tools.utils
+import salt_tools.utils
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from ptscripts import Context, command_group
-from tools.utils import (
+from salt_tools.utils import (
     Linux,
     LinuxPkg,
     MacOS,
@@ -24,7 +24,7 @@ from tools.utils import (
 
 log = logging.getLogger(__name__)
 
-WORKFLOWS = tools.utils.REPO_ROOT / ".github" / "workflows"
+WORKFLOWS = salt_tools.utils.REPO_ROOT / ".github" / "workflows"
 TEMPLATES = WORKFLOWS / "templates"
 
 # Define the command group
@@ -382,12 +382,12 @@ def generate_workflows(ctx: Context):
         workflow_path = WORKFLOWS / template
         template_path = TEMPLATES / f"{template}.jinja"
         ctx.info(
-            f"Generating '{workflow_path.relative_to(tools.utils.REPO_ROOT)}' from "
-            f"template '{template_path.relative_to(tools.utils.REPO_ROOT)}' ..."
+            f"Generating '{workflow_path.relative_to(salt_tools.utils.REPO_ROOT)}' from "
+            f"template '{template_path.relative_to(salt_tools.utils.REPO_ROOT)}' ..."
         )
         workflow_slug = details.get("slug") or workflow_name.lower().replace(" ", "-")
         context = {
-            "template": template_path.relative_to(tools.utils.REPO_ROOT),
+            "template": template_path.relative_to(salt_tools.utils.REPO_ROOT),
             "workflow_name": workflow_name,
             "workflow_slug": workflow_slug,
             "includes": includes,
@@ -405,7 +405,7 @@ def generate_workflows(ctx: Context):
             "build_rpms_listing": build_rpms_listing,
             "build_debs_listing": build_debs_listing,
         }
-        shared_context = tools.utils.get_cicd_shared_context()
+        shared_context = salt_tools.utils.get_cicd_shared_context()
         for key, value in shared_context.items():
             context[key.replace("-", "_")] = value
         loaded_template = env.get_template(template_path.name)

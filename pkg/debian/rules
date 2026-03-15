@@ -20,14 +20,14 @@ override_dh_auto_clean:
 
 ifeq ("${SALT_ONEDIR_ARCHIVE}", "")
 override_dh_auto_build:
-	export PIP_CONSTRAINT=requirements/constraints.txt
 	export FETCH_RELENV_VERSION=$${SALT_RELENV_VERSION}
 	mkdir -p build/onedir
 	python3 -m venv --clear --copies build/onedir/venv
 	build/onedir/venv/bin/python3 -m pip install relenv==$${SALT_RELENV_VERSION}
 	export FETCH_RELENV_VERSION=$${SALT_RELENV_VERSION}
 	export PY=$$(build/onedir/venv/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()') \
-		&& build/onedir/venv/bin/python3 -m pip install -r requirements/static/ci/py$${PY}/tools.txt
+		&& build/onedir/venv/bin/python3 -m pip install uv \
+		&& uv sync --frozen
 	build/onedir/venv/bin/relenv fetch --python=$${SALT_PYTHON_VERSION}
 	build/onedir/venv/bin/pip install ppbt
 	build/onedir/venv/bin/tools pkg build onedir-dependencies --arch $${SALT_PACKAGE_ARCH} --relenv-version=$${SALT_RELENV_VERSION} --python-version $${SALT_PYTHON_VERSION} --package-name build/onedir/salt --platform linux
@@ -41,7 +41,8 @@ override_dh_auto_build:
 
 	# Generate man pages for source builds
 	export PY=$$(build/onedir/venv/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()') \
-		&& build/onedir/venv/bin/python3 -m pip install --no-deps -r requirements/static/ci/py$${PY}/docs.txt
+		&& build/onedir/venv/bin/python3 -m pip install uv \
+		&& uv sync --frozen
 	export LATEST_RELEASE=$$(dpkg-parsechangelog -S Version) && export SALT_ON_SALTSTACK=1 && $(MAKE) -C doc man SPHINXBUILD=../build/onedir/venv/bin/sphinx-build
 	# Copy generated man pages to doc/man
 	mkdir -p doc/man

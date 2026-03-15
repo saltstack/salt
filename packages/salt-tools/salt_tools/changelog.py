@@ -15,7 +15,7 @@ import textwrap
 from jinja2 import Environment, FileSystemLoader
 from ptscripts import Context, command_group
 from ptscripts.models import VirtualEnvPipConfig
-from tools.utils import REPO_ROOT, Version
+from salt_tools.utils import REPO_ROOT, Version
 
 log = logging.getLogger(__name__)
 

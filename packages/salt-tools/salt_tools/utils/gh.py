@@ -10,9 +10,9 @@ import tempfile
 import zipfile
 from typing import TYPE_CHECKING
 
-import tools.utils
+import salt_tools.utils
 from ptscripts import Context
-from tools.utils import ExitCode
+from salt_tools.utils import ExitCode
 
 
 def download_onedir_artifact(
@@ -50,7 +50,7 @@ def download_onedir_artifact(
                 f"The allowed values for '--arch' on {platform.title()} are 'x86_64' or 'arm64'"
             )
             return ExitCode.FAIL
-    artifacts_path = tools.utils.REPO_ROOT / "artifacts"
+    artifacts_path = salt_tools.utils.REPO_ROOT / "artifacts"
     artifacts_path.mkdir(exist_ok=True)
     if artifacts_path.joinpath("salt").exists():
         ctx.warn(
@@ -82,7 +82,7 @@ def download_onedir_artifact(
         .read_text()
         .strip()
     )
-    artifact_checksum = tools.utils.get_file_checksum(
+    artifact_checksum = salt_tools.utils.get_file_checksum(
         found_artifact_path, checksum_algo
     )
     if artifact_expected_checksum != artifact_checksum:
@@ -91,7 +91,7 @@ def download_onedir_artifact(
         return ExitCode.FAIL
 
     ctx.info(
-        f"Decompressing {found_artifact_name!r} to {artifacts_path.relative_to(tools.utils.REPO_ROOT)}{os.path.sep} ..."
+        f"Decompressing {found_artifact_name!r} to {artifacts_path.relative_to(salt_tools.utils.REPO_ROOT)}{os.path.sep} ..."
     )
     if found_artifact_path.suffix == ".zip":
         with zipfile.ZipFile(found_artifact_path) as zfile:
@@ -140,7 +140,7 @@ def download_nox_artifact(
             )
             return ExitCode.FAIL
 
-    artifacts_path = tools.utils.REPO_ROOT / ".nox" / nox_env
+    artifacts_path = salt_tools.utils.REPO_ROOT / ".nox" / nox_env
     if artifacts_path.exists():
         ctx.error(
             f"The '.nox/{nox_env}' directory already exists ... Stopped processing."
@@ -152,7 +152,7 @@ def download_nox_artifact(
     )
     found_artifact_name = download_artifact(
         ctx,
-        dest=tools.utils.REPO_ROOT,
+        dest=salt_tools.utils.REPO_ROOT,
         run_id=run_id,
         artifact_name=artifact_name,
         repository=repository,
@@ -225,7 +225,7 @@ def download_pkgs_artifact(
             ctx.error(f"We do not build packages for {slug}")
             return ExitCode.FAIL
 
-    artifacts_path = tools.utils.REPO_ROOT / "artifacts" / "pkg"
+    artifacts_path = salt_tools.utils.REPO_ROOT / "artifacts" / "pkg"
     artifacts_path.mkdir(exist_ok=True)
 
     ctx.info(
@@ -328,7 +328,7 @@ def download_artifact(
                     found_artifact = artifact["name"]
                     tempdir_path = pathlib.Path(tempfile.gettempdir())
                     download_url = artifact["archive_download_url"]
-                    downloaded_artifact = tools.utils.download_file(
+                    downloaded_artifact = salt_tools.utils.download_file(
                         ctx,
                         download_url,
                         tempdir_path / f"{artifact['name']}.zip",

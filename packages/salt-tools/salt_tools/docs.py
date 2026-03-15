@@ -11,7 +11,7 @@ import pathlib
 import shutil
 import sys
 
-import tools.utils
+import salt_tools.utils
 from ptscripts import Context, command_group
 from ptscripts.models import VirtualEnvPipConfig
 
@@ -25,9 +25,9 @@ docs = command_group(
     venv_config=VirtualEnvPipConfig(
         pip_requirement="pip>=24.2",
         requirements_files=[
-            tools.utils.REPO_ROOT / "requirements" / "base.txt",
-            tools.utils.REPO_ROOT / "requirements" / "zeromq.txt",
-            tools.utils.REPO_ROOT
+            salt_tools.utils.REPO_ROOT / "requirements" / "base.txt",
+            salt_tools.utils.REPO_ROOT / "requirements" / "zeromq.txt",
+            salt_tools.utils.REPO_ROOT
             / "requirements"
             / "static"
             / "ci"
@@ -37,7 +37,7 @@ docs = command_group(
         install_args=[
             "--constraint",
             str(
-                tools.utils.REPO_ROOT
+                salt_tools.utils.REPO_ROOT
                 / "requirements"
                 / "static"
                 / "pkg"
@@ -95,7 +95,7 @@ def man(
         for file in files:
             shutil.copy(os.path.join(root, file), os.path.join(docdir, file))
 
-    artifact = tools.utils.REPO_ROOT / "doc" / "man"
+    artifact = salt_tools.utils.REPO_ROOT / "doc" / "man"
     if "LATEST_RELEASE" in os.environ:
         artifact_name = f"salt-{os.environ['LATEST_RELEASE']}-docs-man"
     else:
@@ -171,7 +171,7 @@ def html(
                     f"artifact-path={archive.resolve()}\n"
                 )
     elif github_output is not None:
-        artifact = tools.utils.REPO_ROOT / "doc" / "_build" / "html"
+        artifact = salt_tools.utils.REPO_ROOT / "doc" / "_build" / "html"
         if "LATEST_RELEASE" in os.environ:
             artifact_name = f"salt-{os.environ['LATEST_RELEASE']}-docs-html"
         else:
@@ -217,7 +217,7 @@ def pdf(ctx: Context, no_clean: bool = False, no_color: bool = False):
         check=True,
     )
 
-    artifact = tools.utils.REPO_ROOT / "doc" / "_build" / "latex" / "Salt.pdf"
+    artifact = salt_tools.utils.REPO_ROOT / "doc" / "_build" / "latex" / "Salt.pdf"
     if "LATEST_RELEASE" in os.environ:
         shutil.move(
             artifact, artifact.parent / f"Salt-{os.environ['LATEST_RELEASE']}.pdf"

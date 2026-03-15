@@ -7,14 +7,14 @@ from __future__ import annotations
 
 import logging
 
-import tools.precommit.workflows
-import tools.utils
-import tools.utils.gh
+import salt_tools.precommit.workflows
+import salt_tools.utils
+import salt_tools.utils.gh
 from ptscripts import Context, command_group
 
 log = logging.getLogger(__name__)
 
-WORKFLOWS = tools.utils.REPO_ROOT / ".github" / "workflows"
+WORKFLOWS = salt_tools.utils.REPO_ROOT / ".github" / "workflows"
 TEMPLATES = WORKFLOWS / "templates"
 
 # Define the command group
@@ -47,7 +47,7 @@ def sync_os_labels(
             "description": f"{description_prefix} ALL OS'es",
         },
     }
-    for slug in tools.precommit.workflows.slugs():
+    for slug in salt_tools.precommit.workflows.slugs():
         name = f"test:os:{slug}"
         known_os[name] = {
             "name": name,
@@ -57,7 +57,7 @@ def sync_os_labels(
 
     ctx.info(known_os)
 
-    github_token = tools.utils.gh.get_github_token(ctx)
+    github_token = salt_tools.utils.gh.get_github_token(ctx)
     if github_token is None:
         ctx.error("Querying labels requires being authenticated to GitHub.")
         ctx.info(
@@ -69,7 +69,7 @@ def sync_os_labels(
     existing_labels = set()
     labels_to_update = []
     labels_to_delete = set()
-    shared_context = tools.utils.get_cicd_shared_context()
+    shared_context = salt_tools.utils.get_cicd_shared_context()
     for slug in shared_context["mandatory_os_slugs"]:
         label = f"test:os:{slug}"
         labels_to_delete.add(label)

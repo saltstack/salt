@@ -13,7 +13,7 @@ import tempfile
 import time
 
 import boto3
-import tools.utils
+import salt_tools.utils
 import virustotal3.core
 from botocore.exceptions import ClientError
 from ptscripts import Context, command_group
@@ -51,7 +51,7 @@ def upload_artifacts(ctx: Context, salt_version: str, artifacts_path: pathlib.Pa
     remote_path = f"release-artifacts/{salt_version}"
     try:
         ret = s3.list_objects(
-            Bucket=tools.utils.STAGING_BUCKET_NAME,
+            Bucket=salt_tools.utils.STAGING_BUCKET_NAME,
             Prefix=remote_path,
         )
         if "Contents" in ret:
@@ -68,12 +68,12 @@ def upload_artifacts(ctx: Context, salt_version: str, artifacts_path: pathlib.Pa
             raise
 
     if to_delete_paths:
-        with tools.utils.create_progress_bar() as progress:
-            bucket_uri = f"s3://{tools.utils.STAGING_BUCKET_NAME}/{remote_path}"
+        with salt_tools.utils.create_progress_bar() as progress:
+            bucket_uri = f"s3://{salt_tools.utils.STAGING_BUCKET_NAME}/{remote_path}"
             task = progress.add_task(f"Deleting '{bucket_uri}'", total=1)
             try:
                 ret = s3.delete_objects(
-                    Bucket=tools.utils.STAGING_BUCKET_NAME,
+                    Bucket=salt_tools.utils.STAGING_BUCKET_NAME,
                     Delete={"Objects": objects},
                 )
             except ClientError:
@@ -96,13 +96,13 @@ def upload_artifacts(ctx: Context, salt_version: str, artifacts_path: pathlib.Pa
             upload_path = f"{remote_path}/{fpath.name}"
             size = fpath.stat().st_size
             ctx.info(f"  {upload_path}")
-            with tools.utils.create_progress_bar(file_progress=True) as progress:
+            with salt_tools.utils.create_progress_bar(file_progress=True) as progress:
                 task = progress.add_task(description="Uploading...", total=size)
                 s3.upload_file(
                     str(fpath),
-                    tools.utils.STAGING_BUCKET_NAME,
+                    salt_tools.utils.STAGING_BUCKET_NAME,
                     upload_path,
-                    Callback=tools.utils.UpdateProgress(progress, task),
+                    Callback=salt_tools.utils.UpdateProgress(progress, task),
                 )
     except KeyboardInterrupt:
         pass
@@ -148,7 +148,7 @@ def download_onedir_artifact(
         ctx.exit(1)
 
     archive_name = f"salt-{salt_version}-onedir-{platform}-{arch}.tar.xz"
-    archive_path = tools.utils.REPO_ROOT / "artifacts" / archive_name
+    archive_path = salt_tools.utils.REPO_ROOT / "artifacts" / archive_name
     if "rc" in salt_version:
         prefix = "salt_rc/salt"
     else:
@@ -156,22 +156,24 @@ def download_onedir_artifact(
     remote_path = f"{prefix}/py3/onedir/minor/{salt_version}/{archive_name}"
     archive_path.parent.mkdir()
     try:
-        ret = s3.head_object(Bucket=tools.utils.STAGING_BUCKET_NAME, Key=remote_path)
+        ret = s3.head_object(
+            Bucket=salt_tools.utils.STAGING_BUCKET_NAME, Key=remote_path
+        )
         size = ret["ContentLength"]
         with archive_path.open("wb") as wfh:
             ctx.info(
-                f"Downloading s3://{tools.utils.STAGING_BUCKET_NAME}/{remote_path} to {archive_path} ..."
+                f"Downloading s3://{salt_tools.utils.STAGING_BUCKET_NAME}/{remote_path} to {archive_path} ..."
             )
-            with tools.utils.create_progress_bar(file_progress=True) as progress:
+            with salt_tools.utils.create_progress_bar(file_progress=True) as progress:
                 task = progress.add_task(
                     description="Downloading ...",
                     total=size,
                 )
                 s3.download_fileobj(
-                    Bucket=tools.utils.STAGING_BUCKET_NAME,
+                    Bucket=salt_tools.utils.STAGING_BUCKET_NAME,
                     Key=remote_path,
                     Fileobj=wfh,
-                    Callback=tools.utils.UpdateProgress(progress, task),
+                    Callback=salt_tools.utils.UpdateProgress(progress, task),
                 )
     except ClientError as exc:
         if "Error" not in exc.response:
@@ -222,7 +224,7 @@ def upload_virustotal(ctx: Context, salt_version: str):
             with local_release_files_path.open("wb") as wfh:
                 ctx.info(f"Downloading file: {repo_release_files_path}")
                 s3.download_fileobj(
-                    Bucket=tools.utils.STAGING_BUCKET_NAME,
+                    Bucket=salt_tools.utils.STAGING_BUCKET_NAME,
                     Key=str(repo_release_files_path.as_posix()),
                     Fileobj=wfh,
                 )
@@ -271,7 +273,7 @@ def upload_virustotal(ctx: Context, salt_version: str):
                 with local_download_file.open("wb") as wfh:
                     ctx.info(f"Downloading from repo: {download_file}")
                     s3.download_fileobj(
-                        Bucket=tools.utils.STAGING_BUCKET_NAME,
+                        Bucket=salt_tools.utils.STAGING_BUCKET_NAME,
                         Key=str(download_file.as_posix()),
                         Fileobj=wfh,
                     )

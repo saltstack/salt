@@ -65,32 +65,32 @@ How to build rpm packages
 
     .. code-block:: bash
 
-       cd <path-to-salt-repo>
+      cd <path-to-salt-repo>
 
 #. Install the dependencies:
 
     .. code-block:: bash
 
-       yum -y install python3 python3-pip openssl git rpmdevtools rpmlint systemd-units libxcrypt-compat git gnupg2 jq createrepo rpm-sign rustc cargo epel-release
-       yum -y install patchelf
-       pip install awscli
+      yum -y install python3 python3-pip openssl git rpmdevtools rpmlint systemd-units libxcrypt-compat git gnupg2 jq createrepo rpm-sign rustc cargo epel-release
+      yum -y install patchelf
+      pip install awscli
 
     .. code-block:: bash
 
-       pip install -r requirements/static/ci/py{python_version}/tools.txt
+      uv sync --no-default-groups
 
-#. (Optional) To build a specific Salt version, you will need to install tools and changelog dependencies:
-
+#. (Optional) To build a specific Salt version,
+   you will need to install tools and changelog dependencies:
 
     .. code-block:: bash
 
-       pip install -r requirements/static/ci/py{python_version}/changelog.txt
+      uv sync
 
 #. (Optional) To build a specific Salt version, run tools and set Salt version:
 
     .. code-block:: bash
 
-       tools changelog update-rpm <salt-version>
+      tools changelog update-rpm <salt-version>
 
 #. Build the RPM:
 
@@ -98,7 +98,7 @@ How to build rpm packages
 
     .. code-block:: bash
 
-       tools pkg build rpm --relenv-version <relenv-version> --python-version <python-version> --arch <arch>
+      tools pkg build rpm --relenv-version <relenv-version> --python-version <python-version> --arch <arch>
 
 
 How to build deb packages
@@ -108,29 +108,29 @@ How to build deb packages
 
     .. code-block:: bash
 
-       cd <path-to-salt-repo>
+      cd <path-to-salt-repo>
 
 #. Install the dependencies:
 
     .. code-block:: bash
 
-       apt install -y apt-utils gnupg jq awscli python3 python3-venv python3-pip build-essential devscripts debhelper bash-completion git patchelf rustc
+      apt install -y apt-utils gnupg jq awscli python3 python3-venv python3-pip build-essential devscripts debhelper bash-completion git patchelf rustc
 
     .. code-block:: bash
 
-       pip install -r requirements/static/ci/py{python_version}/tools.txt
+      uv sync
 
 #. (Optional) To build a specific Salt version, you will need to install changelog dependencies:
 
     .. code-block:: bash
 
-       pip install -r requirements/static/ci/py{python_version}/changelog.txt
+      uv sync
 
 #. (Optional) To build a specific Salt version, run tools and set Salt version:
 
     .. code-block:: bash
 
-       tools changelog update-deb <salt-version>
+      tools changelog update-deb <salt-version>
 
 
 #. Build the deb package:
@@ -139,7 +139,7 @@ How to build deb packages
 
     .. code-block:: bash
 
-       tools pkg build deb --relenv-version <relenv-version> --python-version <python-version> --arch <arch>
+      tools pkg build deb --relenv-version <relenv-version> --python-version <python-version> --arch <arch>
 
 
 How to build MacOS packages
@@ -149,13 +149,13 @@ How to build MacOS packages
 
     .. code-block:: bash
 
-       cd <path-to-salt-repo>
+      cd <path-to-salt-repo>
 
 #. Install the dependencies:
 
     .. code-block:: bash
 
-       pip install -r requirements/static/ci/py{python_version}/tools.txt
+      uv sync
 
 #. Build the MacOS package:
 
@@ -164,7 +164,7 @@ How to build MacOS packages
 
     .. code-block:: bash
 
-       tools pkg build macos --salt-version <salt-version>
+      tools pkg build macos --salt-version <salt-version>
 
 
 How to build Windows packages
@@ -174,13 +174,13 @@ How to build Windows packages
 
     .. code-block:: bash
 
-       cd <path-to-salt-repo>
+      cd <path-to-salt-repo>
 
 #. Install the dependencies:
 
     .. code-block:: bash
 
-       pip install -r requirements/static/ci/py{python_version}/tools.txt
+      uv sync
 
 #. Build the MacOS package:
 
@@ -189,7 +189,7 @@ How to build Windows packages
 
     .. code-block:: bash
 
-       tools pkg build windows --salt-version <salt-version> --arch <arch>
+      tools pkg build windows --salt-version <salt-version> --arch <arch>
 
 
 How to access python binary

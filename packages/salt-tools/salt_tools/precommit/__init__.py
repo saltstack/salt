@@ -2,7 +2,7 @@
 These commands, and sub-commands, are used by pre-commit.
 """
 
-import tools.utils
+import salt_tools.utils
 from ptscripts import command_group
 
 # Define the command group
@@ -10,7 +10,7 @@ cgroup = command_group(
     name="pre-commit", help="Pre-Commit Related Commands", description=__doc__
 )
 
-SALT_BASE_PATH = tools.utils.REPO_ROOT / "salt"
+SALT_BASE_PATH = salt_tools.utils.REPO_ROOT / "salt"
 
 SALT_INTERNAL_LOADERS_PATHS = (
     # This is a 1:1 copy of SALT_INTERNAL_LOADERS_PATHS found in salt/loader/__init__.py

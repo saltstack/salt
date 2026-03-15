@@ -11,11 +11,11 @@ import os
 import pathlib
 import re
 
-import tools.utils
+import salt_tools.utils
 from ptscripts import Context, command_group
 
-DOCS_DIR = tools.utils.REPO_ROOT / "doc"
-SALT_CODE_DIR = tools.utils.REPO_ROOT / "salt"
+DOCS_DIR = salt_tools.utils.REPO_ROOT / "doc"
+SALT_CODE_DIR = salt_tools.utils.REPO_ROOT / "salt"
 
 PYTHON_MODULE_TO_DOC_PATH = {}
 DOC_PATH_TO_PYTHON_MODULE = {}
@@ -63,7 +63,7 @@ def build_path_cache():
     """
 
     for path in SALT_CODE_DIR.rglob("*.py"):
-        path = path.resolve().relative_to(tools.utils.REPO_ROOT)
+        path = path.resolve().relative_to(salt_tools.utils.REPO_ROOT)
         strpath = str(path)
         if strpath.endswith("__init__.py"):
             continue
@@ -108,7 +108,7 @@ def build_path_cache():
                 / "all"
                 / str(path).replace(".py", ".rst").replace(os.sep, ".")
             )
-        stub_path = stub_path.relative_to(tools.utils.REPO_ROOT)
+        stub_path = stub_path.relative_to(salt_tools.utils.REPO_ROOT)
         PYTHON_MODULE_TO_DOC_PATH[path] = stub_path
         if path.exists():
             DOC_PATH_TO_PYTHON_MODULE[stub_path] = path
@@ -119,10 +119,10 @@ build_path_cache()
 
 def build_file_list(files, extension):
     if not files:
-        _files = tools.utils.REPO_ROOT.rglob(f"*{extension}")
+        _files = salt_tools.utils.REPO_ROOT.rglob(f"*{extension}")
     else:
         _files = [fpath.resolve() for fpath in files if fpath.suffix == extension]
-    _files = [path.relative_to(tools.utils.REPO_ROOT) for path in _files]
+    _files = [path.relative_to(salt_tools.utils.REPO_ROOT) for path in _files]
     return _files
 
 
@@ -287,7 +287,7 @@ def check_module_indexes(ctx: Context, files: list[pathlib.Path]) -> int:
             package = "log_handlers"
             path_parts = []
         python_package = SALT_CODE_DIR.joinpath(package, *path_parts).relative_to(
-            tools.utils.REPO_ROOT
+            salt_tools.utils.REPO_ROOT
         )
         modules = set()
         for module in python_package.rglob("*.py"):
@@ -380,12 +380,12 @@ def check_stray(ctx: Context, files: list[pathlib.Path]) -> int:
         DOCS_DIR / "topics",
     )
     exclude_paths = tuple(
-        str(p.relative_to(tools.utils.REPO_ROOT)) for p in exclude_pathlib_paths
+        str(p.relative_to(salt_tools.utils.REPO_ROOT)) for p in exclude_pathlib_paths
     )
     files = build_docs_paths(files)
     for path in files:
         if not str(path).startswith(
-            str((DOCS_DIR / "ref").relative_to(tools.utils.REPO_ROOT))
+            str((DOCS_DIR / "ref").relative_to(salt_tools.utils.REPO_ROOT))
         ):
             continue
         if str(path).startswith(exclude_paths):

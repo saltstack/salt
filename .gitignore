@@ -113,7 +113,6 @@ tests/integration/cloud/providers/pki/minions
 ## Tox/Nox virtualenvs
 /.tox/
 /.nox/
-.tools-venvs/
 # Nox requirements archives
 nox.*.tar.bzip2
 nox.*.tar.gz

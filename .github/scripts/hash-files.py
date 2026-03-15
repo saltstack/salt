@@ -9,7 +9,7 @@ Usage:
     python hash-files.py 'pattern1' 'pattern2' ...
 
 Example:
-    python hash-files.py 'requirements/**/*.txt' 'noxfile.py'
+    python hash-files.py 'pyproject.toml' 'noxfile.py'
 """
 import hashlib
 import sys
@@ -21,7 +21,7 @@ def find_files(patterns):
     Find all files matching the given glob patterns.
 
     Args:
-        patterns: List of glob patterns (e.g., 'requirements/**/*.txt')
+        patterns: List of glob patterns (e.g., 'pyproject.toml')
 
     Returns:
         Sorted list of Path objects for matching files
@@ -122,7 +122,7 @@ def main():
         print("Usage: python hash-files.py 'pattern1' 'pattern2' ...", file=sys.stderr)
         print("", file=sys.stderr)
         print(
-            "Example: python hash-files.py 'requirements/**/*.txt' 'noxfile.py'",
+            "Example: python hash-files.py 'pyproject.toml' 'noxfile.py'",
             file=sys.stderr,
         )
         sys.exit(1)

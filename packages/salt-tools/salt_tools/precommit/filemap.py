@@ -5,20 +5,20 @@
 import pathlib
 import re
 
-import tools.utils
+import salt_tools.utils
 import yaml
 from ptscripts import Context, command_group
 
-FILENAME_MAP_PATH = tools.utils.REPO_ROOT / "tests" / "filename_map.yml"
+FILENAME_MAP_PATH = salt_tools.utils.REPO_ROOT / "tests" / "filename_map.yml"
 
 cgroup = command_group(name="filemap", help=__doc__, parent="pre-commit")
 
 
 def _match_to_test_file(match: str) -> pathlib.Path:
-    tests_path = tools.utils.REPO_ROOT / "tests"
+    tests_path = salt_tools.utils.REPO_ROOT / "tests"
     parts = match.split(".")
     parts[-1] += ".py"
-    return tests_path.joinpath(*parts).relative_to(tools.utils.REPO_ROOT)
+    return tests_path.joinpath(*parts).relative_to(salt_tools.utils.REPO_ROOT)
 
 
 def _check_matches(ctx: Context, rule: str, matches: list[str]) -> int:
@@ -41,8 +41,8 @@ def check(ctx: Context) -> None:
     exitcode = 0
     excludes = ("tools/", "templates/", ".nox/")
     full_filelist = [
-        path.relative_to(tools.utils.REPO_ROOT)
-        for path in tools.utils.REPO_ROOT.rglob("*.py")
+        path.relative_to(salt_tools.utils.REPO_ROOT)
+        for path in salt_tools.utils.REPO_ROOT.rglob("*.py")
     ]
     filelist = [
         str(path) for path in full_filelist if not str(path).startswith(excludes)
@@ -67,7 +67,7 @@ def check(ctx: Context) -> None:
         elif "*" in rule or "\\" in rule:
             # Glob matching
             process_matches = True
-            for filerule in tools.utils.REPO_ROOT.glob(rule):
+            for filerule in salt_tools.utils.REPO_ROOT.glob(rule):
                 if not filerule.exists():
                     ctx.error(
                         f"The rule '{rule}' points to a non existing path: {filerule}"
