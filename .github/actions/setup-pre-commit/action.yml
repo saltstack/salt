@@ -1,10 +1,10 @@
 ---
-name: setup-pre-commit
-description: Setup 'pre-commit'
+name: setup-prek
+description: Setup 'prek'
 
 inputs:
   version:
-    description: Pre-commit version to install
+    description: Prek version to install
     required: true
     default: 3.0.3
   cache-seed:

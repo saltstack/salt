@@ -194,83 +194,25 @@ def _get_pydir(session):
 
 
 def _get_pip_requirements_file(session, crypto=None, requirements_type="ci"):
-    assert requirements_type in ("ci", "pkg")
-    pydir = _get_pydir(session)
-
-    if IS_WINDOWS:
-        if crypto is None:
-            _requirements_file = os.path.join(
-                "requirements", "static", requirements_type, pydir, "windows.txt"
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
-        _requirements_file = os.path.join(
-            "requirements", "static", requirements_type, pydir, "windows-crypto.txt"
-        )
-        if os.path.exists(_requirements_file):
-            return _requirements_file
-        session.error(f"Could not find a windows requirements file for {pydir}")
-    elif IS_DARWIN:
-        if crypto is None:
-            _requirements_file = os.path.join(
-                "requirements", "static", requirements_type, pydir, "darwin.txt"
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
-        _requirements_file = os.path.join(
-            "requirements", "static", requirements_type, pydir, "darwin-crypto.txt"
-        )
-        if os.path.exists(_requirements_file):
-            return _requirements_file
-        session.error(f"Could not find a darwin requirements file for {pydir}")
-    elif IS_FREEBSD:
-        if crypto is None:
-            _requirements_file = os.path.join(
-                "requirements", "static", requirements_type, pydir, "freebsd.txt"
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
-        _requirements_file = os.path.join(
-            "requirements", "static", requirements_type, pydir, "freebsd-crypto.txt"
-        )
-        if os.path.exists(_requirements_file):
-            return _requirements_file
-        session.error(f"Could not find a freebsd requirements file for {pydir}")
-    else:
-        if crypto is None:
-            _requirements_file = os.path.join(
-                "requirements", "static", requirements_type, pydir, "linux.txt"
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
-        _requirements_file = os.path.join(
-            "requirements", "static", requirements_type, pydir, "linux-crypto.txt"
-        )
-        if os.path.exists(_requirements_file):
-            return _requirements_file
-        session.error(f"Could not find a linux requirements file for {pydir}")
+    """DEPRECATED: UV uses uv.lock instead of platform-specific requirements files.
+    This function is kept for compatibility but is no longer used.
+    """
+    session.error(
+        "Platform-specific requirements files are no longer used. "
+        "UV uses uv.lock for deterministic installs across all platforms."
+    )
 
 
 def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
+    """UV handles Python and tool versions - this is now a no-op.
+    Kept for backward compatibility with existing session logic.
+    """
     if SKIP_REQUIREMENTS_INSTALL:
         session.log(
             "Skipping Python Requirements because SKIP_REQUIREMENTS_INSTALL was found in the environ"
         )
         return False
-
-    env = os.environ.copy()
-    env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
-    install_command = [
-        "python",
-        "-m",
-        "pip",
-        "install",
-        "--progress-bar=off",
-    ]
-    if upgrade:
-        install_command.append("-U")
-    install_command.extend(["setuptools", "pip", "wheel"])
-    session_run_always(session, *install_command, silent=PIP_INSTALL_SILENT, env=env)
+    # UV handles environment setup automatically via uv sync
     return True
 
 
@@ -280,28 +222,39 @@ def _install_requirements(
     requirements_type="ci",
     onedir=False,
 ):
+    """Install dependencies using UV.
+    
+    UV reads from pyproject.toml and uv.lock for deterministic, reproducible installs.
+    The old requirements_type parameter is kept for backward compatibility but unused.
+    """
     if onedir and IS_LINUX:
-        session_run_always(
-            session, "python3", "-m", "pip", "install", "relenv[toolchain]"
+        # For onedir packaging on Linux, install relenv[toolchain]
+        session.run(
+            "uv", "pip", "install", "relenv[toolchain]",
+            external=True,
+            silent=PIP_INSTALL_SILENT,
         )
 
     if not _upgrade_pip_setuptools_and_wheel(session):
         return False
 
-    # Install requirements
-    env = os.environ.copy()
-    env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
-
-    requirements_file = _get_pip_requirements_file(
-        session, requirements_type=requirements_type
+    # Sync dependencies from uv.lock and pyproject.toml
+    # This installs all runtime + dev dependencies (from [project.optional-dependencies.dev])
+    session.log("Installing dependencies using uv sync...")
+    session.run(
+        "uv", "sync",
+        external=True,
+        silent=PIP_INSTALL_SILENT,
     )
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT, env=env)
 
     if extra_requirements:
-        install_command = ["--progress-bar=off"]
-        install_command += list(extra_requirements)
-        session.install(*install_command, silent=PIP_INSTALL_SILENT, env=env)
+        session.log(f"Installing extra requirements: {', '.join(extra_requirements)}")
+        for extra_req in extra_requirements:
+            session.run(
+                "uv", "pip", "install", extra_req,
+                external=True,
+                silent=PIP_INSTALL_SILENT,
+            )
 
     if EXTRA_REQUIREMENTS_INSTALL:
         session.log(
@@ -309,19 +262,18 @@ def _install_requirements(
             " EXTRA_REQUIREMENTS_INSTALL environment variable was set: %s",
             EXTRA_REQUIREMENTS_INSTALL,
         )
-        # We pass --constraint in this step because in case any of these extra dependencies has a requirement
-        # we're already using, we want to maintain the locked version
-        install_command = ["--progress-bar=off", "--constraint", requirements_file]
-        install_command += EXTRA_REQUIREMENTS_INSTALL.split()
-        session.install(*install_command, silent=PIP_INSTALL_SILENT, env=env)
+        for extra_req in EXTRA_REQUIREMENTS_INSTALL.split():
+            session.run(
+                "uv", "pip", "install", extra_req,
+                external=True,
+                silent=PIP_INSTALL_SILENT,
+            )
 
     return True
 
 
 def _install_coverage_requirement(session):
     if SKIP_REQUIREMENTS_INSTALL is False:
-        env = os.environ.copy()
-        env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
         coverage_requirement = COVERAGE_REQUIREMENT
         if coverage_requirement is None:
             coverage_requirement = "coverage==7.3.1"
@@ -337,11 +289,10 @@ def _install_coverage_requirement(session):
                     # Unit tests don't finish before the 5 hours timeout when they should
                     # finish within 1 to 2 hours.
                     coverage_requirement = "coverage==5.5"
-        session.install(
-            "--progress-bar=off",
-            coverage_requirement,
+        session.run(
+            "uv", "pip", "install", coverage_requirement,
+            external=True,
             silent=PIP_INSTALL_SILENT,
-            env=env,
         )
 
 
