@@ -177,9 +177,11 @@ official Salt repo you'll never get ``upstream`` or ``origin`` confused.
 
 Set up ``pre-commit`` and ``nox``
 ---------------------------------
-Here at Salt we use `pre-commit <https://pre-commit.com/>`__,
-`nox <https://nox.thea.codes/en/stable/>`__, and
-`uv <https://docs.astral.sh/uv/>`__ to make it easier for
+Here at Salt we use
+`uv <https://docs.astral.sh/uv/>`__ as our package manager,
+`nox <https://nox.thea.codes/en/stable/>`__ for running tests and other common tasks, and
+`prek <https://prek.j178.dev/>`__ for pre-commit hooks.
+These tools make it easier for
 contributors to get quick feedback, for quality control, and to increase
 the chance that your merge request will get reviewed and merged. Nox
 enables us to run multiple different test configurations, as well as
@@ -205,7 +207,8 @@ Next, install your development dependencies and set up pre-commit:
 ::
 
    uv sync
-   uv run pre-commit install
+   uv tool install prek
+   prek install
 
 Now before each commit, it will ensure that your code at least *looks*
 right before you open a pull request. And with that step, it's time to
@@ -532,7 +535,7 @@ install it with this:
 
 ::
 
-   python -m pip install nox
+   uv sync --group test
 
 Now you can run your tests:
 
