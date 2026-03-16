@@ -726,6 +726,16 @@ def load_privkey(pk, passphrase=None):
         if "Corrupt data: broken checksum" in str(err):
             raise SaltInvocationError("Bad decrypt - is the password correct?") from err
         raise CommandExecutionError("Could not load OpenSSH private key") from err
+    except TypeError as err:
+        if "Key is password-protected" in str(err):
+            raise SaltInvocationError(
+                "Private key is encrypted. Please provide a password."
+            ) from err
+        if "private key is not encrypted" in str(err):
+            raise SaltInvocationError(
+                "Password was given but private key is not encrypted"
+            ) from err
+        raise CommandExecutionError("Could not load OpenSSH private key") from err
 
 
 def load_pubkey(pk):
