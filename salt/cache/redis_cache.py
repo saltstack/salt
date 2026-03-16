@@ -14,53 +14,56 @@ This can be easily installed with pip:
 
     salt \* pip.install redis
 
+To use Redis Cluster the cluster package should be installed:
+
+.. code-block:: bash
+
+    salt \* pip.install redis-py-cluster
+
 As Redis provides a simple mechanism for very fast key-value store, in order to
 provide the necessary features for the Salt caching subsystem, the following
 conventions are used:
 
-- A Redis key consists of the bank name and the cache key separated by ``/``, e.g.:
-  ``$KEY_minions/alpha/stuff`` where ``minions/alpha`` is the bank name
-  and ``stuff`` is the key name.
 - As the caching subsystem is organised as a tree, we need to store the caching
   path and identify the bank and its offspring.  At the same time, Redis is
   linear and we need to avoid doing ``keys <pattern>`` which is very
   inefficient as it goes through all the keys on the remote Redis server.
-  Instead, each bank hierarchy has a Redis SET associated which stores the list
-  of sub-banks. By default, these keys begin with ``$BANK_``.
-- In addition, each key name is stored in a separate SET of all the keys within
-  a bank. By default, these SETs begin with ``$BANKEYS_``.
+  Instead a SORTED SET of all banks is stored in a single value. This can act as
+  an index for finding sub-banks. By default this key is prefixed with ``$BANKS_``.
+- Each bank is stored as a hash. It is a simple mechanism and allows for fast access
+  to the data and of the keys. By default this key is prefixed with ``$KEYS_``.
+- An additional hash is used to store the last update time of each cache key. By
+  default this key is prefixed with ``$TSTAMP_``.
 
-For example, to store the key ``my-key`` under the bank ``root-bank/sub-bank/leaf-bank``,
-the following hierarchy will be built:
+For example, to store the key ``my-key`` with value ``my-value`` under the bank
+``root-bank/sub-bank/leaf-bank``, the following datastructures will be created.
 
 .. code-block:: text
 
-    127.0.0.1:6379> SMEMBERS $BANK_root-bank
-    1) "sub-bank"
-    127.0.0.1:6379> SMEMBERS $BANK_root-bank/sub-bank
-    1) "leaf-bank"
-    127.0.0.1:6379> SMEMBERS $BANKEYS_root-bank/sub-bank/leaf-bank
+    127.0.0.1:6379> ZSCAN $BANKS_ 0
+    1) "0"
+    2) 1) "$KEYS_root-bank/sub-bank/leaf-bank/"
+       2) "0"
+    127.0.0.1:6379> HGETALL $KEYS_root-bank/sub-bank/leaf-bank/
     1) "my-key"
-    127.0.0.1:6379> GET $KEY_root-bank/sub-bank/leaf-bank/my-key
-    "my-value"
+    2) "my-value"
+    127.0.0.1:6379> HGETALL $TSTAMP_root-bank/sub-bank/leaf-bank/
+    1) "my-key"
+    2) "1773671718"
 
 
 There are four types of keys stored:
 
-- ``$BANK_*`` is a Redis SET containing the list of banks under the current bank.
-- ``$BANKEYS_*`` is a Redis SET containing the list of keys under the current bank.
-- ``$KEY_*`` keeps the value of the key.
+- ``$BANKS_*`` is a Redis SORTED SET containing the list of all banks
+- ``$KEYS_*`` is a Redis SET containing key, value pairs of the current bank.
 - ``$TSTAMP_*`` stores the last updated timestamp of the key.
 
 These prefixes and the separator can be adjusted using the configuration options:
 
-bank_prefix: ``$BANK``
-    The prefix used for the name of the Redis key storing the list of sub-banks.
+banks_prefix: ``$BANK``
+    The prefix used for the name of the Redis key storing the sorted set of banks.
 
-bank_keys_prefix: ``$BANKEYS``
-    The prefix used for the name of the Redis key storing the list of keys under a certain bank.
-
-key_prefix: ``$KEY``
+keys_prefix: ``$KEY``
     The prefix of the Redis keys having the value of the keys to be cached under
     a certain bank.
 
@@ -126,11 +129,10 @@ Configuration Example:
     cache.redis.port: 6379
     cache.redis.db: '0'
     cache.redis.password: my pass
-    cache.redis.bank_prefix: #BANK
-    cache.redis.bank_keys_prefix: #BANKEYS
-    cache.redis.key_prefix: #KEY
-    cache.redis.timestamp_prefix: #TICKS
-    cache.redis.separator: '@'
+    cache.redis.banks_prefix: #BANKS
+    cache.redis.keys_prefix: #KEYS
+    cache.redis.timestamp_prefix: #TSTAMP
+    cache.redis.separator: '_'
 
 Cluster Configuration Example:
 
@@ -145,13 +147,12 @@ Cluster Configuration Example:
         port: 6379
     cache.redis.db: '0'
     cache.redis.password: my pass
-    cache.redis.bank_prefix: #BANK
-    cache.redis.bank_keys_prefix: #BANKEYS
-    cache.redis.key_prefix: #KEY
-    cache.redis.separator: '@'
+    cache.redis.banks_prefix: #BANKS
+    cache.redis.keys_prefix: #KEYS
+    cache.redis.timestamp_prefix: #TSTAMP
+    cache.redis.separator: '_'
 """
 
-import itertools
 import logging
 import time
 
@@ -187,13 +188,10 @@ __func_alias__ = {"list_": "list"}
 
 log = logging.getLogger(__file__)
 
-_BANK_PREFIX = "$BANK"
-_KEY_PREFIX = "$KEY"
+_BANKS_PREFIX = "$BANKS"
+_KEYS_PREFIX = "$KEYS"
 _TIMESTAMP_PREFIX = "$TSTAMP"
-_BANK_KEYS_PREFIX = "$BANKEYS"
 _SEPARATOR = "_"
-
-REDIS_SERVER = None
 
 # -----------------------------------------------------------------------------
 # property functions
@@ -207,7 +205,7 @@ def __virtual__():
     The redis redis cluster library must be installed if cluster_mode is True
     """
     if not HAS_REDIS:
-        return (False, "Please install the python-redis package.")
+        return (False, "Please install the redis package.")
     if not HAS_REDIS_CLUSTER and _get_redis_cache_opts()["cluster_mode"]:
         return (False, "Please install the redis-py-cluster package.")
     return __virtualname__
@@ -229,7 +227,8 @@ def _get_redis_cache_opts():
     """
     Return the Redis server connection details from the __opts__.
     """
-    return {
+    sep = __opts__.get("cache.redis.separator", _SEPARATOR)
+    opts = {
         "host": __opts__.get("cache.redis.host", "localhost"),
         "port": __opts__.get("cache.redis.port", 6379),
         "unix_socket_path": __opts__.get("cache.redis.unix_socket_path", None),
@@ -240,132 +239,128 @@ def _get_redis_cache_opts():
         "skip_full_coverage_check": __opts__.get(
             "cache.redis.cluster.skip_full_coverage_check", False
         ),
+        "banks_prefix": __opts__.get("cache.redis.banks_prefix", _BANKS_PREFIX) + sep,
+        "keys_prefix": __opts__.get("cache.redis.keys_prefix", _KEYS_PREFIX) + sep,
+        "timestamp_prefix": __opts__.get("cache.redis.timestamp_prefix", _TIMESTAMP_PREFIX) + sep,
     }
+    prefix_confs = [opts["banks_prefix"], opts["keys_prefix"], opts["timestamp_prefix"]]
+    if any("/" in conf for conf in prefix_confs):
+        mesg = "Slash '/' cannot be used in redis cache prefix configuration."
+        log.error(mesg)
+        raise SaltCacheError(mesg)
+    return opts
 
 
-def _get_redis_server(opts=None):
+def _get_redis_server():
     """
     Return the Redis server instance.
     Caching the object instance.
     """
-    global REDIS_SERVER
-    if REDIS_SERVER:
-        return REDIS_SERVER
-    if not opts:
-        opts = _get_redis_cache_opts()
-
+    redis_server = __context__.get("cache.redis", {}).get("client")
+    if redis_server is not None:
+        return redis_server
+    opts = _get_redis_cache_opts()
     if opts["cluster_mode"]:
-        REDIS_SERVER = RedisCluster(
+        redis_server = RedisCluster(
             startup_nodes=opts["startup_nodes"],
             skip_full_coverage_check=opts["skip_full_coverage_check"],
         )
     else:
-        REDIS_SERVER = redis.StrictRedis(
+        redis_server = redis.StrictRedis(
             opts["host"],
             opts["port"],
             unix_socket_path=opts["unix_socket_path"],
             db=opts["db"],
             password=opts["password"],
         )
-    return REDIS_SERVER
-
-
-def _get_redis_keys_opts():
-    """
-    Build the key opts based on the user options.
-    """
-    return {
-        "bank_prefix": __opts__.get("cache.redis.bank_prefix", _BANK_PREFIX),
-        "bank_keys_prefix": __opts__.get(
-            "cache.redis.bank_keys_prefix", _BANK_KEYS_PREFIX
-        ),
-        "key_prefix": __opts__.get("cache.redis.key_prefix", _KEY_PREFIX),
-        "separator": __opts__.get("cache.redis.separator", _SEPARATOR),
-        "timestamp_prefix": __opts__.get(
-            "cache.redis.timestamp_prefix", _TIMESTAMP_PREFIX
-        ),
+    __context__["cache.redis"] = {
+        "client": redis_server,
+        "banks_prefix": opts["banks_prefix"],
+        "keys_prefix": opts["keys_prefix"],
+        "timestamp_prefix": opts["timestamp_prefix"],
     }
+    return __context__["cache.redis"]["client"]
 
 
-def _get_bank_redis_key(bank):
+def _banks_set_key():
     """
-    Return the Redis key for the bank given the name.
+    Return the Redis key that stores all banks.
     """
-    opts = _get_redis_keys_opts()
-    return "{prefix}{separator}{bank}".format(
-        prefix=opts["bank_prefix"], separator=opts["separator"], bank=bank
+    return __context__["cache.redis"]["banks_prefix"]
+
+
+def _normalize_bank(bank):
+    """
+    Return the normalized bank key and bank timestamp names.
+    """
+    bankname = "{0}/".format(bank.rstrip("/"))
+    return (
+        "{0}{1}".format(__context__["cache.redis"]["keys_prefix"], bankname),
+        "{0}{1}".format(__context__["cache.redis"]["timestamp_prefix"], bankname),
     )
 
 
-def _get_timestamp_key(bank, key):
-    opts = _get_redis_keys_opts()
-    return "{}{}{}/{}".format(
-        opts["timestamp_prefix"], opts["separator"], {bank}, {key}
-    )
-    # Use this line when we can use modern python
-    # return f"{opts['timestamp_prefix']}{opts['separator']}{bank}/{key}"
-
-
-def _get_key_redis_key(bank, key):
+def _timestamp_from_bank_key(bank_key):
     """
-    Return the Redis key given the bank name and the key name.
+    Convert a bank key into a timestamp key.
     """
-    opts = _get_redis_keys_opts()
-    return "{prefix}{separator}{bank}/{key}".format(
-        prefix=opts["key_prefix"],
-        separator=opts["separator"],
-        bank=bank,
-        key=salt.utils.stringutils.to_str(key),
+    return '{0}{1}'.format(
+        __context__['cache.redis']['timestamp_prefix'],
+        bank_key.removeprefix(__context__['cache.redis']['keys_prefix']),
     )
 
 
-def _get_bank_keys_redis_key(bank):
+def _flush_key(bank, key):
     """
-    Return the Redis key for the SET of keys under a certain bank, given the bank name.
+    Remove the key from the cache.
+
+    If this is the last key in the bank then also remove the bank from the list of banks.
     """
-    opts = _get_redis_keys_opts()
-    return "{prefix}{separator}{bank}".format(
-        prefix=opts["bank_keys_prefix"], separator=opts["separator"], bank=bank
-    )
+    redis_server = _get_redis_server()
+    bank_key, timestamp_key = _normalize_bank(bank)
+    redis_pipe = redis_server.pipeline()
+    redis_pipe.hdel(bank_key, key)
+    redis_pipe.hdel(timestamp_key, key)
+    redis_pipe.exists(bank_key)
+    batch_results = redis_pipe.execute()
+    # I wish this could be made atomic, but it relies on the previous result. Scripts could make it
+    # atomic, but that's a lot of overhead..
+    if not batch_results[-1]:
+        redis_server.zrem(_banks_set_key(), bank_key)
 
 
-def _build_bank_hier(bank, redis_pipe):
+def _flush_bank(bank):
     """
-    Build the bank hierarchy from the root of the tree.
-    If already exists, it won't rewrite.
-    It's using the Redis pipeline,
-    so there will be only one interaction with the remote server.
+    Clear out an entire bank and subbanks.
     """
+    redis_server = _get_redis_server()
+    bank_key, timestamp_key = _normalize_bank(bank)
+    subbanks = _get_subbanks(redis_server, bank_key)
+    if not subbanks:
+        return
+    redis_pipe = redis_server.pipeline()
+    redis_pipe.zrem(_banks_set_key(), *subbanks)
+    redis_pipe.unlink(*subbanks)
+    redis_pipe.unlink(*[_timestamp_from_bank_key(bank_key) for bank_key in subbanks])
+    redis_pipe.execute()
 
-    def joinbanks(*banks):
-        return "/".join(banks)
 
-    for bank_path in itertools.accumulate(bank.split("/"), joinbanks):
-        bank_set = _get_bank_redis_key(bank_path)
-        log.debug("Adding %s to %s", bank, bank_set)
-        redis_pipe.sadd(bank_set, ".")
-
-
-def _get_banks_to_remove(redis_server, bank, path=""):
+def _get_subbanks(redis_server, bank_key):
     """
-    A simple tree traversal algorithm that builds the list of banks to remove,
-    starting from an arbitrary node in the tree.
-    """
-    current_path = bank if not path else f"{path}/{bank}"
-    bank_paths_to_remove = [current_path]
-    # as you got here, you'll be removed
+    Scan the BANKS key for the sub banks of the given bank.
 
-    bank_key = _get_bank_redis_key(current_path)
-    child_banks = redis_server.smembers(bank_key)
-    if not child_banks:
-        return bank_paths_to_remove  # this bank does not have any child banks so we stop here
-    for child_bank in child_banks:
-        bank_paths_to_remove.extend(
-            _get_banks_to_remove(redis_server, child_bank, path=current_path)
-        )
-        # go one more level deeper
-        # and also remove the children of this child bank (if any)
-    return bank_paths_to_remove
+    The function will also return the current bank if it exists.
+    """
+    startrange = "[{0}".format(bank_key)
+    endrange = "({0}0".format(bank_key.rstrip("/"))
+    return list(_decode(redis_server.zrange(_banks_set_key(), startrange, endrange, bylex=True)))
+
+
+def _decode(iterable):
+    """
+    Decode the iterable.
+    """
+    yield from (item.decode("utf8") for item in iterable)
 
 
 # -----------------------------------------------------------------------------
@@ -378,25 +373,16 @@ def store(bank, key, data):
     Store the data in a Redis key.
     """
     redis_server = _get_redis_server()
+    bank_key, timestamp_key = _normalize_bank(bank)
     redis_pipe = redis_server.pipeline()
-    redis_key = _get_key_redis_key(bank, key)
-    redis_bank_keys = _get_bank_keys_redis_key(bank)
     try:
-        _build_bank_hier(bank, redis_pipe)
-        value = salt.payload.dumps(data)
-        redis_pipe.set(redis_key, value)
-        log.debug("Setting the value for %s under %s (%s)", key, bank, redis_key)
-        redis_pipe.sadd(redis_bank_keys, key)
-        # localfs cache truncates the timestamp to int only. We'll do the same.
-        redis_pipe.set(
-            _get_timestamp_key(bank=bank, key=key),
-            salt.payload.dumps(int(time.time())),
-        )
-        log.debug("Adding %s to %s", key, redis_bank_keys)
+        redis_pipe.zadd(_banks_set_key(), {bank_key: 0})
+        redis_pipe.hset(bank_key, key, salt.payload.dumps(data))
+        redis_pipe.hset(timestamp_key, key, salt.payload.dumps(int(time.time())))
         redis_pipe.execute()
     except (RedisConnectionError, RedisResponseError) as rerr:
-        mesg = "Cannot set the Redis cache key {rkey}: {rerr}".format(
-            rkey=redis_key, rerr=rerr
+        mesg = "Cannot set the Redis cache key {rbank}.{rkey}: {rerr}".format(
+            rbank=bank_key, rkey=key, rerr=rerr
         )
         log.error(mesg)
         raise SaltCacheError(mesg)
@@ -407,120 +393,38 @@ def fetch(bank, key):
     Fetch data from the Redis cache.
     """
     redis_server = _get_redis_server()
-    redis_key = _get_key_redis_key(bank, key)
-    redis_value = None
+    bank_key, _ = _normalize_bank(bank)
     try:
-        redis_value = redis_server.get(redis_key)
+        redis_value = redis_server.hget(bank_key, key)
     except (RedisConnectionError, RedisResponseError) as rerr:
-        mesg = "Cannot fetch the Redis cache key {rkey}: {rerr}".format(
-            rkey=redis_key, rerr=rerr
+        mesg = "Cannot fetch the Redis cache key {rbank}.{rkey}: {rerr}".format(
+            rbank=bank_key, rkey=key, rerr=rerr
         )
         log.error(mesg)
         raise SaltCacheError(mesg)
-    if redis_value is None:
-        return {}
-    return salt.payload.loads(redis_value)
+    return {} if redis_value is None else salt.payload.loads(redis_value)
 
 
 def flush(bank, key=None):
     """
     Remove the key from the cache bank with all the key content. If no key is specified, remove
     the entire bank with all keys and sub-banks inside.
-    This function is using the Redis pipelining for best performance.
-    However, when removing a whole bank,
-    in order to re-create the tree, there are a couple of requests made. In total:
-
-    - one for node in the hierarchy sub-tree, starting from the bank node
-    - one pipelined request to get the keys under all banks in the sub-tree
-    - one pipeline request to remove the corresponding keys
-
-    This is not quite optimal, as if we need to flush a bank having
-    a very long list of sub-banks, the number of requests to build the sub-tree may grow quite big.
-
-    An improvement for this would be loading a custom Lua script in the Redis instance of the user
-    (using the ``register_script`` feature) and call it whenever we flush.
-    This script would only need to build this sub-tree causing problems. It can be added later and the behaviour
-    should not change as the user needs to explicitly allow Salt inject scripts in their Redis instance.
     """
-    redis_server = _get_redis_server()
-    redis_pipe = redis_server.pipeline()
-    if key is None:
-        # will remove all bank keys
-        bank_paths_to_remove = _get_banks_to_remove(redis_server, bank)
-        # tree traversal to get all bank hierarchy
-        for bank_to_remove in bank_paths_to_remove:
-            bank_keys_redis_key = _get_bank_keys_redis_key(bank_to_remove)
-            # Redis key of the SET that stores the bank keys
-            redis_pipe.smembers(bank_keys_redis_key)  # fetch these keys
-            log.debug(
-                "Fetching the keys of the %s bank (%s)",
-                bank_to_remove,
-                bank_keys_redis_key,
-            )
-        try:
-            log.debug("Executing the pipe...")
-            subtree_keys = (
-                redis_pipe.execute()
-            )  # here are the keys under these banks to be removed
-            # this retunrs a list of sets, e.g.:
-            # [set([]), set(['my-key']), set(['my-other-key', 'yet-another-key'])]
-            # one set corresponding to a bank
-        except (RedisConnectionError, RedisResponseError) as rerr:
-            mesg = "Cannot retrieve the keys under these cache banks: {rbanks}: {rerr}".format(
-                rbanks=", ".join(bank_paths_to_remove), rerr=rerr
-            )
-            log.error(mesg)
-            raise SaltCacheError(mesg)
-        total_banks = len(bank_paths_to_remove)
-        # bank_paths_to_remove and subtree_keys have the same length (see above)
-        for index in range(total_banks):
-            bank_keys = subtree_keys[index]  # all the keys under this bank
-            bank_path = bank_paths_to_remove[index]
-            for key in bank_keys:
-                redis_key = _get_key_redis_key(bank_path, key)
-                redis_pipe.delete(redis_key)  # kill 'em all!
-                timestamp_key = _get_timestamp_key(bank=bank_path, key=key.decode())
-                redis_pipe.delete(timestamp_key)
-                log.debug(
-                    "Removing the key %s under the %s bank (%s)",
-                    key,
-                    bank_path,
-                    redis_key,
-                )
-            bank_keys_redis_key = _get_bank_keys_redis_key(bank_path)
-            redis_pipe.delete(bank_keys_redis_key)
-            log.debug(
-                "Removing the bank-keys key for the %s bank (%s)",
-                bank_path,
-                bank_keys_redis_key,
-            )
-            # delete the Redis key where are stored
-            # the list of keys under this bank
-            bank_key = _get_bank_redis_key(bank_path)
-            redis_pipe.delete(bank_key)
-            log.debug("Removing the %s bank (%s)", bank_path, bank_key)
-            # delete the bank key itself
-    else:
-        redis_key = _get_key_redis_key(bank, key)
-        redis_pipe.delete(redis_key)  # delete the key cached
-        timestamp_key = _get_timestamp_key(bank=bank, key=key)
-        redis_pipe.delete(timestamp_key)
-        log.debug("Removing the key %s under the %s bank (%s)", key, bank, redis_key)
-        bank_keys_redis_key = _get_bank_keys_redis_key(bank)
-        redis_pipe.srem(bank_keys_redis_key, key)
-        log.debug(
-            "De-referencing the key %s from the bank-keys of the %s bank (%s)",
-            key,
-            bank,
-            bank_keys_redis_key,
-        )
-        # but also its reference from $BANKEYS list
     try:
-        redis_pipe.execute()  # Fluuuush
+        if key is None:
+            _flush_bank(bank)
+        else:
+            _flush_key(bank, key)
     except (RedisConnectionError, RedisResponseError) as rerr:
-        mesg = "Cannot flush the Redis cache bank {rbank}: {rerr}".format(
-            rbank=bank, rerr=rerr
-        )
+        bank_key, _ = _normalize_bank(bank)
+        if key is None:
+            mesg = "Cannot flush Redis cache bank {rbank}: {rerr}".format(
+                rbank=bank_key, rerr=rerr,
+            )
+        else:
+            mesg = "Cannot flush Redis cache key {rbank}.{rkey}: {rerr}".format(
+                rbank=bank_key, rkey=key, rerr=rerr,
+            )
         log.error(mesg)
         raise SaltCacheError(mesg)
     return True
@@ -531,38 +435,53 @@ def list_(bank):
     Lists entries stored in the specified bank.
     """
     redis_server = _get_redis_server()
-    bank_redis_key = _get_bank_keys_redis_key(bank)
+    bank_key, _ = _normalize_bank(bank)
     try:
-        banks = redis_server.smembers(bank_redis_key)
+        subbanks = _get_subbanks(redis_server, bank_key)
     except (RedisConnectionError, RedisResponseError) as rerr:
-        mesg = "Cannot list the Redis cache key {rkey}: {rerr}".format(
-            rkey=bank_redis_key, rerr=rerr
+        mesg = "Cannot list the Redis cache key subbanks {rbank}: {rerr}".format(
+            rbank=bank_key, rerr=rerr,
         )
         log.error(mesg)
         raise SaltCacheError(mesg)
-    if not banks:
-        return []
-    return [bank.decode() for bank in banks if bank != b"."]
+    # Unfortunately we get all subsub+ banks from the _get_subbanks() function call. A simple method
+    # of filter just the direct descendents is to count the number of slashes. If there is +1 slashes
+    # it is a direct descendent. Also strip out the full path and extra gunk for the final listing.
+    slashcount = bank_key.count('/') + 1
+    listing = [
+        sub.removeprefix(bank_key).rstrip('/')
+        for sub in subbanks if sub.count('/') == slashcount
+    ]
+    try:
+        listing.extend(_decode(redis_server.hkeys(bank_key)))
+    except (RedisConnectionError, RedisResponseError) as rerr:
+        mesg = "Cannot list the Redis cache key {rbank}: {rerr}".format(
+            rbank=bank_key, rerr=rerr,
+        )
+        log.error(mesg)
+        raise SaltCacheError(mesg)
+    return listing
 
 
-def contains(bank, key):
+def contains(bank, key=None):
     """
     Checks if the specified bank contains the specified key.
     """
     redis_server = _get_redis_server()
-    bank_redis_key = _get_bank_keys_redis_key(bank)
+    bank_key, _ = _normalize_bank(bank)
     try:
         if key is None:
-            return (
-                salt.utils.stringutils.to_str(redis_server.type(bank_redis_key))
-                != "none"
+            return bool(redis_server.exists(bank_key))
+        return bool(redis_server.hexists(bank_key, key))
+    except (RedisConnectionError, RedisResponseError) as rerr:
+        if key is None:
+            mesg = "Cannot check contains of Redis cache bank {rbank}: {rerr}".format(
+                rbank=bank_key, rerr=rerr,
             )
         else:
-            return redis_server.sismember(bank_redis_key, key)
-    except (RedisConnectionError, RedisResponseError) as rerr:
-        mesg = "Cannot retrieve the Redis cache key {rkey}: {rerr}".format(
-            rkey=bank_redis_key, rerr=rerr
-        )
+            mesg = "Cannot check contains of Redis cache key {rbank}.{rkey}: {rerr}".format(
+                rbank=bank_key, rkey=key, rerr=rerr,
+            )
         log.error(mesg)
         raise SaltCacheError(mesg)
 
@@ -573,8 +492,13 @@ def updated(bank, key):
     None if key is not found.
     """
     redis_server = _get_redis_server()
-    timestamp_key = _get_timestamp_key(bank=bank, key=key)
-    value = redis_server.get(timestamp_key)
-    if value is not None:
-        value = salt.payload.loads(value)
-    return value
+    _, timestamp_key = _normalize_bank(bank)
+    try:
+        cache_time = redis_server.hget(timestamp_key, key)
+    except (RedisConnectionError, RedisResponseError) as rerr:
+        mesg = "Cannot get timestamp of Redis cache key {rstamp}.{rkey}: {rerr}".format(
+            rstamp=timestamp_key, rkey=key, rerr=rerr,
+        )
+        log.error(mesg)
+        raise SaltCacheError(mesg)
+    return None if cache_time is None else salt.payload.loads(cache_time)
