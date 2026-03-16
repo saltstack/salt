@@ -26,5 +26,8 @@ from __future__ import absolute_import, division, print_function
 # is zero for an official release, positive for a development branch,
 # or negative for a release candidate or beta (after the base version
 # number has been incremented)
-version = "4.5.3"
-version_info = (4, 5, 3, 0)
+
+
+# The bundled version is 4.5.3 and has been patched for CVEs up to 6.5.3
+version = "6.5.3"
+version_info = (6, 5, 3, 0)
