@@ -119,7 +119,7 @@ propcache==0.3.2
     #   yarl
 psutil==5.9.8
     # via -r requirements/base.txt
-pyasn1==0.6.2
+pyasn1==0.6.3
     # via -r requirements/base.txt
 pycparser==2.21
     # via
@@ -127,7 +127,7 @@ pycparser==2.21
     #   cffi
 pycryptodomex==3.19.1
     # via -r requirements/crypto.txt
-pyopenssl==25.3.0
+pyopenssl==26.0.0
     # via -r requirements/base.txt
 python-dateutil==2.9.0.post0
     # via

@@ -337,7 +337,7 @@ psutil==7.2.2
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-pyasn1==0.6.2
+pyasn1==0.6.3
     # via
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt
@@ -360,15 +360,17 @@ pyiface==0.0.11
     # via -r requirements/static/ci/linux.in
 pyinotify==0.9.6
     # via -r requirements/static/ci/common.in
-pyjwt==2.10.1
-    # via twilio
+pyjwt==2.12.1
+    # via
+    #   -r requirements/static/ci/linux.in
+    #   twilio
 pymysql==1.1.2
     # via -r requirements/static/ci/linux.in
 pynacl==1.6.2
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==25.3.0
+pyopenssl==26.0.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt
@@ -546,7 +548,7 @@ transitions==0.9.3
     # via junos-eznc
 trustme==1.2.1
     # via -r requirements/pytest.txt
-twilio==9.9.1
+twilio==9.10.3
     # via -r requirements/static/ci/linux.in
 typing-extensions==4.15.0
     # via pytest-system-statistics

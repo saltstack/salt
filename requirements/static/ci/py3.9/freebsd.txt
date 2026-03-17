@@ -381,7 +381,7 @@ psutil==7.2.2 ; python_full_version >= '3.10'
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-pyasn1==0.6.2
+pyasn1==0.6.3
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.txt
     #   -r requirements/base.txt
@@ -421,7 +421,7 @@ pynacl==1.6.2
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==25.3.0
+pyopenssl==26.0.0
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.txt
     #   -r requirements/base.txt
