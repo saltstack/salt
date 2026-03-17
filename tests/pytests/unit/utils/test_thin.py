@@ -94,6 +94,7 @@ class ThinTestContext:
             "requests": str(code_dir / "requests"),
             "idna": str(code_dir / "idna"),
             "urllib3": str(code_dir / "urllib3"),
+            "charset_normalizer": str(code_dir / "charset_normalizer"),
         }
         self.exc_libs = ["jinja2", "yaml"]
 
@@ -515,6 +516,7 @@ def test_get_tops(thin_ctx):
         "networkx",
         "requests",
         "urllib3",
+        "charset_normalizer",
     ]
     if sys.version_info < (3, 13):
         base_tops.append("backports")
@@ -627,6 +629,7 @@ def test_get_tops_extra_mods(thin_ctx):
         "networkx",
         "requests",
         "urllib3",
+        "charset_normalizer",
         "foo",
         "bar.py",
     ]
@@ -749,6 +752,7 @@ def test_get_tops_so_mods(thin_ctx):
         "networkx",
         "requests",
         "urllib3",
+        "charset_normalizer",
         "foo.so",
         "bar.so",
     ]
@@ -1201,6 +1205,7 @@ def test_get_tops_python(thin_ctx):
                 (bts("requests/__init__.py"), bts("")),
                 (bts("idna/__init__.py"), bts("")),
                 (bts("urllib3/__init__.py"), bts("")),
+                (bts("charset_normalizer/__init__.py"), bts("")),
                 (bts("certifi/__init__.py"), bts("")),
                 (bts("singledispatch.py"), bts("")),
                 (bts(""), bts("")),  # concurrent
@@ -1250,6 +1255,7 @@ def test_get_tops_python_exclude(thin_ctx):
                 (bts("requests/__init__.py"), bts("")),
                 (bts("idna/__init__.py"), bts("")),
                 (bts("urllib3/__init__.py"), bts("")),
+                (bts("charset_normalizer/__init__.py"), bts("")),
                 (bts("certifi/__init__.py"), bts("")),
                 (bts("singledispatch.py"), bts("")),
                 (bts(""), bts("")),  # concurrent
@@ -1301,6 +1307,7 @@ def test_pack_alternatives_exclude(thin_ctx):
                 (bts("requests/__init__.py"), bts("")),
                 (bts("idna/__init__.py"), bts("")),
                 (bts("urllib3/__init__.py"), bts("")),
+                (bts("charset_normalizer/__init__.py"), bts("")),
                 (bts("certifi/__init__.py"), bts("")),
                 (bts("singledispatch.py"), bts("")),
                 (bts(""), bts("")),  # concurrent
