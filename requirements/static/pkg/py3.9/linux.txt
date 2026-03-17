@@ -46,7 +46,7 @@ distlib==0.4.0
     # via virtualenv
 distro==1.8.0
     # via -r requirements/base.txt
-filelock==3.19.1
+filelock==3.20.3
     # via
     #   python-discovery
     #   virtualenv

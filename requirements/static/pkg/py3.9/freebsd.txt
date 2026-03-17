@@ -62,7 +62,7 @@ filelock==3.19.1 ; python_full_version < '3.10'
     # via
     #   python-discovery
     #   virtualenv
-filelock==3.25.2 ; python_full_version >= '3.10'
+filelock==3.20.3 ; python_full_version >= '3.10'
     # via
     #   python-discovery
     #   virtualenv
