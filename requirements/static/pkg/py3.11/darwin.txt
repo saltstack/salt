@@ -166,7 +166,7 @@ timelib==0.3.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/darwin.in
-tornado==6.5.4
+tornado==6.5.5
     # via -r requirements/base.txt
 typing-extensions==4.14.1
     # via
