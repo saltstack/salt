@@ -492,7 +492,7 @@ psutil==5.9.8
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -c requirements/static/pkg/py3.9/linux.txt
     #   -r requirements/base.txt
-pyasn1==0.6.2
+pyasn1==0.6.3
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -c requirements/static/pkg/py3.9/linux.txt
@@ -537,7 +537,7 @@ pyinotify==0.9.6
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
-pyjwt==2.7.0
+pyjwt==2.12.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   twilio
@@ -605,7 +605,6 @@ pytz==2024.1
     #   -c requirements/static/pkg/py3.9/linux.txt
     #   croniter
     #   tempora
-    #   twilio
 pyvmomi==9.0.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -793,7 +792,7 @@ ttp-templates==0.3.7
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   napalm
-twilio==8.2.2
+twilio==9.10.4
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/linux.in
@@ -806,6 +805,7 @@ typing-extensions==4.14.1
     #   cryptography
     #   gitpython
     #   napalm
+    #   pyjwt
     #   pylint
     #   pyopenssl
     #   referencing
