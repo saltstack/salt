@@ -131,7 +131,7 @@ propcache==0.3.2
     #   yarl
 psutil==7.2.2
     # via -r requirements/base.txt
-pyasn1==0.6.2
+pyasn1==0.6.3
     # via -r requirements/base.txt
 pycparser==2.21
     # via
@@ -144,7 +144,7 @@ pymssql==2.3.11 ; sys_platform == 'win32'
     # via -r requirements/base.txt
 pymysql==1.1.2 ; sys_platform == 'win32'
     # via -r requirements/base.txt
-pyopenssl==25.3.0
+pyopenssl==26.0.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in

@@ -373,7 +373,7 @@ psutil==5.9.8
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-pyasn1==0.6.2
+pyasn1==0.6.3
     # via
     #   -c requirements/static/pkg/py3.9/linux.txt
     #   -r requirements/base.txt
@@ -404,15 +404,17 @@ pyiface==0.0.11
     # via -r requirements/static/ci/linux.in
 pyinotify==0.9.6
     # via -r requirements/static/ci/common.in
-pyjwt==2.7.0
-    # via twilio
+pyjwt==2.12.1
+    # via
+    #   -r requirements/static/ci/linux.in
+    #   twilio
 pymysql==1.1.1
     # via -r requirements/static/ci/linux.in
 pynacl==1.6.2
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==25.3.0
+pyopenssl==26.0.0
     # via
     #   -c requirements/static/pkg/py3.9/linux.txt
     #   -r requirements/base.txt
@@ -485,7 +487,6 @@ pytz==2024.1
     #   -c requirements/static/pkg/py3.9/linux.txt
     #   croniter
     #   tempora
-    #   twilio
 pyvmomi==9.0.0.0
     # via -r requirements/static/ci/common.in
 pyyaml==6.0.3
@@ -618,7 +619,7 @@ ttp==0.10.0
     #   ttp-templates
 ttp-templates==0.3.7
     # via napalm
-twilio==8.2.2
+twilio==9.10.3
     # via -r requirements/static/ci/linux.in
 typing-extensions==4.14.1
     # via
@@ -627,6 +628,7 @@ typing-extensions==4.14.1
     #   cryptography
     #   gitpython
     #   napalm
+    #   pyjwt
     #   pyopenssl
     #   pytest-shell-utilities
     #   pytest-system-statistics

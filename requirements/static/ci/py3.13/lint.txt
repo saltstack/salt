@@ -444,7 +444,7 @@ psutil==7.2.2
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt
-pyasn1==0.6.2
+pyasn1==0.6.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
@@ -473,9 +473,10 @@ pyinotify==0.9.6
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
-pyjwt==2.10.1
+pyjwt==2.12.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
+    #   -r requirements/static/ci/linux.in
     #   twilio
 pylint==3.1.1
     # via
@@ -490,7 +491,7 @@ pynacl==1.6.2
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==25.3.0
+pyopenssl==26.0.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
@@ -695,7 +696,7 @@ transitions==0.9.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   junos-eznc
-twilio==9.9.1
+twilio==9.10.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/linux.in
