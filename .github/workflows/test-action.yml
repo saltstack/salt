@@ -202,6 +202,11 @@ jobs:
         run: |
           /usr/bin/docker start ${{ github.run_id }}_salt-test
 
+      - name: Fix PhotonOS password expiration
+        if: startsWith(matrix.slug, 'photonos-')
+        run: |
+          docker exec ${{ github.run_id }}_salt-test chage -I -1 -m 0 -M 99999 -E -1 root
+
       - name: "Show container inspect ${{ matrix.container }}"
         run: |
           /usr/bin/docker inspect ${{ github.run_id }}_salt-test
@@ -542,6 +547,11 @@ jobs:
       - name: "Start container ${{ matrix.container }}"
         run: |
           /usr/bin/docker start ${{ github.run_id }}_salt-test
+
+      - name: Fix PhotonOS password expiration
+        if: startsWith(matrix.slug, 'photonos-')
+        run: |
+          docker exec ${{ github.run_id }}_salt-test chage -I -1 -m 0 -M 99999 -E -1 root
 
       - name: "Show container inspect ${{ matrix.container }}"
         run: |
@@ -1030,7 +1040,7 @@ jobs:
     name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.transport }}${{ matrix.test-group && ' ' || '' }}${{ matrix.test-group && matrix.test-group || '' }}
 
     if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
-    runs-on: ${{ matrix.slug }}
+    runs-on: ${{ matrix.runner }}
     # Full test runs. Each chunk should never take more than 2 hours.
     # Partial test runs(no chunk parallelization), 6 Hours
     timeout-minutes: ${{ fromJSON(inputs.testrun)['type'] == 'full' && inputs.default-timeout || 360 }}

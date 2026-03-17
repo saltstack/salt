@@ -24,7 +24,7 @@ except ImportError:
     HAS_RANDOM = False
 
 try:
-    import crypt
+    import crypt  # pylint: disable=deprecated-module
 
     # We need to ensure if the right `crypt` is loaded,
     # as LazyLoader can load `salt.utils.crypt` instead of `crypt`

@@ -286,7 +286,7 @@ def configure_loader_modules(salt_minion_factory):
         yield {
             state: {
                 "__opts__": {
-                    "cachedir": "/D",
+                    "cachedir": salt_minion_factory.config["cachedir"],
                     "saltenv": None,
                     "sock_dir": "/var/run/salt/master",
                     "transport": "zeromq",
@@ -296,6 +296,7 @@ def configure_loader_modules(salt_minion_factory):
                 "__salt__": {
                     "config.get": config.get,
                     "config.option": MagicMock(return_value=""),
+                    "saltutil.is_running": MagicMock(return_value=[]),
                 },
             },
             config: {"__opts__": {}, "__pillar__": {}},
@@ -850,13 +851,17 @@ def test_sls():
     """
     arg = "core,edit.vim dev"
     ret = ["Pillar failed to render with the following messages:", "E", "1"]
-    with patch.object(state, "running", return_value=True):
+    with patch.object(state, "running", return_value=True), patch(
+        "salt.utils.state.acquire_queue_lock", MagicMock()
+    ):
         with patch.dict(state.__context__, {"retcode": 1}):
             assert state.sls("core,edit.vim dev") is True
 
     with patch.object(
         state, "_wait", side_effect=[True, True, True, True, True, True]
-    ), patch.object(state, "_disabled", side_effect=[["A"], [], [], [], [], []]):
+    ), patch.object(state, "_disabled", side_effect=[["A"], [], [], [], [], []]), patch(
+        "salt.utils.state.acquire_queue_lock", MagicMock()
+    ):
         with patch.dict(state.__context__, {"retcode": 1}):
             assert state.sls("core,edit.vim dev", None, None, True) == ["A"]
 
@@ -864,7 +869,7 @@ def test_sls():
             state,
             "_get_pillar_errors",
             side_effect=[["E", "1"], None, None, None, None],
-        ):
+        ), patch("salt.utils.state.acquire_queue_lock", MagicMock()):
             with patch.dict(state.__context__, {"retcode": 5}), patch.dict(
                 state.__pillar__, {"_errors": ["E", "1"]}
             ):
@@ -874,7 +879,9 @@ def test_sls():
                 salt.utils.state,
                 "get_sls_opts",
                 return_value={"test": "", "saltenv": None},
-            ), patch.object(salt.utils.args, "test_mode", return_value=True):
+            ), patch.object(salt.utils.args, "test_mode", return_value=True), patch(
+                "salt.utils.state.acquire_queue_lock", MagicMock()
+            ):
                 pytest.raises(
                     SaltInvocationError,
                     state.sls,
@@ -884,14 +891,17 @@ def test_sls():
                     True,
                     pillar="A",
                 )
-                with patch.object(os.path, "join", return_value="/D/cache.cache.p"):
+                with patch.object(
+                    os.path, "join", return_value="/D/cache.cache.p"
+                ), patch("salt.utils.state.acquire_queue_lock", MagicMock()):
                     with patch.object(os.path, "isfile", return_value=True), patch(
                         "salt.utils.files.fopen", mock_open(b"")
                     ):
                         assert state.sls(arg, None, None, True, cache=True)
 
                     MockState.HighState.flag = True
-                    assert state.sls("core,edit.vim dev", None, None, True)
+                    with patch("salt.utils.state.acquire_queue_lock", MagicMock()):
+                        assert state.sls("core,edit.vim dev", None, None, True)
 
                     MockState.HighState.flag = False
                     with patch.object(
@@ -906,6 +916,10 @@ def test_sls():
                         state.__opts__, {"test": True}
                     ), patch(
                         "salt.utils.files.fopen", mock_open()
+                    ), patch(
+                        "salt.modules.state._prior_running_states", return_value=[]
+                    ), patch(
+                        "salt.utils.state.acquire_queue_lock", MagicMock()
                     ):
                         assert state.sls("core,edit.vim dev", None, None, True)
 
@@ -1288,15 +1302,78 @@ def test__wait(max_queue, call_count, ret_value):
 
 @pytest.mark.parametrize(
     "queue,wait_called,ret_value",
-    [(True, True, None), (False, False, True), (1, True, None)],
+    [(True, False, None), (False, False, True), (1, True, None)],
 )
 def test__check_queue(queue, wait_called, ret_value):
     mock_wait = MagicMock()
     with patch("salt.modules.state._wait", mock_wait), patch(
         "salt.modules.state.running", MagicMock(return_value=True)
-    ), patch.dict(state.__context__, {"retcode": "banana"}):
+    ), patch.dict(state.__context__, {"retcode": "banana"}), patch(
+        "salt.utils.state.acquire_queue_lock", MagicMock()
+    ):
         ret = state._check_queue(queue, {})
         assert mock_wait.called is wait_called
         assert ret is ret_value
         if ret_value is True:
             assert state.__context__["retcode"] == 1
+
+
+class TestCheckPriorRunningStates:
+    """
+    Test the check_prior_running_states function race condition fixes.
+    """
+
+    def test_check_prior_running_states_basic_functionality(self):
+        """
+        Test that check_prior_running_states works correctly without locks.
+        The function reads queue directories to find conflicting jobs.
+        """
+        # Test with empty directories
+        opts = {"cachedir": "/tmp"}
+        active_jobs = []
+
+        result = salt.utils.state.check_prior_running_states(opts, "12345", active_jobs)
+
+        # Verify it returns a list
+        assert isinstance(result, list)
+        assert result == []  # No conflicts with empty inputs
+
+    @patch("os.path.exists")
+    @patch("os.listdir")
+    @patch("salt.utils.files.fopen")
+    def test_check_prior_running_states_reads_state_queue(
+        self, mock_fopen, mock_listdir, mock_exists
+    ):
+        """
+        Test that check_prior_running_states reads the state_queue directory
+        to find queued jobs that would conflict with the current job.
+        """
+        # Mock directory existence
+        mock_exists.return_value = True
+
+        # Mock directory listing - simulate state_queue having queued files
+        mock_listdir.return_value = ["queued_1234567890_11111.p"]
+
+        # Mock file opening for state queue check
+        mock_file = MagicMock()
+        mock_payload = {"fun": "state.apply", "arg": ["test"], "jid": "11111"}
+        with patch("salt.payload.load", return_value=mock_payload):
+            mock_fopen.return_value.__enter__.return_value = mock_file
+
+            opts = {"cachedir": "/tmp"}
+            active_jobs = []
+
+            result = salt.utils.state.check_prior_running_states(
+                opts, "12345", active_jobs
+            )
+
+            # Verify directories were listed
+            assert mock_listdir.call_count == 2
+            mock_listdir.assert_any_call(os.path.join(opts["cachedir"], "state_queue"))
+            mock_listdir.assert_any_call(os.path.join(opts["cachedir"], "job_queue"))
+
+            # Verify we got results (should include the queued job as a conflict)
+            assert isinstance(result, list)
+            # Since mock_listdir returns the same for both calls in this mock setup,
+            # it finds the same file twice.
+            assert len(result) == 2

@@ -8,7 +8,7 @@ import salt.modules.win_useradd as win_useradd
 from tests.support.mock import MagicMock, patch
 
 try:
-    import win32net
+    import pywintypes
 
     WINAPI = True
 except ImportError:
@@ -64,8 +64,9 @@ def test_info(account, caplog):
 def test_info_domain(account, caplog):
     domain = "mydomain"
     dc = "myDC"
+    dc_info = {"DomainControllerName": dc}
     with caplog.at_level(logging.DEBUG), patch(
-        "win32net.NetGetAnyDCName", MagicMock(return_value=dc)
+        "win32security.DsGetDcName", MagicMock(return_value=dc_info)
     ):
         account.username = f"{domain}\\{account.username}"
         win_useradd.info(account.username)
@@ -77,7 +78,7 @@ def test_info_error(account, caplog):
     domain = "mydomain"
     dc = "myDC"
     with caplog.at_level(logging.DEBUG), patch(
-        "win32net.NetGetAnyDCName", MagicMock(side_effect=win32net.error)
+        "win32security.DsGetDcName", MagicMock(side_effect=pywintypes.error)
     ):
         account.username = f"{domain}\\{account.username}"
         win_useradd.info(account.username)

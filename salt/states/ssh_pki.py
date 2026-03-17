@@ -575,9 +575,9 @@ def private_key_managed(
         file_exists = __salt__["file.file_exists"](real_name)
 
         if file_exists and not new:
+            current_has_passphrase = False
             try:
                 current = sshpki.load_privkey(real_name, passphrase=passphrase)
-                current_has_passphrase = False
                 if passphrase:
                     try:
                         # The SSH key logic does not complain when a
@@ -587,7 +587,9 @@ def private_key_managed(
                         CommandExecutionError,
                         SaltInvocationError,
                     ) as err:  # pylint: disable=broad-except
-                        if "Bad decrypt" not in str(err):
+                        if "Bad decrypt" not in str(
+                            err
+                        ) and "private key is not encrypted" not in str(err):
                             raise
                         current_has_passphrase = True
 
@@ -599,6 +601,11 @@ def private_key_managed(
                             "Pass overwrite: true to force regeneration"
                         ) from err
                     changes["passphrase"] = True
+                elif "private key is not encrypted" in str(err):
+                    changes["passphrase"] = True
+                    # If we got this error, it means we provided a password for an unencrypted key.
+                    # We can still load the current key to compare other attributes.
+                    current = sshpki.load_privkey(real_name, passphrase=None)
                 elif "Private key is encrypted" in str(err):
                     if not overwrite:
                         raise CommandExecutionError(
@@ -647,7 +654,7 @@ def private_key_managed(
                 # cryptography does not report if the file is a valid private key
                 changes["passphrase"] = True
 
-        elif file_exists and new:
+        elif file_exists:
             changes["replaced"] = name
         else:
             changes["created"] = name

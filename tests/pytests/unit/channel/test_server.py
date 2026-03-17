@@ -367,7 +367,7 @@ def test_handle_message_version_extraction(auth_master_opts):
     # The current code at salt/channel/server.py:139-145 shows:
     # version = payload.get("version", 0)
     # #if version < self.opts["minimum_auth_version"]:
-    # #    raise salt.ext.tornado.gen.Return("bad load")
+    # #    raise tornado.gen.Return("bad load")
 
     # REGRESSION TEST: Verify minimum_auth_version exists in opts
     # Currently this will FAIL because the option doesn't exist
