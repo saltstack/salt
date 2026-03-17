@@ -692,7 +692,7 @@ toml==0.10.2
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
-tornado==6.5.4
+tornado==6.5.5
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -c requirements/static/pkg/py3.12/linux.txt
