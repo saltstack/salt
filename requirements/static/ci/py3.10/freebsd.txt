@@ -561,7 +561,7 @@ toml==0.10.2
     # via -r requirements/static/ci/common.in
 tomli==2.0.1 ; python_full_version < '3.11'
     # via pytest
-tornado==6.5.4
+tornado==6.5.5
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.txt
     #   -r requirements/base.txt
