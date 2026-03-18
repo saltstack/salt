@@ -140,7 +140,7 @@ pymssql==2.3.11 ; sys_platform == 'win32'
     # via -r requirements/base.txt
 pymysql==1.1.2 ; sys_platform == 'win32'
     # via -r requirements/base.txt
-pyopenssl==25.3.0
+pyopenssl==26.0.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
