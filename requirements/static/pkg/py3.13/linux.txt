@@ -176,7 +176,7 @@ tempora==5.8.1
     # via portend
 timelib==0.3.0
     # via -r requirements/static/pkg/linux.in
-tornado==6.5.4
+tornado==6.5.5
     # via -r requirements/base.txt
 urllib3==2.6.3
     # via
