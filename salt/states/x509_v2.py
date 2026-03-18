@@ -227,8 +227,6 @@ def certificate_managed(
     signing_policy=None,
     encoding="pem",
     append_certs=None,
-    copypath=None,
-    prepend_cn=False,
     digest="sha256",
     signing_private_key=None,
     signing_private_key_passphrase=None,

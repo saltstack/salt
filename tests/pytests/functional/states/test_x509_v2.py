@@ -1521,6 +1521,21 @@ def test_certificate_managed_pkcs12_embedded_pk_kept(
     assert new_pk.public_key().public_numbers() == cur_pk.public_key().public_numbers()
 
 
+@pytest.mark.parametrize("prepend_cn", [False, True])
+def test_certificate_managed_copypath(
+    x509, cert_args, rsa_privkey, ca_key, prepend_cn, tmp_path
+):
+    cert_args["private_key"] = rsa_privkey
+    cert_args["copypath"] = str(tmp_path)
+    cert_args["prepend_cn"] = prepend_cn
+    ret = x509.certificate_managed(**cert_args)
+    cert = _assert_cert_basic(ret, cert_args["name"], rsa_privkey, ca_key)
+    prefix = ""
+    if prepend_cn:
+        prefix = "success-"
+    assert (tmp_path / f"{prefix}{cert.serial_number:x}.crt").exists()
+
+
 def test_crl_managed_empty(x509, crl_args, ca_key):
     ret = x509.crl_managed(**crl_args)
     crl = _assert_crl_basic(ret, ca_key)
