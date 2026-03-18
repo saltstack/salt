@@ -1591,7 +1591,13 @@ def _file_managed(name, test=None, **kwargs):
         raise SaltInvocationError("test param can only be None or True")
     # work around https://github.com/saltstack/salt/issues/62590
     test = test or __opts__["test"]
-    res = __salt__["state.single"]("file.managed", name, test=test, **kwargs)
+    res = __salt__["state.single"](
+        "file.managed", name, test=test, concurrent=True, **kwargs
+    )
+    if not isinstance(res, dict):
+        raise CommandExecutionError(
+            f"Failed running file.managed in x509_v2 state: {res}"
+        )
     return res[next(iter(res))]
 
 
