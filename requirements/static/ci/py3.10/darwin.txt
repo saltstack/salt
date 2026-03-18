@@ -337,7 +337,7 @@ pynacl==1.5.0
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==25.3.0
+pyopenssl==26.0.0
     # via
     #   -c requirements/static/pkg/py3.10/darwin.txt
     #   -r requirements/base.txt

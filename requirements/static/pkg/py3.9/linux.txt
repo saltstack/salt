@@ -137,7 +137,7 @@ pycryptodomex==3.23.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/crypto.txt
-pyopenssl==25.3.0
+pyopenssl==26.0.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.in

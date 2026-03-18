@@ -150,7 +150,7 @@ pymssql==2.3.11
     # via -r requirements/base.txt
 pymysql==1.1.2
     # via -r requirements/base.txt
-pyopenssl==25.3.0
+pyopenssl==26.0.0
     # via -r requirements/base.txt
 python-dateutil==2.9.0.post0
     # via
