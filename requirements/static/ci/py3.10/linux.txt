@@ -359,7 +359,7 @@ pyiface==0.0.11
     # via -r requirements/static/ci/linux.in
 pyinotify==0.9.6
     # via -r requirements/static/ci/common.in
-pyjwt==2.7.0
+pyjwt==2.12.0
     # via twilio
 pymysql==1.1.1
     # via -r requirements/static/ci/linux.in
