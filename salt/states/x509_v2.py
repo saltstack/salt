@@ -188,6 +188,7 @@ import os.path
 from datetime import datetime, timedelta, timezone
 
 import salt.utils.files
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
@@ -1369,7 +1370,7 @@ def private_key_managed(
     if extra_args:
         raise SaltInvocationError(f"Unrecognized keyword arguments: {list(extra_args)}")
 
-    if not file_args.get("mode"):
+    if not file_args.get("mode") and not salt.utils.platform.is_windows():
         # ensure secure defaults
         file_args["mode"] = "0400"
 
