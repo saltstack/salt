@@ -354,7 +354,7 @@ pymysql==1.1.2
     #   -r requirements/base.txt
 pynacl==1.6.2
     # via -r requirements/static/ci/common.in
-pyopenssl==25.3.0
+pyopenssl==26.0.0
     # via
     #   -c requirements/static/pkg/py3.9/windows.txt
     #   -r requirements/base.txt
