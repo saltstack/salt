@@ -223,7 +223,7 @@ pygments==2.19.2
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   sphinx
-pyopenssl==25.3.0
+pyopenssl==26.0.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
