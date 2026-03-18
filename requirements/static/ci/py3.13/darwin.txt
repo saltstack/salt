@@ -479,7 +479,7 @@ textfsm==2.1.0
     # via -r requirements/static/ci/common.in
 toml==0.10.2
     # via -r requirements/static/ci/common.in
-tornado==6.5.4
+tornado==6.5.5
     # via
     #   -c requirements/static/pkg/py3.13/darwin.txt
     #   -r requirements/base.txt

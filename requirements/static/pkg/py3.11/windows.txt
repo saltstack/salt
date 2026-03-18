@@ -169,7 +169,7 @@ tempora==5.3.0
     # via portend
 timelib==0.3.0
     # via -r requirements/static/pkg/windows.in
-tornado==6.5.4
+tornado==6.5.5
     # via -r requirements/base.txt
 typing-extensions==4.14.1
     # via

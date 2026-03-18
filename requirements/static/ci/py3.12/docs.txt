@@ -298,7 +298,7 @@ tempora==5.3.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   portend
-tornado==6.5.4
+tornado==6.5.5
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
