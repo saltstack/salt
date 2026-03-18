@@ -35,7 +35,7 @@ def _get_running_named_salt_pid(process_name):
     return pids
 
 
-def test_salt_downgrade_minion(salt_master, salt_call_cli, install_salt):
+def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_minion):
     """
     Test a downgrade of Salt Minion.
     """
@@ -91,7 +91,12 @@ def test_salt_downgrade_minion(salt_master, salt_call_cli, install_salt):
         process_name = "salt-minion"
 
     old_minion_pids = _get_running_named_salt_pid(process_name)
-    assert old_minion_pids
+    if not platform.is_windows():
+        assert old_minion_pids
+
+    if platform.is_windows():
+
+        salt_minion.terminate()
 
     if platform.is_windows():
         with salt_master.stopped():

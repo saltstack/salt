@@ -13,6 +13,7 @@ import salt.utils.event
 import salt.utils.files
 import salt.utils.stringutils
 from salt.master import SMaster
+from tests.support.mock import AsyncMock, MagicMock, patch
 
 
 @pytest.fixture
@@ -367,7 +368,7 @@ def test_handle_message_version_extraction(auth_master_opts):
     # The current code at salt/channel/server.py:139-145 shows:
     # version = payload.get("version", 0)
     # #if version < self.opts["minimum_auth_version"]:
-    # #    raise salt.ext.tornado.gen.Return("bad load")
+    # #    raise tornado.gen.Return("bad load")
 
     # REGRESSION TEST: Verify minimum_auth_version exists in opts
     # Currently this will FAIL because the option doesn't exist
@@ -379,6 +380,176 @@ def test_handle_message_version_extraction(auth_master_opts):
     ), "Expected minimum auth version to be at least 3"
 
 
+async def test_auth_version_downgrade_warning_includes_minion_id(
+    pki_dir, auth_minion_opts, req_server, setup_accepted_minion, caplog
+):
+    """
+    Test that the rejected authentication warning includes the minion ID.
+
+    When minimum_auth_version rejects a connection, the warning message should
+    include the minion's ID so administrators can identify which minion needs
+    to be upgraded.
+    """
+    with salt.utils.files.fopen(str(pki_dir / "minion" / "minion.pub"), "r") as fp:
+        pub_key = fp.read()
+
+    load = {
+        "cmd": "_auth",
+        "id": "my-outdated-minion",
+        "pub": pub_key,
+        "enc_algo": auth_minion_opts["encryption_algorithm"],
+        "sig_algo": auth_minion_opts["signing_algorithm"],
+    }
+
+    payload = {"enc": "clear", "load": load, "version": 0}
+
+    import logging
+
+    with caplog.at_level(logging.WARNING, logger="salt.channel.server"):
+        ret = await req_server.handle_message(payload)
+
+    assert ret == "bad load"
+    assert any(
+        "my-outdated-minion" in record.message
+        for record in caplog.records
+        if record.levelno == logging.WARNING
+    ), "Expected minion ID 'my-outdated-minion' in the rejection warning message"
+
+
+async def test_auth_version_downgrade_warning_encrypted_load(req_server, caplog):
+    """
+    Test that the rejected authentication warning shows 'unknown minion' when
+    the load is not a dict (e.g., encrypted payload).
+    """
+    payload = {"enc": "aes", "load": b"encrypted-blob", "version": 0}
+
+    import logging
+
+    with caplog.at_level(logging.WARNING, logger="salt.channel.server"):
+        ret = await req_server.handle_message(payload)
+
+    assert ret == "bad load"
+    assert any(
+        "unknown minion" in record.message
+        for record in caplog.records
+        if record.levelno == logging.WARNING
+    ), "Expected 'unknown minion' in the rejection warning for encrypted payloads"
+
+
 # Note: The remaining security bypasses (token, TTL, ID mismatch, session keys)
 # are already tested via the parametrized downgrade tests above and the
 # functional tests. The key regression test is ensuring old versions are rejected.
+async def test_handle_message_exceptions(temp_salt_master):
+    """
+    test exceptions are handled cleanly in handle_message
+    """
+    opts = dict(temp_salt_master.config.copy())
+    req = server.ReqServerChannel(opts, None)
+
+    with patch(
+        "salt.channel.server.ReqServerChannel._decode_payload",
+        MagicMock(side_effect=OSError()),
+    ):
+        ret = await req.handle_message({})
+        assert ret == "bad load"
+
+    with patch(
+        "salt.channel.server.ReqServerChannel._decode_payload",
+        MagicMock(return_value="foobar"),
+    ):
+        ret = await req.handle_message({})
+        assert ret == "bad load"
+
+    with patch(
+        "salt.channel.server.ReqServerChannel._decode_payload",
+        MagicMock(return_value={"load": {"id": "foo\0"}}),
+    ):
+        ret = await req.handle_message({"version": 3, "enc": "clear", "load": {}})
+        assert ret == "bad load: id contains a null byte"
+
+    with patch(
+        "salt.channel.server.ReqServerChannel._decode_payload",
+        MagicMock(return_value={"load": {"id": None}}),
+    ):
+        ret = await req.handle_message({"version": 3, "enc": "clear", "load": {}})
+        assert ret == "bad load: id None is not a string"
+
+    with patch(
+        "salt.channel.server.ReqServerChannel._decode_payload",
+        MagicMock(
+            return_value={"version": 3, "enc": "clear", "load": {"cmd": "_auth"}}
+        ),
+    ):
+        with patch(
+            "salt.channel.server.ReqServerChannel._auth",
+            MagicMock(side_effect=OSError()),
+        ):
+            ret = await req.handle_message({"version": 3, "enc": "clear", "load": {}})
+            assert ret == "Some exception handling minion payload"
+
+    with patch(
+        "salt.channel.server.ReqServerChannel._decode_payload",
+        MagicMock(
+            return_value={"version": 3, "enc": "clear", "load": {"cmd": "not_auth"}}
+        ),
+    ):
+        with patch(
+            "salt.channel.server.ReqServerChannel.payload_handler",
+            MagicMock(side_effect=OSError()),
+            create=True,
+        ):
+            ret = await req.handle_message({"version": 3, "enc": "clear", "load": {}})
+            assert ret == "Some exception handling minion payload"
+
+    with patch(
+        "salt.channel.server.ReqServerChannel._decode_payload",
+        MagicMock(return_value={"enc": "clear", "load": {"cmd": "not_auth"}}),
+    ):
+        with patch(
+            "salt.channel.server.ReqServerChannel.payload_handler",
+            AsyncMock(return_value=(None, {"fun": "send"})),
+            create=True,
+        ):
+            crypticle = MagicMock()
+            with patch.object(req, "crypticle", crypticle, create=True):
+                crypticle.dumps = MagicMock(side_effect=OSError())
+                ret = await req.handle_message(
+                    {"version": 3, "enc": "clear", "load": {}}
+                )
+                assert ret == "Some exception handling minion payload"
+
+    with patch(
+        "salt.channel.server.ReqServerChannel._decode_payload",
+        MagicMock(return_value={"enc": "clear", "load": {"cmd": "not_auth"}}),
+    ):
+        with patch(
+            "salt.channel.server.ReqServerChannel.payload_handler",
+            AsyncMock(
+                return_value=(None, {"fun": "send_private", "key": None, "tgt": None})
+            ),
+            create=True,
+        ):
+            with patch.object(
+                req, "_encrypt_private", MagicMock(side_effect=OSError()), create=True
+            ):
+                ret = await req.handle_message(
+                    {"version": 3, "enc": "clear", "load": {}}
+                )
+                assert ret == "Some exception handling minion payload"
+
+    with patch(
+        "salt.channel.server.ReqServerChannel._decode_payload",
+        MagicMock(return_value={"enc": "clear", "load": {"cmd": "not_auth"}}),
+    ):
+        with patch(
+            "salt.channel.server.ReqServerChannel.payload_handler",
+            AsyncMock(return_value=(None, {"fun": "foobar", "key": None, "tgt": None})),
+            create=True,
+        ):
+            with patch.object(
+                req, "_encrypt_private", MagicMock(side_effect=OSError()), create=True
+            ):
+                ret = await req.handle_message(
+                    {"version": 3, "enc": "clear", "load": {}}
+                )
+                assert ret == "Server-side exception handling payload"

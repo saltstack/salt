@@ -26,7 +26,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2026.01.15"
+__ScriptVersion="2026.01.22"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -6107,7 +6107,14 @@ install_arch_linux_git_deps() {
 }
 
 install_arch_linux_onedir_deps() {
+    echodebug "install_arch_linux_onedir_deps() entry"
+
+    # Basic tooling for download/verify/extract
+    pacman -Sy --noconfirm --needed wget tar gzip gnupg ca-certificates || return 1
+
+    # Reuse stable deps for python-yaml etc. if you want config_salt() parity
     install_arch_linux_stable_deps || return 1
+    return 0
 }
 
 install_arch_linux_stable() {
@@ -6122,7 +6129,73 @@ install_arch_linux_stable() {
     pacman -S --noconfirm --needed bash || return 1
     pacman -Su --noconfirm || return 1
     # We can now resume regular salt update
-    pacman -Syu --noconfirm salt || return 1
+    # Except that this hasn't been in arch repos for years;
+    # so we have to build from AUR
+    # We use "buildgirl" because Eve demanded it.
+    build_user=${build_user:-buildgirl}
+    userdel "$build_user" || true
+    useradd -M -r -s /usr/bin/nologin "$build_user"
+    echo "$build_user ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/"$build_user"
+    rm -rf /tmp/yay-bin || true
+
+    git clone https://aur.archlinux.org/salt.git /tmp/yay-bin
+    chown -R "$build_user":"$build_user" /tmp/yay-bin
+    sudo -u "$build_user" env -i \
+        HOME=/tmp \
+        PATH=/usr/bin:/bin:/usr/sbin:/sbin \
+        MAKEFLAGS="-j$(nproc)" \
+        LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
+        makepkg -CcsiD /tmp/yay-bin \
+        --noconfirm --needed \
+        --noprogressbar || return 1
+
+    rm -f /etc/sudoers.d/"$build_user"
+    rm -rf /tmp/yay-bin
+    userdel "$build_user"
+    return 0
+}
+
+install_arch_linux_onedir() {
+    echodebug "install_arch_linux_onedir() entry"
+
+    version="${ONEDIR_REV:-latest}"
+    arch="x86_64"
+    [ "$(uname -m)" = "aarch64" ] && arch="aarch64"
+
+    # Resolve "latest" to actual version
+    if [ "$version" = "latest" ]; then
+        version=$(wget -qO- https://api.github.com/repos/saltstack/salt/releases/latest \
+                  | grep -Eo '"tag_name": *"v[0-9.]+"' \
+                  | sed 's/"tag_name": *"v//;s/"//') || return 1
+    fi
+
+    tarball="salt-${version}-onedir-linux-${arch}.tar.xz"
+    url="https://github.com/saltstack/salt/releases/download/v${version}/${tarball}"
+    extractdir="/tmp/salt-${version}-onedir-linux-${arch}"
+
+    echoinfo "Downloading Salt onedir: $url"
+    wget -q "$url" -O "/tmp/${tarball}" || return 1
+
+    # Validate tarball
+    if ! tar -tf "/tmp/${tarball}" >/dev/null 2>&1; then
+        echoerror "Invalid or corrupt onedir tarball"
+        return 1
+    fi
+
+    # Prepare extraction
+    rm -rf "$extractdir" || true
+    rm -rf /opt/saltstack/salt || true
+    mkdir -p "$extractdir"
+
+    # Extract and flatten (remove leading 'salt/' directory)
+    # /tmp/salt-${version}-onedir-linux-${arch}
+    tar --strip-components=1 -xf "/tmp/${tarball}" -C "$extractdir"
+
+    # Place into /opt
+    mkdir -p /opt/saltstack/salt
+    mv "$extractdir"/* /opt/saltstack/salt/ || return 1
+    chmod -R 755 /opt/saltstack/salt
+
     return 0
 }
 
@@ -6260,17 +6333,48 @@ install_arch_check_services() {
     return 0
 }
 
-install_arch_linux_onedir() {
-  install_arch_linux_stable || return 1
 
-  return 0
-}
 
 install_arch_linux_onedir_post() {
-  install_arch_linux_post || return 1
+    echodebug "install_arch_linux_onedir_post() entry"
 
-  return 0
+    # Disable any distro/AUR salt units
+    systemctl disable --now salt-minion.service 2>/dev/null || true
+    systemctl disable --now salt-master.service 2>/dev/null || true
+
+    # Drop a clean unit, same pattern as Debian/Ubuntu onedir
+    cat >/etc/systemd/system/salt-minion.service <<'EOF'
+[Unit]
+Description=Salt Minion (onedir)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/opt/saltstack/salt/salt-minion -c /etc/salt
+Restart=always
+LimitNOFILE=100000
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    systemctl daemon-reload
+
+    # Add onedir paths system-wide
+    cat >/etc/profile.d/saltstack.sh <<'EOF'
+export PATH=/opt/saltstack/salt:/opt/saltstack/salt/bin:$PATH
+EOF
+
+    chmod 644 /etc/profile.d/saltstack.sh
+
+    if [ "$_START_DAEMONS" -eq $BS_TRUE ]; then
+        systemctl enable --now salt-minion.service
+    fi
+
+    return 0
 }
+
 #
 #   Ended Arch Install Functions
 #

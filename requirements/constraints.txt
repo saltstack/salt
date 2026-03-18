@@ -1,5 +1,7 @@
-wheel
-setuptools < 80.0.0
+# IMPORTANT: The versions here must be compatible with the environment where
+# uv-pre-commit hooks run. We do not pin setuptools in .pre-commit-config.yaml
+# to allow uv to resolve a version that satisfies these constraints.
+wheel >= 0.46.3
+setuptools >= 80.10.2
 networkx >= 3.0,< 3.2
-pip >= 23.3,< 24.0 ; python_version < '3.12'
-pip >24 ; python_version >= '3.12'
+pip == 25.2

@@ -677,19 +677,25 @@ def _environment_slugs(ctx, slugdef, labels):
     label_requests = [
         _[0].rsplit(":", 1)[1] for _ in labels if _[0].startswith("test:os:")
     ]
-    all_slugs = []
+    all_slugs = set()
+    enabled_slugs = set()
     slugs = set()
     for platform in TEST_SALT_LISTING:
         for osdef in TEST_SALT_LISTING[platform]:
-            all_slugs.append(osdef.slug)
-    for platform in TEST_SALT_LISTING:
-        for osdef in TEST_SALT_LISTING[platform]:
-            all_slugs.append(osdef.slug)
+            all_slugs.add(osdef.slug)
+            if osdef.enabled:
+                enabled_slugs.add(osdef.slug)
+    for platform in TEST_SALT_PKG_LISTING:
+        for osdef in TEST_SALT_PKG_LISTING[platform]:
+            all_slugs.add(osdef.slug)
+            if osdef.enabled:
+                enabled_slugs.add(osdef.slug)
+
     if "all" in requests:
-        slugs = all_slugs[:]
+        slugs.update(enabled_slugs)
         requests.remove("all")
     if "all" in label_requests:
-        slugs = all_slugs[:]
+        slugs.update(enabled_slugs)
         label_requests.remove("all")
     for request in requests[:]:
         if request.startswith("+"):
@@ -698,7 +704,7 @@ def _environment_slugs(ctx, slugdef, labels):
                 ctx.warn(f"invalid slug name from environment {request}")
                 continue
             if request in slugs:
-                ctx.info("slug already requested from environment {request}")
+                ctx.info(f"slug already requested from environment {request}")
                 continue
             slugs.add(request)
         elif request.startswith("-"):
@@ -709,13 +715,13 @@ def _environment_slugs(ctx, slugdef, labels):
             if request in slugs:
                 slugs.remove(request)
             else:
-                ctx.info("slug from environment was never requested {request}")
+                ctx.info(f"slug from environment was never requested {request}")
         else:
             if request not in all_slugs:
                 ctx.warn(f"invalid slug name from environment {request}")
                 continue
             if request in slugs:
-                ctx.info("slug from environment already requested {request}")
+                ctx.info(f"slug from environment already requested {request}")
                 continue
             slugs.add(request)
 
