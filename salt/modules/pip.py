@@ -1119,6 +1119,8 @@ def uninstall(
             If unsupported options are passed here that are not supported in a
             minion's version of pip, a `No such option error` will be thrown.
 
+        .. versionadded:: 3008.0
+
     CLI Example:
 
     .. code-block:: bash
