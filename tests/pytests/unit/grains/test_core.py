@@ -5682,6 +5682,7 @@ def test_alfalinux_rise_os_grains():
     }
     _run_os_grains_tests(_os_release_data, {}, expectation)
 
+
 @pytest.mark.skip_unless_on_linux
 def test_alteros_os_grains():
     _os_release_data = {
