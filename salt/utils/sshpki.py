@@ -277,7 +277,7 @@ def check_cert_changes(
         The certificate will be recreated once the remaining certificate validity
         period is less than this number of seconds. Can also be specified as a
         time string like ``12d`` or ``1.5h``.
-        Defaults to ``30d`` for host keys and ``1h`` for user keys.
+        Defaults to ``7d`` for host keys and ``1h`` for user keys.
 
     backend
         Instead of using the ``ssh_pki`` execution module for certificate
@@ -397,8 +397,6 @@ def check_cert_changes(
                 current,
                 builder,
                 serial_number=serial_number,
-                not_before=not_before,
-                not_after=not_after,
                 signing_pubkey=signing_pubkey,
             )
         )
@@ -445,9 +443,7 @@ def _build_cert_with_policy(
     )
 
 
-def _compare_cert(
-    current, builder, serial_number, not_before, not_after, signing_pubkey
-):
+def _compare_cert(current, builder, serial_number, signing_pubkey):
     changes = {}
 
     if (
@@ -872,10 +868,6 @@ def merge_signing_policy(policy, kwargs):
     )
     default_principals = policy.pop("default_valid_principals", allowed_principals)
 
-    default_ttl = time.timestring_map(policy.pop("ttl", None))
-    max_ttl = time.timestring_map(policy.pop("max_ttl", default_ttl))
-    requested_ttl = time.timestring_map(kwargs.pop("ttl", None))
-
     final_opts = default_opts
     for opt, optval in (kwargs.get("critical_options") or {}).items():
         if all_opts_allowed or opt in allowed_opts:
@@ -907,15 +899,34 @@ def merge_signing_policy(policy, kwargs):
         else:
             kwargs["valid_principals"] = default_principals
 
+    default_ttl = time.timestring_map(policy.pop("ttl", None))
+    max_ttl = time.timestring_map(policy.pop("max_ttl", default_ttl))
+    requested_ttl = time.timestring_map(kwargs.pop("ttl", None))
+    if kwargs.get("not_before"):
+        requested_not_before = datetime.strptime(
+            kwargs.pop("not_before"), x509.TIME_FMT
+        )
+    else:
+        requested_not_before = datetime.now(tz=timezone.utc)
+    if kwargs.get("not_after"):
+        requested_not_after = datetime.strptime(kwargs.pop("not_after"), x509.TIME_FMT)
+        # not_after overrides ttl, ensure we account for that
+        requested_ttl = (requested_not_after - requested_not_before).total_seconds()
+
     if requested_ttl is None:
-        kwargs["ttl"] = default_ttl if default_ttl is not None else max_ttl
+        allowed_ttl = default_ttl if default_ttl is not None else max_ttl
     elif max_ttl is not None:
         if requested_ttl > max_ttl:
-            kwargs["ttl"] = max_ttl
+            allowed_ttl = max_ttl
         else:
-            kwargs["ttl"] = requested_ttl
+            allowed_ttl = requested_ttl
     else:
-        kwargs["ttl"] = requested_ttl
+        allowed_ttl = requested_ttl
+    if allowed_ttl is not None:
+        final_not_after = requested_not_before + timedelta(seconds=allowed_ttl)
+        kwargs["not_before"] = datetime.strftime(requested_not_before, x509.TIME_FMT)
+        kwargs["not_after"] = datetime.strftime(final_not_after, x509.TIME_FMT)
+    kwargs["ttl"] = allowed_ttl
 
     # Update the kwargs with the remaining signing policy
     kwargs.update(policy)
