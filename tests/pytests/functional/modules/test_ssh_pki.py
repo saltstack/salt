@@ -665,12 +665,13 @@ def test_create_private_key_with_passphrase(ssh, algo):
 
 def test_create_private_key_write_to_path(ssh, tmp_path):
     tgt = tmp_path / "pk"
+    pub = tgt.with_suffix(".pub")
     ssh.create_private_key(path=str(tgt))
     assert tgt.exists()
+    assert pub.exists()
     assert tgt.read_text().startswith("-----BEGIN OPENSSH PRIVATE KEY-----")
     assert stat.S_IMODE(tgt.stat().st_mode) == 0o0600
-    # ensure it can be loaded
-    ssh.get_private_key_size(str(tgt))
+    assert ssh.get_public_key(str(tgt)) == pub.read_text()
 
 
 def test_create_private_key_write_to_path_overwrite(ssh, tmp_path):
