@@ -2512,6 +2512,28 @@ def group_list():
         "available language groups:": "available languages",
     }
 
+    if _yum() in ("dnf5"):
+        out = __salt__["cmd.run_stdout"](
+            [_yum(), "group", "list", "--hidden"],
+            output_loglevel="trace",
+            python_shell=False,
+        )
+
+        for line in salt.utils.itertools.split(out, "\n"):
+            line_lc = line.lower()
+            # split line into 3 parts: ID (no spaces), Name (contains spaces), and
+            # Installed (one of 'yes' or 'no')
+            match = re.match(r"^(\S+?)\s+(.+?)\s*(yes|no)$", line_lc)
+            if match:
+                pkg_id, pkg_name, pkg_installed = match.groups()
+                if pkg_id not in ("id"):
+                    if pkg_installed in ("yes"):
+                        ret["installed"].append(pkg_id)
+                    else:
+                        ret["available"].append(pkg_id)
+        return ret
+
+    # else: not dnf5
     out = __salt__["cmd.run_stdout"](
         [_yum(), "grouplist", "hidden"], output_loglevel="trace", python_shell=False
     )
@@ -2615,7 +2637,10 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
         }
     )
 
-    cmd = [_yum(), "--quiet"] + options + ["groupinfo", name]
+    if _yum() in ("dnf5"):
+        cmd = [_yum(), "--quiet"] + options + ["group", "info", name]
+    else:
+        cmd = [_yum(), "--quiet"] + options + ["groupinfo", name]
     out = __salt__["cmd.run_stdout"](cmd, output_loglevel="trace", python_shell=False)
 
     g_info = {}
@@ -2630,9 +2655,15 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
         ret["type"] = "environment group"
     elif "group" in g_info:
         ret["type"] = "package group"
+    elif "name" in g_info:
+        ret["type"] = "package group"
 
-    ret["group"] = g_info.get("environment group") or g_info.get("group")
-    ret["id"] = g_info.get("environment-id") or g_info.get("group-id")
+    ret["group"] = (
+        g_info.get("environment group") or g_info.get("group") or g_info.get("name")
+    )
+    ret["id"] = (
+        g_info.get("environment-id") or g_info.get("group-id") or g_info.get("id")
+    )
     if not ret["group"] and not ret["id"]:
         raise CommandExecutionError(f"Group '{name}' not found")
 
@@ -2643,7 +2674,8 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
     for pkgtype in pkgtypes:
         target_found = False
         for line in salt.utils.itertools.split(out, "\n"):
-            line = line.strip().lstrip(string.punctuation)
+            line = line.strip().lstrip(string.punctuation).lstrip()
+            # dnf
             match = re.match(
                 pkgtypes_capturegroup + r" (?:groups|packages):\s*$", line.lower()
             )
@@ -2656,6 +2688,29 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
                         # We've reached the targeted section
                         target_found = True
                     continue
+            # dnf5
+            match_dnf5 = re.match(
+                pkgtypes_capturegroup + r" (?:groups|packages)\s*:\s*(.*?)$",
+                line.lower(),
+            )
+            if match_dnf5:
+                if target_found:
+                    # We've reached a new section, break from loop
+                    break
+                else:
+                    if match_dnf5.group(1) == pkgtype:
+                        # We've reached the targeted section
+                        target_found = True
+                        # The difference here from dnf (above) is that this line
+                        # also contains the first package of this section.
+                        # Have to pull out the package name, but not changing the case
+                        rematch_dnf5 = re.match( r"^.*:\s*(.*?)$", line)
+                        # Let line be the match we found, and then simply
+                        # continue on, where we'll add this to the appropriate group
+                        # Can't fail...
+                        if rematch_dnf5:
+                            line = rematch_dnf5.group(1)
+
             if target_found:
                 if expand and ret["type"] == "environment group":
                     if not line or line in completed_groups:
