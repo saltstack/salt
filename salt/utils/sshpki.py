@@ -415,8 +415,10 @@ def _build_cert_with_policy(
     backend = backend or "ssh_pki"
     skip_load_signing_private_key = False
     final_kwargs = copy.deepcopy(kwargs)
+    final_kwargs["signing_private_key"] = signing_private_key
     merge_signing_policy(signing_policy_contents, final_kwargs)
-    signing_pubkey = final_kwargs.pop("signing_public_key", None)
+    signing_private_key = final_kwargs.pop("signing_private_key")
+    signing_pubkey = None
     if ca_server is None and backend == "ssh_pki":
         if not signing_private_key:
             raise SaltInvocationError(
@@ -425,11 +427,12 @@ def _build_cert_with_policy(
         signing_pubkey = load_privkey(
             signing_private_key, passphrase=kwargs.get("signing_private_key_passphrase")
         )
-    elif signing_pubkey is None:
+    elif "signing_public_key" not in final_kwargs:
         raise SaltInvocationError(
             "The remote CA server or backend module did not deliver the CA pubkey"
         )
     else:
+        signing_pubkey = final_kwargs.pop("signing_public_key")
         skip_load_signing_private_key = True
 
     return (
