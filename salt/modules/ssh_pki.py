@@ -409,20 +409,24 @@ def create_private_key(
             f"The file at {path} exists and overwrite was set to false"
         )
 
-    out = encode_private_key(
+    priv = encode_private_key(
         _generate_pk(algo=algo, keysize=keysize),
         passphrase=passphrase,
     )
+    pub = get_public_key(priv, passphrase=passphrase)
 
     if path is None:
         if raw:
-            return out.encode()
+            return priv.encode()
         return {
-            "private_key": out,
-            "public_key": get_public_key(out, passphrase=passphrase),
+            "private_key": priv,
+            "public_key": pub,
         }
 
-    salt.utils.atomicfile.safe_atomic_write(path, out)
+    salt.utils.atomicfile.safe_atomic_write(path, priv)
+    if pubkey_suffix:
+        salt.utils.atomicfile.safe_atomic_write(path + pubkey_suffix, pub)
+
     return f"Private key written to {path}"
 
 
