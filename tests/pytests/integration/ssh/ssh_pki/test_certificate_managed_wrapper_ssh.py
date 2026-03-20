@@ -210,6 +210,49 @@ def test_certificate_managed_remote(ssh_salt_ssh_cli, cert_args, ca_key, rsa_pri
     assert _belongs_to(cert, rsa_privkey)
 
 
+@pytest.fixture
+def cm_file_args(sshpki_salt_master):
+    state_contents = """
+    {{
+        salt["ssh_pki.certificate_managed_wrapper"](
+            pillar["args"]["name"],
+            ca_server=pillar["args"]["ca_server"],
+            signing_policy=pillar["args"]["signing_policy"],
+            backend=pillar["args"].get("backend"),
+            backend_args=pillar["args"].get("backend_args"),
+            private_key_managed=pillar["args"].get("private_key_managed"),
+            private_key=pillar["args"].get("private_key"),
+            private_key_passphrase=pillar["args"].get("private_key_passphrase"),
+            public_key=pillar["args"].get("public_key"),
+            certificate_managed=pillar["args"].get("certificate_managed"),
+            test=opts.get("test"),
+            mode="0400"
+        ) | yaml(false)
+    }}
+    """
+    with sshpki_salt_master.state_tree.base.temp_file(
+        "cert_file_args.sls", state_contents
+    ):
+        yield
+
+
+@pytest.mark.usefixtures("_check_bcrypt", "cm_file_args")
+def test_certificate_managed_remote_file_managed_kwargs(
+    ssh_salt_ssh_cli, cert_args, ca_key, rsa_privkey
+):
+    ret = ssh_salt_ssh_cli.run(
+        "state.apply", "cert_file_args", pillar={"args": cert_args}
+    )
+    assert ret.returncode == 0
+    cert = _get_cert(cert_args["name"])
+    assert cert.key_id == b"from_signing_policy"
+    assert _signed_by(cert, ca_key)
+    assert _belongs_to(cert, rsa_privkey)
+    ret = ssh_salt_ssh_cli.run("file.get_mode", cert_args["name"])
+    assert ret.returncode == 0
+    assert ret.data == "0400"
+
+
 @pytest.mark.usefixtures("_check_bcrypt")
 def test_certificate_managed_remote_with_privkey_managed(
     ssh_salt_ssh_cli, cert_args, tmp_path, ca_key
