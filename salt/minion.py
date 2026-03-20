@@ -3202,6 +3202,10 @@ class Minion(MinionBase):
         prev_interval_map = {}
         if hasattr(self, "beacons") and hasattr(self.beacons, "interval_map"):
             prev_interval_map = self.beacons.interval_map
+        # Close existing beacon modules to release resources (e.g. inotify fds)
+        # before replacing the Beacon instance.
+        if hasattr(self, "beacons"):
+            self.beacons.close_beacons()
         self.beacons = salt.beacons.Beacon(
             self.opts, self.functions, interval_map=prev_interval_map
         )
