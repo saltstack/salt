@@ -135,10 +135,8 @@ except ImportError:
     HAS_CRYPTOGRAPHY = False
 
 import salt.utils.atomicfile
-import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.functools
-import salt.utils.stringutils
 import salt.utils.timeutil as time
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -359,7 +357,6 @@ def create_private_key(
     pubkey_suffix=".pub",
     overwrite=False,
     raw=False,
-    **kwargs,
 ):
     """
     Create a private key.

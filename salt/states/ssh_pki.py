@@ -806,9 +806,7 @@ def public_key_managed(name, public_key_source, passphrase=None, **kwargs):
     return ret
 
 
-def certificate_managed_ssh(
-    name, result, comment, changes, encoding=None, contents=None, **kwargs
-):
+def certificate_managed_ssh(name, result, comment, changes, contents=None, **kwargs):
     """
     Helper for the SSH wrapper module.
     This receives a certificate and dumps the data to the target.
