@@ -1003,6 +1003,14 @@ def test_certificate_managed_file_managed_error(ssh, cert_args, rsa_privkey):
     assert "Could not create file, see file.managed output" in ret.comment
 
 
+def test_certificate_managed_copypath(ssh, cert_args, rsa_privkey, ca_key, tmp_path):
+    cert_args["private_key"] = rsa_privkey
+    cert_args["copypath"] = str(tmp_path)
+    ret = ssh.certificate_managed(**cert_args)
+    cert = _assert_cert_basic(ret, cert_args["name"], rsa_privkey, ca_key)
+    assert (tmp_path / f"{cert.serial:x}.crt").exists()
+
+
 @pytest.mark.parametrize("algo", ["rsa", "ec", "ed25519"])
 @pytest.mark.parametrize(
     "passphrase",
