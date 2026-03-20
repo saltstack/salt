@@ -434,6 +434,7 @@ def certificate_managed(
                 valid_principals=valid_principals,
                 all_principals=all_principals,
                 key_id=key_id,
+                copypath=copypath,
                 **backend_args,
             )
             ret["comment"] = f"The certificate has been {verb}d"
