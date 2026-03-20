@@ -7,8 +7,8 @@ import os
 import re
 from collections import OrderedDict
 
-from salt.exceptions import SaltInvocationError
 import salt.utils.files
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -395,7 +395,9 @@ class SourceEntry:
                     except ValueError:
                         repo_line.pop(repo_line.index(f"[{opt}]"))
         if len(repo_line) < 3:
-            raise SaltInvocationError(f"Invalid repository definition: {' '.join(repo_line)}")
+            raise SaltInvocationError(
+                f"Invalid repository definition: {' '.join(repo_line)}"
+            )
         self.type = repo_line[0]
         self.uri = repo_line[1]
         self.dist = repo_line[2]
