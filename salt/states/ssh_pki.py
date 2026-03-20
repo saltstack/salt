@@ -891,7 +891,13 @@ def _file_managed(name, test=None, **kwargs):
     if test not in [None, True]:
         raise SaltInvocationError("test param can only be None or True")
     test = test or __opts__["test"]
-    res = __salt__["state.single"]("file.managed", name, test=test, **kwargs)
+    res = __salt__["state.single"](
+        "file.managed", name, test=test, concurrent=True, **kwargs
+    )
+    if not isinstance(res, dict):
+        raise CommandExecutionError(
+            f"Failed running file.managed in ssh_pki state: {res}"
+        )
     return res[next(iter(res))]
 
 
