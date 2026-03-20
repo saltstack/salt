@@ -223,7 +223,7 @@ def certificate_managed(
         The certificate will be recreated once the remaining certificate validity
         period is less than this number of seconds. Can also be specified as a
         time string like ``12d`` or ``1.5h``.
-        Defaults to ``30d`` for host keys and ``1h`` for user keys.
+        Defaults to ``7d`` for host keys and ``1h`` for user keys.
 
     ca_server
         Request a remotely signed certificate from another minion acting as
