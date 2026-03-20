@@ -2739,8 +2739,12 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
             section["URIs"] = repo_entry["uri"]
             section["Suites"] = repo_entry["dist"]
             section["Components"] = " ".join(repo_entry["comps"])
-            trusted_kwargs = kwargs.get("trusted") is True or kwargs.get("Trusted") is True
-            if trusted_kwargs or ("trusted" not in kwargs and repo_entry["trusted"] is True):
+            trusted_kwargs = (
+                kwargs.get("trusted") is True or kwargs.get("Trusted") is True
+            )
+            if trusted_kwargs or (
+                "trusted" not in kwargs and repo_entry["trusted"] is True
+            ):
                 section["Trusted"] = "yes"
             mod_source = Deb822SourceEntry(section, apt_source_file)
         else:
