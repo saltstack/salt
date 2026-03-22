@@ -330,14 +330,15 @@ def list_jobs(
                     )
         if search_target and _match:
             _match = False
-            if "Target" in ret[item]:
-                targets = ret[item]["Target"]
-                if isinstance(targets, str):
-                    targets = [targets]
-                for target in targets:
-                    for key in salt.utils.args.split_input(search_target):
-                        if fnmatch.fnmatch(target, key):
-                            _match = True
+            targets = ret[item].get("Target", [])
+            if isinstance(targets, str):
+                targets = [targets]
+            elif not hasattr(targets, '__iter__'):
+                targets = [targets]
+            for target in targets:
+                for key in salt.utils.args.split_input(search_target):
+                    if fnmatch.fnmatch(target, key):
+                        _match = True
 
         if search_function and _match:
             _match = False
