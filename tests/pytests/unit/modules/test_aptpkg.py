@@ -195,6 +195,7 @@ class MockSourceEntry:
         self.comps = []
         self.architectures = []
         self.signedby = ""
+        self.trusted = None
 
     def mysplit(self, line):
         return line.split()
