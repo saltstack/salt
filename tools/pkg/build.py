@@ -32,22 +32,84 @@ log = logging.getLogger(__name__)
 _PATCHED_PIP_WHEEL: pathlib.Path | None = None
 
 
+def _apply_unified_diff(original_text: str, patch_text: str) -> str:
+    """
+    Apply a unified diff patch to *original_text* and return the result.
+
+    This is a minimal pure-Python applier sufficient for the well-formed,
+    non-fuzzy patches stored in pkg/patches/pip-urllib3/.  It handles the
+    standard unified diff hunk format produced by difflib.unified_diff and
+    GNU diff, including the '\\' (no newline at end of file) marker.
+    """
+    orig_lines = original_text.splitlines(True)
+    result: list[str] = []
+    orig_idx = 0
+
+    patch_lines = patch_text.splitlines(True)
+    i = 0
+
+    # Skip the file-header lines (--- / +++) before the first hunk.
+    while i < len(patch_lines) and not patch_lines[i].startswith("@@"):
+        i += 1
+
+    while i < len(patch_lines):
+        line = patch_lines[i]
+        if line.startswith("@@"):
+            m = re.match(r"^@@ -(\d+)(?:,\d+)? \+\d+(?:,\d+)? @@", line)
+            if not m:
+                i += 1
+                continue
+            orig_start = int(m.group(1)) - 1  # convert 1-based → 0-based
+
+            # Copy unchanged original lines that precede this hunk.
+            result.extend(orig_lines[orig_idx:orig_start])
+            orig_idx = orig_start
+            i += 1
+
+            # Process hunk body lines.
+            while i < len(patch_lines):
+                hunk_line = patch_lines[i]
+                if hunk_line.startswith("@@"):
+                    break  # next hunk starts
+                if hunk_line.startswith("+"):
+                    result.append(hunk_line[1:])
+                elif hunk_line.startswith("-"):
+                    orig_idx += 1
+                elif hunk_line.startswith(" "):
+                    result.append(orig_lines[orig_idx])
+                    orig_idx += 1
+                # "\\" → "No newline at end of file" marker; skip.
+                i += 1
+        else:
+            i += 1
+
+    # Copy any original lines that follow the last hunk.
+    result.extend(orig_lines[orig_idx:])
+    return "".join(result)
+
+
 def _patch_pip_wheel_urllib3(wheel_path: pathlib.Path) -> None:
     """
     Rewrite *wheel_path* in-place so that the urllib3 vendored inside pip
     contains the Salt security backports defined in pkg/patches/pip-urllib3/.
 
-    Patched files:
-      pip/_vendor/urllib3/response.py  — CVE-2025-66418, CVE-2026-21441
-      pip/_vendor/urllib3/_version.py  — version bumped to "2.6.3"
+    Patches applied (unified diff format):
+      response.py.patch  — CVE-2025-66418, CVE-2026-21441
+      _version.py.patch  — version bumped to "2.6.3"
 
-    The wheel's RECORD file is updated with correct sha256 hashes and sizes
-    for the two replaced files so that the installed dist-info stays valid.
+    Each patch is applied to the file as extracted from the wheel, so the
+    original sources do not need to be stored in the repository.  The wheel's
+    RECORD file is updated with correct sha256 hashes and sizes for the two
+    patched files so that the installed dist-info stays valid.
     """
     patches_dir = tools.utils.REPO_ROOT / "pkg" / "patches" / "pip-urllib3"
-    targets = {
-        "pip/_vendor/urllib3/response.py": (patches_dir / "response.py").read_bytes(),
-        "pip/_vendor/urllib3/_version.py": (patches_dir / "_version.py").read_bytes(),
+    patch_map = {
+        "pip/_vendor/urllib3/response.py": (
+            patches_dir / "response.py.patch"
+        ).read_text(encoding="utf-8"),
+        "pip/_vendor/urllib3/_version.py": (
+            patches_dir / "_version.py.patch"
+        ).read_text(encoding="utf-8"),
     }
 
     def _record_hash(content: bytes) -> str:
@@ -62,6 +124,7 @@ def _patch_pip_wheel_urllib3(wheel_path: pathlib.Path) -> None:
             ) as zout:
                 record_name: str | None = None
                 record_rows: list[list[str]] = []
+                patched: dict[str, bytes] = {}
 
                 for item in zin.infolist():
                     if item.filename.endswith(".dist-info/RECORD"):
@@ -69,8 +132,14 @@ def _patch_pip_wheel_urllib3(wheel_path: pathlib.Path) -> None:
                         raw = zin.read(item.filename).decode("utf-8")
                         record_rows = list(csv.reader(raw.splitlines()))
                         continue  # written last after we know the new hashes
-                    if item.filename in targets:
-                        zout.writestr(item, targets[item.filename])
+                    if item.filename in patch_map:
+                        original = zin.read(item.filename).decode("utf-8")
+                        patched_text = _apply_unified_diff(
+                            original, patch_map[item.filename]
+                        )
+                        patched_bytes = patched_text.encode("utf-8")
+                        patched[item.filename] = patched_bytes
+                        zout.writestr(item, patched_bytes)
                     else:
                         zout.writestr(item, zin.read(item.filename))
 
@@ -78,8 +147,8 @@ def _patch_pip_wheel_urllib3(wheel_path: pathlib.Path) -> None:
                 if record_name:
                     new_rows = []
                     for row in record_rows:
-                        if len(row) >= 1 and row[0] in targets:
-                            content = targets[row[0]]
+                        if len(row) >= 1 and row[0] in patched:
+                            content = patched[row[0]]
                             new_rows.append(
                                 [row[0], _record_hash(content), str(len(content))]
                             )

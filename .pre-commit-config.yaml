@@ -14,7 +14,8 @@ repos:
           - --markdown-linebreak-ext=md
         exclude: >
           (?x)^(
-            pkg/macos/pkg-resources/.*\.rtf
+            pkg/macos/pkg-resources/.*\.rtf|
+            pkg/patches/.*\.patch
           )$
 
       - id: mixed-line-ending     # Replaces or checks mixed line ending.
