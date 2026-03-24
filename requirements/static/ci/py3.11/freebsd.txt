@@ -162,6 +162,8 @@ gitpython==3.1.46
     #   -c requirements/static/pkg/py3.11/freebsd.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
+greenlet==3.3.2 ; platform_machine == 'AMD64' or platform_machine == 'WIN32' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'ppc64le' or platform_machine == 'win32' or platform_machine == 'x86_64'
+    # via sqlalchemy
 hglib==2.6.2
     # via -r requirements/static/ci/freebsd.in
 idna==3.7
@@ -513,6 +515,8 @@ smmap==5.0.3
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.txt
     #   gitdb
+sqlalchemy==2.0.48
+    # via -r requirements/static/ci/common.in
 sqlparse==0.5.5
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
@@ -546,6 +550,7 @@ typing-extensions==4.14.1
     #   aiosignal
     #   pyopenssl
     #   pytest-system-statistics
+    #   sqlalchemy
 urllib3==2.6.3
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.txt
