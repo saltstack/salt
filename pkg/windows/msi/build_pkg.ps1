@@ -496,7 +496,7 @@ Write-Host "Discovering install files: " -NoNewline
     -var var.DISCOVER_INSTALLDIR `
     -dr INSTALLDIR `
     -t "$SCRIPT_DIR\Product-discover-files.xsl" `
-    -nologo -indent 1 -gg -sfrag -sreg -srd -ke -template fragment
+    -nologo -indent 1 -ag -sfrag -sreg -srd -template fragment
 CheckExitCode
 
 # Move the configs back
@@ -513,7 +513,7 @@ Write-Host "Discovering config files: " -NoNewline
     -var var.DISCOVER_CONFDIR `
     -dr CONFDIR `
     -t "$SCRIPT_DIR\Product-discover-files-config.xsl" `
-    -nologo -indent 1 -gg -sfrag -sreg -srd -ke -template fragment
+    -nologo -indent 1 -ag -sfrag -sreg -srd -template fragment
 CheckExitCode
 
 Write-Host "Compiling *.wxs to $($ARCHITECTURE[$i]) *.wixobj: " -NoNewline
