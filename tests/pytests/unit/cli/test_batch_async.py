@@ -127,12 +127,12 @@ async def test_batch_fire_start_event(batch):
     batch.minions = {"foo", "bar"}
     batch.opts = {"batch": "2", "timeout": 5}
     with patch.object(batch, "events_channel", MagicMock()), patch.object(
-        batch.events_channel.master_event,
-        "fire_event_async",
-        AsyncMock(return_value={}),
-    ) as fire_event_async_mock:
+        batch.event,
+        "fire_event",
+        MagicMock(return_value={}),
+    ) as fire_event_mock:
         await batch.start_batch()
-        assert fire_event_async_mock.call_args[0] == (
+        assert fire_event_mock.call_args[0] == (
             {
                 "available_minions": {"foo", "bar"},
                 "down_minions": set(),
@@ -161,12 +161,12 @@ async def test_batch_fire_done_event(batch):
     batch.done_minions = {"foo"}
     batch.timedout_minions = {"bar"}
     with patch.object(batch, "events_channel", MagicMock()), patch.object(
-        batch.events_channel.master_event,
-        "fire_event_async",
-        AsyncMock(return_value={}),
-    ) as fire_event_async_mock:
+        batch.event,
+        "fire_event",
+        MagicMock(return_value={}),
+    ) as fire_event_mock:
         await batch.end_batch()
-        assert fire_event_async_mock.call_args[0] == (
+        assert fire_event_mock.call_args[0] == (
             {
                 "available_minions": {"foo", "bar"},
                 "done_minions": batch.done_minions,
@@ -292,20 +292,18 @@ async def test_batch__event_handler_ping_return(batch):
 
 async def test_batch__event_handler_call_start_batch_when_all_pings_return(batch):
     batch.targeted_minions = {"foo"}
-    future = tornado.gen.Future()
-    future.set_result({})
     with patch.object(
         batch.events_channel.local_client,
         "run_job_async",
         AsyncMock(return_value={"minions": ["foo"]}),
     ) as local_client_mock, patch.object(
-        batch, "start_batch", AsyncMock(return_value=future)
+        batch, "start_batch", AsyncMock(return_value=None)
     ) as start_batch_mock:
         asyncio.create_task(batch.start())
-        await asyncio.sleep(1)
         await batch._BatchAsync__event_handler(
             "salt/job/1234/ret/foo", {"id": "foo"}, "ping_return"
         )
+        await asyncio.sleep(1)
         start_batch_mock.assert_called_once()
 
 
@@ -313,20 +311,18 @@ async def test_batch__event_handler_not_call_start_batch_when_not_all_pings_retu
     batch,
 ):
     batch.targeted_minions = {"foo", "bar"}
-    future = tornado.gen.Future()
-    future.set_result({})
     with patch.object(
         batch.events_channel.local_client,
         "run_job_async",
         AsyncMock(return_value={"minions": ["foo", "bar"]}),
     ) as local_client_mock, patch.object(
-        batch, "start_batch", AsyncMock(return_value=future)
+        batch, "start_batch", AsyncMock(return_value=None)
     ) as start_batch_mock:
         asyncio.create_task(batch.start())
-        await asyncio.sleep(1)
         await batch._BatchAsync__event_handler(
             "salt/job/1234/ret/foo", {"id": "foo"}, "ping_return"
         )
+        await asyncio.sleep(1)
         start_batch_mock.assert_not_called()
 
 
