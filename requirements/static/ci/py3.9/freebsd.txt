@@ -328,11 +328,6 @@ netmiko==4.2.0 ; python_full_version < '3.10' and sys_platform != 'win32'
     # via napalm
 netutils==1.6.0 ; python_full_version < '3.10' and sys_platform != 'win32'
     # via napalm
-networkx==3.1
-    # via
-    #   -c requirements/constraints.txt
-    #   -c requirements/static/pkg/py3.9/freebsd.txt
-    #   -r requirements/base.txt
 ntc-templates==4.0.1 ; python_full_version < '3.10' and sys_platform != 'win32'
     # via netmiko
 oauthlib==3.3.1

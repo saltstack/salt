@@ -16,7 +16,7 @@ def _utc_now():
     """
     Helper method so tests do not have to patch the built-in method.
     """
-    return datetime.datetime.utcnow()
+    return datetime.datetime.now(tz=datetime.timezone.utc)
 
 
 def gen_jid(opts):

@@ -3,5 +3,4 @@
 # to allow uv to resolve a version that satisfies these constraints.
 wheel >= 0.46.3
 setuptools >= 80.10.2
-networkx >= 3.0,< 3.2
 pip == 25.2
