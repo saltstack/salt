@@ -222,6 +222,10 @@ google-auth==2.35.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
+greenlet==3.2.5
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   sqlalchemy
 idna==3.7
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -729,6 +733,10 @@ smmap==5.0.3
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -c requirements/static/pkg/py3.9/linux.txt
     #   gitdb
+sqlalchemy==2.0.48
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   -r requirements/static/ci/common.in
 sqlparse==0.5.5
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -797,6 +805,7 @@ typing-extensions==4.15.0
     #   pyopenssl
     #   pytest-shell-utilities
     #   pytest-system-statistics
+    #   sqlalchemy
     #   virtualenv
 urllib3==1.26.20
     # via
