@@ -4,7 +4,7 @@ Unit Tests for the salt.cli.batch module
 
 import pytest
 
-from salt.cli.batch import Batch, batch_get_opts
+from salt.cli.batch import Batch, batch_get_opts, get_bnum
 from tests.support.mock import MagicMock, patch
 
 
@@ -31,7 +31,7 @@ def test_get_bnum_str(batch):
     """
     batch.opts = {"batch": "2", "timeout": 5}
     batch.minions = ["foo", "bar"]
-    assert Batch.get_bnum(batch) == 2
+    assert get_bnum(batch.opts, batch.minions, batch.quiet) == 2
 
 
 def test_get_bnum_int(batch):
@@ -40,7 +40,7 @@ def test_get_bnum_int(batch):
     """
     batch.opts = {"batch": 2, "timeout": 5}
     batch.minions = ["foo", "bar"]
-    assert Batch.get_bnum(batch) == 2
+    assert get_bnum(batch.opts, batch.minions, batch.quiet) == 2
 
 
 def test_get_bnum_percentage(batch):
@@ -49,7 +49,7 @@ def test_get_bnum_percentage(batch):
     """
     batch.opts = {"batch": "50%", "timeout": 5}
     batch.minions = ["foo"]
-    assert Batch.get_bnum(batch) == 1
+    assert get_bnum(batch.opts, batch.minions, batch.quiet) == 1
 
 
 def test_get_bnum_high_percentage(batch):
@@ -58,14 +58,14 @@ def test_get_bnum_high_percentage(batch):
     """
     batch.opts = {"batch": "160%", "timeout": 5}
     batch.minions = ["foo", "bar", "baz"]
-    assert Batch.get_bnum(batch) == 4
+    assert get_bnum(batch.opts, batch.minions, batch.quiet) == 4
 
 
 def test_get_bnum_invalid_batch_data(batch):
     """
     Tests when an invalid batch value is passed
     """
-    ret = Batch.get_bnum(batch)
+    ret = get_bnum(batch.opts, batch.minions, batch.quiet)
     assert ret is None
 
 
