@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 
 import pytest
@@ -29,7 +30,22 @@ pytestmark = [
 
 
 @pytest.fixture(scope="module")
-def minion_config_overrides():
+def ca_dir(tmp_path_factory):
+    ca_dir = tmp_path_factory.mktemp("ca")
+    try:
+        yield ca_dir
+    finally:
+        shutil.rmtree(str(ca_dir), ignore_errors=True)
+
+
+@pytest.fixture(scope="module")
+def ca_key_file(ca_dir, ca_key):
+    with pytest.helpers.temp_file("ca.key", ca_key, ca_dir) as key:
+        yield key
+
+
+@pytest.fixture(scope="module")
+def minion_config_overrides(ca_key_file):
     return {
         "ssh_signing_policies": {
             "testhostpolicy": {
@@ -58,6 +74,9 @@ def minion_config_overrides():
                 "cert_type": "host",
                 "valid_principals": ["a", "b", "c"],
             },
+            "test_fixed_signing_private_key": {
+                "signing_private_key": str(ca_key_file),
+            },
         },
     }
 
@@ -67,7 +86,7 @@ def ssh(states):
     yield states.ssh_pki
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def ca_key():
     return """\
 -----BEGIN OPENSSH PRIVATE KEY-----
@@ -253,12 +272,12 @@ def ed25519_pubkey():
 
 
 @pytest.fixture
-def cert_args(tmp_path, ca_key):
+def cert_args(tmp_path, ca_key_file):
     return {
         "name": f"{tmp_path}/cert",
         "cert_type": "user",
         "all_principals": True,
-        "signing_private_key": ca_key,
+        "signing_private_key": ca_key_file,
         "key_id": "success",
     }
 
@@ -581,6 +600,24 @@ def test_certificate_managed_with_signing_policy_user(
     }
     assert cert.critical_options == expected_options
     assert cert.extensions == expected_extensions
+
+
+@pytest.mark.usefixtures("existing_cert")
+@pytest.mark.parametrize(
+    "existing_cert",
+    [{"signing_policy": "test_fixed_signing_private_key"}],
+    indirect=True,
+)
+def test_certificate_managed_existing_with_fixed_signing_key_in_signing_policy(
+    ssh, cert_args
+):
+    """
+    If the policy defines a fixed signing_private_key and a certificate
+    is managed locally (without ca_server), the state module should not crash
+    when checking for changes.
+    """
+    ret = ssh.certificate_managed(**cert_args)
+    _assert_not_changed(ret)
 
 
 def test_certificate_managed_test_true(ssh, cert_args, rsa_privkey):
@@ -1001,6 +1038,14 @@ def test_certificate_managed_file_managed_error(ssh, cert_args, rsa_privkey):
     ret = ssh.certificate_managed(**cert_args)
     assert ret.result is False
     assert "Could not create file, see file.managed output" in ret.comment
+
+
+def test_certificate_managed_copypath(ssh, cert_args, rsa_privkey, ca_key, tmp_path):
+    cert_args["private_key"] = rsa_privkey
+    cert_args["copypath"] = str(tmp_path)
+    ret = ssh.certificate_managed(**cert_args)
+    cert = _assert_cert_basic(ret, cert_args["name"], rsa_privkey, ca_key)
+    assert (tmp_path / f"{cert.serial:x}.crt").exists()
 
 
 @pytest.mark.parametrize("algo", ["rsa", "ec", "ed25519"])

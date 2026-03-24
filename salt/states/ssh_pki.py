@@ -223,7 +223,7 @@ def certificate_managed(
         The certificate will be recreated once the remaining certificate validity
         period is less than this number of seconds. Can also be specified as a
         time string like ``12d`` or ``1.5h``.
-        Defaults to ``30d`` for host keys and ``1h`` for user keys.
+        Defaults to ``7d`` for host keys and ``1h`` for user keys.
 
     ca_server
         Request a remotely signed certificate from another minion acting as
@@ -434,6 +434,7 @@ def certificate_managed(
                 valid_principals=valid_principals,
                 all_principals=all_principals,
                 key_id=key_id,
+                copypath=copypath,
                 **backend_args,
             )
             ret["comment"] = f"The certificate has been {verb}d"
@@ -805,9 +806,7 @@ def public_key_managed(name, public_key_source, passphrase=None, **kwargs):
     return ret
 
 
-def certificate_managed_ssh(
-    name, result, comment, changes, encoding=None, contents=None, **kwargs
-):
+def certificate_managed_ssh(name, result, comment, changes, contents=None, **kwargs):
     """
     Helper for the SSH wrapper module.
     This receives a certificate and dumps the data to the target.
@@ -891,7 +890,13 @@ def _file_managed(name, test=None, **kwargs):
     if test not in [None, True]:
         raise SaltInvocationError("test param can only be None or True")
     test = test or __opts__["test"]
-    res = __salt__["state.single"]("file.managed", name, test=test, **kwargs)
+    res = __salt__["state.single"](
+        "file.managed", name, test=test, concurrent=True, **kwargs
+    )
+    if not isinstance(res, dict):
+        raise CommandExecutionError(
+            f"Failed running file.managed in ssh_pki state: {res}"
+        )
     return res[next(iter(res))]
 
 
