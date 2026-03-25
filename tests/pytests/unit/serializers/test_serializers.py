@@ -327,7 +327,6 @@ def test_sls_micking_file_merging():
     }, sls_obj3
 
 
-@pytest.mark.skipif(msgpack.available is False, reason=SKIP_MESSAGE.format("msgpack"))
 def test_msgpack():
     data = OrderedDict([("foo", 1), ("bar", 2), ("baz", True)])
     serialized = msgpack.serialize(data)
