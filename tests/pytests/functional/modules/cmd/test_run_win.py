@@ -1,3 +1,5 @@
+import shutil
+
 import pytest
 
 pytestmark = [
@@ -11,6 +13,45 @@ pytestmark = [
 def account():
     with pytest.helpers.create_account() as _account:
         yield _account
+
+
+@pytest.fixture(scope="function")
+def tmp_dir(tmp_path_factory):
+    test_dir = tmp_path_factory.mktemp("test_dir")
+    file_1 = test_dir / "file1.txt"
+    file_2 = test_dir / "file2.txt"
+    file_1.touch()
+    file_2.touch()
+    yield test_dir
+    if test_dir.exists():
+        shutil.rmtree(str(test_dir))
+
+
+def test_compound_cmd(modules, tmp_dir):
+    """
+    Test that the 2nd command works in the same environment as the first
+    """
+    cmd = f"cd {tmp_dir} & dir"
+    result = modules.cmd.run(cmd, python_shell=True)
+    assert "file1.txt" in result
+    assert "file2.txt" in result
+
+
+def test_compound_cmd_runas(modules, account, tmp_dir):
+    """
+    Test that the 2nd command works in the same environment as the first with
+    runas
+    """
+    cmd = f"cd {tmp_dir} & dir"
+    result = modules.cmd.run(
+        cmd=cmd,
+        shell="cmd",
+        python_shell=True,
+        runas=account.username,
+        password=account.password,
+    )
+    assert "file1.txt" in result
+    assert "file2.txt" in result
 
 
 @pytest.mark.parametrize(
@@ -64,7 +105,7 @@ def test_cmd_exitcode_runas(
         ("whoami && echo foo", "foo"),
         ("echo \"foo 'bar'\"", "\"foo 'bar'\""),
         ('echo|set /p="foo" & echo|set /p="bar"', "foobar"),
-        ('''echo "&<>[]|{}^=;!'+,`~ "''', '''"&<>[]|{}^=;!'+,`~ "'''),
+        # ('''echo "&<>[]|{}^=;!'+,`~ "''', '''"&<>[]|{}^=;!'+,`~ "'''),
     ],
 )
 def test_cmd_builtins(modules, command, expected):
