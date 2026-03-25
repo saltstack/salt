@@ -80,7 +80,7 @@ def _parallel_map(func, inputs):
         def run_thread():
             try:
                 outputs[index] = func(inputs[index])
-            except:  # pylint: disable=bare-except
+            except Exception:  # pylint: disable=bare-except
                 errors[index] = sys.exc_info()
 
         thread = threading.Thread(target=run_thread)
