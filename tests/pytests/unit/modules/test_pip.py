@@ -1355,6 +1355,52 @@ def test_uninstall_timeout_argument_in_resulting_command(python_binary):
         pytest.raises(ValueError, pip.uninstall, pkg, timeout="a")
 
 
+def test_uninstall_extra_args_arguments_in_resulting_command(python_binary):
+    pkg = "pep8"
+    mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
+        pip.uninstall(
+            pkg, extra_args=[{"--latest-pip-kwarg": "param"}, "--latest-pip-arg"]
+        )
+        expected = [
+            *python_binary,
+            "uninstall",
+            "-y",
+            pkg,
+            "--latest-pip-kwarg",
+            "param",
+            "--latest-pip-arg",
+        ]
+        mock.assert_called_with(
+            expected,
+            saltenv="base",
+            cwd=None,
+            runas=None,
+            use_vt=False,
+            python_shell=False,
+        )
+
+
+def test_uninstall_extra_args_arguments_recursion_error():
+    pkg = "pep8"
+    mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
+
+        pytest.raises(
+            TypeError,
+            lambda: pip.uninstall(
+                pkg, extra_args=[{"--latest-pip-kwarg": ["param1", "param2"]}]
+            ),
+        )
+
+        pytest.raises(
+            TypeError,
+            lambda: pip.uninstall(
+                pkg, extra_args=[{"--latest-pip-kwarg": [{"--too-deep": dict()}]}]
+            ),
+        )
+
+
 def test_freeze_command(python_binary):
     expected = [*python_binary, "freeze"]
     eggs = [
