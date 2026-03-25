@@ -238,6 +238,54 @@ def test_traceroute():
                 assert networkmod.traceroute("gentoo.org") == []
 
 
+def test_traceroute_with_timeout():
+    """
+    Test that traceroute passes the timeout parameter to cmd.run
+    """
+
+    def patched_which(binary):
+        binary_path = shutil.which(binary)
+        if binary_path:
+            return binary_path
+        if binary == "traceroute":
+            return binary
+        return binary_path
+
+    mock_run = MagicMock(return_value="")
+    with patch("salt.utils.path.which", patched_which):
+        with patch.dict(
+            networkmod.__utils__,
+            {"network.sanitize_host": MagicMock(return_value="gentoo.org")},
+        ):
+            with patch.dict(networkmod.__salt__, {"cmd.run": mock_run}):
+                networkmod.traceroute("gentoo.org", timeout=60)
+                mock_run.assert_any_call("traceroute gentoo.org", timeout=60)
+
+
+def test_traceroute_without_timeout():
+    """
+    Test that traceroute does not pass timeout when not specified
+    """
+
+    def patched_which(binary):
+        binary_path = shutil.which(binary)
+        if binary_path:
+            return binary_path
+        if binary == "traceroute":
+            return binary
+        return binary_path
+
+    mock_run = MagicMock(return_value="")
+    with patch("salt.utils.path.which", patched_which):
+        with patch.dict(
+            networkmod.__utils__,
+            {"network.sanitize_host": MagicMock(return_value="gentoo.org")},
+        ):
+            with patch.dict(networkmod.__salt__, {"cmd.run": mock_run}):
+                networkmod.traceroute("gentoo.org")
+                mock_run.assert_any_call("traceroute gentoo.org")
+
+
 def test_dig():
     """
     Test for Performs a DNS lookup with dig

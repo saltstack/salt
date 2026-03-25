@@ -919,7 +919,7 @@ def active_tcp():
 
 
 @salt.utils.decorators.path.which("traceroute")
-def traceroute(host):
+def traceroute(host, timeout=0):
     """
     Performs a traceroute to a 3rd party host
 
@@ -929,15 +929,26 @@ def traceroute(host):
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
+    .. versionchanged:: 3008.0
+        Added ``timeout`` parameter
+
+    timeout
+        The maximum number of seconds to wait for the traceroute command
+        to complete. Defaults to ``0`` (no timeout).
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' network.traceroute archlinux.org
+        salt '*' network.traceroute archlinux.org timeout=60
     """
     ret = []
     cmd = "traceroute {}".format(__utils__["network.sanitize_host"](host))
-    out = __salt__["cmd.run"](cmd)
+    cmd_kwargs = {}
+    if timeout:
+        cmd_kwargs["timeout"] = int(timeout)
+    out = __salt__["cmd.run"](cmd, **cmd_kwargs)
 
     # Parse version of traceroute
     if __utils__["platform.is_sunos"]() or __utils__["platform.is_aix"]():
