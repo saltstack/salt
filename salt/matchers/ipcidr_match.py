@@ -20,11 +20,11 @@ def match(tgt, opts=None, minion_id=None):
     try:
         # Target is an address?
         tgt = ipaddress.ip_address(tgt)
-    except:  # pylint: disable=bare-except
+    except Exception:  # pylint: disable=bare-except
         try:
             # Target is a network?
             tgt = ipaddress.ip_network(tgt)
-        except:  # pylint: disable=bare-except
+        except Exception:  # pylint: disable=bare-except
             log.error("Invalid IP/CIDR target: %s", tgt)
             return []
     proto = f"ipv{tgt.version}"

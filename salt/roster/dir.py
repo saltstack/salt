@@ -103,6 +103,6 @@ def _render(roster_file, **kwargs):
         )
         result.setdefault("host", f"{os.path.basename(roster_file)}.{domain}")
         return result
-    except:  # pylint: disable=W0702
+    except Exception:  # pylint: disable=W0702
         log.warning('Unable to render roster file "%s".', roster_file, exc_info=True)
         return {}
