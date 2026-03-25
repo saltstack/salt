@@ -803,12 +803,17 @@ def onedir_dependencies(
     )
     # Install pip from the security-patched wheel instead of pulling from PyPI,
     # so that pip's vendored urllib3 never contains the vulnerable version.
+    # --force-reinstall is required because relenv ships with pip pre-installed
+    # at the same version (25.2), so without it pip would skip the install as
+    # "already satisfied" and leave the unpatched copy in site-packages.
     patched_pip = _build_patched_pip_wheel(ctx)
     ctx.run(
         str(python_bin),
         "-m",
         "pip",
         "install",
+        "--force-reinstall",
+        "--no-deps",
         str(patched_pip),
         env=env,
     )
