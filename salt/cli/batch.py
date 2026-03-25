@@ -69,13 +69,15 @@ class Batch:
         fret = set()
         nret = set()
         for ret in ping_gen:
-            if ("minions" and "jid") in ret:
+            if "minions" in ret and "jid" in ret:
                 for minion in ret["minions"]:
                     nret.add(minion)
                 continue
             else:
                 try:
                     m = next(iter(ret.keys()))
+                    if not isinstance(m, str) or m == "error":
+                        continue
                 except StopIteration:
                     if not self.quiet:
                         salt.utils.stringutils.print_cli(
@@ -215,7 +217,7 @@ class Batch:
                 iters.append(new_iter)
                 minion_tracker[new_iter] = {}
                 # every iterator added is 'active' and has its set of minions
-                minion_tracker[new_iter]["minions"] = next_
+                minion_tracker[new_iter]["minions"] = set(next_)
                 minion_tracker[new_iter]["active"] = True
 
             else:
@@ -227,7 +229,7 @@ class Batch:
                 if ping_ret is None:
                     break
                 m = next(iter(ping_ret.keys()))
-                if m not in self.minions:
+                if m not in self.minions and m != "error":
                     self.minions.append(m)
                     to_run.append(m)
 
@@ -244,26 +246,19 @@ class Batch:
                                 break
                             continue
                         if self.opts.get("raw"):
-                            parts.update({part["data"]["id"]: part})
-                            if part["data"]["id"] in minion_tracker[queue]["minions"]:
-                                minion_tracker[queue]["minions"].remove(
-                                    part["data"]["id"]
-                                )
-                            else:
-                                salt.utils.stringutils.print_cli(
-                                    "minion {} was already deleted from tracker,"
-                                    " probably a duplicate key".format(part["id"])
-                                )
+                            if ("data" in part and part["data"]["id"] != "error"):
+                                minion_id = part["data"]["id"]
+                                parts[minion_id] = part
+                                minion_tracker[queue]["minions"].discard(minion_id)
+                            elif "error" in part:
+                                log.debug("Error in batch run (raw mode): %s", part)
+                                continue
                         else:
-                            parts.update(part)
-                            for id in part:
-                                if id in minion_tracker[queue]["minions"]:
-                                    minion_tracker[queue]["minions"].remove(id)
-                                else:
-                                    salt.utils.stringutils.print_cli(
-                                        "minion {} was already deleted from tracker,"
-                                        " probably a duplicate key".format(id)
-                                    )
+                            for minion_id, data in part.items():
+                                if minion_id == "error" or minion_id not in self.minions:
+                                    continue
+                                parts[minion_id] = data
+                                minion_tracker[queue]["minions"].discard(minion_id)
                 except StopIteration:
                     # if a iterator is done:
                     # - set it to inactive
@@ -277,8 +272,11 @@ class Batch:
                         # that have not responded to parts{} with an empty response
                         for minion in minion_tracker[queue]["minions"]:
                             if minion not in parts:
-                                parts[minion] = {}
-                                parts[minion]["ret"] = {}
+                                if minion != "error":
+                                    parts[minion] = {}
+                                    parts[minion]["ret"] = {}
+                                else:
+                                    log.debug("Skipping error entry from minions tracker")
 
             for minion, data in parts.items():
                 if minion in active:
@@ -289,7 +287,14 @@ class Batch:
 
                 # need to check if Minion failed to respond to job sent
                 failed_check = data.get("failed", False)
-                if failed_check:
+                # Missing 'ret' is equivalent to a failed response
+                if failed_check or "ret" not in data:
+                    if "ret" not in data:
+                        log.debug(
+                            "Minion '%s' returned data without 'ret': %s",
+                            minion,
+                            data,
+                        )
                     log.debug(
                         "Minion '%s' failed to respond to job sent, data '%s'",
                         minion,
@@ -323,11 +328,14 @@ class Batch:
                         ret[minion] = data
                         yield data, retcode
                     else:
-                        ret[minion] = data["ret"]
-                        yield {minion: data["ret"]}, retcode
+                        ret[minion] = data.get("ret")
+                        yield {minion: data.get("ret")}, retcode
                     if not self.quiet:
-                        ret[minion] = data["ret"]
-                        data[minion] = data.pop("ret")
+                        ret[minion] = data.get("ret")
+                        if "ret" in data:
+                            data[minion] = data.pop("ret")
+                        else:
+                            data[minion] = None
                         if "out" in data:
                             out = data.pop("out")
                         else:
