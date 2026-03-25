@@ -139,7 +139,7 @@ class Beacon:
                 error = None
                 try:
                     raw = self.beacons[fun_str](b_config[mod])
-                except:  # pylint: disable=bare-except
+                except Exception:  # pylint: disable=bare-except
                     error = f"{sys.exc_info()[1]}"
                     log.error("Unable to start %s beacon, %s", mod, error)
                     # send beacon error event
