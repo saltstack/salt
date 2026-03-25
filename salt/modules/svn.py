@@ -415,7 +415,7 @@ def export(
     username=None,
     password=None,
     revision="HEAD",
-    *opts
+    *opts,
 ):
     """
     Create an unversioned copy of a tree.

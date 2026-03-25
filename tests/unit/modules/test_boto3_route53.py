@@ -145,7 +145,7 @@ class Boto3Route53TestCase(TestCase, LoaderModuleMockMixin):
                     HostedZoneId="Z2P70J7EXAMPLE",
                     StartRecordName="blog.saltstack.furniture.",
                     StartRecordType="A",
-                    **CONN_PARAMETERS
+                    **CONN_PARAMETERS,
                 ),
                 [
                     {

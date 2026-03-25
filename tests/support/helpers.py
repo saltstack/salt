@@ -1748,11 +1748,8 @@ class VirtualEnv:
         return data
 
     def _create_virtualenv(self):
-        pyexec = shutil.which("python")
-        if not pyexec:
-            pytest.fail("'python' binary not found for virtualenv")
         cmd = [
-            pyexec,
+            sys.executable,
             "-m",
             "virtualenv",
             f"--python={self.get_real_python()}",

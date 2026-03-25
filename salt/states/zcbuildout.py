@@ -135,7 +135,7 @@ def installed(
     onlyif=None,
     use_vt=False,
     loglevel="debug",
-    **kwargs
+    **kwargs,
 ):
     """
     Install buildout in a specific directory

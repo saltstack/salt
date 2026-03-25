@@ -58,7 +58,7 @@ class TestCertificateVerify(TestCase, LoaderModuleMockMixin):
                         service_running=True,
                         service_restart=False,
                         certificate_verify=certificate_verify_value,
-                        **kwargs
+                        **kwargs,
                     )
                 http_query_mock.assert_called_once_with(
                     "https://1.2.3.4:443/host/ssh_root_authorized_keys",
@@ -68,5 +68,5 @@ class TestCertificateVerify(TestCase, LoaderModuleMockMixin):
                     text=True,
                     username="root",
                     verify_ssl=certificate_verify_value,
-                    **expected_kwargs
+                    **expected_kwargs,
                 )

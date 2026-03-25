@@ -431,7 +431,7 @@ class MockNeutron:
         peer_id,
         psk,
         admin_state_up,
-        **kwargs
+        **kwargs,
     ):
         """
         Mock of create_ipsec_site_connection method

@@ -57,7 +57,7 @@ def reissue(
     web_server_type,
     approver_email=None,
     http_dc_validation=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Reissues a purchased SSL certificate. Returns a dictionary of result
@@ -140,7 +140,7 @@ def activate(
     web_server_type,
     approver_email=None,
     http_dc_validation=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Activates a newly-purchased SSL certificate. Returns a dictionary of result
