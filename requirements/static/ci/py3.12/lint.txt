@@ -463,7 +463,7 @@ pyinotify==0.9.6
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
-pyjwt==2.4.0
+pyjwt==2.12.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   twilio
