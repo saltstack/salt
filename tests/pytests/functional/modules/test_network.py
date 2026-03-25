@@ -57,11 +57,12 @@ def test_network_netstat(network):
 
 @pytest.mark.skip_if_binaries_missing("traceroute")
 @pytest.mark.slow_test
+@pytest.mark.timeout(120)
 def test_network_traceroute(network, url):
     """
     network.traceroute
     """
-    ret = network.traceroute(url)
+    ret = network.traceroute(url, timeout=60)
     exp_out = ["hostname", "ip"]
     for val in ret:
         if not val:
