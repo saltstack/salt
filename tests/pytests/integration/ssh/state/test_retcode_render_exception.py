@@ -54,8 +54,8 @@ def state_tree_render_fail(base_env_state_tree_root_dir):
         (("state.top", "top.sls"), EX_AGGREGATE),
     ),
 )
-def test_it(salt_ssh_cli, args, retcode):
-    ret = salt_ssh_cli.run(*args)
+def test_it(salt_ssh_cli_parameterized, args, retcode):
+    ret = salt_ssh_cli_parameterized.run(*args)
     assert ret.returncode == retcode
     assert isinstance(ret.data, list)
     assert ret.data
@@ -65,8 +65,8 @@ def test_it(salt_ssh_cli, args, retcode):
     )
 
 
-def test_state_single(salt_ssh_cli):
-    ret = salt_ssh_cli.run("state.single", "file")
+def test_state_single(salt_ssh_cli_parameterized):
+    ret = salt_ssh_cli_parameterized.run("state.single", "file")
     assert ret.returncode == EX_AGGREGATE
     assert isinstance(ret.data, str)
     assert "single() missing 1 required positional argument" in ret.data
