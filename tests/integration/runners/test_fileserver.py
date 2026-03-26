@@ -202,15 +202,31 @@ class FileserverTest(ShellCase):
         fileserver.update
         """
         ret = self.run_run_plus(fun="fileserver.update")
-        self.assertTrue(ret["return"])
+        self.assertTrue(ret["return"] is True)
 
         # Backend submitted as a string
         ret = self.run_run_plus(fun="fileserver.update", backend="roots")
-        self.assertTrue(ret["return"])
+        self.assertTrue(ret["return"] is True)
 
         # Backend submitted as a list
         ret = self.run_run_plus(fun="fileserver.update", backend=["roots"])
-        self.assertTrue(ret["return"])
+        self.assertTrue(ret["return"] is True)
+
+        # Possible '__pub_user' is removed from kwargs
+        ret = self.run_run_plus(
+            fun="fileserver.update", backend=["roots"], __pub_user="foo"
+        )
+        self.assertTrue(ret["return"] is True)
+
+        # Unknown arguments
+        ret = self.run_run_plus(
+            fun="fileserver.update", backend=["roots"], unknown_arg="foo"
+        )
+        self.assertIn(
+            "Passed invalid arguments: update() got an unexpected keyword argument"
+            " 'unknown_arg'",
+            ret["return"],
+        )
 
         # Other arguments are passed to backend
         def mock_gitfs_update(remotes=None):
@@ -225,7 +241,23 @@ class FileserverTest(ShellCase):
             ret = self.run_run_plus(
                 fun="fileserver.update", backend="gitfs", remotes="myrepo,yourrepo"
             )
-            self.assertTrue(ret["return"])
+            self.assertTrue(ret["return"] is True)
+            mock_backend_func.assert_called_once_with(remotes="myrepo,yourrepo")
+
+        # Possible '__pub_user' arguments are removed from kwargs
+        mock_backend_func = create_autospec(mock_gitfs_update)
+        mock_return_value = {
+            "gitfs.envs": None,  # This is needed to activate the backend
+            "gitfs.update": mock_backend_func,
+        }
+        with patch("salt.loader.fileserver", MagicMock(return_value=mock_return_value)):
+            ret = self.run_run_plus(
+                fun="fileserver.update",
+                backend="gitfs",
+                remotes="myrepo,yourrepo",
+                __pub_user="foo",
+            )
+            self.assertTrue(ret["return"] is True)
             mock_backend_func.assert_called_once_with(remotes="myrepo,yourrepo")
 
         # Unknown arguments are passed to backend
