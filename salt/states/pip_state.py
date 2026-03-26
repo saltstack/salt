@@ -19,6 +19,7 @@ requisite to a pkg.installed state for the package which provides pip
 """
 
 import logging
+import re
 import sys
 import types
 
@@ -192,13 +193,10 @@ def _check_pkg_version_format(pkg):
         ret["result"] = False
         if not from_vcs and "=" in pkg and "==" not in pkg:
             ret["comment"] = (
-                "Invalid version specification in package {}. '=' is "
-                "not supported, use '==' instead.".format(pkg)
+                f"Invalid version specification in package {pkg}. '=' is not supported, use '==' instead."
             )
             return ret
-        ret["comment"] = "pip raised an exception while parsing '{}': {}".format(
-            pkg, exc
-        )
+        ret["comment"] = f"pip raised an exception while parsing '{pkg}': {exc}"
         return ret
 
     if install_req.req is None:
@@ -275,8 +273,8 @@ def _check_if_installed(
                 and _fulfills_version_spec(pip_list[prefix], version_spec)
             ) or (not any(version_spec)):
                 ret["result"] = True
-                ret["comment"] = "Python package {} was already installed".format(
-                    state_pkg_name
+                ret["comment"] = (
+                    f"Python package {state_pkg_name} was already installed"
                 )
                 return ret
         if force_reinstall is False and upgrade:
@@ -322,8 +320,8 @@ def _check_if_installed(
                 return ret
             if _pep440_version_cmp(pip_list[prefix], desired_version) == 0:
                 ret["result"] = True
-                ret["comment"] = "Python package {} was already installed".format(
-                    state_pkg_name
+                ret["comment"] = (
+                    f"Python package {state_pkg_name} was already installed"
                 )
                 return ret
 
@@ -851,8 +849,7 @@ def installed(
                 )
             if editable:
                 comments.append(
-                    "Package will be installed in editable mode (i.e. "
-                    'setuptools "develop mode") from {}.'.format(editable)
+                    f'Package will be installed in editable mode (i.e. setuptools "develop mode") from {editable}.'
                 )
             ret["comment"] = " ".join(comments)
             return ret
@@ -1020,18 +1017,14 @@ def installed(
                         ret["changes"]["requirements"] = True
                 if ret["changes"].get("requirements"):
                     comments.append(
-                        "Successfully processed requirements file {}.".format(
-                            requirements
-                        )
+                        f"Successfully processed requirements file {requirements}."
                     )
                 else:
                     comments.append("Requirements were already installed.")
 
             if editable:
                 comments.append(
-                    "Package successfully installed from VCS checkout {}.".format(
-                        editable
-                    )
+                    f"Package successfully installed from VCS checkout {editable}."
                 )
                 ret["changes"]["editable"] = True
             ret["comment"] = " ".join(comments)
@@ -1043,10 +1036,18 @@ def installed(
             already_installed_packages = set()
             for line in pip_install_call.get("stdout", "").split("\n"):
                 # Output for already installed packages:
-                # 'Requirement already up-to-date: jinja2 in /usr/local/lib/python2.7/dist-packages\nCleaning up...'
-                if line.startswith("Requirement already up-to-date: "):
-                    package = line.split(":", 1)[1].split()[0]
-                    already_installed_packages.add(package.lower())
+                # modern pip: 'Requirement already satisfied: jinja2 in /usr/local/lib/...'
+                # old pip: 'Requirement already up-to-date: jinja2 in /usr/local/lib/python2.7/...'
+                if line.startswith(
+                    (
+                        "Requirement already satisfied: ",
+                        "Requirement already up-to-date: ",
+                    )
+                ):
+                    pkg_str = line.split(":", 1)[1].split()[0]
+                    # Strip version specifier to get just the package name
+                    pkg_name = re.split(r"[=!<>~@]", pkg_str)[0]
+                    already_installed_packages.add(__salt__["pip.normalize"](pkg_name))
 
             for prefix, state_name in target_pkgs:
                 # Case for packages that are not an URL
@@ -1073,7 +1074,7 @@ def installed(
                     else:
                         if (
                             prefix in pipsearch
-                            and prefix.lower() not in already_installed_packages
+                            and prefix not in already_installed_packages
                         ):
                             ver = pipsearch[prefix]
                             ret["changes"][f"{prefix}=={ver}"] = "Installed"
