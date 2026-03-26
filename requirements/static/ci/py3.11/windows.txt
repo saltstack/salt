@@ -403,7 +403,7 @@ pyzmq==25.1.2
     #   -c requirements/static/pkg/py3.11/windows.txt
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
-requests==2.32.5
+requests==2.33.0
     # via
     #   -c requirements/static/pkg/py3.11/windows.txt
     #   -r requirements/base.txt
