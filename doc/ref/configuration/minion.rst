@@ -559,6 +559,19 @@ need to be changed to the ownership of the new user.
 
     sudo_user: root
 
+.. conf_minion:: sudo_cmd
+
+``sudo_cmd``
+-------------
+
+Default: ``''``
+
+The command to use as an alternative to sudo when running remote execution
+commands. This will default to sudo if the command below does not exist.
+
+.. code-block:: yaml
+
+    sudo_cmd: doas
 
 ``pidfile``
 -----------
