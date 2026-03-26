@@ -1,0 +1,1218 @@
+"""
+OptsDict: Copy-on-write dictionary optimized for Salt's opts pattern.
+
+This module provides a memory-efficient alternative to copy.deepcopy(opts)
+by implementing true copy-on-write semantics at the key level, with full
+mutation tracking for future unwinding.
+
+Key Features:
+- Only duplicates data for keys that are actually mutated
+- Tracks all mutations with stack traces for auditing
+- Provides reports to identify unwinding opportunities
+- Maintains dict interface for backward compatibility
+- Thread-safe for concurrent access
+
+Example:
+    >>> base_opts = {'grains': {...}, 'pillar': {...}, 'test': False}
+    >>> child = OptsDict(base_opts)
+    >>> child['test'] = True  # Only 'test' is copied, grains/pillar shared
+    >>> child.get_mutation_report()
+    {
+        'test': {
+            'mutated_by': ['salt.utils.state.get_sls_opts:211'],
+            'mutation_count': 1,
+            'original_value': False,
+            'current_value': True
+        }
+    }
+"""
+
+from __future__ import annotations
+
+import copy
+import logging
+import sys
+import threading
+import traceback
+import weakref
+from typing import Any
+
+log = logging.getLogger(__name__)
+
+
+class _DeletedKey:
+    """Sentinel to mark keys that have been deleted from inherited dicts."""
+
+    __slots__ = ()
+
+    def __repr__(self):
+        return "<DELETED>"
+
+
+# Singleton sentinel instance
+_DELETED = _DeletedKey()
+
+
+class DictProxy(dict):
+    """
+    Proxy for dict that triggers copy-on-write in parent OptsDict on mutation.
+
+    Subclasses dict to pass isinstance checks while providing copy-on-write semantics.
+    """
+
+    def __init__(self, target: dict, parent_optsdict: OptsDict, key: str):
+        # Initialize underlying dict with target data AND keep _target
+        # We need both: underlying dict for C code, _target for our logic
+        super().__init__(target)
+        object.__setattr__(self, "_target", target)
+        object.__setattr__(self, "_parent", parent_optsdict)
+        object.__setattr__(self, "_key", key)
+        object.__setattr__(self, "_copied", False)
+
+    def _ensure_copied(self):
+        """Copy target to parent's _local on first mutation."""
+        if not object.__getattribute__(self, "_copied"):
+            parent = object.__getattribute__(self, "_parent")
+            key = object.__getattribute__(self, "_key")
+            target = object.__getattribute__(self, "_target")
+
+            with parent._lock:
+                # Deep copy the entire dict to parent's _local
+                copied = copy.deepcopy(target)
+                parent._local[key] = copied
+                object.__setattr__(self, "_target", copied)
+                # Also update the underlying dict storage
+                dict.clear(self)
+                dict.update(self, copied)
+                object.__setattr__(self, "_copied", True)
+
+    def __getitem__(self, key):
+        target = object.__getattribute__(self, "_target")
+        value = target[key]
+        # For nested mutable values, copy THIS dict first,
+        # then return the value from the copied dict without further wrapping
+        if isinstance(value, (dict, list)) and not object.__getattribute__(
+            self, "_copied"
+        ):
+            # Trigger copy-on-access for nested mutables to prevent unwrapped references
+            self._ensure_copied()
+            # Return value from the now-copied target
+            target = object.__getattribute__(self, "_target")
+            return target[key]
+        return value
+
+    def __setitem__(self, key, value):
+        self._ensure_copied()
+        object.__getattribute__(self, "_target")[key] = value
+        # Also update underlying dict
+        dict.__setitem__(self, key, value)
+
+    def __delitem__(self, key):
+        self._ensure_copied()
+        del object.__getattribute__(self, "_target")[key]
+        # Also update underlying dict
+        dict.__delitem__(self, key)
+
+    def __iter__(self):
+        return iter(object.__getattribute__(self, "_target"))
+
+    def __len__(self):
+        return len(object.__getattribute__(self, "_target"))
+
+    def __repr__(self):
+        return repr(object.__getattribute__(self, "_target"))
+
+    def __str__(self):
+        return str(object.__getattribute__(self, "_target"))
+
+    def __contains__(self, key):
+        return key in object.__getattribute__(self, "_target")
+
+    def keys(self):
+        return object.__getattribute__(self, "_target").keys()
+
+    def values(self):
+        return object.__getattribute__(self, "_target").values()
+
+    def items(self):
+        return object.__getattribute__(self, "_target").items()
+
+    def get(self, key, default=None):
+        return object.__getattribute__(self, "_target").get(key, default)
+
+    def pop(self, key, *args):
+        self._ensure_copied()
+        result = object.__getattribute__(self, "_target").pop(key, *args)
+        # Also update underlying dict
+        dict.pop(self, key, *args)
+        return result
+
+    def update(self, *args, **kwargs):
+        self._ensure_copied()
+        object.__getattribute__(self, "_target").update(*args, **kwargs)
+        # Also update underlying dict
+        dict.update(self, *args, **kwargs)
+
+    def setdefault(self, key, default=None):
+        self._ensure_copied()
+        result = object.__getattribute__(self, "_target").setdefault(key, default)
+        # Also update underlying dict
+        dict.setdefault(self, key, default)
+        return result
+
+    def __deepcopy__(self, memo):
+        """Return a deep copy of the underlying dict, not the proxy."""
+        target = object.__getattribute__(self, "_target")
+        return copy.deepcopy(target, memo)
+
+    def __reduce_ex__(self, protocol):
+        """For pickling, return the underlying dict, not the proxy."""
+        target = object.__getattribute__(self, "_target")
+        return (dict, (target,))
+
+
+class ListProxy(list):
+    """
+    Proxy for list that triggers copy-on-write in parent OptsDict on mutation.
+
+    Subclasses list to pass isinstance checks while providing copy-on-write semantics.
+    """
+
+    def __init__(self, target: list, parent_optsdict: OptsDict, key: str):
+        # Initialize underlying list with target data AND keep _target
+        # We need both: underlying list for C code, _target for our logic
+        super().__init__(target)
+        object.__setattr__(self, "_target", target)
+        object.__setattr__(self, "_parent", parent_optsdict)
+        object.__setattr__(self, "_key", key)
+        object.__setattr__(self, "_copied", False)
+
+    def _ensure_copied(self):
+        """Copy target to parent's _local on first mutation."""
+        if not object.__getattribute__(self, "_copied"):
+            parent = object.__getattribute__(self, "_parent")
+            key = object.__getattribute__(self, "_key")
+            target = object.__getattribute__(self, "_target")
+
+            with parent._lock:
+                # Deep copy the entire list to parent's _local
+                copied = copy.deepcopy(target)
+                parent._local[key] = copied
+                object.__setattr__(self, "_target", copied)
+                object.__setattr__(self, "_copied", True)
+
+    def __getitem__(self, index):
+        return object.__getattribute__(self, "_target")[index]
+
+    def __setitem__(self, index, value):
+        self._ensure_copied()
+        object.__getattribute__(self, "_target")[index] = value
+
+    def __delitem__(self, index):
+        self._ensure_copied()
+        del object.__getattribute__(self, "_target")[index]
+
+    def __len__(self):
+        return len(object.__getattribute__(self, "_target"))
+
+    def __iter__(self):
+        return iter(object.__getattribute__(self, "_target"))
+
+    def __contains__(self, item):
+        return item in object.__getattribute__(self, "_target")
+
+    def insert(self, index, value):
+        self._ensure_copied()
+        object.__getattribute__(self, "_target").insert(index, value)
+
+    def append(self, value):
+        self._ensure_copied()
+        object.__getattribute__(self, "_target").append(value)
+
+    def extend(self, values):
+        self._ensure_copied()
+        object.__getattribute__(self, "_target").extend(values)
+
+    def remove(self, value):
+        self._ensure_copied()
+        object.__getattribute__(self, "_target").remove(value)
+
+    def pop(self, index=-1):
+        self._ensure_copied()
+        return object.__getattribute__(self, "_target").pop(index)
+
+    def __deepcopy__(self, memo):
+        """Return a deep copy of the underlying list, not the proxy."""
+        return copy.deepcopy(object.__getattribute__(self, "_target"), memo)
+
+    def __reduce_ex__(self, protocol):
+        """For pickling, return the underlying list, not the proxy."""
+        return (list, (object.__getattribute__(self, "_target"),))
+
+    def clear(self):
+        self._ensure_copied()
+        object.__getattribute__(self, "_target").clear()
+
+    def __repr__(self):
+        return repr(object.__getattribute__(self, "_target"))
+
+    def __str__(self):
+        return str(object.__getattribute__(self, "_target"))
+
+    def __eq__(self, other):
+        target = object.__getattribute__(self, "_target")
+        if isinstance(other, ListProxy):
+            return target == object.__getattribute__(other, "_target")
+        return target == other
+
+    def index(self, value, *args):
+        """Return first index of value."""
+        return object.__getattribute__(self, "_target").index(value, *args)
+
+    def count(self, value):
+        """Return number of occurrences of value."""
+        return object.__getattribute__(self, "_target").count(value)
+
+
+# DictProxy and ListProxy now subclass dict and list respectively, so they pass
+# isinstance checks. This ensures compatibility with Salt code that uses isinstance(x, dict).
+
+
+class MutationTracker:
+    """
+    Tracks mutations to OptsDict keys for auditing and future unwinding.
+
+    For each mutated key, we track:
+    - Where the mutation happened (file, line, function)
+    - When it happened (order of mutations)
+    - What the original value was
+    - How many times it's been mutated
+    """
+
+    def __init__(self, track_mutations: bool = True, max_stack_depth: int = 10):
+        self.track_mutations = track_mutations
+        self.max_stack_depth = max_stack_depth
+        self._lock = threading.RLock()
+        if track_mutations:
+            self._mutations: dict[str, dict[str, Any]] = {}
+            self._mutation_order: list[str] = []
+        else:
+            # Don't allocate data structures if tracking is disabled
+            self._mutations = None
+            self._mutation_order = None
+
+    def record_mutation(self, key: str, original_value: Any, new_value: Any):
+        """
+        Record a mutation of a key with stack trace.
+
+        Args:
+            key: The opts key being mutated
+            original_value: The original value before mutation
+            new_value: The new value being set
+        """
+        if not self.track_mutations:
+            return
+
+        with self._lock:
+            # Capture stack trace
+            stack = traceback.extract_stack(limit=self.max_stack_depth)
+            # Filter out frames from this file
+            stack = [frame for frame in stack if "optsdict.py" not in frame.filename]
+
+            # Format stack trace for readability
+            caller_info = []
+            for frame in stack[-3:]:  # Last 3 frames (most relevant)
+                caller_info.append(f"{frame.filename}:{frame.lineno} in {frame.name}")
+
+            if key not in self._mutations:
+                # First mutation of this key
+                self._mutations[key] = {
+                    "original_value": original_value,
+                    "current_value": new_value,
+                    "mutation_count": 1,
+                    "first_mutation_stack": caller_info,
+                    "all_mutations": [caller_info],
+                    "mutation_sequence": [new_value],
+                }
+                self._mutation_order.append(key)
+            else:
+                # Subsequent mutation
+                self._mutations[key]["mutation_count"] += 1
+                self._mutations[key]["current_value"] = new_value
+                self._mutations[key]["all_mutations"].append(caller_info)
+                self._mutations[key]["mutation_sequence"].append(new_value)
+
+    def get_mutation_report(self, verbose: bool = False) -> dict[str, Any]:
+        """
+        Generate a report of all mutations.
+
+        Args:
+            verbose: If True, include full mutation history
+
+        Returns:
+            Dictionary containing mutation statistics and details
+        """
+        if not self.track_mutations:
+            return {}
+
+        with self._lock:
+            if not verbose:
+                # Concise report
+                return {
+                    key: {
+                        "mutation_count": info["mutation_count"],
+                        "first_mutated_at": info["first_mutation_stack"],
+                        "original_value_type": type(info["original_value"]).__name__,
+                        "current_value_type": type(info["current_value"]).__name__,
+                    }
+                    for key, info in self._mutations.items()
+                }
+            else:
+                # Full report with history
+                return copy.deepcopy(self._mutations)
+
+    def get_hotspot_keys(self, min_mutations: int = 2) -> list[str]:
+        """
+        Identify keys that are frequently mutated (hotspots).
+
+        These are candidates for being designed as mutable from the start.
+
+        Args:
+            min_mutations: Minimum mutation count to be considered a hotspot
+
+        Returns:
+            List of keys sorted by mutation count (descending)
+        """
+        with self._lock:
+            hotspots = [
+                (key, info["mutation_count"])
+                for key, info in self._mutations.items()
+                if info["mutation_count"] >= min_mutations
+            ]
+            return [
+                key for key, _ in sorted(hotspots, key=lambda x: x[1], reverse=True)
+            ]
+
+    def get_mutation_locations(self) -> dict[str, set[str]]:
+        """
+        Get all unique locations where mutations happen.
+
+        Returns:
+            Dict mapping location strings to set of keys mutated there
+        """
+        with self._lock:
+            locations = {}
+            for key, info in self._mutations.items():
+                for stack in info["all_mutations"]:
+                    # Use the most recent frame (actual mutation site)
+                    location = stack[-1] if stack else "unknown"
+                    if location not in locations:
+                        locations[location] = set()
+                    locations[location].add(key)
+            return locations
+
+
+class OptsDict(dict):
+    """
+    Copy-on-write dictionary for Salt opts.
+
+    Inherits from dict for full compatibility with isinstance(opts, dict) checks
+    while providing copy-on-write semantics for memory efficiency.
+
+    This class implements true copy-on-write semantics at the key level:
+    - Keys are only copied when first mutated
+    - Nested structures are handled properly (deep COW)
+    - Parent data is shared until modification
+    - Full mutation tracking for auditing
+
+    Thread-safe for concurrent reads; writes are serialized per instance.
+
+    Example:
+        >>> parent_opts = {'grains': {...}, 'pillar': {...}, 'test': False}
+        >>> child = OptsDict.from_parent(parent_opts)
+        >>> child['test'] = True  # Only copies 'test', not grains/pillar
+        >>> 'grains' in child  # True (shared from parent)
+        >>> child['test']  # True (local mutation)
+        >>> isinstance(child, dict)  # True (for compatibility)
+    """
+
+    def __init__(
+        self,
+        base_dict: dict[str, Any] | None = None,
+        parent: OptsDict | None = None,
+        track_mutations: bool = False,
+        name: str | None = None,
+    ):
+        """
+        Initialize OptsDict.
+
+        Args:
+            base_dict: Initial dictionary (for root instance)
+            parent: Parent OptsDict to inherit from (for child instances)
+            track_mutations: Enable mutation tracking (disabled by default to save memory)
+            name: Optional name for debugging (e.g., "loader:states", "state:highstate")
+        """
+        # Initialize dict parent WITHOUT data (we handle storage ourselves)
+        super().__init__()
+
+        self._parent = parent
+        self._local = {}  # Keys that have been copied/mutated locally
+        self._base = base_dict if base_dict is not None else {}
+        self._name = name or f"OptsDict@{id(self)}"
+        self._lock = threading.RLock()
+
+        # Mutation tracking
+        if parent and parent._tracker:
+            # Inherit parent's tracker
+            self._tracker = parent._tracker
+        else:
+            # Root instance - create new tracker
+            self._tracker = MutationTracker(track_mutations=track_mutations)
+
+    def _ensure_lock(self) -> threading.RLock:
+        """
+        Ensure _lock exists and return it.
+
+        This is needed for unpickling, where dict restoration may call
+        methods before our attributes are fully initialized.
+        """
+        if not hasattr(self, "_lock") or self._lock is None:
+            object.__setattr__(self, "_lock", threading.RLock())
+        return self._lock
+
+    @classmethod
+    def from_parent(cls, parent: OptsDict, name: str | None = None) -> OptsDict:
+        """
+        Create a child OptsDict that shares parent's data.
+
+        Args:
+            parent: Parent OptsDict to inherit from
+            name: Optional name for debugging
+
+        Returns:
+            New OptsDict instance sharing parent's data
+        """
+        return cls(parent=parent, name=name)
+
+    @classmethod
+    def from_dict(
+        cls,
+        base_dict: dict[str, Any],
+        track_mutations: bool = False,
+        name: str | None = None,
+    ) -> OptsDict:
+        """
+        Create a root OptsDict from a regular dictionary.
+
+        Args:
+            base_dict: Dictionary to wrap
+            track_mutations: Enable mutation tracking (disabled by default to save memory)
+            name: Optional name for debugging
+
+        Returns:
+            New root OptsDict instance
+        """
+        return cls(base_dict=base_dict, track_mutations=track_mutations, name=name)
+
+    def _get_from_parent_chain(self, key: str) -> tuple[bool, Any]:
+        """
+        Walk up the parent chain to find a key.
+
+        Returns:
+            (found, value) tuple
+        """
+        current = self._parent
+        while current is not None:
+            # Check local dict first
+            if key in current._local:
+                return True, current._local[key]
+            # Check base dict if this is a root node
+            if current._parent is None and key in current._base:
+                return True, current._base[key]
+            current = current._parent
+
+        return False, None
+
+    def __getitem__(self, key: str) -> Any:
+        """
+        Get item with proxy-based copy-on-write for mutable values.
+
+        When accessing mutable values from parent/base, we return a proxy object
+        that triggers copy-on-write on first mutation. This provides isolation
+        without copying until actually needed.
+        """
+        with self._ensure_lock():
+            # Check local first - if already copied, return direct reference
+            if key in self._local:
+                value = self._local[key]
+                # Check if this key was deleted (masked by sentinel)
+                if value is _DELETED:
+                    raise KeyError(key)
+                return value
+
+            # Check parent chain
+            if self._parent is not None:
+                found, value = self._get_from_parent_chain(key)
+                if found:
+                    # Check if this key was deleted in parent chain
+                    if value is _DELETED:
+                        raise KeyError(key)
+                    # Wrap mutable values in proxies to catch mutations
+                    if isinstance(value, dict) and not isinstance(value, OptsDict):
+                        return DictProxy(value, self, key)
+                    elif isinstance(value, list):
+                        return ListProxy(value, self, key)
+                    # Immutable values can be returned directly
+                    return value
+
+            # Check base (root level only)
+            if self._parent is None and key in self._base:
+                value = self._base[key]
+                # Even root instances need proxies to track when values are mutated
+                # This allows us to know when a key has been accessed/modified
+                if isinstance(value, dict) and not isinstance(value, OptsDict):
+                    return DictProxy(value, self, key)
+                elif isinstance(value, list):
+                    return ListProxy(value, self, key)
+                return value
+
+            raise KeyError(key)
+
+    def __setitem__(self, key: str, value: Any):
+        """
+        Set item with copy-on-write semantics.
+
+        On first write to a key:
+        1. Record the mutation
+        2. Copy only that key's value to local dict
+        3. Store new value
+        """
+        with self._ensure_lock():
+            # Get original value for tracking
+            try:
+                original_value = self[key]
+                is_mutation = True
+            except KeyError:
+                original_value = None
+                is_mutation = False
+
+            # Check if this is the first mutation of this key
+            if is_mutation and key not in self._local:
+                # First mutation - record it
+                self._tracker.record_mutation(key, original_value, value)
+                log.debug(
+                    "OptsDict[%s]: First mutation of key '%s' (original type: %s, new type: %s)",
+                    self._name,
+                    key,
+                    type(original_value).__name__,
+                    type(value).__name__,
+                )
+            elif key in self._local:
+                # Subsequent mutation of already-local key
+                self._tracker.record_mutation(key, original_value, value)
+
+            # Store the value locally
+            self._local[key] = value
+
+    def _key_in_parent_or_base(self, key: str) -> bool:
+        """Check if key exists in parent chain or base dict."""
+        # Check parent chain
+        if self._parent is not None:
+            found, value = self._get_from_parent_chain(key)
+            if found and value is not _DELETED:
+                return True
+
+        # Check base (root level only)
+        if self._parent is None and key in self._base:
+            return True
+
+        return False
+
+    def __delitem__(self, key: str):
+        """
+        Delete item by masking it with a sentinel.
+
+        For keys in local dict: truly delete them.
+        For keys in parent/base: mask them with _DELETED sentinel.
+        This preserves copy-on-write semantics.
+        """
+        with self._ensure_lock():
+            if key not in self:
+                raise KeyError(key)
+
+            if key in self._local:
+                # Key is in local - check if it's already deleted
+                if self._local[key] is _DELETED:
+                    raise KeyError(key)
+                # Truly delete if it's ONLY in local (not in parent/base)
+                if not self._key_in_parent_or_base(key):
+                    del self._local[key]
+                else:
+                    # Key is in both local and parent/base - mask it
+                    self._local[key] = _DELETED
+            else:
+                # Key is in parent/base only - mask it
+                self._local[key] = _DELETED
+
+    def __iter__(self):
+        """Iterate over all keys (local + parent chain + base), excluding deleted keys."""
+        with self._ensure_lock():
+            # Sync underlying dict for C-level iteration (e.g., JSON serialization)
+            # This ensures json.dumps() works without needing to_dict()
+            # Build items dict first to avoid leaving underlying dict in bad state
+            # if an exception occurs during iteration
+            items = {}
+            for key in self._get_all_keys():
+                try:
+                    value = self[key]
+                    # Skip deleted keys (will raise KeyError)
+                    items[key] = value
+                except KeyError:
+                    # Key was deleted (sentinel), skip it
+                    pass
+
+            # Only update underlying dict after successfully building all items
+            dict.clear(self)
+            for key, value in items.items():
+                dict.__setitem__(self, key, value)
+
+            return dict.__iter__(self)
+
+    def _get_all_keys(self):
+        """Get all keys from local, parent chain, and base."""
+        keys = set(self._local.keys())
+
+        # Add parent chain keys
+        if self._parent is not None:
+            current = self._parent
+            while current is not None:
+                keys.update(current._local.keys())
+                # Add base keys if this is a root node
+                if current._parent is None:
+                    keys.update(current._base.keys())
+                current = current._parent
+        else:
+            # This is a root node, add base keys
+            keys.update(self._base.keys())
+
+        return keys
+
+    def __len__(self) -> int:
+        """Return total number of keys."""
+        with self._ensure_lock():
+            # Sync underlying dict for C-level access
+            _ = iter(self)
+            return dict.__len__(self)
+
+    def __contains__(self, key: str) -> bool:
+        """Check if key exists in local, parent chain, or base (excluding deleted keys)."""
+        with self._ensure_lock():
+            # Check if key is in local and not deleted
+            if key in self._local:
+                return self._local[key] is not _DELETED
+
+            # Check parent chain
+            if self._parent is not None:
+                found, value = self._get_from_parent_chain(key)
+                if found:
+                    return value is not _DELETED
+
+            # Check base (root level only)
+            if self._parent is None and key in self._base:
+                return True
+
+            return False
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """Get with default value."""
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+    def setdefault(self, key: str, default: Any = None) -> Any:
+        """
+        Get value for key, setting it to default if not present.
+
+        This is important for OptsDict because dict's setdefault uses C-level
+        access which doesn't respect our copy-on-write storage. We need to
+        check using __getitem__ and set using __setitem__ to properly trigger
+        copy-on-write semantics.
+        """
+        try:
+            return self[key]
+        except KeyError:
+            self[key] = default
+            return default
+
+    def pop(self, key: str, *args) -> Any:
+        """
+        Remove and return value for key.
+
+        This is important for OptsDict because dict's pop uses C-level
+        access which doesn't respect our copy-on-write storage.
+
+        For copy-on-write semantics:
+        - If key is in local dict, delete it and return value
+        - If key is in parent chain, return value without deleting (can't modify parent)
+        - If key doesn't exist, return default or raise KeyError
+        """
+        with self._ensure_lock():
+            if key in self._local:
+                value = self._local[key]
+                del self._local[key]
+                return value
+            elif key in self:
+                # Key is in parent chain - return value but don't delete
+                return self[key]
+            elif args:
+                return args[0]
+            else:
+                raise KeyError(key)
+
+    def keys(self):
+        """Return all keys."""
+        # Force iteration to sync underlying dict
+        _ = iter(self)
+        return dict.keys(self)
+
+    def values(self):
+        """Return all values."""
+        # Force iteration to sync underlying dict
+        _ = iter(self)
+        return dict.values(self)
+
+    def items(self):
+        """Return all items."""
+        # Force iteration to sync underlying dict
+        _ = iter(self)
+        return dict.items(self)
+
+    def copy(self) -> dict[str, Any]:
+        """Return a regular dict copy of all data, unwrapping all proxies."""
+        with self._ensure_lock():
+            result = {}
+            for k, v in self.items():
+                result[k] = self._unwrap_value(v)
+            return result
+
+    def _unwrap_value(self, value):
+        """Recursively unwrap DictProxy/ListProxy objects to plain dicts/lists."""
+        if isinstance(value, DictProxy):
+            # Unwrap DictProxy - get the underlying target and preserve its type
+            target = object.__getattribute__(value, "_target")
+            # If target is also a DictProxy, we need to get the real underlying dict
+            # This shouldn't happen in normal use, but handle it defensively
+            while isinstance(target, DictProxy):
+                target = object.__getattribute__(target, "_target")
+            # Now preserve the type of the real underlying dict (could be OrderedDict, etc.)
+            dict_type = (
+                type(target) if not isinstance(target, (DictProxy, ListProxy)) else dict
+            )
+            return dict_type((k, self._unwrap_value(v)) for k, v in value.items())
+        elif isinstance(value, ListProxy):
+            # Unwrap ListProxy to plain list
+            return [self._unwrap_value(item) for item in value]
+        elif isinstance(value, dict) and not isinstance(value, OptsDict):
+            # Regular dict (including OrderedDict, etc.) - preserve type and recursively unwrap values
+            dict_type = type(value)
+            return dict_type((k, self._unwrap_value(v)) for k, v in value.items())
+        elif isinstance(value, (list, tuple)):
+            # Regular list/tuple - recursively unwrap its items
+            return type(value)(self._unwrap_value(item) for item in value)
+        else:
+            # Primitive value or OptsDict - return as-is
+            return value
+
+    def to_dict(self) -> dict[str, Any]:
+        """Alias for copy() - return regular dict."""
+        return self.copy()
+
+    def update(self, other=None, /, **kwargs: Any):  # pylint: disable=arguments-differ
+        """Update with another dict.
+
+        Compatible with MutableMapping.update() signature.
+        """
+        with self._ensure_lock():
+            if other:
+                for key, value in other.items():
+                    self[key] = value
+            for key, value in kwargs.items():
+                self[key] = value
+
+    # OptsDict-specific methods
+
+    def get_mutation_report(self, verbose: bool = False) -> dict[str, Any]:
+        """
+        Get report of all mutations across this OptsDict hierarchy.
+
+        Args:
+            verbose: Include full mutation history
+
+        Returns:
+            Dictionary with mutation statistics
+        """
+        return self._tracker.get_mutation_report(verbose=verbose)
+
+    def get_local_keys(self) -> set[str]:
+        """Return set of keys that have been mutated locally."""
+        with self._ensure_lock():
+            return set(self._local.keys())
+
+    def get_shared_keys(self) -> set[str]:
+        """Return set of keys that are shared from parent/base."""
+        with self._ensure_lock():
+            all_keys = set(self)
+            local_keys = self.get_local_keys()
+            return all_keys - local_keys
+
+    def get_root(self) -> OptsDict:
+        """
+        Get the root OptsDict instance.
+
+        Walks up the parent chain to find the root (the OptsDict with no parent).
+        Useful when you need to set a value that should be visible to all children.
+
+        Returns:
+            The root OptsDict instance
+        """
+        root = self
+        while root._parent is not None:
+            root = root._parent
+        return root
+
+    def set_shared(self, key: str, value: Any):
+        """
+        Set a value on the root OptsDict so all children can see it.
+
+        This is useful for setting shared configuration values (like grains, pillar)
+        that need to be visible to all loaders/children, not just the current instance.
+
+        Args:
+            key: The configuration key to set
+            value: The value to set
+
+        Example:
+            opts.set_shared("grains", grains_data)  # All children can now see grains
+        """
+        root = self.get_root()
+        root[key] = value
+
+    def get_memory_stats(self) -> dict[str, Any]:
+        """
+        Estimate memory usage statistics.
+
+        Returns:
+            Dict with local size, shared size, etc.
+        """
+        with self._ensure_lock():
+            import sys
+
+            local_size = sum(
+                sys.getsizeof(k) + sys.getsizeof(v) for k, v in self._local.items()
+            )
+
+            return {
+                "name": self._name,
+                "local_keys_count": len(self._local),
+                "shared_keys_count": len(self.get_shared_keys()),
+                "total_keys_count": len(self),
+                "local_size_bytes": local_size,
+                "local_size_mb": local_size / (1024 * 1024),
+            }
+
+    def log_mutation_summary(self, logger: logging.Logger | None = None):
+        """
+        Log a summary of mutations for debugging.
+
+        Args:
+            logger: Logger to use (defaults to module logger)
+        """
+        logger = logger or log
+        stats = self.get_memory_stats()
+
+        logger.info(
+            "OptsDict[%s] memory stats: %d local keys (%.2f MB), %d shared keys",
+            self._name,
+            stats["local_keys_count"],
+            stats["local_size_mb"],
+            stats["shared_keys_count"],
+        )
+
+        if self._tracker.track_mutations:
+            report = self.get_mutation_report(verbose=False)
+            if report:
+                logger.info("OptsDict[%s] mutations:", self._name)
+                for key, info in report.items():
+                    logger.info(
+                        "  - %s: %d mutations, first at %s",
+                        key,
+                        info["mutation_count"],
+                        (
+                            info["first_mutated_at"][-1]
+                            if info["first_mutated_at"]
+                            else "unknown"
+                        ),
+                    )
+
+    def __deepcopy__(self, memo):
+        """
+        Support for copy.deepcopy().
+
+        Uses copy-on-write by creating a child OptsDict instead of deep copying.
+        This provides the same isolation semantics as deepcopy while being much
+        more memory efficient. When the copied OptsDict is modified, only the
+        modified keys are copied, not the entire dict.
+        """
+        # Use copy-on-write by creating a child OptsDict
+        # This shares data with parent until mutations occur
+        child = OptsDict.from_parent(self, name=f"{self._name}_deepcopy")
+        # Sync underlying dict to support C-level iteration (e.g., JSON serialization)
+        # This ensures json.dumps() works without needing to call __iter__() first
+        list(child)  # Triggers __iter__() which syncs the underlying dict
+        return child
+
+    def __eq__(self, other):
+        """
+        Compare OptsDict instances based on logical contents.
+
+        dict's built-in __eq__ compares the underlying dict storage directly
+        using C-level iteration, which doesn't account for OptsDict's
+        copy-on-write storage in _local, _parent, and _base. We need to
+        compare the logical key-value pairs instead.
+        """
+        if not isinstance(other, dict):
+            return NotImplemented
+
+        # Get all keys from self
+        with self._ensure_lock():
+            self_keys = set(self._get_all_keys())
+
+        # For regular dict, just use keys()
+        if isinstance(other, OptsDict):
+            with other._ensure_lock():
+                other_keys = set(other._get_all_keys())
+        else:
+            other_keys = set(other.keys())
+
+        # Quick check: if key sets differ, not equal
+        if self_keys != other_keys:
+            return False
+
+        # Compare values for each key
+        for key in self_keys:
+            if self[key] != other[key]:
+                return False
+
+        return True
+
+    def _sync_underlying_dict(self):
+        """
+        Sync the underlying dict storage with our custom storage.
+
+        This is needed for JSON serialization and other operations that
+        bypass our custom __iter__() and use C-level dict iteration.
+        """
+        with self._ensure_lock():
+            # Clear and repopulate the underlying dict
+            dict.clear(self)
+            for key in self:
+                dict.__setitem__(self, key, self[key])
+
+    def __reduce_ex__(self, protocol):
+        """
+        Custom pickle support for dict subclass.
+
+        When pickling, convert to regular dict and reconstruct via from_dict.
+        This avoids issues with dict's unpickling mechanism calling __setitem__
+        before __init__ has run.
+        """
+        # Convert to regular dict
+        data = self.to_dict()
+        name = getattr(self, "_name", None)
+        # Return (callable, args) to reconstruct
+        # We pass the name as the third positional arg which maps to name= in from_dict
+        return (
+            self.__class__.from_dict,
+            (data, False, name),  # base_dict, track_mutations=False, name
+        )
+
+    def mutate_key(self, key, new_value):
+        """
+        Update a key in place to preserve cached references.
+
+        This method replaces the pattern of:
+            opts[key] = new_dict  # Creates NEW dict, breaks cached references
+
+        With:
+            new_dict = ...
+            opts.mutate_key(key, new_dict)  # Mutates SAME dict, preserves references
+
+        Why this matters:
+        - Loaders cache references to opts["grains"], opts["pillar"], etc.
+        - When we replace opts[key] = new_dict, cached refs become stale
+        - By mutating in place (clear + update), we preserve object identity
+        - Cached references continue to see updates
+
+        Args:
+            key: The key to update (e.g., "grains", "pillar")
+            new_value: The new value to set
+
+        Example:
+            # Instead of:
+            opts["grains"] = salt.loader.grains(opts)  # BREAKS cached refs
+
+            # Use:
+            new_grains = salt.loader.grains(opts)
+            opts.mutate_key("grains", new_grains)  # PRESERVES cached refs
+        """
+        # Ensure new_value is not None
+        if new_value is None:
+            # If setting to None, just use regular assignment
+            self[key] = new_value
+            return
+
+        # Check if key exists and both old and new values are dicts
+        if key in self and isinstance(self[key], dict) and isinstance(new_value, dict):
+            # Mutate in place to preserve object identity
+            self[key].clear()
+            self[key].update(new_value)
+        else:
+            # Initial creation or non-dict value - regular assignment is fine
+            self[key] = new_value
+
+    def __repr__(self) -> str:
+        """String representation."""
+        with self._ensure_lock():
+            return (
+                f"OptsDict(name={self._name!r}, "
+                f"local_keys={len(self._local)}, "
+                f"total_keys={len(self)})"
+            )
+
+
+def mutate_opts_key(opts, key, new_value):
+    """
+    Update an opts key in place to preserve cached references.
+
+    .. deprecated:: 3008.0
+        Prefer using the instance method: ``opts.mutate_key(key, value)``
+        This function is maintained for backwards compatibility.
+
+    This function replaces the pattern of:
+        opts[key] = new_dict  # Creates NEW dict, breaks cached references
+
+    With:
+        new_dict = ...
+        mutate_opts_key(opts, key, new_dict)  # Mutates SAME dict, preserves references
+
+    Args:
+        opts: The opts dict (can be OptsDict or regular dict)
+        key: The key to update (e.g., "grains", "pillar")
+        new_value: The new value to set
+
+    Example:
+        # Preferred (OptsDict instance method):
+        opts.mutate_key("grains", new_grains)
+
+        # Still supported (old):
+        mutate_opts_key(opts, "grains", new_grains)
+    """
+    if isinstance(opts, OptsDict):
+        # Use instance method
+        return opts.mutate_key(key, new_value)
+
+    # Fallback for regular dict (shouldn't happen with new config)
+    if new_value is None:
+        opts[key] = new_value
+        return
+
+    if key in opts and isinstance(opts[key], dict) and isinstance(new_value, dict):
+        opts[key].clear()
+        opts[key].update(new_value)
+    else:
+        opts[key] = new_value
+
+
+def generate_global_mutation_report(include_locations: bool = True) -> str:
+    """
+    Generate a global report of all mutations across all OptsDict instances.
+
+    This is useful for identifying patterns and unwinding opportunities.
+
+    Args:
+        include_locations: Include mutation location analysis
+
+    Returns:
+        Formatted report string
+    """
+    # Note: This would require tracking all OptsDict instances globally
+    # For now, this is a placeholder for the concept
+    # Could be implemented with a global registry
+
+    report_lines = [
+        "=" * 80,
+        "OptsDict Global Mutation Report",
+        "=" * 80,
+        "",
+        "This report shows all opts mutations across the Salt minion instance.",
+        "Use this to identify unwinding opportunities and refactoring targets.",
+        "",
+    ]
+
+    # TODO: Implement global tracking
+    report_lines.append(
+        "(Not implemented yet - call get_mutation_report() on individual instances)"
+    )
+
+    return "\n".join(report_lines)
+
+
+# Global mapping from source dict id() to its OptsDict root
+# Keyed by id(source_dict), value is the root OptsDict that wraps it
+# Use WeakValueDictionary to allow garbage collection when no longer referenced
+_dict_to_root = weakref.WeakValueDictionary()
+
+
+# Convenience function for backward compatibility
+def safe_opts_copy(opts: Any, name: str | None = None) -> OptsDict:
+    """
+    Create an OptsDict from opts (dict or existing OptsDict).
+
+    This function provides a migration path from copy.deepcopy(opts).
+
+    Args:
+        opts: Existing opts (dict or OptsDict)
+        name: Optional name for debugging
+
+    Returns:
+        OptsDict instance
+
+    Example:
+        # OLD:
+        opts = copy.deepcopy(opts)
+
+        # NEW:
+        from salt.utils.optsdict import safe_opts_copy
+        opts = safe_opts_copy(opts, name="loader:states")
+    """
+    if isinstance(opts, OptsDict):
+        # Create child from current opts, not root
+        # This ensures the child can see all values in the current opts,
+        # including any values set in the current opts' _local dict
+        return OptsDict.from_parent(opts, name=name)
+
+    # Converting from regular dict
+    # Check if we've already created a root for this specific dict object
+    global _dict_to_root  # pylint: disable=global-variable-not-assigned
+    opts_id = id(opts)
+    if opts_id in _dict_to_root:
+        # Reuse existing root - this ensures all OptsDict instances
+        # from the same source dict share the same base and see mutations
+        root = _dict_to_root[opts_id]
+        return OptsDict.from_parent(root, name=name)
+
+    # First time seeing this dict - create a new root that wraps it
+    root = OptsDict.from_dict(opts, name=name or f"root@{opts_id}")
+    _dict_to_root[opts_id] = root
+    return root
