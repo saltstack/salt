@@ -579,7 +579,7 @@ referencing==0.35.1
     #   -c requirements/static/ci/py3.13/linux.txt
     #   jsonschema
     #   jsonschema-specifications
-requests==2.32.5
+requests==2.33.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
