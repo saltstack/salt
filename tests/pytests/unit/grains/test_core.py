@@ -17,6 +17,7 @@ import sys
 import tempfile
 import textwrap
 import uuid
+import warnings
 from collections import namedtuple
 
 import pytest
@@ -158,7 +159,6 @@ def test_network_grains_secondary_ip(tmp_path):
     opts = {
         "cachedir": str(cache_dir),
         "extension_modules": str(extmods),
-        "optimization_order": [0],
     }
     with patch("salt.utils.network.interfaces", side_effect=[data]):
         grains = salt.loader.grain_funcs(opts)
@@ -254,7 +254,6 @@ def test_network_grains_cache(tmp_path):
     opts = {
         "cachedir": str(cache_dir),
         "extension_modules": str(extmods),
-        "optimization_order": [0],
     }
     with patch(
         "salt.utils.network.interfaces", side_effect=[call_1, call_2]
@@ -490,10 +489,10 @@ def test_gnu_slash_linux_in_os_name():
     orig_import = __import__
     built_in = "builtins"
 
-    def _import_mock(name, *args):
+    def _import_mock(name, *args, **kwargs):
         if name == "lsb_release":
             raise ImportError("No module named lsb_release")
-        return orig_import(name, *args)
+        return orig_import(name, *args, **kwargs)
 
     # - Skip the first if statement
     # - Skip the selinux/systemd stuff (not pertinent)
@@ -567,10 +566,10 @@ def test_suse_os_from_cpe_data():
     orig_import = __import__
     built_in = "builtins"
 
-    def _import_mock(name, *args):
+    def _import_mock(name, *args, **kwargs):
         if name == "lsb_release":
             raise ImportError("No module named lsb_release")
-        return orig_import(name, *args)
+        return orig_import(name, *args, **kwargs)
 
     distro_mock = MagicMock(
         return_value=("SUSE Linux Enterprise Server ", "12", "x86_64")
@@ -636,10 +635,10 @@ def _run_os_grains_tests(os_release_data, os_release_map, expectation):
     orig_import = __import__
     built_in = "builtins"
 
-    def _import_mock(name, *args):
+    def _import_mock(name, *args, **kwargs):
         if name == "lsb_release":
             raise ImportError("No module named lsb_release")
-        return orig_import(name, *args)
+        return orig_import(name, *args, **kwargs)
 
     suse_release_file = os_release_map.get("suse_release_file")
 
@@ -858,6 +857,34 @@ def test_suse_os_grains_tumbleweed():
         "osrelease_info": (20160504,),
         "osmajorrelease": 20160504,
         "osfinger": "Tumbleweed-20160504",
+    }
+    _run_suse_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_suse_os_grains_slmicro62():
+    """
+    Test if OS grains are parsed correctly in SL Micro 6.2
+    """
+    _os_release_data = {
+        "NAME": "SLES",
+        "VERSION": "16.0",
+        "VERSION_ID": "16.0",
+        "PRETTY_NAME": "SUSE Linux Enterprise Server 16.0",
+        "ID": "sles",
+        "ANSI_COLOR": "0;32",
+        "CPE_NAME": "cpe:/o:suse:sles:16:16.0",
+        "SUSE_SUPPORT_PRODUCT": "SUSE Linux Micro",
+        "SUSE_SUPPORT_PRODUCT_VERSION": "6.2",
+        "SUSE_PRETTY_NAME": "SUSE Linux Micro 6.2",
+    }
+    expectation = {
+        "oscodename": "SUSE Linux Micro 6.2",
+        "osfullname": "SL-Micro",
+        "osrelease": "6.2",
+        "osrelease_info": (6, 2),
+        "osmajorrelease": 6,
+        "osfinger": "SL-Micro-6",
     }
     _run_suse_os_grains_tests(_os_release_data, {}, expectation)
 
@@ -1192,6 +1219,78 @@ def test_almalinux_8_os_grains():
         "osrelease_info": (8, 5),
         "osmajorrelease": 8,
         "osfinger": "AlmaLinux-8",
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_almalinux_kitten_os_grains():
+    """
+    Test that 'os' grain will properly detect AlmaLinux Kitten
+    """
+    # /etc/os-release data taken from an AlmaLinux Kitten VM, install ISO
+    # AlmaLinux-Kitten-10-20241018.0-x86_64_v2-minimal.iso. At the time of
+    # writting, there was no docker image for Kitten
+    _os_release_data = {
+        "NAME": "AlmaLinux Kitten",
+        "VERSION": "10 (Lion Cub)",
+        "ID": "almalinux",
+        "ID_LIKE": "rhel centos fedora",
+        "VERSION_ID": "10",
+        "PLATFORM_ID": "platform:el10",
+        "PRETTY_NAME": "AlmaLinux Kitten 10 (Lion Cub)",
+        "ANSI_COLOR": "0;34",
+        "LOGO": "fedora-logo-icon",
+        "CPE_NAME": "cpe:/o:almalinux:almalinux:10::baseos",
+        "HOME_URL": "https://almalinux.org/",
+        "DOCUMENTATION_URL": "https://wiki.almalinux.org/",
+        "VENDOR_NAME": "AlmaLinux",
+        "VENDOR_URL": "https://almalinux.org/",
+        "BUG_REPORT_URL": "https://bugs.almalinux.org/",
+        "ALMALINUX_MANTISBT_PROJECT": "AlmaLinux-10",
+        "ALMALINUX_MANTISBT_PROJECT_VERSION": "10",
+        "REDHAT_SUPPORT_PRODUCT": "AlmaLinux",
+        "REDHAT_SUPPORT_PRODUCT_VERSION": "10",
+    }
+    expectation = {
+        "os": "AlmaLinux",
+        "os_family": "RedHat",
+        "oscodename": "Lion Cub",
+        "osfullname": "AlmaLinux Kitten",
+        "osrelease": "10",
+        "osrelease_info": (10,),
+        "osmajorrelease": 10,
+        "osfinger": "AlmaLinux-10",
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_virtuozzo_7_os_grains():
+    """
+    Test if OS grains are parsed correctly in Virtuozzo 7
+    """
+    _os_release_data = {
+        "NAME": "Virtuozzo",
+        "ID": "virtuozzo",
+        "PRETTY_NAME": "Virtuozzo release 7.5.4",
+        "VERSION": "7.5.4",
+        "ID_LIKE": "rhel fedora",
+        "VERSION_ID": "7",
+        "ANSI_COLOR": "0;31",
+        "CPE_NAME": "cpe:/o:virtuozzoproject:vz:7",
+        "HOME_URL": "http://www.virtuozzo.com",
+        "BUG_REPORT_URL": "https://bugs.openvz.org",
+    }
+    expectation = {
+        "os": "Virtuozzo",
+        "os_family": "RedHat",
+        "osfullname": "Virtuozzo",
+        "oscodename": "Virtuozzo release 7.5.4",
+        "osrelease": "7",
+        "osrelease_info": (7,),
+        "osmajorrelease": 7,
+        "osfinger": "Virtuozzo-7",
     }
     _run_os_grains_tests(_os_release_data, {}, expectation)
 
@@ -1546,6 +1645,77 @@ def test_astralinuxse_os_grains():
         "osrelease_info": (1, 6),
         "osmajorrelease": 1,
         "osfinger": "Astra Linux (Smolensk)-1",
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_openeuler_os_grains():
+    """
+    Test that OS grains are parsed correctly for openEuler
+    """
+    # /etc/os-release data taken from openEuler 24.03 (LTS-SP1)
+    _os_release_data = {
+        "PRETTY_NAME": "openEuler 24.03 (LTS-SP1)",
+        "NAME": "openEuler",
+        "ID": "openEuler",
+        "ANSI_COLOR": "0;31",
+        "VERSION": "24.03 (LTS-SP1)",
+        "VERSION_ID": "24.03",
+    }
+    expectation = {
+        "os": "openEuler",
+        "os_family": "RedHat",
+        "oscodename": "openEuler 24.03 (LTS-SP1)",
+        "osfullname": "openEuler",
+        "osrelease": "24.03",
+        "osrelease_info": (24, 3),
+        "osmajorrelease": 24,
+        "osfinger": "openEuler-24",
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_nixos_os_grains():
+    """
+    Test that OS grains are parsed correctly for NixOS
+    """
+    # /etc/os-release data taken from NixOS 25.05
+    _os_release_data = {
+        "ANSI_COLOR": "0;38;2;126;186;228",
+        "BUG_REPORT_URL": "https://github.com/NixOS/nixpkgs/issues",
+        "BUILD_ID": "25.05.807313.59e69648d345",
+        "CPE_NAME": "cpe:/o:nixos:nixos:25.05",
+        "DEFAULT_HOSTNAME": "nixos",
+        "DOCUMENTATION_URL": "https://nixos.org/learn.html",
+        "HOME_URL": "https://nixos.org/",
+        "ID": "nixos",
+        "ID_LIKE": "",
+        "IMAGE_ID": "",
+        "IMAGE_VERSION": "",
+        "LOGO": "nix-snowflake",
+        "NAME": "NixOS",
+        "PRETTY_NAME": "NixOS 25.05 (Warbler)",
+        "SUPPORT_END": "2025-12-31",
+        "SUPPORT_URL": "https://nixos.org/community.html",
+        "VARIANT": "",
+        "VARIANT_ID": "",
+        "VENDOR_NAME": "NixOS",
+        "VENDOR_URL": "https://nixos.org/",
+        "VERSION": "25.05 (Warbler)",
+        "VERSION_CODENAME": "warbler",
+        "VERSION_ID": "25.05",
+    }
+    expectation = {
+        "os": "NixOS",
+        "os_family": "NixOS",
+        "oscodename": "warbler",
+        "osfullname": "NixOS",
+        "osrelease": "25.05",
+        "osrelease_info": (25, 5),
+        "osmajorrelease": 25,
+        "osfinger": "NixOS-25.05",
     }
     _run_os_grains_tests(_os_release_data, {}, expectation)
 
@@ -2283,7 +2453,8 @@ def _run_fqdn_tests(
         salt.utils.network, "ip_addrs6", MagicMock(return_value=net_ip6_mock)
     ), patch.object(
         core.socket, "getaddrinfo", side_effect=_getaddrinfo
-    ):
+    ), warnings.catch_warnings():
+        warnings.simplefilter("error")
         get_fqdn = core.ip_fqdn()
         ret_keys = ["fqdn_ip4", "fqdn_ip6", "ipv4", "ipv6"]
         for key in ret_keys:
@@ -3091,6 +3262,10 @@ def test__windows_platform_data():
             {"virtual": "Parallels"},
         ),
         (
+            {"kernel": "Windows", "manufacturer": "Nutanix", "productname": "AHV"},
+            {"virtual": "kvm", "virtual_subtype": "Nutanix AHV"},
+        ),
+        (
             {"kernel": "Windows", "manufacturer": None, "productname": None},
             {"virtual": "physical"},
         ),
@@ -3888,6 +4063,186 @@ def test_virtual_linux_proc_files_with_non_utf8_chars():
             environ_fh.close()
             virt_grains = core._virtual({"kernel": "Linux"})
             assert virt_grains == {"virtual": "physical"}
+
+
+@pytest.mark.skip_unless_on_linux
+def test_virtual_nutanix_virt_what():
+    osdata = {}
+
+    (
+        osdata["kernel"],
+        osdata["nodename"],
+        osdata["kernelrelease"],
+        osdata["kernelversion"],
+        osdata["cpuarch"],
+        _,
+    ) = platform.uname()
+
+    which_mock = MagicMock(
+        side_effect=[
+            # Check with virt-what
+            "/usr/sbin/virt-what",
+            "/usr/sbin/virt-what",
+            None,
+            "/usr/sbin/dmidecode",
+        ]
+    )
+    cmd_run_all_mock = MagicMock(
+        side_effect=[
+            # Check with virt-what
+            {"retcode": 0, "stderr": "", "stdout": "nutanix_ahv"},
+            {
+                "retcode": 0,
+                "stderr": "",
+                "stdout": "\n".join(
+                    [
+                        "dmidecode 3.4",
+                        "Getting SMBIOS data from sysfs.",
+                        "SMBIOS 2.8 present.",
+                        "",
+                        "Handle 0x0001, DMI type 1, 27 bytes",
+                        "System Information",
+                        "	Manufacturer: Nutanix",
+                        "	Product Name: AHV",
+                        "	Version: Not Specified",
+                        "	Serial Number: 01234567-dcba-1234-abcd-abcdef012345",
+                        "	UUID: 12345678-abcd-4321-dcba-0123456789ab",
+                        "	Wake-up Type: Power Switch",
+                        "	SKU Number: Not Specified",
+                        "	Family: Not Specified",
+                        "",
+                        "Handle 0x2000, DMI type 32, 11 bytes",
+                        "System Boot Information",
+                        "	Status: No errors detected",
+                    ]
+                ),
+            },
+        ]
+    )
+
+    with patch("salt.utils.path.which", which_mock), patch.dict(
+        core.__salt__,
+        {
+            "cmd.run": salt.modules.cmdmod.run,
+            "cmd.run_all": cmd_run_all_mock,
+            "cmd.retcode": salt.modules.cmdmod.retcode,
+            "smbios.get": salt.modules.smbios.get,
+        },
+    ):
+
+        virtual_grains = core._virtual(osdata.copy())
+
+        assert virtual_grains["virtual"] == "kvm"
+        assert virtual_grains["virtual_subtype"] == "Nutanix AHV"
+
+
+@pytest.mark.skip_unless_on_linux
+def test_virtual_nutanix_dmidecode():
+    osdata = {}
+
+    (
+        osdata["kernel"],
+        osdata["nodename"],
+        osdata["kernelrelease"],
+        osdata["kernelversion"],
+        osdata["cpuarch"],
+        _,
+    ) = platform.uname()
+
+    which_mock = MagicMock(
+        side_effect=[
+            # Check with virt-what
+            None,
+            None,
+            None,
+            "/usr/sbin/dmidecode",
+            None,
+            "/usr/sbin/dmidecode",
+        ]
+    )
+    cmd_run_all_mock = MagicMock(
+        side_effect=[
+            {
+                "retcode": 0,
+                "stderr": "",
+                "stdout": "\n".join(
+                    [
+                        "dmidecode 3.4",
+                        "Getting SMBIOS data from sysfs.",
+                        "SMBIOS 2.8 present.",
+                        "",
+                        "Handle 0x0001, DMI type 1, 27 bytes",
+                        "System Information",
+                        "	Manufacturer: Nutanix",
+                        "	Product Name: AHV",
+                        "	Version: Not Specified",
+                        "	Serial Number: 01234567-dcba-1234-abcd-abcdef012345",
+                        "	UUID: 12345678-abcd-4321-dcba-0123456789ab",
+                        "	Wake-up Type: Power Switch",
+                        "	SKU Number: Not Specified",
+                        "	Family: Not Specified",
+                        "",
+                        "Handle 0x2000, DMI type 32, 11 bytes",
+                        "System Boot Information",
+                        "	Status: No errors detected",
+                    ]
+                ),
+            },
+            {
+                "retcode": 0,
+                "stderr": "",
+                "stdout": "\n".join(
+                    [
+                        "dmidecode 3.4",
+                        "Getting SMBIOS data from sysfs.",
+                        "SMBIOS 2.8 present.",
+                        "",
+                        "Handle 0x0001, DMI type 1, 27 bytes",
+                        "System Information",
+                        "	Manufacturer: Nutanix",
+                        "	Product Name: AHV",
+                        "	Version: Not Specified",
+                        "	Serial Number: 01234567-dcba-1234-abcd-abcdef012345",
+                        "	UUID: 12345678-abcd-4321-dcba-0123456789ab",
+                        "	Wake-up Type: Power Switch",
+                        "	SKU Number: Not Specified",
+                        "	Family: Not Specified",
+                        "",
+                        "Handle 0x2000, DMI type 32, 11 bytes",
+                        "System Boot Information",
+                        "	Status: No errors detected",
+                    ]
+                ),
+            },
+        ]
+    )
+
+    def _mock_is_file(filename):
+        if filename in (
+            "/proc/1/cgroup",
+            "/proc/cpuinfo",
+            "/sys/devices/virtual/dmi/id/product_name",
+            "/proc/xen/xsd_kva",
+            "/proc/xen/capabilities",
+        ):
+            return False
+        return True
+
+    with patch("salt.utils.path.which", which_mock), patch.dict(
+        core.__salt__,
+        {
+            "cmd.run": salt.modules.cmdmod.run,
+            "cmd.run_all": cmd_run_all_mock,
+            "cmd.retcode": salt.modules.cmdmod.retcode,
+            "smbios.get": salt.modules.smbios.get,
+        },
+    ), patch("os.path.isfile", _mock_is_file), patch(
+        "os.path.isdir", return_value=False
+    ):
+        virtual_grains = core._virtual(osdata.copy())
+
+        assert virtual_grains["virtual"] == "kvm"
+        assert virtual_grains["virtual_subtype"] == "Nutanix AHV"
 
 
 @pytest.mark.skip_unless_on_linux
@@ -5255,3 +5610,32 @@ def test__ps():
             "| awk '{ $7=\"\"; print }'"
         )
     }
+
+
+@pytest.mark.skip_on_windows
+@pytest.mark.parametrize(
+    "status",
+    (
+        False,
+        True,
+    ),
+)
+def test_fibre_channel_host(status):
+    """
+    Test if fibre_channel_host grain is correctly reflecting a fibre channel enabled host.
+    """
+
+    def _dir_side_effect(path):
+        if path == "/sys/class/fc_host":
+            return status
+
+    with patch.object(
+        salt.utils.platform, "is_windows", MagicMock(return_value=False)
+    ), patch.object(
+        os.path,
+        "isdir",
+        MagicMock(side_effect=_dir_side_effect),
+    ):
+        grains = core.fibre_channel_host()
+        assert "fibre_channel_host" in grains
+        assert grains["fibre_channel_host"] is status

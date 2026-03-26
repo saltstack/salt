@@ -5,15 +5,13 @@
 import asyncio
 import concurrent.futures
 import copy
+import functools
 import logging
 import os
 import signal
 import threading
 import traceback
 import types
-
-import tornado.gen
-import tornado.ioloop
 
 import salt
 import salt._logging
@@ -61,8 +59,7 @@ from salt.utils.process import SignalHandlingProcess, default_signals
 log = logging.getLogger(__name__)
 
 
-@tornado.gen.coroutine
-def post_master_init(self, master):
+async def post_master_init(self, master):
     """
     Function to finish init after a deltaproxy proxy
     minion has finished connecting to a master.
@@ -72,7 +69,7 @@ def post_master_init(self, master):
     """
 
     if self.connected:
-        self.opts["pillar"] = yield salt.pillar.get_async_pillar(
+        self.opts["pillar"] = await salt.pillar.get_async_pillar(
             self.opts,
             self.opts["grains"],
             self.opts["id"],
@@ -86,7 +83,7 @@ def post_master_init(self, master):
         self.opts["master"] = master
 
         tag = "salt/deltaproxy/start"
-        self._fire_master(tag=tag)
+        await self._fire_master_main(tag=tag)
 
     if "proxy" not in self.opts["pillar"] and "proxy" not in self.opts:
         errmsg = (
@@ -168,8 +165,13 @@ def post_master_init(self, master):
     # Start engines here instead of in the Minion superclass __init__
     # This is because we need to inject the __proxy__ variable but
     # it is not setup until now.
-    self.io_loop.spawn_callback(
-        salt.engines.start_engines, self.opts, self.process_manager, proxy=self.proxy
+    self.io_loop.call_soon(
+        functools.partial(
+            salt.engines.start_engines,
+            self.opts,
+            self.process_manager,
+            proxy=self.proxy,
+        )
     )
 
     proxy_init_func_name = f"{fq_proxyname}.init"
@@ -356,9 +358,10 @@ def post_master_init(self, master):
             )
 
         try:
-            results = yield tornado.gen.multi(waitfor)
+            results = await asyncio.gather(*waitfor)
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Errors loading sub proxies: %s", exc)
+            raise
 
         _failed = self.opts["proxy"].get("ids", [])[:]
         for sub_proxy_data in results:
@@ -380,7 +383,7 @@ def post_master_init(self, master):
         log.debug("Initiating non-parallel startup for proxies")
         for _id in self.opts["proxy"].get("ids", []):
             try:
-                sub_proxy_data = yield subproxy_post_master_init(
+                sub_proxy_data = await subproxy_post_master_init(
                     _id, uid, self.opts, self.proxy, self.utils
                 )
             except Exception as exc:  # pylint: disable=broad-except
@@ -409,8 +412,7 @@ def post_master_init(self, master):
     self.ready = True
 
 
-@tornado.gen.coroutine
-def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
+async def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
     """
     Function to finish init after a deltaproxy proxy
     minion has finished connecting to a master.
@@ -437,7 +439,7 @@ def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
     proxy_grains = salt.loader.grains(
         proxyopts, proxy=main_proxy, context=proxy_context
     )
-    proxy_pillar = yield salt.pillar.get_async_pillar(
+    proxy_pillar = await salt.pillar.get_async_pillar(
         proxyopts,
         proxy_grains,
         minion_id,
@@ -581,7 +583,7 @@ def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
             "__proxy_keepalive", persist=True, fire_event=False
         )
 
-    raise tornado.gen.Return({"proxy_minion": _proxy_minion, "proxy_opts": proxyopts})
+    return {"proxy_minion": _proxy_minion, "proxy_opts": proxyopts}
 
 
 def target(cls, minion_instance, opts, data, connected, creds_map):

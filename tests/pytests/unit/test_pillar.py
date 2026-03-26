@@ -19,7 +19,7 @@ import salt.exceptions
 import salt.fileclient
 import salt.utils.stringutils
 from salt.utils.files import fopen
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import ANY, MagicMock, call, patch
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
@@ -1012,17 +1012,20 @@ def test_get_opts_in_pillar_override_call(minion_opts, grains):
 
 
 def test_multiple_keys_in_opts_added_to_pillar(grains, tmp_pki):
-    opts = {
-        "pki_dir": tmp_pki,
-        "id": "minion",
-        "master_uri": "tcp://127.0.0.1:4505",
-        "__role": "minion",
-        "keysize": 2048,
-        "renderer": "json",
-        "path_to_add": "fake_data",
-        "path_to_add2": {"fake_data2": ["fake_data3", "fake_data4"]},
-        "pass_to_ext_pillars": ["path_to_add", "path_to_add2"],
-    }
+    opts = salt.config.minion_config(None)
+    opts.update(
+        {
+            "pki_dir": tmp_pki,
+            "id": "minion",
+            "master_uri": "tcp://127.0.0.1:4505",
+            "__role": "minion",
+            "keysize": 2048,
+            "renderer": "json",
+            "path_to_add": "fake_data",
+            "path_to_add2": {"fake_data2": ["fake_data3", "fake_data4"]},
+            "pass_to_ext_pillars": ["path_to_add", "path_to_add2"],
+        }
+    )
     pillar = salt.pillar.RemotePillar(opts, grains, "mocked-minion", "dev")
     assert pillar.extra_minion_data == {
         "path_to_add": "fake_data",
@@ -1068,16 +1071,19 @@ def test_pillar_file_client_master_remote(tmp_pki, grains):
     returns a remote file client.
     """
     mocked_minion = MagicMock()
-    opts = {
-        "pki_dir": tmp_pki,
-        "id": "minion",
-        "master_uri": "tcp://127.0.0.1:4505",
-        "__role": "minion",
-        "keysize": 2048,
-        "file_client": "local",
-        "use_master_when_local": True,
-        "pillar_cache": None,
-    }
+    opts = salt.config.minion_config(None)
+    opts.update(
+        {
+            "pki_dir": tmp_pki,
+            "id": "minion",
+            "master_uri": "tcp://127.0.0.1:4505",
+            "__role": "minion",
+            "keysize": 2048,
+            "file_client": "local",
+            "use_master_when_local": True,
+            "pillar_cache": None,
+        }
+    )
     pillar = salt.pillar.get_pillar(opts, grains, mocked_minion)
     assert type(pillar) == salt.pillar.RemotePillar
     assert type(pillar) != salt.pillar.PillarCache
@@ -1174,8 +1180,14 @@ def test_include(tmp_path):
         assert compiled_pillar["sub_init_dot"] == "sub_with_init_dot_worked"
 
 
-def test_compile_pillar_memory_cache(master_opts):
-    master_opts.update({"pillar_cache_backend": "memory", "pillar_cache_ttl": 3600})
+def test_compile_pillar_cache(master_opts):
+    master_opts.update(
+        {
+            "memcache_expire_seconds": 3600,
+            "pillar_cache_ttl": 3600,
+            "pillar_cache": True,
+        }
+    )
 
     pillar = salt.pillar.PillarCache(
         master_opts,
@@ -1186,39 +1198,36 @@ def test_compile_pillar_memory_cache(master_opts):
     )
 
     with patch(
-        "salt.pillar.PillarCache.fetch_pillar",
+        "salt.pillar.Pillar.compile_pillar",
         side_effect=[{"foo": "bar"}, {"foo": "baz"}],
     ):
         # Run once for pillarenv base
-        ret = pillar.compile_pillar()
-        expected_cache = {"base": {"foo": "bar"}}
-        assert "mocked_minion" in pillar.cache
-        assert pillar.cache["mocked_minion"] == expected_cache
+        pillar.compile_pillar()
+        expected_cache = {("pillar", "mocked_minion:base"): [ANY, None, {"foo": "bar"}]}
+        assert pillar.cache.storage == expected_cache
 
         # Run a second time for pillarenv base
-        ret = pillar.compile_pillar()
-        expected_cache = {"base": {"foo": "bar"}}
-        assert "mocked_minion" in pillar.cache
-        assert pillar.cache["mocked_minion"] == expected_cache
+        pillar.compile_pillar()
+        assert pillar.cache.storage == expected_cache
 
         # Change the pillarenv
-        pillar.pillarenv = "dev"
+        pillar.opts["pillarenv"] = "dev"
 
         # Run once for pillarenv dev
-        ret = pillar.compile_pillar()
-        expected_cache = {"base": {"foo": "bar"}, "dev": {"foo": "baz"}}
-        assert "mocked_minion" in pillar.cache
-        assert pillar.cache["mocked_minion"] == expected_cache
+        pillar.compile_pillar()
+        expected_cache = {
+            ("pillar", "mocked_minion:base"): [ANY, None, {"foo": "bar"}],
+            ("pillar", "mocked_minion:dev"): [ANY, None, {"foo": "baz"}],
+        }
+        assert pillar.cache.storage == expected_cache
 
         # Run a second time for pillarenv dev
-        ret = pillar.compile_pillar()
-        expected_cache = {"base": {"foo": "bar"}, "dev": {"foo": "baz"}}
-        assert "mocked_minion" in pillar.cache
-        assert pillar.cache["mocked_minion"] == expected_cache
+        pillar.compile_pillar()
+        assert pillar.cache.storage == expected_cache
 
 
 def test_compile_pillar_disk_cache(master_opts, grains):
-    master_opts.update({"pillar_cache_backend": "disk", "pillar_cache_ttl": 3600})
+    master_opts.update({"pillar_cache_ttl": 3600, "pillar_cache": True})
 
     pillar = salt.pillar.PillarCache(
         master_opts,
@@ -1227,50 +1236,61 @@ def test_compile_pillar_disk_cache(master_opts, grains):
         "fake_env",
         pillarenv="base",
     )
+    with patch(
+        "salt.pillar.Pillar.compile_pillar",
+        side_effect=[{"foo": "bar"}, {"foo": "baz"}],
+    ), patch.object(
+        pillar.cache, "fetch", side_effect=[None, {"foo": "bar"}, None, {"foo": "baz"}]
+    ) as fetch_mock, patch.object(
+        pillar.cache, "store"
+    ) as store_mock:
+        # Run once for pillarenv base
+        pillar.compile_pillar()
 
-    with patch("salt.utils.cache.CacheDisk._write", MagicMock()):
-        with patch(
-            "salt.pillar.PillarCache.fetch_pillar",
-            side_effect=[{"foo": "bar"}, {"foo": "baz"}],
-        ):
-            # Run once for pillarenv base
-            ret = pillar.compile_pillar()
-            expected_cache = {"mocked_minion": {"base": {"foo": "bar"}}}
-            assert pillar.cache._dict == expected_cache
+        # Run a second time for pillarenv base
+        pillar.compile_pillar()
 
-            # Run a second time for pillarenv base
-            ret = pillar.compile_pillar()
-            expected_cache = {"mocked_minion": {"base": {"foo": "bar"}}}
-            assert pillar.cache._dict == expected_cache
+        # Change the pillarenv
+        pillar.opts["pillarenv"] = "dev"
 
-            # Change the pillarenv
-            pillar.pillarenv = "dev"
+        # Run once for pillarenv dev
+        pillar.compile_pillar()
 
-            # Run once for pillarenv dev
-            ret = pillar.compile_pillar()
-            expected_cache = {
-                "mocked_minion": {"base": {"foo": "bar"}, "dev": {"foo": "baz"}}
-            }
-            assert pillar.cache._dict == expected_cache
+        # Run a second time for pillarenv dev
+        pillar.compile_pillar()
 
-            # Run a second time for pillarenv dev
-            ret = pillar.compile_pillar()
-            expected_cache = {
-                "mocked_minion": {"base": {"foo": "bar"}, "dev": {"foo": "baz"}}
-            }
-            assert pillar.cache._dict == expected_cache
+        expected_fetches = [
+            call("pillar", "mocked_minion:base"),
+            call("pillar", "mocked_minion:base"),
+            call("pillar", "mocked_minion:dev"),
+            call("pillar", "mocked_minion:dev"),
+        ]
+
+        # Assert all calls match the pattern
+        fetch_mock.assert_has_calls(expected_fetches, any_order=False)
+
+        expected_stores = [
+            call("pillar", "mocked_minion:base", {"foo": "bar"}),
+            call("pillar", "mocked_minion:dev", {"foo": "baz"}),
+        ]
+
+        # Assert all calls match the pattern
+        store_mock.assert_has_calls(expected_stores, any_order=False)
 
 
 def test_remote_pillar_bad_return(grains, tmp_pki):
-    opts = {
-        "pki_dir": tmp_pki,
-        "id": "minion",
-        "master_uri": "tcp://127.0.0.1:4505",
-        "__role": "minion",
-        "keysize": 2048,
-        "saltenv": "base",
-        "pillarenv": "base",
-    }
+    opts = salt.config.minion_config(None)
+    opts.update(
+        {
+            "pki_dir": tmp_pki,
+            "id": "minion",
+            "master_uri": "tcp://127.0.0.1:4505",
+            "__role": "minion",
+            "keysize": 2048,
+            "saltenv": "base",
+            "pillarenv": "base",
+        }
+    )
     pillar = salt.pillar.RemotePillar(opts, grains, "mocked-minion", "dev")
 
     async def crypted_transfer_mock():
@@ -1282,15 +1302,18 @@ def test_remote_pillar_bad_return(grains, tmp_pki):
 
 
 async def test_async_remote_pillar_bad_return(grains, tmp_pki):
-    opts = {
-        "pki_dir": tmp_pki,
-        "id": "minion",
-        "master_uri": "tcp://127.0.0.1:4505",
-        "__role": "minion",
-        "keysize": 2048,
-        "saltenv": "base",
-        "pillarenv": "base",
-    }
+    opts = salt.config.minion_config(None)
+    opts.update(
+        {
+            "pki_dir": tmp_pki,
+            "id": "minion",
+            "master_uri": "tcp://127.0.0.1:4505",
+            "__role": "minion",
+            "keysize": 2048,
+            "saltenv": "base",
+            "pillarenv": "base",
+        }
+    )
     pillar = salt.pillar.AsyncRemotePillar(opts, grains, "mocked-minion", "dev")
 
     async def crypted_transfer_mock():

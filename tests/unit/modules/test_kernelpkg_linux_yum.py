@@ -18,6 +18,7 @@ from tests.support.unit import TestCase
 try:
     import salt.modules.kernelpkg_linux_yum as kernelpkg
     import salt.modules.yumpkg as pkg
+    from salt.utils.pkg.rpm import get_osarch
 
     HAS_MODULES = True
 except ImportError:
@@ -33,7 +34,7 @@ class YumKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
     _kernelpkg = kernelpkg
     KERNEL_LIST = ["3.10.0-327.el7", "3.11.0-327.el7", "4.9.1-100.el7"]
     LATEST = KERNEL_LIST[-1]
-    OS_ARCH = "x86_64"
+    OS_ARCH = get_osarch()
     OS_NAME = "RedHat"
     OS_MAJORRELEASE = "7"
 

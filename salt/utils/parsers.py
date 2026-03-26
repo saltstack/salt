@@ -2867,16 +2867,19 @@ class SaltCallOptionParser(
         self.add_option(
             "--file-root",
             default=None,
+            action="append",
             help="Set this directory as the base file root.",
         )
         self.add_option(
             "--pillar-root",
             default=None,
+            action="append",
             help="Set this directory as the base pillar root.",
         )
         self.add_option(
             "--states-dir",
             default=None,
+            action="append",
             help="Set this directory to search for additional states.",
         )
         self.add_option(
@@ -3106,6 +3109,7 @@ class SaltSSHOptionParser(
     ]
 
     def _mixin_setup(self):
+        # pylint: disable=W0106
         self.add_option(
             "-r",
             "--raw",
@@ -3189,6 +3193,13 @@ class SaltSSHOptionParser(
             ),
         )
         self.add_option(
+            "--thin-exclude-saltexts",
+            default=False,
+            action="store_true",
+            dest="thin_exclude_saltexts",
+            help="Exclude Salt extension modules from generated Thin Salt.",
+        )
+        self.add_option(
             "-v",
             "--verbose",
             default=False,
@@ -3233,6 +3244,16 @@ class SaltSSHOptionParser(
             ),
         )
         self.add_option(
+            "--relenv",
+            dest="relenv",
+            default=False,
+            action="store_true",
+            help=(
+                "Deploy and use a relenv (Salt+Python bundled) environment on the "
+                "SSH target."
+            ),
+        ),
+        self.add_option(
             "--python2-bin",
             default="python2",
             help="Path to a python2 binary which has salt installed.",
@@ -3263,6 +3284,25 @@ class SaltSSHOptionParser(
                 "forwarding definitions will be translated into multiple "
                 "-R parameters."
             ),
+        )
+        ssh_group.add_option(
+            "--disable-keepalive",
+            default=True,
+            action="store_false",
+            dest="ssh_keepalive",
+            help=(
+                "Disable KeepAlive probes (ServerAliveInterval) for the SSH connection."
+            ),
+        )
+        ssh_group.add_option(
+            "--keepalive-interval",
+            dest="ssh_keepalive_interval",
+            help=("Define the value for ServerAliveInterval option."),
+        )
+        ssh_group.add_option(
+            "--keepalive-count-max",
+            dest="ssh_keepalive_count_max",
+            help=("Define the value for ServerAliveCountMax option."),
         )
         ssh_group.add_option(
             "--ssh-option",
@@ -3414,6 +3454,9 @@ class SaltSSHOptionParser(
                     if option.dest == "ssh_passwd":
                         option.explicit = True
                         break
+
+        if self.options.regen_thin and self.options.relenv:
+            self.error("--thin and --relenv are mutually exclusive")
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())

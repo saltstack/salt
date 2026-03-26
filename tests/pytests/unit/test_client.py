@@ -349,7 +349,8 @@ def test_pub_explicit_timeout(master_opts):
                 assert call_kwargs[1]["timeout"] == 30
 
 
-def test_pub_async_default_timeout(master_opts):
+@pytest.mark.asyncio
+async def test_pub_async_default_timeout(master_opts):
     """
     Test that LocalClient.pub_async uses a default timeout of 15 seconds.
     """
@@ -358,23 +359,19 @@ def test_pub_async_default_timeout(master_opts):
             with patch(
                 "salt.channel.client.AsyncReqChannel.factory"
             ) as mock_channel_factory:
-                import tornado.gen
-
                 mock_channel = MagicMock()
                 mock_channel.__enter__ = MagicMock(return_value=mock_channel)
                 mock_channel.__exit__ = MagicMock(return_value=False)
 
-                # Mock the async send to return a completed Future
-                future = tornado.gen.maybe_future(
-                    {"load": {"jid": "test_jid", "minions": ["minion1"]}}
-                )
-                mock_channel.send = MagicMock(return_value=future)
+                # Mock the async send to return a coroutine that resolves to the payload
+                async def mock_send(*args, **kwargs):
+                    return {"load": {"jid": "test_jid", "minions": ["minion1"]}}
+
+                mock_channel.send = MagicMock(side_effect=mock_send)
                 mock_channel_factory.return_value = mock_channel
 
-                # Mock the event system
-                local_client.event.connect_pub = MagicMock(
-                    return_value=tornado.gen.maybe_future(True)
-                )
+                # Mock the event system - connect_pub should return True (not awaitable)
+                local_client.event.connect_pub = MagicMock(return_value=True)
 
                 # Mock _prep_pub to capture the timeout value
                 original_prep_pub = local_client._prep_pub
@@ -386,7 +383,7 @@ def test_pub_async_default_timeout(master_opts):
 
                 with patch.object(local_client, "_prep_pub", side_effect=mock_prep_pub):
                     # Call pub_async without specifying timeout
-                    local_client.pub_async("*", "test.ping")
+                    await local_client.pub_async("*", "test.ping")
 
                     # Verify _prep_pub was called with timeout=15
                     assert len(prep_pub_calls) == 1
@@ -396,7 +393,8 @@ def test_pub_async_default_timeout(master_opts):
                     )  # timeout is the 7th positional arg
 
 
-def test_pub_async_explicit_timeout(master_opts):
+@pytest.mark.asyncio
+async def test_pub_async_explicit_timeout(master_opts):
     """
     Test that LocalClient.pub_async respects explicit timeout values.
     """
@@ -405,23 +403,19 @@ def test_pub_async_explicit_timeout(master_opts):
             with patch(
                 "salt.channel.client.AsyncReqChannel.factory"
             ) as mock_channel_factory:
-                import tornado.gen
-
                 mock_channel = MagicMock()
                 mock_channel.__enter__ = MagicMock(return_value=mock_channel)
                 mock_channel.__exit__ = MagicMock(return_value=False)
 
-                # Mock the async send to return a completed Future
-                future = tornado.gen.maybe_future(
-                    {"load": {"jid": "test_jid", "minions": ["minion1"]}}
-                )
-                mock_channel.send = MagicMock(return_value=future)
+                # Mock the async send to return a coroutine that resolves to the payload
+                async def mock_send(*args, **kwargs):
+                    return {"load": {"jid": "test_jid", "minions": ["minion1"]}}
+
+                mock_channel.send = MagicMock(side_effect=mock_send)
                 mock_channel_factory.return_value = mock_channel
 
-                # Mock the event system
-                local_client.event.connect_pub = MagicMock(
-                    return_value=tornado.gen.maybe_future(True)
-                )
+                # Mock the event system - connect_pub should return True (not awaitable)
+                local_client.event.connect_pub = MagicMock(return_value=True)
 
                 # Mock _prep_pub to capture the timeout value
                 original_prep_pub = local_client._prep_pub
@@ -433,7 +427,7 @@ def test_pub_async_explicit_timeout(master_opts):
 
                 with patch.object(local_client, "_prep_pub", side_effect=mock_prep_pub):
                     # Call pub_async with explicit timeout=30
-                    local_client.pub_async("*", "test.ping", timeout=30)
+                    await local_client.pub_async("*", "test.ping", timeout=30)
 
                     # Verify _prep_pub was called with timeout=30
                     assert len(prep_pub_calls) == 1

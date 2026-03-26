@@ -90,23 +90,23 @@ class MockState:
             Mock verify_high method
             """
             if self.flag:
-                return True
+                return ["verify_high_error"]
             else:
-                return -1
+                return []
 
         @staticmethod
         def compile_high_data(data):
             """
             Mock compile_high_data
             """
-            return [{"__id__": "ABC"}]
+            return [{"__id__": "ABC"}], []
 
         @staticmethod
         def call_chunk(data, data1, data2):
             """
             Mock call_chunk method
             """
-            return {"": "ABC"}
+            return {"": "ABC"}, False
 
         @staticmethod
         def call_chunks(data):
@@ -121,6 +121,9 @@ class MockState:
             Mock call_listen method
             """
             return True
+
+        def order_chunks(self, data):
+            return data, []
 
         def requisite_in(self, data):  # pylint: disable=unused-argument
             return data, []
@@ -142,9 +145,9 @@ class MockState:
             Mock render_state method
             """
             if self.flag:
-                return {}, True
+                return {}, ["render_state_error"]
             else:
-                return {}, False
+                return {}, []
 
         @staticmethod
         def get_top():
@@ -209,9 +212,9 @@ class MockState:
             Mock render_highstate method
             """
             if self.flag:
-                return ["a", "b"], True
+                return ["a", "b"], ["render_highstate_error"]
             else:
-                return ["a", "b"], False
+                return ["a", "b"], []
 
         @staticmethod
         def call_highstate(
@@ -612,9 +615,13 @@ def test_sls_id():
                 with patch.object(salt.utils.args, "test_mode", mock):
                     MockState.State.flag = True
                     MockState.HighState.flag = True
-                    assert state.sls_id("apache", "http") == 2
+                    assert state.sls_id("apache", "http") == [
+                        "render_highstate_error",
+                        "verify_high_error",
+                    ]
 
                     MockState.State.flag = False
+                    MockState.HighState.flag = False
                     assert state.sls_id("ABC", "http") == {"": "ABC"}
                     pytest.raises(SaltInvocationError, state.sls_id, "DEF", "http")
 
@@ -632,9 +639,13 @@ def test_show_low_sls():
             with patch.object(salt.utils.state, "get_sls_opts", mock):
                 MockState.State.flag = True
                 MockState.HighState.flag = True
-                assert state.show_low_sls("foo") == 2
+                assert state.show_low_sls("foo") == [
+                    "render_highstate_error",
+                    "verify_high_error",
+                ]
 
                 MockState.State.flag = False
+                MockState.HighState.flag = False
                 assert state.show_low_sls("foo") == [{"__id__": "ABC"}]
 
 
@@ -656,7 +667,7 @@ def test_show_sls():
                     )
 
                     MockState.State.flag = True
-                    assert state.show_sls("foo") == 2
+                    assert state.show_sls("foo") == ["verify_high_error"]
 
                     MockState.State.flag = False
                     assert state.show_sls("foo") == ["a", "b"]

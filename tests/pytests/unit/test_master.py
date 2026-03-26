@@ -90,6 +90,11 @@ def encrypted_requests(tmp_path):
             "conf_file": str(tmp_path / "config.conf"),
             "fileserver_backend": ["local"],
             "master_job_cache": False,
+            "keys.cache_driver": "localfs_key",
+            "__role": "master",
+            "optimization_order": [0, 1, 2],
+            "master_sign_key_name": "master_sign",
+            "id": "master",
         }
     )
 
@@ -134,6 +139,10 @@ def test_maintenance_duration():
         "master_job_cache": "",
         "pki_dir": "/tmp",
         "eauth_tokens": "",
+        "keys.cache_driver": "localfs_key",
+        "__role": "master",
+        "optimization_order": [0, 1, 2],
+        "master_sign_key_name": "master_sign",
     }
     mp = salt.master.Maintenance(opts)
     with patch("salt.utils.verify.check_max_open_files") as check_files, patch.object(
@@ -954,6 +963,7 @@ def test_run_func(maintenance):
     mocked_clean_old_jobs = MockTimedFunc()
     mocked_clean_expired_tokens = MockTimedFunc()
     mocked_clean_pub_auth = MockTimedFunc()
+    mocked_clean_proc_dir = MockTimedFunc()
     mocked_handle_git_pillar = MockTimedFunc()
     mocked_handle_schedule = MockTimedFunc()
     mocked_handle_key_cache = MockTimedFunc()
@@ -969,6 +979,8 @@ def test_run_func(maintenance):
         "salt.daemons.masterapi.clean_expired_tokens", mocked_clean_expired_tokens
     ), patch(
         "salt.daemons.masterapi.clean_pub_auth", mocked_clean_pub_auth
+    ), patch(
+        "salt.utils.master.clean_proc_dir", mocked_clean_proc_dir
     ), patch(
         "salt.master.Maintenance.handle_git_pillar", mocked_handle_git_pillar
     ), patch(
@@ -991,6 +1003,7 @@ def test_run_func(maintenance):
         assert mocked_clean_old_jobs.call_times == [0, 120, 180]
         assert mocked_clean_expired_tokens.call_times == [0, 120, 180]
         assert mocked_clean_pub_auth.call_times == [0, 120, 180]
+        assert mocked_clean_proc_dir.call_times == [0, 120, 180]
         assert mocked_handle_git_pillar.call_times == [0]
         assert mocked_handle_schedule.call_times == [0, 60, 120, 180]
         assert mocked_handle_key_cache.call_times == [0, 60, 120, 180]
@@ -1101,20 +1114,18 @@ def test_pub_ret_traversal(encrypted_requests, tmp_path):
     """
     master's  AESFuncs._syndic_return method cachdir creation is not vulnerable to a directory traversal
     """
-    salt.crypt.gen_keys(tmp_path, "minion", 2048)
+    priv, pub = salt.crypt.gen_keys(2048)
 
     minions = pathlib.Path(encrypted_requests.opts["pki_dir"]) / "minions"
     minions.mkdir()
 
-    with salt.utils.files.fopen(minions / "minion", "wb") as wfp:
-        with salt.utils.files.fopen(tmp_path / "minion.pub", "rb") as rfp:
-            wfp.write(rfp.read())
+    with salt.utils.files.fopen(minions / "minion", "w") as wfp:
+        wfp.write(pub)
 
-    priv = salt.crypt.PrivateKey(tmp_path / "minion.pem")
     with pytest.raises(salt.exceptions.SaltValidationError):
         encrypted_requests.pub_ret(
             {
-                "tok": priv.encrypt(b"salt"),
+                "tok": salt.crypt.PrivateKey.from_str(priv).encrypt(b"salt"),
                 "id": "minion",
                 "jid": "asdf/../../../sdf",
                 "return": {},
@@ -1129,6 +1140,7 @@ def _git_pillar_base_config(tmp_path):
         "cachedir": str(tmp_path / "cache"),
         "sock_dir": str(tmp_path / "sock_drawer"),
         "conf_file": str(tmp_path / "config.conf"),
+        "keys.cache_driver": "localfs_key",
         "fileserver_backend": ["local"],
         "master_job_cache": False,
         "file_client": "local",
@@ -1156,6 +1168,7 @@ def _git_pillar_base_config(tmp_path):
         "git_pillar_root": "",
         "git_pillar_env": "",
         "git_pillar_fallback": "",
+        "git_pillar_proxy": "",
     }
 
 
@@ -1166,13 +1179,12 @@ def allowed_funcs(tmp_path):
     """
     opts = _git_pillar_base_config(tmp_path)
     opts["on_demand_ext_pillar"] = ["git"]
-    salt.crypt.gen_keys(str(tmp_path), "minion", 2048)
+    priv, pub = salt.crypt.gen_keys(2048)
     master_pki = tmp_path / "pki"
     master_pki.mkdir()
     accepted_pki = master_pki / "minions"
     accepted_pki.mkdir()
-    (accepted_pki / "minion.pub").write_text((tmp_path / "minion.pub").read_text())
-
+    (accepted_pki / "minion.pub").write_text(pub)
     return salt.master.AESFuncs(opts=opts)
 
 
@@ -1210,12 +1222,12 @@ def not_allowed_funcs(tmp_path):
     """
     opts = _git_pillar_base_config(tmp_path)
     opts["on_demand_ext_pillar"] = []
-    salt.crypt.gen_keys(str(tmp_path), "minion", 2048)
+    priv, pub = salt.crypt.gen_keys(2048)
     master_pki = tmp_path / "pki"
     master_pki.mkdir()
     accepted_pki = master_pki / "minions"
     accepted_pki.mkdir()
-    (accepted_pki / "minion.pub").write_text((tmp_path / "minion.pub").read_text())
+    (accepted_pki / "minion.pub").write_text(pub)
 
     return salt.master.AESFuncs(opts=opts)
 

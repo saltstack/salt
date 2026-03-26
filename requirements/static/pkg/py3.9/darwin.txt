@@ -8,15 +8,15 @@ aiosignal==1.4.0
     # via aiohttp
 apache-libcloud==3.8.0
     # via -r requirements/base.txt
-async-timeout==4.0.3
+async-timeout==5.0.1
     # via aiohttp
-attrs==23.2.0
+attrs==25.4.0
     # via aiohttp
 autocommand==2.2.2
     # via jaraco-text
 backports-tarfile==1.2.0
     # via jaraco-context
-certifi==2026.1.4
+certifi==2023.7.22
     # via
     #   -r requirements/base.txt
     #   requests
@@ -32,8 +32,6 @@ cheroot==11.1.2
     #   cherrypy
 cherrypy==18.8.0
     # via -r requirements/base.txt
-contextvars==2.4
-    # via -r requirements/base.txt
 croniter==2.0.5
     # via -r requirements/base.txt
 cryptography==46.0.5
@@ -45,7 +43,9 @@ distlib==0.4.0
 distro==1.8.0
     # via -r requirements/base.txt
 filelock==3.19.1
-    # via virtualenv
+    # via
+    #   python-discovery
+    #   virtualenv
 frozenlist==1.4.1
     # via
     #   -r requirements/base.txt
@@ -60,15 +60,11 @@ idna==3.7
     #   -r requirements/base.txt
     #   requests
     #   yarl
-immutables==0.21
-    # via
-    #   -r requirements/base.txt
-    #   contextvars
 importlib-metadata==8.7.0
     # via -r requirements/base.txt
 jaraco-collections==4.1.0
     # via cherrypy
-jaraco-context==6.1.0
+jaraco-context==6.1.1
     # via
     #   -r requirements/base.txt
     #   jaraco-text
@@ -103,17 +99,19 @@ more-itertools==9.1.0
     #   jaraco-text
 msgpack==1.0.7
     # via -r requirements/base.txt
-multidict==6.0.4
+multidict==6.7.1
     # via
     #   aiohttp
     #   yarl
 packaging==24.0
     # via -r requirements/base.txt
 platformdirs==4.4.0
-    # via virtualenv
+    # via
+    #   python-discovery
+    #   virtualenv
 portend==3.1.0
     # via cherrypy
-propcache==0.3.2
+propcache==0.4.1
     # via
     #   aiohttp
     #   yarl
@@ -133,13 +131,15 @@ python-dateutil==2.8.2
     # via
     #   -r requirements/base.txt
     #   croniter
+python-discovery==1.1.3
+    # via virtualenv
 python-gnupg==0.5.2
     # via -r requirements/base.txt
 pytz==2024.1
     # via
     #   croniter
     #   tempora
-pyyaml==6.0.3
+pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==25.1.2
     # via -r requirements/zeromq.txt
@@ -150,36 +150,39 @@ requests==2.31.0
     #   vultr
 setproctitle==1.3.2
     # via -r requirements/base.txt
-setuptools==82.0.0
+setuptools==82.0.1
     # via
     #   -c requirements/constraints.txt
     #   zc-lockfile
 six==1.16.0
     # via python-dateutil
-smmap==5.0.2
+smmap==5.0.3
     # via gitdb
 tempora==5.3.0
     # via portend
 timelib==0.3.0
-    # via -r requirements/static/pkg/darwin.in
+    # via
+    #   -r requirements/base.txt
+    #   -r requirements/static/pkg/darwin.in
 tornado==6.5.4
     # via -r requirements/base.txt
-typing-extensions==4.14.1
+typing-extensions==4.15.0
     # via
     #   aiosignal
     #   cryptography
     #   gitpython
+    #   multidict
     #   pyopenssl
     #   virtualenv
 urllib3==1.26.20
     # via
     #   -r requirements/base.txt
     #   requests
-virtualenv==20.36.1
+virtualenv==21.2.0
     # via -r requirements/base.txt
 vultr==1.0.1
     # via -r requirements/base.txt
-yarl==1.20.1
+yarl==1.22.0
     # via aiohttp
 zc-lockfile==3.0.post1
     # via cherrypy

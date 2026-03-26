@@ -5,6 +5,7 @@ atomic way
 
 import errno
 import os
+import pathlib
 import random
 import shutil
 import sys
@@ -31,6 +32,10 @@ if os.name == "nt":  # pragma: no cover
         _MoveFileEx = ctypes.windll.kernel32.MoveFileExW  # pylint: disable=C0103
 
         def _rename(src, dst):  # pylint: disable=E0102
+            if isinstance(src, pathlib.Path):
+                src = str(src)
+            if isinstance(dst, pathlib.Path):
+                dst = str(dst)
             if not isinstance(src, str):
                 src = str(src, sys.getfilesystemencoding())
             if not isinstance(dst, str):
@@ -180,3 +185,32 @@ def atomic_open(filename, mode="w"):
         kwargs["newline"] = ""
     ntf = tempfile.NamedTemporaryFile(mode, **kwargs)
     return _AtomicWFile(ntf, ntf.name, filename)
+
+
+def safe_atomic_write(dst, data, backup_mode="", cachedir=""):
+    """
+    Create a temporary file with only user r/w perms, write the
+    data and atomically copy it to the destination. Supports the
+    Salt file backup mechanism.
+
+    dst
+        The path to write to.
+
+    data
+        String or bytes of data to write.
+
+    backup_mode
+        Optional parameter to override the configured
+        :ref:`backup mode <file-state-backups>` explicitly.
+
+    cachedir
+        Optional parameter to override the configured
+        cachedir explicitly. Backups are written into
+        a subdirectory of this path called ``file_backup``.
+    """
+    mode = "wb" if isinstance(data, bytes) else "w"
+    tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX)
+    with salt.utils.files.fopen(tmp, mode) as tmp_:
+        tmp_.write(data)
+    salt.utils.files.copyfile(tmp, dst, backup_mode, cachedir)
+    salt.utils.files.safe_rm(tmp)

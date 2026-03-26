@@ -77,7 +77,7 @@ DEFAULT_SHELL = salt.grains.extra.shell()["shell"]
 
 
 # Overwriting the cmd python module makes debugging modules with pdb a bit
-# harder so lets do it this way instead.
+# harder so let's do it this way instead.
 def __virtual__():
     return __virtualname__
 
@@ -422,26 +422,25 @@ def _run(
                 msg = "missing salt/utils/win_runas.py"
                 raise CommandExecutionError(msg)
 
-        if shell:
-            # Find the full path to the shell
-            win_shell = salt.utils.path.which(shell)
-            if not win_shell:
-                raise CommandExecutionError(f"shell binary not found: {win_shell}")
+        if shell is None:
+            shell = DEFAULT_SHELL
 
-            # Prepare the command to be executed
-            win_shell_lower = win_shell.lower()
-            if any(
-                win_shell_lower.endswith(word)
-                for word in ["powershell.exe", "pwsh.exe"]
-            ):
-                cmd = _prep_powershell_cmd(win_shell, cmd, encoded_cmd)
-            elif any(win_shell_lower.endswith(word) for word in ["cmd.exe"]):
-                if python_shell:
-                    cmd = salt.platform.win.prepend_cmd(win_shell, cmd)
-            else:
-                raise CommandExecutionError(f"unsupported shell type: {win_shell}")
+        # Find the full path to the shell
+        win_shell = salt.utils.path.which(shell)
+        if not win_shell:
+            raise CommandExecutionError(f"shell binary not found: {win_shell}")
+
+        # Prepare the command to be executed
+        win_shell_lower = win_shell.lower()
+        if any(
+            win_shell_lower.endswith(word) for word in ["powershell.exe", "pwsh.exe"]
+        ):
+            cmd = _prep_powershell_cmd(win_shell, cmd, encoded_cmd)
+        elif any(win_shell_lower.endswith(word) for word in ["cmd.exe"]):
+            if python_shell:
+                cmd = salt.platform.win.prepend_cmd(win_shell, cmd)
         else:
-            win_shell = None
+            raise CommandExecutionError(f"unsupported shell type: {win_shell}")
 
     env = _parse_env(env)
 

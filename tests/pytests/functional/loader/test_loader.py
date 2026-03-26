@@ -1,15 +1,24 @@
 import json
+import os
 
 import pytest
 
 from salt.utils.versions import Version
 from tests.support.helpers import SaltVirtualEnv
 from tests.support.pytest.helpers import FakeSaltExtension
+from tests.support.runtests import RUNTIME_VARS
+
+MISSING_SETUP_PY_FILE = not os.path.exists(
+    os.path.join(RUNTIME_VARS.CODE_DIR, "setup.py")
+)
 
 pytestmark = [
     # These are slow because they create a virtualenv and install salt in it
     pytest.mark.slow_test,
     pytest.mark.timeout_unless_on_windows(240),
+    pytest.mark.skipif(
+        MISSING_SETUP_PY_FILE, reason="This test only work if setup.py is available"
+    ),
 ]
 
 
@@ -63,24 +72,6 @@ def test_module_dirs_priority(venv, salt_extension, minion_opts, module_dirs):
             "/var/cache/salt/minion/extmods/modules",
             "/module-dir-base",
             "/site-packages/salt_ext_loader_test/modules",
-            "/site-packages/salt/modules",
-        ]
-    ):
-        assert module_dirs_return[i].endswith(
-            tail
-        ), f"{module_dirs_return[i]} does not end with {tail}"
-
-    # Test the deprecated mode as well
-    minion_opts["features"] = {"enable_deprecated_module_search_path_priority": True}
-    ret = venv.run_code(code, input=json.dumps(minion_opts))
-    module_dirs_return = json.loads(ret.stdout)
-    assert len(module_dirs_return) == 5
-    for i, tail in enumerate(
-        [
-            "/module-dir-base/modules",
-            "/module-dir-base",
-            "/site-packages/salt_ext_loader_test/modules",
-            "/var/cache/salt/minion/extmods/modules",
             "/site-packages/salt/modules",
         ]
     ):

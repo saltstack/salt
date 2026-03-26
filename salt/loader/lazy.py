@@ -318,6 +318,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 opts[i], salt.loader.context.NamedLoaderContext
             ):
                 opts[i] = opts[i].value()
+        if "optimization_order" not in opts:
+            opts["optimization_order"] = [0, 1, 2]
         threadsafety = not opts.get("multiprocessing")
         self.opts = self.__prep_mod_opts(opts)
         self.pack_self = pack_self
@@ -1216,7 +1218,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             for name in self.file_mapping:
                 if name in self.loaded_files or name in self.missing_modules:
                     continue
-                self._load_module(name)
+                try:
+                    self._load_module(name)
+                except FileNotFoundError:
+                    log.warning("Module file not found %s", name)
+                    self.missing_modules[name] = f"Module file not found {name}"
 
             self.loaded = True
 

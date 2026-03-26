@@ -122,7 +122,6 @@ def create(ctx: Context, image: str, name: str = "", platform: str = ""):
                 capture=True,
                 check=True,
             )
-
     for key in env:
         cmd.extend(["-e", f"{key}={env[key]}"])
     if onci:

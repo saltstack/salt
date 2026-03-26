@@ -14,6 +14,22 @@ import tornado.ioloop
 log = logging.getLogger(__name__)
 
 
+def aioloop(io_loop, warn=False):
+    """
+    Ensure the ioloop is an asyncio loop not a tornado ioloop.
+    """
+    if isinstance(io_loop, asyncio.AbstractEventLoop):
+        return io_loop
+    elif isinstance(io_loop, tornado.ioloop.IOLoop):
+        if warn:
+            import traceback
+
+            log.warning("Passed tornado loop %s", "".join(traceback.format_stack()))
+        return io_loop.asyncio_loop
+    else:
+        raise RuntimeError("Loop must be AbstractEventLoop (prefered) or IOLoop")
+
+
 @contextlib.contextmanager
 def current_ioloop(io_loop):
     """
@@ -125,6 +141,17 @@ class SyncWrapper:
 
     def _wrap(self, key):
         def wrap(*args, **kwargs):
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                # asyncio.get_running_loop() raises RuntimeError
+                # if there is no running loop, so we can run the method
+                # directly with no detaching it to the distinct thread.
+                # It will make SyncWrapper way faster for the cases
+                # when there are no nested SyncWrapper objects used.
+                return self.io_loop.run_sync(
+                    lambda: getattr(self.obj, key)(*args, **kwargs)
+                )
             results = []
             thread = threading.Thread(
                 target=self._target,

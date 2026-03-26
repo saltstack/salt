@@ -1673,9 +1673,9 @@ class VirtualEnv:
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
         kwargs.setdefault("universal_newlines", True)
-        env = kwargs.pop("env", None)
-        if env:
-            env = self.environ.copy().update(env)
+        if kwenv := kwargs.pop("env", None):
+            env = self.environ.copy()
+            env.update(kwenv)
         else:
             env = self.environ
         proc = subprocess.run(args, check=False, env=env, **kwargs)
@@ -1748,14 +1748,14 @@ class VirtualEnv:
         return data
 
     def _create_virtualenv(self):
-        pyexec = shutil.which("python")
+        pyexec = self.get_real_python()
         if not pyexec:
-            pytest.fail("'python' binary not found for virtualenv")
+            pytest.fail("'python' or 'python3' binary not found for virtualenv")
         cmd = [
             pyexec,
             "-m",
             "virtualenv",
-            f"--python={self.get_real_python()}",
+            f"--python={pyexec}",
         ]
         if self.system_site_packages:
             cmd.append("--system-site-packages")
@@ -1779,13 +1779,33 @@ class SaltVirtualEnv(VirtualEnv):
 
     def _create_virtualenv(self):
         super()._create_virtualenv()
+        code_dir = pathlib.Path(RUNTIME_VARS.CODE_DIR)
+        py_version = f"py{sys.version_info.major}.{sys.version_info.minor}"
+        self.install(
+            "--prefer-binary",
+            "-r",
+            code_dir / "requirements" / "static" / "pkg" / py_version / "linux.txt",
+        )
         self.install(RUNTIME_VARS.CODE_DIR)
 
     def install(self, *args, **kwargs):
-        env = self.environ.copy()
-        env.update(kwargs.pop("env", None) or {})
+        env = kwargs.pop("env", None) or {}
         env["USE_STATIC_REQUIREMENTS"] = "1"
+        # Add relenv toolchain to PATH if it exists
+        toolchains_dir = pathlib.Path.home() / ".cache" / "relenv" / "toolchains"
+        if toolchains_dir.exists():
+            # Find any toolchain subdirectory (e.g., x86_64-linux-gnu, aarch64-linux-gnu)
+            for toolchain in toolchains_dir.iterdir():
+                if toolchain.is_dir():
+                    toolchain_bin = toolchain / "bin"
+                    if toolchain_bin.exists():
+                        current_path = env.get("PATH", os.environ.get("PATH", ""))
+                        env["PATH"] = f"{toolchain_bin}:{current_path}"
+                        break
         kwargs["env"] = env
+        # Add --prefer-binary to avoid building from source when possible
+        if "--prefer-binary" not in args:
+            args = ("--prefer-binary",) + args
         return super().install(*args, **kwargs)
 
 

@@ -42,22 +42,21 @@ attrs==23.2.0
     #   pytest-shell-utilities
     #   pytest-skip-markers
     #   pytest-system-statistics
-    #   referencing
 autocommand==2.2.2
     # via
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   jaraco-text
-bcrypt==5.0.0
+bcrypt==4.0.1
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
 boto==2.49.0
     # via -r requirements/static/ci/common.in
-boto3==1.42.33
+boto3==1.39.4
     # via
     #   -r requirements/static/ci/common.in
     #   moto
-botocore==1.42.33
+botocore==1.39.4
     # via
     #   -r requirements/static/ci/common.in
     #   boto3
@@ -85,7 +84,7 @@ charset-normalizer==3.2.0
     # via
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   requests
-cheetah3==3.2.6.post1
+cheetah3==3.2.6.post2
     # via -r requirements/static/ci/common.in
 cheroot==11.1.2
     # via
@@ -97,12 +96,8 @@ cherrypy==18.8.0
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
-clustershell==1.9.3
+clustershell==1.9.1
     # via -r requirements/static/ci/common.in
-contextvars==2.4
-    # via
-    #   -c requirements/static/pkg/py3.12/linux.txt
-    #   -r requirements/base.txt
 croniter==2.0.5
     # via
     #   -c requirements/static/pkg/py3.12/linux.txt
@@ -128,7 +123,7 @@ distro==1.8.0
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   -r requirements/base.txt
     #   pytest-skip-markers
-dnspython==2.8.0
+dnspython==2.6.1
     # via
     #   -r requirements/static/ci/common.in
     #   python-etcd
@@ -138,10 +133,11 @@ durationpy==0.10
     # via kubernetes
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
-filelock==3.20.3
+filelock==3.25.2
     # via
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
+    #   python-discovery
     #   virtualenv
 flaky==3.8.1
     # via -r requirements/pytest.txt
@@ -151,7 +147,9 @@ frozenlist==1.7.0
     #   -r requirements/base.txt
     #   aiohttp
     #   aiosignal
-genshi==0.7.10
+future==1.0.0
+    # via textfsm
+genshi==0.7.7
     # via -r requirements/static/ci/common.in
 gitdb==4.0.12
     # via
@@ -180,24 +178,17 @@ idna==3.7
     #   requests
     #   trustme
     #   yarl
-immutables==0.21
-    # via
-    #   -c requirements/static/pkg/py3.12/linux.txt
-    #   -r requirements/base.txt
-    #   contextvars
 importlib-metadata==8.7.0
     # via
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   -r requirements/base.txt
 iniconfig==2.0.0
     # via pytest
-invoke==2.2.1
-    # via paramiko
 jaraco-collections==4.1.0
     # via
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   cherrypy
-jaraco-context==6.1.0
+jaraco-context==6.1.1
     # via
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -228,34 +219,32 @@ jmespath==1.1.0
     #   -r requirements/static/ci/common.in
     #   boto3
     #   botocore
-jsonschema==4.26.0
+jsonschema==3.2.0
     # via -r requirements/static/ci/common.in
-jsonschema-specifications==2025.9.1
-    # via jsonschema
 junit-xml==1.9
     # via -r requirements/static/ci/common.in
-junos-eznc==2.7.6
+junos-eznc==2.6.7
     # via -r requirements/static/ci/common.in
 jxmlease==1.0.3
     # via -r requirements/static/ci/common.in
-kazoo==2.10.0
+kazoo==2.9.0
     # via -r requirements/static/ci/common.in
 keyring==5.7.1
     # via -r requirements/static/ci/common.in
 kubernetes==35.0.0
     # via -r requirements/static/ci/common.in
-libnacl==2.1.0
+libnacl==1.8.0
     # via -r requirements/static/ci/common.in
 looseversion==1.3.0
     # via
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   -r requirements/base.txt
-lxml==6.0.2
+lxml==4.9.2
     # via
     #   junos-eznc
     #   ncclient
     #   xmldiff
-mako==1.3.10
+mako==1.2.4
     # via -r requirements/static/ci/common.in
 markupsafe==2.1.3
     # via
@@ -277,7 +266,7 @@ more-itertools==10.8.0
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-moto==5.1.20
+moto==5.1.8
     # via -r requirements/static/ci/common.in
 msgpack==1.0.7
     # via
@@ -289,7 +278,9 @@ multidict==6.0.4
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   aiohttp
     #   yarl
-ncclient==0.7.0
+ncclient==0.6.13
+    # via junos-eznc
+netaddr==0.8.0
     # via junos-eznc
 oauthlib==3.3.1
     # via requests-oauthlib
@@ -301,7 +292,7 @@ packaging==24.0
     #   -r requirements/base.txt
     #   ansible-core
     #   pytest
-paramiko==4.0.0
+paramiko==3.4.0
     # via
     #   -r requirements/static/ci/common.in
     #   junos-eznc
@@ -309,13 +300,14 @@ paramiko==4.0.0
     #   scp
 passlib==1.7.4
     # via -r requirements/static/ci/common.in
-pathspec==0.12.1
+pathspec==0.11.1
     # via yamllint
-platformdirs==4.5.1
+platformdirs==4.9.4
     # via
     #   -c requirements/static/pkg/py3.12/linux.txt
+    #   python-discovery
     #   virtualenv
-pluggy==1.5.0
+pluggy==1.4.0
     # via pytest
 portend==3.1.0
     # via
@@ -358,7 +350,7 @@ pyjwt==2.4.0
     # via twilio
 pymysql==1.1.1
     # via -r requirements/static/ci/linux.in
-pynacl==1.6.2
+pynacl==1.5.0
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
@@ -367,8 +359,10 @@ pyopenssl==25.3.0
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   -r requirements/base.txt
     #   etcd3-py
-pyparsing==3.3.2
+pyparsing==3.0.9
     # via junos-eznc
+pyrsistent==0.19.3
+    # via jsonschema
 pyserial==3.5
     # via junos-eznc
 pytest==8.1.1
@@ -420,6 +414,10 @@ python-dateutil==2.8.2
     #   kubernetes
     #   moto
     #   vcert
+python-discovery==1.1.3
+    # via
+    #   -c requirements/static/pkg/py3.12/linux.txt
+    #   virtualenv
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
 python-gnupg==0.5.2
@@ -434,7 +432,7 @@ pytz==2024.1
     #   croniter
     #   tempora
     #   twilio
-pyvmomi==9.0.0.0
+pyvmomi==8.0.1.0.1
     # via -r requirements/static/ci/common.in
 pyyaml==6.0.1
     # via
@@ -447,7 +445,7 @@ pyyaml==6.0.1
     #   pytest-salt-factories
     #   responses
     #   yamllint
-    #   yamlloader
+    #   yamlordereddictloader
 pyzmq==25.1.2
     # via
     #   -c requirements/static/pkg/py3.12/linux.txt
@@ -457,10 +455,6 @@ redis==3.5.3
     # via redis-py-cluster
 redis-py-cluster==2.1.3
     # via -r requirements/static/ci/linux.in
-referencing==0.37.0
-    # via
-    #   jsonschema
-    #   jsonschema-specifications
 requests==2.32.5
     # via
     #   -c requirements/static/pkg/py3.12/linux.txt
@@ -480,21 +474,17 @@ requests-oauthlib==2.0.0
     # via kubernetes
 resolvelib==1.0.1
     # via ansible-core
-responses==0.25.8
+responses==0.23.1
     # via moto
 rfc3987==1.3.8
     # via -r requirements/static/ci/common.in
-rpds-py==0.30.0
-    # via
-    #   jsonschema
-    #   referencing
 rpm-vercmp==0.1.2
     # via
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   -r requirements/base.txt
-s3transfer==0.16.0
+s3transfer==0.13.0
     # via boto3
-scp==0.15.0
+scp==0.14.5
     # via junos-eznc
 semantic-version==2.10.0
     # via etcd3-py
@@ -506,18 +496,24 @@ six==1.16.0
     # via
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   etcd3-py
+    #   genshi
+    #   jsonschema
     #   junit-xml
     #   junos-eznc
+    #   kazoo
     #   kubernetes
+    #   ncclient
     #   python-consul
     #   python-dateutil
+    #   pyvmomi
+    #   textfsm
     #   transitions
     #   vcert
 slack-bolt==1.18.0
     # via -r requirements/static/ci/linux.in
 slack-sdk==3.21.3
     # via slack-bolt
-smmap==5.0.2
+smmap==5.0.3
     # via
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   gitdb
@@ -534,27 +530,32 @@ tempora==5.3.0
     # via
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   portend
-textfsm==2.1.0
+textfsm==1.1.3
     # via -r requirements/static/ci/common.in
+timelib==0.3.0
+    # via
+    #   -c requirements/static/pkg/py3.12/linux.txt
+    #   -r requirements/base.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.in
 tornado==6.5.4
     # via
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   -r requirements/base.txt
-transitions==0.9.3
+transitions==0.9.0
     # via junos-eznc
 trustme==1.1.0
     # via -r requirements/pytest.txt
 twilio==8.2.2
     # via -r requirements/static/ci/linux.in
+types-pyyaml==6.0.12.12
+    # via responses
 typing-extensions==4.14.1
     # via
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   aiosignal
     #   pyopenssl
     #   pytest-system-statistics
-    #   referencing
 urllib3==2.6.3
     # via
     #   -c requirements/static/pkg/py3.12/linux.txt
@@ -567,7 +568,7 @@ urllib3==2.6.3
     #   responses
 vcert==0.9.1
     # via -r requirements/static/ci/common.in
-virtualenv==20.36.1
+virtualenv==21.2.0
     # via
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   -r requirements/base.txt
@@ -577,7 +578,7 @@ vultr==1.0.1
     # via
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   -r requirements/base.txt
-watchdog==6.0.0
+watchdog==3.0.0
     # via -r requirements/static/ci/common.in
 websocket-client==1.9.0
     # via
@@ -590,13 +591,13 @@ werkzeug==3.1.6
     #   -r requirements/static/ci/common.in
     #   moto
     #   pytest-httpserver
-xmldiff==2.7.0
+xmldiff==2.6.3
     # via -r requirements/static/ci/common.in
-xmltodict==1.0.2
+xmltodict==0.13.0
     # via moto
 yamllint==1.32.0
     # via -r requirements/static/ci/linux.in
-yamlloader==1.6.0
+yamlordereddictloader==0.4.0
     # via junos-eznc
 yarl==1.20.1
     # via

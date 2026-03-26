@@ -28,6 +28,7 @@ import salt.exceptions
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
+import salt.modules.file as file
 import salt.modules.network
 import salt.modules.smbios
 import salt.utils.args
@@ -790,6 +791,9 @@ def _windows_virtual(osdata):
     # Manufacturer: Parallels Software International Inc.
     elif "Parallels" in manufacturer:
         grains["virtual"] = "Parallels"
+    elif "Nutanix" in manufacturer and "AHV" in product_name:
+        grains["virtual"] = "kvm"
+        grains["virtual_subtype"] = "Nutanix AHV"
     # Apache CloudStack
     elif "CloudStack KVM Hypervisor" in product_name:
         grains["virtual"] = "kvm"
@@ -961,6 +965,10 @@ def _virtual(osdata):
                 elif "parallels" in line:
                     grains["virtual"] = "Parallels"
                     break
+                elif "nutanix" in line:
+                    grains["virtual"] = "kvm"
+                    grains["virtual_subtype"] = "Nutanix AHV"
+                    break
                 elif "hyperv" in line:
                     grains["virtual"] = "HyperV"
                     break
@@ -1012,6 +1020,9 @@ def _virtual(osdata):
                 grains["virtual"] = "Parallels"
             elif "Manufacturer: Google" in output:
                 grains["virtual"] = "kvm"
+            elif "Manufacturer: Nutanix" in output and "Product Name: AHV" in output:
+                grains["virtual"] = "kvm"
+                grains["virtual_subtype"] = "Nutanix AHV"
             # Proxmox KVM
             elif "Vendor: SeaBIOS" in output:
                 grains["virtual"] = "kvm"
@@ -1268,6 +1279,7 @@ def _virtual(osdata):
         grains["virtual"] = "virtual"
 
     # Try to detect if the instance is running on Amazon EC2
+    # or Nutanix AHV
     if grains["virtual"] in ("qemu", "kvm", "xen", "amazon"):
         dmidecode = salt.utils.path.which("dmidecode")
         if dmidecode:
@@ -1286,6 +1298,9 @@ def _virtual(osdata):
                     grains["virtual_subtype"] = f"Amazon EC2 ({product[1]})"
             elif re.match(r".*Version: [^\r\n]+\.amazon.*", output, flags=re.DOTALL):
                 grains["virtual_subtype"] = "Amazon EC2"
+
+            elif "Manufacturer: Nutanix" in output and "Product Name: AHV" in output:
+                grains["virtual_subtype"] = "Nutanix AHV"
 
     for command in failed_commands:
         log.info(
@@ -1791,7 +1806,9 @@ _OS_NAME_MAP = {
     "oracleserv": "OEL",
     "cloudserve": "CloudLinux",
     "cloudlinux": "CloudLinux",
+    "virtuozzo": "Virtuozzo",
     "almalinux": "AlmaLinux",
+    "almalinuxk": "AlmaLinux",
     "pidora": "Fedora",
     "scientific": "ScientificLinux",
     "synology": "Synology",
@@ -1861,7 +1878,9 @@ _OS_FAMILY_MAP = {
     "Scientific": "RedHat",
     "Amazon": "RedHat",
     "CloudLinux": "RedHat",
+    "Virtuozzo": "RedHat",
     "AlmaLinux": "RedHat",
+    "AlmaLinux Kitten": "RedHat",
     "OVS": "RedHat",
     "OEL": "RedHat",
     "XCP": "RedHat",
@@ -1918,6 +1937,7 @@ _OS_FAMILY_MAP = {
     "Alinux": "RedHat",
     "Mendel": "Debian",
     "OSMC": "Debian",
+    "openEuler": "RedHat",
 }
 
 
@@ -2460,6 +2480,18 @@ def _legacy_linux_distribution_data(grains, os_release, lsb_has_error):
         grains["oscodename"] = oscodename
     if "os" not in grains:
         grains["os"] = _derive_os_grain(grains["osfullname"])
+    if "SUSE_SUPPORT_PRODUCT" in os_release and "SUSE_SUPPORT_PRODUCT_VERSION":
+        # It's a workaround for very specific case of SL Micro 6.2
+        # SL Micro 6.2 is different than prevoius ones and identifies itself
+        # as SLES-16, but transactional. This workaround was made to make the grains
+        # of SL Micro 6.2 aligned with the previous versions.
+        grains["oscodename"] = os_release.get(
+            "SUSE_PRETTY_NAME",
+            f"{os_release['SUSE_SUPPORT_PRODUCT']} {os_release['SUSE_SUPPORT_PRODUCT_VERSION']}",
+        )
+        grains["osrelease"] = os_release["SUSE_SUPPORT_PRODUCT_VERSION"]
+        if os_release["SUSE_SUPPORT_PRODUCT"] == "SUSE Linux Micro":
+            grains["osfullname"] = "SL-Micro"
     # this assigns family names based on the os name
     # family defaults to the os name if not found
     grains["os_family"] = _OS_FAMILY_MAP.get(grains["os"], grains["os"])
@@ -2514,13 +2546,21 @@ def _osrelease_data(os, osfullname, osrelease):
             grains["osrelease_info"],
         )
 
-    if os in ("Debian", "FreeBSD", "OpenBSD", "NetBSD", "Mac", "Raspbian"):
+    if os in (
+        "Debian",
+        "FreeBSD",
+        "OpenBSD",
+        "NetBSD",
+        "Mac",
+        "Raspbian",
+        "AlmaLinux",
+    ):
         os_name = os
     else:
         os_name = osfullname
     grains["osfinger"] = "{}-{}".format(
         os_name,
-        osrelease if os in ("Ubuntu", "Pop") else grains["osrelease_info"][0],
+        osrelease if os in ("Ubuntu", "Pop", "NixOS") else grains["osrelease_info"][0],
     )
 
     return grains
@@ -2952,12 +2992,12 @@ def ip_fqdn():
         if not ret["ipv" + ipv_num]:
             ret[key] = []
         else:
-            start_time = datetime.datetime.utcnow()
+            start_time = datetime.datetime.now(tz=datetime.timezone.utc)
             try:
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
                 ret[key] = list({item[4][0] for item in info})
             except (OSError, UnicodeError):
-                timediff = datetime.datetime.utcnow() - start_time
+                timediff = datetime.datetime.now(tz=datetime.timezone.utc) - start_time
                 if timediff.seconds > 5 and __opts__["__role"] == "master":
                     log.warning(
                         'Unable to find IPv%s record for "%s" causing a %s '
@@ -3600,3 +3640,13 @@ def kernelparams():
             log.debug("Failed to read /proc/cmdline: %s", exc)
 
         return grains
+
+
+def fibre_channel_host():
+    """
+    Determine whether the minion is a fibre channel host
+    """
+    grains = {"fibre_channel_host": False}
+    if file.directory_exists("/sys/class/fc_host"):
+        grains["fibre_channel_host"] = True
+    return grains

@@ -107,7 +107,6 @@ def check_prior_running_states(opts, jid, active_jobs):
     active_jobs = list(active_jobs)
 
     # Check for queued jobs in BOTH state_queue and job_queue
-    # Also check for 'running_' files to close the "Invisible Gap"
     for queue_name in ("state_queue", "job_queue"):
         queue_dir = os.path.join(opts["cachedir"], queue_name)
         if not os.path.exists(queue_dir):
@@ -115,21 +114,14 @@ def check_prior_running_states(opts, jid, active_jobs):
 
         try:
             for fn in os.listdir(queue_dir):
-                # We check for both 'queued_' and 'running_'
-                # 'running_' files are those that have been popped from the queue
-                # but haven't yet written their PID to the proc directory.
-                if (
-                    fn.startswith("queued_") or fn.startswith("running_")
-                ) and fn.endswith(".p"):
-                    # fn is <prefix>_<timestamp>_<jid>.p
-                    parts = fn[:-2].split("_")
+                if fn.startswith("queued_") and fn.endswith(".p"):
+                    # fn is queued_<timestamp>_<jid>.p
+                    parts = fn.split("_")
                     if len(parts) >= 3:
                         # The JID is the third part
                         job_jid = parts[2]
-                        # If the JID itself contains underscores (uncommon but possible),
-                        # it might be split further. Re-join just in case.
-                        if len(parts) > 3:
-                            job_jid = "_".join(parts[2:])
+                        if job_jid.endswith(".p"):
+                            job_jid = job_jid[:-2]
 
                         # We use PID 0 to indicate it's not a real process yet
                         active_jobs.append(
@@ -137,10 +129,6 @@ def check_prior_running_states(opts, jid, active_jobs):
                         )
         except OSError as exc:
             log.error("Unable to list queue directory %s: %s", queue_dir, exc)
-
-    if active_jobs:
-        # log.debug("check_prior_running_states: checking JID %s against active jobs: %s", jid, active_jobs)
-        pass
 
     for data in active_jobs:
         data_jid = data.get("jid")

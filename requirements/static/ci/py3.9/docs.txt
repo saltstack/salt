@@ -18,11 +18,11 @@ apache-libcloud==3.8.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
-async-timeout==4.0.3
+async-timeout==5.0.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   aiohttp
-attrs==23.2.0
+attrs==25.4.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   aiohttp
@@ -36,7 +36,7 @@ backports-tarfile==1.2.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   jaraco-context
-certifi==2026.1.4
+certifi==2023.7.22
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
@@ -60,10 +60,6 @@ cherrypy==18.8.0
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/docs.in
-contextvars==2.4
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/base.txt
 croniter==2.0.5
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -86,6 +82,7 @@ docutils==0.20.1
 filelock==3.19.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
+    #   python-discovery
     #   virtualenv
 frozenlist==1.4.1
     # via
@@ -109,11 +106,6 @@ idna==3.7
     #   yarl
 imagesize==1.4.1
     # via sphinx
-immutables==0.21
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/base.txt
-    #   contextvars
 importlib-metadata==8.7.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -123,7 +115,7 @@ jaraco-collections==4.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   cherrypy
-jaraco-context==6.1.0
+jaraco-context==6.1.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
@@ -159,21 +151,17 @@ looseversion==1.3.0
     #   -r requirements/base.txt
 markdown-it-py==2.2.0
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   mdit-py-plugins
     #   myst-docutils
 markupsafe==2.1.3
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
-    #   -r requirements/static/ci/docs.in
     #   jinja2
 mdit-py-plugins==0.3.5
     # via myst-docutils
 mdurl==0.1.2
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   markdown-it-py
+    # via markdown-it-py
 more-itertools==9.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -186,7 +174,7 @@ msgpack==1.0.7
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
-multidict==6.0.4
+multidict==6.7.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   aiohttp
@@ -201,12 +189,13 @@ packaging==24.0
 platformdirs==4.4.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
+    #   python-discovery
     #   virtualenv
 portend==3.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   cherrypy
-propcache==0.3.2
+propcache==0.4.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   aiohttp
@@ -230,10 +219,8 @@ pycryptodomex==3.19.1
     #   -r requirements/crypto.txt
 pyenchant==3.2.2
     # via sphinxcontrib-spelling
-pygments==2.19.2
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   sphinx
+pygments==2.17.2
+    # via sphinx
 pyopenssl==25.3.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -243,6 +230,10 @@ python-dateutil==2.8.2
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
     #   croniter
+python-discovery==1.1.3
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   virtualenv
 python-gnupg==0.5.2
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -252,7 +243,7 @@ pytz==2024.1
     #   -c requirements/static/ci/py3.9/linux.txt
     #   croniter
     #   tempora
-pyyaml==6.0.3
+pyyaml==6.0.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
@@ -281,7 +272,7 @@ six==1.16.0
     #   -c requirements/static/ci/py3.9/linux.txt
     #   python-dateutil
     #   sphinxcontrib-httpdomain
-smmap==5.0.2
+smmap==5.0.3
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   gitdb
@@ -312,16 +303,21 @@ tempora==5.3.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   portend
+timelib==0.3.0
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   -r requirements/base.txt
 tornado==6.5.4
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
-typing-extensions==4.14.1
+typing-extensions==4.15.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   aiosignal
     #   cryptography
     #   gitpython
+    #   multidict
     #   pyopenssl
     #   virtualenv
 uc-micro-py==1.0.2
@@ -331,7 +327,7 @@ urllib3==1.26.20
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
     #   requests
-virtualenv==20.36.1
+virtualenv==21.2.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
@@ -339,7 +335,7 @@ vultr==1.0.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
-yarl==1.20.1
+yarl==1.22.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   aiohttp

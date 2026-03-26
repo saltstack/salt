@@ -18,8 +18,6 @@ import threading
 import time
 from collections import OrderedDict
 
-import tornado.gen
-
 import salt.acl
 import salt.auth
 import salt.channel.server
@@ -334,6 +332,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
                 salt.daemons.masterapi.clean_pub_auth(self.opts)
+                salt.utils.master.clean_proc_dir(self.opts)
             if not last or (now - last_git_pillar_update) >= git_pillar_update_interval:
                 last_git_pillar_update = now
                 self.handle_git_pillar()
@@ -725,16 +724,6 @@ class Master(SMaster):
         if not self.opts["fileserver_backend"]:
             errors.append("No fileserver backends are configured")
 
-        # Check to see if we need to create a pillar cache dir
-        if self.opts["pillar_cache"] and not os.path.isdir(
-            os.path.join(self.opts["cachedir"], "pillar_cache")
-        ):
-            try:
-                with salt.utils.files.set_umask(0o077):
-                    os.mkdir(os.path.join(self.opts["cachedir"], "pillar_cache"))
-            except OSError:
-                pass
-
         if self.opts.get("git_pillar_verify_config", True):
             try:
                 git_pillars = [
@@ -950,7 +939,7 @@ class Master(SMaster):
         if self.opts.get("cluster_id", None):
             # Notify the rest of the cluster we're starting.
             ipc_publisher.send_aes_key_event()
-        self.process_manager.run()
+        asyncio.run(self.process_manager.run())
 
     def _handle_signals(self, signum, sigframe):
         # escalate the signals to the process manager
@@ -1007,13 +996,19 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
             log.trace("Ignore tag %s", tag)
 
     def run(self):
-        io_loop = tornado.ioloop.IOLoop()
+        io_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(io_loop)
         with salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], io_loop=io_loop, listen=True
         ) as event_bus:
             event_bus.subscribe("")
             event_bus.set_event_handler(self.handle_event)
-            io_loop.start()
+            try:
+                io_loop.run_forever()
+            except (KeyboardInterrupt, SystemExit):
+                pass
+            finally:
+                io_loop.close()
 
 
 class ReqServer(salt.utils.process.SignalHandlingProcess):
@@ -1174,16 +1169,18 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         Bind to the local port
         """
-        self.io_loop = tornado.ioloop.IOLoop()
+        self.io_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.io_loop)
         for req_channel in self.req_channels:
             req_channel.post_fork(
                 self._handle_payload, io_loop=self.io_loop
             )  # TODO: cleaner? Maybe lazily?
         try:
-            self.io_loop.start()
+            self.io_loop.run_forever()
         except (KeyboardInterrupt, SystemExit):
-            # Tornado knows what to do
             pass
+        finally:
+            self.io_loop.close()
 
     async def _handle_payload(self, payload):
         """
@@ -1281,11 +1278,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             start = time.time()
             self.stats[cmd]["runs"] += 1
 
-        def run_func(data):
-            return self.aes_funcs.run_func(data["cmd"], data)
-
         with salt.utils.ctx.request_context({"data": data, "opts": self.opts}):
-            ret = run_func(data)
+            ret = self.aes_funcs.run_func(data["cmd"], data)
 
         if self.opts["master_stats"]:
             self._post_stats(start, cmd)
@@ -1412,6 +1406,9 @@ class AESFuncs(TransportMethods):
             self.pki_dir = self.opts["cluster_pki_dir"]
         else:
             self.pki_dir = self.opts.get("pki_dir", "")
+        self.key_cache = salt.cache.Cache(
+            self.opts, driver=self.opts["keys.cache_driver"]
+        )
 
     def __setup_fileserver(self):
         """
@@ -1444,18 +1441,25 @@ class AESFuncs(TransportMethods):
         """
         if not salt.utils.verify.valid_id(self.opts, id_):
             return False
-        pub_path = salt.utils.verify.clean_join(self.pki_dir, "minions", id_)
+
+        key = self.key_cache.fetch("keys", id_)
+
+        if not key:
+            log.error("Unexpectedly got no pub key for %s", id_)
+            return False
+
         try:
-            pub = salt.crypt.PublicKey(pub_path)
-        except OSError:
+            pub = salt.crypt.PublicKey.from_str(key["pub"])
+        except (OSError, KeyError):
             log.warning(
                 "Salt minion claiming to be %s attempted to communicate with "
                 "master, but key could not be read and verification was denied.",
                 id_,
+                exc_info=True,
             )
             return False
         except (ValueError, IndexError, TypeError) as err:
-            log.error('Unable to load public key "%s": %s', pub_path, err)
+            log.error('Unable to load public key "%s": %s', id_, err)
         try:
             if pub.decrypt(token) == b"salt":
                 return True
@@ -1751,11 +1755,8 @@ class AESFuncs(TransportMethods):
         data = pillar.compile_pillar()
         self.fs_.update_opts()
         if self.opts.get("minion_data_cache", False):
-            self.masterapi.cache.store(
-                "minions/{}".format(load["id"]),
-                "data",
-                {"grains": load["grains"], "pillar": data},
-            )
+            self.masterapi.cache.store("grains", load["id"], load["grains"])
+
             if self.opts.get("minion_data_cache_events") is True:
                 self.event.fire_event(
                     {"Minion data cache refresh": load["id"]},
@@ -1826,14 +1827,17 @@ class AESFuncs(TransportMethods):
         if "sig" in load:
             log.trace("Verifying signed event publish from minion")
             sig = load.pop("sig")
-            this_minion_pubkey = salt.utils.verify.clean_join(
-                self.pki_dir, "minions", load["id"]
-            )
+            this_minion_pubkey = self.key_cache.fetch("keys", load["id"])
             serialized_load = salt.serializers.msgpack.serialize(load)
-            if not salt.crypt.verify_signature(
-                this_minion_pubkey, serialized_load, sig
+            if not this_minion_pubkey or not this_minion_pubkey.verify(
+                serialized_load, sig
             ):
-                log.info("Failed to verify event signature from minion %s.", load["id"])
+                if not this_minion_pubkey:
+                    log.error("Failed to fetch pub key for minion %s.", load["id"])
+                else:
+                    log.info(
+                        "Failed to verify event signature from minion %s.", load["id"]
+                    )
                 if self.opts["drop_messages_signature_fail"]:
                     log.critical(
                         "drop_messages_signature_fail is enabled, dropping "
@@ -2258,12 +2262,17 @@ class ClearFuncs(TransportMethods):
                 "tag": tag,
                 "user": username,
             }
-
-            self.event.fire_event(data, tagify([jid, "new"], "wheel"))
+            clear_load.update(
+                {
+                    "__jid__": jid,
+                    "__tag__": tag,
+                    "__user__": username,
+                    "print_event": clear_load.get("print_event", False),
+                }
+            )
             ret = self.wheel_.call_func(fun, full_return=True, **clear_load)
             data["return"] = ret["return"]
             data["success"] = ret["success"]
-            self.event.fire_event(data, tagify([jid, "ret"], "wheel"))
             return {"tag": tag, "data": data}
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Exception occurred while introspecting %s: %s", fun, exc)
@@ -2440,8 +2449,12 @@ class ClearFuncs(TransportMethods):
                     },
                 }
         jid = self._prep_jid(clear_load, extra)
-        if jid is None:
-            return {"enc": "clear", "load": {"error": "Master failed to assign jid"}}
+        if jid is None or isinstance(jid, dict):
+            if jid and "error" in jid:
+                load = jid
+            else:
+                load = {"error": "Master failed to assign jid"}
+            return load
         payload = self._prep_pub(minions, jid, clear_load, extra, missing)
 
         if self.opts.get("order_masters"):
@@ -2541,8 +2554,6 @@ class ClearFuncs(TransportMethods):
         clear_load["jid"] = jid
         delimiter = clear_load.get("kwargs", {}).get("delimiter", DEFAULT_TARGET_DELIM)
 
-        # TODO Error reporting over the master event bus
-        self.event.fire_event({"minions": minions}, clear_load["jid"])
         new_job_load = {
             "jid": clear_load["jid"],
             "tgt_type": clear_load["tgt_type"],

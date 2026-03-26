@@ -1953,21 +1953,10 @@ def load_template(
         )
         return _loaded  # exit
 
-    # to check if will be rendered by salt or NAPALM
-    salt_render_prefixes = ("salt://", "http://", "https://", "ftp://")
-    salt_render = False
-    file_exists = False
-    if not isinstance(template_name, (tuple, list)):
-        for salt_render_prefix in salt_render_prefixes:
-            if not salt_render:
-                salt_render = salt_render or template_name.startswith(
-                    salt_render_prefix
-                )
-        file_exists = __salt__["file.file_exists"](template_name)
-
     if context is None:
         context = {}
     context.update(template_vars)
+
     # if needed to render the template send as inline arg
     if template_source:
         # render the content

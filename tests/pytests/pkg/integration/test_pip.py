@@ -4,6 +4,7 @@ import pathlib
 import shutil
 import subprocess
 
+import packaging.version
 import pytest
 from pytestskipmarkers.utils import platform
 
@@ -50,6 +51,7 @@ def pkg_tests_account_environ(pkg_tests_account):
     return environ
 
 
+@pytest.mark.skip("Great module migration")
 def test_pip_install(salt_call_cli, install_salt, shell):
     """
     Test pip.install and ensure module can use installed library
@@ -68,6 +70,33 @@ def test_pip_install(salt_call_cli, install_salt, shell):
         assert ret.returncode == 0
         use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
         assert "The github execution module cannot be loaded" in use_lib.stderr
+
+
+@pytest.fixture
+def extras_pypath(install_salt):
+    # Handle both single-element (Path) and multi-element (path components) lists
+    python_path = install_salt.binary_paths["python"]
+    if len(python_path) == 1:
+        python_bin = str(python_path[0])
+    else:
+        python_bin = os.path.join(*python_path)
+    ret = subprocess.run([python_bin, "--version"], check=True, capture_output=True)
+    v = packaging.version.Version(ret.stdout.decode().split()[1])
+    extras_dir = f"extras-{v.major}.{v.minor}"
+
+    if platform.is_windows():
+        return pathlib.Path(
+            os.getenv("ProgramFiles"), "Salt Project", "Salt", extras_dir
+        )
+    elif platform.is_darwin():
+        return pathlib.Path("/opt", "salt", extras_dir)
+    else:
+        return pathlib.Path("/opt", "saltstack", "salt", extras_dir)
+
+
+@pytest.fixture
+def extras_pypath_bin(extras_pypath):
+    return extras_pypath / "bin"
 
 
 def test_pip_install_extras(shell, install_salt, extras_pypath_bin):

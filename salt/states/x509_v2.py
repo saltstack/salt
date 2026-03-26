@@ -182,19 +182,17 @@ according to the www policy.
 """
 
 import base64
-import copy
 import logging
 import os.path
 from datetime import datetime, timedelta, timezone
 
-import salt.utils.files
+import salt.utils.atomicfile
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 try:
     import cryptography.x509 as cx509
     from cryptography.exceptions import UnsupportedAlgorithm
-    from cryptography.hazmat.primitives import hashes
 
     import salt.utils.x509 as x509util
 
@@ -211,12 +209,8 @@ __virtualname__ = "x509"
 def __virtual__():
     if not HAS_CRYPTOGRAPHY:
         return (False, "Could not load cryptography")
-    if not __opts__["features"].get("x509_v2"):
-        return (
-            False,
-            "x509_v2 needs to be explicitly enabled by setting `x509_v2: true` "
-            "in the minion configuration value `features` until Salt 3008 (Argon).",
-        )
+    if not __opts__["features"].get("x509_v2", True):
+        return (False, "x509_v2 modules were explicitly disabled in `features:x509_v2`")
     return __virtualname__
 
 
@@ -252,6 +246,11 @@ def certificate_managed(
 
     This function accepts the same arguments as :py:func:`x509.create_certificate <salt.modules.x509_v2.create_certificate>`,
     as well as most ones for `:py:func:`file.managed <salt.states.file.managed>`.
+
+    .. note::
+
+        Since ``file.managed`` also has an ``encoding`` param, it can be passed
+        as ``file_encoding`` instead.
 
     name
         The path the certificate should be present at.
@@ -421,10 +420,12 @@ def certificate_managed(
         "result": True,
         "comment": "The certificate is in the correct state",
     }
-    current = current_encoding = None
+    current = None
     changes = {}
     verb = "create"
-    file_args, cert_args = _split_file_kwargs(_filter_state_internal_kwargs(kwargs))
+    file_args, cert_args = x509util.split_file_kwargs(
+        _filter_state_internal_kwargs(kwargs)
+    )
     append_certs = append_certs or []
     if not isinstance(append_certs, list):
         append_certs = [append_certs]
@@ -457,103 +458,40 @@ def certificate_managed(
                 replace = True
 
         if __salt__["file.file_exists"](real_name):
-            try:
-                (
-                    current,
-                    current_encoding,
-                    current_chain,
-                    current_extra,
-                ) = x509util.load_cert(
-                    real_name, passphrase=pkcs12_passphrase, get_encoding=True
-                )
-            except SaltInvocationError as err:
-                if "Bad decrypt" in str(err):
-                    changes["pkcs12_passphrase"] = True
-                elif any(
-                    (
-                        "Could not deserialize binary data" in str(err),
-                        "Could not load PEM-encoded" in str(err),
-                    )
-                ):
-                    replace = True
-                else:
-                    raise
-            else:
-                if encoding != current_encoding:
-                    changes["encoding"] = encoding
-                elif encoding == "pkcs12" and current_extra.cert.friendly_name != (
-                    salt.utils.stringutils.to_bytes(pkcs12_friendlyname)
-                    if pkcs12_friendlyname
-                    else None
-                ):
-                    changes["pkcs12_friendlyname"] = pkcs12_friendlyname
-                try:
-                    curr_not_after = current.not_valid_after_utc
-                except AttributeError:
-                    # naive datetime object, release <42 (it's always UTC)
-                    curr_not_after = current.not_valid_after.replace(
-                        tzinfo=timezone.utc
-                    )
-
-                if curr_not_after < datetime.now(tz=timezone.utc) + timedelta(
-                    days=days_remaining
-                ):
-                    changes["expiration"] = True
-
-                current_chain = current_chain or []
-                ca_chain = [x509util.load_cert(x) for x in append_certs]
-                if not _compare_ca_chain(current_chain, ca_chain):
-                    changes["additional_certs"] = True
-
-                (
-                    builder,
-                    private_key_loaded,
-                    signing_cert_loaded,
-                    final_kwargs,
-                ) = _build_cert(
-                    ca_server=ca_server,
-                    signing_policy=signing_policy,
-                    digest=digest,  # passed because of signing_policy merging
-                    signing_private_key=signing_private_key,
-                    signing_private_key_passphrase=signing_private_key_passphrase,
-                    signing_cert=signing_cert,
-                    public_key=public_key,
-                    private_key=private_key,
-                    private_key_passphrase=private_key_passphrase,
-                    csr=csr,
-                    subject=subject,
-                    serial_number=serial_number,
-                    not_before=not_before,
-                    not_after=not_after,
-                    days_valid=days_valid,
-                    **cert_args,
-                )
-
-                try:
-                    if current.signature_hash_algorithm is not None and not isinstance(
-                        current.signature_hash_algorithm,
-                        type(x509util.get_hashing_algorithm(final_kwargs["digest"])),
-                    ):
-                        # ed25519, ed448 do not use a separate hash for signatures, hence algo is None
-                        changes["digest"] = digest
-                except UnsupportedAlgorithm:
-                    # this eg happens with sha3 in cryptography < v39
-                    log.warning(
-                        "Could not determine signature hash algorithm of '%s'. "
-                        "Continuing anyways",
-                        name,
-                    )
-
-                changes.update(
-                    _compare_cert(
-                        current,
-                        builder,
-                        signing_cert=signing_cert_loaded,
-                        serial_number=serial_number,
-                        not_before=not_before,
-                        not_after=not_after,
-                    )
-                )
+            signing_policy_contents = __salt__["x509.get_signing_policy"](
+                signing_policy, ca_server=ca_server
+            )
+            (
+                current,
+                checked_changes,
+                replace,
+                private_key_loaded,
+            ) = x509util.check_cert_changes(
+                real_name,
+                days_remaining=days_remaining,
+                days_valid=days_valid,
+                not_before=not_before,
+                not_after=not_after,
+                ca_server=ca_server,
+                signing_policy_contents=signing_policy_contents,
+                encoding=encoding,
+                append_certs=append_certs,
+                digest=digest,
+                signing_private_key=signing_private_key,
+                signing_private_key_passphrase=signing_private_key_passphrase,
+                signing_cert=signing_cert,
+                public_key=public_key,
+                private_key=private_key,
+                private_key_passphrase=private_key_passphrase,
+                csr=csr,
+                subject=subject,
+                serial_number=serial_number,
+                pkcs12_passphrase=pkcs12_passphrase,
+                pkcs12_encryption_compat=pkcs12_encryption_compat,
+                pkcs12_friendlyname=pkcs12_friendlyname,
+                **cert_args,
+            )
+            changes.update(checked_changes)
         else:
             changes["created"] = name
 
@@ -636,8 +574,11 @@ def certificate_managed(
                 _add_sub_state_run(ret, file_managed_ret)
                 if not _check_file_ret(file_managed_ret, ret, current):
                     return ret
-                _safe_atomic_write(
-                    real_name, base64.b64decode(cert), file_args.get("backup", "")
+                salt.utils.atomicfile.safe_atomic_write(
+                    real_name,
+                    base64.b64decode(cert),
+                    __salt__["config.backup_mode"](file_args.get("backup", "")),
+                    __opts__["cachedir"],
                 )
 
         if not changes or encoding in ["pem", "pkcs7_pem"]:
@@ -834,7 +775,9 @@ def crl_managed(
     current = current_encoding = None
     changes = {}
     verb = "create"
-    file_args, extra_args = _split_file_kwargs(_filter_state_internal_kwargs(kwargs))
+    file_args, extra_args = x509util.split_file_kwargs(
+        _filter_state_internal_kwargs(kwargs)
+    )
     extensions = extensions or {}
     if extra_args:
         raise SaltInvocationError(f"Unrecognized keyword arguments: {list(extra_args)}")
@@ -998,8 +941,11 @@ def crl_managed(
                 _add_sub_state_run(ret, file_managed_ret)
                 if not _check_file_ret(file_managed_ret, ret, current):
                     return ret
-                _safe_atomic_write(
-                    real_name, base64.b64decode(crl), file_args.get("backup", "")
+                salt.utils.atomicfile.safe_atomic_write(
+                    real_name,
+                    base64.b64decode(crl),
+                    __salt__["config.backup_mode"](file_args.get("backup", "")),
+                    __opts__["cachedir"],
                 )
 
         if not changes or encoding == "pem":
@@ -1080,7 +1026,9 @@ def csr_managed(
     current = current_encoding = None
     changes = {}
     verb = "create"
-    file_args, csr_args = _split_file_kwargs(_filter_state_internal_kwargs(kwargs))
+    file_args, csr_args = x509util.split_file_kwargs(
+        _filter_state_internal_kwargs(kwargs)
+    )
 
     try:
         # check file.managed changes early to avoid using unnecessary resources
@@ -1207,8 +1155,11 @@ def csr_managed(
                 _add_sub_state_run(ret, file_managed_ret)
                 if not _check_file_ret(file_managed_ret, ret, current):
                     return ret
-                _safe_atomic_write(
-                    real_name, base64.b64decode(csr), file_args.get("backup", "")
+                salt.utils.atomicfile.safe_atomic_write(
+                    real_name,
+                    base64.b64decode(csr),
+                    __salt__["config.backup_mode"](file_args.get("backup", "")),
+                    __opts__["cachedir"],
                 )
         if not changes or encoding == "pem":
             replace = bool((encoding == "pem") and changes)
@@ -1241,7 +1192,7 @@ def pem_managed(name, text, **kwargs):
     kwargs
         Most arguments supported by :py:func:`file.managed <salt.states.file.managed>` are passed through.
     """
-    file_args, extra_args = _split_file_kwargs(kwargs)
+    file_args, extra_args = x509util.split_file_kwargs(kwargs)
     if extra_args:
         raise SaltInvocationError(f"Unrecognized keyword arguments: {list(extra_args)}")
 
@@ -1354,7 +1305,9 @@ def private_key_managed(
     current = current_encoding = None
     changes = {}
     verb = "create"
-    file_args, extra_args = _split_file_kwargs(kwargs)
+    file_args, extra_args = x509util.split_file_kwargs(
+        _filter_state_internal_kwargs(kwargs)
+    )
 
     if extra_args:
         raise SaltInvocationError(f"Unrecognized keyword arguments: {list(extra_args)}")
@@ -1515,8 +1468,11 @@ def private_key_managed(
                 _add_sub_state_run(ret, file_managed_ret)
                 if not _check_file_ret(file_managed_ret, ret, current):
                     return ret
-                _safe_atomic_write(
-                    real_name, base64.b64decode(pk), file_args.get("backup", "")
+                salt.utils.atomicfile.safe_atomic_write(
+                    real_name,
+                    base64.b64decode(pk),
+                    __salt__["config.backup_mode"](file_args.get("backup", "")),
+                    __opts__["cachedir"],
                 )
 
         if not changes or encoding == "pem":
@@ -1535,43 +1491,77 @@ def private_key_managed(
     return ret
 
 
+def certificate_managed_ssh(
+    name, result, comment, changes, encoding=None, contents=None, **kwargs
+):
+    """
+    Helper for the SSH wrapper module.
+    This receives a base64/PEM-encoded certificate and dumps the data to the target.
+    A ``file.managed`` sub-state run will be performed.
+    """
+    ret = {"name": name, "result": result, "comment": comment, "changes": changes}
+    if not result:
+        return ret
+    file_managed_ret = _file_managed(name, replace=False, **kwargs)
+    _add_sub_state_run(ret, file_managed_ret)
+    if not _check_file_ret(file_managed_ret, ret, __salt__["file.file_exists"](name)):
+        return ret
+    if contents is not None:
+        if __opts__["test"]:
+            ret["comment"] += (
+                '. The file was not actually updated - please pass test=opts.get("test") '
+                "into the wrapper to enable proper test mode support."
+            )
+            return ret
+        if encoding in ("pem", "pkcs7_pem"):
+            contents = contents.encode()
+        else:
+            contents = base64.b64decode(contents)
+        salt.utils.atomicfile.safe_atomic_write(
+            name,
+            contents,
+            __salt__["config.backup_mode"](kwargs.get("backup", "")),
+            __opts__["cachedir"],
+        )
+    return ret
+
+
+def private_key_managed_ssh(name, result, comment, changes, tempfile=None, **kwargs):
+    """
+    Helper for the SSH wrapper module to report the correct return and
+    perform a ``file.managed`` sub-state run.
+    """
+    ret = {"name": name, "result": result, "comment": comment, "changes": changes}
+    if not result:
+        return ret
+    file_managed_ret = _file_managed(name, replace=False, **kwargs)
+    if tempfile is not None:
+        if __opts__["test"]:
+            ret["comment"] += (
+                '. The file was not actually updated - please pass test=opts.get("test") '
+                "into the wrapper to enable proper test mode support."
+            )
+            try:
+                __salt__["file.remove"](tempfile)
+            except Exception:  # pylint: disable=broad-except
+                pass
+            return ret
+        try:
+            # This will replace symlinks with the file
+            __salt__["file.move"](tempfile, name)
+        except Exception as err:  # pylint: disable=broad-except
+            ret["result"] = False
+            ret["comment"] += f". But: Failed moving the private key into place: {err}"
+            ret["changes"] = {}
+            return ret
+    _add_sub_state_run(ret, file_managed_ret)
+    return ret
+
+
 def _filter_state_internal_kwargs(kwargs):
     # check_cmd is a valid argument to file.managed
     ignore = set(_STATE_INTERNAL_KEYWORDS) - {"check_cmd"}
     return {k: v for k, v in kwargs.items() if k not in ignore}
-
-
-def _split_file_kwargs(kwargs):
-    valid_file_args = [
-        "user",
-        "group",
-        "mode",
-        "attrs",
-        "makedirs",
-        "dir_mode",
-        "backup",
-        "create",
-        "follow_symlinks",
-        "check_cmd",
-        "tmp_dir",
-        "tmp_ext",
-        "selinux",
-        "encoding",
-        "encoding_errors",
-        "win_owner",
-        "win_perms",
-        "win_deny_perms",
-        "win_inheritance",
-        "win_perms_reset",
-    ]
-    file_args = {"show_changes": False}
-    extra_args = {}
-    for k, v in kwargs.items():
-        if k in valid_file_args:
-            file_args[k] = v
-        else:
-            extra_args[k] = v
-    return file_args, extra_args
 
 
 def _add_sub_state_run(ret, sub):
@@ -1589,7 +1579,6 @@ def _add_sub_state_run(ret, sub):
 def _file_managed(name, test=None, **kwargs):
     if test not in [None, True]:
         raise SaltInvocationError("test param can only be None or True")
-    # work around https://github.com/saltstack/salt/issues/62590
     test = test or __opts__["test"]
     res = __salt__["state.single"]("file.managed", name, test=test, **kwargs)
     return res[next(iter(res))]
@@ -1606,68 +1595,15 @@ def _check_file_ret(fret, ret, current):
     return True
 
 
-def _build_cert(
-    ca_server=None, signing_policy=None, signing_private_key=None, **kwargs
-):
-    final_kwargs = copy.deepcopy(kwargs)
-    final_kwargs["signing_private_key"] = signing_private_key
-    x509util.merge_signing_policy(
-        __salt__["x509.get_signing_policy"](signing_policy, ca_server=ca_server),
-        final_kwargs,
-    )
-    signing_private_key = final_kwargs.pop("signing_private_key")
-
-    builder, _, private_key_loaded, signing_cert = x509util.build_crt(
-        signing_private_key,
-        skip_load_signing_private_key=ca_server is not None,
-        **final_kwargs,
-    )
-    return builder, private_key_loaded, signing_cert, final_kwargs
-
-
-def _compare_cert(current, builder, signing_cert, serial_number, not_before, not_after):
-    changes = {}
-
-    if (
-        serial_number is not None
-        and _getattr_safe(builder, "_serial_number") != current.serial_number
-    ):
-        changes["serial_number"] = serial_number
-
-    if not x509util.match_pubkey(
-        _getattr_safe(builder, "_public_key"), current.public_key()
-    ):
-        changes["private_key"] = True
-
-    if signing_cert and not x509util.verify_signature(
-        current, signing_cert.public_key()
-    ):
-        changes["signing_private_key"] = True
-
-    if _getattr_safe(builder, "_subject_name") != current.subject:
-        changes["subject_name"] = _getattr_safe(
-            builder, "_subject_name"
-        ).rfc4514_string()
-
-    if _getattr_safe(builder, "_issuer_name") != current.issuer:
-        changes["issuer_name"] = _getattr_safe(builder, "_issuer_name").rfc4514_string()
-
-    ext_changes = _compare_exts(current, builder)
-    if any(ext_changes.values()):
-        changes["extensions"] = ext_changes
-    return changes
-
-
 def _compare_csr(current, builder):
     changes = {}
 
-    # if _getattr_safe(builder, "_subject_name") != current.subject:
     if not _compareattr_safe(builder, "_subject_name", current.subject):
-        changes["subject_name"] = _getattr_safe(
+        changes["subject_name"] = x509util.getattr_safe(
             builder, "_subject_name"
         ).rfc4514_string()
 
-    ext_changes = _compare_exts(current, builder)
+    ext_changes = x509util.compare_exts(current, builder)
     if any(ext_changes.values()):
         changes["extensions"] = ext_changes
     return changes
@@ -1689,13 +1625,15 @@ def _compare_crl(current, builder, sig_pubkey):
 
     changes = {}
 
-    if _getattr_safe(builder, "_issuer_name") != current.issuer:
-        changes["issuer_name"] = _getattr_safe(builder, "_issuer_name").rfc4514_string()
+    if x509util.getattr_safe(builder, "_issuer_name") != current.issuer:
+        changes["issuer_name"] = x509util.getattr_safe(
+            builder, "_issuer_name"
+        ).rfc4514_string()
     if not current.is_signature_valid(sig_pubkey):
         changes["public_key"] = True
 
     rev_changes = {"added": [], "changed": [], "removed": []}
-    revoked = _getattr_safe(builder, "_revoked_certificates")
+    revoked = x509util.getattr_safe(builder, "_revoked_certificates")
     for rev in revoked:
         cur = current.get_revoked_certificate_by_serial_number(rev.serial_number)
         if cur is None:
@@ -1731,64 +1669,10 @@ def _compare_crl(current, builder, sig_pubkey):
     if any(rev_changes.values()):
         changes["revocations"] = rev_changes
 
-    ext_changes = _compare_exts(current, builder)
+    ext_changes = x509util.compare_exts(current, builder)
     if any(ext_changes.values()):
         changes["extensions"] = ext_changes
     return changes
-
-
-def _compare_exts(current, builder):
-    def getextname(ext):
-        try:
-            return ext.oid._name
-        except AttributeError:
-            return ext.oid.dotted_string
-
-    added = []
-    changed = []
-    removed = []
-    builder_extensions = cx509.Extensions(_getattr_safe(builder, "_extensions"))
-
-    # iter is unnecessary, but avoids a pylint < 2.13.6 crash
-    for ext in iter(builder_extensions):
-        try:
-            cur_ext = current.extensions.get_extension_for_oid(ext.value.oid)
-            if cur_ext.critical != ext.critical or cur_ext.value != ext.value:
-                changed.append(getextname(ext))
-        except cx509.ExtensionNotFound:
-            added.append(getextname(ext))
-
-    for ext in current.extensions:
-        try:
-            builder_extensions.get_extension_for_oid(ext.value.oid)
-        except cx509.ExtensionNotFound:
-            removed.append(getextname(ext))
-
-    return {"added": added, "changed": changed, "removed": removed}
-
-
-def _compare_ca_chain(current, new):
-    if not len(current) == len(new):
-        return False
-    for i, new_cert in enumerate(new):
-        if new_cert.fingerprint(hashes.SHA256()) != current[i].fingerprint(
-            hashes.SHA256()
-        ):
-            return False
-    return True
-
-
-def _getattr_safe(obj, attr):
-    try:
-        return getattr(obj, attr)
-    except AttributeError as err:
-        # Since we cannot get the certificate object without signing,
-        # we need to compare attributes marked as internal. At least
-        # convert possible exceptions into some description.
-        raise CommandExecutionError(
-            f"Could not get attribute {attr} from {obj.__class__.__name__}. "
-            "Did the internal API of cryptography change?"
-        ) from err
 
 
 def _compareattr_safe(obj, attr, comp):
@@ -1796,17 +1680,3 @@ def _compareattr_safe(obj, attr, comp):
         return getattr(obj, attr) == comp
     except AttributeError:
         return False
-
-
-def _safe_atomic_write(dst, data, backup):
-    """
-    Create a temporary file with only user r/w perms and atomically
-    copy it to the destination, honoring ``backup``.
-    """
-    tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX)
-    with salt.utils.files.fopen(tmp, "wb") as tmp_:
-        tmp_.write(data)
-    salt.utils.files.copyfile(
-        tmp, dst, __salt__["config.backup_mode"](backup), __opts__["cachedir"]
-    )
-    salt.utils.files.safe_rm(tmp)

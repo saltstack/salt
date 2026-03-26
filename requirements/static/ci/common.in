@@ -31,9 +31,6 @@ keyring==5.7.1
 pyasn1-modules==0.4.0; python_version == '3.9'
 kubernetes>=24.0.0
 libnacl>=1.7.1; sys_platform != 'win32' and sys_platform != 'darwin'
-# markdown-it-py constraint for py3.9: myst-docutils (docs requirement) needs <3.0.0,
-# but netmiko (from napalm, only in py3.9) pulls in rich which wants 3.0.0+
-markdown-it-py<3.0.0; python_version == '3.9'
 moto>=5.0.0
 # Napalm pulls in pyeapi which does not work on Py3.10
 napalm; sys_platform != 'win32' and python_version < '3.10'
@@ -46,6 +43,13 @@ pyvmomi
 rfc3987
 sqlparse>=0.5.4
 strict_rfc3339>=0.7
+toml
+vcert; sys_platform != 'win32' and python_version < '3.13.0'
+virtualenv>=20.3.0
+watchdog>=0.9.0
+xmldiff>=2.4
+# werkzeug is a dependency of moto
+werkzeug>=3.0.6
 textfsm
 toml
 vcert~=0.9.0; sys_platform != 'win32'

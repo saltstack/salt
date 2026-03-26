@@ -218,11 +218,11 @@ def test_renderer():
 
     with pytest.raises(salt.exceptions.SaltInvocationError) as exc:
         slsutil.renderer()
-        assert str(exc.value) == "Must pass path or string."
+    assert str(exc.value) == "Must pass path or string."
 
     with pytest.raises(salt.exceptions.SaltInvocationError) as exc:
         slsutil.renderer(path="/path/to/file", string="Hello world")
-        assert str(exc.value) == "Must not pass both path and string."
+    assert str(exc.value) == "Must not pass both path and string."
 
     with patch.dict(
         slsutil.__salt__, {"cp.get_url": MagicMock(return_value="/path/to/file")}

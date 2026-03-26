@@ -134,6 +134,7 @@ mapper = TzMapper(
         "Pacific Standard Time (Mexico)": "America/Tijuana",
         "Pakistan Standard Time": "Asia/Karachi",
         "Paraguay Standard Time": "America/Asuncion",
+        "Qyzylorda Standard Time": "Asia/Qyzylorda",
         "Romance Standard Time": "Europe/Paris",
         "Russia Time Zone 10": "Asia/Srednekolymsk",
         "Russia Time Zone 11": "Asia/Kamchatka",

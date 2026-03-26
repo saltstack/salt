@@ -378,6 +378,10 @@ class SyncClientMixin(ClientStateMixin):
                 data["fun_args"] = list(args) + ([kwargs] if kwargs else [])
                 func_globals["__jid_event__"].fire_event(data, "new")
 
+                proc_fn = os.path.join(self.opts["cachedir"], "proc", jid)
+                with salt.utils.files.fopen(proc_fn, "w+b") as fp_:
+                    fp_.write(salt.payload.dumps(dict(data, pid=os.getpid())))
+
                 func = self.functions[fun]
                 try:
                     data["return"] = func(*args, **kwargs)
@@ -408,6 +412,12 @@ class SyncClientMixin(ClientStateMixin):
                     )
                 data["success"] = False
                 data["retcode"] = 1
+            finally:
+                # Job has finished or issue found, so let's clean up after ourselves
+                try:
+                    os.remove(proc_fn)
+                except OSError as err:
+                    log.debug("Error attempting to remove master job tracker: %s", err)
 
             if self.store_job:
                 try:

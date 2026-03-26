@@ -1,3 +1,15 @@
+import pytest
+
+from tests.support.helpers import system_python_version
+
+pytestmark = [
+    pytest.mark.skipif(
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
+    ),
+]
+
+
 def test_pillar_using_http_query(salt_master, salt_minion, salt_cli):
     pillar_top = """
     base:

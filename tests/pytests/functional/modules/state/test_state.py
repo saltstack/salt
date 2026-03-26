@@ -131,7 +131,11 @@ def test_catch_recurse(state, state_tree):
         ret = state.sls("recurse-fail")
         assert ret.failed
         assert (
-            'A recursive requisite was found, SLS "recurse-fail" ID "/etc/mysql/my.cnf" ID "mysql"'
+            "Recursive requisites were found: "
+            "({'SLS': 'recurse-fail', 'ID': '/etc/mysql/my.cnf'}, "
+            "'require', {'SLS': 'recurse-fail', 'ID': 'mysql'}), "
+            "({'SLS': 'recurse-fail', 'ID': 'mysql'}, "
+            "'require', {'SLS': 'recurse-fail', 'ID': '/etc/mysql/my.cnf'})"
             in ret.errors
         )
 
@@ -616,6 +620,7 @@ def test_template_str_invalid_items(state, item):
     assert errmsg in ret.errors
 
 
+@pytest.mark.skip("GREAT MODULE MIGRATION")
 @pytest.mark.skip_on_windows(
     reason=(
         "Functional testing this on windows raises unicode errors. "
@@ -847,7 +852,7 @@ def test_retry_option_eventual_success(state, state_tree, tmp_path):
         ret = state.sls("retry")
         for state_return in ret:
             assert state_return.result is True
-            assert state_return.full_return["duration"] > 4
+            assert state_return.full_return["duration"] > 2
             # It should not take 5 attempts
             assert "Attempt 5" not in state_return.comment
 
@@ -898,7 +903,7 @@ def test_retry_option_eventual_success_parallel(state, state_tree, tmp_path):
         for state_return in ret:
             log.debug("=== state_return %s ===", state_return)
             assert state_return.result is True
-            assert state_return.full_return["duration"] > 4
+            assert state_return.full_return["duration"] > 2
             # It should not take 5 attempts
             assert "Attempt 5" not in state_return.comment
 

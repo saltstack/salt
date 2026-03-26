@@ -1,9 +1,15 @@
 import pytest
 from saltfactories.utils.functional import StateResult
 
+from tests.support.helpers import system_python_version
+
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows"),
+    pytest.mark.skipif(
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
+    ),
 ]
 
 

@@ -2,6 +2,16 @@ import json
 
 import pytest
 
+from tests.support.helpers import system_python_version
+
+pytestmark = [
+    pytest.mark.skip_unless_on_linux,
+    pytest.mark.skipif(
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
+    ),
+]
+
 
 @pytest.mark.usefixtures("state_tree")
 def test_renderer_file(salt_ssh_cli):

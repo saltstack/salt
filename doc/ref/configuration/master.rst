@@ -1228,6 +1228,22 @@ a minion performs an authentication check with the master.
 
     auth_events: True
 
+.. conf_master:: auth_events_autosign_grains
+
+``auth_events_autosign_grains``
+-------------------------------
+
+.. versionadded:: 3008
+
+Default: ``[]``
+
+Determines which actions the master will include autosign_grains for when
+firing authentication events.
+
+.. code-block:: yaml
+
+    auth_events_autosign_grains: ["accept", "pend", "reject", "full", "denied", "error"]
+
 .. conf_master:: minion_data_cache_events
 
 ``minion_data_cache_events``
@@ -1711,6 +1727,8 @@ Pass a list of importable Python modules that are typically located in
 the `site-packages` Python directory so they will be also always included
 into the Salt Thin, once generated.
 
+.. conf_master:: min_extra_mods
+
 ``min_extra_mods``
 ------------------
 
@@ -1718,6 +1736,47 @@ Default: None
 
 Identical as `thin_extra_mods`, only applied to the Salt Minimal.
 
+.. conf_master:: thin_exclude_saltexts
+
+``thin_exclude_saltexts``
+-------------------------
+
+Default: False
+
+By default, Salt-SSH autodiscovers Salt extensions in the current Python environment
+and adds them to the Salt Thin. This disables that behavior.
+
+.. note::
+
+    When the list of modules/extensions to include in the Salt Thin changes
+    for any reason (e.g. Saltext was added/removed, :conf_master:`thin_exclude_saltexts`,
+    :conf_master:`thin_saltext_allowlist` or :conf_master:`thin_saltext_blocklist`
+    was changed), you typically need to regenerate the Salt Thin by passing
+    ``--regen-thin`` to the next Salt-SSH invocation.
+
+.. conf_master:: thin_saltext_allowlist
+
+``thin_saltext_allowlist``
+--------------------------
+
+Default: None
+
+A list of Salt extension **distribution** names which are allowed to be
+included in the Salt Thin (when :conf_master:`thin_exclude_saltexts`
+is inactive) and they are discovered. Any extension not in this list
+will be excluded. If unset, all discovered extensions are added,
+unless present in :conf_master:`thin_saltext_blocklist`.
+
+.. conf_master:: thin_saltext_blocklist
+
+``thin_saltext_blocklist``
+--------------------------
+
+Default: None
+
+A list of Salt extension **distribution** names which should never be
+included in the Salt Thin (when :conf_master:`thin_exclude_saltexts`
+is inactive).
 
 .. _master-security-settings:
 
@@ -2449,7 +2508,11 @@ This option has no default value. Set it to an environment name to ensure that
 :ref:`highstate <running-highstate>`.
 
 .. note::
-    Using this value does not change the merging strategy. For instance, if
+    Minions which have an explicit :conf_minion:`saltenv` set will use that
+    environment's top file, ignoring this master config option.
+
+.. note::
+    Using this option does not change the merging strategy. For instance, if
     :conf_master:`top_file_merging_strategy` is set to ``merge``, and
     :conf_master:`state_top_saltenv` is set to ``foo``, then any sections for
     environments other than ``foo`` in the top file for the ``foo`` environment
@@ -3274,6 +3337,23 @@ be a better option.
 
 .. versionchanged:: 2016.11.0
     The default config value changed from ``False`` to ``True``.
+
+.. conf_master:: gitfs_proxy
+
+``gitfs_proxy``
+***************
+
+.. versionadded:: 3008.0
+
+Default: ``''``
+
+Specifies the URL of the proxy server that will be used to connect to the
+repositories configured in :conf_master:`gitfs_remotes`. By default, no proxy
+server will be used.
+
+.. code-block:: yaml
+
+    gitfs_proxy: http://foo.com:8080/
 
 .. conf_master:: gitfs_mountpoint
 
@@ -4743,6 +4823,22 @@ In the 2016.11.0 release, the default config value changed from ``False`` to
     pygit2 only supports disabling SSL verification in versions 0.23.2 and
     newer.
 
+.. conf_master:: git_pillar_proxy
+
+``git_pillar_proxy``
+********************
+
+.. versionadded:: 3008.0
+
+Default: ``''``
+
+Specifies the URL of the proxy server that will be used to connect to the
+remote repository. By default, no proxy server will be used.
+
+.. code-block:: yaml
+
+    git_pillar_proxy: http://foo.com:8080/
+
 .. conf_master:: git_pillar_global_lock
 
 ``git_pillar_global_lock``
@@ -6141,6 +6237,22 @@ In the 2016.11.0 release, the default config value changed from ``False`` to
 .. code-block:: yaml
 
     winrepo_ssl_verify: True
+
+.. conf_master:: winrepo_proxy
+
+``winrepo_proxy``
+-----------------
+
+.. versionadded:: 3008.0
+
+Default: ``''``
+
+Specifies the URL of the proxy server that will be used to connect to the
+remote repository. By default, no proxy server will be used.
+
+.. code-block:: yaml
+
+    winrepo_proxy: http://foo.com:8080/
 
 Winrepo Authentication Options
 ------------------------------

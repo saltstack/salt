@@ -37,6 +37,7 @@ from salt._logging import (
     DFLT_LOG_FMT_CONSOLE,
     DFLT_LOG_FMT_JID,
     DFLT_LOG_FMT_LOGFILE,
+    DFLT_LOG_FMT_MINION_ID,
 )
 
 try:
@@ -162,7 +163,7 @@ VALID_OPTS = immutabletypes.freeze(
         "always_verify_signature": bool,
         # The name of the file in the masters pki-directory that holds the pre-calculated signature of
         # the masters public-key
-        "master_pubkey_signature": str,
+        "master_pubkey_signature": (type(None), str),
         # Instead of computing the signature for each auth-reply, use a pre-calculated signature.
         # The master_pubkey_signature must also be set for this.
         "master_use_pubkey_signature": bool,
@@ -350,6 +351,10 @@ VALID_OPTS = immutabletypes.freeze(
         "log_fmt_console": str,
         # The format for a given log file
         "log_fmt_logfile": (tuple, str),
+        # The format for JIDs prior to formatting into log lines as %(jid)s
+        "log_fmt_jid": (type(None), str),
+        # The format for minion_ids prior to formatting into log lines as %(minion_id)s
+        "log_fmt_minion_id": (type(None), str),
         # A dictionary of logging levels
         "log_granular_levels": dict,
         # The maximum number of bytes a single log file may contain before
@@ -404,6 +409,8 @@ VALID_OPTS = immutabletypes.freeze(
         "state_auto_order": bool,
         # Fire events as state chunks are processed by the state compiler
         "state_events": bool,
+        # Limit the number of states that can be running in parallel
+        "state_max_parallel": int,
         # The number of seconds a minion should wait before retry when attempting authentication
         "acceptance_wait_time": float,
         # The number of seconds a minion should wait before giving up during authentication
@@ -577,6 +584,7 @@ VALID_OPTS = immutabletypes.freeze(
         "git_pillar_refspecs": list,
         "git_pillar_includes": bool,
         "git_pillar_verify_config": bool,
+        "git_pillar_proxy": str,
         # NOTE: gitfs_base, gitfs_fallback, gitfs_mountpoint, and gitfs_root omitted
         # here because their values could conceivably be loaded as non-string types,
         # which is OK because gitfs will normalize them to strings. But rather than
@@ -594,6 +602,7 @@ VALID_OPTS = immutabletypes.freeze(
         "gitfs_ref_types": list,
         "gitfs_refspecs": list,
         "gitfs_disable_saltenv_mapping": bool,
+        "gitfs_proxy": str,
         "hgfs_remotes": list,
         "hgfs_mountpoint": str,
         "hgfs_root": str,
@@ -763,6 +772,7 @@ VALID_OPTS = immutabletypes.freeze(
         "winrepo_remotes": list,
         "winrepo_remotes_ng": list,
         "winrepo_ssl_verify": bool,
+        "winrepo_proxy": str,
         "winrepo_user": str,
         "winrepo_password": str,
         "winrepo_insecure_auth": bool,
@@ -838,6 +848,9 @@ VALID_OPTS = immutabletypes.freeze(
         "ssh_scan_ports": str,
         "ssh_scan_timeout": float,
         "ssh_identities_only": bool,
+        "ssh_keepalive": bool,
+        "ssh_keepalive_interval": int,
+        "ssh_keepalive_count_max": int,
         "ssh_log_file": str,
         "ssh_config_file": str,
         "ssh_merge_pillar": bool,
@@ -912,6 +925,9 @@ VALID_OPTS = immutabletypes.freeze(
         # Thin and minimal Salt extra modules
         "thin_extra_mods": str,
         "min_extra_mods": str,
+        "thin_exclude_saltexts": bool,
+        "thin_saltext_allowlist": (type(None), list),
+        "thin_saltext_blocklist": list,
         # Default returners minion should use. List or comma-delimited string
         "return": (str, list),
         # TLS/SSL connection options. This could be set to a dictionary containing arguments
@@ -971,6 +987,8 @@ VALID_OPTS = immutabletypes.freeze(
         "schedule": dict,
         # Whether to fire auth events
         "auth_events": bool,
+        # Specify auth events to add autosign_grains to
+        "auth_events_autosign_grains": list,
         # Whether to fire Minion data cache refresh events
         "minion_data_cache_events": bool,
         # Enable calling ssh minions from the salt master
@@ -1015,10 +1033,18 @@ VALID_OPTS = immutabletypes.freeze(
         "signing_algorithm": str,
         # Master publish channel signing
         "publish_signing_algorithm": str,
+        # the cache driver to be used to manage keys for both minion and master
+        "keys.cache_driver": (type(None), str),
         "request_server_ttl": int,
         "request_server_aes_session": int,
         # Minimum authentication protocol version to accept from minions
         "minimum_auth_version": int,
+        # optional cache driver for pillar cache
+        "pillar.cache_driver": (type(None), str),
+        # optional cache driver for eauth_tokens cache
+        "eauth_tokens.cache_driver": (type(None), str),
+        # eauth tokens cluster id override
+        "eauth_tokens.cluster_id": (type(None), str),
     }
 )
 
@@ -1144,6 +1170,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "git_pillar_passphrase": "",
         "git_pillar_refspecs": _DFLT_REFSPECS,
         "git_pillar_includes": True,
+        "git_pillar_proxy": "",
         "gitfs_remotes": [],
         "gitfs_mountpoint": "",
         "gitfs_root": "",
@@ -1163,6 +1190,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "gitfs_ref_types": ["branch", "tag", "sha"],
         "gitfs_refspecs": _DFLT_REFSPECS,
         "gitfs_disable_saltenv_mapping": False,
+        "gitfs_proxy": "",
         "unique_jid": False,
         "hash_type": DEFAULT_HASH_TYPE,
         "optimization_order": [0, 1, 2],
@@ -1204,6 +1232,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "log_fmt_console": DFLT_LOG_FMT_CONSOLE,
         "log_fmt_logfile": DFLT_LOG_FMT_LOGFILE,
         "log_fmt_jid": DFLT_LOG_FMT_JID,
+        "log_fmt_minion_id": DFLT_LOG_FMT_MINION_ID,
         "log_granular_levels": {},
         "log_rotate_max_bytes": 0,
         "log_rotate_backup_count": 0,
@@ -1223,6 +1252,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "state_events": False,
         "state_aggregate": False,
         "state_queue": False,
+        "state_max_parallel": 0,
         "snapper_states": False,
         "snapper_states_config": "root",
         "acceptance_wait_time": 10,
@@ -1259,6 +1289,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "winrepo_branch": "master",
         "winrepo_fallback": "",
         "winrepo_ssl_verify": True,
+        "winrepo_proxy": "",
         "winrepo_user": "",
         "winrepo_password": "",
         "winrepo_insecure_auth": False,
@@ -1329,6 +1360,8 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "features": {},
         "encryption_algorithm": "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA1",
+        "keys.cache_driver": "localfs_key",
+        "pillar.cache_driver": None,
     }
 )
 
@@ -1401,6 +1434,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "git_pillar_refspecs": _DFLT_REFSPECS,
         "git_pillar_includes": True,
         "git_pillar_verify_config": True,
+        "git_pillar_proxy": "",
         "gitfs_remotes": [],
         "gitfs_mountpoint": "",
         "gitfs_root": "",
@@ -1420,6 +1454,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "gitfs_ref_types": ["branch", "tag", "sha"],
         "gitfs_refspecs": _DFLT_REFSPECS,
         "gitfs_disable_saltenv_mapping": False,
+        "gitfs_proxy": "",
         "hgfs_remotes": [],
         "hgfs_mountpoint": "",
         "hgfs_root": "",
@@ -1537,6 +1572,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "log_fmt_console": DFLT_LOG_FMT_CONSOLE,
         "log_fmt_logfile": DFLT_LOG_FMT_LOGFILE,
         "log_fmt_jid": DFLT_LOG_FMT_JID,
+        "log_fmt_minion_id": DFLT_LOG_FMT_MINION_ID,
         "log_granular_levels": {},
         "log_rotate_max_bytes": 0,
         "log_rotate_backup_count": 0,
@@ -1563,6 +1599,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "state_auto_order": True,
         "state_events": False,
         "state_aggregate": False,
+        "state_max_parallel": 0,
         "search": "",
         "loop_interval": 60,
         "nodegroups": {},
@@ -1588,6 +1625,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "winrepo_branch": "master",
         "winrepo_fallback": "",
         "winrepo_ssl_verify": True,
+        "winrepo_proxy": "",
         "winrepo_user": "",
         "winrepo_password": "",
         "winrepo_insecure_auth": False,
@@ -1621,6 +1659,9 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "ssh_scan_ports": "22",
         "ssh_scan_timeout": 0.01,
         "ssh_identities_only": False,
+        "ssh_keepalive": True,
+        "ssh_keepalive_interval": 60,
+        "ssh_keepalive_count_max": 3,
         "ssh_log_file": os.path.join(salt.syspaths.LOGS_DIR, "ssh"),
         "ssh_config_file": os.path.join(salt.syspaths.HOME_DIR, ".ssh", "config"),
         "cluster_mode": False,
@@ -1630,7 +1671,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "max_minions": 0,
         "master_sign_key_name": "master_sign",
         "master_sign_pubkey": False,
-        "master_pubkey_signature": "master_pubkey_signature",
+        "master_pubkey_signature": None,
         "master_use_pubkey_signature": False,
         "zmq_filtering": False,
         "zmq_monitor": False,
@@ -1648,6 +1689,9 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "memcache_debug": False,
         "thin_extra_mods": "",
         "min_extra_mods": "",
+        "thin_exclude_saltexts": False,
+        "thin_saltext_allowlist": None,
+        "thin_saltext_blocklist": [],
         "ssl": None,
         "extmod_whitelist": {},
         "extmod_blacklist": {},
@@ -1661,6 +1705,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "discovery": False,
         "schedule": {},
         "auth_events": True,
+        "auth_events_pend_autosign_grains": False,
         "minion_data_cache_events": True,
         "enable_ssh_minions": False,
         "netapi_allow_raw_shell": False,
@@ -1680,9 +1725,13 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_pool_port": 4520,
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
+        "keys.cache_driver": "localfs_key",
         "request_server_aes_session": 0,
         "request_server_ttl": 0,
         "minimum_auth_version": 3,
+        "pillar.cache_driver": None,
+        "eauth_tokens.cache_driver": None,
+        "eauth_tokens.cluster_id": None,
     }
 )
 
@@ -1746,6 +1795,7 @@ DEFAULT_CLOUD_OPTS = immutabletypes.freeze(
         "log_fmt_console": DFLT_LOG_FMT_CONSOLE,
         "log_fmt_logfile": DFLT_LOG_FMT_LOGFILE,
         "log_fmt_jid": DFLT_LOG_FMT_JID,
+        "log_fmt_minion_id": DFLT_LOG_FMT_MINION_ID,
         "log_granular_levels": {},
         "log_rotate_max_bytes": 0,
         "log_rotate_backup_count": 0,
@@ -2559,12 +2609,12 @@ def apply_sdb(opts, sdb_opts=None):
     """
     Recurse for sdb:// links for opts
     """
-    # Late load of SDB to keep CLI light
-    import salt.utils.sdb
-
     if sdb_opts is None:
         sdb_opts = opts
     if isinstance(sdb_opts, str) and sdb_opts.startswith("sdb://"):
+        # Late load of SDB to keep CLI light
+        import salt.utils.sdb
+
         return salt.utils.sdb.sdb_get(sdb_opts, opts)
     elif isinstance(sdb_opts, dict):
         for key, value in sdb_opts.items():
@@ -3292,7 +3342,9 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
         # Let's get the value from the profile, if present
         if "profile" in vm_ and vm_["profile"] is not None:
             if name in opts["profiles"][vm_["profile"]]:
-                if isinstance(value, dict):
+                if isinstance(value, dict) and isinstance(
+                    opts["profiles"][vm_["profile"]][name], dict
+                ):
                     value.update(opts["profiles"][vm_["profile"]][name].copy())
                 else:
                     value = deepcopy(opts["profiles"][vm_["profile"]][name])
@@ -3904,6 +3956,11 @@ def apply_minion_config(
             f"The signging algorithm '{opts['signing_algorithm']}' is not valid. "
             f"Please specify one of {','.join(salt.crypt.VALID_SIGNING_ALGORITHMS)}."
         )
+
+    # Store original `cachedir` value, before overriding,
+    # to make overriding more accurate.
+    if "__cachedir" not in opts:
+        opts["__cachedir"] = opts["cachedir"]
 
     return opts
 

@@ -139,6 +139,24 @@ def b_fp():
 
 
 @pytest.fixture
+def pub_ec():
+    return """\
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEACXBqu2ndMLUS/Z0X/fKUGAgRUfe
+nYBie3erw/QNOYfQpgDIjNu+6xVxMLRRvSYGrQ2JREwUVXR0SR5pERAnoQ==
+-----END PUBLIC KEY-----"""
+
+
+@pytest.fixture
+def pub_ec2():
+    return """\
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErtBZ3qL5m97SzlSwOoxFzzG/1v5a
+sLzOIrXykh4yO8tDn4h6JMOe+P0HuoUbENxk4+f/1D9hTEI88rj70bi7Ig==
+-----END PUBLIC KEY-----"""
+
+
+@pytest.fixture
 def _gpg_keys_present(gnupg, a_pubkey, b_pubkey, a_fp, b_fp):
     pubkeys = [a_pubkey, b_pubkey]
     fingerprints = [a_fp, b_fp]
@@ -889,6 +907,7 @@ def test_file_managed_keep_source_false_http(
 
 
 @pytest.mark.parametrize("verify_ssl", [True, False])
+@pytest.mark.flaky(max_runs=4)
 def test_verify_ssl_https_source(file, tmp_path, ssl_webserver, verify_ssl):
     """
     test verify_ssl when its False and True when managing
@@ -952,6 +971,30 @@ def test_file_managed_signature(
     assert name.read_text() == contents_file.read_text()
 
 
+@pytest.mark.requires_salt_modules("asymmetric.verify")
+@pytest.mark.parametrize("is_list", (False, True))
+def test_file_managed_signature_sig_backend(
+    file, tmp_path, remote_grail_scene33, pub_ec, pub_ec2, is_list
+):
+    name = tmp_path / "test_file_managed_signature.txt"
+    source = remote_grail_scene33.url
+    signature = source + ".sig"
+    contents_file = remote_grail_scene33.file
+    source_hash = remote_grail_scene33.hash
+    ret = file.managed(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        signature=[signature] if is_list else signature,
+        signed_by_any=[pub_ec2, pub_ec] if is_list else pub_ec,
+        sig_backend="asymmetric",
+    )
+    assert ret.result is True
+    assert ret.changes
+    assert name.exists()
+    assert name.read_text() == contents_file.read_text()
+
+
 @pytest.mark.skipif(HAS_GNUPG is False, reason="Needs python-gnupg library")
 @pytest.mark.usefixtures("_gpg_keys_present")
 def test_file_managed_signature_fail(
@@ -972,6 +1015,33 @@ def test_file_managed_signature_fail(
         signed_by_all=signed_by_all,
     )
     assert ret.result is False
+    assert "signature could not be verified" in ret.comment
+    assert not ret.changes
+    assert not name.exists()
+    # Ensure that a new state run will attempt to redownload the source
+    # instead of verifying the invalid signature again
+    assert not modules.cp.is_cached(source)
+    assert not modules.cp.is_cached(signature)
+
+
+@pytest.mark.requires_salt_modules("asymmetric.verify")
+def test_file_managed_signature_sig_backend_fail(
+    file, tmp_path, remote_grail_scene33, pub_ec2, modules
+):
+    name = tmp_path / "test_file_managed_signature.txt"
+    source = remote_grail_scene33.url
+    signature = source + ".sig"
+    source_hash = remote_grail_scene33.hash
+    ret = file.managed(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        signature=[signature],
+        signed_by_any=pub_ec2,
+        sig_backend="asymmetric",
+    )
+    assert ret.result is False
+    assert "signature could not be verified" in ret.comment
     assert not ret.changes
     assert not name.exists()
     # Ensure that a new state run will attempt to redownload the source
@@ -1007,6 +1077,30 @@ def test_file_managed_source_hash_sig(
     assert name.read_text() == contents_file.read_text()
 
 
+@pytest.mark.requires_salt_modules("asymmetric.verify")
+@pytest.mark.parametrize("is_list", (False, True))
+def test_file_managed_source_hash_sig_sig_backend(
+    file, tmp_path, remote_grail_scene33, pub_ec, pub_ec2, is_list
+):
+    name = tmp_path / "test_file_managed_source_hash_sig.txt"
+    source = remote_grail_scene33.url
+    source_hash = remote_grail_scene33.url_hash
+    contents_file = remote_grail_scene33.file
+    signature = source_hash + ".sig"
+    ret = file.managed(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        source_hash_sig=[signature] if is_list else signature,
+        signed_by_any=[pub_ec2, pub_ec] if is_list else pub_ec,
+        sig_backend="asymmetric",
+    )
+    assert ret.result is True
+    assert ret.changes
+    assert name.exists()
+    assert name.read_text() == contents_file.read_text()
+
+
 @pytest.mark.skipif(HAS_GNUPG is False, reason="Needs python-gnupg library")
 @pytest.mark.usefixtures("_gpg_keys_present")
 def test_file_managed_source_hash_sig_fail(
@@ -1026,6 +1120,29 @@ def test_file_managed_source_hash_sig_fail(
         signed_by_all=signed_by_all,
     )
     assert ret.result is False
+    assert "signature could not be verified" in ret.comment
+    assert not ret.changes
+    assert not name.exists()
+
+
+@pytest.mark.requires_salt_modules("asymmetric.verify")
+def test_file_managed_source_hash_sig_sig_backend_fail(
+    file, tmp_path, remote_grail_scene33, pub_ec2
+):
+    name = tmp_path / "test_file_managed_source_hash_sig.txt"
+    source = remote_grail_scene33.url
+    source_hash = remote_grail_scene33.url_hash
+    signature = source_hash + ".sig"
+    ret = file.managed(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        source_hash_sig=[signature],
+        signed_by_any=pub_ec2,
+        sig_backend="asymmetric",
+    )
+    assert ret.result is False
+    assert "signature could not be verified" in ret.comment
     assert not ret.changes
     assert not name.exists()
 
@@ -1045,6 +1162,18 @@ def test_issue_60203(
     assert "Unable to manage file" in ret.comment
     assert "/files/test.tar.gz.sha256" in ret.comment
     assert "dontshowme" not in ret.comment
+
+
+def test_file_managed_new_file_diff(file, tmp_path):
+    name = tmp_path / "new_file_diff.txt"
+    ret = file.managed(str(name), contents="EITR", new_file_diff=True, test=True)
+    assert ret.changes == {
+        "diff": f"--- \n+++ \n@@ -0,0 +1 @@\n+EITR{os.linesep}",
+    }
+    assert not name.exists()
+    ret = file.managed(str(name), contents="EITR", new_file_diff=True)
+    assert ret.changes == {"diff": f"--- \n+++ \n@@ -0,0 +1 @@\n+EITR{os.linesep}"}
+    assert name.exists()
 
 
 def test_file_managed_remote_source_does_not_refetch_existing_file_with_correct_digest(

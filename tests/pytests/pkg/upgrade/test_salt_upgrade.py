@@ -77,11 +77,15 @@ def salt_test_upgrade(
     if platform.is_windows():
         # Terminate master and minion so they don't lock files during the upgrade.
         log.info("Terminating salt-master and salt-minion before upgrade")
-        salt_master.terminate()
+
         salt_minion.terminate()
 
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
-    install_salt.install(upgrade=True)
+    if sys.platform == "win32" and salt_master:
+        with salt_master.stopped():
+            install_salt.install(upgrade=True)
+    else:
+        install_salt.install(upgrade=True)
 
     if platform.is_windows():
         # Give the system a moment to fully release all file locks after the installer finishes

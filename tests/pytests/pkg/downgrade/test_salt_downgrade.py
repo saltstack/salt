@@ -63,15 +63,25 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
         install_salt.artifact_version
     )
 
-    # Test pip install before a downgrade
-    dep = "PyGithub==1.56.0"
-    install = salt_call_cli.run("--local", "pip.install", dep)
-    assert install.returncode == 0
+    # XXX: The gpg module needs a gpg binary on
+    #      windows. Ideally find a module that works on both windows/linux.
+    #      Otherwise find a module on windows to run this test agsint.
 
-    # Verify we can use the module dependent on the installed package
-    repo = "https://github.com/saltstack/salt.git"
-    use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
-    assert "Authentication information could" in use_lib.stderr
+    uninstall = salt_call_cli.run("--local", "pip.uninstall", "netaddr")
+
+    if not platform.is_windows():
+        ret = salt_call_cli.run("--local", "netaddress.list_cidr_ips", "192.168.0.0/20")
+        assert ret.returncode != 0
+        assert "netaddr python library is not installed." in ret.stderr
+
+        # Test pip install before an upgrade
+        dep = "netaddr==0.8.0"
+        install = salt_call_cli.run("--local", "pip.install", dep)
+        assert install.returncode == 0
+
+        # Verify we can use the module dependent on the installed package
+        ret = salt_call_cli.run("--local", "netaddress.list_cidr_ips", "192.168.0.0/20")
+        assert ret.returncode == 0
 
     # Verify there is a running minion by getting its PID
     salt_name = "salt"
@@ -85,11 +95,15 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
         assert old_minion_pids
 
     if platform.is_windows():
-        salt_master.terminate()
+
         salt_minion.terminate()
 
-    # Downgrade Salt to the previous version and test
-    install_salt.install(downgrade=True)
+    if platform.is_windows():
+        with salt_master.stopped():
+            # Downgrade Salt to the previous version and test
+            install_salt.install(downgrade=True)
+    else:
+        install_salt.install(downgrade=True)
 
     time.sleep(10)  # give it some time
     # downgrade install will stop services on Debian/Ubuntu
@@ -114,6 +128,8 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
             bin_file = install_salt.install_dir / "salt-call.bat"
         else:
             bin_file = install_salt.install_dir / "salt-call.exe"
+    elif platform.is_darwin() and install_salt.classic:
+        bin_file = install_salt.bin_dir / "salt-call"
 
     ret = install_salt.proc.run(bin_file, "--version")
     assert ret.returncode == 0
@@ -127,6 +143,8 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
     if is_downgrade_to_relenv and not platform.is_darwin():
         new_py_version = install_salt.package_python_version()
         if new_py_version == original_py_version:
-            # test pip install after a downgrade
-            use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
-            assert "Authentication information could" in use_lib.stderr
+            if not platform.is_windows():
+                ret = salt_call_cli.run(
+                    "--local", "netaddress.list_cidr_ips", "192.168.0.0/20"
+                )
+                assert ret.returncode == 0

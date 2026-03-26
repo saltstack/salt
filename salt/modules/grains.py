@@ -17,6 +17,8 @@ import os
 from collections.abc import Mapping
 from functools import reduce  # pylint: disable=redefined-builtin
 
+import yaml
+
 import salt.utils.compat
 import salt.utils.data
 import salt.utils.files
@@ -262,8 +264,9 @@ def setvals(grains, destructive=False, refresh_pillar=True):
     if os.path.isfile(gfn):
         with salt.utils.files.fopen(gfn, "rb") as fp_:
             try:
-                grains = salt.utils.yaml.safe_load(fp_)
-            except salt.utils.yaml.YAMLError as exc:
+                # DO NOT USE salt.utils.yaml.safe_load HERE
+                grains = yaml.safe_load(fp_)
+            except Exception as exc:  # pylint: disable=broad-except
                 return f"Unable to read existing grains file: {exc}"
         if not isinstance(grains, dict):
             grains = {}

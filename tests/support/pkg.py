@@ -495,6 +495,14 @@ class SaltPkgInstall:
                 log.error("Invalid package: %s", pkg)
                 return False
 
+            # XXX This should be temporary. See also a similar thing happening
+            # in tests/pytests/pkg/conftest.py
+            grainsdir = pathlib.Path(
+                r"C:\Program Files\Salt Project\Salt\Lib\site-packages\salt\grains"
+            )
+            shutil.copy(r"salt\grains\disks.py", grainsdir)
+
+            # Remove the service installed by the installer
             log.debug("Removing installed salt-minion service")
             self.proc.run(str(self.ssm_bin), "stop", "salt-minion", "confirm")
             subprocess.run(
@@ -960,14 +968,15 @@ class SaltPkgInstall:
                 )
                 assert ret.returncode in [0, 3010]
             else:
-                # ret = self.proc.run("start", "/wait", f"\"{pkg_path} /start-minion=0 /S\"")
-                batch_file = pkg_path.parent / "install_nsis.cmd"
-                batch_content = f"start /wait {str(pkg_path)} /start-minion=0 /S"
-                with salt.utils.files.fopen(batch_file, "w") as fp:
-                    fp.write(batch_content)
-                # Now run the batch file
-                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
+                ret = self.proc.run(str(pkg_path), "/start-minion=0", "/S", timeout=600)
                 self._check_retcode(ret)
+
+            # XXX This should be temporary. See also a similar thing happening
+            # in tests/pytests/pkg/conftest.py
+            grainsdir = pathlib.Path(
+                r"C:\Program Files\Salt Project\Salt\Lib\site-packages\salt\grains"
+            )
+            shutil.copy(r"salt\grains\disks.py", grainsdir)
 
             log.debug("Removing installed salt-minion service")
             ret = self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
@@ -1185,7 +1194,11 @@ class SaltPkgInstall:
         # Did we left anything running?!
         procs = []
         for proc in psutil.process_iter():
-            if "salt" in proc.name():
+            try:
+                name = proc.name()
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                continue
+            if "salt" in name:
                 cmdl_strg = " ".join(str(element) for element in _get_cmdline(proc))
                 if "/opt/saltstack" in cmdl_strg:
                     procs.append(proc)
@@ -1327,8 +1340,8 @@ class PkgLaunchdSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
 
         # Dereference the internal _process attribute
         self._process = None
-        # Lets log and kill any child processes left behind, including the main subprocess
-        # if it failed to properly stop
+        # Let's log and kill any child processes left behind, including the main
+        # subprocess if it failed to properly stop
         terminate_process(
             pid=pid,
             kill_children=True,

@@ -11,22 +11,20 @@ import hashlib
 import logging
 import os
 import pathlib
-import shutil
 import time
 
-import tornado.gen
+import tornado.ioloop
 
+import salt.cache
 import salt.crypt
 import salt.master
 import salt.payload
 import salt.transport.frame
 import salt.utils.channel
 import salt.utils.event
-import salt.utils.files
 import salt.utils.minions
 import salt.utils.platform
 import salt.utils.stringutils
-import salt.utils.verify
 from salt.exceptions import SaltDeserializationError, UnsupportedAlgorithm
 from salt.utils.cache import CacheCli
 
@@ -58,9 +56,7 @@ class ReqServerChannel:
     def __init__(self, opts, transport):
         self.opts = opts
         self.transport = transport
-        # The event and master_key attributes will be populated after fork.
-        #        self.event = None
-        #        self.master_key = None
+        self.cache = salt.cache.Cache(opts, driver=self.opts["keys.cache_driver"])
         self.event = salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
         )
@@ -139,15 +135,14 @@ class ReqServerChannel:
         if hasattr(self.transport, "post_fork"):
             self.transport.post_fork(self.handle_message, io_loop)
 
-    @tornado.gen.coroutine
-    def handle_message(self, payload):
+    async def handle_message(self, payload):
         if (
             not isinstance(payload, dict)
             or "enc" not in payload
             or "load" not in payload
         ):
-            log.warn("bad load received on socket")
-            raise tornado.gen.Return("bad load")
+            log.warning("bad load received on socket")
+            return "bad load"
         try:
             version = int(payload.get("version", 0))
         except ValueError:
@@ -156,13 +151,19 @@ class ReqServerChannel:
         # Enforce minimum authentication protocol version to prevent downgrade attacks
         minimum_version = self.opts.get("minimum_auth_version", 0)
         if minimum_version > 0 and version < minimum_version:
+            load = payload.get("load")
+            if isinstance(load, dict):
+                minion_id = load.get("id", "unknown minion")
+            else:
+                minion_id = "unknown minion"
             log.warning(
-                "Rejected authentication attempt using protocol version %d "
-                "(minimum required: %d)",
+                "Rejected authentication attempt from minion '%s' using "
+                "protocol version %d (minimum required: %d)",
+                minion_id,
                 version,
                 minimum_version,
             )
-            raise tornado.gen.Return("bad load")
+            return "bad load"
 
         try:
             payload = self._decode_payload(payload, version)
@@ -177,36 +178,28 @@ class ReqServerChannel:
                 )
             else:
                 log.error("Bad load from minion: %s: %s", exc_type, exc)
-            raise tornado.gen.Return("bad load")
+            return "bad load"
 
         # TODO helper functions to normalize payload?
         if not isinstance(payload, dict) or not isinstance(payload.get("load"), dict):
             log.error(
-                "payload and load must be a dict. Payload was: %s and load was %s",
+                "payload and load must be a dict. Payload was: %s",
                 payload,
-                payload.get("load"),
             )
-            raise tornado.gen.Return("payload and load must be a dict")
+            return "payload and load must be a dict"
 
         try:
             id_ = payload["load"].get("id", "")
             if "\0" in id_:
                 log.error("Payload contains an id with a null byte: %s", payload)
-                raise tornado.gen.Return("bad load: id contains a null byte")
+                return "bad load: id contains a null byte"
         except TypeError:
             log.error("Payload contains non-string id: %s", payload)
-            raise tornado.gen.Return(f"bad load: id {id_} is not a string")
+            return f"bad load: id {id_} is not a string"
 
         sign_messages = False
         if version > 1:
             sign_messages = True
-
-        # intercept the "_auth" commands, since the main daemon shouldn't know
-        # anything about our key auth
-        if payload["enc"] == "clear" and payload.get("load", {}).get("cmd") == "_auth":
-            raise tornado.gen.Return(
-                self._auth(payload["load"], sign_messages, version)
-            )
 
         if payload["enc"] == "aes":
             nonce = None
@@ -224,7 +217,7 @@ class ReqServerChannel:
                             ttl,
                             self.opts["request_server_ttl"],
                         )
-                        raise tornado.gen.Return("bad load")
+                        return "bad load"
 
                 if payload["id"] != payload["load"]["id"]:
                     log.warning(
@@ -232,44 +225,46 @@ class ReqServerChannel:
                         payload["load"]["id"],
                         payload["id"],
                     )
-                    raise tornado.gen.Return("bad load")
+                    return "bad load"
                 if not salt.utils.verify.valid_id(self.opts, payload["load"]["id"]):
                     log.warning(
                         "Request contains invalid minion id '%s'", payload["load"]["id"]
                     )
-                    raise tornado.gen.Return("bad load")
+                    return "bad load"
                 if not self.validate_token(payload, required=True):
-                    raise tornado.gen.Return("bad load")
+                    return "bad load"
             # The token won't always be present in the payload for v2 and
             # below, but if it is we always wanto validate it.
             elif not self.validate_token(payload, required=False):
-                raise tornado.gen.Return("bad load")
+                return "bad load"
 
         # TODO: test
         try:
+            # intercept the "_auth" commands, since the main daemon shouldn't know
+            # anything about our key auth
+            if (
+                payload["enc"] == "clear"
+                and payload.get("load", {}).get("cmd") == "_auth"
+            ):
+                return self._auth(payload["load"], sign_messages, version)
+
             # Take the payload_handler function that was registered when we created the channel
             # and call it, returning control to the caller until it completes
-            ret, req_opts = yield self.payload_handler(payload)
-        except Exception as e:  # pylint: disable=broad-except
-            # always attempt to return an error to the minion
-            log.error("Some exception handling a payload from minion", exc_info=True)
-            raise tornado.gen.Return("Some exception handling minion payload")
 
-        req_fun = req_opts.get("fun", "send")
-        if req_fun == "send_clear":
-            raise tornado.gen.Return(ret)
-        elif req_fun == "send":
-            if version > 2:
-                raise tornado.gen.Return(
-                    salt.crypt.Crypticle(self.opts, self.session_key(id_)).dumps(
+            ret, req_opts = await self.payload_handler(payload)
+
+            req_fun = req_opts.get("fun", "send")
+            if req_fun == "send_clear":
+                return ret
+            elif req_fun == "send":
+                if version > 2:
+                    return salt.crypt.Crypticle(self.opts, self.session_key(id_)).dumps(
                         ret, nonce
                     )
-                )
-            else:
-                raise tornado.gen.Return(self.crypticle.dumps(ret, nonce))
-        elif req_fun == "send_private":
-            raise tornado.gen.Return(
-                self._encrypt_private(
+                else:
+                    return self.crypticle.dumps(ret, nonce)
+            elif req_fun == "send_private":
+                return self._encrypt_private(
                     ret,
                     req_opts["key"],
                     req_opts["tgt"],
@@ -277,11 +272,15 @@ class ReqServerChannel:
                     sign_messages,
                     payload.get("enc_algo", salt.crypt.OAEP_SHA1),
                     payload.get("sig_algo", salt.crypt.PKCS1v15_SHA1),
-                ),
-            )
-        log.error("Unknown req_fun %s", req_fun)
-        # always attempt to return an error to the minion
-        raise tornado.gen.Return("Server-side exception handling payload")
+                )
+            log.error("Unknown req_fun %s", req_fun)
+            # always attempt to return an error to the minion
+            return "Server-side exception handling payload"
+
+        except Exception as e:  # pylint: disable=broad-except
+            # always attempt to return an error to the minion
+            log.error("Some exception handling a payload from minion", exc_info=True)
+            return "Some exception handling minion payload"
 
     def _encrypt_private(
         self,
@@ -297,20 +296,26 @@ class ReqServerChannel:
         The server equivalent of ReqChannel.crypted_transfer_decode_dictentry
         """
         # encrypt with a specific AES key
-        if self.master_key.cluster_key:
-            pubfn = os.path.join(self.opts["cluster_pki_dir"], "minions", target)
-        else:
-            pubfn = os.path.join(self.opts["pki_dir"], "minions", target)
-        key = salt.crypt.Crypticle.generate_key_string()
-        pcrypt = salt.crypt.Crypticle(self.opts, key)
         try:
-            pub = salt.crypt.PublicKey(pubfn)
-        except (ValueError, IndexError, TypeError):
-            log.error("Bad load from minion")
-            return {"error": "bad load"}
-        except OSError:
-            log.error("AES key not found")
-            return {"error": "AES key not found"}
+            key = salt.crypt.Crypticle.generate_key_string()
+            pcrypt = salt.crypt.Crypticle(self.opts, key)
+            pub = self.cache.fetch("keys", target)
+            if not isinstance(pub, dict) or "pub" not in pub:
+                log.error(
+                    "No pub key found for target %s, its pub key was likely deleted mid-request.",
+                    target,
+                )
+                return self.crypticle.dumps({})
+
+            pub = salt.crypt.PublicKey.from_str(pub["pub"])
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error(
+                'Corrupt or missing public key "%s": %s',
+                target,
+                exc,
+                exc_info_on_loglevel=logging.DEBUG,
+            )
+            return self.crypticle.dumps({})
         pret = {}
         pret["key"] = pub.encrypt(key, encryption_algorithm)
         if ret is False:
@@ -323,9 +328,7 @@ class ReqServerChannel:
             )
             signed_msg = {
                 "data": tosign,
-                "sig": salt.crypt.PrivateKey(self.master_key.rsa_path).sign(
-                    tosign, algorithm=signing_algorithm
-                ),
+                "sig": self.master_key.sign(tosign, algorithm=signing_algorithm),
             }
             pret[dictkey] = pcrypt.dumps(signed_msg)
         else:
@@ -338,9 +341,7 @@ class ReqServerChannel:
             return {
                 "enc": "clear",
                 "load": tosign,
-                "sig": salt.crypt.PrivateKey(self.master_key.rsa_path).sign(
-                    tosign, algorithm=algorithm
-                ),
+                "sig": self.master_key.sign(tosign, algorithm=algorithm),
             }
         except UnsupportedAlgorithm:
             log.info(
@@ -415,7 +416,7 @@ class ReqServerChannel:
                 log.warning("Invalid minion id: %s", id_)
                 return False
             try:
-                pub = salt.crypt.PublicKey(pub_path)
+                pub = salt.crypt.PublicKey.from_file(pub_path)
             except OSError:
                 log.warning(
                     "Salt minion claiming to be %s attempted to communicate with "
@@ -463,6 +464,8 @@ class ReqServerChannel:
             else:
                 return {"enc": "clear", "load": {"ret": False}}
         log.info("Authentication request from %s", load["id"])
+        # remove any trailing whitespace
+        load["pub"] = load["pub"].strip()
 
         # 0 is default which should be 'unlimited'
         if self.opts["max_minions"] > 0:
@@ -488,14 +491,20 @@ class ReqServerChannel:
                         self.opts["max_minions"],
                         load["id"],
                     )
-                    eload = {
-                        "result": False,
-                        "act": "full",
-                        "id": load["id"],
-                        "pub": load["pub"],
-                    }
 
                     if self.opts.get("auth_events") is True:
+                        eload = {
+                            "result": False,
+                            "act": "full",
+                            "id": load["id"],
+                            "pub": load["pub"],
+                        }
+                        autosign_grains = load.get("autosign_grains", None)
+                        if (
+                            "full" in self.opts.get("auth_events_autosign_grains", [])
+                            and autosign_grains
+                        ):
+                            eload["autosign_grains"] = autosign_grains
                         self.event.fire_event(
                             eload, salt.utils.event.tagify(prefix="auth")
                         )
@@ -506,33 +515,47 @@ class ReqServerChannel:
                     else:
                         return {"enc": "clear", "load": {"ret": "full"}}
 
-        pki_dir = self.opts["pki_dir"]
-        if self.opts["cluster_id"]:
-            if self.opts["cluster_pki_dir"]:
-                pki_dir = self.opts["cluster_pki_dir"]
-
         # Check if key is configured to be auto-rejected/signed
         auto_reject = self.auto_key.check_autoreject(load["id"])
         auto_sign = self.auto_key.check_autosign(
             load["id"], load.get("autosign_grains", None)
         )
 
-        pubfn = os.path.join(pki_dir, "minions", load["id"])
-        pubfn_pend = os.path.join(pki_dir, "minions_pre", load["id"])
-        pubfn_rejected = os.path.join(pki_dir, "minions_rejected", load["id"])
-        pubfn_denied = os.path.join(pki_dir, "minions_denied", load["id"])
+        # key will be a dict of str and state
+        # state can be one of pending, rejected, accepted
+        key = self.cache.fetch("keys", load["id"])
+
+        # although keys should be always newline stripped in current state of auth.py
+        # older salt versions  may have written pub-keys with trailing whitespace
+        if key and "pub" in key:
+            key["pub"] = key["pub"].strip()
+
+        # any number of keys can be denied for a given minion_id regardless of above
+        denied = self.cache.fetch("denied_keys", load["id"]) or []
+
         if self.opts["open_mode"]:
             # open mode is turned on, nuts to checks and overwrite whatever
             # is there
             pass
-        elif os.path.isfile(pubfn_rejected):
+        elif key and key["state"] == "rejected":
             # The key has been rejected, don't place it in pending
             log.info(
                 "Public key rejected for %s. Key is present in rejection key dir.",
                 load["id"],
             )
-            eload = {"result": False, "id": load["id"], "pub": load["pub"]}
             if self.opts.get("auth_events") is True:
+                eload = {
+                    "result": False,
+                    "act": "reject",
+                    "id": load["id"],
+                    "pub": load["pub"],
+                }
+                autosign_grains = load.get("autosign_grains", None)
+                if (
+                    "reject" in self.opts.get("auth_events_autosign_grains", [])
+                    and autosign_grains
+                ):
+                    eload["autosign_grains"] = autosign_grains
                 self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
             if sign_messages:
                 return self._clear_signed(
@@ -540,43 +563,33 @@ class ReqServerChannel:
                 )
             else:
                 return {"enc": "clear", "load": {"ret": False}}
-        elif os.path.isfile(pubfn):
+        elif key and key["state"] == "accepted":
             # The key has been accepted, check it
-            with salt.utils.files.fopen(pubfn, "r") as pubfn_handle:
-                if not self.compare_keys(pubfn_handle.read(), load["pub"]):
-                    log.error(
-                        "Authentication attempt from %s failed, the public "
-                        "keys did not match. This may be an attempt to compromise "
-                        "the Salt cluster.",
-                        load["id"],
-                    )
-                    # put denied minion key into minions_denied
-                    with salt.utils.files.fopen(pubfn_denied, "w+") as fp_:
-                        fp_.write(load["pub"])
+            if not self.compare_keys(key["pub"], load["pub"]):
+                log.error(
+                    "Authentication attempt from %s failed, the public "
+                    "keys did not match. This may be an attempt to compromise "
+                    "the Salt cluster.",
+                    load["id"],
+                )
+                # put denied minion key into minions_denied
+                if load["pub"] not in denied:
+                    denied.append(load["pub"])
+                    self.cache.store("denied_keys", load["id"], denied)
+
+                if self.opts.get("auth_events") is True:
                     eload = {
                         "result": False,
                         "id": load["id"],
                         "act": "denied",
                         "pub": load["pub"],
                     }
-                    if self.opts.get("auth_events") is True:
-                        self.event.fire_event(
-                            eload, salt.utils.event.tagify(prefix="auth")
-                        )
-                    if sign_messages:
-                        return self._clear_signed(
-                            {"ret": False, "nonce": load["nonce"]}, sig_algo
-                        )
-                    else:
-                        return {"enc": "clear", "load": {"ret": False}}
-
-        elif not os.path.isfile(pubfn_pend):
-            # The key has not been accepted, this is a new minion
-            if os.path.isdir(pubfn_pend):
-                # The key path is a directory, error out
-                log.info("New public key %s is a directory", load["id"])
-                eload = {"result": False, "id": load["id"], "pub": load["pub"]}
-                if self.opts.get("auth_events") is True:
+                    autosign_grains = load.get("autosign_grains", None)
+                    if (
+                        "denied" in self.opts.get("auth_events_autosign_grains", [])
+                        and autosign_grains
+                    ):
+                        eload["autosign_grains"] = autosign_grains
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
                 if sign_messages:
                     return self._clear_signed(
@@ -585,34 +598,41 @@ class ReqServerChannel:
                 else:
                     return {"enc": "clear", "load": {"ret": False}}
 
+        elif not key:
+            # The key has not been accepted, this is a new minion
             if auto_reject:
-                key_path = pubfn_rejected
                 log.info(
                     "New public key for %s rejected via autoreject_file", load["id"]
                 )
+                key = {"pub": load["pub"], "state": "rejected"}
+                self.cache.store("keys", load["id"], key)
                 key_act = "reject"
                 key_result = False
             elif not auto_sign:
-                key_path = pubfn_pend
                 log.info("New public key for %s placed in pending", load["id"])
+                key = {"pub": load["pub"], "state": "pending"}
+                self.cache.store("keys", load["id"], key)
                 key_act = "pend"
                 key_result = True
             else:
                 # The key is being automatically accepted, don't do anything
                 # here and let the auto accept logic below handle it.
-                key_path = None
+                key_result = None
 
-            if key_path is not None:
-                # Write the key to the appropriate location
-                with salt.utils.files.fopen(key_path, "w+") as fp_:
-                    fp_.write(load["pub"])
-                eload = {
-                    "result": key_result,
-                    "act": key_act,
-                    "id": load["id"],
-                    "pub": load["pub"],
-                }
+            if key_result is not None:
                 if self.opts.get("auth_events") is True:
+                    eload = {
+                        "result": key_result,
+                        "act": key_act,
+                        "id": load["id"],
+                        "pub": load["pub"],
+                    }
+                    autosign_grains = load.get("autosign_grains", None)
+                    if (
+                        key_act in self.opts.get("auth_events_autosign_grains", [])
+                        and autosign_grains
+                    ):
+                        eload["autosign_grains"] = autosign_grains
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
                 if sign_messages:
                     return self._clear_signed(
@@ -622,27 +642,31 @@ class ReqServerChannel:
                 else:
                     return {"enc": "clear", "load": {"ret": key_result}}
 
-        elif os.path.isfile(pubfn_pend):
+        elif key and key["state"] == "pending":
             # This key is in the pending dir and is awaiting acceptance
             if auto_reject:
                 # We don't care if the keys match, this minion is being
                 # auto-rejected. Move the key file from the pending dir to the
                 # rejected dir.
-                try:
-                    shutil.move(pubfn_pend, pubfn_rejected)
-                except OSError:
-                    pass
+                key["state"] = "rejected"
+                self.cache.store("keys", load["id"], key)
                 log.info(
                     "Pending public key for %s rejected via autoreject_file",
                     load["id"],
                 )
-                eload = {
-                    "result": False,
-                    "act": "reject",
-                    "id": load["id"],
-                    "pub": load["pub"],
-                }
                 if self.opts.get("auth_events") is True:
+                    eload = {
+                        "result": False,
+                        "act": "reject",
+                        "id": load["id"],
+                        "pub": load["pub"],
+                    }
+                    autosign_grains = load.get("autosign_grains", None)
+                    if (
+                        "reject" in self.opts.get("auth_events_autosign_grains", [])
+                        and autosign_grains
+                    ):
+                        eload["autosign_grains"] = autosign_grains
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
                 if sign_messages:
                     return self._clear_signed(
@@ -656,92 +680,123 @@ class ReqServerChannel:
                 # Check if the keys are the same and error out if this is the
                 # case. Otherwise log the fact that the minion is still
                 # pending.
-                with salt.utils.files.fopen(pubfn_pend, "r") as pubfn_handle:
-                    if not self.compare_keys(pubfn_handle.read(), load["pub"]):
-                        log.error(
-                            "Authentication attempt from %s failed, the public "
-                            "key in pending did not match. This may be an "
-                            "attempt to compromise the Salt cluster.",
-                            load["id"],
-                        )
-                        # put denied minion key into minions_denied
-                        with salt.utils.files.fopen(pubfn_denied, "w+") as fp_:
-                            fp_.write(load["pub"])
+                if not self.compare_keys(key["pub"], load["pub"]):
+                    log.error(
+                        "Authentication attempt from %s failed, the public "
+                        "key in pending did not match. This may be an "
+                        "attempt to compromise the Salt cluster.",
+                        load["id"],
+                    )
+                    # put denied minion key into minions_denied
+                    if load["pub"] not in denied:
+                        denied.append(load["pub"])
+                        self.cache.store("denied_keys", load["id"], denied)
+                    if self.opts.get("auth_events") is True:
                         eload = {
                             "result": False,
                             "id": load["id"],
                             "act": "denied",
                             "pub": load["pub"],
                         }
-                        if self.opts.get("auth_events") is True:
-                            self.event.fire_event(
-                                eload, salt.utils.event.tagify(prefix="auth")
-                            )
-                        if sign_messages:
-                            return self._clear_signed(
-                                {"ret": False, "nonce": load["nonce"]}, sig_algo
-                            )
-                        else:
-                            return {"enc": "clear", "load": {"ret": False}}
-                    else:
-                        log.info(
-                            "Authentication failed from host %s, the key is in "
-                            "pending and needs to be accepted with salt-key "
-                            "-a %s",
-                            load["id"],
-                            load["id"],
+                        autosign_grains = load.get("autosign_grains", None)
+                        if (
+                            "denied" in self.opts.get("auth_events_autosign_grains", [])
+                            and autosign_grains
+                        ):
+                            eload["autosign_grains"] = autosign_grains
+                        self.event.fire_event(
+                            eload, salt.utils.event.tagify(prefix="auth")
                         )
+                    if sign_messages:
+                        return self._clear_signed(
+                            {"ret": False, "nonce": load["nonce"]}, sig_algo
+                        )
+                    else:
+                        return {"enc": "clear", "load": {"ret": False}}
+                else:
+                    log.info(
+                        "Authentication failed from host %s, the key is in "
+                        "pending and needs to be accepted with salt-key "
+                        "-a %s",
+                        load["id"],
+                        load["id"],
+                    )
+                    if self.opts.get("auth_events") is True:
                         eload = {
                             "result": True,
                             "act": "pend",
                             "id": load["id"],
                             "pub": load["pub"],
                         }
-                        if self.opts.get("auth_events") is True:
-                            self.event.fire_event(
-                                eload, salt.utils.event.tagify(prefix="auth")
-                            )
-                        if sign_messages:
-                            return self._clear_signed(
-                                {"ret": True, "nonce": load["nonce"]}, sig_algo
-                            )
-                        else:
-                            return {"enc": "clear", "load": {"ret": True}}
+                        autosign_grains = load.get("autosign_grains", None)
+                        if (
+                            "pend" in self.opts.get("auth_events_autosign_grains", [])
+                            and autosign_grains
+                        ):
+                            eload["autosign_grains"] = autosign_grains
+                        self.event.fire_event(
+                            eload, salt.utils.event.tagify(prefix="auth")
+                        )
+                    if sign_messages:
+                        return self._clear_signed(
+                            {"ret": True, "nonce": load["nonce"]}, sig_algo
+                        )
+                    else:
+                        return {"enc": "clear", "load": {"ret": True}}
             else:
                 # This key is in pending and has been configured to be
                 # auto-signed. Check to see if it is the same key, and if
                 # so, pass on doing anything here, and let it get automatically
                 # accepted below.
-                with salt.utils.files.fopen(pubfn_pend, "r") as pubfn_handle:
-                    if not self.compare_keys(pubfn_handle.read(), load["pub"]):
-                        log.error(
-                            "Authentication attempt from %s failed, the public "
-                            "keys in pending did not match. This may be an "
-                            "attempt to compromise the Salt cluster.",
-                            load["id"],
+                if not self.compare_keys(key["pub"], load["pub"]):
+                    log.error(
+                        "Authentication attempt from %s failed, the public "
+                        "keys in pending did not match. This may be an "
+                        "attempt to compromise the Salt cluster.",
+                        load["id"],
+                    )
+                    # put denied minion key into minions_denied
+                    if load["pub"] not in denied:
+                        denied.append(load["pub"])
+                        self.cache.store("denied_keys", load["id"], denied)
+                    if self.opts.get("auth_events") is True:
+                        eload = {
+                            "result": False,
+                            "act": "denied",
+                            "id": load["id"],
+                            "pub": load["pub"],
+                        }
+                        autosign_grains = load.get("autosign_grains", None)
+                        if (
+                            "denied" in self.opts.get("auth_events_autosign_grains", [])
+                            and autosign_grains
+                        ):
+                            eload["autosign_grains"] = autosign_grains
+                        self.event.fire_event(
+                            eload, salt.utils.event.tagify(prefix="auth")
                         )
-                        # put denied minion key into minions_denied
-                        with salt.utils.files.fopen(pubfn_denied, "w+") as fp_:
-                            fp_.write(load["pub"])
-                        eload = {"result": False, "id": load["id"], "pub": load["pub"]}
-                        if self.opts.get("auth_events") is True:
-                            self.event.fire_event(
-                                eload, salt.utils.event.tagify(prefix="auth")
-                            )
-                        if sign_messages:
-                            return self._clear_signed(
-                                {"ret": False, "nonce": load["nonce"]}, sig_algo
-                            )
-                        else:
-                            return {"enc": "clear", "load": {"ret": False}}
+                    if sign_messages:
+                        return self._clear_signed(
+                            {"ret": False, "nonce": load["nonce"]}, sig_algo
+                        )
                     else:
-                        os.remove(pubfn_pend)
-
+                        return {"enc": "clear", "load": {"ret": False}}
         else:
             # Something happened that I have not accounted for, FAIL!
             log.warning("Unaccounted for authentication failure")
-            eload = {"result": False, "id": load["id"], "pub": load["pub"]}
             if self.opts.get("auth_events") is True:
+                eload = {
+                    "result": False,
+                    "act": "error",
+                    "id": load["id"],
+                    "pub": load["pub"],
+                }
+                autosign_grains = load.get("autosign_grains", None)
+                if (
+                    "error" in self.opts.get("auth_events_autosign_grains", [])
+                    and autosign_grains
+                ):
+                    eload["autosign_grains"] = autosign_grains
                 self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
             if sign_messages:
                 return self._clear_signed(
@@ -751,20 +806,16 @@ class ReqServerChannel:
                 return {"enc": "clear", "load": {"ret": False}}
 
         log.info("Authentication accepted from %s", load["id"])
+
         # only write to disk if you are adding the file, and in open mode,
         # which implies we accept any key from a minion.
-        if not os.path.isfile(pubfn) and not self.opts["open_mode"]:
-            with salt.utils.files.fopen(pubfn, "w+") as fp_:
-                fp_.write(load["pub"])
+        if (not key or key["state"] != "accepted") and not self.opts["open_mode"]:
+            key = {"pub": load["pub"], "state": "accepted"}
+            self.cache.store("keys", load["id"], key)
         elif self.opts["open_mode"]:
-            disk_key = ""
-            if os.path.isfile(pubfn):
-                with salt.utils.files.fopen(pubfn, "r") as fp_:
-                    disk_key = fp_.read()
-            if load["pub"] and load["pub"] != disk_key:
-                log.debug("Host key change detected in open mode.")
-                with salt.utils.files.fopen(pubfn, "w+") as fp_:
-                    fp_.write(load["pub"])
+            if load["pub"] and (not key or load["pub"] != key["pub"]):
+                key = {"pub": load["pub"], "state": "accepted"}
+                self.cache.store("keys", load["id"], key)
             elif not load["pub"]:
                 log.error("Public key is empty: %s", load["id"])
                 if sign_messages:
@@ -783,9 +834,14 @@ class ReqServerChannel:
         # The key payload may sometimes be corrupt when using auto-accept
         # and an empty request comes in
         try:
-            pub = salt.crypt.PublicKey(pubfn)
-        except salt.crypt.InvalidKeyError as err:
-            log.error('Corrupt public key "%s": %s', pubfn, err)
+            pub = salt.crypt.PublicKey.from_str(key["pub"])
+        except Exception as err:  # pylint: disable=broad-except
+            log.error(
+                'Corrupt or missing public key "%s": %s',
+                load["id"],
+                err,
+                exc_info_on_loglevel=logging.DEBUG,
+            )
             if sign_messages:
                 return self._clear_signed(
                     {"ret": False, "nonce": load["nonce"]}, sig_algo
@@ -803,31 +859,23 @@ class ReqServerChannel:
         # sent to the minion that was just authenticated
         if self.opts["master_sign_pubkey"]:
             # append the pre-computed signature to the auth-reply
-            if self.master_key.pubkey_signature():
+            if self.master_key.pubkey_signature:
                 log.debug("Adding pubkey signature to auth-reply")
-                log.debug(self.master_key.pubkey_signature())
-                ret.update({"pub_sig": self.master_key.pubkey_signature()})
+                log.debug(self.master_key.pubkey_signature)
+                ret.update({"pub_sig": self.master_key.pubkey_signature})
             else:
                 # the master has its own signing-keypair, compute the master.pub's
                 # signature and append that to the auth-reply
-
-                # get the key_pass for the signing key
-                key_pass = salt.utils.sdb.sdb_get(
-                    self.opts["signing_key_pass"], self.opts
-                )
                 log.debug("Signing master public key before sending")
-                pub_sign = salt.crypt.sign_message(
-                    self.master_key.get_sign_paths()[1],
-                    ret["pub_key"],
-                    key_pass,
-                    algorithm=sig_algo,
+                pub_sign = self.master_key.sign_key.sign(
+                    ret["pub_key"], algorithm=sig_algo
                 )
                 ret.update({"pub_sig": binascii.b2a_base64(pub_sign)})
 
         if self.opts["auth_mode"] >= 2:
             if "token" in load:
                 try:
-                    mtoken = self.master_key.key.decrypt(load["token"], enc_algo)
+                    mtoken = self.master_key.decrypt(load["token"], enc_algo)
                     aes = "{}_|-{}".format(
                         salt.master.SMaster.secrets["aes"]["secret"].value, mtoken
                     )
@@ -850,7 +898,7 @@ class ReqServerChannel:
         else:
             if "token" in load:
                 try:
-                    mtoken = self.master_key.key.decrypt(load["token"], enc_algo)
+                    mtoken = self.master_key.decrypt(load["token"], enc_algo)
                     ret["token"] = pub.encrypt(mtoken, enc_algo)
                 except UnsupportedAlgorithm as exc:
                     log.info(
@@ -876,9 +924,20 @@ class ReqServerChannel:
 
         # Be aggressive about the signature
         digest = salt.utils.stringutils.to_bytes(hashlib.sha256(aes).hexdigest())
-        ret["sig"] = self.master_key.key.encrypt(digest)
-        eload = {"result": True, "act": "accept", "id": load["id"], "pub": load["pub"]}
+        ret["sig"] = self.master_key.encrypt(digest)
         if self.opts.get("auth_events") is True:
+            eload = {
+                "result": True,
+                "act": "accept",
+                "id": load["id"],
+                "pub": load["pub"],
+            }
+            autosign_grains = load.get("autosign_grains", None)
+            if (
+                "accept" in self.opts.get("auth_events_autosign_grains", [])
+                and autosign_grains
+            ):
+                eload["autosign_grains"] = autosign_grains
             self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
         if sign_messages:
             ret["nonce"] = load["nonce"]
@@ -1065,9 +1124,9 @@ class PubServerChannel:
         if self.opts["sign_pub_messages"]:
             log.debug("Signing data packet")
             payload["sig_algo"] = self.opts["publish_signing_algorithm"]
-            payload["sig"] = salt.crypt.PrivateKey(
-                self.master_key.rsa_path,
-            ).sign(payload["load"], self.opts["publish_signing_algorithm"])
+            payload["sig"] = self.master_key.sign(
+                payload["load"], self.opts["publish_signing_algorithm"]
+            )
 
         int_payload = {"payload": salt.payload.dumps(payload)}
 
@@ -1122,11 +1181,8 @@ class MasterPubServerChannel:
     def send_aes_key_event(self):
         data = {"peer_id": self.opts["id"], "peers": {}}
         for peer in self.opts.get("cluster_peers", []):
-            peer_pub = (
-                pathlib.Path(self.opts["cluster_pki_dir"]) / "peers" / f"{peer}.pub"
-            )
-            if peer_pub.exists():
-                pub = salt.crypt.PublicKey(peer_pub)
+            pub = self.master_key.fetch(f"peers/{peer}.pub")
+            if pub:
                 aes = salt.master.SMaster.secrets["aes"]["secret"].value
                 digest = salt.utils.stringutils.to_bytes(
                     hashlib.sha256(aes).hexdigest()
@@ -1136,7 +1192,7 @@ class MasterPubServerChannel:
                     "sig": self.master_key.master_key.encrypt(digest),
                 }
             else:
-                log.warning("Peer key missing %r", peer_pub)
+                log.warning("Peer key missing %r", "peers/{peer}.pub")
                 data["peers"][peer] = {}
         with salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
@@ -1205,10 +1261,13 @@ class MasterPubServerChannel:
                 payload_handler=self.handle_pool_publish,
             )
             self.pool_puller.start()
-        self.io_loop.add_callback(
-            self.transport.publisher,
-            self.publish_payload,
-            io_loop=self.io_loop,
+        # Extract asyncio loop for create_task
+        aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
+        aio_loop.create_task(
+            self.transport.publisher(
+                self.publish_payload,
+                io_loop=self.io_loop,
+            )
         )
         # run forever
         try:
@@ -1220,7 +1279,7 @@ class MasterPubServerChannel:
 
     async def handle_pool_publish(self, payload):
         """
-        Handle incomming events from cluster peer.
+        Handle incoming events from cluster peer.
         """
         try:
             tag, data = salt.utils.event.SaltEvent.unpack(payload)
@@ -1234,10 +1293,7 @@ class MasterPubServerChannel:
                 digest = salt.utils.stringutils.to_bytes(
                     hashlib.sha256(key_str).hexdigest()
                 )
-                pub_path = (
-                    pathlib.Path(self.opts["cluster_pki_dir"]) / "peers" / f"{peer}.pub"
-                )
-                key = salt.crypt.PublicKey(pub_path)
+                key = self.master_key.fetch(f"peers/{peer}.pub")
                 m_digest = key.decrypt(sig)
                 if m_digest != digest:
                     log.error("Invalid aes signature from peer: %s", peer)

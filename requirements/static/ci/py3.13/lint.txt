@@ -14,7 +14,7 @@ aiohttp==3.13.3
     #   aiohttp-retry
     #   etcd3-py
     #   twilio
-aiohttp-retry==2.9.1
+aiohttp-retry==2.8.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   twilio
@@ -31,7 +31,7 @@ ansible-core==2.20.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   ansible
-anyio==4.12.1
+anyio==4.6.2.post1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   httpx
@@ -48,7 +48,7 @@ asn1crypto==1.5.1
     #   oscrypto
 astroid==3.1.0
     # via pylint
-attrs==25.4.0
+attrs==24.2.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
@@ -60,7 +60,7 @@ autocommand==2.2.2
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   jaraco-text
-bcrypt==5.0.0
+bcrypt==4.2.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
@@ -69,19 +69,19 @@ boto==2.49.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
-boto3==1.42.33
+boto3==1.35.46
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
     #   moto
-botocore==1.42.33
+botocore==1.35.46
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.1.4
+certifi==2024.8.30
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
@@ -103,7 +103,7 @@ cffi==2.0.0
     #   cryptography
     #   pygit2
     #   pynacl
-charset-normalizer==3.4.4
+charset-normalizer==3.4.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
@@ -112,7 +112,7 @@ cheetah3==3.2.6.post1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
-cheroot==11.1.2
+cheroot==10.0.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
@@ -126,16 +126,11 @@ cherrypy==18.10.0
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/linux.in
-clustershell==1.9.3
+clustershell==1.9.2
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
-contextvars==2.4
-    # via
-    #   -c requirements/static/ci/py3.13/linux.txt
-    #   -c requirements/static/pkg/py3.13/linux.txt
-    #   -r requirements/base.txt
-croniter==6.0.0
+croniter==3.0.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
@@ -153,7 +148,7 @@ cryptography==46.0.5
     #   paramiko
     #   pyopenssl
     #   vcert
-dill==0.4.1
+dill==0.3.9
     # via pylint
 distlib==0.4.0
     # via
@@ -165,7 +160,7 @@ distro==1.9.0
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt
-dnspython==2.8.0
+dnspython==2.7.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
@@ -182,20 +177,25 @@ etcd3-py==0.1.6
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
-filelock==3.20.3
+filelock==3.25.2
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
+    #   python-discovery
     #   virtualenv
-frozenlist==1.8.0
+frozenlist==1.7.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt
     #   aiohttp
     #   aiosignal
-genshi==0.7.10
+future==1.0.0
+    # via
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   textfsm
+genshi==0.7.9
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
@@ -210,7 +210,7 @@ gitpython==3.1.46
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
-h11==0.16.0
+h11==0.14.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   httpcore
@@ -218,15 +218,15 @@ hglib==2.6.2
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/linux.in
-httpcore==1.0.9
+httpcore==1.0.6
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   httpx
-httpx==0.28.1
+httpx==0.27.2
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   python-telegram-bot
-idna==3.11
+idna==3.10
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
@@ -236,36 +236,26 @@ idna==3.11
     #   httpx
     #   requests
     #   yarl
-immutables==0.21
-    # via
-    #   -c requirements/static/ci/py3.13/linux.txt
-    #   -c requirements/static/pkg/py3.13/linux.txt
-    #   -r requirements/base.txt
-    #   contextvars
-importlib-metadata==8.7.1
+importlib-metadata==8.7.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.in
-invoke==2.2.1
-    # via
-    #   -c requirements/static/ci/py3.13/linux.txt
-    #   paramiko
 isort==5.13.2
     # via pylint
-jaraco-collections==5.2.1
+jaraco-collections==5.1.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   cherrypy
-jaraco-context==6.1.0
+jaraco-context==6.1.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt
     #   jaraco-text
-jaraco-functools==4.4.0
+jaraco-functools==4.1.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
@@ -295,11 +285,11 @@ jmespath==1.1.0
     #   -r requirements/static/ci/common.in
     #   boto3
     #   botocore
-jsonschema==4.26.0
+jsonschema==4.23.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
-jsonschema-specifications==2025.9.1
+jsonschema-specifications==2024.10.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   jsonschema
@@ -307,7 +297,7 @@ junit-xml==1.9
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
-junos-eznc==2.7.6
+junos-eznc==2.7.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
@@ -340,13 +330,13 @@ looseversion==1.3.0
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt
-lxml==6.0.2
+lxml==5.3.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   junos-eznc
     #   ncclient
     #   xmldiff
-mako==1.3.10
+mako==1.3.6
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
@@ -360,11 +350,11 @@ markupsafe==2.1.5
     #   werkzeug
 mccabe==0.7.0
     # via pylint
-mercurial==7.1.2
+mercurial==6.8.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/linux.in
-more-itertools==10.8.0
+more-itertools==10.5.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
@@ -374,22 +364,22 @@ more-itertools==10.8.0
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-moto==5.1.20
+moto==5.0.18
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
-msgpack==1.1.2
+msgpack==1.1.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt
-multidict==6.7.0
+multidict==6.1.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   aiohttp
     #   yarl
-ncclient==0.7.0
+ncclient==0.6.16
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   junos-eznc
@@ -407,28 +397,28 @@ packaging==24.0
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt
     #   ansible-core
-paramiko==4.0.0
+paramiko==3.5.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
-    #   junos-eznc
     #   ncclient
     #   scp
 passlib==1.7.4
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
-pathspec==1.0.3
+pathspec==0.12.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   yamllint
-platformdirs==4.5.1
+platformdirs==4.9.4
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   pylint
+    #   python-discovery
     #   virtualenv
-portend==3.2.1
+portend==3.2.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
@@ -439,7 +429,7 @@ propcache==0.4.1
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   aiohttp
     #   yarl
-psutil==7.2.1
+psutil==6.1.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
@@ -449,19 +439,19 @@ pyasn1==0.6.2
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt
-pycparser==3.0
+pycparser==2.22
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.in
     #   cffi
-pycryptodomex==3.23.0
+pycryptodomex==3.21.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/crypto.txt
-pygit2==1.19.1
+pygit2==1.16.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/linux.in
@@ -473,7 +463,7 @@ pyinotify==0.9.6
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
-pyjwt==2.10.1
+pyjwt==2.9.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   twilio
@@ -481,11 +471,11 @@ pylint==3.1.1
     # via
     #   -r requirements/static/ci/lint.in
     #   saltpylint
-pymysql==1.1.2
+pymysql==1.1.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/linux.in
-pynacl==1.6.2
+pynacl==1.5.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
@@ -497,7 +487,7 @@ pyopenssl==25.3.0
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
-pyparsing==3.3.2
+pyparsing==3.2.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   junos-eznc
@@ -521,30 +511,35 @@ python-dateutil==2.9.0.post0
     #   moto
     #   tempora
     #   vcert
+python-discovery==1.1.3
+    # via
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   virtualenv
 python-etcd==0.4.5
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
-python-gnupg==0.5.6
+python-gnupg==0.5.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.in
-python-telegram-bot==22.5
+python-telegram-bot==21.6
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/linux.in
-pytz==2025.2
+pytz==2024.2
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   croniter
-pyvmomi==9.0.0.0
+pyvmomi==8.0.3.0.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
-pyyaml==6.0.3
+pyyaml==6.0.2
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
@@ -555,8 +550,8 @@ pyyaml==6.0.3
     #   kubernetes
     #   responses
     #   yamllint
-    #   yamlloader
-pyzmq==27.1.0
+    #   yamlordereddictloader
+pyzmq==26.2.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
@@ -569,7 +564,7 @@ redis-py-cluster==2.1.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/linux.in
-referencing==0.37.0
+referencing==0.35.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   jsonschema
@@ -594,11 +589,11 @@ requests-oauthlib==2.0.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   kubernetes
-resolvelib==1.2.1
+resolvelib==1.0.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   ansible-core
-responses==0.25.8
+responses==0.25.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   moto
@@ -606,7 +601,7 @@ rfc3987==1.3.8
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
-rpds-py==0.30.0
+rpds-py==0.20.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   jsonschema
@@ -617,7 +612,7 @@ rpm-vercmp==0.1.2
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.in
-s3transfer==0.16.0
+s3transfer==0.10.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   boto3
@@ -631,37 +626,46 @@ semantic-version==2.10.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   etcd3-py
-setproctitle==1.3.7
+setproctitle==1.3.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.in
-six==1.17.0
+six==1.16.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   etcd3-py
+    #   genshi
     #   junit-xml
     #   junos-eznc
     #   kubernetes
+    #   ncclient
     #   python-consul
     #   python-dateutil
+    #   pyvmomi
+    #   textfsm
     #   transitions
     #   vcert
-slack-bolt==1.27.0
+slack-bolt==1.21.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/linux.in
-slack-sdk==3.39.0
+slack-sdk==3.33.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   slack-bolt
-smmap==5.0.2
+smmap==5.0.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   gitdb
+sniffio==1.3.1
+    # via
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   anyio
+    #   httpx
 sqlparse==0.5.5
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -670,36 +674,38 @@ strict-rfc3339==0.7
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
-tempora==5.8.1
+tempora==5.7.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   portend
-textfsm==2.1.0
+textfsm==1.1.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
 timelib==0.3.0
     # via
+    #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
+    #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.in
 toml==0.10.2
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/ci/lint.in
-tomlkit==0.14.0
+tomlkit==0.13.2
     # via pylint
 tornado==6.5.4
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt
-transitions==0.9.3
+transitions==0.9.2
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   junos-eznc
-twilio==9.9.1
+twilio==9.3.4
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/linux.in
@@ -718,7 +724,7 @@ vcert==0.9.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
-virtualenv==20.36.1
+virtualenv==21.2.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
@@ -729,7 +735,7 @@ vultr==1.0.1
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt
-watchdog==6.0.0
+watchdog==5.0.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
@@ -751,15 +757,15 @@ xmldiff==2.7.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/common.in
-xmltodict==1.0.2
+xmltodict==0.14.2
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   moto
-yamllint==1.38.0
+yamllint==1.35.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/linux.in
-yamlloader==1.6.0
+yamlordereddictloader==0.4.2
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   junos-eznc
@@ -768,12 +774,12 @@ yarl==1.22.0
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   aiohttp
-zc-lockfile==4.0
+zc-lockfile==3.0.post1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   cherrypy
-zipp==3.23.0
+zipp==3.20.2
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt

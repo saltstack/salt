@@ -59,7 +59,7 @@ import hashlib
 import logging
 import os
 import time
-from collections.abc import MutableMapping
+from collections.abc import Iterable, MutableMapping
 
 import tornado.ioloop
 import tornado.iostream
@@ -76,7 +76,7 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.zeromq
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltDeserializationError, SaltInvocationError
 from salt.utils.versions import warn_until
 
 log = logging.getLogger(__name__)
@@ -186,17 +186,23 @@ def tagify(suffix="", prefix="", base=SALT):
 
     """
     parts = [base, TAGS.get(prefix, prefix)]
-    if hasattr(suffix, "append"):  # list so extend parts
+    if isinstance(suffix, Iterable) and not isinstance(
+        suffix, str
+    ):  # list so extend parts
         parts.extend(suffix)
     else:  # string so append
         parts.append(suffix)
 
-    for index, _ in enumerate(parts):
+    str_parts = []
+    for part in parts:
+        part_str = None
         try:
-            parts[index] = salt.utils.stringutils.to_str(parts[index])
+            part_str = salt.utils.stringutils.to_str(part)
         except TypeError:
-            parts[index] = str(parts[index])
-    return TAGPARTER.join([part for part in parts if part])
+            part_str = str(part)
+        if part_str:
+            str_parts.append(part_str)
+    return TAGPARTER.join(str_parts)
 
 
 class SaltEvent:
@@ -229,7 +235,7 @@ class SaltEvent:
         self.node = node
         self.keep_loop = keep_loop
         if io_loop is not None:
-            self.io_loop = io_loop
+            self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
             self._run_io_loop_sync = False
         else:
             self.io_loop = None
@@ -264,6 +270,7 @@ class SaltEvent:
             # and don't read out events from the buffer on an on-going basis,
             # the buffer will grow resulting in big memory usage.
             self.connect_pub()
+        self._publish_tasks = []
 
     @classmethod
     def __load_cache_regex(cls):
@@ -313,6 +320,30 @@ class SaltEvent:
             ):
                 self.pending_events.append(evt)
 
+    def _schedule(self, func, *args, **kwargs):
+        """
+        Schedule ``func`` on the underlying asyncio event loop.
+
+        ``func`` can be a coroutine function or a regular callable. If it
+        returns a coroutine, we ensure it's converted into a task so that any
+        exceptions are surfaced instead of being silently ignored.
+        """
+        if self.io_loop is None:
+            raise RuntimeError("No asyncio event loop available for scheduling")
+
+        loop = salt.utils.asynchronous.aioloop(self.io_loop)
+
+        if asyncio.iscoroutinefunction(func):
+            loop.create_task(func(*args, **kwargs))
+            return
+
+        def runner():
+            result = func(*args, **kwargs)
+            if asyncio.iscoroutine(result):
+                loop.create_task(result)
+
+        loop.call_soon(runner)
+
     def connect_pub(self, timeout=None):
         """
         Establish the publish connection
@@ -349,7 +380,7 @@ class SaltEvent:
                 self.subscriber = salt.transport.ipc_publish_client(
                     self.node, self.opts, io_loop=self.io_loop
                 )
-                self.io_loop.spawn_callback(self.subscriber.connect)
+                self._connect_task = self.io_loop.create_task(self.subscriber.connect())
 
             # For the asynchronous case, the connect will be defered to when
             # set_event_handler() is invoked.
@@ -362,6 +393,11 @@ class SaltEvent:
         """
         if not self.cpub:
             return
+        if hasattr(self, "_connect_task"):
+            task = self._connect_task
+            if task and not task.done():
+                task.cancel()
+            self._connect_task = None
         self.subscriber.close()
         self.subscriber = None
         self.pending_events = []
@@ -414,6 +450,10 @@ class SaltEvent:
             self.pusher.close()
             self.pusher = None
             self.cpush = False
+        for task in self._publish_tasks:
+            if task and not task.done():
+                task.cancel()
+        self._publish_tasks.clear()
 
     @classmethod
     def unpack(cls, raw):
@@ -421,7 +461,13 @@ class SaltEvent:
             salt.utils.stringutils.to_bytes(TAGEND)
         )  # split tag from data
         mtag = salt.utils.stringutils.to_str(mtag)
-        data = salt.payload.loads(mdata, encoding="utf-8")
+        try:
+            data = salt.payload.loads(mdata, encoding="utf-8")
+        except SaltDeserializationError:
+            log.warning(
+                "SaltDeserializationError on unpacking data, the payload could be incomplete"
+            )
+            raise
         return mtag, data
 
     @classmethod
@@ -565,6 +611,9 @@ class SaltEvent:
                     raise
                 else:
                     return None
+            except SaltDeserializationError:
+                log.error("Unable to deserialize received event")
+                return None
             except RuntimeError:
                 return None
 
@@ -782,7 +831,8 @@ class SaltEvent:
                 )
                 raise
         else:
-            asyncio.create_task(self.pusher.publish(msg))
+            task = self.io_loop.create_task(self.pusher.publish(msg))
+            self._publish_tasks.append(task)
         return True
 
     def fire_master(self, data, tag, timeout=1000):
@@ -828,6 +878,14 @@ class SaltEvent:
             ret = load.get("return", {})
             retcode = load["retcode"]
 
+        if not isinstance(ret, dict):
+            log.error(
+                "Event with bad payload received from '%s': %s",
+                load.get("id", "UNKNOWN"),
+                "".join(ret) if isinstance(ret, list) else ret,
+            )
+            return
+
         try:
             for tag, data in ret.items():
                 data["retcode"] = retcode
@@ -847,7 +905,8 @@ class SaltEvent:
                     )
         except Exception as exc:  # pylint: disable=broad-except
             log.error(
-                "Event iteration failed with exception: %s",
+                "Event from '%s' iteration failed with exception: %s",
+                load.get("id", "UNKNOWN"),
                 exc,
                 exc_info_on_loglevel=logging.DEBUG,
             )
@@ -892,7 +951,7 @@ class SaltEvent:
         if not self.cpub:
             self.connect_pub()
         # This will handle reconnects
-        self.io_loop.spawn_callback(self.subscriber.on_recv, event_handler)
+        self._schedule(self.subscriber.on_recv, event_handler)
 
     # pylint: disable=W1701
     def __del__(self):

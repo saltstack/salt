@@ -32,9 +32,7 @@ def peer_salt_master_config(pillar_state_tree):
 
 
 @pytest.fixture(scope="module")
-def peer_salt_master(
-    salt_factories, pillar_state_tree, vault_port, peer_salt_master_config
-):
+def peer_salt_master(salt_factories, pillar_state_tree, peer_salt_master_config):
     factory = salt_factories.salt_master_daemon(
         random_string("peer-comm-master", uppercase=False),
         defaults=peer_salt_master_config,
