@@ -1116,7 +1116,7 @@ def grant_winsta_and_desktop(th):
     """
     current_sid = win32security.GetTokenInformation(th, win32security.TokenUser)[0]
     # Add permissions for the sid to the current windows station and thread id.
-    # This prevents windows error 0xC0000142.
+    # This prevents Windows error 0xC0000142.
     winsta = win32process.GetProcessWindowStation()
     set_user_perm(winsta, WINSTA_ALL, current_sid)
     desktop = win32service.GetThreadDesktop(win32api.GetCurrentThreadId())
@@ -1341,11 +1341,12 @@ def CreateProcessWithLogonW(
 
 def prepend_cmd(win_shell, cmd):
     """
-    Prep cmd when shell is cmd.exe. Always use a command string instead of a list to satisfy
-    both CreateProcess and CreateProcessWithToken.
+    Prep cmd when shell is cmd.exe. Always use a command string instead of a
+    list to satisfy both CreateProcess and CreateProcessWithToken.
 
-    cmd must be double-quoted to ensure proper handling of space characters. The first opening
-    quote and the closing quote are stripped automatically by the Win32 API.
+    cmd must be double-quoted to ensure proper handling of space characters.
+    The first opening quote and the closing quote are stripped automatically by
+    the Win32 API.
     """
     if isinstance(cmd, (list, tuple)):
         args = subprocess.list2cmdline(cmd)
