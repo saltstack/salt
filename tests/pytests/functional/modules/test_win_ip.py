@@ -1,9 +1,10 @@
 import ipaddress
-
-import pytest
 from unittest.mock import patch
 
+import pytest
+
 import salt.utils.json
+import salt.utils.validate.net
 import salt.utils.win_pwsh
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -171,8 +172,7 @@ def dummy_interface(request):
             Rename-NetAdapter -Name $dummy.Name -NewName "SaltTestLoopback" -Confirm:$false
             ConvertTo-Json -InputObject @($dummy.ifIndex, "SaltTestLoopback") -Compress
         """
-        json_data = session.run_json(cmd)
-        index, name = salt.utils.json.loads(json_data)
+        index, name = session.run_json(cmd)
         yield index, name
 
 
@@ -226,14 +226,17 @@ def default_static(ip, dummy_interface):
         "ipv4_address": "192.168.1.105/24",
         "ipv4_dhcp": False,
         "ipv4_dns": ["192.168.1.10"],
-        "ipv4_gateways": {"ip": "192.168.1.1", "metric": 5},
+        "ipv4_gateways": [{"ip": "192.168.1.1", "metric": 5}],
         "ipv4_metric": 10,
         "ipv4_wins": ["192.168.1.11", "192.168.1.12"],
         "ipv6_enabled": True,
         "ipv6_address": "2001:db8::1/64",
         "ipv6_dhcp": False,
         "ipv6_dns": ["fd00:1234:5678:1::10"],
-        "ipv6_gateways": {"ip": "fe80::20c:29ff:fe0c:4bea", "metric": 50},
+        # Use a ULA address rather than a link-local (fe80::) next hop.
+        # Link-local addresses require a zone ID and are not valid default-route
+        # next hops on loopback adapters.
+        "ipv6_gateways": [{"ip": "fd00::1", "metric": 50}],
         "ipv6_metric": 100,
     }
 
@@ -281,6 +284,9 @@ def disabled(ip, dummy_interface):
 
 
 def test_is_enabled(ip, enabled):
+    """
+    Test that is_enabled returns True for an administratively up interface.
+    """
     assert ip.is_enabled(enabled)
 
 
@@ -290,28 +296,43 @@ def test_is_enabled_invalid_interface(ip):
     """
     with pytest.raises(CommandExecutionError) as excinfo:
         ip.is_enabled("does-not-exist")
-    assert str(excinfo.value) == "Interface 'does-not-exist' not found or invalid response."
+    assert (
+        str(excinfo.value)
+        == "Interface 'does-not-exist' not found or invalid response."
+    )
 
 
 def test_is_disabled(ip, disabled):
+    """
+    Test that is_disabled returns True for an administratively down interface.
+    """
     assert ip.is_disabled(disabled)
 
 
 def test_is_disabled_invalid_interface(ip):
     """
-    Test that is_enabled raises CommandExecutionError for non-existent interfaces.
+    Test that is_disabled raises CommandExecutionError for non-existent interfaces.
     """
     with pytest.raises(CommandExecutionError) as excinfo:
         ip.is_disabled("does-not-exist")
-    assert str(excinfo.value) == "Interface 'does-not-exist' not found or invalid response."
+    assert (
+        str(excinfo.value)
+        == "Interface 'does-not-exist' not found or invalid response."
+    )
 
 
 def test_enable(ip, disabled):
+    """
+    Test that enable() brings a disabled interface back to administrative up state.
+    """
     ip.enable(disabled)
     assert ip.is_enabled(disabled)
 
 
 def test_disable(ip, enabled):
+    """
+    Test that disable() takes an enabled interface to administrative down state.
+    """
     ip.disable(enabled)
     assert ip.is_disabled(enabled)
 
@@ -369,6 +390,10 @@ def test_set_static_ip_basic(ip, default_dhcp):
     # Verify return message
     assert ret["Address Info"] == "10.1.2.3/24"
     assert ret["Default Gateway"] == "10.1.2.1"
+
+    result = ip.get_interface_new(name)[name]
+    assert "10.1.2.3/24" in result["ipv4_address"]
+    assert "10.1.2.1" in result["ipv4_gateway"]
 
 
 def test_set_static_ip_append(ip, default_dhcp):
@@ -449,7 +474,7 @@ def test_set_dhcp_ip_success(ip, default_static):
 def test_set_dhcp_ip_already_enabled(ip, default_dhcp):
     """
     Test that calling set_dhcp_ip on an interface that already has DHCP
-    enabled returns an empty dict (as per your code's logic).
+    enabled is a no-op and returns an empty dict.
     """
     name, settings = default_dhcp
 
@@ -460,10 +485,8 @@ def test_set_dhcp_ip_already_enabled(ip, default_dhcp):
 
 def test_set_dhcp_ip_invalid_interface(ip):
     """
-    Test behavior when an interface name does not exist.
+    Test that set_dhcp_ip raises an exception when the interface does not exist.
     """
-    # Depending on how session.run handles errors, this will likely
-    # raise CommandExecutionError or return an empty state.
     with pytest.raises(Exception):
         ip.set_dhcp_ip(iface="ThisInterfaceDoesNotExist")
 
@@ -515,6 +538,11 @@ def test_set_static_dns_already_set(ip, dummy_interface):
 
     # First set
     ip.set_static_dns(name, dns)
+
+    # Ensure the DNS is set in the stack
+    result = ip.get_interface_new(name)[name]
+    assert "9.9.9.9" in result["ipv4_dns"]
+
     # Second set
     ret = ip.set_static_dns(name, dns)
 
@@ -542,26 +570,27 @@ def test_set_static_dns_clear_via_list_string(ip, dummy_interface):
 
 def test_set_dhcp_dns_success(ip, dummy_interface):
     """
-    Test transitioning from static DNS back to DHCP.
+    Test transitioning from static DNS back to automatic (DHCP-sourced) DNS.
+
+    Verifies that after the reset the previously configured static server is no
+    longer present in the interface's DNS server list.
     """
     index, name = dummy_interface
 
     # 1. Start by setting a static DNS to ensure we aren't already in DHCP mode
     ip.set_static_dns(name, "1.1.1.1")
 
-    # 2. Run the DHCP DNS setter
+    result = ip.get_interface_new(name)[name]
+    assert "1.1.1.1" in result["ipv4_dns"]
+
+    # 2. Reset DNS to automatic
     ret = ip.set_dhcp_dns(iface=name)
 
     # 3. Verify return message and actual state
     assert ret["DNS Server"] == "DHCP (Empty)"
     assert ret["Interface"] == name
 
-    # Use get_interface_new to verify the DHCP source
-    # Note: ipv4_dhcp usually refers to the IP address;
-    # you may need to check the specific DNS source if your getter tracks it.
     result = ip.get_interface_new(name)[name]
-    # If DNS is DHCP, the static list we set (1.1.1.1) should be gone
-    # or replaced by the network's provided DNS.
     assert "1.1.1.1" not in result.get("ipv4_dns", [])
 
 
@@ -648,9 +677,9 @@ def test_get_default_gateway_selection(ip, dummy_interface):
 
 def test_get_default_gateway_no_route(ip):
     """
-        Test that the function raises CommandExecutionError when no route is found,
-        using unittest.mock to simulate an empty PowerShell return.
-        """
+    Test that the function raises CommandExecutionError when no route is found,
+    using unittest.mock to simulate an empty PowerShell return.
+    """
     # We patch the 'run' method of the PowerShellSession class
     # located within the win_pwsh utility module.
     with patch("salt.utils.win_pwsh.PowerShellSession.run") as mock_run:
@@ -670,10 +699,14 @@ def test_get_default_gateway_no_route(ip):
 
 
 def test_get_interface_static(ip, default_static):
+    """
+    Test that get_interface returns the correct legacy-format keys for a
+    statically configured interface (DHCP disabled, static IP/DNS/WINS/gateway).
+    """
     name, settings = default_static
     result = ip.get_interface(name)[name]
     assert result["DHCP enabled"] == "No"
-    assert result["Default Gateway"] == settings["ipv4_gateways"]["ip"]
+    assert result["Default Gateway"] == settings["ipv4_gateways"][0]["ip"]
     assert result["InterfaceMetric"] == settings["ipv4_metric"]
     assert result["Register with which suffix"] == "Primary only"
     assert result["Statically Configured DNS Servers"] == settings["ipv4_dns"]
@@ -690,6 +723,10 @@ def test_get_interface_static(ip, default_static):
 
 
 def test_get_interface_dhcp(ip, default_dhcp):
+    """
+    Test that get_interface returns the correct legacy-format keys for an
+    interface configured to obtain its IP and DNS from DHCP.
+    """
     name, settings = default_dhcp
     result = ip.get_interface(name)[name]
     assert result["DHCP enabled"] == "Yes"
@@ -699,6 +736,11 @@ def test_get_interface_dhcp(ip, default_dhcp):
 
 
 def test_get_interface_new_static(ip, default_static):
+    """
+    Test that get_interface_new returns the full structured configuration for a
+    statically configured interface, including both IPv4 and IPv6 addresses,
+    gateways, DNS, WINS, and metric values.
+    """
     name, settings = default_static
     result = ip.get_interface_new(name)[name]
     assert result["alias"] == name
@@ -708,6 +750,10 @@ def test_get_interface_new_static(ip, default_static):
 
 
 def test_get_interface_new_dhcp(ip, default_dhcp):
+    """
+    Test that get_interface_new returns the correct structured configuration for
+    an interface configured to use DHCP for both IPv4 and IPv6.
+    """
     name, settings = default_dhcp
     result = ip.get_interface_new(name)[name]
     assert result["alias"] == name
@@ -719,19 +765,26 @@ def test_get_interface_new_dhcp(ip, default_dhcp):
 @pytest.mark.parametrize(
     "gateways_input, expected_gateways",
     [
-        # Case 1: Single string gateway
-        ("192.168.1.1", {"ip": "192.168.1.1", "metric": 10}),
-        # Case 2: List of string gateways
-        (["192.168.1.1"], {"ip": "192.168.1.1", "metric": 10}),
+        # Case 1: Single string gateway — metric falls back to ipv4_metric (10)
+        ("192.168.1.1", [{"ip": "192.168.1.1", "metric": 10}]),
+        # Case 2: List of string gateways — metric falls back to ipv4_metric (10)
+        (["192.168.1.1"], [{"ip": "192.168.1.1", "metric": 10}]),
         # Case 3: Single dict with custom metric
-        ({"ip": "192.168.1.1", "metric": 5}, {"ip": "192.168.1.1", "metric": 5}),
+        ({"ip": "192.168.1.1", "metric": 5}, [{"ip": "192.168.1.1", "metric": 5}]),
         # Case 4: List of dicts
-        ([{"ip": "192.168.1.1", "metric": 99}], {"ip": "192.168.1.1", "metric": 99}),
+        ([{"ip": "192.168.1.1", "metric": 99}], [{"ip": "192.168.1.1", "metric": 99}]),
     ],
 )
 def test_set_interface_flexible_gateways(
     ip, dummy_interface, gateways_input, expected_gateways
 ):
+    """
+    Test that set_interface accepts gateways in all supported input formats
+    (plain string, list of strings, dict, list of dicts) and that
+    get_interface_new always returns them as a normalized list of
+    ``{"ip": ..., "metric": ...}`` dicts.  When no per-gateway metric is
+    supplied the interface-level ``ipv4_metric`` is used as the fallback.
+    """
     index, name = dummy_interface
 
     settings = {
@@ -750,6 +803,10 @@ def test_set_interface_flexible_gateways(
 
 
 def test_ipv4_cidr_defaulting(ip, dummy_interface):
+    """
+    Test that IPv4 addresses supplied without a prefix length default to /24,
+    while addresses that already include a prefix keep their original length.
+    """
     index, name = dummy_interface
 
     # Pass a list of naked IPs and one with CIDR
@@ -764,6 +821,10 @@ def test_ipv4_cidr_defaulting(ip, dummy_interface):
 
 
 def test_dhcp_with_manual_metric(ip, dummy_interface):
+    """
+    Test that an explicit interface metric can be set alongside DHCP,
+    confirming that metric and DHCP mode are independent settings.
+    """
     index, name = dummy_interface
 
     # Enable DHCP but force a very high metric
@@ -775,20 +836,24 @@ def test_dhcp_with_manual_metric(ip, dummy_interface):
 
 
 def test_interface_hardware_and_dns_suffix(ip, dummy_interface):
+    """
+    Test that MTU and the connection-specific DNS suffix can be set and are
+    accurately reflected by get_interface_new.
+    """
     index, name = dummy_interface
 
-    # 1. Set MTU to a non-standard value and add a custom suffix
     ip.set_interface(iface=name, mtu=1450, dns_suffix="test.saltstack.com")
 
-    # 2. Retrieve results
     res = ip.get_interface_new(iface=name)[name]
-
-    # Note: Ensure get_interface_new is updated to return these!
     assert res["mtu"] == 1450
     assert res["dns_suffix"] == "test.saltstack.com"
 
 
 def test_interface_forwarding_toggles(ip, dummy_interface):
+    """
+    Test that IP forwarding can be independently enabled and disabled for both
+    the IPv4 and IPv6 stacks, and that the change is reflected by get_interface_new.
+    """
     index, name = dummy_interface
 
     # 1. Enable forwarding on both stacks
@@ -806,6 +871,12 @@ def test_interface_forwarding_toggles(ip, dummy_interface):
 
 
 def test_interface_rename_persistence(ip, dummy_interface):
+    """
+    Test that renaming an interface via set_interface (alias parameter) is
+    persisted: the new name is discoverable by get_interface_new and the
+    InterfaceIndex remains unchanged.  The original name is restored in the
+    finally block so subsequent tests are not affected.
+    """
     index, name = dummy_interface
     new_name = "Salt-Rename-Test"
 
@@ -824,6 +895,10 @@ def test_interface_rename_persistence(ip, dummy_interface):
 
 
 def test_interface_ip_append(ip, dummy_interface):
+    """
+    Test that passing append=True to set_interface adds an additional IP
+    address without removing the previously configured one.
+    """
     index, name = dummy_interface
     primary_ip = "10.10.10.10/24"
     secondary_ip = "10.10.10.11/24"
@@ -841,14 +916,22 @@ def test_interface_ip_append(ip, dummy_interface):
 
 
 def test_interface_invalid_mtu_raises(ip, dummy_interface):
+    """
+    Test that set_interface raises SaltInvocationError when an MTU value
+    outside the supported range (576–9000) is provided.
+    """
     index, name = dummy_interface
 
-    # This should be caught by your input validation in Python
-    with pytest.raises(salt.exceptions.SaltInvocationError):
+    with pytest.raises(SaltInvocationError):
         ip.set_interface(iface=name, mtu=9999)
 
 
 def test_set_interface_atomic_multi_change(ip, dummy_interface):
+    """
+    Test that set_interface applies multiple unrelated settings (MTU, IPv6
+    forwarding, DNS suffix, interface metric) atomically in a single call, and
+    that all changes are reflected correctly by get_interface_new.
+    """
     index, name = dummy_interface
 
     # Mix hardware, protocol, and client settings
@@ -857,7 +940,7 @@ def test_set_interface_atomic_multi_change(ip, dummy_interface):
         mtu=1400,
         ipv6_forwarding=True,
         dns_suffix="atomic.test",
-        ipv4_metric=42
+        ipv4_metric=42,
     )
 
     res = ip.get_interface_new(iface=name)[name]
@@ -868,6 +951,11 @@ def test_set_interface_atomic_multi_change(ip, dummy_interface):
 
 
 def test_set_interface_protocol_binding(ip, dummy_interface):
+    """
+    Test that the IPv6 protocol binding (ms_tcpip6) can be disabled and
+    re-enabled via set_interface, and that the change is visible through
+    the ipv6_enabled field in get_interface_new.
+    """
     index, name = dummy_interface
 
     # Disable IPv6 binding
@@ -882,6 +970,11 @@ def test_set_interface_protocol_binding(ip, dummy_interface):
 
 
 def test_set_interface_dns_registration(ip, dummy_interface):
+    """
+    Test that the dns_register flag can be toggled via set_interface, controlling
+    whether the interface registers its addresses in DNS with the computer's
+    primary DNS suffix.
+    """
     index, name = dummy_interface
 
     # Disable registration
@@ -896,6 +989,11 @@ def test_set_interface_dns_registration(ip, dummy_interface):
 
 
 def test_interface_protocol_binding_toggles(ip, dummy_interface):
+    """
+    Test that the IPv4 and IPv6 protocol bindings can each be disabled
+    independently and then re-enabled together, verifying the state after each
+    change via get_interface_new.
+    """
     index, name = dummy_interface
 
     # 1. Disable IPv4 Stack
