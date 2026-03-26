@@ -639,7 +639,7 @@ pyzmq==25.1.2
     #   -c requirements/static/pkg/py3.9/linux.txt
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
-requests==2.31.0
+requests==2.33.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -c requirements/static/pkg/py3.9/linux.txt
