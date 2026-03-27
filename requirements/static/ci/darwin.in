@@ -1,4 +1,4 @@
-pygit2>=1.10.1
+pygit2>=1.14.0
 yamllint
 mercurial
 hglib
