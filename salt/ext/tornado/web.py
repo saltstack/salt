@@ -313,11 +313,21 @@ class RequestHandler(object):
         :arg int status_code: Response status code. If ``reason`` is ``None``,
             it must be present in `httplib.responses <http.client.responses>`.
         :arg string reason: Human-readable reason phrase describing the status
-            code. If ``None``, it will be filled in from
-            `httplib.responses <http.client.responses>`.
+            code (for example, the "Not Found" in ``HTTP/1.1 404 Not Found``).
+            Normally determined automatically from `http.client.responses`; this
+            argument should only be used if you need to use a non-standard
+            status code.
         """
         self._status_code = status_code
         if reason is not None:
+            if "<" in reason or not RequestHandler._REASON_PHRASE_RE.fullmatch(reason):
+                # Logically this would be better as an exception, but this method
+                # is called on error-handling paths that would need some refactoring
+                # to tolerate internal errors cleanly.
+                #
+                # The check for "<" is a defense-in-depth against XSS attacks (we also
+                # escape the reason when rendering error pages).
+                reason = "Unknown"
             self._reason = escape.native_str(reason)
         else:
             try:
@@ -358,6 +368,7 @@ class RequestHandler(object):
             del self._headers[name]
 
     _INVALID_HEADER_CHAR_RE = re.compile(r"[\x00-\x1f]")
+    _REASON_PHRASE_RE = re.compile(r"(?:[\t ]|[\x21-\x7E]|[\x80-\xFF])+")
 
     def _convert_header_value(self, value):
         # type: (_HeaderTypes) -> str
@@ -1035,7 +1046,8 @@ class RequestHandler(object):
                 reason = exception.reason
         self.set_status(status_code, reason=reason)
         try:
-            self.write_error(status_code, **kwargs)
+            if status_code != 304:
+                self.write_error(status_code, **kwargs)
         except Exception:
             app_log.error("Uncaught exception in write_error", exc_info=True)
         if not self._finished:
@@ -1063,7 +1075,7 @@ class RequestHandler(object):
             self.finish("<html><title>%(code)d: %(message)s</title>"
                         "<body>%(code)d: %(message)s</body></html>" % {
                             "code": status_code,
-                            "message": self._reason,
+                            "message": escape.xhtml_escape(self._reason),
                         })
 
     @property
@@ -2153,9 +2165,11 @@ class HTTPError(Exception):
         mode).  May contain ``%s``-style placeholders, which will be filled
         in with remaining positional parameters.
     :arg string reason: Keyword-only argument.  The HTTP "reason" phrase
-        to pass in the status line along with ``status_code``.  Normally
+        to pass in the status line along with ``status_code`` (for example,
+        the "Not Found" in ``HTTP/1.1 404 Not Found``).  Normally
         determined automatically from ``status_code``, but can be used
-        to use a non-standard numeric code.
+        to use a non-standard numeric code. This is not a general-purpose
+        error message.
     """
     def __init__(self, status_code=500, log_message=None, *args, **kwargs):
         self.status_code = status_code
