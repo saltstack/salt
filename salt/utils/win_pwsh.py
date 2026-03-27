@@ -11,26 +11,20 @@ log = logging.getLogger(__name__)
 HAS_CLR = False
 try:
     import clr
-    from System import Exception as DotNetException
 
     HAS_CLR = True
-except ImportError as e:
-    log.debug(f"could not import clr, pythonnet is not available")
+except ImportError:
+    log.debug("could not import clr, pythonnet is not available")
 
 HAS_PWSH_SDK = False
 try:
     PWSH_GAC_NAME = "System.Management.Automation, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35"
     clr.AddReference(PWSH_GAC_NAME)
-    from System.Management.Automation import (
-        CommandNotFoundException,
-        ParameterBindingException,
-        PowerShell,
-        RuntimeException,
-    )
+    from System.Management.Automation import PowerShell
 
     HAS_PWSH_SDK = True
-except Exception as e:
-    log.debug(f"win_pwsh could not load PowerShell SDK: {e}")
+except Exception as exc:  # pylint: disable=broad-exception-caught
+    log.debug("win_pwsh could not load PowerShell SDK: %s", exc)
 
 
 def run_dict(cmd, cwd=None):
@@ -189,7 +183,7 @@ class PowerShellSession:
                 error_msg = str(self.ps.InvocationStateInfo.Reason.Message)
 
             # We don't raise here so the session stays alive, but we log it
-            log.debug(f"PowerShell Session Warning/Error: {error_msg}")
+            log.debug("PowerShell Session Warning/Error: %s", error_msg)
             return error_msg
 
         if not results or len(results) == 0:
@@ -317,9 +311,7 @@ class PowerShellSession:
             self.ps.Streams.ClearStreams()
             self.ps.AddScript("$__salt_ok__ -eq $true")
             chk = self.ps.Invoke()
-            ran_to_end = (
-                chk and chk.Count > 0 and str(chk[0]).lower() == "true"
-            )
+            ran_to_end = chk and chk.Count > 0 and str(chk[0]).lower() == "true"
             if ran_to_end:
                 # All errors were intentionally suppressed; script completed.
                 pass
@@ -367,6 +359,6 @@ class PowerShellSession:
         exc_tb: The traceback object
         """
         if exc_type:
-            log.debug(f"PowerShellSession exiting due to error: {exc_val}")
+            log.debug("PowerShellSession exiting due to error: %s", exc_val)
             log.debug(exc_tb)
         self.ps.Dispose()
