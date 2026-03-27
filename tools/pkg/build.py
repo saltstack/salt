@@ -627,7 +627,7 @@ def onedir_dependencies(
         python_bin = env_scripts_dir / "python3"
         install_args.append("--no-binary=:all:")
         install_args.append(
-            "--only-binary=maturin,apache-libcloud,pymssql,cassandra-driver"
+            "--only-binary=maturin,apache-libcloud,pymssql,cassandra-driver,hatchling"
         )
 
     # Cryptography needs openssl dir set to link to the proper openssl libs.
