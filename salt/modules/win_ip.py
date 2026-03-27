@@ -137,7 +137,24 @@ def raw_interface_configs():
 
 def get_all_interfaces():
     """
-    This mimics the old method of getting ip settings using netsh.
+    Return IP configuration for all network interfaces using the legacy
+    ``netsh``-compatible data format.
+
+    Each interface is keyed by its alias and contains ``ip_addrs``,
+    ``ipv4_gateway``, ``dns_servers``, and related fields mirroring the
+    structure formerly produced by ``netsh interface ip show config``.
+    Prefer :func:`list_interfaces` with ``full=True`` for richer, always-
+    English output.
+
+    Returns:
+        dict: A dictionary keyed by interface name.  Each value is a
+        dict with the legacy ``netsh``-style fields.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt -G 'os_family:Windows' ip.get_all_interfaces
     """
     return _get_interfaces_legacy_format()
 
@@ -651,7 +668,7 @@ def get_default_gateway(iface=None):
                     Select-Object -First 1 -ExpandProperty NextHop
             """
         else:
-            cmd = f"""
+            cmd = """
                 Get-NetRoute -DestinationPrefix '0.0.0.0/0' `
                              -ErrorAction SilentlyContinue |
                     Sort-Object RouteMetric |
@@ -684,6 +701,12 @@ def get_interface_index(iface, session=None):
 
     Raises:
         CommandExecutionError: If the interface cannot be found.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt -G 'os_family:Windows' ip.get_interface_index 'Ethernet'
     """
     cmd = f"""
         $adapter = Get-NetAdapter -Name "{iface}" `
@@ -751,21 +774,22 @@ def set_interface(
     (protocol level) and the **Route Metric** (gateway level).
 
     * **Interface Metric:** Set via ``ipvX_metric``. A value of ``0``
-        enables 'Automatic Metric', where Windows assigns priority based
-        on link speed.
+      enables 'Automatic Metric', where Windows assigns priority based on link
+      speed.
     * **Route Metric:** Set within the ``ipvX_gateways`` objects.
     * **Total Cost:** Interface Metric + Route Metric. The lowest total
-        cost determines the primary route.
+      cost determines the primary route.
 
     **Context-Aware Behavior:**
     The function identifies the current state of protocol bindings (IPv4/IPv6)
     before applying settings.
+
     * If a protocol is disabled and ``ipvX_enabled`` is not passed as ``True``,
-        configuration for that stack (IPs, DNS, etc.) is skipped to prevent
-        errors.
-    * If ``ipvX_dhcp`` is enabled, static IP and gateway configurations
-        are ignored by the OS; therefore, this function skips applying
-        static addresses unless DHCP is ``False``.
+      configuration for that stack (IPs, DNS, etc.) is skipped to prevent
+      errors.
+    * If ``ipvX_dhcp`` is enabled, static IP and gateway configurations are
+      ignored by the OS; therefore, this function skips applying static
+      addresses unless DHCP is ``False``.
 
     Args:
 
@@ -928,7 +952,7 @@ def set_interface(
     if ipv4_netbios and ipv4_netbios.lower() not in ["default", "enable", "disable"]:
         raise SaltInvocationError(f"Invalid NetBIOS setting: {ipv4_netbios}")
 
-    if mtu is not None and not (576 <= mtu <= 9000):
+    if mtu is not None and (mtu < 576 or mtu > 9000):
         raise SaltInvocationError("MTU must be between 576 and 9000.")
 
     ipv4_addrs = (
@@ -1229,12 +1253,13 @@ def get_interface_new(iface):
     to be directly compatible with the parameters of ``set_interface``.
 
     **Data Structures and Round-trip Logic:**
+
     * **Addresses:** IPs are returned in CIDR notation (e.g., ``10.0.0.5/24``)
-        to ensure the setter can accurately recreate the subnet mask.
+      to ensure the setter can accurately recreate the subnet mask.
     * **Gateways:** Returned as a list of dictionaries containing both the
-        IP (``ip``) and the route-specific metric (``metric``).
+      IP (``ip``) and the route-specific metric (``metric``).
     * **Metrics:** A value of ``0`` indicates that the interface is
-        configured for 'Automatic Metric' calculation by Windows.
+      configured for 'Automatic Metric' calculation by Windows.
 
     Args:
 
@@ -1408,6 +1433,13 @@ def list_interfaces(full=False):
             invocation** rather than one session per adapter, so it is
             significantly faster than calling :func:`get_interface_new`
             in a loop.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt -G 'os_family:Windows' ip.list_interfaces
+        salt -G 'os_family:Windows' ip.list_interfaces full=True
     """
     with salt.utils.win_pwsh.PowerShellSession() as session:
         session.import_modules(["NetAdapter", "NetTCPIP", "DnsClient"])
