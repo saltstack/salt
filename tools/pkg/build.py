@@ -5,13 +5,19 @@ These commands are used to build the salt onedir and system packages.
 # pylint: disable=resource-leakage,broad-except
 from __future__ import annotations
 
+import base64
+import csv
+import hashlib
+import io
 import json
 import logging
 import os
 import pathlib
 import re
 import shutil
+import sys
 import tarfile
+import tempfile
 import zipfile
 from typing import TYPE_CHECKING
 
@@ -20,6 +26,172 @@ from ptscripts import Context, command_group
 import tools.utils
 
 log = logging.getLogger(__name__)
+
+# Cached path to the patched pip wheel built by _build_patched_pip_wheel.
+# None until first call; reused across all build steps in the same process.
+_PATCHED_PIP_WHEEL: pathlib.Path | None = None
+
+
+def _apply_unified_diff(original_text: str, patch_text: str) -> str:
+    """
+    Apply a unified diff patch to *original_text* and return the result.
+
+    This is a minimal pure-Python applier sufficient for the well-formed,
+    non-fuzzy patches stored in pkg/patches/pip-urllib3/.  It handles the
+    standard unified diff hunk format produced by difflib.unified_diff and
+    GNU diff, including the '\\' (no newline at end of file) marker.
+    """
+    orig_lines = original_text.splitlines(True)
+    result: list[str] = []
+    orig_idx = 0
+
+    patch_lines = patch_text.splitlines(True)
+    i = 0
+
+    # Skip the file-header lines (--- / +++) before the first hunk.
+    while i < len(patch_lines) and not patch_lines[i].startswith("@@"):
+        i += 1
+
+    while i < len(patch_lines):
+        line = patch_lines[i]
+        if line.startswith("@@"):
+            m = re.match(r"^@@ -(\d+)(?:,\d+)? \+\d+(?:,\d+)? @@", line)
+            if not m:
+                i += 1
+                continue
+            orig_start = int(m.group(1)) - 1  # convert 1-based → 0-based
+
+            # Copy unchanged original lines that precede this hunk.
+            result.extend(orig_lines[orig_idx:orig_start])
+            orig_idx = orig_start
+            i += 1
+
+            # Process hunk body lines.
+            while i < len(patch_lines):
+                hunk_line = patch_lines[i]
+                if hunk_line.startswith("@@"):
+                    break  # next hunk starts
+                if hunk_line.startswith("+"):
+                    result.append(hunk_line[1:])
+                elif hunk_line.startswith("-"):
+                    orig_idx += 1
+                elif hunk_line.startswith(" "):
+                    result.append(orig_lines[orig_idx])
+                    orig_idx += 1
+                # "\\" → "No newline at end of file" marker; skip.
+                i += 1
+        else:
+            i += 1
+
+    # Copy any original lines that follow the last hunk.
+    result.extend(orig_lines[orig_idx:])
+    return "".join(result)
+
+
+def _patch_pip_wheel_urllib3(wheel_path: pathlib.Path) -> None:
+    """
+    Rewrite *wheel_path* in-place so that the urllib3 vendored inside pip
+    contains the Salt security backports defined in pkg/patches/pip-urllib3/.
+
+    Patches applied (unified diff format):
+      response.py.patch  — CVE-2025-66418, CVE-2026-21441
+      _version.py.patch  — version bumped to "2.6.3"
+
+    Each patch is applied to the file as extracted from the wheel, so the
+    original sources do not need to be stored in the repository.  The wheel's
+    RECORD file is updated with correct sha256 hashes and sizes for the two
+    patched files so that the installed dist-info stays valid.
+    """
+    patches_dir = tools.utils.REPO_ROOT / "pkg" / "patches" / "pip-urllib3"
+    patch_map = {
+        "pip/_vendor/urllib3/response.py": (
+            patches_dir / "response.py.patch"
+        ).read_text(encoding="utf-8"),
+        "pip/_vendor/urllib3/_version.py": (
+            patches_dir / "_version.py.patch"
+        ).read_text(encoding="utf-8"),
+    }
+
+    def _record_hash(content: bytes) -> str:
+        digest = hashlib.sha256(content).digest()
+        return "sha256=" + base64.urlsafe_b64encode(digest).decode().rstrip("=")
+
+    tmp_path = wheel_path.with_suffix(".tmp.whl")
+    try:
+        with zipfile.ZipFile(wheel_path, "r") as zin:
+            with zipfile.ZipFile(
+                tmp_path, "w", compression=zipfile.ZIP_DEFLATED
+            ) as zout:
+                record_name: str | None = None
+                record_rows: list[list[str]] = []
+                patched: dict[str, bytes] = {}
+
+                for item in zin.infolist():
+                    if item.filename.endswith(".dist-info/RECORD"):
+                        record_name = item.filename
+                        raw = zin.read(item.filename).decode("utf-8")
+                        record_rows = list(csv.reader(raw.splitlines()))
+                        continue  # written last after we know the new hashes
+                    if item.filename in patch_map:
+                        original = zin.read(item.filename).decode("utf-8")
+                        patched_text = _apply_unified_diff(
+                            original, patch_map[item.filename]
+                        )
+                        patched_bytes = patched_text.encode("utf-8")
+                        patched[item.filename] = patched_bytes
+                        zout.writestr(item, patched_bytes)
+                    else:
+                        zout.writestr(item, zin.read(item.filename))
+
+                # Update RECORD rows for patched files and write it back.
+                if record_name:
+                    new_rows = []
+                    for row in record_rows:
+                        if len(row) >= 1 and row[0] in patched:
+                            content = patched[row[0]]
+                            new_rows.append(
+                                [row[0], _record_hash(content), str(len(content))]
+                            )
+                        else:
+                            new_rows.append(row)
+                    buf = io.StringIO()
+                    csv.writer(buf).writerows(new_rows)
+                    zout.writestr(record_name, buf.getvalue())
+
+        tmp_path.replace(wheel_path)
+    except Exception:
+        tmp_path.unlink(missing_ok=True)
+        raise
+
+
+def _build_patched_pip_wheel(ctx: Context) -> pathlib.Path:
+    """
+    Download pip==25.2 into a temporary directory, patch its vendored urllib3,
+    and return the path to the patched wheel.  The result is cached for the
+    lifetime of the current process so subsequent calls are free.
+    """
+    global _PATCHED_PIP_WHEEL
+    if _PATCHED_PIP_WHEEL is not None:
+        return _PATCHED_PIP_WHEEL
+
+    tmpdir = pathlib.Path(tempfile.mkdtemp(prefix="salt-pip-patch-"))
+    ctx.info("Downloading pip==25.2 for urllib3 security patching ...")
+    ctx.run(
+        sys.executable,
+        "-m",
+        "pip",
+        "download",
+        "pip==25.2",
+        "--no-deps",
+        "--dest",
+        str(tmpdir),
+    )
+    wheel = next(tmpdir.glob("pip-*.whl"))
+    ctx.info(f"Patching urllib3 CVEs inside {wheel.name} ...")
+    _patch_pip_wheel_urllib3(wheel)
+    _PATCHED_PIP_WHEEL = wheel
+    return wheel
+
 
 # Define the command group
 build = command_group(
@@ -275,6 +447,20 @@ def macos(
 
             ctx.info("Installing salt into the relenv python")
             ctx.run("./install_salt.sh")
+
+        # Patch pip's vendored urllib3 in the standalone macOS build.
+        # install_salt.sh uses the relenv pip but does not upgrade it, so we
+        # install the security-patched pip wheel and replace the copy that
+        # virtualenv embeds so that new environments also get the fixed pip.
+        build_env = checkout / "pkg" / "macos" / "build" / "opt" / "salt"
+        python_bin = build_env / "bin" / "python3"
+        patched_pip = _build_patched_pip_wheel(ctx)
+        ctx.run(str(python_bin), "-m", "pip", "install", str(patched_pip))
+        for old_pip in (build_env / "lib").glob(
+            "python*/site-packages/virtualenv/seed/wheels/embed/pip-*.whl"
+        ):
+            old_pip.unlink()
+            shutil.copy(str(patched_pip), str(old_pip.parent / patched_pip.name))
 
     if sign:
         ctx.info("Signing binaries")
@@ -612,8 +798,23 @@ def onedir_dependencies(
         "install",
         "-U",
         "setuptools",
-        "pip",
         "wheel",
+        env=env,
+    )
+    # Install pip from the security-patched wheel instead of pulling from PyPI,
+    # so that pip's vendored urllib3 never contains the vulnerable version.
+    # --force-reinstall is required because relenv ships with pip pre-installed
+    # at the same version (25.2), so without it pip would skip the install as
+    # "already satisfied" and leave the unpatched copy in site-packages.
+    patched_pip = _build_patched_pip_wheel(ctx)
+    ctx.run(
+        str(python_bin),
+        "-m",
+        "pip",
+        "install",
+        "--force-reinstall",
+        "--no-deps",
+        str(patched_pip),
         env=env,
     )
     ctx.run(
@@ -832,17 +1033,22 @@ def salt_onedir(
     env["PIP_CONSTRAINT"] = str(
         tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
     )
+    # Download setuptools and wheel normally; pip is handled separately below
+    # so that the security-patched wheel is used instead of the PyPI version.
     ctx.run(
         str(python_executable),
         "-m",
         "pip",
         "download",
         "setuptools",
-        "pip",
         "wheel",
         "--dest",
         str(embed_dir),
     )
+    # Copy the security-patched pip wheel into the embed directory so that
+    # virtualenv seeds new environments with pip that has the urllib3 fixes.
+    patched_pip = _build_patched_pip_wheel(ctx)
+    shutil.copy(str(patched_pip), str(embed_dir / patched_pip.name))
 
     # Update __init__.py with the new versions
 
