@@ -745,6 +745,28 @@ def _int_or_none(val):
     return int(val)
 
 
+class ParseMultipartConfig:
+    """Configures the parsing of multipart/form-data request bodies.
+
+    Its primary purpose is to place limits on the size and complexity of
+    request messages to avoid potential denial-of-service attacks.
+    """
+
+    def __init__(self, enabled=True, max_parts=100, max_part_header_size=10 * 1024):
+        self.enabled = enabled
+        self.max_parts = max_parts
+        self.max_part_header_size = max_part_header_size
+
+
+_DEFAULT_MULTIPART_CONFIG = ParseMultipartConfig()
+
+
+def set_parse_body_config(config):
+    """Sets the global default configuration for parsing request bodies."""
+    global _DEFAULT_MULTIPART_CONFIG
+    _DEFAULT_MULTIPART_CONFIG = config
+
+
 def parse_body_arguments(content_type, body, arguments, files, headers=None):
     """Parses a form request body.
 
@@ -768,10 +790,15 @@ def parse_body_arguments(content_type, body, arguments, files, headers=None):
     elif content_type.startswith("multipart/form-data"):
         try:
             fields = content_type.split(";")
+            if fields[0].strip() != "multipart/form-data":
+                raise HTTPInputError("Invalid content type")
             for field in fields:
                 k, sep, v = field.strip().partition("=")
                 if k == "boundary" and v:
-                    parse_multipart_form_data(utf8(v), body, arguments, files)
+                    parse_multipart_form_data(
+                        utf8(v), body, arguments, files,
+                        config=_DEFAULT_MULTIPART_CONFIG,
+                    )
                     break
             else:
                 raise HTTPInputError("multipart boundary not found")
@@ -779,13 +806,17 @@ def parse_body_arguments(content_type, body, arguments, files, headers=None):
             raise HTTPInputError("Invalid multipart/form-data: %s" % e) from e
 
 
-def parse_multipart_form_data(boundary, data, arguments, files):
+def parse_multipart_form_data(boundary, data, arguments, files, config=None):
     """Parses a ``multipart/form-data`` body.
 
     The ``boundary`` and ``data`` parameters are both byte strings.
     The dictionaries given in the arguments and files parameters
     will be updated with the contents of the body.
     """
+    if config is None:
+        config = _DEFAULT_MULTIPART_CONFIG
+    if not config.enabled:
+        raise HTTPInputError("multipart/form-data parsing is disabled")
     # The standard allows for the boundary to be quoted in the header,
     # although it's rare (it happens at least for google app engine
     # xmpp).  I think we're also supposed to handle backslash-escapes
@@ -797,12 +828,16 @@ def parse_multipart_form_data(boundary, data, arguments, files):
     if final_boundary_index == -1:
         raise HTTPInputError("Invalid multipart/form-data: no final boundary")
     parts = data[:final_boundary_index].split(b"--" + boundary + b"\r\n")
+    if len(parts) > config.max_parts:
+        raise HTTPInputError("multipart/form-data has too many parts")
     for part in parts:
         if not part:
             continue
         eoh = part.find(b"\r\n\r\n")
         if eoh == -1:
             raise HTTPInputError("multipart/form-data missing headers")
+        if eoh > config.max_part_header_size:
+            raise HTTPInputError("multipart/form-data part header too large")
         headers = HTTPHeaders.parse(part[:eoh].decode("utf-8"))
         disp_header = headers.get("Content-Disposition", "")
         disposition, disp_params = _parse_header(disp_header)
