@@ -27,6 +27,7 @@ jaraco.text>=4.0.0
 Jinja2>=3.1.5
 jmespath>=1.1.0
 looseversion
+lxml>=5.0.0; sys_platform != 'win32'
 lxml>=6.0.2; sys_platform == 'win32'
 MarkupSafe<3.0.0
 msgpack>=1.0.0 ; python_version < '3.13'
