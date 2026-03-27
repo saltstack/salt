@@ -11,8 +11,18 @@ def _check_systemctl():
         if not salt.utils.platform.is_linux():
             _check_systemctl.memo = False
         else:
-            proc = subprocess.run(["localectl"], capture_output=True, check=False)
-            _check_systemctl.memo = b"No such file or directory" in proc.stderr
+            try:
+                proc = subprocess.run(
+                    ["localectl"], capture_output=True, check=False
+                )
+                _check_systemctl.memo = (
+                    b"No such file or directory" in proc.stderr
+                    or b"Connection refused" in proc.stderr
+                    or b"Failed to connect to bus" in proc.stderr
+                    or b"Failed to get D-Bus connection" in proc.stderr
+                )
+            except FileNotFoundError:
+                _check_systemctl.memo = True
     return _check_systemctl.memo
 
 
