@@ -1,5 +1,4 @@
 import ipaddress
-from unittest.mock import patch
 
 import pytest
 
@@ -7,6 +6,7 @@ import salt.utils.json
 import salt.utils.validate.net
 import salt.utils.win_pwsh
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from tests.support.mock import patch
 
 pytestmark = [
     pytest.mark.skip_unless_on_windows,
@@ -167,8 +167,8 @@ def dummy_interface(request):
 
         request.addfinalizer(cleanup)
 
-        cmd = f"""
-            $dummy = Get-NetAdapter | Where-Object {{ $_.InterfaceDescription -match "KM-TEST Loopback" }}
+        cmd = """
+            $dummy = Get-NetAdapter | Where-Object { $_.InterfaceDescription -match "KM-TEST Loopback" }
             Rename-NetAdapter -Name $dummy.Name -NewName "SaltTestLoopback" -Confirm:$false
             ConvertTo-Json -InputObject @($dummy.ifIndex, "SaltTestLoopback") -Compress
         """
@@ -392,8 +392,8 @@ def test_set_static_ip_basic(ip, default_dhcp):
     assert ret["Default Gateway"] == "10.1.2.1"
 
     result = ip.get_interface_new(name)[name]
-    assert "10.1.2.3/24" in result["ipv4_address"]
-    assert "10.1.2.1" in result["ipv4_gateway"]
+    assert "10.1.2.3/24" == result["ipv4_address"]
+    assert "10.1.2.1" == result["ipv4_gateways"][0]["ip"]
 
 
 def test_set_static_ip_append(ip, default_dhcp):
