@@ -70,3 +70,45 @@ def test_list_jobs_with_search_target():
         assert jobs.list_jobs(search_target="node-1-2.com") == returns["node-1-2.com"]
 
         assert jobs.list_jobs(search_target="non-existant") == returns["non-existant"]
+
+
+def test_list_jobs_with_non_iterable_target():
+    """
+    test jobs.list_jobs does not crash when Target is not iterable (e.g. int)
+
+    Regression test for https://github.com/saltstack/salt/issues/68780
+    """
+    mock_jobs_cache = {
+        "20160524035503086853": {
+            "Arguments": [],
+            "Function": "test.ping",
+            "StartTime": "2016, May 24 03:55:03.086853",
+            "Target": 3,
+            "Target-type": "glob",
+            "User": "root",
+        },
+        "20160524035524895387": {
+            "Arguments": [],
+            "Function": "test.ping",
+            "StartTime": "2016, May 24 03:55:24.895387",
+            "Target": "node-1-1.com",
+            "Target-type": "glob",
+            "User": "sudo_ubuntu",
+        },
+    }
+
+    def return_mock_jobs():
+        return mock_jobs_cache
+
+    class MockMasterMinion:
+
+        returners = {"local_cache.get_jids": return_mock_jobs}
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+    with patch.object(salt.minion, "MasterMinion", MockMasterMinion):
+        # Should not raise TypeError; the non-iterable target job is skipped
+        result = jobs.list_jobs(search_target="node-1-1.com")
+        assert "20160524035524895387" in result
+        assert "20160524035503086853" not in result
