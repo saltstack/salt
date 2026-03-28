@@ -281,7 +281,7 @@ markupsafe==2.1.3
     #   jinja2
     #   mako
     #   werkzeug
-mercurial==6.4.4
+mercurial==7.2
     # via -r requirements/static/ci/linux.in
 mock==5.1.0
     # via -r requirements/pytest.txt
