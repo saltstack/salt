@@ -1,5 +1,5 @@
 # FreeBSD static CI requirements
 
 yamllint
-mercurial
+mercurial>=6.7
 hglib
