@@ -125,9 +125,7 @@ def _localectl_set(locale=""):
     # container environment where D-Bus write access is unavailable).  Write
     # /etc/locale.conf directly; modern localectl status reads from that file
     # without D-Bus, so get_locale() will see the change immediately.
-    log.debug(
-        "localectl set-locale failed; writing /etc/locale.conf directly"
-    )
+    log.debug("localectl set-locale failed; writing /etc/locale.conf directly")
     locale_conf = "/etc/locale.conf"
     if not __salt__["file.file_exists"](locale_conf):
         __salt__["file.touch"](locale_conf)
