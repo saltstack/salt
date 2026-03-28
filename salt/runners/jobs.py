@@ -334,6 +334,8 @@ def list_jobs(
                 targets = ret[item]["Target"]
                 if isinstance(targets, str):
                     targets = [targets]
+                elif not isinstance(targets, (list, tuple)):
+                    targets = []
                 for target in targets:
                     for key in salt.utils.args.split_input(search_target):
                         if fnmatch.fnmatch(target, key):
