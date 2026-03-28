@@ -362,8 +362,6 @@ looseversion==1.3.0
 lxml==6.0.2
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
-    #   -c requirements/static/pkg/py3.9/linux.txt
-    #   -r requirements/base.txt
     #   junos-eznc
     #   napalm
     #   ncclient

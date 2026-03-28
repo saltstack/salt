@@ -94,7 +94,7 @@ linode-python==1.1.1
     # via -r requirements/static/pkg/freebsd.in
 looseversion==1.3.0
     # via -r requirements/base.txt
-lxml==6.0.2
+lxml==6.0.2 ; sys_platform == 'win32'
     # via -r requirements/base.txt
 markupsafe==2.1.3
     # via
