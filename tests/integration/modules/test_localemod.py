@@ -12,9 +12,7 @@ def _check_systemctl():
             _check_systemctl.memo = False
         else:
             try:
-                proc = subprocess.run(
-                    ["localectl"], capture_output=True, check=False
-                )
+                proc = subprocess.run(["localectl"], capture_output=True, check=False)
                 _check_systemctl.memo = (
                     b"No such file or directory" in proc.stderr
                     or b"Connection refused" in proc.stderr
