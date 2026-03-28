@@ -231,7 +231,7 @@ markupsafe==2.1.3
     #   jinja2
     #   mako
     #   werkzeug
-mercurial==6.0.1
+mercurial==7.2
     # via -r requirements/static/ci/darwin.in
 mock==5.1.0
     # via -r requirements/pytest.txt

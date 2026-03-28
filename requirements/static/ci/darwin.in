@@ -1,6 +1,6 @@
 pygit2>=1.14.0
 yamllint
-mercurial
+mercurial>=6.7
 hglib
 # Pin versions to match 3007.x
 apache-libcloud>=3.8.0
