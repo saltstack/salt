@@ -21,8 +21,8 @@ Or it can be set for each file:
 
     /etc/ssh/sshd_config:
       file.managed:
-        - source: salt://ssh/sshd_config
-        - backup: minion
+        source: salt://ssh/sshd_config
+        backup: minion
 
 
 The backup_mode can be set to any of the following options:

@@ -457,10 +457,10 @@ Now create ``/srv/salt/bin/nginx.sls`` containing the following:
 
     nginx:
       pkg.installed:
-        - name: nginx
+        name: nginx
       service.running:
-        - enable: True
-        - reload: True
+        enable: True
+        reload: True
 
 Check Minion State
 ------------------
