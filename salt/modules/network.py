@@ -937,7 +937,17 @@ def traceroute(host):
     """
     ret = []
     cmd = "traceroute {}".format(__utils__["network.sanitize_host"](host))
-    out = __salt__["cmd.run"](cmd)
+    # Bound the wall-clock time so callers aren't blocked indefinitely when
+    # every hop times out (30 hops × 3 probes × 5 s = 450 s by default).
+    # 120 s is enough for a well-routed destination and still returns partial
+    # results (already-seen hops) for unreachable destinations.
+    out = __salt__["cmd.run"](cmd, timeout=120)
+
+    # When cmd.run hits its timeout it returns the exception message as stdout
+    # rather than actual traceroute output.  Detect that and bail early so the
+    # parser below doesn't try to interpret the error string as hop data.
+    if "Timed out after" in out:
+        return ret
 
     # Parse version of traceroute
     if __utils__["platform.is_sunos"]() or __utils__["platform.is_aix"]():
@@ -1041,7 +1051,7 @@ def traceroute(host):
         # Parse anything else
         else:
             comps = line.split()
-            if len(comps) >= 8:
+            if len(comps) >= 9:
                 result = {
                     "count": comps[0],
                     "hostname": comps[1],
