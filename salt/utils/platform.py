@@ -12,7 +12,8 @@ import sys
 
 import distro
 
-# Use functools.lru_cache rather than importing from salt.utils.decorators.
+
+# Use a local wraps-based memoize rather than importing from salt.utils.decorators.
 # This module is synced to the remote's extmods/utils/platform.py, and in
 # Python 3.14+ (forkserver default start method) it can be accidentally
 # imported as the stdlib ``platform`` module when extmods/utils/ sits at
@@ -21,7 +22,26 @@ import distro
 #   salt.utils.decorators → salt.utils.versions → salt.version
 #   → import platform (ourselves!) → salt.utils.decorators  (cycle)
 # functools is part of the stdlib and has no such dependency.
-real_memoize = functools.cache
+#
+# We cannot use functools.cache/lru_cache directly as the decorator because
+# those produce functools._lru_cache_wrapper objects which fail
+# inspect.isfunction(), causing the Salt loader to skip them when loading
+# salt.utils.platform as a utils module (salt/loader/lazy.py line ~1109).
+def real_memoize(func):
+    """Cache the result of a zero-or-more-argument function (stdlib-only, loader-safe)."""
+    cache = {}
+    _sentinel = object()
+
+    @functools.wraps(func)
+    def _wrapper(*args, **kwargs):
+        key = (args, tuple(sorted(kwargs.items())))
+        result = cache.get(key, _sentinel)
+        if result is _sentinel:
+            result = func(*args, **kwargs)
+            cache[key] = result
+        return result
+
+    return _wrapper
 
 
 def linux_distribution(full_distribution_name=True):
