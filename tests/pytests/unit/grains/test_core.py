@@ -5639,3 +5639,87 @@ def test_fibre_channel_host(status):
         grains = core.fibre_channel_host()
         assert "fibre_channel_host" in grains
         assert grains["fibre_channel_host"] is status
+
+
+@pytest.mark.skip_unless_on_linux
+def test_alfalinux_os_grains():
+    _os_release_data = {
+        "NAME": "alfaLinux",
+        "PRETTY_NAME": "alfaLinux",
+        "ID": "alfalinux",
+        "VERSION_ID": "1",
+    }
+    expectation = {
+        "os": "alfaLinux",
+        "os_family": "Suse",
+        "osfullname": "alfaLinux",
+        "oscodename": "alfaLinux",
+        "osfinger": "alfaLinux-1",
+        "osrelease": "1",
+        "osrelease_info": (1,),
+        "osmajorrelease": 1,
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_alfalinux_rise_os_grains():
+    _os_release_data = {
+        "NAME": "alfaLinux Rise",
+        "PRETTY_NAME": "alfaLinux Rise",
+        "ID": "alfalinux-rise",
+        "VERSION_ID": "1",
+    }
+    expectation = {
+        "os": "alfaLinux Rise",
+        "os_family": "Suse",
+        "osfullname": "alfaLinux Rise",
+        "oscodename": "alfaLinux Rise",
+        "osfinger": "alfaLinux Rise-1",
+        "osrelease": "1",
+        "osrelease_info": (1,),
+        "osmajorrelease": 1,
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_alteros_os_grains():
+    _os_release_data = {
+        "NAME": "AlterOS",
+        "PRETTY_NAME": "AlterOS",
+        "ID": "alteros",
+        "VERSION_ID": "1",
+    }
+    expectation = {
+        "os": "AlterOS",
+        "os_family": "RedHat",
+        "osfullname": "AlterOS",
+        "oscodename": "AlterOS",
+        "osfinger": "AlterOS-1",
+        "osrelease": "1",
+        "osrelease_info": (1,),
+        "osmajorrelease": 1,
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_red_os_os_grains():
+    _os_release_data = {
+        "NAME": "RED OS",
+        "PRETTY_NAME": "RED OS",
+        "ID": "redos",
+        "VERSION_ID": "1",
+    }
+    expectation = {
+        "os": "RED OS",
+        "os_family": "RedHat",
+        "osfullname": "RED OS",
+        "oscodename": "RED OS",
+        "osfinger": "RED OS-1",
+        "osrelease": "1",
+        "osrelease_info": (1,),
+        "osmajorrelease": 1,
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
