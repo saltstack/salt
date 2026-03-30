@@ -677,8 +677,13 @@ class AsyncReqMessageClient:
                     log.trace(
                         "The request ended with an error while sending. reconnecting."
                     )
+                # Only reconnect if the client is still active. If close() was
+                # already called externally (context is None), do not create a
+                # new socket/context that would never be cleaned up.
+                _should_reconnect = self.context is not None
                 self.close()
-                self.connect()
+                if _should_reconnect:
+                    self.connect()
                 send_recv_running = False
                 break
 
@@ -724,8 +729,13 @@ class AsyncReqMessageClient:
                     )
                 else:
                     log.trace("The request ended with an error. reconnecting.")
+                # Only reconnect if the client is still active. If close() was
+                # already called externally (context is None), do not create a
+                # new socket/context that would never be cleaned up.
+                _should_reconnect = self.context is not None
                 self.close()
-                self.connect()
+                if _should_reconnect:
+                    self.connect()
                 send_recv_running = False
             elif received:
                 data = salt.payload.loads(recv)
