@@ -291,6 +291,36 @@ __outputter__ = {
     "highstate": "highstate",
 }
 
+# Variable for tracking podman-specific behavior
+_is_podman = False
+
+def _filter_podman_prefixes(val, prefixes=['HOSTNAME', 'HOME', 'container_uuid']):
+    """
+    Filter out items starting with any of the given prefixes if and only if
+    interaction with a podman socket is suspected, and return sorted list.
+
+    This function is required as Podman adds unecessary environment variables
+    
+    Args:
+        val: Iterable of strings to filter and sort
+        prefixes: Iterable of string prefixes to exclude
+        
+    Returns:
+        Sorted list with items not starting with any prefix
+    """
+    if not _is_podman:
+        return sorted(val)
+
+    #res = list(filter(lambda x: any(x.startswith(prefix) for prefix in prefixes)), val)
+    #res = [item for item in val if not any(item.startswith(prefix) for prefix in prefixes)]
+    res = list()
+    for item in val:
+        if not any(item.startswith(prefix) for prefix in prefixes):
+            res.append(item)
+        else:
+            log.warning("Filtering Podman-specific value %s", item)
+
+    return sorted(res)
 
 def __virtual__():
     """
@@ -405,6 +435,7 @@ def _get_client(timeout=NOTSET, **kwargs):
                     docker_machine_tls["ClientKeyPath"],
                 ),
                 ca_cert=docker_machine_tls["CaCertPath"],
+                assert_hostname=False,
                 verify=True,
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -418,6 +449,15 @@ def _get_client(timeout=NOTSET, **kwargs):
         # pylint: disable=not-callable
         ret = docker.Client(**client_kwargs)
         # pylint: enable=not-callable
+
+    global _is_podman
+    _is_podman = any(
+        'podman' in component.get('Name', '').lower()
+        for component in ret.version().get('Components', [])
+    )
+
+    if _is_podman:
+        log.warning("Detected Podman emulating Docker API")
 
     log.debug("docker-py API version: %s", getattr(ret, "api_version", None))
     return ret
@@ -980,7 +1020,7 @@ def compare_containers(first, second, ignore=None):
     ret = {}
     for conf_dict in ("Config", "HostConfig"):
         for item in result1[conf_dict]:
-            if item in ignore:
+            if item in ignore or item == "Annotations":
                 continue
             val1 = result1[conf_dict][item]
             val2 = result2[conf_dict].get(item)
@@ -993,21 +1033,28 @@ def compare_containers(first, second, ignore=None):
                 if image1 != image2:
                     ret.setdefault(conf_dict, {})[item] = {"old": image1, "new": image2}
             else:
+                if item == "Binds":
+                    val1 = sorted(val1)
+                    val2 = sorted(val2)
+                if item == "CapDrop":
+                    val1 = sorted(val1)
+                    val2 = sorted(val2)
                 if item == "Links":
                     val1 = sorted(_scrub_links(val1, first))
                     val2 = sorted(_scrub_links(val2, second))
                 if item == "Ulimits":
                     val1 = _ulimit_sort(val1)
                     val2 = _ulimit_sort(val2)
+                # Podman seems to set variables we did not expect, so we are filtering them out here:
                 if item == "Env":
-                    val1 = sorted(val1)
-                    val2 = sorted(val2)
+                    val1 = _filter_podman_prefixes(val1)
+                    val2 = _filter_podman_prefixes(val2)
                 if val1 != val2:
                     ret.setdefault(conf_dict, {})[item] = {"old": val1, "new": val2}
         # Check for optionally-present items that were in the second container
         # and not the first.
         for item in result2[conf_dict]:
-            if item in ignore or item in ret.get(conf_dict, {}):
+            if item in ignore or item in ret.get(conf_dict, {}) or item == "Annotations":
                 # We're either ignoring this or we already processed this
                 # when iterating through result1. Either way, skip it.
                 continue
@@ -1022,6 +1069,12 @@ def compare_containers(first, second, ignore=None):
                 if image1 != image2:
                     ret.setdefault(conf_dict, {})[item] = {"old": image1, "new": image2}
             else:
+                if item == "Binds":
+                    val1 = sorted(val1)
+                    val2 = sorted(val2)
+                if item == "CapDrop":
+                    val1 = sorted(val1)
+                    val2 = sorted(val2)
                 if item == "Links":
                     val1 = sorted(_scrub_links(val1, first))
                     val2 = sorted(_scrub_links(val2, second))
@@ -1029,8 +1082,8 @@ def compare_containers(first, second, ignore=None):
                     val1 = _ulimit_sort(val1)
                     val2 = _ulimit_sort(val2)
                 if item == "Env":
-                    val1 = sorted(val1)
-                    val2 = sorted(val2)
+                    val1 = _filter_podman_prefixes(val1)
+                    val2 = _filter_podman_prefixes(val2)
                 if val1 != val2:
                     ret.setdefault(conf_dict, {})[item] = {"old": val1, "new": val2}
     return ret
@@ -7074,3 +7127,4 @@ def sls_build(
         stop(id_)
         rm_(id_)
     return ret
+
