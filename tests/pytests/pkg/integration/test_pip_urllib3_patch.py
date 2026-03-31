@@ -9,6 +9,16 @@ import pytest
 PATCHED_URLLIB3_VERSION = "2.6.3"
 
 
+@pytest.fixture(autouse=True)
+def skip_on_prev_version(install_salt):
+    """
+    Skip urllib3 patch tests when running against the previous (downgraded)
+    Salt version, which does not contain the CVE backports.
+    """
+    if install_salt.use_prev_version:
+        pytest.skip("urllib3 CVE patch is not present in the previous Salt version")
+
+
 def _site_packages(install_salt) -> pathlib.Path:
     """Return the site-packages directory for the installed Salt Python."""
     ret = subprocess.run(
