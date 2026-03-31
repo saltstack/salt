@@ -37,7 +37,7 @@ class GemModuleTest(ModuleCase):
         self.GEM_VER = "1.1.2"
         self.OLD_GEM = "brass"
         self.OLD_VERSION = "1.0.0"
-        self.NEW_VERSION = "1.2.1"
+        self.NEW_VERSION = "1.3.0"
         self.GEM_LIST = [self.GEM, self.OLD_GEM]
         for name in (
             "GEM",
@@ -55,6 +55,15 @@ class GemModuleTest(ModuleCase):
                 self.run_function("gem.uninstall", [self.GEM])
 
         self.addCleanup(uninstall_gem)
+
+        def uninstall_old_gem():
+            if self.run_function("gem.list", [self.OLD_GEM]):
+                self.run_function("gem.uninstall", [self.OLD_GEM])
+
+        # Ensure OLD_GEM is not installed before the test (handles leftover state
+        # from a previously failed run that skipped its own cleanup).
+        uninstall_old_gem()
+        self.addCleanup(uninstall_old_gem)
 
     def run_function(self, function, *args, **kwargs):
         """Override run_function to use the gem binary"""
