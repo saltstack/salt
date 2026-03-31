@@ -29,8 +29,6 @@ import traceback
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from typing import Any, Union
 
-import networkx as nx
-
 import salt.channel.client
 import salt.fileclient
 import salt.loader
@@ -60,7 +58,7 @@ from salt.serializers.msgpack import deserialize as msgpack_deserialize
 from salt.serializers.msgpack import serialize as msgpack_serialize
 from salt.template import compile_template, compile_template_str
 from salt.utils.datastructures import DefaultOrderedDict, HashableOrderedDict
-from salt.utils.requisite import DependencyGraph, RequisiteType
+from salt.utils.requisite import DependencyGraph, DiGraphCycle, RequisiteType
 
 log = logging.getLogger(__name__)
 
@@ -164,11 +162,9 @@ def _calculate_fake_duration() -> tuple[str, float]:
     Generate a NULL duration for when states do not run
     but we want the results to be consistent.
     """
-    utc_start_time = datetime.datetime.utcnow()
-    local_start_time = utc_start_time - (
-        datetime.datetime.utcnow() - datetime.datetime.now()
-    )
-    utc_finish_time = datetime.datetime.utcnow()
+    utc_start_time = datetime.datetime.now(tz=datetime.timezone.utc)
+    local_start_time = utc_start_time.astimezone()
+    utc_finish_time = datetime.datetime.now(tz=datetime.timezone.utc)
     start_time = local_start_time.time().isoformat()
     delta = utc_finish_time - utc_start_time
     # duration in milliseconds.microseconds
@@ -625,7 +621,7 @@ class Compiler:
         try:
             # Get nodes in topological order also sorted by order attribute
             sorted_chunks = self.dependency_dag.aggregate_and_order_chunks(cap)
-        except nx.NetworkXUnfeasible:
+        except DiGraphCycle:
             sorted_chunks = []
             cycle_edges = self.dependency_dag.get_cycles_str()
             errors.append(f"Recursive requisites were found: {cycle_edges}")
@@ -1542,7 +1538,7 @@ class State:
         try:
             # Get nodes in topological order also sorted by order attribute
             sorted_chunks = self.dependency_dag.aggregate_and_order_chunks(cap)
-        except nx.NetworkXUnfeasible:
+        except DiGraphCycle:
             sorted_chunks = []
             cycle_edges = self.dependency_dag.get_cycles_str()
             errors.append(f"Recursive requisites were found: {cycle_edges}")
@@ -2022,7 +2018,7 @@ class State:
             instance.states.inject_globals = inject_globals
         # we need to re-record start/end duration here because it is impossible to
         # correctly calculate further down the chain
-        utc_start_time = datetime.datetime.utcnow()
+        utc_start_time = datetime.datetime.now(tz=datetime.timezone.utc)
 
         instance.format_slots(cdata)
         tag = _gen_tag(low)
@@ -2042,10 +2038,9 @@ class State:
                 "comment": f"An exception occurred in this state: {trb}",
             }
 
-        utc_finish_time = datetime.datetime.utcnow()
-        timezone_delta = datetime.datetime.utcnow() - datetime.datetime.now()
-        local_finish_time = utc_finish_time - timezone_delta
-        local_start_time = utc_start_time - timezone_delta
+        utc_finish_time = datetime.datetime.now(tz=datetime.timezone.utc)
+        local_finish_time = utc_finish_time.astimezone()
+        local_start_time = utc_start_time.astimezone()
         ret["start_time"] = local_start_time.time().isoformat()
         delta = utc_finish_time - utc_start_time
         # duration in milliseconds.microseconds
@@ -2075,8 +2070,8 @@ class State:
                         *cdata["args"], **cdata["kwargs"]
                     )
 
-                    utc_start_time = datetime.datetime.utcnow()
-                    utc_finish_time = datetime.datetime.utcnow()
+                    utc_start_time = datetime.datetime.now(tz=datetime.timezone.utc)
+                    utc_finish_time = datetime.datetime.now(tz=datetime.timezone.utc)
                     delta = utc_finish_time - utc_start_time
                     duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
                     retry_ret["duration"] = duration
@@ -2161,10 +2156,8 @@ class State:
         Call a state directly with the low data structure, verify data
         before processing.
         """
-        utc_start_time = datetime.datetime.utcnow()
-        local_start_time = utc_start_time - (
-            datetime.datetime.utcnow() - datetime.datetime.now()
-        )
+        utc_start_time = datetime.datetime.now(tz=datetime.timezone.utc)
+        local_start_time = utc_start_time.astimezone()
         low_name = low.get("name")
         log_low_name = low_name.strip() if isinstance(low_name, str) else low_name
         log.info(
@@ -2359,10 +2352,9 @@ class State:
         self.__run_num += 1
         format_log(ret)
         self.check_refresh(low, ret)
-        utc_finish_time = datetime.datetime.utcnow()
-        timezone_delta = datetime.datetime.utcnow() - datetime.datetime.now()
-        local_finish_time = utc_finish_time - timezone_delta
-        local_start_time = utc_start_time - timezone_delta
+        utc_finish_time = datetime.datetime.now(tz=datetime.timezone.utc)
+        local_finish_time = utc_finish_time.astimezone()
+        local_start_time = utc_start_time.astimezone()
         ret["start_time"] = local_start_time.time().isoformat()
         delta = utc_finish_time - utc_start_time
         # duration in milliseconds.microseconds

@@ -291,11 +291,6 @@ netmiko==4.2.0
     # via napalm
 netutils==1.6.0
     # via napalm
-networkx==3.1
-    # via
-    #   -c requirements/constraints.txt
-    #   -c requirements/static/pkg/py3.9/darwin.txt
-    #   -r requirements/base.txt
 ntc-templates==4.0.1
     # via netmiko
 oauthlib==3.3.1

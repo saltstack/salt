@@ -76,3 +76,9 @@ def test_ssl_context_opts(mock):
     assert ssl.VerifyMode.CERT_OPTIONAL == ctx.verify_mode
     assert ctx.check_hostname
     assert ssl.VerifyFlags.VERIFY_CRL_CHECK_CHAIN & ctx.verify_flags
+
+
+def test_ssl_context_server_side_none_raises_error():
+    """Test that server_side=None raises ValueError."""
+    with pytest.raises(ValueError, match="server_side must be True or False"):
+        salt.transport.base.ssl_context({}, server_side=None)

@@ -3316,3 +3316,17 @@ last                 But not least           no\
         "available languages": {},
     }
     assert result == expected
+def test_normalize_name_with_arch_x86_64_v2():
+    """
+    Test if `salt.modules.yumpkg.normalize_name` is able to identify x86_64_v2
+    as a possible package architecture and remove it from name in case of
+    using it on x86_64 and not in any other cases.
+    """
+    with patch("salt.utils.pkg.rpm.get_osarch", MagicMock(return_value="x86_64")):
+        assert yumpkg.normalize_name("chrony.x86_64_v2") == "chrony"
+    with patch("salt.utils.pkg.rpm.get_osarch", MagicMock(return_value="x86_64")):
+        assert yumpkg.normalize_name("chrony.x86_64") == "chrony"
+    with patch("salt.utils.pkg.rpm.get_osarch", MagicMock(return_value="amd64")):
+        assert yumpkg.normalize_name("chrony.x86_64") == "chrony.x86_64"
+    with patch("salt.utils.pkg.rpm.get_osarch", MagicMock(return_value="x86_64")):
+        assert yumpkg.normalize_name("rootfiles.noarch") == "rootfiles"

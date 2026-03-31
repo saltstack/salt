@@ -358,12 +358,6 @@ ncclient==0.6.16
     #   junos-eznc
 netaddr==1.3.0
     # via -r requirements/static/ci/cloud.in
-networkx==3.1
-    # via
-    #   -c requirements/constraints.txt
-    #   -c requirements/static/ci/py3.13/linux.txt
-    #   -c requirements/static/pkg/py3.13/linux.txt
-    #   -r requirements/base.txt
 oauthlib==3.3.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt

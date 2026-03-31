@@ -24,7 +24,6 @@ import idna
 import jinja2
 import looseversion
 import msgpack
-import networkx
 import packaging
 import requests
 import tornado
@@ -295,7 +294,6 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
         "yaml",
         "tornado",
         "msgpack",
-        "networkx",
         "requests",
         "idna",
         "urllib3",
@@ -353,7 +351,7 @@ def get_ext_tops(config):
     """
     config = copy.deepcopy(config) or {}
     alternatives = {}
-    required = ["jinja2", "yaml", "tornado", "msgpack", "networkx"]
+    required = ["jinja2", "yaml", "tornado", "msgpack"]
     tops = []
     for ns, cfg in config.items():
         alternatives[ns] = cfg
@@ -452,7 +450,6 @@ def get_tops(extra_mods="", so_mods=""):
         yaml,
         tornado,
         msgpack,
-        networkx,
         certifi,
         singledispatch,
         concurrent,

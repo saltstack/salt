@@ -14,7 +14,8 @@ import salt.utils.stringutils
 log = logging.getLogger(__name__)
 
 # These arches compiled from the rpmUtils.arch python module source
-ARCHES_64 = ("x86_64", "athlon", "amd64", "ia32e", "ia64", "geode")
+ARCHES_X86_64 = ("x86_64", "x86_64_v2")
+ARCHES_64 = ARCHES_X86_64 + ("athlon", "amd64", "ia32e", "ia64", "geode")
 ARCHES_32 = ("i386", "i486", "i586", "i686")
 ARCHES_PPC = ("ppc", "ppc64", "ppc64le", "ppc64iseries", "ppc64pseries")
 ARCHES_S390 = ("s390", "s390x")
@@ -105,7 +106,11 @@ def resolve_name(name, arch, osarch=None):
     if osarch is None:
         osarch = get_osarch()
 
-    if not check_32(arch, osarch) and arch not in (osarch, "noarch"):
+    if (
+        not check_32(arch, osarch)
+        and arch not in (osarch, "noarch")
+        and not (arch in ARCHES_X86_64 and osarch in ARCHES_X86_64)
+    ):
         name += f".{arch}"
     return name
 
@@ -130,7 +135,10 @@ def parse_pkginfo(line, osarch=None):
 
     if install_time not in ("(none)", "0"):
         install_date = (
-            datetime.datetime.utcfromtimestamp(int(install_time)).isoformat() + "Z"
+            datetime.datetime.fromtimestamp(
+                int(install_time), datetime.timezone.utc
+            ).isoformat()
+            + "Z"
         )
         install_date_time_t = int(install_time)
     else:

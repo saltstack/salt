@@ -1,6 +1,8 @@
 # Author: Bo Maryniuk <bo@suse.de>
 
+import json
 import os
+import shlex
 
 import pytest
 
@@ -350,3 +352,31 @@ def test_ansible_discover_playbooks_multiple_locations():
         "fullpath": os.path.join(playbooks_dir, "example-playbook2/site.yml"),
         "custom_inventory": os.path.join(playbooks_dir, "example-playbook2/hosts"),
     }
+
+
+def test_ansible_playbooks_with_complex_extra_vars():
+    """
+    Test ansible.playbooks execution module function can pass comples extra-vars.
+    """
+    extra_vars = {
+        "test_key1": {
+            "test_subkey1": "single'quote",
+            "test_subkey2": 'double"quote',
+        },
+        "test_key2": {
+            "backquote": "`",
+        },
+    }
+    cmd_run_all = MagicMock(return_value={"retcode": 0, "stdout": '{"foo": "bar"}'})
+    with patch.dict(ansiblegate.__salt__, {"cmd.run_all": cmd_run_all}), patch(
+        "salt.utils.path.which", MagicMock(return_value=True)
+    ):
+        ret = ansiblegate.playbooks("fake-playbook.yml", extra_vars=extra_vars)
+        assert "retcode" in ret
+        cmd_run_all.assert_called_once()
+        passed_extra_vars = {}
+        for arg in shlex.split(cmd_run_all.call_args.kwargs["cmd"]):
+            if arg.startswith("--extra-vars="):
+                passed_extra_vars = arg[13:]
+        passed_extra_vars = json.loads(passed_extra_vars)
+        assert passed_extra_vars == extra_vars
