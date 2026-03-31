@@ -28,6 +28,6 @@ from __future__ import absolute_import, division, print_function
 # number has been incremented)
 
 
-# The bundled version is 4.5.3 and has been patched for CVEs up to 6.5.3
-version = "6.5.3"
-version_info = (6, 5, 3, 0)
+# The bundled version is 4.5.3 and has been patched for CVEs up to 6.5.5
+version = "6.5.5"
+version_info = (6, 5, 5, 0)

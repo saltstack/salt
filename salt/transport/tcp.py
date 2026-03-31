@@ -537,9 +537,7 @@ class TCPClientKeepAlive(salt.ext.tornado.tcpclient.TCPClient):
         stream = salt.ext.tornado.iostream.IOStream(
             sock, max_buffer_size=max_buffer_size
         )
-        if salt.ext.tornado.version_info < (5,):
-            return stream.connect(addr)
-        return stream, stream.connect(addr)
+        return stream.connect(addr)
 
 
 # TODO consolidate with IPCClient
