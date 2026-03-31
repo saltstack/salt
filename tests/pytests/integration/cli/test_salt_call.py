@@ -34,6 +34,11 @@ def test_fib(salt_call_cli):
     assert ret.data[0] == 2
 
 
+def test_fib_str_limit(salt_call_cli):
+    ret = salt_call_cli.run("test.fib", "20578")
+    assert ret.returncode == 0
+
+
 def test_fib_txt_output(salt_call_cli):
     ret = salt_call_cli.run("--output=txt", "test.fib", "3")
     assert ret.returncode == 0
