@@ -152,7 +152,23 @@ class GemModuleTest(ModuleCase):
 
         self.run_function("gem.update", [self.OLD_GEM])
         gem_list = self.run_function("gem.list", [self.OLD_GEM])
-        self.assertEqual({self.OLD_GEM: [self.NEW_VERSION, self.OLD_VERSION]}, gem_list)
+        installed_versions = gem_list.get(self.OLD_GEM, [])
+
+        if installed_versions == [self.OLD_VERSION]:
+            # gem update may be unable to install a newer version when the
+            # only available release requires a Ruby version not present on
+            # this system (e.g. brass >= 1.3.0 requires Ruby >= 3.1).
+            self.skipTest(
+                "gem update did not install a newer version of {}; the "
+                "latest release may require a newer Ruby version".format(
+                    self.OLD_GEM
+                )
+            )
+
+        self.assertEqual(
+            {self.OLD_GEM: [self.NEW_VERSION, self.OLD_VERSION]},
+            gem_list,
+        )
 
         self.run_function("gem.uninstall", [self.OLD_GEM])
         self.assertFalse(self.run_function("gem.list", [self.OLD_GEM]))
