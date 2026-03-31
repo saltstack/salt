@@ -5,7 +5,6 @@ import zipfile
 
 import pytest
 
-
 PATCHED_URLLIB3_VERSION = "2.6.3"
 
 
@@ -23,7 +22,10 @@ def _site_packages(install_salt) -> pathlib.Path:
     """Return the site-packages directory for the installed Salt Python."""
     ret = subprocess.run(
         install_salt.binary_paths["python"]
-        + ["-c", "import pip, pathlib; print(pathlib.Path(pip.__file__).parent.parent)"],
+        + [
+            "-c",
+            "import pip, pathlib; print(pathlib.Path(pip.__file__).parent.parent)",
+        ],
         capture_output=True,
         text=True,
         check=False,
@@ -49,9 +51,9 @@ def test_pip_vendored_urllib3_version(install_salt):
     )
     assert ret.returncode == 0, ret.stderr
     version = ret.stdout.strip()
-    assert version == PATCHED_URLLIB3_VERSION, (
-        f"pip's vendored urllib3 is {version!r}; expected {PATCHED_URLLIB3_VERSION!r}"
-    )
+    assert (
+        version == PATCHED_URLLIB3_VERSION
+    ), f"pip's vendored urllib3 is {version!r}; expected {PATCHED_URLLIB3_VERSION!r}"
 
 
 def test_virtualenv_embedded_pip_wheel_urllib3_version(install_salt):
@@ -80,9 +82,7 @@ def test_virtualenv_embedded_pip_wheel_urllib3_version(install_salt):
                 f"pip/_vendor/urllib3/_version.py not found inside {pip_wheel.name}"
             )
 
-    match = re.search(
-        r'^__version__\s*=\s*["\']([^"\']+)["\']', content, re.MULTILINE
-    )
+    match = re.search(r'^__version__\s*=\s*["\']([^"\']+)["\']', content, re.MULTILINE)
     assert match, f"Could not parse __version__ from {pip_wheel.name}"
     version = match.group(1)
     assert version == PATCHED_URLLIB3_VERSION, (
