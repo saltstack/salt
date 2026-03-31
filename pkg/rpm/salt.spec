@@ -472,12 +472,61 @@ if [ $1 -gt 1 ] ; then
 fi
 
 %pre minion
+
+# Source setup configuration if present
+if [ -f /etc/sysconfig/salt-minion-setup ]; then
+    . /etc/sysconfig/salt-minion-setup
+fi
+
 if [ $1 -gt 1 ] ; then
-    # Reset permissions to match previous installs - performing upgrade
-    _MN_LCUR_USER=$(ls -dl /run/salt/minion | cut -d ' ' -f 3)
-    _MN_LCUR_GROUP=$(ls -dl /run/salt/minion | cut -d ' ' -f 4)
-    %global _MN_CUR_USER  %{_MN_LCUR_USER}
-    %global _MN_CUR_GROUP %{_MN_LCUR_GROUP}
+    # Upgrade: detect and save current ownership
+    /bin/systemctl stop salt-minion.service >/dev/null 2>&1 || :
+
+    # Check if minion config specifies a non-root user
+    MINION_USER=""
+    if [ -f "/etc/salt/minion" ] || [ -d "/etc/salt/minion.d" ]; then
+        # Try to get user from main config
+        if [ -f "/etc/salt/minion" ]; then
+            MINION_USER=$(grep -E "^user:" /etc/salt/minion | cut -d ':' -f 2 | tr -d ' ')
+        fi
+        # Try to get user from minion.d configs
+        if [ -z "$MINION_USER" ] && [ -d "/etc/salt/minion.d" ]; then
+            MINION_USER=$(grep -r -h -E "^user:" /etc/salt/minion.d/ | head -1 | cut -d ':' -f 2 | tr -d ' ' || true)
+        fi
+    fi
+
+    if [ -n "$MINION_USER" ] && [ "$MINION_USER" != "root" ]; then
+        echo "$MINION_USER:$MINION_USER" > /tmp/.salt-minion-upgrade-ownership
+        %global _MN_CUR_USER %{MINION_USER}
+        %global _MN_CUR_GROUP %{MINION_USER}
+    else
+        # Fallback to checking multiple directories for ownership
+        if [ -d "/run/salt/minion" ]; then
+            _MN_LCUR_USER=$(ls -dl /run/salt/minion | cut -d ' ' -f 3)
+            _MN_LCUR_GROUP=$(ls -dl /run/salt/minion | cut -d ' ' -f 4)
+            if [ "$_MN_LCUR_USER" != "root" ]; then
+                echo "$_MN_LCUR_USER:$_MN_LCUR_GROUP" > /tmp/.salt-minion-upgrade-ownership
+                %global _MN_CUR_USER  %{_MN_LCUR_USER}
+                %global _MN_CUR_GROUP %{_MN_LCUR_GROUP}
+            fi
+        elif [ -d "/etc/salt/pki/minion" ]; then
+            _MN_LCUR_USER=$(ls -dl /etc/salt/pki/minion | cut -d ' ' -f 3)
+            _MN_LCUR_GROUP=$(ls -dl /etc/salt/pki/minion | cut -d ' ' -f 4)
+            if [ "$_MN_LCUR_USER" != "root" ]; then
+                echo "$_MN_LCUR_USER:$_MN_LCUR_GROUP" > /tmp/.salt-minion-upgrade-ownership
+                %global _MN_CUR_USER  %{_MN_LCUR_USER}
+                %global _MN_CUR_GROUP %{_MN_LCUR_GROUP}
+            fi
+        elif [ -d "/var/cache/salt/minion" ]; then
+            _MN_LCUR_USER=$(ls -dl /var/cache/salt/minion | cut -d ' ' -f 3)
+            _MN_LCUR_GROUP=$(ls -dl /var/cache/salt/minion | cut -d ' ' -f 4)
+            if [ "$_MN_LCUR_USER" != "root" ]; then
+                echo "$_MN_LCUR_USER:$_MN_LCUR_GROUP" > /tmp/.salt-minion-upgrade-ownership
+                %global _MN_CUR_USER  %{_MN_LCUR_USER}
+                %global _MN_CUR_GROUP %{_MN_LCUR_GROUP}
+            fi
+        fi
+    fi
 fi
 
 
@@ -530,7 +579,6 @@ fi
 %post
 ln -s -f /opt/saltstack/salt/spm %{_bindir}/spm
 ln -s -f /opt/saltstack/salt/salt-pip %{_bindir}/salt-pip
-/opt/saltstack/salt/bin/python3 -m compileall -qq /opt/saltstack/salt/lib
 
 
 %post cloud
@@ -577,6 +625,11 @@ else
 fi
 
 %post minion
+# Source setup configuration if present
+if [ -f /etc/sysconfig/salt-minion-setup ]; then
+    . /etc/sysconfig/salt-minion-setup
+fi
+
 ln -s -f /opt/saltstack/salt/salt-minion %{_bindir}/salt-minion
 ln -s -f /opt/saltstack/salt/salt-call %{_bindir}/salt-call
 ln -s -f /opt/saltstack/salt/salt-proxy %{_bindir}/salt-proxy
@@ -596,6 +649,36 @@ fi
 # %%systemd_post salt-minion.service
 if [ $1 -gt 1 ] ; then
   # Upgrade
+  # Restore ownership before restarting service
+  if [ -f "/tmp/.salt-minion-upgrade-ownership" ]; then
+    OWNERSHIP=$(cat /tmp/.salt-minion-upgrade-ownership)
+    USER_GROUP=${OWNERSHIP%:*}
+    chown $OWNERSHIP /etc/salt
+    chown $OWNERSHIP /etc/salt/pki
+    chown $OWNERSHIP /var/run/salt
+    chown -R $OWNERSHIP /etc/salt/pki/minion
+    chown -R $OWNERSHIP /etc/salt/minion.d
+    chown -R $OWNERSHIP /var/cache/salt/minion
+    chown -R $OWNERSHIP /var/run/salt/minion
+    chown $OWNERSHIP /var/log/salt/minion
+    # Also restore parent directories that are commonly owned by salt user
+    chown $OWNERSHIP /var/log/salt
+    chown -R $OWNERSHIP /var/cache/salt
+
+    # Pre-create proc directory to ensure ownership (fixes PermissionError)
+    mkdir -p /var/cache/salt/minion/proc
+    chown $OWNERSHIP /var/cache/salt/minion/proc
+    chmod 750 /var/cache/salt/minion/proc
+
+    # Restore ownership of the main installation directory for salt-pip access
+    chown -R $OWNERSHIP /opt/saltstack/salt
+    # Also restore ownership of extras directory if it exists
+    # Use find to handle wildcard expansion safely in scriptlet
+    find /opt/saltstack/salt -maxdepth 1 -name "extras-*" -exec chown -R $OWNERSHIP {} +
+
+    # Create marker file to tell %posttrans this was an upgrade
+    touch /tmp/.salt-minion-upgrade-ownership.done
+  fi
   /bin/systemctl try-restart salt-minion.service >/dev/null 2>&1 || :
 else
   # Initial installation
@@ -617,6 +700,13 @@ else
 fi
 
 
+%posttrans
+# (Re)generate pycache in posttrans, so we're sure any old libraries have been uninstalled.
+find /opt/saltstack/salt/lib -type f -name '*.pyc' -delete
+find /opt/saltstack/salt/lib -type d -name __pycache__ -empty -delete
+/opt/saltstack/salt/bin/python3 -m compileall -qq /opt/saltstack/salt/lib
+
+
 %posttrans cloud
 PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush();")
 if [ ! -e "/var/log/salt/cloud" ]; then
@@ -624,56 +714,56 @@ if [ ! -e "/var/log/salt/cloud" ]; then
   chmod 640 /var/log/salt/cloud
 fi
 if [ $1 -gt 1 ] ; then
-    # Reset permissions to match previous installs - performing upgrade
-    chown -R %{_MS_CUR_USER}:%{_MS_CUR_GROUP} /etc/salt/cloud.deploy.d /var/log/salt/cloud /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy
+    # Upgrade: preserve existing ownership, don't reset to defaults
+    :
 else
-    chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/cloud.deploy.d /var/log/salt/cloud /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy
-fi
+        chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/cloud.deploy.d /var/log/salt/cloud /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy /opt/saltstack/salt
+    fi
+
+    %posttrans master
+    if [ ! -e "/var/log/salt/master" ]; then
+      touch /var/log/salt/master
+      chmod 640 /var/log/salt/master
+    fi
+    if [ ! -e "/var/log/salt/key" ]; then
+      touch /var/log/salt/key
+      chmod 640 /var/log/salt/key
+    fi
+    if [ $1 -gt 1 ] ; then
+        # Upgrade: preserve existing ownership, don't reset to defaults
+        :
+    else
+        chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master /opt/saltstack/salt
+    fi
 
 
-%posttrans master
-if [ ! -e "/var/log/salt/master" ]; then
-  touch /var/log/salt/master
-  chmod 640 /var/log/salt/master
-fi
-if [ ! -e "/var/log/salt/key" ]; then
-  touch /var/log/salt/key
-  chmod 640 /var/log/salt/key
-fi
-if [ $1 -gt 1 ] ; then
-    # Reset permissions to match previous installs - performing upgrade
-    chown -R %{_MS_CUR_USER}:%{_MS_CUR_GROUP} /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
-else
-    chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
-fi
+    %posttrans syndic
+    if [ ! -e "/var/log/salt/syndic" ]; then
+      touch /var/log/salt/syndic
+      chmod 640 /var/log/salt/syndic
+    fi
+    if [ $1 -gt 1 ] ; then
+        # Upgrade: preserve existing ownership, don't reset to defaults
+        :
+    else
+        chown -R %{_SALT_USER}:%{_SALT_GROUP} /var/log/salt/syndic /opt/saltstack/salt
+    fi
 
 
-%posttrans syndic
-if [ ! -e "/var/log/salt/syndic" ]; then
-  touch /var/log/salt/syndic
-  chmod 640 /var/log/salt/syndic
-fi
-if [ $1 -gt 1 ] ; then
-    # Reset permissions to match previous installs - performing upgrade
-    chown -R %{_MS_CUR_USER}:%{_MS_CUR_GROUP} /var/log/salt/syndic
-else
-    chown -R %{_SALT_USER}:%{_SALT_GROUP} /var/log/salt/syndic
-fi
-
-
-%posttrans api
-if [ ! -e "/var/log/salt/api" ]; then
-  touch /var/log/salt/api
-  chmod 640 /var/log/salt/api
-fi
-if [ $1 -gt 1 ] ; then
-    # Reset permissions to match previous installs - performing upgrade
-    chown -R %{_MS_CUR_USER}:%{_MS_CUR_GROUP} /var/log/salt/api
-else
-    chown -R %{_SALT_USER}:%{_SALT_GROUP} /var/log/salt/api
-fi
+    %posttrans api
+    if [ ! -e "/var/log/salt/api" ]; then
+      touch /var/log/salt/api
+      chmod 640 /var/log/salt/api
+    fi
+    if [ $1 -gt 1 ] ; then
+        # Upgrade: preserve existing ownership, don't reset to defaults
+        :
+    else
+        chown -R %{_SALT_USER}:%{_SALT_GROUP} /var/log/salt/api /opt/saltstack/salt
+    fi
 
 %posttrans minion
+
 if [ ! -e "/var/log/salt/minion" ]; then
   touch /var/log/salt/minion
   chmod 640 /var/log/salt/minion
@@ -682,17 +772,62 @@ if [ ! -e "/var/log/salt/key" ]; then
   touch /var/log/salt/key
   chmod 640 /var/log/salt/key
 fi
-if [ $1 -gt 1 ] ; then
-    # Reset permissions to match previous installs - performing upgrade
-    chown -R %{_MN_CUR_USER}:%{_MN_CUR_GROUP} /etc/salt/pki/minion /etc/salt/minion.d /var/log/salt/minion /var/cache/salt/minion /var/run/salt/minion
+
+# Check for preserved ownership marker (from %pre)
+if [ -f "/tmp/.salt-minion-upgrade-ownership" ]; then
+    # Upgrade case where we detected previous user
+    OWNERSHIP=$(cat /tmp/.salt-minion-upgrade-ownership)
+
+    # Apply ownership restoration
+    chown $OWNERSHIP /etc/salt
+    chown $OWNERSHIP /etc/salt/pki
+    chown $OWNERSHIP /var/run/salt
+    chown -R $OWNERSHIP /etc/salt/pki/minion
+    chown -R $OWNERSHIP /etc/salt/minion.d
+    chown -R $OWNERSHIP /var/cache/salt/minion
+    chown -R $OWNERSHIP /var/run/salt/minion
+    chown $OWNERSHIP /var/log/salt/minion
+    # Also restore parent directories that are commonly owned by salt user
+    chown $OWNERSHIP /var/log/salt
+    chown -R $OWNERSHIP /var/cache/salt
+
+    # Pre-create proc directory to ensure ownership (fixes PermissionError)
+    mkdir -p /var/cache/salt/minion/proc
+    chown $OWNERSHIP /var/cache/salt/minion/proc
+    chmod 750 /var/cache/salt/minion/proc
+
+    # Restore ownership of the main installation directory for salt-pip access
+    chown -R $OWNERSHIP /opt/saltstack/salt
+
+    # Clean up
+    rm -f /tmp/.salt-minion-upgrade-ownership
+    rm -f /tmp/.salt-minion-upgrade-ownership.done
+
+else
+    # Fresh install or upgrade from root
+
+    # Check for configuration file in /etc/sysconfig/salt-minion-setup
+    if [ -f /etc/sysconfig/salt-minion-setup ]; then
+        . /etc/sysconfig/salt-minion-setup
+    fi
+
+    # For fresh installs, set ownership based on environment variables or defaults
+    if [ -n "$SALT_MINION_USER" ] && [ "$SALT_MINION_USER" != "root" ]; then
+        chown -R $SALT_MINION_USER:$SALT_MINION_USER /etc/salt/pki/minion /etc/salt/minion.d /var/log/salt/minion /var/cache/salt/minion /var/run/salt/minion /var/log/salt /var/cache/salt
+        # Ensure the main installation directory is also owned by the salt user for salt-pip
+        chown -R $SALT_MINION_USER:$SALT_MINION_USER /opt/saltstack/salt
+    fi
 fi
+
+# Always try to restart service
+/bin/systemctl try-restart salt-minion.service >/dev/null 2>&1 || :
 
 
 %preun
 if [ $1 -eq 0 ]; then
   # Uninstall
-  find /opt/saltstack/salt -type f -name \*\.pyc -print0 | xargs --null --no-run-if-empty rm
-  find /opt/saltstack/salt -type d -name __pycache__ -empty -print0 | xargs --null --no-run-if-empty rmdir
+  find /opt/saltstack/salt -type f -name '*.pyc' -delete
+  find /opt/saltstack/salt -type d -name __pycache__ -empty -delete
 fi
 
 %postun master

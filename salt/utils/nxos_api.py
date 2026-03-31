@@ -117,7 +117,7 @@ def rpc(commands, method="cli", **kwargs):
         header_dict=headers,
         decode=True,
         decode_type="json",
-        **init_args
+        **init_args,
     )
     if "error" in response:
         raise SaltException(response["error"])

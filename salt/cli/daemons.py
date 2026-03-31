@@ -265,6 +265,9 @@ class Minion(
                 v_dirs = [
                     self.config["pki_dir"],
                     self.config["cachedir"],
+                    os.path.join(
+                        self.config["cachedir"], "proc"
+                    ),  # Ensure proc dir is created before privilege drop
                     self.config["sock_dir"],
                     self.config["extension_modules"],
                     confd,
@@ -456,6 +459,9 @@ class ProxyMinion(
                 v_dirs = [
                     self.config["pki_dir"],
                     self.config["cachedir"],
+                    os.path.join(
+                        self.config["cachedir"], "proc"
+                    ),  # Ensure proc dir is created before privilege drop
                     self.config["sock_dir"],
                     self.config["extension_modules"],
                     confd,

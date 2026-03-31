@@ -86,7 +86,7 @@ def create_issue(
     server=None,
     username=None,
     password=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Create a JIRA issue using the named settings. Return the JIRA ticket ID.

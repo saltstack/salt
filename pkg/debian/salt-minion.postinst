@@ -35,6 +35,7 @@ case "$1" in
         chown -R $RET:$RET /etc/salt/pki/minion /etc/salt/minion.d \
                            /var/log/salt/minion /var/cache/salt/minion \
                            /var/run/salt/minion \
+                           /opt/saltstack/salt \
                            || true
       fi
     fi

@@ -560,7 +560,7 @@ def onedir_dependencies(
         "-v",
         "--use-pep517",
         "--no-cache-dir",
-        "--only-binary=maturin,apache-libcloud,pymssql",
+        "--only-binary=maturin,apache-libcloud,pymssql,hatchling",
     ]
     if platform == "windows":
         python_bin = env_scripts_dir / "python"
@@ -568,7 +568,9 @@ def onedir_dependencies(
         env["RELENV_BUILDENV"] = "1"
         python_bin = env_scripts_dir / "python3"
         install_args.append("--no-binary=:all:")
-        install_args.append("--only-binary=maturin,apache-libcloud,pymssql")
+        install_args.append(
+            "--only-binary=maturin,apache-libcloud,pymssql,cassandra-driver,hatchling"
+        )
 
     # Cryptography needs openssl dir set to link to the proper openssl libs.
     if platform == "macos":

@@ -191,7 +191,7 @@ def managed(name, data, **kwargs):
         test=test,
         debug=debug,
         commit=commit,
-        replace=replace
+        replace=replace,
     )
     log.debug("Loaded config result:")
     log.debug(loaded_changes)
@@ -294,6 +294,6 @@ def configured(name, data, **kwargs):
         test=test,
         debug=debug,
         commit=commit,
-        replace=replace
+        replace=replace,
     )
     return salt.utils.napalm.loaded_ret(ret, loaded_changes, test, debug)

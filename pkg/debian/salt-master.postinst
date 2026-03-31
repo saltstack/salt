@@ -31,10 +31,14 @@ case "$1" in
           touch /var/log/salt/key
           chmod 640 /var/log/salt/key
         fi
-        chown -R $RET:$RET /etc/salt/pki/master /etc/salt/master.d \
-                           /var/log/salt/master /var/log/salt/key \
-                           /var/cache/salt/master /var/run/salt/master \
-                           || true
+        # Only set ownership on fresh install, preserve on upgrade
+        if [ -z "$2" ]; then
+            chown -R $RET:$RET /etc/salt/pki/master /etc/salt/master.d \
+                               /var/log/salt/master /var/log/salt/key \
+                               /var/cache/salt/master /var/run/salt/master \
+                               /opt/saltstack/salt \
+                               || true
+        fi
       fi
     fi
   ;;
