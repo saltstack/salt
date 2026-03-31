@@ -18,6 +18,7 @@ import fnmatch
 import json
 import logging
 import os
+import shlex
 import subprocess
 import sys
 from tempfile import NamedTemporaryFile
@@ -364,9 +365,9 @@ def playbooks(
     if diff:
         command.append("--diff")
     if isinstance(extra_vars, dict):
-        command.append(f"--extra-vars='{json.dumps(extra_vars)}'")
+        command.append(f"--extra-vars={shlex.quote(json.dumps(extra_vars))}")
     elif isinstance(extra_vars, str) and extra_vars.startswith("@"):
-        command.append(f"--extra-vars={extra_vars}")
+        command.append(f"--extra-vars={shlex.quote(extra_vars)}")
     if flush_cache:
         command.append("--flush-cache")
     if inventory:
