@@ -160,9 +160,7 @@ class GemModuleTest(ModuleCase):
             # this system (e.g. brass >= 1.3.0 requires Ruby >= 3.1).
             self.skipTest(
                 "gem update did not install a newer version of {}; the "
-                "latest release may require a newer Ruby version".format(
-                    self.OLD_GEM
-                )
+                "latest release may require a newer Ruby version".format(self.OLD_GEM)
             )
 
         self.assertEqual(
