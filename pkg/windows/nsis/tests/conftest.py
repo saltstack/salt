@@ -1,6 +1,7 @@
 import os
 import re
 import shutil
+import stat
 import subprocess
 import time
 import winreg
@@ -127,7 +128,7 @@ def reg_key_exists(hive=winreg.HKEY_LOCAL_MACHINE, key=None):
     try:
         with winreg.OpenKey(hive, key, 0, winreg.KEY_READ):
             return True
-    except:
+    except OSError:
         return False
 
 
@@ -161,9 +162,16 @@ def clean_fragments(inst_dir=INST_DIR):
         shutil.rmtree(inst_dir)
     assert not os.path.exists(inst_dir)
 
-    # Remove old salt dir (C:\salt)
+    # Remove old salt dir (C:\salt).  PKI files (minion.pem etc.) are created
+    # with restrictive NTFS permissions by the Salt installer, so a plain
+    # rmtree raises PermissionError.  The onerror handler clears the read-only
+    # attribute and retries so the tree is always removed cleanly.
+    def _force_remove(func, path, _exc):
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
+
     if os.path.exists(OLD_DIR):
-        shutil.rmtree(OLD_DIR)
+        shutil.rmtree(OLD_DIR, onerror=_force_remove)
     assert not os.path.exists(OLD_DIR)
 
     # Remove custom config
@@ -186,7 +194,7 @@ def clean_fragments(inst_dir=INST_DIR):
 
 
 @pytest.helpers.register
-def clean_env(inst_dir=INST_DIR, timeout=300):
+def clean_env(inst_dir=INST_DIR):
     # Track whether any process had to be force-killed.  If so we return
     # False so the caller's `assert clean_env()` fails the test — a forced
     # kill means something got stuck, which is exactly what this test suite
@@ -209,8 +217,10 @@ def clean_env(inst_dir=INST_DIR, timeout=300):
     live = _live_processes()
     for proc in PROCESSES:
         if proc in live:
-            print(f"\nWARNING: {proc} still in process list after wait — marking as killed")
+            print(f"\nWARNING: {proc} still in process list after wait — force-killing")
+            _kill_lingering_processes()
             killed = True
+            break  # _kill_lingering_processes covers all PROCESSES at once
 
     # Uninstall existing installation if one is present.
     for uninst_bin in [f"{inst_dir}\\uninst.exe", f"{OLD_DIR}\\uninst.exe"]:
@@ -261,8 +271,7 @@ def clean_env(inst_dir=INST_DIR, timeout=300):
                 time.sleep(0.5)
 
             try:
-                result = clean_fragments(inst_dir=install_dir)
-                assert result, "clean_fragments returned False"
+                clean_fragments(inst_dir=install_dir)
             except Exception as exc:
                 print(f"\nERROR in clean_fragments({install_dir!r}): {exc}")
                 killed = True
@@ -327,7 +336,9 @@ def install_salt(args):
         cmd.extend(args)
     else:
         raise TypeError(f"Invalid args format: {args}")
-    assert run_command(cmd), "Installer failed (non-zero exit or force-killed on timeout)"
+    assert run_command(
+        cmd
+    ), "Installer failed (non-zero exit or force-killed on timeout)"
 
     # Let's make sure none of the install/uninstall processes are running
     try:
@@ -401,22 +412,19 @@ def run_command(cmd_args, timeout=60):
         cmd_args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )
 
-    elapsed_time = 0
-    while (
-        os.path.exists(bin_file) and is_file_locked(bin_file) and elapsed_time < timeout
-    ):
-        elapsed_time += 0.1
-        time.sleep(0.1)
-
     try:
         proc.wait(timeout=timeout)
         if proc.returncode != 0:
-            print(f"\nWARNING: process exited with code {proc.returncode}: {cmd_args[:120]}")
+            print(
+                f"\nWARNING: process exited with code {proc.returncode}: {cmd_args[:120]}"
+            )
             return False
         return True
     except subprocess.TimeoutExpired:
         # Kill the installer/uninstaller and every child it spawned (nssm,
         # salt-minion, etc.) so they don't linger into the next iteration.
-        print(f"\nWARNING: process timed out after {timeout}s — force-killing: {cmd_args[:120]}")
+        print(
+            f"\nWARNING: process timed out after {timeout}s — force-killing: {cmd_args[:120]}"
+        )
         _kill_process_tree(proc)
         return False
