@@ -1279,7 +1279,7 @@ def list_freeze_parse(
 
     normal_prefix = normalize(prefix) if prefix else None
 
-    if prefix is None or "pip".startswith(normal_prefix):
+    if normal_prefix is None or "pip".startswith(normal_prefix):
         packages["pip"] = version(bin_env, cwd)
 
     for line in freeze(
@@ -1314,7 +1314,7 @@ def list_freeze_parse(
             continue
 
         normal_name = normalize(name)
-        if prefix:
+        if normal_prefix:
             if normal_name.startswith(normal_prefix):
                 packages[normal_name] = version_
         else:
