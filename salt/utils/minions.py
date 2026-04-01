@@ -34,10 +34,9 @@ log = logging.getLogger(__name__)
 TARGET_REX = re.compile(
     r"""(?x)
         (
-            (?P<engine>G|P|I|J|L|N|S|E|R)  # Possible target engines
-            (?P<delimiter>(?<=G|P|I|J).)?  # Optional delimiter for specific engines
-        @)?                                # Engine+delimiter are separated by a '@'
-                                           # character and are optional for the target
+            (?P<engine>G|P|I|J|L|N|S|E|R|T|M)  # Possible target engines
+            (?P<delimiter>(?<=G|P|I|J).)?        # Optional delimiter (G/P/I/J only)
+        @)?                                      # Engine+delimiter separated by '@', optional
         (?P<pattern>.+)$"""  # The pattern passed to the target engine
 )
 
@@ -209,6 +208,7 @@ class CkMinions:
         self.opts = opts
         self.cache = salt.cache.factory(opts)
         self.key = salt.key.get_key(opts)
+        # TODO(resources): self.registry = ResourceRegistry(opts)
         # TODO: this is actually an *auth* check
         if self.opts.get("transport", "zeromq") in salt.transport.TRANSPORTS:
             self.acc = "minions"
@@ -526,6 +526,8 @@ class CkMinions:
                 "S": self._check_ipcidr_minions,
                 "E": self._check_pcre_minions,
                 "R": self._all_minions,
+                "T": self._check_resource_minions,
+                "M": self._check_managing_minion_minions,
             }
             if pillar_exact:
                 ref["I"] = self._check_pillar_exact_minions
@@ -722,6 +724,107 @@ class CkMinions:
 
         return {"minions": minions, "missing": []}
 
+    def _check_resource_minions(self, expr, greedy, minions=None):
+        """
+        Return the resource IDs that match the ``T@`` pattern ``expr``.
+
+        ``expr`` is either a bare resource type (``dummy``) or a full SRN
+        (``dummy:dummy-01``).
+
+        Unlike other ``_check_*_minions`` methods, the returned IDs are
+        **resource IDs**, not managing-minion IDs.  This is intentional: the
+        CLI uses this list to know which return IDs to expect, and resource
+        returns are keyed by resource ID (remapped by the master's ``_return``
+        handler after the transport security check passes).
+
+        Job delivery is handled separately: the job is published with the
+        original ``T@`` target expression and ``tgt_type=compound``; managing
+        minions receive it via broadcast and filter locally with
+        ``resource_match.match()``.
+
+        The ``minion_resources`` cache bank (populated by each minion on startup
+        via ``_register_resources``) is consulted first.  For a full SRN the
+        resource ID can also be derived directly from the expression without a
+        populated registry.  A bare-type expression with an empty registry
+        returns an empty set.
+        """
+        if ":" in expr:
+            resource_type, resource_id = expr.split(":", 1)
+            # Treat a trailing colon with no ID (e.g. "dummy:") as a bare-type
+            # expression so it matches all resources of that type rather than
+            # returning an invalid empty-string resource ID.
+            if not resource_id:
+                resource_id = None
+        else:
+            resource_type, resource_id = expr, None
+
+        managed_minions = self.cache.list("minion_resources") or []
+        if managed_minions:
+            matched = []
+            for minion_id in managed_minions:
+                resources = self.cache.fetch("minion_resources", minion_id) or {}
+                for rtype, rids in resources.items():
+                    if rtype != resource_type:
+                        continue
+                    for rid in rids:
+                        if resource_id is not None and rid != resource_id:
+                            continue
+                        matched.append(rid)
+            if matched:
+                return {"minions": matched, "missing": []}
+            log.debug("No registry entries for T@%s", expr)
+
+        # Registry empty or no match — fall back to deriving from the expression.
+        if resource_id is not None:
+            log.debug(
+                "Resource registry cache empty; using resource ID from expression: %s",
+                resource_id,
+            )
+            return {"minions": [resource_id], "missing": []}
+
+        log.warning(
+            "T@%s: resource registry is empty and no specific ID in expression. "
+            "Restart the minion to populate the registry.",
+            expr,
+        )
+        return {"minions": [], "missing": []}
+
+    def _augment_with_resources(self, minion_ids):
+        """
+        Append the resource IDs managed by each matched minion to the list.
+
+        Looks up the ``minion_resources`` cache bank (populated by each minion
+        calling ``_register_resources`` on startup) and includes any resource
+        IDs associated with the minions in ``minion_ids``.
+
+        This is called by :meth:`check_minions` for non-compound targets so
+        that ``salt '*' test.ping`` or ``salt 'minion' test.ping`` also
+        includes returns from the minion's managed resources.
+        """
+        managed = self.cache.list("minion_resources") or []
+        if not managed:
+            return list(minion_ids)
+        result = list(minion_ids)
+        minion_set = set(minion_ids)
+        for minion_id in managed:
+            if minion_id not in minion_set:
+                continue
+            resources = self.cache.fetch("minion_resources", minion_id) or {}
+            for rids in resources.values():
+                for rid in rids:
+                    if rid not in result:
+                        result.append(rid)
+        return result
+
+    def _check_managing_minion_minions(self, expr, greedy, minions=None):
+        """
+        Return the minion set for a ``M@`` managing-minion expression.
+
+        ``expr`` is a minion ID glob.  Returns any accepted minion whose ID
+        matches ``expr``.
+        """
+        return self._check_glob_minions(expr, greedy, minions=minions)
+
     def check_minions(
         self, expr, tgt_type="glob", delimiter=DEFAULT_TARGET_DELIM, greedy=True
     ):
@@ -749,6 +852,12 @@ class CkMinions:
                 # pylint: enable=not-callable
             else:
                 _res = check_func(expr, greedy)  # pylint: disable=not-callable
+            # For non-compound targets, include resource IDs managed by the
+            # matched minions so that ``salt '*' test.ping`` also returns
+            # results from managed resources.  Compound targets handle resource
+            # matching explicitly via T@/M@ engines.
+            if tgt_type not in ("compound", "compound_pillar_exact"):
+                _res["minions"] = self._augment_with_resources(_res["minions"])
             _res["ssh_minions"] = False
             if self.opts.get("enable_ssh_minions", False) is True and isinstance(
                 "tgt", str
