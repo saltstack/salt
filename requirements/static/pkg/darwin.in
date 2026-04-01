@@ -3,4 +3,3 @@
 # If they are macOS specific, place "; sys_platform == 'darwin'" in front of the requirement.
 timelib>=0.2.5; python_version < '3.11'
 timelib>=0.3.0; python_version >= '3.11'
-linode-python>=1.1.1

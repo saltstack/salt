@@ -293,10 +293,6 @@ libnacl==1.8.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
-linode-python==1.1.1
-    # via
-    #   -c requirements/static/pkg/py3.11/linux.txt
-    #   -r requirements/static/pkg/linux.in
 looseversion==1.3.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
