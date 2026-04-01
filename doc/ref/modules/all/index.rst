@@ -67,6 +67,7 @@ execution modules
     dpkg_lowpkg
     dummyproxy_pkg
     dummyproxy_service
+    dummyresource_test
     environ
     etcd_mod
     ethtool
@@ -215,6 +216,10 @@ execution modules
     ssh_pkg
     ssh_pki
     ssh_service
+    sshresource_cmd
+    sshresource_pkg
+    sshresource_state
+    sshresource_test
     state
     status
     supervisord

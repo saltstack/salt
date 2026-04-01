@@ -400,6 +400,27 @@ def refresh_grains(**kwargs):
     return True
 
 
+def refresh_resources():
+    """
+    Trigger resource discovery on this minion and report the current set of
+    managed resources back to the Master, which updates the Resource Registry.
+
+    Each resource type module's ``discover()`` function is called to enumerate
+    the resources the minion manages.  The results are sent to the Master,
+    which updates the ``resources`` cache bank for each resource.  Resources
+    no longer present in the discovery result are removed from the Registry.
+
+    This is the resource analogue of ``saltutil.refresh_grains`` — it should
+    be called whenever the set of resources a minion manages may have changed.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.refresh_resources
+    """
+
+
 def sync_grains(
     saltenv=None,
     refresh=True,
