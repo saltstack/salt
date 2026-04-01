@@ -63,6 +63,7 @@ SALT_INTERNAL_LOADERS_PATHS = (
     str(SALT_BASE_PATH / "output"),
     str(SALT_BASE_PATH / "pillar"),
     str(SALT_BASE_PATH / "proxy"),
+    str(SALT_BASE_PATH / "resource"),
     str(SALT_BASE_PATH / "queues"),
     str(SALT_BASE_PATH / "renderers"),
     str(SALT_BASE_PATH / "returners"),
@@ -492,6 +493,87 @@ def proxy(
         extra_module_dirs=utils.module_dirs if utils else None,
         pack_self=pack_self,
         loaded_base_name=loaded_base_name,
+    )
+
+
+def resource(
+    opts,
+    functions=None,
+    utils=None,
+    context=None,
+    loaded_base_name=None,
+):
+    """
+    Load the resource connection modules (``salt/resource/*.py``).
+
+    Returns a LazyLoader whose functions are accessible via the
+    ``__resource_funcs__`` dunder injected into resource execution modules.
+    Analogous to :func:`proxy` for proxy minions.
+
+    :param dict opts: The Salt options dictionary.
+    :param LazyLoader functions: A LazyLoader returned from :func:`minion_mods`.
+    :param LazyLoader utils: A LazyLoader returned from :func:`utils`.
+    :param dict context: Shared loader context dictionary.
+    :param str loaded_base_name: Module namespace prefix for this loader.
+    """
+    return LazyLoader(
+        _module_dirs(opts, "resource"),
+        opts,
+        tag="resource",
+        pack={
+            "__salt__": functions,
+            "__utils__": utils,
+            "__context__": context,
+            "__resource__": {},
+        },
+        extra_module_dirs=utils.module_dirs if utils else None,
+        pack_self="__resource_funcs__",
+        loaded_base_name=loaded_base_name,
+    )
+
+
+def resource_modules(
+    opts,
+    resource_type,
+    resource_funcs=None,
+    utils=None,
+    context=None,
+    loaded_base_name=None,
+):
+    """
+    Load execution modules for a specific resource type.
+
+    Creates an isolated :class:`LazyLoader` whose opts contain
+    ``resource_type``, allowing execution modules to gate their
+    ``__virtual__`` on that value — the same mechanism proxy modules use
+    with ``proxytype``.  A minion managing N resource types holds N of
+    these loaders simultaneously (one per type, not one per device).
+
+    :param dict opts: The Salt options dictionary.  A copy is made and
+        ``resource_type`` is injected before passing to the loader.
+    :param str resource_type: The resource type string (e.g. ``"dummy"``).
+    :param LazyLoader resource_funcs: The resource connection loader returned
+        by :func:`resource`, injected as ``__resource_funcs__``.
+    :param LazyLoader utils: A LazyLoader returned from :func:`utils`.
+    :param dict context: Shared loader context dictionary.
+    :param str loaded_base_name: Module namespace prefix for this loader.
+    """
+    resource_opts = dict(opts)
+    resource_opts["resource_type"] = resource_type
+
+    return LazyLoader(
+        _module_dirs(resource_opts, "modules", "module"),
+        resource_opts,
+        tag="module",
+        pack={
+            "__context__": context,
+            "__utils__": utils,
+            "__resource_funcs__": resource_funcs,
+            "__opts__": resource_opts,
+        },
+        extra_module_dirs=utils.module_dirs if utils else None,
+        loaded_base_name=loaded_base_name,
+        pack_self="__salt__",
     )
 
 
