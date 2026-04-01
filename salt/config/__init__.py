@@ -1335,6 +1335,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "sock_pool_size": 1,
         "ret_port": 4506,
         "timeout": 5,
+        "publish_timeout": 15,
         "keep_jobs": 24,
         "keep_jobs_seconds": 86400,
         "archive_jobs": False,
