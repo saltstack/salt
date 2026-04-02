@@ -24,6 +24,7 @@ initiator is the minion, not the master.
 
 import logging
 import os
+import uuid
 
 import salt.client.ssh
 import salt.client.ssh.shell
@@ -32,6 +33,7 @@ import salt.client.ssh.wrapper
 import salt.defaults.exitcodes
 import salt.fileclient
 import salt.utils.hashutils
+import salt.utils.network
 import salt.utils.state
 from salt.client.ssh.wrapper.state import (
     _cleanup_slsmod_low_data,
@@ -72,6 +74,12 @@ def _host_cfg():
     )  # pylint: disable=undefined-variable
 
 
+def _relenv_path():
+    """Return the local path of our pre-built custom relenv tarball."""
+    cachedir = __opts__.get("cachedir", "")  # pylint: disable=undefined-variable
+    return os.path.join(cachedir, "relenv", "linux", "x86_64", "salt-relenv.tar.xz")
+
+
 def _target_opts():
     """
     Build a copy of ``__opts__`` suitable for ``SSHHighState`` and ``Single``.
@@ -97,6 +105,7 @@ def _target_opts():
     )
     if "known_hosts_file" in cfg:
         opts["known_hosts_file"] = cfg["known_hosts_file"]
+    opts["relenv"] = True
     return opts
 
 
@@ -121,23 +130,31 @@ def _connection_kwargs():
     }
 
 
+def _thin_dir():
+    """
+    Return the remote working directory for the salt-thin bundle.
+
+    Mirrors the logic in ``salt.resource.ssh._thin_dir``: uses the per-host
+    ``thin_dir`` config key when set, otherwise builds a path under ``/tmp/``
+    (always world-writable) to avoid ``/var/tmp/`` which may be root-only.
+    """
+    cfg = _host_cfg()
+    if "thin_dir" in cfg:
+        return cfg["thin_dir"]
+    fqdn_uuid = uuid.uuid3(uuid.NAMESPACE_DNS, salt.utils.network.get_fqhostname()).hex[
+        :6
+    ]
+    return "/tmp/.{}_{}_salt".format(cfg.get("user", "root"), fqdn_uuid)
+
+
 def _seed_thin_dir(opts):
     """
-    Create a throw-away ``Single`` to force ``opts["thin_dir"]`` to be set.
-
-    ``Single.__init__`` computes ``thin_dir`` from the remote user and the
-    local FQDN and writes it back into opts in-place.  We need that value
-    before building the ``state.pkg`` command string.
+    Compute ``thin_dir`` and write it into *opts* so that ``SSHHighState``
+    and ``prep_trans_tar`` use a consistent, writable path.
     """
-    resource_id = _resource_id()
-    dummy = salt.client.ssh.Single(
-        opts,
-        ["test.ping"],
-        resource_id,
-        **_connection_kwargs(),
-    )
-    # thin_dir is now written to opts["thin_dir"] as a side-effect
-    return dummy.thin_dir
+    thin = _thin_dir()
+    opts["thin_dir"] = thin
+    return thin
 
 
 def _get_initial_pillar(opts):
@@ -407,6 +424,8 @@ def _exec_state_pkg(opts, trans_tar, test):
             opts,
             cmd,
             _resource_id(),
+            thin=_relenv_path(),
+            thin_dir=opts["thin_dir"],
             **_connection_kwargs(),
         )
         single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))

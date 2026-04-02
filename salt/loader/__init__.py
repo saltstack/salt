@@ -570,6 +570,11 @@ def resource_modules(
             "__utils__": utils,
             "__resource_funcs__": resource_funcs,
             "__opts__": resource_opts,
+            # Empty sentinel so LazyLoader creates a NamedLoaderContext for
+            # __resource__ on every loaded module.  The NamedLoaderContext
+            # reads from resource_ctxvar, which _thread_return sets per-call
+            # before dispatching — giving each resource job its own identity.
+            "__resource__": {},
         },
         extra_module_dirs=utils.module_dirs if utils else None,
         loaded_base_name=loaded_base_name,
