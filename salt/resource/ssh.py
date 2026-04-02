@@ -71,12 +71,14 @@ Per-host connection parameters:
 
 import logging
 import os
+import uuid
 
 import salt.client.ssh
 import salt.client.ssh.shell
 import salt.config
 import salt.fileclient
 import salt.utils.json
+import salt.utils.network
 import salt.utils.path
 
 log = logging.getLogger(__name__)
@@ -173,6 +175,38 @@ def _make_shell(resource_id, cfg_override=None):
     )
 
 
+def _thin_dir(cfg):
+    """
+    Return the remote working directory for the salt-thin bundle.
+
+    Uses the per-host ``thin_dir`` config key when provided.  Otherwise
+    computes a path under ``/tmp/`` (always world-writable) using the same
+    ``.<user>_<fqdnuuid>_salt`` naming convention as Salt's DEFAULT_THIN_DIR,
+    but avoiding ``/var/tmp/`` which may be root-only on some systems.
+    """
+    if "thin_dir" in cfg:
+        return cfg["thin_dir"]
+    fqdn_uuid = uuid.uuid3(uuid.NAMESPACE_DNS, salt.utils.network.get_fqhostname()).hex[
+        :6
+    ]
+    return "/tmp/.{}_{}_salt".format(cfg.get("user", "root"), fqdn_uuid)
+
+
+def _relenv_path():
+    """
+    Return the local path of our pre-built custom relenv tarball.
+
+    The tarball lives in the minion's cache directory under the
+    ``relenv/linux/x86_64/`` sub-path that :func:`salt.utils.relenv.gen_relenv`
+    would populate for a linux/x86_64 target.  By pre-resolving the path here
+    (rather than calling ``detect_os_arch()`` inside ``Single.__init__``) we
+    avoid an SSH round-trip during object construction, which caused hangs when
+    ``Single`` was instantiated inside a minion job worker.
+    """
+    cachedir = __opts__.get("cachedir", "")  # pylint: disable=undefined-variable
+    return os.path.join(cachedir, "relenv", "linux", "x86_64", "salt-relenv.tar.xz")
+
+
 def _make_single(resource_id, argv):
     """
     Return a :class:`~salt.client.ssh.Single` instance for *resource_id*
@@ -198,10 +232,12 @@ def _make_single(resource_id, argv):
         ctx.get("_ssh_version") or salt.client.ssh.ssh_version()
     )
 
+    single_opts["relenv"] = True
     return salt.client.ssh.Single(
         single_opts,
         argv,
         resource_id,
+        thin=_relenv_path(),
         host=cfg["host"],
         user=cfg.get("user", "root"),
         port=cfg.get("port", 22),
@@ -216,6 +252,7 @@ def _make_single(resource_id, argv):
         keepalive=cfg.get("keepalive", True),
         keepalive_interval=cfg.get("keepalive_interval", 60),
         keepalive_count_max=cfg.get("keepalive_count_max", 3),
+        thin_dir=_thin_dir(cfg),
     )
 
 
