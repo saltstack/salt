@@ -852,11 +852,19 @@ class CkMinions:
                 # pylint: enable=not-callable
             else:
                 _res = check_func(expr, greedy)  # pylint: disable=not-callable
-            # For non-compound targets, include resource IDs managed by the
-            # matched minions so that ``salt '*' test.ping`` also returns
-            # results from managed resources.  Compound targets handle resource
-            # matching explicitly via T@/M@ engines.
-            if tgt_type not in ("compound", "compound_pillar_exact"):
+            # For wildcard glob targets (e.g. ``salt '*'``), include resource
+            # IDs managed by matched minions so that the master keeps its
+            # response window open long enough to receive resource results.
+            # Specific name targets (e.g. ``salt 'minion'``) are intentionally
+            # NOT augmented — targeting a minion by name should not implicitly
+            # include its resources.
+            # Compound targets handle resource matching explicitly via T@/M@.
+            if (
+                tgt_type == "glob"
+                and tgt_type not in ("compound", "compound_pillar_exact")
+                and isinstance(expr, str)
+                and "*" in expr
+            ):
                 _res["minions"] = self._augment_with_resources(_res["minions"])
             _res["ssh_minions"] = False
             if self.opts.get("enable_ssh_minions", False) is True and isinstance(

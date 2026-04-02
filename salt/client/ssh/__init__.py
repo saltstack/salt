@@ -229,6 +229,18 @@ if [ ! -x "$SALT_CALL_BIN" ]; then
     tar --strip-components=1 -xf "$RELENV_TAR" -C "{THIN_DIR}"
 fi
 
+# BUG-WORKAROUND: salt-ssh relenv path never writes the minion config that
+# Single.__init__ builds in self.minion_config.  The non-relenv (salt-thin)
+# path embeds it in SSH_PY_SHIM via OPTIONS.config, which the Python shim
+# writes to thin_dir/minion.  The relenv shim has no equivalent, so salt-call
+# falls back to system defaults (/var/cache/salt, /var/log/salt) and fails for
+# any unprivileged user.  Writing it here replicates the salt-thin behaviour.
+# See: https://github.com/saltstack/salt (file as issue against salt-ssh relenv)
+mkdir -p "{THIN_DIR}/running_data/pki"
+cat > "{THIN_DIR}/minion" << 'SALT_MINION_CONF_EOF'
+__SALT_MINION_CONFIG__
+SALT_MINION_CONF_EOF
+
 # Check if Python binary is executable
 if [ ! -x "$SALT_CALL_BIN" ]; then
     echo "ERROR: salt-call binary not found or not executable at $SALT_CALL_BIN" >&2
@@ -1191,40 +1203,26 @@ class Single:
             self.arch = arch.strip()
 
         if self.opts.get("relenv"):
-            # Check if OS/arch already detected and cached in opts
-            if "relenv_kernel" in opts and "relenv_os_arch" in opts:
-                kernel = opts["relenv_kernel"]
-                os_arch = opts["relenv_os_arch"]
-                log.warning(f"RELENV: Reusing cached OS/arch: {kernel}/{os_arch}")
+            if thin:
+                # Caller pre-resolved the relenv tarball path — skip the SSH
+                # round-trip that detect_os_arch() would otherwise make during
+                # __init__.  This is important when Single is created inside a
+                # minion job worker where every extra SSH connection adds latency
+                # and can cause hangs.
+                self.thin = thin
             else:
-                # First Single instance - detect and cache OS/arch in opts before assigning to self.opts
                 kernel, os_arch = self.detect_os_arch()
-                opts["relenv_kernel"] = kernel
-                opts["relenv_os_arch"] = os_arch
-                log.warning(f"RELENV: Detected and cached OS/arch: {kernel}/{os_arch}")
-
-            log.info(
-                "RELENV: About to call gen_relenv() to download/generate tarball..."
-            )
-            self.thin = salt.utils.relenv.gen_relenv(
-                self.opts["cachedir"], kernel=kernel, os_arch=os_arch
-            )
-            log.info(
-                "RELENV: gen_relenv() completed successfully, tarball path: %s",
-                self.thin,
-            )
+                self.thin = salt.utils.relenv.gen_relenv(
+                    opts["cachedir"], kernel=kernel, os_arch=os_arch
+                )
 
             # Add file_roots and related config to minion config
             # (required for slsutil functions and other fileserver operations)
-            # Thin does this in _run_wfunc_thin() at lines 1498-1507
-            # NOTE: Now that we transfer config via SCP instead of embedding in command line,
-            # we CAN add __master_opts__ without hitting ARG_MAX limits
             self.minion_opts["file_roots"] = self.opts["file_roots"]
             self.minion_opts["pillar_roots"] = self.opts["pillar_roots"]
             self.minion_opts["ext_pillar"] = self.opts["ext_pillar"]
-            # For relenv, we need to override extension_modules to point to where the shim
-            # extracts the tarball on the remote system. The wrapper system will copy this
-            # to opts_pkg["extension_modules"] which is used by salt-call.
+            # For relenv, override extension_modules to point to where the shim
+            # extracts the tarball on the remote system.
             self.minion_opts["extension_modules"] = (
                 f"{self.thin_dir}/running_data/var/cache/salt/minion/extmods"
             )
@@ -1232,18 +1230,7 @@ class Single:
             self.minion_opts["__master_opts__"] = self.context["master_opts"]
 
             # Re-serialize the minion config after updating relenv-specific paths
-            # This ensures the config file sent to the remote system has the correct extension_modules path
             self.minion_config = salt.serializers.yaml.serialize(self.minion_opts)
-            log.debug(
-                "RELENV: Re-serialized minion config with extension_modules=%s",
-                self.minion_opts["extension_modules"],
-            )
-
-            # NOTE: We no longer pre-compile pillar for relenv here.
-            # Both thin and relenv now use the wrapper system (_run_wfunc_thin())
-            # which compiles pillar dynamically, ensuring correct behavior with pillar overrides:
-            # - 1x compilation without pillar overrides
-            # - 2x compilation with pillar overrides (re-compiled in wrapper modules)
         else:
             self.thin = thin if thin else salt.utils.thin.thin_path(opts["cachedir"])
 
@@ -1867,22 +1854,16 @@ class Single:
                 and isinstance(self.argv[0], str)
                 and " " in self.argv[0]
             ):
-                # Split the string into shell words
                 argv_to_use = shlex.split(self.argv[0])
             else:
                 argv_to_use = self.argv
 
             quoted_args = " ".join(shlex.quote(str(arg)) for arg in argv_to_use)
-            log.debug(
-                "RELENV: Building shim with argv=%s, argv_to_use=%s, quoted_args=%s",
-                self.argv,
-                argv_to_use,
-                quoted_args,
-            )
 
             # Note: Config is sent separately via SCP in cmd_block() to avoid ARG_MAX issues
-            # The shim expects the config file to already exist at {THIN_DIR}/minion
-            return SSH_SH_SHIM_RELENV.format(
+            # Use .replace() for minion_config — it is YAML flow-style and
+            # may contain literal { } which would break .format().
+            shim = SSH_SH_SHIM_RELENV.format(
                 DEBUG=debug,
                 SUDO=sudo,
                 SUDO_USER=sudo_user or "",
@@ -1892,6 +1873,7 @@ class Single:
                 ARGS=quoted_args,
                 EXT_MODS_VERSION=self.mods.get("version", ""),
             )
+            return shim.replace("__SALT_MINION_CONFIG__", self.minion_config)
 
         thin_code_digest, thin_sum = salt.utils.thin.thin_sum(cachedir, "sha1")
         arg_str = '''
