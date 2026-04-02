@@ -1876,7 +1876,7 @@ class LocalClient:
                 A set, the targets that the tgt passed should match.
         """
         if timeout is None:
-            timeout = self.opts.get("publish_timeout", 15)
+            timeout = self.opts.get("publish_timeout", 30)
 
         # Make sure the publisher is running by checking the unix socket
         if self.opts.get("ipc_mode", "") != "tcp" and not os.path.exists(
@@ -1981,7 +1981,7 @@ class LocalClient:
                 A set, the targets that the tgt passed should match.
         """
         if timeout is None:
-            timeout = self.opts.get("publish_timeout", 15)
+            timeout = self.opts.get("publish_timeout", 30)
 
         # Make sure the publisher is running by checking the unix socket
         if self.opts.get("ipc_mode", "") != "tcp" and not os.path.exists(
