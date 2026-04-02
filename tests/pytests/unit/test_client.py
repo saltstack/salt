@@ -296,16 +296,16 @@ def test_invalid_event_tag_65727(master_opts, caplog):
 
 def test_publish_timeout_in_default_master_opts():
     """
-    publish_timeout must be present in DEFAULT_MASTER_OPTS with a value of 15
+    publish_timeout must be present in DEFAULT_MASTER_OPTS with a value of 30
     so that any LocalClient not given explicit opts still gets a sane pub timeout.
     """
     assert "publish_timeout" in salt.config.DEFAULT_MASTER_OPTS
-    assert salt.config.DEFAULT_MASTER_OPTS["publish_timeout"] == 15
+    assert salt.config.DEFAULT_MASTER_OPTS["publish_timeout"] == 30
 
 
 def test_pub_default_timeout(master_opts):
     """
-    Test that LocalClient.pub uses a default timeout of 15 seconds.
+    Test that LocalClient.pub uses a default timeout of 30 seconds.
     """
     with client.LocalClient(mopts=master_opts) as local_client:
         with patch("os.path.exists", return_value=True):
@@ -326,11 +326,11 @@ def test_pub_default_timeout(master_opts):
                 # Call pub without specifying timeout
                 result = local_client.pub("*", "test.ping")
 
-                # Verify the channel.send was called with timeout=15
+                # Verify the channel.send was called with timeout=30
                 assert mock_channel.send.called
                 call_kwargs = mock_channel.send.call_args
                 # The timeout is passed to channel.send in the first call
-                assert call_kwargs[1]["timeout"] == 15
+                assert call_kwargs[1]["timeout"] == 30
 
 
 def test_pub_explicit_timeout(master_opts):
@@ -364,7 +364,7 @@ def test_pub_explicit_timeout(master_opts):
 
 def test_pub_async_default_timeout(master_opts):
     """
-    Test that LocalClient.pub_async uses a default timeout of 15 seconds.
+    Test that LocalClient.pub_async uses a default timeout of 30 seconds.
     """
     with client.LocalClient(mopts=master_opts) as local_client:
         with patch("os.path.exists", return_value=True):
@@ -401,11 +401,11 @@ def test_pub_async_default_timeout(master_opts):
                     # Call pub_async without specifying timeout
                     local_client.pub_async("*", "test.ping")
 
-                    # Verify _prep_pub was called with timeout=15
+                    # Verify _prep_pub was called with timeout=30
                     assert len(prep_pub_calls) == 1
                     # _prep_pub signature: (tgt, fun, arg, tgt_type, ret, jid, timeout, **kwargs)
                     assert (
-                        prep_pub_calls[0][0][6] == 15
+                        prep_pub_calls[0][0][6] == 30
                     )  # timeout is the 7th positional arg
 
 
@@ -469,7 +469,7 @@ def _make_channel_mock(return_payload):
 
 def test_pub_uses_publish_timeout_from_config(master_opts):
     """
-    pub() must honor a custom publish_timeout set in opts, overriding the 15s default.
+    pub() must honor a custom publish_timeout set in opts, overriding the 30s default.
     """
     master_opts = dict(master_opts, publish_timeout=30)
     with client.LocalClient(mopts=master_opts) as local_client:
@@ -522,7 +522,7 @@ def test_pub_async_uses_publish_timeout_from_config(master_opts):
 def test_run_job_passes_none_to_pub_when_no_timeout(master_opts):
     """
     run_job() called without an explicit timeout must pass timeout=None to pub()
-    so that pub() resolves the value via publish_timeout (15 by default) rather
+    so that pub() resolves the value via publish_timeout (30 by default) rather
     than the 5-second salt command timeout.
     """
     with client.LocalClient(mopts=master_opts) as local_client:
@@ -553,7 +553,7 @@ def test_run_job_passes_explicit_timeout_to_pub(master_opts):
 def test_run_job_async_passes_none_to_pub_async_when_no_timeout(master_opts):
     """
     run_job_async() called without an explicit timeout must pass timeout=None
-    to pub_async() so that pub_async() uses publish_timeout (15 by default).
+    to pub_async() so that pub_async() uses publish_timeout (30 by default).
     """
     captured = {}
 
