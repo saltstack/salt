@@ -329,8 +329,10 @@ def test_sls_micking_file_merging():
 
 def test_msgpack():
     data = OrderedDict([("foo", 1), ("bar", 2), ("baz", True)])
-    serialized = msgpack.serialize(data)
-    deserialized = msgpack.deserialize(serialized)
+    serialized = msgpack.serialize(data)  # pylint: disable=assignment-from-no-return
+    deserialized = msgpack.deserialize(  # pylint: disable=assignment-from-no-return
+        serialized
+    )
     assert deserialized == data, deserialized
 
 

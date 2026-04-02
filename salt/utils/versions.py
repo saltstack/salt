@@ -6,6 +6,7 @@
     which works under python 3 because on python 3 you can no longer compare
     strings against integers.
 """
+
 import collections
 import datetime
 import inspect
