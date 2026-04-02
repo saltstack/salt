@@ -259,7 +259,7 @@ def check_buffered_base(pack_func, unpack_func):
     data = os.urandom(1024).decode(errors="ignore")
     buffer = io.BytesIO()
     # Sanity check, we are not borking the BytesIO read function
-    assert io.BytesIO.read != buffer.read
+    assert io.BytesIO.read != buffer.read  # pylint: disable=comparison-with-callable
     buffer.read = buffer.getvalue
     pack_func(data, buffer)
     # Sanity Check

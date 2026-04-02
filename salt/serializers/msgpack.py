@@ -5,6 +5,7 @@
     Implements MsgPack serializer.
 """
 
+import copy
 import logging
 
 import salt.utils.msgpack
