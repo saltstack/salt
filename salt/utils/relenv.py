@@ -41,7 +41,11 @@ def gen_relenv(
 
     tarball_path = os.path.join(relenv_dir, "salt-relenv.tar.xz")
 
-    # Download the tarball if it doesn't exist or overwrite is True
+    # Download the tarball if it doesn't exist or overwrite is True.
+    # NOTE: get_tarball() always makes network requests to scrape the latest
+    # version number even when the tarball is already cached.  Skip it when
+    # the file is present and overwrite is not requested — this avoids
+    # unnecessary latency and failures in air-gapped environments.
     if overwrite or not os.path.exists(tarball_path):
         # Check for shared test cache first (for integration tests)
         import shutil
