@@ -244,7 +244,7 @@ def warn_until_date(
         # Attribute the warning to the calling function, not to warn_until_date()
         stacklevel = 2
 
-    today = _current_date or datetime.datetime.utcnow().date()
+    today = _current_date or datetime.datetime.now(datetime.UTC).date()
     if today >= date:
         caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
         deprecated_message = (
