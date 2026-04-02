@@ -11,8 +11,10 @@ import logging
 import multiprocessing
 import os
 import signal
+import stat
 import sys
 import threading
+import zlib
 from random import randint
 
 import tornado
@@ -447,7 +449,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             base_port = self.opts.get("tcp_master_workers", 4515)
             if pool_name:
                 # Use different port for each pool
-                port_offset = hash(pool_name) % 1000
+                port_offset = zlib.adler32(pool_name.encode()) % 1000
                 self.w_uri = f"tcp://127.0.0.1:{base_port + port_offset}"
             else:
                 self.w_uri = f"tcp://127.0.0.1:{base_port}"
@@ -525,7 +527,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             # Determine worker URI for this pool
             if self.opts.get("ipc_mode", "") == "tcp":
                 base_port = self.opts.get("tcp_master_workers", 4515)
-                port_offset = hash(pool_name) % 1000
+                port_offset = zlib.adler32(pool_name.encode()) % 1000
                 w_uri = f"tcp://127.0.0.1:{base_port + port_offset}"
             else:
                 w_uri = "ipc://{}".format(
@@ -551,10 +553,21 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         # This file is expected by components that check if master is running
         if self.opts.get("ipc_mode", "") != "tcp":
             marker_path = os.path.join(self.opts["sock_dir"], "workers.ipc")
+            # If workers.ipc exists and is a socket (from a legacy run), remove it
+            if os.path.exists(marker_path):
+                try:
+                    if stat.S_ISSOCK(os.lstat(marker_path).st_mode):
+                        log.debug("Removing legacy workers.ipc socket")
+                        os.remove(marker_path)
+                except OSError:
+                    pass
             # Touch the file to create it if it doesn't exist
-            with salt.utils.files.fopen(marker_path, "a", encoding="utf-8"):
-                pass
-            os.chmod(marker_path, 0o600)
+            try:
+                with salt.utils.files.fopen(marker_path, "a", encoding="utf-8"):
+                    pass
+                os.chmod(marker_path, 0o600)
+            except OSError as exc:
+                log.error("Failed to create workers.ipc marker file: %s", exc)
 
         log.info("Setting up pooled master communication server")
         log.info("ReqServer clients %s", self.uri)
@@ -792,7 +805,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             if pool_name:
                 # Hash pool name for consistent port assignment
                 base_port = self.opts.get("tcp_master_workers", 4515)
-                port_offset = hash(pool_name) % 1000
+                port_offset = zlib.adler32(pool_name.encode()) % 1000
                 return f"tcp://127.0.0.1:{base_port + port_offset}"
             else:
                 return f"tcp://127.0.0.1:{self.opts.get('tcp_master_workers', 4515)}"
