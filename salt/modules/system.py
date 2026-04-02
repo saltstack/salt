@@ -15,7 +15,7 @@ Support for reboot, shutdown, etc on POSIX-like systems.
 import logging
 import os.path
 import re
-from datetime import datetime, timedelta, tzinfo
+from datetime import datetime, timedelta, timezone, tzinfo
 
 import salt.utils.files
 import salt.utils.path
@@ -258,7 +258,7 @@ def _get_offset_time(utc_offset):
     if utc_offset is not None:
         minutes = _offset_to_min(utc_offset)
         offset = timedelta(minutes=minutes)
-        offset_time = datetime.utcnow() + offset
+        offset_time = datetime.now(timezone.utc) + offset
         offset_time = offset_time.replace(tzinfo=_FixedOffset(minutes))
     else:
         offset_time = datetime.now()

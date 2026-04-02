@@ -6,7 +6,7 @@ Functions various time manipulations.
 import logging
 import re
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 # Import Salt modules
 
@@ -34,7 +34,7 @@ def get_timestamp_at(time_in=None, time_at=None):
                 minutes = 0
             hours, minutes = int(hours), int(minutes)
         dt = timedelta(hours=hours, minutes=minutes)
-        time_now = datetime.utcnow()
+        time_now = datetime.now(timezone.utc)
         time_at = time_now + dt
         return time.mktime(time_at.timetuple())
     elif time_at:
