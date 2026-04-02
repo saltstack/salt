@@ -2031,7 +2031,10 @@ class MasterPubServerChannel:
                     return
                 # Check if this peer has our AES key before processing
                 if self.opts["id"] not in data["peers"]:
-                    log.debug("Peer %s has not discovered us yet, skipping AES key event", peer)
+                    log.debug(
+                        "Peer %s has not discovered us yet, skipping AES key event",
+                        peer,
+                    )
                     return
                 aes = data["peers"][self.opts["id"]]["aes"]
                 sig = data["peers"][self.opts["id"]]["sig"]
@@ -2087,7 +2090,9 @@ class MasterPubServerChannel:
                 try:
                     event_data = self.extract_cluster_event(peer_id, data)
                 except salt.exceptions.AuthenticationError:
-                    self.auth_errors.setdefault(peer_id, collections.deque()).append((tag, data))
+                    self.auth_errors.setdefault(peer_id, collections.deque()).append(
+                        (tag, data)
+                    )
                 else:
                     await self.transport.publish_payload(
                         salt.utils.event.SaltEvent.pack(parsed_tag, event_data)
@@ -2126,9 +2131,7 @@ class MasterPubServerChannel:
         else:
             # Process cluster/peer/* events locally as well as forwarding to peers
             tasks.append(
-                asyncio.create_task(
-                    self.handle_pool_publish(load), name="local"
-                )
+                asyncio.create_task(self.handle_pool_publish(load), name="local")
             )
         for pusher in self.pushers:
             log.info("Publish event to peer %s:%s", pusher.pull_host, pusher.pull_port)
