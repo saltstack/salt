@@ -32,3 +32,10 @@ def match(tgt, opts=None, minion_id=None):
     :param str minion_id: The minion ID to evaluate; defaults to ``opts["id"]``.
     :rtype: bool
     """
+    if opts is None:
+        opts = __opts__  # pylint: disable=undefined-variable
+    if minion_id is None:
+        minion_id = opts.get("id", "")
+    result = minion_id == tgt
+    log.debug("managing_minion_match: M@%s => %s (id=%s)", tgt, result, minion_id)
+    return result

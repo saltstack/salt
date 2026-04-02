@@ -402,16 +402,13 @@ def refresh_grains(**kwargs):
 
 def refresh_resources():
     """
-    Trigger resource discovery on this minion and report the current set of
-    managed resources back to the Master, which updates the Resource Registry.
+    Re-register this minion's managed resources with the master.
 
-    Each resource type module's ``discover()`` function is called to enumerate
-    the resources the minion manages.  The results are sent to the Master,
-    which updates the ``resources`` cache bank for each resource.  Resources
-    no longer present in the discovery result are removed from the Registry.
-
-    This is the resource analogue of ``saltutil.refresh_grains`` — it should
-    be called whenever the set of resources a minion manages may have changed.
+    Sends the current ``opts["resources"]`` to the master so that the master's
+    ``minion_resources`` cache bank is up-to-date.  This is the resource
+    analogue of ``saltutil.refresh_grains`` — call it whenever the set of
+    resources a minion manages may have changed, or after a minion restart to
+    ensure the master's targeting cache reflects the current state.
 
     CLI Example:
 
@@ -419,6 +416,38 @@ def refresh_resources():
 
         salt '*' saltutil.refresh_resources
     """
+    resources = __opts__.get("resources", {})
+    if not resources:
+        return True
+
+    masters = []
+    if "master_uri_list" in __opts__:
+        masters.extend(__opts__["master_uri_list"])
+    else:
+        masters.append(__opts__["master_uri"])
+
+    from salt.exceptions import SaltReqTimeoutError
+
+    for master in masters:
+        with salt.channel.client.ReqChannel.factory(
+            __opts__, master_uri=master
+        ) as channel:
+            load = {
+                "cmd": "_register_resources",
+                "id": __opts__["id"],
+                "resources": resources,
+                "tok": channel.auth.gen_token(b"salt"),
+            }
+            try:
+                channel.send(load, timeout=60)
+                log.debug(
+                    "refresh_resources: registered %s with master %s",
+                    list(resources),
+                    master,
+                )
+            except SaltReqTimeoutError:
+                log.warning("refresh_resources: timed out contacting master %s", master)
+    return True
 
 
 def sync_grains(

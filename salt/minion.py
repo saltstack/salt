@@ -488,13 +488,24 @@ class MinionBase:
             context=context,
         )
         self.resource_funcs.pack["__salt__"] = self.functions
-        self.resource_loaders = {}
+        # Build resource_loaders into a local dict before assigning to
+        # self.resource_loaders.  Without this, the previous pattern:
+        #
+        #   self.resource_loaders = {}          ← exposes empty dict
+        #   for ...: self.resource_loaders[t] = …
+        #
+        # creates a window where a concurrent thread (multiprocessing: False)
+        # calling gen_modules() can read resource_loaders.get(type) == None
+        # and fail with "No resource loader available".  A single dict
+        # assignment is atomic in CPython, so the old loaders remain visible
+        # until the new complete set is ready.
+        _new_resource_loaders = {}
         for resource_type in self.opts.get("resources", {}):
             rtype_base = (
                 f"{self.opts.get('loaded_base_name', 'salt.loaded.int')}"
                 f".resource.{resource_type}"
             )
-            self.resource_loaders[resource_type] = salt.loader.resource_modules(
+            _new_resource_loaders[resource_type] = salt.loader.resource_modules(
                 self.opts,
                 resource_type,
                 resource_funcs=self.resource_funcs,
@@ -502,6 +513,7 @@ class MinionBase:
                 context=context,
                 loaded_base_name=rtype_base,
             )
+        self.resource_loaders = _new_resource_loaders
 
         # Call init() on each resource type so that __context__ is populated
         # before any per-resource operations (grains, ping, etc.) are dispatched.
@@ -549,12 +561,19 @@ class MinionBase:
         ``discover(opts)``; the return value is a dict of
         ``{resource_type: [resource_id, ...]}``.
 
+        If pillar does not specify any resources, any resources already
+        present in ``opts["resources"]`` (e.g. set directly in the minion
+        config file) are preserved as-is.  This supports testing and simple
+        deployments where pillar-driven discovery is not needed.
+
         Called from :meth:`gen_modules` after pillar is compiled and before
         the per-type execution-module loaders are created.
         """
         pillar_resources = self.opts.get("pillar", {}).get("resources", {})
         if not pillar_resources:
-            return {}
+            # No pillar resources — preserve whatever is already in opts
+            # (set directly in the minion config or from a previous discovery).
+            return {k: list(v) for k, v in self.opts.get("resources", {}).items()}
 
         # A minimal resource loader is sufficient here — discover() only reads
         # from the opts dict passed to it and does not need other dunders.
@@ -2677,13 +2696,15 @@ class Minion(MinionBase):
                     )
                     ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
                 else:
-                    # Inject per-call resource context into the type loader
-                    # AND into resource_funcs so that resource module
-                    # functions like dummy.ping() can read __resource__.
-                    functions_to_use.pack["__resource__"] = resource_target
-                    minion_instance.resource_funcs.pack["__resource__"] = (
-                        resource_target
-                    )
+                    # Set the per-call resource context via resource_ctxvar.
+                    # contextvars are per-thread, so this value is invisible
+                    # to other threads.  LazyLoader.run() calls copy_context()
+                    # fresh on every invocation, capturing this value in the
+                    # snapshot before _run_as executes — fully isolated from
+                    # concurrent resource jobs sharing the same loader object.
+                    import salt.loader.context as _loader_ctx
+
+                    _loader_ctx.resource_ctxvar.set(resource_target)
                     grains_fn = f"{resource_type}.grains"
                     if grains_fn in minion_instance.resource_funcs:
                         functions_to_use.pack["__grains__"] = (
