@@ -304,7 +304,6 @@ class ReqServerChannel:
             log.error("Some exception handling a payload from minion", exc_info=True)
             return "Some exception handling minion payload"
 
-
     def _encrypt_private(
         self,
         ret,
