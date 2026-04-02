@@ -3,7 +3,7 @@
 The setup script for salt
 """
 
-# pylint: disable=file-perms,resource-leakage,deprecated-module
+# pylint: disable=file-perms,resource-leakage,deprecated-module,3rd-party-module-not-gated
 import setuptools  # isort:skip
 import distutils.dist
 import glob

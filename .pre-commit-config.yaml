@@ -2034,8 +2034,8 @@ repos:
           - --
         additional_dependencies:
           - nox==2022.11.21
-          - setuptools<58.0
-          - pip>=20.2.4,<21.2
+          - setuptools
+          - pip
 
   - repo: local
     hooks:
@@ -2050,6 +2050,6 @@ repos:
           - --
         additional_dependencies:
           - nox==2022.11.21
-          - setuptools<58.0
-          - pip>=20.2.4,<21.2
+          - setuptools
+          - pip
   # <---- Pre-Commit -------------------------------------------------------------------------------------------------
