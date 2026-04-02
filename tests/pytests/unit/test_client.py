@@ -469,7 +469,7 @@ def _make_channel_mock(return_payload):
 
 def test_pub_uses_publish_timeout_from_config(master_opts):
     """
-    pub() must honour a custom publish_timeout set in opts, overriding the 15s default.
+    pub() must honor a custom publish_timeout set in opts, overriding the 15s default.
     """
     master_opts = dict(master_opts, publish_timeout=30)
     with client.LocalClient(mopts=master_opts) as local_client:
@@ -486,7 +486,7 @@ def test_pub_uses_publish_timeout_from_config(master_opts):
 
 def test_pub_async_uses_publish_timeout_from_config(master_opts):
     """
-    pub_async() must honour a custom publish_timeout set in opts.
+    pub_async() must honor a custom publish_timeout set in opts.
     """
     master_opts = dict(master_opts, publish_timeout=30)
     with client.LocalClient(mopts=master_opts) as local_client:
@@ -538,7 +538,7 @@ def test_run_job_passes_none_to_pub_when_no_timeout(master_opts):
 def test_run_job_passes_explicit_timeout_to_pub(master_opts):
     """
     run_job() called with an explicit timeout must forward that value to pub()
-    unchanged so caller-controlled timeouts are honoured (e.g. CLI -t flag).
+    unchanged so caller-controlled timeouts are honored (e.g. CLI -t flag).
     """
     with client.LocalClient(mopts=master_opts) as local_client:
         with patch.object(
