@@ -165,9 +165,14 @@ def test_autoscale_rejects_path_traversal_in_peer_id(
     )
 
     # Attempt to start - should fail or be rejected
-    with factory.started(start_timeout=30, max_start_attempts=1):
-        # Give it a moment to attempt join
-        time.sleep(5)
+    from pytestshellutils.exceptions import FactoryNotStarted
+    try:
+        with factory.started(start_timeout=30, max_start_attempts=1):
+            # Give it a moment to attempt join
+            time.sleep(5)
+    except FactoryNotStarted:
+        # Expected - malicious ID should cause failure to start
+        pass
 
     # Verify no files were created outside cluster_pki_dir
     cluster_pki_dir = pathlib.Path(autoscale_bootstrap_master.config["cluster_pki_dir"])
@@ -328,6 +333,9 @@ def test_autoscale_rejects_wrong_cluster_secret(
 
     # Use WRONG cluster secret
     config_overrides["cluster_secret"] = "WRONG-SECRET-12345"
+    # Use the actual port of the bootstrap master
+    bootstrap_port = autoscale_bootstrap_master.config["tcp_master_pull_port"]
+    config_overrides["cluster_peers"] = [f"127.0.0.1:{bootstrap_port}"]
 
     factory = salt_factories.salt_master_daemon(
         "unauthorized-master",
