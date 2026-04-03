@@ -1126,7 +1126,10 @@ class RequestRouter:
         """
         try:
             load = payload.get("load", {})
-            return load.get("cmd", "")
+            if isinstance(load, dict):
+                return load.get("cmd", "")
+            # If load is encrypted (bytes), we can't extract the command
+            return ""
         except (AttributeError, KeyError):
             return ""
 
@@ -1224,21 +1227,20 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
                 for pool_name, pool_config in worker_pools.items():
                     worker_count = pool_config.get("worker_count", 1)
 
+                    # Create pool-specific options
+                    pool_opts = self.opts.copy()
+                    pool_opts["pool_name"] = pool_name
+
+                    # Create pool-specific channels for workers to connect to
+                    # These channels are shared by all workers in the same pool
+                    pool_worker_channels = []
+                    for transport, opts in iter_transport_opts(pool_opts):
+                        worker_chan = salt.channel.server.ReqServerChannel.factory(opts)
+                        pool_worker_channels.append(worker_chan)
+                        # Only use first transport
+                        break
+
                     for pool_index in range(worker_count):
-                        # Create pool-specific options for this worker
-                        pool_opts = self.opts.copy()
-                        pool_opts["pool_name"] = pool_name
-
-                        # Create pool-specific channel for worker to connect to
-                        worker_channels = []
-                        for transport, opts in iter_transport_opts(pool_opts):
-                            worker_chan = salt.channel.server.ReqServerChannel.factory(
-                                opts
-                            )
-                            worker_channels.append(worker_chan)
-                            # Only use first transport
-                            break
-
                         name = f"MWorker-{pool_name}-{pool_index}"
                         self.process_manager.add_process(
                             MWorker,
@@ -1246,7 +1248,7 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
                                 pool_opts,
                                 self.master_key,
                                 self.key,
-                                worker_channels,
+                                pool_worker_channels,
                             ),
                             kwargs={"pool_name": pool_name, "pool_index": pool_index},
                             name=name,
