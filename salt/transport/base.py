@@ -441,7 +441,7 @@ class DaemonizedPublishServer(PublishServer):
         raise NotImplementedError
 
     @abstractmethod
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, *args, **kwargs):
         raise NotImplementedError
 
     @abstractmethod

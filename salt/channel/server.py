@@ -1120,7 +1120,11 @@ class PubServerChannel:
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         """
         if hasattr(self.transport, "publish_daemon"):
-            process_manager.add_process(self._publish_daemon, kwargs=kwargs)
+            # Extract kwargs for the process.
+            # We check for a named 'kwargs' key first (from salt/master.py),
+            # then fallback to the entire kwargs dict.
+            proc_kwargs = kwargs.pop("kwargs", kwargs)
+            process_manager.add_process(self._publish_daemon, kwargs=proc_kwargs)
 
     def _publish_daemon(self, **kwargs):
         if self.opts["pub_server_niceness"] and not salt.utils.platform.is_windows():
@@ -1316,7 +1320,7 @@ class MasterPubServerChannel:
     def close(self):
         self.transport.close()
 
-    def pre_fork(self, process_manager, kwargs=None):
+    def pre_fork(self, process_manager, *args, **kwargs):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
@@ -1325,11 +1329,14 @@ class MasterPubServerChannel:
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         """
         if hasattr(self.transport, "publish_daemon"):
+            proc_kwargs = kwargs.pop("kwargs", kwargs)
             process_manager.add_process(
-                self._publish_daemon, kwargs=kwargs, name="EventPublisher"
+                self._publish_daemon, kwargs=proc_kwargs, name="EventPublisher"
             )
 
     def _publish_daemon(self, **kwargs):
+        import salt.master
+
         if (
             self.opts["event_publisher_niceness"]
             and not salt.utils.platform.is_windows()
@@ -1339,6 +1346,11 @@ class MasterPubServerChannel:
                 self.opts["event_publisher_niceness"],
             )
             os.nice(self.opts["event_publisher_niceness"])
+
+        secrets = kwargs.get("secrets", None)
+        if secrets is not None:
+            salt.master.SMaster.secrets = secrets
+
         self.io_loop = tornado.ioloop.IOLoop.current()
         tcp_master_pool_port = self.opts["cluster_pool_port"]
         self.pushers = []

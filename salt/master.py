@@ -818,7 +818,9 @@ class Master(SMaster):
             ipc_publisher = salt.channel.server.MasterPubServerChannel.factory(
                 self.opts
             )
-            ipc_publisher.pre_fork(self.process_manager)
+            ipc_publisher.pre_fork(
+                self.process_manager, kwargs={"secrets": SMaster.secrets}
+            )
             if not ipc_publisher.transport.started.wait(30):
                 raise salt.exceptions.SaltMasterError(
                     "IPC publish server did not start within 30 seconds. Something went wrong."
