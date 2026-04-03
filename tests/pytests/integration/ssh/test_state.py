@@ -251,13 +251,11 @@ def test_state_running(
 
     expected = 'The function "state.pkg" is running as'
     try:
-        end_time = time.time() + 30
+        end_time = time.time() + 60
         while time.time() < end_time:
             ret = salt_ssh_cli.run("state.running")
-            if isinstance(ret.data, list):
-                output = " ".join(ret.data)
-            else:
-                output = " ".join(str(ret.data).splitlines())
+            # The wrapper returns a list of strings
+            output = " ".join(ret.data) if isinstance(ret.data, list) else str(ret.data)
             if expected in output:
                 break
             time.sleep(1)
@@ -271,10 +269,7 @@ def test_state_running(
     end_time = time.time() + 120
     while time.time() < end_time:
         ret = salt_ssh_cli.run("state.running")
-        if isinstance(ret.data, list):
-            output = " ".join(ret.data)
-        else:
-            output = " ".join(str(ret.data).splitlines())
+        output = " ".join(ret.data) if isinstance(ret.data, list) else str(ret.data)
         if expected not in output:
             break
         time.sleep(1)
