@@ -349,7 +349,7 @@ class RequestServer:
 
 
 class DaemonizedRequestServer(RequestServer):
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, *args, **kwargs):
         raise NotImplementedError
 
     def post_fork(self, message_handler, io_loop):

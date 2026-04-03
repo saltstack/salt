@@ -676,13 +676,14 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             except RuntimeError:
                 log.error("IOLoop closed when trying to cancel task")
 
-    def pre_fork(self, process_manager, worker_pools=None):
+    def pre_fork(self, process_manager, *args, **kwargs):
         """
         Pre-fork we need to create the zmq router device
 
         :param func process_manager: An instance of salt.utils.process.ProcessManager
         :param dict worker_pools: Optional worker pools configuration for pooled routing
         """
+        worker_pools = kwargs.get("worker_pools") or (args[0] if args else None)
         if worker_pools:
             # Use pooled routing device
             process_manager.add_process(
@@ -1392,7 +1393,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             await self.dpub_sock.send(payload)
             log.trace("Unfiltered data has been sent")
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, *args, **kwargs):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to

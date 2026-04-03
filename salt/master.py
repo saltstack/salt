@@ -1195,17 +1195,9 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
             req_channels = []
             for transport, opts in iter_transport_opts(self.opts):
                 chan = salt.channel.server.ReqServerChannel.factory(opts)
-                # Pass worker_pools to pre_fork for ZeroMQ transport
-                if hasattr(chan.transport, "pre_fork"):
-                    chan.transport.pre_fork(self.process_manager, worker_pools)
-                else:
-                    # Non-ZeroMQ transports don't support worker pools
-                    log.warning(
-                        "Transport %s does not support worker pools. "
-                        "Falling back to single pool.",
-                        transport,
-                    )
-                    chan.pre_fork(self.process_manager)
+                # Pass worker_pools to pre_fork. Transports that don't support it
+                # (like TCP/WS) will just ignore it.
+                chan.pre_fork(self.process_manager, worker_pools=worker_pools)
                 req_channels.append(chan)
 
             if (
