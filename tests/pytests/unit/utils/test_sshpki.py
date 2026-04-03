@@ -1,7 +1,12 @@
+from datetime import datetime, timedelta
+
 import pytest
+
+from tests.support.mock import patch
 
 try:
     import salt.utils.sshpki as ssh
+    from salt.utils.x509 import TIME_FMT
 
     HAS_LIBS = True
 except ImportError:
@@ -11,6 +16,18 @@ except ImportError:
 pytestmark = [
     pytest.mark.skipif(HAS_LIBS is False, reason="Needs cryptography library"),
 ]
+
+
+class DateTimeMock(datetime):
+    @classmethod
+    def now(cls, tz=None):
+        return cls.strptime("2026-03-20 13:37:42", TIME_FMT)
+
+
+@pytest.fixture(autouse=True)
+def time_stopped():
+    with patch("salt.utils.sshpki.datetime", new=DateTimeMock) as mocked_dt:
+        yield mocked_dt.now()
 
 
 @pytest.mark.parametrize(
@@ -168,11 +185,78 @@ pytestmark = [
         ({"max_ttl": "1h", "ttl": "30m"}, {}, {"ttl": 1800}),
         ({"max_ttl": "1h", "ttl": "30m"}, {"ttl": "2h"}, {"ttl": 3600}),
         ({"max_ttl": "1h", "ttl": "30m"}, {"ttl": "1m"}, {"ttl": 60}),
+        (
+            {},
+            {"not_before": "2026-03-13 13:37:42", "not_after": "2027-03-20 13:37:41"},
+            {"not_before": "2026-03-13 13:37:42", "not_after": "2027-03-20 13:37:41"},
+        ),
+        (
+            {"ttl": "1h"},
+            {"not_before": "2026-03-13 13:37:42", "not_after": "2027-03-13 13:37:41"},
+            {
+                "not_before": "2026-03-13 13:37:42",
+                "not_after": "2026-03-13 14:37:42",
+                "ttl": 3600,
+            },
+        ),
+        (
+            {"max_ttl": "1h"},
+            {"not_before": "2026-03-13 13:37:42", "not_after": "2027-03-13 13:37:41"},
+            {
+                "not_before": "2026-03-13 13:37:42",
+                "not_after": "2026-03-13 14:37:42",
+                "ttl": 3600,
+            },
+        ),
+        (
+            {"ttl": "30m", "max_ttl": "1h"},
+            {"not_before": "2026-03-13 13:37:42", "not_after": "2027-03-13 13:37:41"},
+            {
+                "not_before": "2026-03-13 13:37:42",
+                "not_after": "2026-03-13 14:37:42",
+                "ttl": 3600,
+            },
+        ),
+        (
+            {"max_ttl": "1h"},
+            {"not_before": "2026-03-13 13:37:42", "not_after": "2026-03-13 14:22:00"},
+            {
+                "not_before": "2026-03-13 13:37:42",
+                "not_after": "2026-03-13 14:22:00",
+                "ttl": 2658,
+            },
+        ),
+        (
+            {"max_ttl": "1h"},
+            {"not_before": "2025-03-13 13:37:42"},
+            {
+                "not_before": "2025-03-13 13:37:42",
+                "not_after": "2025-03-13 14:37:42",
+                "ttl": 3600,
+            },
+        ),
+        (
+            {"max_ttl": "1h"},
+            {"not_after": "2027-03-20 13:37:42"},
+            {
+                "not_before": "2026-03-20 13:37:42",
+                "not_after": "2026-03-20 14:37:42",
+                "ttl": 3600,
+            },
+        ),
     ],
 )
-def test_merge_signing_policy(policy, kwargs, expected):
-    assert {
+def test_merge_signing_policy(policy, kwargs, expected, time_stopped):
+    res = {
         k: v
-        for k, v in ssh.merge_signing_policy(policy, kwargs).items()
+        for k, v in ssh.merge_signing_policy(policy, kwargs.copy()).items()
         if v is not None
-    } == expected
+    }
+    if "ttl" in policy or "max_ttl" in policy or "ttl" in kwargs:
+        expected["not_before"] = expected.get("not_before") or datetime.strftime(
+            time_stopped, TIME_FMT
+        )
+        expected["not_after"] = expected.get("not_after") or datetime.strftime(
+            time_stopped + timedelta(seconds=expected["ttl"]), TIME_FMT
+        )
+    assert res == expected
