@@ -184,3 +184,56 @@ def test_check_minions_compound_not_augmented(ck_with_resources):
         )
 
     assert "dummy-01" not in result["minions"]
+
+
+def test_augment_with_resources_cache_list_error_returns_minion_ids(ck):
+    """
+    If cache.list raises, _augment_with_resources logs an error and returns
+    the original minion IDs unchanged. The exception must NOT propagate into
+    check_minions where it would wipe out the PKI-based results.
+    """
+    ck.cache.list.side_effect = Exception("cache unavailable")
+
+    result = ck._augment_with_resources(["minion"])
+
+    assert result == [
+        "minion"
+    ], "_augment_with_resources should fall back to minion_ids on cache error"
+
+
+def test_augment_with_resources_cache_fetch_error_skips_minion(ck):
+    """
+    If cache.fetch raises for a specific minion, that minion's resources are
+    skipped but other minions' resources and the original IDs are preserved.
+    """
+    ck.cache.list.return_value = ["minion-a", "minion-b"]
+    ck.cache.fetch.side_effect = [
+        Exception("fetch failed"),
+        {"ssh": ["node1"]},
+    ]
+
+    result = ck._augment_with_resources(["minion-a", "minion-b"])
+
+    assert "minion-a" in result
+    assert "minion-b" in result
+    assert "node1" in result
+
+
+def test_augment_with_resources_cache_error_does_not_break_check_minions(ck):
+    """
+    An exception inside _augment_with_resources must not propagate through
+    check_minions and discard the PKI-based minion IDs.
+    """
+    ck.cache.list.side_effect = Exception("cache driver failure")
+
+    with patch.object(
+        ck,
+        "_check_glob_minions",
+        return_value={"minions": ["minion"], "missing": []},
+    ):
+        result = ck.check_minions("*", tgt_type="glob")
+
+    assert "minion" in result["minions"], (
+        "PKI-based minion IDs must survive a resource-cache failure in "
+        "_augment_with_resources"
+    )

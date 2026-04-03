@@ -798,10 +798,24 @@ class CkMinions:
         IDs associated with the minions in ``minion_ids``.
 
         This is called by :meth:`check_minions` for non-compound targets so
-        that ``salt '*' test.ping`` or ``salt 'minion' test.ping`` also
-        includes returns from the minion's managed resources.
+        that ``salt '*' test.ping`` also includes returns from the minion's
+        managed resources.
+
+        If the resource cache is unavailable for any reason the method logs
+        an error and returns the original ``minion_ids`` unchanged so that
+        ordinary minion targeting is never disrupted by a resource-cache
+        failure.
         """
-        managed = self.cache.list("minion_resources") or []
+        try:
+            managed = self.cache.list("minion_resources") or []
+        except Exception:  # pylint: disable=broad-except
+            log.error(
+                "Failed to list minion_resources cache bank; "
+                "resource IDs will not be included in this target expansion. "
+                "Check cache driver configuration and permissions.",
+                exc_info=True,
+            )
+            return list(minion_ids)
         if not managed:
             return list(minion_ids)
         result = list(minion_ids)
@@ -809,7 +823,16 @@ class CkMinions:
         for minion_id in managed:
             if minion_id not in minion_set:
                 continue
-            resources = self.cache.fetch("minion_resources", minion_id) or {}
+            try:
+                resources = self.cache.fetch("minion_resources", minion_id) or {}
+            except Exception:  # pylint: disable=broad-except
+                log.error(
+                    "Failed to fetch minion_resources for minion '%s'; "
+                    "skipping resource augmentation for this minion.",
+                    minion_id,
+                    exc_info=True,
+                )
+                continue
             for rids in resources.values():
                 for rid in rids:
                     if rid not in result:
@@ -861,9 +884,8 @@ class CkMinions:
             # Compound targets handle resource matching explicitly via T@/M@.
             if (
                 tgt_type == "glob"
-                and tgt_type not in ("compound", "compound_pillar_exact")
                 and isinstance(expr, str)
-                and "*" in expr
+                and any(c in expr for c in ("*", "?", "["))
             ):
                 _res["minions"] = self._augment_with_resources(_res["minions"])
             _res["ssh_minions"] = False
