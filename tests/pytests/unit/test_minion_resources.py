@@ -56,12 +56,13 @@ def test_resolve_resource_targets_glob_wildcard(minion_with_resources):
 
 def test_resolve_resource_targets_glob_specific_minion(minion_with_resources):
     """
-    A specific minion name glob still returns all managed resources — the
-    minion decides what to dispatch based on the load, not the target string.
+    A specific name glob (no wildcard characters) must NOT dispatch to
+    resources.  ``salt 'minion' test.ping`` should only run on the minion
+    itself, not on its managed resources.
     """
     load = {"tgt": "minion", "tgt_type": "glob", "fun": "test.ping", "arg": []}
     targets = minion_with_resources._resolve_resource_targets(load)
-    assert len(targets) == 5
+    assert targets == [], "specific-name glob must not dispatch to resources"
 
 
 def test_resolve_resource_targets_compound_T_full_srn(minion_with_resources):
@@ -232,3 +233,67 @@ def test_resource_ctxvar_concurrent_threads_isolated():
     assert not errors, errors
     assert results["a"] is target_a
     assert results["b"] is target_b
+
+
+# ---------------------------------------------------------------------------
+# _discover_resources tests
+# ---------------------------------------------------------------------------
+
+
+def test_discover_resources_no_pillar_key_preserves_opts(minion_with_resources):
+    """
+    When the pillar contains no 'resources' key at all, _discover_resources
+    preserves whatever is already in opts["resources"].
+    """
+    minion_with_resources.opts["pillar"] = {}
+    result = minion_with_resources._discover_resources()
+    assert result == {k: list(v) for k, v in RESOURCES.items()}
+
+
+def test_discover_resources_empty_pillar_key_clears_opts(minion_with_resources):
+    """
+    When the pillar *does* contain a 'resources' key but its value is empty,
+    _discover_resources must return {} and NOT preserve the old opts resources.
+    This is the fix for the stale-cache bug: removing a resource type from the
+    pillar and running sync_all must clear it at runtime.
+    """
+    minion_with_resources.opts["pillar"] = {"resources": {}}
+    result = minion_with_resources._discover_resources()
+    assert (
+        result == {}
+    ), "_discover_resources must return {} when pillar['resources'] is empty"
+
+
+# ---------------------------------------------------------------------------
+# _register_resources_with_master tests
+# ---------------------------------------------------------------------------
+
+
+def test_register_resources_with_master_sends_empty_dict(minion_with_resources):
+    """
+    _register_resources_with_master must send the registration even when
+    opts["resources"] is {}.  Without this, removing resources from the pillar
+    and running sync_all leaves the master cache permanently stale.
+    """
+    minion_with_resources.opts["resources"] = {}
+    sent_loads = []
+
+    async def fake_send(load, timeout=None):
+        sent_loads.append(load)
+
+    import asyncio
+
+    minion_with_resources.tok = b"test-tok"
+    with mock_patch.object(
+        minion_with_resources,
+        "_send_req_async_main",
+        side_effect=fake_send,
+    ):
+        asyncio.run(minion_with_resources._register_resources_with_master())
+
+    assert (
+        len(sent_loads) == 1
+    ), "_register_resources_with_master must always send a load, even for {}"
+    assert (
+        sent_loads[0]["resources"] == {}
+    ), "An empty resource dict must be forwarded to the master to clear stale cache"
