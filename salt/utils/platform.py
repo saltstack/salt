@@ -2,6 +2,7 @@
 Functions for identifying which platform a machine is
 """
 
+import builtins
 import contextlib
 import functools
 import multiprocessing
@@ -11,6 +12,9 @@ import subprocess
 import sys
 
 import distro
+
+if not hasattr(builtins, "__salt_system_encoding__"):
+    setattr(builtins, "__salt_system_encoding__", sys.getdefaultencoding())
 
 
 # Use a local wraps-based memoize rather than importing from salt.utils.decorators.

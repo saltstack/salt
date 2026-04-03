@@ -502,9 +502,10 @@ def get_user_sid(username):
         salt '*' user.get_user_sid jsnuffy
     """
     domain = win32api.GetComputerName()
+    username = str(username)
     if username.find("\\") != -1:
-        domain = username.split("\\")[0]
-        username = username.split("\\")[-1]
+        domain = username.split("\\", maxsplit=1)[0]
+        username = username.rsplit("\\", maxsplit=1)[-1]
     domain = domain.upper()
     return win32security.ConvertSidToStringSid(
         win32security.LookupAccountName(None, domain + "\\" + username)[0]

@@ -1051,14 +1051,14 @@ def traceroute(host):
         # Parse anything else
         else:
             comps = line.split()
-            if len(comps) >= 9:
+            if len(comps) >= 8:
                 result = {
                     "count": comps[0],
                     "hostname": comps[1],
                     "ip": comps[2],
                     "ms1": comps[4],
                     "ms2": comps[6],
-                    "ms3": comps[8],
+                    "ms3": comps[8] if len(comps) >= 9 else None,
                     "ping1": comps[3],
                     "ping2": comps[5],
                     "ping3": comps[7],

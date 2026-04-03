@@ -695,7 +695,7 @@ def test_list_present_nested_already():
     with set_grains({"a": "aval", "b": {"foo": ["bar"]}}):
         ret = grains.list_present(name="b:foo", value="bar")
         assert ret["result"] is True
-        assert ret["comment"] == "Value bar is already in grain b:foo"
+        assert ret["comment"] == "Value bar is already in grain b:foo (or pending)"
         assert ret["changes"] == {}
         assert grains.__grains__ == {"a": "aval", "b": {"foo": ["bar"]}}
         assert_grain_file_content("a: aval\nb:\n  foo:\n  - bar\n")
@@ -705,7 +705,7 @@ def test_list_present_already():
     with set_grains({"a": "aval", "foo": ["bar"]}):
         ret = grains.list_present(name="foo", value="bar")
         assert ret["result"] is True
-        assert ret["comment"] == "Value bar is already in grain foo"
+        assert ret["comment"] == "Value bar is already in grain foo (or pending)"
         assert ret["changes"] == {}
         assert grains.__grains__ == {"a": "aval", "foo": ["bar"]}
         assert_grain_file_content("a: aval\nfoo:\n- bar\n")
@@ -717,7 +717,7 @@ def test_list_present_complex_present():
         assert grains.__grains__ == {"a": [{"foo": "bar"}, {"foo": "baz"}]}
         assert ret["result"] is True
         assert ret["comment"] == (
-            "Removed value [{'foo': 'bar'}] from update due to value found in \"a\".\n"
+            "Removed value [{'foo': 'bar'}] from update due to value found in \"a\" (or pending).\n"
             "Append value [{'foo': 'baz'}] to grain a"
         )
         assert ret["changes"] == {"new": {"a": [{"foo": "bar"}, {"foo": "baz"}]}}
@@ -748,7 +748,7 @@ def test_list_present_multiple_calls_empty_as_str():
         assert grains.__grains__ == {"foo": ["racecar", "taxi"]}
         assert ret["result"] is True
         assert ret["comment"] == (
-            "Removed value ['racecar'] from update due to value found in \"foo\".\n"
+            "Removed value ['racecar'] from update due to value found in \"foo\" (or pending).\n"
             "Append value ['taxi'] to grain foo"
         )
         assert ret["changes"] == {"new": {"foo": ["racecar", "taxi"]}}
@@ -768,7 +768,7 @@ def test_list_present_multiple_calls_empty_as_list():
         assert grains.__grains__ == {"foo": ["racecar", "taxi"]}
         assert ret["result"] is True
         assert ret["comment"] == (
-            "Removed value ['racecar'] from update due to value found in \"foo\".\n"
+            "Removed value ['racecar'] from update due to value found in \"foo\" (or pending).\n"
             "Append value ['taxi'] to grain foo"
         )
         assert ret["changes"] == {"new": {"foo": ["racecar", "taxi"]}}
@@ -788,7 +788,7 @@ def test_list_present_multiple_calls_present_as_str():
         assert grains.__grains__ == {"foo": ["nascar", "racecar", "taxi"]}
         assert ret["result"] is True
         assert ret["comment"] == (
-            "Removed value ['racecar'] from update due to value found in \"foo\".\n"
+            "Removed value ['racecar'] from update due to value found in \"foo\" (or pending).\n"
             "Append value ['taxi'] to grain foo"
         )
         assert ret["changes"] == {"new": {"foo": ["nascar", "racecar", "taxi"]}}
@@ -808,7 +808,7 @@ def test_list_present_multiple_calls_present_as_list():
         assert grains.__grains__ == {"foo": ["nascar", "racecar", "taxi"]}
         assert ret["result"] is True
         assert ret["comment"] == (
-            "Removed value ['racecar'] from update due to value found in \"foo\".\n"
+            "Removed value ['racecar'] from update due to value found in \"foo\" (or pending).\n"
             "Append value ['taxi'] to grain foo"
         )
         assert ret["changes"] == {"new": {"foo": ["nascar", "racecar", "taxi"]}}

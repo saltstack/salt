@@ -210,8 +210,8 @@ class Deb822SourceEntry:
         return (
             self.disabled == other.disabled
             and self.type == other.type
-            and set([uri.rstrip("/") for uri in self.uris])
-            == set([uri.rstrip("/") for uri in other.uris])
+            and {uri.rstrip("/") for uri in self.uris}
+            == {uri.rstrip("/") for uri in other.uris}
             and self.dist == other.dist
             and self.comps == other.comps
         )
