@@ -40,8 +40,7 @@ import salt.utils.xdg
 import salt.utils.yaml
 import salt.version as version
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.utils.validate.path import is_syslog_path
-from salt.utils.validate.path import is_writeable
+from salt.utils.validate.path import is_syslog_path, is_writeable
 from salt.utils.verify import insecure_log, verify_log, verify_log_files
 
 log = logging.getLogger(__name__)
