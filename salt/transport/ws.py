@@ -443,7 +443,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             for msg in unpacker:
                 await self._pub_payload(msg)
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, *args, **kwargs):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
@@ -531,7 +531,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self._run = None
         self._socket = None
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, *args, **kwargs):
         """
         Pre-fork we need to create the zmq router device
         """

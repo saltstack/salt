@@ -115,13 +115,13 @@ class ReqServerChannel:
         )
         return self.sessions[minion][1]
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, *args, **kwargs):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be bind and listen (or the equivalent for your network library)
         """
         if hasattr(self.transport, "pre_fork"):
-            self.transport.pre_fork(process_manager)
+            self.transport.pre_fork(process_manager, *args, **kwargs)
 
     def post_fork(self, payload_handler, io_loop):
         """
@@ -1111,7 +1111,7 @@ class PubServerChannel:
             self.aes_funcs.destroy()
             self.aes_funcs = None
 
-    def pre_fork(self, process_manager, kwargs=None):
+    def pre_fork(self, process_manager, *args, **kwargs):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
