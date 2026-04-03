@@ -1965,7 +1965,7 @@ def test_build_crl_accounts_for_local_time_zone(ca_key, ca_cert):
     with patch("salt.utils.x509.datetime") as fakedate:
         fakedate.today.return_value = curr_time_naive
         fakedate.now.side_effect = dtn
-        fakedate.utcnow.return_value = curr_time_utc_naive
+        fakedate.now(datetime.UTC).return_value = curr_time_utc_naive
         builder, _ = x509.build_crl(privkey, [], signing_cert=cert)
         crl = builder.sign(privkey, algorithm=cprim.hashes.SHA256())
     try:
