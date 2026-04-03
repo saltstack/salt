@@ -22,6 +22,7 @@ import salt.crypt
 import salt.master
 import salt.payload
 import salt.transport.frame
+import salt.transport.tcp
 import salt.utils.channel
 import salt.utils.event
 import salt.utils.minions
@@ -1176,8 +1177,20 @@ class MasterPubServerChannel:
 
     @classmethod
     def factory(cls, opts, **kwargs):
+        log.info("MasterPubServerChannel.factory called with cluster_id=%s", opts.get("cluster_id"))
         _discover_event = kwargs.get("_discover_event", None)
-        transport = salt.transport.ipc_publish_server("master", opts)
+        if opts.get("cluster_id"):
+            # For master clusters, we need a TCP transport
+            tcp_master_pool_port = opts.get("tcp_master_pull_port", 4520)
+            transport = salt.transport.tcp.PublishServer(
+                opts,
+                pub_host=opts.get("interface", "0.0.0.0"),
+                pub_port=opts.get("publish_port", 4505),
+                pull_host="0.0.0.0",
+                pull_port=tcp_master_pool_port,
+            )
+        else:
+            transport = salt.transport.ipc_publish_server("master", opts)
         return cls(opts, transport, _discover_event=_discover_event)
 
     def __init__(
@@ -1208,20 +1221,29 @@ class MasterPubServerChannel:
             pub = fp.read()
 
         # Discover configured peers (IPs/hostnames) that we haven't discovered yet
-        for peer in self.opts.get("cluster_peers", []):
-            log.error("Discover cluster from %s", peer)
+        for peer_entry in self.opts.get("cluster_peers", []):
+            if ":" in peer_entry:
+                peer_host, peer_port = peer_entry.rsplit(":", 1)
+                peer_port = int(peer_port)
+            else:
+                peer_host = peer_entry
+                peer_port = self.tcp_master_pool_port
+
+            log.info("DISCOVERING PEER %s:%s", peer_host, peer_port)
+
             # Generate unique token for each peer we're discovering
             discover_token = self.gen_token()
 
             # Store token to validate discover-reply
-            # Key by peer_id so we can validate the response came from who we asked
-            self._discover_candidates[peer] = {"token": discover_token}
+            # Key by peer_host so we can validate the response came from who we asked
+            self._discover_candidates[peer_host] = {"token": discover_token}
 
             tosign = salt.payload.package(
                 {
                     "peer_id": self.opts["id"],
                     "pub": pub,
                     "token": discover_token,
+                    "port": self.tcp_master_pool_port,
                 }
             )
             key = salt.crypt.PrivateKeyString(self.private_key())
@@ -1230,16 +1252,25 @@ class MasterPubServerChannel:
                 "sig": sig,
                 "payload": tosign,
             }
-            with salt.utils.event.get_master_event(
-                self.opts, self.opts["sock_dir"], listen=False
-            ) as event:
-                success = event.fire_event(
-                    data,
-                    salt.utils.event.tagify("discover", "peer", "cluster"),
-                    timeout=30000,  # 30 second timeout
-                )
-                if not success:
-                    log.error("Unable to send aes key event")
+            # Find the pusher for this peer
+            target_pusher = None
+            for p in self.pushers:
+                if p.pull_host == peer_host:
+                    target_pusher = p
+                    # Ensure port matches
+                    p.pull_port = peer_port
+                    break
+            if not target_pusher:
+                target_pusher = self.pusher(peer_host, port=peer_port)
+                self.pushers.append(target_pusher)
+
+            # Directly publish discovery event to the peer
+            event_data = salt.utils.event.SaltEvent.pack(
+                salt.utils.event.tagify("discover", "peer", "cluster"),
+                data,
+            )
+            # Use target_pusher to send directly
+            self.io_loop.add_callback(target_pusher.publish, event_data)
 
     def send_aes_key_event(self):
         import traceback
@@ -1247,6 +1278,7 @@ class MasterPubServerChannel:
         log.warning("SEND AES KEY EVENT %s", "".join(traceback.format_stack()[-4:-1]))
         data = {"peer_id": self.opts["id"], "peers": {}}
         for peer in self.cluster_peers:
+            log.info("Sending AES key to peer %s", peer)
             peer_pub = (
                 pathlib.Path(self.opts["cluster_pki_dir"]) / "peers" / f"{peer}.pub"
             )
@@ -1304,6 +1336,11 @@ class MasterPubServerChannel:
             )
 
     def _publish_daemon(self, **kwargs):
+        # Initialize asyncio loop first
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
         if (
             self.opts["event_publisher_niceness"]
             and not salt.utils.platform.is_windows()
@@ -1314,9 +1351,34 @@ class MasterPubServerChannel:
             )
             os.nice(self.opts["event_publisher_niceness"])
         self.io_loop = tornado.ioloop.IOLoop.current()
+
+        if self.opts.get("cluster_id"):
+            # Ensure we are using TCP transport for master cluster
+            if not isinstance(self.transport, salt.transport.tcp.PublishServer):
+                log.info("Forcing TCP transport for master cluster in EventPublisher")
+                tcp_master_pool_port = self.opts.get("tcp_master_pull_port", 4520)
+                self.transport = salt.transport.tcp.PublishServer(
+                    self.opts,
+                    pub_host=self.opts.get("interface", "0.0.0.0"),
+                    pub_port=self.opts.get("publish_port", 4505),
+                    pull_host="0.0.0.0",
+                    pull_port=tcp_master_pool_port,
+                )
+                # We need to start the publisher task for the new transport
+                aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
+                aio_loop.create_task(
+                    self.transport.publisher(
+                        self.publish_payload,
+                        io_loop=self.io_loop,
+                    )
+                )
+
         # Re-initialize master_key in the daemon process
         self.master_key = salt.crypt.MasterKeys(self.opts)
-        self.tcp_master_pool_port = self.opts["cluster_pool_port"]
+        # Default cluster port is 4520, but prioritize tcp_master_pull_port if it's set (usual for tests)
+        self.tcp_master_pool_port = self.opts.get("tcp_master_pull_port")
+        if not self.tcp_master_pool_port or self.tcp_master_pool_port == 4506:
+            self.tcp_master_pool_port = self.opts.get("cluster_pool_port", 4520)
         self.pushers = []
         self.auth_errors = {}
         for peer in self.opts.get("cluster_peers", []):
@@ -1345,13 +1407,27 @@ class MasterPubServerChannel:
                 self.pushers.append(pusher)
 
         if self.opts.get("cluster_id", None):
+            # Always bind to 0.0.0.0 for cluster pool to allow cross-interface communication
             self.pool_puller = salt.transport.tcp.TCPPuller(
-                host=self.opts["interface"],
+                host="0.0.0.0",
                 port=self.tcp_master_pool_port,
                 io_loop=self.io_loop,
                 payload_handler=self.handle_pool_publish,
             )
-            self.pool_puller.start()
+            try:
+                self.pool_puller.start()
+            except OSError as exc:
+                if exc.errno == 98:  # Address already in use
+                    log.warning(
+                        "Cluster pool port %s already in use, binding to dynamic port",
+                        self.tcp_master_pool_port,
+                    )
+                    self.pool_puller.port = 0
+                    self.pool_puller.start()
+                    # Update our port so discovery sends the correct one
+                    self.tcp_master_pool_port = self.pool_puller.port
+                else:
+                    raise
         # Extract asyncio loop for create_task
         aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
         aio_loop.create_task(
@@ -1411,6 +1487,10 @@ class MasterPubServerChannel:
             return path.read_text(encoding="utf-8")
 
     def pusher(self, peer, port=None):
+        if ":" in peer:
+            peer, peer_port = peer.rsplit(":", 1)
+            if port is None:
+                port = int(peer_port)
         if port is None:
             port = self.tcp_master_pool_port
         return salt.transport.tcp.PublishServer(
@@ -1425,8 +1505,193 @@ class MasterPubServerChannel:
         """
         try:
             tag, data = salt.utils.event.SaltEvent.unpack(payload)
-            log.debug("Incomming from peer %s %r", tag, data)
-            if tag.startswith("cluster/peer/join-notify"):
+            log.info("RECEIVED EVENT FROM CLUSTER POOL: tag=%s data=%r", tag, data)
+            if tag.startswith("cluster/peer/discover"):
+
+                payload = salt.payload.loads(data["payload"])
+                log.info(
+                    "RECEIVED DISCOVER REQUEST FROM PEER %s", payload.get("peer_id")
+                )
+
+                # Validate peer_id early (before storing in candidates)
+                # Note: We don't construct a path yet, but validate the ID is safe
+                try:
+                    # Use clean_join just for validation (we don't use the result yet)
+                    _ = salt.utils.verify.clean_join(
+                        self.opts["cluster_pki_dir"],
+                        "peers",
+                        f"{payload.get('peer_id', '')}.pub",
+                        subdir=True,
+                    )
+                except (SaltValidationError, KeyError) as e:
+                    log.error(
+                        "Invalid peer_id in discover %s: %s", payload.get("peer_id"), e
+                    )
+                    return
+
+                try:
+                    peer_key = salt.crypt.PublicKeyString(payload["pub"])
+                    if not peer_key.verify(data["payload"], data["sig"]):
+                        log.warning("Invalid signature of cluster discover payload")
+                        return
+                except InvalidKeyError:
+                    log.warning(
+                        "Invalid public key or signature in cluster discover payload"
+                    )
+                    return
+                log.info("Cluster discovery from %s", payload["peer_id"])
+                token = self.gen_token()
+                # Store this peer as a candidate.
+                # XXX Add timestamp so we can clean up old candidates
+                self._discover_candidates[payload["peer_id"]] = {
+                    "pub": payload["pub"],
+                    "token": token,
+                    "port": payload.get("port"),
+                }
+                tosign = salt.payload.package(
+                    {
+                        "return_token": payload["token"],
+                        "token": token,
+                        "peer_id": self.opts["id"],
+                        "pub": self.public_key(),
+                        "cluster_pub": self.cluster_public_key(),
+                        "port": self.tcp_master_pool_port,
+                    }
+                )
+                key = salt.crypt.PrivateKeyString(self.cluster_key())
+                sig = key.sign(tosign)
+                _ = salt.payload.package(
+                    {
+                        "sig": sig,
+                        "payload": tosign,
+                    }
+                )
+                event_data = salt.utils.event.SaltEvent.pack(
+                    salt.utils.event.tagify("discover-reply", "peer", "cluster"),
+                    {"sig": sig, "payload": tosign},
+                )
+                # Send reply back to the provided port
+                await self.pusher(payload["peer_id"], port=payload.get("port")).publish(
+                    event_data
+                )
+            elif tag.startswith("cluster/peer/discover-reply"):
+                payload = salt.payload.loads(data["payload"])
+
+                # Verify digest (using SHA-256 for security)
+                digest = hashlib.sha256(payload["cluster_pub"].encode()).hexdigest()
+
+                # Check if cluster_pub_signature is configured
+                cluster_pub_sig = self.opts.get("cluster_pub_signature", None)
+
+                if cluster_pub_sig:
+                    # Signature is configured - verify it matches
+                    if digest != cluster_pub_sig:
+                        log.error(
+                            "Cluster public key verification failed: "
+                            "expected %s, got %s",
+                            cluster_pub_sig,
+                            digest,
+                        )
+                        return
+                    log.info("Cluster public key signature verified: %s", digest)
+                else:
+                    # No signature configured - check if it's required
+                    if self.opts.get("cluster_pub_signature_required", True):
+                        log.error(
+                            "cluster_pub_signature is required for autoscale join "
+                            "(set cluster_pub_signature_required=False to allow TOFU). "
+                            "Refusing to join cluster with unknown key: %s",
+                            digest,
+                        )
+                        return
+                    else:
+                        # TOFU mode - trust on first use
+                        log.warning(
+                            "SECURITY: No cluster_pub_signature configured, "
+                            "trusting cluster public key on first use: %s "
+                            "(vulnerable to man-in-the-middle attacks)",
+                            digest,
+                        )
+
+                cluster_pub = salt.crypt.PublicKeyString(payload["cluster_pub"])
+                if not cluster_pub.verify(data["payload"], data["sig"]):
+                    log.warning("Invalid signature of cluster discover payload")
+                    return
+
+                # Store this peer as a candidate if not already there (bootstrap peer)
+                if peer_id not in self._discover_candidates:
+                    self._discover_candidates[peer_id] = {
+                        "pub": payload["pub"],
+                        "token": payload["token"],
+                        "port": payload.get("port"),
+                    }
+                else:
+                    # Update token and port from reply
+                    self._discover_candidates[peer_id]["token"] = payload["token"]
+                    if payload.get("port"):
+                        self._discover_candidates[peer_id]["port"] = payload.get("port")
+
+                expected_token = self._discover_candidates[peer_id].get("token")
+                peer_port = self._discover_candidates[peer_id].get("port")
+                received_token = payload.get("return_token")
+
+                if received_token != expected_token:
+                    log.warning(
+                        "Invalid return_token in discover-reply from %s: %s != %s",
+                        peer_id,
+                        received_token,
+                        expected_token,
+                    )
+                    return
+
+                log.info("Cluster discover reply from %s", payload["peer_id"])
+                key = salt.crypt.PublicKeyString(payload["pub"])
+                self._discover_token = self.gen_token()
+                tosign = salt.payload.package(
+                    {
+                        "return_token": payload["token"],
+                        "token": self._discover_token,
+                        "peer_id": self.opts["id"],
+                        "secret": key.encrypt(
+                            payload["token"].encode()
+                            + self.opts["cluster_secret"].encode()
+                        ),
+                        "key": key.encrypt(
+                            payload["token"].encode()
+                            + salt.master.SMaster.secrets["aes"]["secret"].value
+                        ),
+                        "pub": self.public_key(),
+                    }
+                )
+                sig = salt.crypt.PrivateKeyString(self.private_key()).sign(tosign)
+
+                # Use clean_join to validate and construct path safely
+                try:
+                    peer_pub_path = salt.utils.verify.clean_join(
+                        self.opts["cluster_pki_dir"],
+                        "peers",
+                        f"{payload['peer_id']}.pub",
+                        subdir=True,
+                    )
+                except SaltValidationError as e:
+                    log.error(
+                        "Invalid peer_id in discover-reply %s: %s",
+                        payload["peer_id"],
+                        e,
+                    )
+                    return
+
+                self.cluster_peers.append(payload["peer_id"])
+                event_data = salt.utils.event.SaltEvent.pack(
+                    salt.utils.event.tagify("join", "peer", "cluster"),
+                    {"sig": sig, "payload": tosign},
+                )
+                with salt.utils.files.fopen(peer_pub_path, "w") as fp:
+                    fp.write(payload["pub"])
+                pusher = self.pusher(payload["peer_id"], port=peer_port)
+                self.pushers.append(pusher)
+                await pusher.publish(event_data)
+            elif tag.startswith("cluster/peer/join-notify"):
                 # Verify this is a properly signed notification
                 if "payload" not in data or "sig" not in data:
                     log.error("Join-notify missing payload or signature")
@@ -1676,8 +1941,9 @@ class MasterPubServerChannel:
                 if event:
                     event.set()
             elif tag.startswith("cluster/peer/join"):
-
                 payload = salt.payload.loads(data["payload"])
+                log.info("RECEIVED JOIN REQUEST FROM PEER %s", payload.get("peer_id"))
+
 
                 # Verify we have a discovery candidate for this peer
                 if payload["peer_id"] not in self._discover_candidates:
@@ -1687,7 +1953,9 @@ class MasterPubServerChannel:
                     )
                     return
 
-                pub, token = self._discover_candidates[payload["peer_id"]]
+                candidate = self._discover_candidates[payload["peer_id"]]
+                pub = candidate["pub"]
+                token = candidate["token"]
 
                 if payload["pub"] != pub:
                     log.warning("Cluster join, peer public keys do not match")
@@ -1856,175 +2124,16 @@ class MasterPubServerChannel:
                     },
                 )
                 await self.pusher(payload["peer_id"]).publish(event_data)
-            elif tag.startswith("cluster/peer/discover-reply"):
-                payload = salt.payload.loads(data["payload"])
-
-                # Verify digest (using SHA-256 for security)
-                digest = hashlib.sha256(payload["cluster_pub"].encode()).hexdigest()
-
-                # Check if cluster_pub_signature is configured
-                cluster_pub_sig = self.opts.get("cluster_pub_signature", None)
-
-                if cluster_pub_sig:
-                    # Signature is configured - verify it matches
-                    if digest != cluster_pub_sig:
-                        log.error(
-                            "Cluster public key verification failed: "
-                            "expected %s, got %s",
-                            cluster_pub_sig,
-                            digest,
-                        )
-                        return
-                    log.info("Cluster public key signature verified: %s", digest)
-                else:
-                    # No signature configured - check if it's required
-                    if self.opts.get("cluster_pub_signature_required", True):
-                        log.error(
-                            "cluster_pub_signature is required for autoscale join "
-                            "(set cluster_pub_signature_required=False to allow TOFU). "
-                            "Refusing to join cluster with unknown key: %s",
-                            digest,
-                        )
-                        return
-                    else:
-                        # TOFU mode - trust on first use
-                        log.warning(
-                            "SECURITY: No cluster_pub_signature configured, "
-                            "trusting cluster public key on first use: %s "
-                            "(vulnerable to man-in-the-middle attacks)",
-                            digest,
-                        )
-
-                cluster_pub = salt.crypt.PublicKeyString(payload["cluster_pub"])
-                if not cluster_pub.verify(data["payload"], data["sig"]):
-                    log.warning("Invalid signature of cluster discover payload")
-                    return
-
-                # Validate return_token matches the token we sent to this peer
-                peer_id = payload.get("peer_id")
-                if peer_id not in self._discover_candidates:
-                    log.warning(
-                        "Discover-reply from unexpected peer: %s (not in candidates)",
-                        peer_id,
-                    )
-                    return
-
-                expected_token = self._discover_candidates[peer_id].get("token")
-                received_token = payload.get("return_token")
-
-                if received_token != expected_token:
-                    log.warning(
-                        "Invalid return_token in discover-reply from %s: %s != %s",
-                        peer_id,
-                        received_token,
-                        expected_token,
-                    )
-                    return
-
-                log.info("Cluster discover reply from %s", payload["peer_id"])
-                key = salt.crypt.PublicKeyString(payload["pub"])
-                self._discover_token = self.gen_token()
-                tosign = salt.payload.package(
-                    {
-                        "return_token": payload["token"],
-                        "token": self._discover_token,
-                        "peer_id": self.opts["id"],
-                        "secret": key.encrypt(
-                            payload["token"].encode()
-                            + self.opts["cluster_secret"].encode()
-                        ),
-                        "key": key.encrypt(
-                            payload["token"].encode()
-                            + salt.master.SMaster.secrets["aes"]["secret"].value
-                        ),
-                        "pub": self.public_key(),
-                    }
-                )
-                sig = salt.crypt.PrivateKeyString(self.private_key()).sign(tosign)
-
-                # Use clean_join to validate and construct path safely
-                try:
-                    peer_pub_path = salt.utils.verify.clean_join(
-                        self.opts["cluster_pki_dir"],
-                        "peers",
-                        f"{payload['peer_id']}.pub",
-                        subdir=True,
-                    )
-                except SaltValidationError as e:
-                    log.error(
-                        "Invalid peer_id in discover-reply %s: %s",
-                        payload["peer_id"],
-                        e,
-                    )
-                    return
-
-                self.cluster_peers.append(payload["peer_id"])
-                event_data = salt.utils.event.SaltEvent.pack(
-                    salt.utils.event.tagify("join", "peer", "cluster"),
-                    {"sig": sig, "payload": tosign},
-                )
-                with salt.utils.files.fopen(peer_pub_path, "w") as fp:
-                    fp.write(payload["pub"])
-                pusher = self.pusher(payload["peer_id"])
-                self.pushers.append(pusher)
-                await pusher.publish(event_data)
-            elif tag.startswith("cluster/peer/discover"):
-                payload = salt.payload.loads(data["payload"])
-
-                # Validate peer_id early (before storing in candidates)
-                # Note: We don't construct a path yet, but validate the ID is safe
-                try:
-                    # Use clean_join just for validation (we don't use the result yet)
-                    _ = salt.utils.verify.clean_join(
-                        self.opts["cluster_pki_dir"],
-                        "peers",
-                        f"{payload.get('peer_id', '')}.pub",
-                        subdir=True,
-                    )
-                except (SaltValidationError, KeyError) as e:
-                    log.error(
-                        "Invalid peer_id in discover %s: %s", payload.get("peer_id"), e
-                    )
-                    return
-
-                try:
-                    peer_key = salt.crypt.PublicKeyString(payload["pub"])
-                    if not peer_key.verify(data["payload"], data["sig"]):
-                        log.warning("Invalid signature of cluster discover payload")
-                        return
-                except InvalidKeyError:
-                    log.warning(
-                        "Invalid public key or signature in cluster discover payload"
-                    )
-                    return
-                log.info("Cluster discovery from %s", payload["peer_id"])
-                token = self.gen_token()
-                # Store this peer as a candidate.
-                # XXX Add timestamp so we can clean up old candidates
-                self._discover_candidates[payload["peer_id"]] = (payload["pub"], token)
-                tosign = salt.payload.package(
-                    {
-                        "return_token": payload["token"],
-                        "token": token,
-                        "peer_id": self.opts["id"],
-                        "pub": self.public_key(),
-                        "cluster_pub": self.cluster_public_key(),
-                    }
-                )
-                key = salt.crypt.PrivateKeyString(self.cluster_key())
-                sig = key.sign(tosign)
-                _ = salt.payload.package(
-                    {
-                        "sig": sig,
-                        "payload": tosign,
-                    }
-                )
-                event_data = salt.utils.event.SaltEvent.pack(
-                    salt.utils.event.tagify("discover-reply", "peer", "cluster"),
-                    {"sig": sig, "payload": tosign},
-                )
-                await self.pusher(payload["peer_id"]).publish(event_data)
             elif tag.startswith("cluster/peer"):
+                # Signature of an AES key event is 'cluster/peer/<peer_id>'
+                # Protocol events have more parts: 'cluster/peer/discover', etc.
+                tag_parts = tag.split("/")
+                if len(tag_parts) != 3:
+                    # This is likely a protocol event that we don't have a handler for yet
+                    # or it was meant for one of the startswith handlers above but they were reordered.
+                    log.debug("Ignoring cluster/peer protocol event: %s", tag)
+                    return
+
                 peer = data["peer_id"]
                 if peer == self.opts["id"]:
                     log.debug("Skip our own cluster peer event %s", tag)
@@ -2134,6 +2243,10 @@ class MasterPubServerChannel:
                 asyncio.create_task(self.handle_pool_publish(load), name="local")
             )
         for pusher in self.pushers:
+            # Only forward to this peer if they have already discovered us
+            # (which means we have their peer ID and they're in self.pushers)
+            # and if this is a cluster/peer event, ensure it's not a discovery event
+            # that we're trying to send to someone who hasn't discovered us yet.
             log.info("Publish event to peer %s:%s", pusher.pull_host, pusher.pull_port)
             if tag.startswith("cluster/peer"):
                 # log.info("Send %s %r", tag, load)
