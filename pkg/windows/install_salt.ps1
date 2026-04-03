@@ -124,7 +124,7 @@ if ( ! $SkipInstall ) {
   #-------------------------------------------------------------------------------
   Write-Host "Installing dependencies: " -NoNewline
   Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
-                -ArgumentList "install", "-r", "$SALT_DEPS" `
+                -ArgumentList "install", "-r", "$SALT_DEPS", "-U" `
                 -WorkingDirectory "$PROJECT_DIR" `
                 -Wait -WindowStyle Hidden
   if ( Test-Path -Path "$SCRIPTS_DIR\distro.exe" ) {

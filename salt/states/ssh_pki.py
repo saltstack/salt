@@ -223,7 +223,7 @@ def certificate_managed(
         The certificate will be recreated once the remaining certificate validity
         period is less than this number of seconds. Can also be specified as a
         time string like ``12d`` or ``1.5h``.
-        Defaults to ``30d`` for host keys and ``1h`` for user keys.
+        Defaults to ``7d`` for host keys and ``1h`` for user keys.
 
     ca_server
         Request a remotely signed certificate from another minion acting as
@@ -434,6 +434,7 @@ def certificate_managed(
                 valid_principals=valid_principals,
                 all_principals=all_principals,
                 key_id=key_id,
+                copypath=copypath,
                 **backend_args,
             )
             ret["comment"] = f"The certificate has been {verb}d"
@@ -575,9 +576,9 @@ def private_key_managed(
         file_exists = __salt__["file.file_exists"](real_name)
 
         if file_exists and not new:
+            current_has_passphrase = False
             try:
                 current = sshpki.load_privkey(real_name, passphrase=passphrase)
-                current_has_passphrase = False
                 if passphrase:
                     try:
                         # The SSH key logic does not complain when a
@@ -587,7 +588,9 @@ def private_key_managed(
                         CommandExecutionError,
                         SaltInvocationError,
                     ) as err:  # pylint: disable=broad-except
-                        if "Bad decrypt" not in str(err):
+                        if "Bad decrypt" not in str(
+                            err
+                        ) and "private key is not encrypted" not in str(err):
                             raise
                         current_has_passphrase = True
 
@@ -599,6 +602,11 @@ def private_key_managed(
                             "Pass overwrite: true to force regeneration"
                         ) from err
                     changes["passphrase"] = True
+                elif "private key is not encrypted" in str(err):
+                    changes["passphrase"] = True
+                    # If we got this error, it means we provided a password for an unencrypted key.
+                    # We can still load the current key to compare other attributes.
+                    current = sshpki.load_privkey(real_name, passphrase=None)
                 elif "Private key is encrypted" in str(err):
                     if not overwrite:
                         raise CommandExecutionError(
@@ -647,7 +655,7 @@ def private_key_managed(
                 # cryptography does not report if the file is a valid private key
                 changes["passphrase"] = True
 
-        elif file_exists and new:
+        elif file_exists:
             changes["replaced"] = name
         else:
             changes["created"] = name
@@ -798,9 +806,7 @@ def public_key_managed(name, public_key_source, passphrase=None, **kwargs):
     return ret
 
 
-def certificate_managed_ssh(
-    name, result, comment, changes, encoding=None, contents=None, **kwargs
-):
+def certificate_managed_ssh(name, result, comment, changes, contents=None, **kwargs):
     """
     Helper for the SSH wrapper module.
     This receives a certificate and dumps the data to the target.
@@ -884,7 +890,13 @@ def _file_managed(name, test=None, **kwargs):
     if test not in [None, True]:
         raise SaltInvocationError("test param can only be None or True")
     test = test or __opts__["test"]
-    res = __salt__["state.single"]("file.managed", name, test=test, **kwargs)
+    res = __salt__["state.single"](
+        "file.managed", name, test=test, concurrent=True, **kwargs
+    )
+    if not isinstance(res, dict):
+        raise CommandExecutionError(
+            f"Failed running file.managed in ssh_pki state: {res}"
+        )
     return res[next(iter(res))]
 
 

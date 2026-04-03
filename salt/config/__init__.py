@@ -23,6 +23,7 @@ import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.network
+import salt.utils.optsdict
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
@@ -409,6 +410,8 @@ VALID_OPTS = immutabletypes.freeze(
         "state_auto_order": bool,
         # Fire events as state chunks are processed by the state compiler
         "state_events": bool,
+        # Limit the number of states that can be running in parallel
+        "state_max_parallel": int,
         # The number of seconds a minion should wait before retry when attempting authentication
         "acceptance_wait_time": float,
         # The number of seconds a minion should wait before giving up during authentication
@@ -935,6 +938,8 @@ VALID_OPTS = immutabletypes.freeze(
         # Note: to set enum arguments values like `cert_reqs` and `ssl_version` use constant names
         # without ssl module prefix: `CERT_REQUIRED` or `PROTOCOL_SSLv23`.
         "ssl": (dict, bool, type(None)),
+        # Disable redundant AES encryption when TLS is active with validated certificates
+        "disable_aes_with_tls": bool,
         # Controls how a multi-function job returns its data. If this is False,
         # it will return its data using a dictionary with the function name as
         # the key. This is compatible with legacy systems. If this is True, it
@@ -985,6 +990,8 @@ VALID_OPTS = immutabletypes.freeze(
         "schedule": dict,
         # Whether to fire auth events
         "auth_events": bool,
+        # Specify auth events to add autosign_grains to
+        "auth_events_autosign_grains": list,
         # Whether to fire Minion data cache refresh events
         "minion_data_cache_events": bool,
         # Enable calling ssh minions from the salt master
@@ -1037,6 +1044,10 @@ VALID_OPTS = immutabletypes.freeze(
         "minimum_auth_version": int,
         # optional cache driver for pillar cache
         "pillar.cache_driver": (type(None), str),
+        # optional cache driver for eauth_tokens cache
+        "eauth_tokens.cache_driver": (type(None), str),
+        # eauth tokens cluster id override
+        "eauth_tokens.cluster_id": (type(None), str),
     }
 )
 
@@ -1244,6 +1255,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "state_events": False,
         "state_aggregate": False,
         "state_queue": False,
+        "state_max_parallel": 0,
         "snapper_states": False,
         "snapper_states_config": "root",
         "acceptance_wait_time": 10,
@@ -1333,6 +1345,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "proxy_port": 0,
         "minion_jid_queue_hwm": 100,
         "ssl": None,
+        "disable_aes_with_tls": False,
         "multifunc_ordered": False,
         "beacons_before_connect": False,
         "scheduler_before_connect": False,
@@ -1590,6 +1603,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "state_auto_order": True,
         "state_events": False,
         "state_aggregate": False,
+        "state_max_parallel": 0,
         "search": "",
         "loop_interval": 60,
         "nodegroups": {},
@@ -1683,6 +1697,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "thin_saltext_allowlist": None,
         "thin_saltext_blocklist": [],
         "ssl": None,
+        "disable_aes_with_tls": False,
         "extmod_whitelist": {},
         "extmod_blacklist": {},
         "clean_dynamic_modules": True,
@@ -1695,6 +1710,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "discovery": False,
         "schedule": {},
         "auth_events": True,
+        "auth_events_pend_autosign_grains": False,
         "minion_data_cache_events": True,
         "enable_ssh_minions": False,
         "netapi_allow_raw_shell": False,
@@ -1719,6 +1735,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "request_server_ttl": 0,
         "minimum_auth_version": 3,
         "pillar.cache_driver": None,
+        "eauth_tokens.cache_driver": None,
+        "eauth_tokens.cluster_id": None,
     }
 )
 
@@ -2339,6 +2357,14 @@ def prepend_root_dir(opts, path_options):
 def insert_system_path(opts, paths):
     """
     Inserts path into python path taking into consideration 'root_dir' option.
+
+    Paths are appended rather than prepended so that stdlib modules are never
+    shadowed by extension module directories (e.g. extmods/utils/).  In Python
+    3.14+ the ``forkserver`` start method spawns child processes with a fresh
+    interpreter and passes the parent's ``sys.path`` via preparation_data.  If
+    an extmods directory sits before the stdlib entries it can accidentally
+    shadow stdlib modules (e.g. ``platform``, ``functools``), triggering
+    circular imports that crash the child.
     """
     if isinstance(paths, str):
         paths = [paths]
@@ -2346,7 +2372,7 @@ def insert_system_path(opts, paths):
         path_options = {"path": path, "root_dir": opts["root_dir"]}
         prepend_root_dir(path_options, path_options)
         if os.path.isdir(path_options["path"]) and path_options["path"] not in sys.path:
-            sys.path.insert(0, path_options["path"])
+            sys.path.append(path_options["path"])
 
 
 def minion_config(
@@ -2412,7 +2438,10 @@ def minion_config(
         apply_sdb(opts)
         _validate_opts(opts)
     salt.features.setup_features(opts)
-    return opts
+    # Convert to OptsDict for memory efficiency
+    return salt.utils.optsdict.OptsDict.from_dict(
+        opts, name=f"minion_config:role={role}"
+    )
 
 
 def mminion_config(path, overrides, ignore_config_errors=True):
@@ -2511,7 +2540,11 @@ def proxy_config(
     apply_sdb(opts)
     _validate_opts(opts)
     salt.features.setup_features(opts)
-    return opts
+
+    # Convert to OptsDict for memory efficiency
+    return salt.utils.optsdict.OptsDict.from_dict(
+        opts, name="minion_config:role=master"
+    )
 
 
 def syndic_config(
@@ -2592,27 +2625,53 @@ def syndic_config(
     return opts
 
 
-def apply_sdb(opts, sdb_opts=None):
+def apply_sdb(opts, sdb_opts=None, _visited=None):
     """
     Recurse for sdb:// links for opts
     """
     if sdb_opts is None:
         sdb_opts = opts
+    if _visited is None:
+        _visited = set()
+
+    # Track visited objects to prevent circular references
+    # For OptsDict proxies, track the parent OptsDict to avoid new proxy instances
+    # from being treated as new objects (which causes infinite recursion)
+    try:
+        from salt.utils.optsdict import DictProxy, ListProxy
+
+        if isinstance(sdb_opts, (DictProxy, ListProxy)):
+            # Track the parent OptsDict instead of the proxy
+            parent = object.__getattribute__(sdb_opts, "_parent")
+            obj_id = id(parent)
+        else:
+            obj_id = id(sdb_opts)
+    except (ImportError, AttributeError):
+        # Fallback if optsdict not available or not a proxy
+        obj_id = id(sdb_opts)
+
+    if obj_id in _visited:
+        return sdb_opts
+    _visited.add(obj_id)
+
     if isinstance(sdb_opts, str) and sdb_opts.startswith("sdb://"):
         # Late load of SDB to keep CLI light
         import salt.utils.sdb
 
         return salt.utils.sdb.sdb_get(sdb_opts, opts)
     elif isinstance(sdb_opts, dict):
-        for key, value in sdb_opts.items():
+        # Create a list of items to avoid modifying dict during iteration
+        # This is especially important for OptsDict which has special iteration behavior
+        items = list(sdb_opts.items())
+        for key, value in items:
             if value is None:
                 continue
-            sdb_opts[key] = apply_sdb(opts, value)
+            sdb_opts[key] = apply_sdb(opts, value, _visited)
     elif isinstance(sdb_opts, list):
         for key, value in enumerate(sdb_opts):
             if value is None:
                 continue
-            sdb_opts[key] = apply_sdb(opts, value)
+            sdb_opts[key] = apply_sdb(opts, value, _visited)
 
     return sdb_opts
 
@@ -4036,7 +4095,8 @@ def master_config(
         opts["nodegroups"] = salt.utils.data.repack_dictlist(opts["nodegroups"])
     apply_sdb(opts)
     salt.features.setup_features(opts)
-    return opts
+    # Convert to OptsDict for memory efficiency
+    return salt.utils.optsdict.OptsDict.from_dict(opts, name="master_config")
 
 
 def apply_master_config(overrides=None, defaults=None):
@@ -4309,7 +4369,7 @@ def client_config(path, env_var="SALT_CLIENT_CONFIG", defaults=None):
     # Return the client options
     _validate_opts(opts)
     salt.features.setup_features(opts)
-    return opts
+    return salt.utils.optsdict.OptsDict.from_dict(opts, name="client_config")
 
 
 def api_config(path):

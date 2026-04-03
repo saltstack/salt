@@ -480,6 +480,13 @@ Defines how often to restart the master's Maintenance process.
 
     maintenance_interval: 9600
 
+.. note::
+
+    Scheduled jobs will fail to trigger if their interval is greater than the
+    ``maintenance_interval``. Because the master scheduler only evaluates jobs
+    during maintenance cycles, a default 3600-second (1-hour) maintenance
+    interval will effectively ignore any job set to run every 7200 seconds (2
+    hours).
 
 .. conf_master:: output
 
@@ -1220,6 +1227,22 @@ a minion performs an authentication check with the master.
 .. code-block:: yaml
 
     auth_events: True
+
+.. conf_master:: auth_events_autosign_grains
+
+``auth_events_autosign_grains``
+-------------------------------
+
+.. versionadded:: 3008
+
+Default: ``[]``
+
+Determines which actions the master will include autosign_grains for when
+firing authentication events.
+
+.. code-block:: yaml
+
+    auth_events_autosign_grains: ["accept", "pend", "reject", "full", "denied", "error"]
 
 .. conf_master:: minion_data_cache_events
 
@@ -2257,6 +2280,50 @@ constant names without ssl module prefix: ``CERT_REQUIRED`` or ``PROTOCOL_SSLv23
         keyfile: <path_to_keyfile>
         certfile: <path_to_certfile>
         ssl_version: PROTOCOL_TLSv1_2
+
+.. conf_master:: disable_aes_with_tls
+
+``disable_aes_with_tls``
+------------------------
+
+.. versionadded:: 3008.0
+
+Default: ``False``
+
+When set to ``True``, Salt will skip application-layer AES encryption when TLS
+is active with validated certificates. This optimization can improve performance
+by eliminating redundant encryption, as TLS already provides encryption at the
+transport layer.
+
+**Requirements for optimization to activate:**
+
+1. ``disable_aes_with_tls: true`` on both master and minion
+2. Valid SSL configuration (``ssl`` option configured)
+3. Mutual TLS authentication (``cert_reqs: CERT_REQUIRED``)
+4. TCP or WebSocket transport (not ZeroMQ)
+5. Valid peer certificates
+6. Minion certificates must contain minion ID in CN or SAN
+
+If any requirement is not met, Salt automatically falls back to standard AES
+encryption. This ensures the feature is safe to enable and maintains backward
+compatibility.
+
+.. code-block:: yaml
+
+    transport: tcp
+    ssl:
+        certfile: /etc/pki/tls/certs/salt-master.crt
+        keyfile: /etc/pki/tls/private/salt-master.key
+        ca_certs: /etc/pki/tls/certs/ca-bundle.crt
+        cert_reqs: CERT_REQUIRED
+    disable_aes_with_tls: true
+
+.. warning::
+    Minion certificates **must** contain the minion ID in either the Common Name
+    (CN) or Subject Alternative Name (SAN) field to prevent impersonation attacks.
+
+See :ref:`tls-encryption-optimization` for detailed configuration and security
+information.
 
 .. conf_master:: preserve_minion_cache
 

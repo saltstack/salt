@@ -331,6 +331,10 @@ class MergeConfigMixIn(metaclass=MixInMeta):
                 if value is not None:
                     # There's an actual value, add it to the config
                     self.config[option.dest] = value
+            elif self.config.get(option.dest) is None and value is not None:
+                # Config has the key but with None value, and we have a non-None value
+                # Set it in config (similar to missing key case)
+                self.config[option.dest] = value
             elif value is not None and getattr(option, "explicit", False):
                 # Only set the value in the config file IF it was explicitly
                 # specified by the user, this makes it possible to tweak settings
@@ -351,11 +355,16 @@ class MergeConfigMixIn(metaclass=MixInMeta):
                 # Get the passed value from shell. If empty get the default one
                 default = self.defaults.get(option.dest)
                 value = getattr(self.options, option.dest, default)
+
                 if option.dest not in self.config:
                     # There's no value in the configuration file
                     if value is not None:
                         # There's an actual value, add it to the config
                         self.config[option.dest] = value
+                elif self.config.get(option.dest) is None and value is not None:
+                    # Config has the key but with None value, and we have a non-None value
+                    # Set it in config (similar to missing key case)
+                    self.config[option.dest] = value
                 elif value is not None and getattr(option, "explicit", False):
                     # Only set the value in the config file IF it was explicitly
                     # specified by the user, this makes it possible to tweak
@@ -566,10 +575,11 @@ class ConfigDirMixIn(metaclass=MixInMeta):
         self.options.config_dir = os.path.abspath(self.options.config_dir)
 
         if hasattr(self, "setup_config"):
-            if not hasattr(self, "config"):
-                self.config = {}
+            # Initialize config before try block to avoid linter error
+            self.config = None
             try:
-                self.config.update(self.setup_config())
+                # Directly assign to preserve OptsDict type
+                self.config = self.setup_config()
             except OSError as exc:
                 self.error(f"Failed to load configuration: {exc}")
 
@@ -722,15 +732,11 @@ class LogLevelMixIn(metaclass=MixInMeta):
                 setattr(
                     self.options,
                     self._logfile_loglevel_config_setting_name_,
-                    # From the console log level config setting
                     self.config.get(
                         self._loglevel_config_setting_name_,
                         self._default_logging_level_,
                     ),
                 )
-                if self._logfile_loglevel_config_setting_name_ in self.config:
-                    # Remove it from config so it inherits from log_level_logfile
-                    self.config.pop(self._logfile_loglevel_config_setting_name_)
 
     def __setup_console_logger_config(self):
         # Since we're not going to be a daemon, setup the console logger
@@ -2868,16 +2874,19 @@ class SaltCallOptionParser(
         self.add_option(
             "--file-root",
             default=None,
+            action="append",
             help="Set this directory as the base file root.",
         )
         self.add_option(
             "--pillar-root",
             default=None,
+            action="append",
             help="Set this directory as the base pillar root.",
         )
         self.add_option(
             "--states-dir",
             default=None,
+            action="append",
             help="Set this directory to search for additional states.",
         )
         self.add_option(

@@ -212,14 +212,17 @@ def get_process_info(pid=None):
     # another reasons is the process requires kernel permissions
     try:
         raw_process_info.status()
-    except psutil.NoSuchProcess:
+    except (psutil.NoSuchProcess, psutil.ZombieProcess, psutil.AccessDenied):
         return None
 
-    return {
-        "pid": raw_process_info.pid,
-        "name": raw_process_info.name(),
-        "start_time": raw_process_info.create_time(),
-    }
+    try:
+        return {
+            "pid": raw_process_info.pid,
+            "name": raw_process_info.name(),
+            "start_time": raw_process_info.create_time(),
+        }
+    except (psutil.NoSuchProcess, psutil.ZombieProcess, psutil.AccessDenied):
+        return None
 
 
 def claim_mantle_of_responsibility(file_name):
@@ -1186,16 +1189,20 @@ class SubprocessList:
     def cleanup(self):
         with self.lock:
             for proc in self.processes[:]:
-                proc.join(0.01)
-                if hasattr(proc, "exitcode"):
-                    # Only processes have exitcode and a close method, threads
-                    # do not.
-                    if proc.exitcode is None:
-                        continue
-                    proc.close()
-                else:
-                    if proc.is_alive():
-                        continue
+                try:
+                    proc.join(0.01)
+                    if hasattr(proc, "exitcode"):
+                        # Only processes have exitcode and a close method, threads
+                        # do not.
+                        if proc.exitcode is None:
+                            continue
+                        proc.close()
+                    else:
+                        if proc.is_alive():
+                            continue
+                except (ValueError, OSError):
+                    # Process may be closed or already cleaned up
+                    pass
                 self.processes.remove(proc)
                 self.count -= 1
                 log.debug("Subprocess %s cleaned up", proc.name)

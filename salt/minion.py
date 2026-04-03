@@ -7,6 +7,7 @@ import binascii
 import collections
 import contextlib
 import copy
+import errno
 import logging
 import multiprocessing
 import os
@@ -42,6 +43,7 @@ import salt.syspaths
 import salt.transport
 import salt.utils.args
 import salt.utils.asynchronous
+import salt.utils.atomicfile
 import salt.utils.context
 import salt.utils.ctx
 import salt.utils.data
@@ -59,6 +61,7 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.schedule
 import salt.utils.ssdp
+import salt.utils.state
 import salt.utils.user
 import salt.utils.zeromq
 from salt._compat import ipaddress
@@ -431,6 +434,11 @@ def service_name():
 
 class MinionBase:
     def __init__(self, opts):
+        # Ensure opts is OptsDict for mutate_key() and other OptsDict methods
+        from salt.utils.optsdict import OptsDict
+
+        if not isinstance(opts, OptsDict):
+            opts = OptsDict.from_dict(opts, name="minionbase_opts")
         self.opts = opts
         self.beacons_leader = opts.get("beacons_leader", True)
 
@@ -927,8 +935,12 @@ class SMinion(MinionBase):
         # Late setup of the opts grains, so we can log from the grains module
         import salt.loader
 
-        opts["grains"] = salt.loader.grains(opts)
+        # MinionBase.__init__ will ensure opts is OptsDict
+        # We need to call super().__init__ first to get the OptsDict conversion
         super().__init__(opts)
+
+        new_grains = salt.loader.grains(self.opts)
+        self.opts.mutate_key("grains", new_grains)
 
         # Clean out the proc directory (default /var/cache/salt/minion/proc)
         if self.opts.get("file_client", "remote") == "remote" or self.opts.get(
@@ -1125,7 +1137,13 @@ class MinionManager(MinionBase):
 
         beacons_leader = True
         for master in masters:
-            s_opts = copy.deepcopy(self.opts)
+            # Use OptsDict copy-on-write instead of deepcopy
+            # Only master, multimaster, and beacons_leader are mutated
+            # Grains, pillar, and other large dicts are shared via copy-on-write
+            # self.opts is guaranteed to be OptsDict (set by MinionBase.__init__)
+            from salt.utils.optsdict import OptsDict
+
+            s_opts = OptsDict.from_parent(self.opts, name=f"minion_manager:{master}")
             s_opts["master"] = master
             s_opts["multimaster"] = True
             s_opts["beacons_leader"] = beacons_leader
@@ -1236,7 +1254,11 @@ class MinionManager(MinionBase):
         and any remaining events to be processed before stopping the minions.
         """
 
-        # Sleep to allow any remaining events to be processed
+        # Sleep to allow any remaining events to be processed.
+        # This gives the minion time to send final "return" messages to the Master.
+        # Ideally, we would dynamically wait for all pending messages to be flushed
+        # from the I/O loop instead of using a static sleep amount, but for now
+        # this 5-second window handles most cases.
         await asyncio.sleep(5)
 
         # Continue to stop the minions
@@ -1288,6 +1310,21 @@ class Minion(MinionBase):
         """
         # this means that the parent class doesn't know *which* master we connect to
         super().__init__(opts)
+
+        # Clean up stale queue lock that might have been left behind if the minion
+        # was killed forcefully (SIGKILL). This ensures recovery on restart.
+        lock_path = os.path.join(self.opts["cachedir"], "minion_queue.lock")
+        if os.path.isfile(lock_path):
+            try:
+                os.remove(lock_path)
+                log.info("Removed stale lock file: %s", lock_path)
+            except OSError:
+                pass
+
+        # Clean up orphaned running_ files from crashed minions
+        # These can be left behind if minion crashes after rename but before cleanup
+        self._cleanup_orphaned_queue_files()
+
         self.timeout = timeout
         self.safe = safe
 
@@ -1302,6 +1339,8 @@ class Minion(MinionBase):
         self.jid_queue = [] if jid_queue is None else jid_queue
         self.periodic_callbacks = {}
         self.req_channel = None
+        # Track when system resource limits are hit (EMFILE/ENFILE) to apply backpressure
+        self._system_resource_limit_hit_timestamp = 0
 
         if io_loop is None:
             try:
@@ -1332,7 +1371,8 @@ class Minion(MinionBase):
         # post_master_init
         if not salt.utils.platform.is_proxy():
             if load_grains:
-                self.opts["grains"] = salt.loader.grains(opts)
+                new_grains = salt.loader.grains(opts)
+                self.opts.mutate_key("grains", new_grains)
         else:
             if self.opts.get("beacons_before_connect", False):
                 log.warning(
@@ -1383,6 +1423,42 @@ class Minion(MinionBase):
         self.process_manager._handle_signals(signum, sigframe)
         time.sleep(1)
         sys.exit(0)
+
+    def _cleanup_orphaned_queue_files(self):
+        """
+        Clean up orphaned running_ queue files that may have been left behind
+        if the minion crashed after renaming queued_ to running_ but before cleanup.
+        """
+        for queue_name in ("state_queue", "job_queue"):
+            queue_dir = os.path.join(self.opts["cachedir"], queue_name)
+            if not os.path.exists(queue_dir):
+                continue
+
+            try:
+                for fn in os.listdir(queue_dir):
+                    if not fn.startswith("running_") or not fn.endswith(".p"):
+                        continue
+
+                    path = os.path.join(queue_dir, fn)
+                    try:
+                        # Check if file is older than 5 minutes (300 seconds)
+                        # This gives running jobs time to complete and clean up
+                        stat_info = os.stat(path)
+                        age_seconds = time.time() - stat_info.st_mtime
+
+                        if age_seconds > 300:  # 5 minutes
+                            log.info(
+                                "Removing orphaned running queue file: %s (age: %.1fs)",
+                                path,
+                                age_seconds,
+                            )
+                            os.remove(path)
+                    except OSError as exc:
+                        log.debug(
+                            "Could not check/cleanup running file %s: %s", path, exc
+                        )
+            except OSError as exc:
+                log.debug("Could not list queue directory %s: %s", queue_dir, exc)
 
     def sync_connect_master(self, timeout=None, failed=False):
         """
@@ -1620,13 +1696,19 @@ class Minion(MinionBase):
             context = {}
 
         if grains is None:
-            opts["grains"] = salt.loader.grains(
+            new_grains = salt.loader.grains(
                 opts, force_refresh, proxy=proxy, context=context
             )
+            opts.mutate_key("grains", new_grains)
         self.utils = salt.loader.utils(opts, proxy=proxy, context=context)
 
         if opts.get("multimaster", False):
-            s_opts = copy.deepcopy(opts)
+            # Use OptsDict copy-on-write instead of deepcopy
+            # Loader already handles OptsDict, so this is safe
+            # opts is guaranteed to be OptsDict (set by MinionBase.__init__ via super().__init__)
+            from salt.utils.optsdict import OptsDict
+
+            s_opts = OptsDict.from_parent(opts, name="minion_multimaster_loader")
             functions = salt.loader.minion_mods(
                 s_opts,
                 utils=self.utils,
@@ -1823,7 +1905,12 @@ class Minion(MinionBase):
         Override this method if you wish to handle the decoded data
         differently.
         """
+        await self._handle_decoded_payload_impl(data)
 
+    async def _handle_decoded_payload_impl(self, data):
+        """
+        Async implementation of _handle_decoded_payload
+        """
         # Ensure payload is unicode. Disregard failure to decode binary blobs.
         if "user" in data:
             log.info(
@@ -1838,9 +1925,12 @@ class Minion(MinionBase):
 
         # Don't duplicate jobs
         log.trace("Started JIDs: %s", self.jid_queue)
+        # Check bypass flag early to prevent deduplication of queued jobs
+        bypass_check = data.get("__ignore_process_count_max", False)
         if self.jid_queue is not None:
             if data["jid"] in self.jid_queue:
-                return
+                if not bypass_check:
+                    return
             else:
                 self.jid_queue.append(data["jid"])
                 if len(self.jid_queue) > self.opts["minion_jid_queue_hwm"]:
@@ -1862,26 +1952,210 @@ class Minion(MinionBase):
                 proxy = self.proxy
             else:
                 proxy = None
-            self.opts["grains"] = salt.loader.grains(
-                self.opts, force_refresh=True, proxy=proxy
-            )
+            new_grains = salt.loader.grains(self.opts, force_refresh=True, proxy=proxy)
+            self.opts.mutate_key("grains", new_grains)
 
-        process_count_max = self.opts.get("process_count_max")
-        if process_count_max > 0:
-            process_count = len(salt.utils.minion.running(self.opts))
-            while process_count >= process_count_max:
+        # Check if we should bypass the process_count_max check
+        # This is used for jobs that have been queued and are now being released
+        bypass_process_count_max = data.pop("__ignore_process_count_max", False)
+
+        # Enforce resource limits (FDs and Memory) before checking process counts
+        # This safeguard is critical to prevent crashes under high load
+        if not bypass_process_count_max:
+            if not self._has_fd_headroom():
+                log.warning("Insufficient FD headroom, queuing job %s", data["jid"])
+                self._queue_job(data)
+                return
+
+            if not self._has_memory_headroom():
+                log.warning("Insufficient memory headroom, queuing job %s", data["jid"])
+                self._queue_job(data)
+                return
+
+        # Check process count and potentially queue - only acquire lock when needed
+        if not bypass_process_count_max:
+            # Use internal subprocess list for accurate counting
+            # This is racy but acceptable for the common case
+            running_processes = [
+                p for p in self.subprocess_list.processes if p.is_alive()
+            ]
+            process_count = len(running_processes)
+            process_count_max = self._get_effective_process_count_max()
+
+            if process_count >= process_count_max:
+                # At process limit - need to acquire lock for atomic queuing
+                try:
+                    async with salt.utils.state.acquire_async_queue_lock(self.opts):
+                        # Re-check count under lock to avoid race
+                        running_processes = [
+                            p for p in self.subprocess_list.processes if p.is_alive()
+                        ]
+                        process_count = len(running_processes)
+                        process_count_max = self._get_effective_process_count_max()
+
+                        if process_count >= process_count_max:
+                            log.warning(
+                                "Maximum number of processes reached while executing jid %s,"
+                                " queuing... (Running: %s, Max: %s)",
+                                data["jid"],
+                                process_count,
+                                process_count_max,
+                            )
+                            self._queue_job(data)
+                            return
+                except salt.exceptions.FileLockError:
+                    log.warning(
+                        "Failed to acquire job_queue lock for jid %s, queuing anyway.",
+                        data["jid"],
+                    )
+                    # If we can't get the lock, we assume high contention and queue it to be safe.
+                    # Or we could just proceed (unsafe). Queuing is safer for stability.
+                    self._queue_job(data)
+                    return
+
+        # Execute the job and get the process handle
+        proc = self._invoke_execution(data)
+
+    def _queue_job(self, data):
+        """
+        Queue a job to disk because process_count_max is reached.
+        """
+        queue_dir = os.path.join(self.opts["cachedir"], "job_queue")
+        if not os.path.exists(queue_dir):
+            try:
+                os.makedirs(queue_dir)
+            except OSError:
+                pass
+
+        # Use timestamp first to ensure strict FIFO ordering
+        # and suffix with JID to ensure uniqueness
+        jid = data.get("jid")
+        fn = f"queued_{int(time.time() * 1000000)}_{jid}.p"
+        path = os.path.join(queue_dir, fn)
+
+        try:
+            tmp_path = path + ".tmp"
+            with salt.utils.files.fopen(tmp_path, "w+b") as fp_:
+                salt.payload.dump(data, fp_)
+            salt.utils.atomicfile.atomic_rename(tmp_path, path)
+            log.info("Queued job %s to %s", jid, path)
+        except OSError:
+            log.error("Failed to write job queue file %s", path)
+
+    def _has_fd_headroom(self, critical_only=False):
+        """
+        Check if we have enough file descriptors available to start a new process safely.
+        Returns True if we have headroom, False otherwise.
+        """
+        if not HAS_RESOURCE:
+            return True
+
+        try:
+            soft_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
+            if soft_limit == resource.RLIM_INFINITY:
+                return True
+
+            # Count current open FDs
+            # This is specific to Linux/Unix with /proc
+            if os.path.isdir("/proc/self/fd"):
+                current_fds = len(os.listdir("/proc/self/fd"))
+            else:
+                try:
+                    import psutil
+
+                    p = psutil.Process()
+                    current_fds = p.num_fds()
+                except Exception:  # pylint: disable=broad-exception-caught
+                    return True
+
+            # Global critical check (always enforced)
+            if current_fds >= soft_limit - 100:
                 log.warning(
-                    "Maximum number of processes reached while executing jid %s,"
-                    " waiting...",
-                    data["jid"],
+                    "FD critical limit reached (Open: %s, Limit: %s). Pausing queue processing.",
+                    current_fds,
+                    soft_limit,
                 )
-                await asyncio.sleep(10)
-                process_count = len(salt.utils.minion.running(self.opts))
+                return False
 
+            if not critical_only:
+                # Check if we are running in threading mode (multiprocessing=False)
+                # If so, we need to be more conservative with file descriptors
+                if not self.opts.get("multiprocessing", True):
+                    # Use 80% of the available file descriptors as the limit (20% headroom)
+                    limit = int(soft_limit * 0.8)
+                    if current_fds >= limit:
+                        log.warning(
+                            "FD limit reached (Open: %s, Limit: %s, Threshold: %s). Pausing queue processing.",
+                            current_fds,
+                            soft_limit,
+                            limit,
+                        )
+                        return False
+
+            return True
+        except Exception:  # pylint: disable=broad-exception-caught
+            return True
+
+    def _has_memory_headroom(self):
+        """
+        Check if we have enough memory to start a new process.
+        Returns True if we have headroom, False otherwise.
+        """
+        if not HAS_PSUTIL:
+            return True
+
+        try:
+            import psutil
+
+            mem = psutil.virtual_memory()
+            if mem.percent > 95:
+                log.warning(
+                    "Memory limit reached (Used: %s%%). Pausing queue processing.",
+                    mem.percent,
+                )
+                return False
+        except Exception:  # pylint: disable=broad-exception-caught
+            return True
+        return True
+
+    def _get_effective_process_count_max(self):
+        """
+        Calculate the effective process_count_max.
+        If configured value is > 0, use it.
+        If <= 0 (unlimited), calculate a safe limit based on RLIMIT_NOFILE.
+        """
+        limit = self.opts.get("process_count_max")
+        if limit is not None and limit > 0:
+            return limit
+
+        if not HAS_RESOURCE:
+            return 100  # Conservative default
+
+        try:
+            soft_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
+            if soft_limit == resource.RLIM_INFINITY:
+                return 1000  # Large but not unlimited
+        except Exception:  # pylint: disable=broad-exception-caught
+            return 100
+
+        # Conservative estimates:
+        # Threading: 15 FDs per job
+        # Multiprocessing: 5 FDs per job (IPC overhead in parent)
+        is_threading = not self.opts.get("multiprocessing", True)
+        fds_per_job = 15 if is_threading else 5
+
+        # Reserve FDs for the main process base usage
+        reserved = 100
+
+        safe_limit = (soft_limit - reserved) // fds_per_job
+        return max(1, safe_limit)
+
+    def _invoke_execution(self, data):
         # We stash an instance references to allow for the socket
         # communication in Windows. You can't pickle functions, and thus
         # python needs to be able to reconstruct the reference on the other
         # side.
+
         instance = self
         creds_map = None
         multiprocessing_enabled = self.opts.get("multiprocessing", True)
@@ -1909,10 +2183,238 @@ class Minion(MinionBase):
             with default_signals(signal.SIGINT, signal.SIGTERM):
                 # Reset current signals before starting the process in
                 # order not to inherit the current signal handlers
-                process.start()
+                try:
+                    process.start()
+                except OSError as exc:
+                    if exc.errno in (
+                        errno.EAGAIN,
+                        errno.EMFILE,
+                        errno.ENFILE,
+                        errno.ENOMEM,
+                    ):
+                        log.warning(
+                            "System resource limit reached while starting process for jid %s, queuing job. Error: %s",
+                            data["jid"],
+                            exc,
+                        )
+                        self._system_resource_limit_hit_timestamp = time.time()
+                        self._queue_job(data)
+                        return None
+                    raise
         else:
-            process.start()
+            try:
+                process.start()
+            except OSError as exc:
+                if exc.errno in (
+                    errno.EAGAIN,
+                    errno.EMFILE,
+                    errno.ENFILE,
+                    errno.ENOMEM,
+                ):
+                    log.warning(
+                        "System resource limit reached while starting thread for jid %s, queuing job. Error: %s",
+                        data["jid"],
+                        exc,
+                    )
+                    self._system_resource_limit_hit_timestamp = time.time()
+                    self._queue_job(data)
+                    return None
+                raise
         self.subprocess_list.add(process)
+        return process
+
+    def setup_process_queue_processing(self):
+        """
+        Set up the process queue processing.
+        """
+        if "process_queue" not in self.periodic_callbacks:
+            self.add_periodic_callback(
+                "process_queue", self.process_process_queue, interval=0.2
+            )
+
+    def process_process_queue(self):
+        """
+        Check the process queue for pending jobs and execute them if slots are available.
+        Runs as an async task on the main loop.
+        """
+        if getattr(self, "_process_queue_processing_active", False):
+            return
+
+        self._process_queue_processing_active = True
+        self.io_loop.create_task(self._process_process_queue_async())
+
+    async def _process_process_queue_async(self):
+        """
+        Async body of process_process_queue.
+        """
+        await self._process_process_queue_async_impl()
+
+    async def _process_process_queue_async_impl(self):
+        """
+        Async implementation of _process_process_queue_async
+        """
+        try:
+            queue_dir = os.path.join(self.opts["cachedir"], "job_queue")
+            if not os.path.exists(queue_dir):
+                return
+
+            # Check process count max first to avoid lock contention if we are obviously full
+            # This is an optimization; we check again under lock.
+            process_count_max = self._get_effective_process_count_max()
+            # If process_count_max is <= 0 (unlimited), we still check the queue because we might
+            # have queued jobs due to system resource exhaustion (OS limits).
+
+            # Acquire shared queue lock (protects both state_queue and job_queue)
+            try:
+                # We use a short timeout because we run every 1s.
+                # If we can't get it, we'll try next time.
+                async with salt.utils.state.acquire_async_queue_lock(self.opts):
+                    # Check actual process count
+                    # Use internal subprocess list for accurate counting
+                    running_processes = [
+                        p for p in self.subprocess_list.processes if p.is_alive()
+                    ]
+                    process_count = len(running_processes)
+                    process_count_max = self._get_effective_process_count_max()
+
+                    if process_count >= process_count_max:
+                        return
+
+                    # Backpressure: If we recently hit system resource limits, pause processing
+                    # to allow the system to recover and drain.
+                    if self._system_resource_limit_hit_timestamp > 0:
+                        # 5 second cool-down period
+                        if time.time() - self._system_resource_limit_hit_timestamp < 5:
+                            log.debug(
+                                "Backpressure active: Pausing queue processing due to recent resource exhaustion."
+                            )
+                            return
+                        else:
+                            self._system_resource_limit_hit_timestamp = 0
+
+                    # Proactive check for FD limits before trying to pop anything
+                    if not self._has_fd_headroom():
+                        log.debug(
+                            "Backpressure active: Pausing queue processing due to approaching FD limit."
+                        )
+                        self._system_resource_limit_hit_timestamp = time.time()
+                        return
+
+                    # Check for queued jobs
+                    files = []
+                    try:
+                        for fn in os.listdir(queue_dir):
+                            if fn.startswith("queued_") and fn.endswith(".p"):
+                                files.append(fn)
+                    except OSError:
+                        pass
+
+                    if not files:
+                        return
+
+                    log.info(
+                        "Process queue processing: found %d queued files (Running: %d, Max: %d)",
+                        len(files),
+                        process_count,
+                        process_count_max,
+                    )
+
+                    # Sort by timestamp (FIFO)
+                    files.sort()
+
+                    # Calculate slots available
+                    if process_count_max > 0:
+                        slots_available = max(0, process_count_max - process_count)
+                    else:
+                        # If unlimited (but queued due to OS limits), assume we can try a batch.
+                        # We use a conservative batch size to avoid hitting limits again immediately.
+                        slots_available = 10
+
+                    # Process up to slots_available files
+                    for fn in files[:slots_available]:
+                        path = os.path.join(queue_dir, fn)
+
+                        # Re-check process count before processing each job (count may have changed)
+                        current_process_count = len(
+                            [p for p in self.subprocess_list.processes if p.is_alive()]
+                        )
+                        current_process_count_max = (
+                            self._get_effective_process_count_max()
+                        )
+
+                        if current_process_count >= current_process_count_max:
+                            log.debug(
+                                "Process queue processing: Process count changed, stopping batch. "
+                                "Current: %d, Max: %d",
+                                current_process_count,
+                                current_process_count_max,
+                            )
+                            break
+
+                        try:
+                            with salt.utils.files.fopen(path, "rb") as fp_:
+                                data = salt.payload.load(fp_)
+                        except (OSError, ValueError) as exc:
+                            if isinstance(exc, OSError) and exc.errno in (
+                                errno.EMFILE,
+                                errno.ENFILE,
+                            ):
+                                log.error(
+                                    "Process queue processing: Too many open files, cannot read queued job %s. Waiting.",
+                                    fn,
+                                )
+                                # If we can't read one due to EMFILE, likely can't read others. Stop this batch.
+                                break
+                            log.error("Failed to load queued job %s, removing.", fn)
+                            try:
+                                os.remove(path)
+                            except OSError:
+                                pass
+                            continue
+
+                        # Extract JID from filename to ensure the execution JID matches the
+                        # queuing JID used for ordering.
+                        try:
+                            parts = fn.split("_")
+                            if len(parts) >= 3:
+                                jid_str = parts[2]
+                                if jid_str.endswith(".p"):
+                                    jid_str = jid_str[:-2]
+                                data["jid"] = jid_str
+                        except (ValueError, IndexError):
+                            pass
+
+                        # Mark to bypass checks (we already checked count)
+                        data["__ignore_process_count_max"] = True
+
+                        log.info("Re-submitting queued job %s", data.get("jid"))
+
+                        if hasattr(self, "io_loop"):
+                            self.io_loop.create_task(self._handle_decoded_payload(data))
+                        else:
+                            self.io_loop.create_task(self._handle_decoded_payload(data))
+
+                        # Remove from queue
+                        try:
+                            os.remove(path)
+                        except OSError:
+                            pass
+
+            except (salt.exceptions.FileLockError, OSError) as exc:
+                if isinstance(exc, salt.exceptions.FileLockError) or (
+                    isinstance(exc, OSError)
+                    and exc.errno in (errno.EMFILE, errno.ENFILE)
+                ):
+                    log.error(
+                        "Process queue processing: Unable to acquire queue lock due to system resource exhaustion (%s). Waiting.",
+                        exc,
+                    )
+                    return
+                raise
+        except Exception:  # pylint: disable=broad-exception-caught
+            log.critical("Process queue processing failed", exc_info=True)
+        finally:
+            self._process_queue_processing_active = False
 
     def ctx(self):
         """
@@ -2024,204 +2526,242 @@ class Minion(MinionBase):
         asyncio.set_event_loop(loop)
 
         minion_instance.gen_modules()
-        fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
+        fn_ = os.path.join(minion_instance.proc_dir, str(data["jid"]))
 
-        if opts.get("multiprocessing", True):
-            salt.utils.process.appendproctitle(f"{cls.__name__}._thread_return")
+        try:
+            if opts.get("multiprocessing", True):
+                salt.utils.process.appendproctitle(f"{cls.__name__}._thread_return")
 
-        sdata = {"pid": os.getpid()}
-        sdata.update(data)
-        log.info("Starting a new job %s with PID %s", data["jid"], sdata["pid"])
-        with salt.utils.files.fopen(fn_, "w+b") as fp_:
-            fp_.write(salt.payload.dumps(sdata))
-        ret = {"success": False}
-        function_name = data["fun"]
-        function_args = data["arg"]
-        executors = (
-            data.get("module_executors")
-            or getattr(minion_instance, "module_executors", [])
-            or opts.get("module_executors", ["direct_call"])
-        )
-        allow_missing_funcs = any(
-            [
-                minion_instance.executors[f"{executor}.allow_missing_func"](
-                    function_name
-                )
-                for executor in executors
-                if f"{executor}.allow_missing_func" in minion_instance.executors
-            ]
-        )
-        if function_name in minion_instance.functions or allow_missing_funcs is True:
-            try:
-                return_data = minion_instance._execute_job_function(
-                    function_name, function_args, executors, opts, data
-                )
-
-                if isinstance(return_data, types.GeneratorType):
-                    ind = 0
-                    iret = {}
-                    for single in return_data:
-                        if isinstance(single, dict) and isinstance(iret, dict):
-                            iret.update(single)
-                        else:
-                            if not iret:
-                                iret = []
-                            iret.append(single)
-                        tag = tagify([data["jid"], "prog", opts["id"], str(ind)], "job")
-                        event_data = {"return": single}
-                        minion_instance._fire_master(event_data, tag)
-                        ind += 1
-                    ret["return"] = iret
-                else:
-                    ret["return"] = return_data
-
-                retcode = minion_instance.functions.pack["__context__"].get(
-                    "retcode", salt.defaults.exitcodes.EX_OK
-                )
-                if retcode == salt.defaults.exitcodes.EX_OK:
-                    # No nonzero retcode in __context__ dunder. Check if return
-                    # is a dictionary with a "result" or "success" key.
-                    try:
-                        func_result = all(
-                            return_data.get(x, True) for x in ("result", "success")
-                        )
-                    except Exception:  # pylint: disable=broad-except
-                        # return data is not a dict
-                        func_result = True
-                    if not func_result:
-                        retcode = salt.defaults.exitcodes.EX_GENERIC
-
-                ret["retcode"] = retcode
-                ret["success"] = retcode == salt.defaults.exitcodes.EX_OK
-            except CommandNotFoundError as exc:
-                msg = f"Command required for '{function_name}' not found"
-                log.debug(msg, exc_info=True)
-                ret["return"] = f"{msg}: {exc}"
-                ret["out"] = "nested"
-                ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
-            except CommandExecutionError as exc:
-                log.error(
-                    "A command in '%s' had a problem: %s",
-                    function_name,
-                    exc,
-                    exc_info_on_loglevel=logging.DEBUG,
-                )
-                ret["return"] = f"ERROR: {exc}"
-                ret["out"] = "nested"
-                ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
-            except SaltInvocationError as exc:
-                log.error(
-                    "Problem executing '%s': %s",
-                    function_name,
-                    exc,
-                    exc_info_on_loglevel=logging.DEBUG,
-                )
-                ret["return"] = f"ERROR executing '{function_name}': {exc}"
-                ret["out"] = "nested"
-                ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
-            except SaltClientError as exc:
-                log.error(
-                    "Problem executing '%s': %s",
-                    function_name,
-                    exc,
-                )
-                ret["return"] = f"ERROR executing '{function_name}': {exc}"
-                ret["out"] = "nested"
-                ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
-            except TypeError as exc:
-                # XXX: This can ba extreemly missleading when something outside of a
-                # execution module call raises a TypeError. Make this it's own
-                # type of exception when we start validating state and
-                # execution argument module inputs.
-                msg = "Passed invalid arguments to {}: {}\n{}".format(
-                    function_name,
-                    exc,
-                    minion_instance.functions[function_name].__doc__ or "",
-                )
-                log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
-                ret["return"] = msg
-                ret["out"] = "nested"
-                ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
-            except Exception:  # pylint: disable=broad-except
-                msg = "The minion function caused an exception"
-                log.warning(msg, exc_info_on_loglevel=True)
-                salt.utils.error.fire_exception(
-                    salt.exceptions.MinionError(msg), opts, job=data
-                )
-                ret["return"] = f"{msg}: {traceback.format_exc()}"
-                ret["out"] = "nested"
-                ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
-        else:
-            docs = minion_instance.functions["sys.doc"](f"{function_name}*")
-            if docs:
-                docs[function_name] = minion_instance.functions.missing_fun_string(
-                    function_name
-                )
-                ret["return"] = docs
-            else:
-                ret["return"] = minion_instance.functions.missing_fun_string(
-                    function_name
-                )
-                mod_name = function_name.split(".")[0]
-                if mod_name in minion_instance.function_errors:
-                    ret["return"] += " Possible reasons: '{}'".format(
-                        minion_instance.function_errors[mod_name]
-                    )
-            ret["success"] = False
-            ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
-            ret["out"] = "nested"
-
-        ret["jid"] = data["jid"]
-        ret["fun"] = data["fun"]
-        ret["fun_args"] = data["arg"]
-        if "user" in data:
-            ret["user"] = data["user"]
-        if "master_id" in data:
-            ret["master_id"] = data["master_id"]
-        if "metadata" in data:
-            if isinstance(data["metadata"], dict):
-                ret["metadata"] = data["metadata"]
-            else:
-                log.warning("The metadata parameter must be a dictionary. Ignoring.")
-        if minion_instance.connected:
-            minion_instance._return_pub(
-                ret,
-                timeout=minion_instance.opts["return_retry_tries"]
-                * minion_instance._return_retry_timer(max=True),
+            sdata = {"pid": os.getpid()}
+            sdata.update(data)
+            log.info("Starting a new job %s with PID %s", data["jid"], sdata["pid"])
+            with salt.utils.files.fopen(fn_, "w+b") as fp_:
+                fp_.write(salt.payload.dumps(sdata))
+            ret = {"success": False}
+            function_name = data["fun"]
+            function_args = data["arg"]
+            executors = (
+                data.get("module_executors")
+                or getattr(minion_instance, "module_executors", [])
+                or opts.get("module_executors", ["direct_call"])
             )
-
-        # Add default returners from minion config
-        # Should have been converted to comma-delimited string already
-        if isinstance(opts.get("return"), str):
-            if data["ret"]:
-                data["ret"] = ",".join((data["ret"], opts["return"]))
-            else:
-                data["ret"] = opts["return"]
-
-        log.debug("minion return: %s", ret)
-        # TODO: make a list? Seems odd to split it this late :/
-        if data["ret"] and isinstance(data["ret"], str):
-            if "ret_config" in data:
-                ret["ret_config"] = data["ret_config"]
-            if "ret_kwargs" in data:
-                ret["ret_kwargs"] = data["ret_kwargs"]
-            ret["id"] = opts["id"]
-            for returner in set(data["ret"].split(",")):
+            allow_missing_funcs = any(
+                [
+                    minion_instance.executors[f"{executor}.allow_missing_func"](
+                        function_name
+                    )
+                    for executor in executors
+                    if f"{executor}.allow_missing_func" in minion_instance.executors
+                ]
+            )
+            if (
+                function_name in minion_instance.functions
+                or allow_missing_funcs is True
+            ):
                 try:
-                    returner_str = f"{returner}.returner"
-                    if returner_str in minion_instance.returners:
-                        minion_instance.returners[returner_str](ret)
+                    return_data = minion_instance._execute_job_function(
+                        function_name, function_args, executors, opts, data
+                    )
+                    log.info(
+                        "Job %s execution finished, return_data: %s",
+                        data["jid"],
+                        return_data,
+                    )
+
+                    if isinstance(return_data, types.GeneratorType):
+                        ind = 0
+                        iret = {}
+                        for single in return_data:
+                            if isinstance(single, dict) and isinstance(iret, dict):
+                                iret.update(single)
+                            else:
+                                if not iret:
+                                    iret = []
+                                iret.append(single)
+                            tag = tagify(
+                                [data["jid"], "prog", opts["id"], str(ind)], "job"
+                            )
+                            event_data = {"return": single}
+                            minion_instance._fire_master(event_data, tag)
+                            ind += 1
+                        ret["return"] = iret
                     else:
-                        returner_err = minion_instance.returners.missing_fun_string(
-                            returner_str
+                        ret["return"] = return_data
+
+                    retcode = minion_instance.functions.pack["__context__"].get(
+                        "retcode", salt.defaults.exitcodes.EX_OK
+                    )
+                    if retcode == salt.defaults.exitcodes.EX_OK:
+                        # No nonzero retcode in __context__ dunder. Check if return
+                        # is a dictionary with a "result" or "success" key.
+                        try:
+                            if isinstance(return_data, dict):
+                                func_result = all(
+                                    return_data.get(x, True)
+                                    for x in ("result", "success")
+                                )
+                            else:
+                                func_result = True
+                        except Exception:  # pylint: disable=broad-except
+                            # return data is not a dict
+                            func_result = True
+                        if not func_result:
+                            retcode = salt.defaults.exitcodes.EX_GENERIC
+
+                    ret["retcode"] = retcode
+                    ret["success"] = retcode == salt.defaults.exitcodes.EX_OK
+                except CommandNotFoundError as exc:
+                    msg = f"Command required for '{function_name}' not found"
+                    log.debug(msg, exc_info=True)
+                    ret["return"] = f"{msg}: {exc}"
+                    ret["out"] = "nested"
+                    ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+                except CommandExecutionError as exc:
+                    log.error(
+                        "A command in '%s' had a problem: %s",
+                        function_name,
+                        exc,
+                        exc_info_on_loglevel=logging.DEBUG,
+                    )
+                    ret["return"] = f"ERROR: {exc}"
+                    ret["out"] = "nested"
+                    ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+                except SaltInvocationError as exc:
+                    log.error(
+                        "Problem executing '%s': %s",
+                        function_name,
+                        exc,
+                        exc_info_on_loglevel=logging.DEBUG,
+                    )
+                    ret["return"] = f"ERROR executing '{function_name}': {exc}"
+                    ret["out"] = "nested"
+                    ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+                except SaltClientError as exc:
+                    log.error(
+                        "Problem executing '%s': %s",
+                        function_name,
+                        exc,
+                    )
+                    ret["return"] = f"ERROR executing '{function_name}': {exc}"
+                    ret["out"] = "nested"
+                    ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+                except TypeError as exc:
+                    # XXX: This can ba extreemly missleading when something outside of a
+                    # execution module call raises a TypeError. Make this it's own
+                    # type of exception when we start validating state and
+                    # execution argument module inputs.
+                    msg = "Passed invalid arguments to {}: {}\n{}".format(
+                        function_name,
+                        exc,
+                        minion_instance.functions[function_name].__doc__ or "",
+                    )
+                    log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
+                    ret["return"] = msg
+                    ret["out"] = "nested"
+                    ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+                except Exception:  # pylint: disable=broad-except
+                    msg = "The minion function caused an exception"
+                    log.warning(msg, exc_info_on_loglevel=True)
+                    salt.utils.error.fire_exception(
+                        salt.exceptions.MinionError(msg), opts, job=data
+                    )
+                    ret["return"] = f"{msg}: {traceback.format_exc()}"
+                    ret["out"] = "nested"
+                    ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+            else:
+                docs = minion_instance.functions["sys.doc"](f"{function_name}*")
+                if docs:
+                    docs[function_name] = minion_instance.functions.missing_fun_string(
+                        function_name
+                    )
+                    ret["return"] = docs
+                else:
+                    ret["return"] = minion_instance.functions.missing_fun_string(
+                        function_name
+                    )
+                    mod_name = function_name.split(".")[0]
+                    if mod_name in minion_instance.function_errors:
+                        ret["return"] += " Possible reasons: '{}'".format(
+                            minion_instance.function_errors[mod_name]
                         )
-                        log.error(
-                            "Returner %s could not be loaded: %s",
-                            returner_str,
-                            returner_err,
+                ret["success"] = False
+                ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+                ret["out"] = "nested"
+
+            if isinstance(ret["return"], dict) and ret["return"].get("__no_return__"):
+                # This is used to suppress the return for queued jobs
+                # The job will be executed later and will return then
+                # TODO: make this a configurable feature in the future
+                log.trace(
+                    "Suppressing return for job %s because __no_return__ is set",
+                    data["jid"],
+                )
+                return
+
+            ret["jid"] = data["jid"]
+            ret["fun"] = data["fun"]
+            ret["fun_args"] = data["arg"]
+            if "user" in data:
+                ret["user"] = data["user"]
+            if "master_id" in data:
+                ret["master_id"] = data["master_id"]
+            if "metadata" in data:
+                if isinstance(data["metadata"], dict):
+                    ret["metadata"] = data["metadata"]
+                else:
+                    log.warning(
+                        "The metadata parameter must be a dictionary. Ignoring."
+                    )
+            if minion_instance.connected:
+                minion_instance._return_pub(
+                    ret,
+                    timeout=minion_instance.opts["return_retry_tries"]
+                    * minion_instance._return_retry_timer(max=True),
+                )
+            else:
+                log.warning(
+                    "Minion not connected, cannot return data for job %s", data["jid"]
+                )
+
+            # Add default returners from minion config
+            # Should have been converted to comma-delimited string already
+            if isinstance(opts.get("return"), str):
+                if data["ret"]:
+                    data["ret"] = ",".join((data["ret"], opts["return"]))
+                else:
+                    data["ret"] = opts["return"]
+
+            log.debug("minion return: %s", ret)
+            # TODO: make a list? Seems odd to split it this late :/
+            if data["ret"] and isinstance(data["ret"], str):
+                if "ret_config" in data:
+                    ret["ret_config"] = data["ret_config"]
+                if "ret_kwargs" in data:
+                    ret["ret_kwargs"] = data["ret_kwargs"]
+                ret["id"] = opts["id"]
+                for returner in set(data["ret"].split(",")):
+                    try:
+                        returner_str = f"{returner}.returner"
+                        if returner_str in minion_instance.returners:
+                            minion_instance.returners[returner_str](ret)
+                        else:
+                            returner_err = minion_instance.returners.missing_fun_string(
+                                returner_str
+                            )
+                            log.error(
+                                "Returner %s could not be loaded: %s",
+                                returner_str,
+                                returner_err,
+                            )
+                    except Exception as exc:  # pylint: disable=broad-except
+                        log.exception(
+                            "The return failed for job %s: %s", data["jid"], exc
                         )
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.exception("The return failed for job %s: %s", data["jid"], exc)
+        finally:
+            try:
+                os.remove(fn_)
+            except OSError:
+                pass
 
     @classmethod
     def _thread_multi_return(cls, minion_instance, opts, data):
@@ -2233,7 +2773,7 @@ class Minion(MinionBase):
         asyncio.set_event_loop(loop)
 
         minion_instance.gen_modules()
-        fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
+        fn_ = os.path.join(minion_instance.proc_dir, str(data["jid"]))
 
         if opts.get("multiprocessing", True):
             salt.utils.process.appendproctitle(f"{cls.__name__}._thread_multi_return")
@@ -2241,8 +2781,25 @@ class Minion(MinionBase):
         sdata = {"pid": os.getpid()}
         sdata.update(data)
         log.info("Starting a new job with PID %s", sdata["pid"])
-        with salt.utils.files.fopen(fn_, "w+b") as fp_:
-            fp_.write(salt.payload.dumps(sdata))
+        try:
+            with salt.utils.files.fopen(fn_, "w+b") as fp_:
+                fp_.write(salt.payload.dumps(sdata))
+        except OSError as exc:
+            if exc.errno in (errno.EAGAIN, errno.EMFILE, errno.ENFILE, errno.ENOMEM):
+                log.error(
+                    "System resource limit reached while writing proc file for job %s: %s. Aborting.",
+                    data["jid"],
+                    exc,
+                )
+                minion_instance._system_resource_limit_hit_timestamp = time.time()
+                # If we can't write the proc file, we shouldn't run the job because
+                # we can't track it. This will prevent "ghost" jobs.
+                # Since we are already in the child process/thread, we just return.
+                # The parent will see the process die.
+                # However, for queue processing to work, we need to handle this earlier.
+                # But here, we just fail gracefully instead of crashing hard.
+                return
+            raise
 
         multifunc_ordered = opts.get("multifunc_ordered", False)
         num_funcs = len(data["fun"])
@@ -2260,53 +2817,67 @@ class Minion(MinionBase):
             or opts.get("module_executors", ["direct_call"])
         )
 
-        for ind in range(0, num_funcs):
-            function_name = data["fun"][ind]
-            function_args = data["arg"][ind]
-            if not multifunc_ordered:
-                ret["success"][function_name] = False
+        try:
+            for ind in range(0, num_funcs):
+                function_name = data["fun"][ind]
+                function_args = data["arg"][ind]
+                if not multifunc_ordered:
+                    ret["success"][function_name] = False
+                try:
+                    return_data = minion_instance._execute_job_function(
+                        function_name, function_args, executors, opts, data
+                    )
+
+                    key = ind if multifunc_ordered else data["fun"][ind]
+                    ret["return"][key] = return_data
+                    retcode = minion_instance.functions.pack["__context__"].get(
+                        "retcode", 0
+                    )
+                    if retcode == 0:
+                        # No nonzero retcode in __context__ dunder. Check if return
+                        # is a dictionary with a "result" or "success" key.
+                        try:
+                            if isinstance(ret["return"][key], dict):
+                                func_result = all(
+                                    ret["return"][key].get(x, True)
+                                    for x in ("result", "success")
+                                )
+                            else:
+                                func_result = True
+                        except Exception:  # pylint: disable=broad-except
+                            # return data is not a dict
+                            func_result = True
+                        if not func_result:
+                            retcode = 1
+
+                    ret["retcode"][key] = retcode
+                    ret["success"][key] = retcode == 0
+                except Exception as exc:  # pylint: disable=broad-except
+                    trb = traceback.format_exc()
+                    log.warning("The minion function caused an exception: %s", exc)
+                    if multifunc_ordered:
+                        ret["return"][ind] = trb
+                    else:
+                        ret["return"][data["fun"][ind]] = trb
+                ret["jid"] = data["jid"]
+                ret["fun"] = data["fun"]
+                ret["fun_args"] = data["arg"]
+                if "user" in data:
+                    ret["user"] = data["user"]
+            if "metadata" in data:
+                ret["metadata"] = data["metadata"]
+            if minion_instance.connected:
+                log.info("Attempting to return data for job %s", data["jid"])
+                minion_instance._return_pub(ret)
+            else:
+                log.warning(
+                    "Minion not connected, cannot return data for job %s", data["jid"]
+                )
+        finally:
             try:
-                return_data = minion_instance._execute_job_function(
-                    function_name, function_args, executors, opts, data
-                )
-
-                key = ind if multifunc_ordered else data["fun"][ind]
-                ret["return"][key] = return_data
-                retcode = minion_instance.functions.pack["__context__"].get(
-                    "retcode", 0
-                )
-                if retcode == 0:
-                    # No nonzero retcode in __context__ dunder. Check if return
-                    # is a dictionary with a "result" or "success" key.
-                    try:
-                        func_result = all(
-                            ret["return"][key].get(x, True)
-                            for x in ("result", "success")
-                        )
-                    except Exception:  # pylint: disable=broad-except
-                        # return data is not a dict
-                        func_result = True
-                    if not func_result:
-                        retcode = 1
-
-                ret["retcode"][key] = retcode
-                ret["success"][key] = retcode == 0
-            except Exception as exc:  # pylint: disable=broad-except
-                trb = traceback.format_exc()
-                log.warning("The minion function caused an exception: %s", exc)
-                if multifunc_ordered:
-                    ret["return"][ind] = trb
-                else:
-                    ret["return"][data["fun"][ind]] = trb
-            ret["jid"] = data["jid"]
-            ret["fun"] = data["fun"]
-            ret["fun_args"] = data["arg"]
-            if "user" in data:
-                ret["user"] = data["user"]
-        if "metadata" in data:
-            ret["metadata"] = data["metadata"]
-        if minion_instance.connected:
-            minion_instance._return_pub(ret)
+                os.remove(fn_)
+            except OSError:
+                pass
         if data["ret"]:
             if "ret_config" in data:
                 ret["ret_config"] = data["ret_config"]
@@ -2322,15 +2893,16 @@ class Minion(MinionBase):
     def _prepare_return_pub(self, ret, ret_cmd="_return"):
         jid = ret.get("jid", ret.get("__jid__"))
         fun = ret.get("fun", ret.get("__fun__"))
-        if self.opts["multiprocessing"]:
-            fn_ = os.path.join(self.proc_dir, jid)
-            if os.path.isfile(fn_):
-                try:
-                    os.remove(fn_)
-                except OSError:
-                    # The file is gone already
-                    pass
+        fn_ = os.path.join(self.proc_dir, str(jid))
+        if os.path.isfile(fn_):
+            try:
+                os.remove(fn_)
+            except OSError:
+                # The file is gone already
+                pass
         log.info("Returning information for job: %s", jid)
+        if ret.get("comment") == "Job queued for execution":
+            log.warning("Sending 'Job Queued' return for job %s", jid)
         log.trace("Return data: %s", ret)
         if ret_cmd == "_syndic_return":
             load = {
@@ -2372,7 +2944,18 @@ class Minion(MinionBase):
             # Local job cache has been enabled
             if ret["jid"] == "req":
                 ret["jid"] = salt.utils.jid.gen_jid(self.opts)
-            salt.utils.minion.cache_jobs(self.opts, ret["jid"], ret)
+            try:
+                salt.utils.minion.cache_jobs(self.opts, ret["jid"], ret)
+            except OSError as exc:
+                if exc.errno in (errno.EMFILE, errno.ENFILE):
+                    log.error(
+                        "System resource limit reached while caching job %s: %s",
+                        ret["jid"],
+                        exc,
+                    )
+                    self._system_resource_limit_hit_timestamp = time.time()
+                else:
+                    raise
         return load
 
     async def _return_pub_main(self, ret, ret_cmd="_return", timeout=60):
@@ -2439,14 +3022,13 @@ class Minion(MinionBase):
         for ret in rets:
             jid = ret.get("jid", ret.get("__jid__"))
             fun = ret.get("fun", ret.get("__fun__"))
-            if self.opts["multiprocessing"]:
-                fn_ = os.path.join(self.proc_dir, jid)
-                if os.path.isfile(fn_):
-                    try:
-                        os.remove(fn_)
-                    except OSError:
-                        # The file is gone already
-                        pass
+            fn_ = os.path.join(self.proc_dir, str(jid))
+            if os.path.isfile(fn_):
+                try:
+                    os.remove(fn_)
+                except OSError:
+                    # The file is gone already
+                    pass
             log.info("Returning information for job: %s", jid)
             load = jids.setdefault(jid, {})
             if ret_cmd == "_syndic_return":
@@ -2615,7 +3197,13 @@ class Minion(MinionBase):
         if not self.beacons_leader:
             return
         log.debug("Refreshing beacons.")
-        self.beacons = salt.beacons.Beacon(self.opts, self.functions)
+        # Preserve the interval_map so beacon intervals aren't reset on refresh
+        prev_interval_map = {}
+        if hasattr(self, "beacons") and hasattr(self.beacons, "interval_map"):
+            prev_interval_map = self.beacons.interval_map
+        self.beacons = salt.beacons.Beacon(
+            self.opts, self.functions, interval_map=prev_interval_map
+        )
 
     def matchers_refresh(self):
         """
@@ -3028,7 +3616,10 @@ class Minion(MinionBase):
                     log.info("Minion is ready to receive requests!")
 
                     # update scheduled job to run with the new master addr
-                    if self.opts["transport"] != "tcp":
+                    if (
+                        self.opts["transport"] != "tcp"
+                        and self.opts["master_alive_interval"] > 0
+                    ):
                         schedule = {
                             "function": "status.master",
                             "seconds": self.opts["master_alive_interval"],
@@ -3077,7 +3668,10 @@ class Minion(MinionBase):
                 self.connected = True
                 # modify the __master_alive job to only fire,
                 # if the connection is lost again
-                if self.opts["transport"] != "tcp":
+                if (
+                    self.opts["transport"] != "tcp"
+                    and self.opts["master_alive_interval"] > 0
+                ):
                     schedule = {
                         "function": "status.master",
                         "seconds": self.opts["master_alive_interval"],
@@ -3231,6 +3825,208 @@ class Minion(MinionBase):
 
             self.add_periodic_callback("schedule", handle_schedule)
 
+    def setup_state_queue_processing(self):
+        """
+        Set up the state queue processing.
+        This is safe to call multiple times.
+        """
+        if "state_queue" not in self.periodic_callbacks:
+            # We add the periodic callback directly. The callback itself handles
+            # threading to avoid blocking the loop.
+            self.add_periodic_callback(
+                "state_queue", self.process_state_queue, interval=0.3
+            )
+
+    def process_state_queue(self):
+        """
+        Check the state queue for pending jobs and execute them if safe.
+        Runs as an async task on the main loop.
+        """
+        if getattr(self, "_state_queue_processing_active", False):
+            return
+
+        self._state_queue_processing_active = True
+        self.io_loop.create_task(self._process_state_queue_async())
+
+    async def _process_state_queue_async(self):
+        """
+        Async body of process_state_queue.
+        """
+        await self._process_state_queue_async_impl()
+
+    async def _process_state_queue_async_impl(self):
+        log.trace("State queue processing firing")
+        try:
+            queue_dir = os.path.join(self.opts["cachedir"], "state_queue")
+            if not os.path.exists(queue_dir):
+                return
+
+            # Acquire lock to check queue
+            try:
+                async with salt.utils.state.acquire_async_queue_lock(self.opts):
+                    # Check for queued jobs
+                    files = []
+                    try:
+                        for fn in os.listdir(queue_dir):
+                            if fn.startswith("queued_") and fn.endswith(".p"):
+                                files.append(fn)
+                    except OSError:
+                        pass
+
+                    if not files:
+                        return
+
+                    log.debug("State queue processing: found queued files: %s", files)
+
+                    # Sort by JID to ensure we process in the order expected by the state system's
+                    # dependency check (_prior_running_states), which relies on JID comparison.
+                    # Filename: queued_<timestamp>_<jid>.p
+                    def sort_key(fn):
+                        try:
+                            # Extract JID part (after second underscore, before .p)
+                            parts = fn.split("_")
+                            if len(parts) >= 3:
+                                # state.py uses parts[2] as the JID. We should match this to ensure
+                                # consistent sorting, even if the filename has extra underscores.
+                                jid_str = parts[2]
+                                if jid_str.endswith(".p"):
+                                    jid_str = jid_str[:-2]
+                                return int(jid_str)
+                        except (ValueError, IndexError):
+                            pass
+                        return float("inf")
+
+                    files.sort(key=sort_key)
+
+                    # Pick the candidate to check for conflicts
+                    candidate_fn = files[0]
+                    candidate_jid = None
+                    try:
+                        parts = candidate_fn.split("_")
+                        if len(parts) >= 3:
+                            jid_str = parts[2]
+                            if jid_str.endswith(".p"):
+                                jid_str = jid_str[:-2]
+                            candidate_jid = int(jid_str)
+                    except (ValueError, IndexError):
+                        pass
+
+                    log.trace(
+                        "State queue processing: found %d queued files in %s, candidate: %s",
+                        len(files),
+                        queue_dir,
+                        candidate_fn,
+                    )
+
+                    # Check if this candidate is blocked by any active jobs
+                    # Use get_active_states to ensure we see jobs even if they share our PID (placeholder)
+                    try:
+                        active = salt.utils.state.get_active_states(self.opts)
+                    except OSError as exc:
+                        log.error(
+                            "State queue processing: System resource exhaustion preventing active job check (%s). Waiting.",
+                            exc,
+                        )
+                        return
+
+                    # Use the shared utility logic to determine if we should run
+                    blocking_jobs = salt.utils.state.check_prior_running_states(
+                        self.opts, candidate_jid, active
+                    )
+
+                    if blocking_jobs:
+                        log.debug(
+                            "State queue processing: candidate job %s is blocked by active jobs: %s. Waiting.",
+                            candidate_jid,
+                            [j["jid"] for j in blocking_jobs],
+                        )
+                        return
+
+                    # Pick oldest
+                    fn = files[0]
+                    path = os.path.join(queue_dir, fn)
+
+                    try:
+                        with salt.utils.files.fopen(path, "rb") as fp_:
+                            data = salt.payload.load(fp_)
+                    except (OSError, ValueError) as exc:
+                        # If we can't open the file due to resource limits, we MUST NOT delete it.
+                        if isinstance(exc, OSError) and exc.errno in (
+                            errno.EMFILE,
+                            errno.ENFILE,
+                        ):
+                            log.error(
+                                "State queue processing: Too many open files, cannot read queued job %s. Waiting.",
+                                fn,
+                            )
+                            return
+
+                        # Corrupt or unreadable?
+                        log.error("Failed to load queued job %s, removing.", fn)
+                        try:
+                            os.remove(path)
+                        except OSError:
+                            pass
+                        return
+
+                    # Extract JID from filename to ensure the execution JID matches the
+                    # queuing JID used for ordering.
+                    try:
+                        parts = fn.split("_")
+                        if len(parts) >= 3:
+                            jid_str = parts[2]
+                            if jid_str.endswith(".p"):
+                                jid_str = jid_str[:-2]
+                            # Verify it's an int before using it
+                            int(jid_str)
+                            data["jid"] = jid_str
+                            log.info(
+                                "Updated execution JID to match queued filename: %s",
+                                jid_str,
+                            )
+                    except (ValueError, IndexError):
+                        pass
+
+                    # Execute
+                    log.info(
+                        "Popping queued job %s from the queue for execution",
+                        data.get("jid"),
+                    )
+
+                    # Mark job to bypass process_count_max checks since it has already waited
+                    # its turn in the State queue and we don't want it to starve.
+                    data["__ignore_process_count_max"] = True
+
+                    if hasattr(self, "io_loop"):
+                        self.io_loop.create_task(self._handle_decoded_payload(data))
+                    else:
+                        # Fallback if io_loop is not explicit (should not happen in Minion)
+                        self.io_loop.create_task(self._handle_decoded_payload(data))
+
+                    # Remove from queue
+                    try:
+                        os.remove(path)
+                    except OSError:
+                        pass
+
+            except (OSError, salt.exceptions.FileLockError) as exc:
+                if isinstance(exc, salt.exceptions.FileLockError) or (
+                    isinstance(exc, OSError)
+                    and exc.errno in (errno.EMFILE, errno.ENFILE)
+                ):
+                    log.error(
+                        "State queue processing: Unable to acquire queue lock due to system resource exhaustion (%s). Waiting.",
+                        exc,
+                    )
+                    return
+                # Re-raise other errors
+                raise
+
+        except Exception:  # pylint: disable=broad-exception-caught
+            log.critical("State queue processing failed", exc_info=True)
+        finally:
+            self._state_queue_processing_active = False
+
     def add_periodic_callback(self, name, method, interval=1):
         """
         Add a periodic callback to the event loop and call its start method.
@@ -3288,7 +4084,9 @@ class Minion(MinionBase):
 
         self.setup_beacons()
         self.setup_scheduler()
-        self.add_periodic_callback("cleanup", self.cleanup_subprocesses)
+        self.setup_state_queue_processing()
+        self.setup_process_queue_processing()
+        self.add_periodic_callback("cleanup", self.cleanup_subprocesses, interval=0.2)
 
         # schedule the stuff that runs every interval
         ping_interval = self.opts.get("ping_interval", 0) * 60
@@ -4133,14 +4931,16 @@ class SProxyMinion(SMinion):
         """
         # need sync of custom grains as may be used in pillar compilation
         salt.utils.extmods.sync(self.opts, "grains")
-        self.opts["grains"] = salt.loader.grains(self.opts)
-        self.opts["pillar"] = salt.pillar.get_pillar(
+        new_grains = salt.loader.grains(self.opts)
+        self.opts.mutate_key("grains", new_grains)
+        new_pillar = salt.pillar.get_pillar(
             self.opts,
             self.opts["grains"],
             self.opts["id"],
             saltenv=self.opts["saltenv"],
             pillarenv=self.opts.get("pillarenv"),
         ).compile_pillar()
+        self.opts.mutate_key("pillar", new_pillar)
 
         if "proxy" not in self.opts["pillar"] and "proxy" not in self.opts:
             errmsg = (
@@ -4216,7 +5016,8 @@ class SProxyMinion(SMinion):
         proxy_init_fn = self.proxy[fq_proxyname + ".init"]
         proxy_init_fn(self.opts)
 
-        self.opts["grains"] = salt.loader.grains(self.opts, proxy=self.proxy)
+        new_grains = salt.loader.grains(self.opts, proxy=self.proxy)
+        self.opts.mutate_key("grains", new_grains)
 
         #  Sync the grains here so the proxy can communicate them to the master
         self.functions["saltutil.sync_grains"](saltenv="base")

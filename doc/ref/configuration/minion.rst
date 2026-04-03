@@ -2342,8 +2342,12 @@ Default: ``False``
 
 Instead of failing immediately when another state run is in progress, a value
 of ``True`` will queue the new state run to begin running once the other has
-finished. This option starts a new thread for each queued state run, so use
-this option sparingly.
+finished.
+
+The queue is implemented as a disk-based FIFO queue, minimizing memory usage
+regardless of queue depth. Jobs in the state queue are processed by a background
+thread and will bypass :conf_minion:`process_count_max` limits when they are
+ready to execute, ensuring they are not starved by other workloads.
 
 .. code-block:: yaml
 
@@ -2357,6 +2361,16 @@ performance is hampered.
 .. code-block:: yaml
 
     state_queue: 2
+
+.. conf_minion:: state_max_parallel
+
+``state_max_parallel``
+----------------------
+
+Default: ``0``
+
+Limit the number of ``parallel: true`` states that can be running at the same time.
+By default, there is no limit.
 
 .. conf_minion:: state_verbose
 
@@ -3197,6 +3211,52 @@ constant names without ssl module prefix: ``CERT_REQUIRED`` or ``PROTOCOL_SSLv23
         certfile: <path_to_certfile>
         ssl_version: PROTOCOL_TLSv1_2
 
+.. conf_minion:: disable_aes_with_tls
+
+``disable_aes_with_tls``
+------------------------
+
+.. versionadded:: 3008.0
+
+Default: ``False``
+
+When set to ``True``, Salt will skip application-layer AES encryption when TLS
+is active with validated certificates. This optimization can improve performance
+by eliminating redundant encryption, as TLS already provides encryption at the
+transport layer.
+
+**Requirements for optimization to activate:**
+
+1. ``disable_aes_with_tls: true`` on both master and minion
+2. Valid SSL configuration (``ssl`` option configured)
+3. Mutual TLS authentication (``cert_reqs: CERT_REQUIRED``)
+4. TCP or WebSocket transport (not ZeroMQ)
+5. Valid peer certificates
+6. Minion certificate must contain minion ID in CN or SAN
+
+If any requirement is not met, Salt automatically falls back to standard AES
+encryption. This ensures the feature is safe to enable and maintains backward
+compatibility.
+
+.. code-block:: yaml
+
+    transport: tcp
+    ssl:
+        certfile: /etc/pki/tls/certs/minion.crt
+        keyfile: /etc/pki/tls/private/minion.key
+        ca_certs: /etc/pki/tls/certs/ca-bundle.crt
+        cert_reqs: CERT_REQUIRED
+    disable_aes_with_tls: true
+
+.. important::
+    The minion certificate **must** contain the minion ID in either the Common
+    Name (CN) or Subject Alternative Name (SAN) field to prevent impersonation
+    attacks. See :ref:`tls-encryption-optimization` for certificate generation
+    instructions.
+
+See :ref:`tls-encryption-optimization` for detailed configuration and security
+information.
+
 ``encryption_algorithm``
 ------------------------
 
@@ -3308,8 +3368,14 @@ Default: ``-1``
 
 Limit the maximum amount of processes or threads created by ``salt-minion``.
 This is useful to avoid resource exhaustion in case the minion receives more
-publications than it is able to handle, as it limits the number of spawned
-processes or threads. ``-1`` is the default and disables the limit.
+publications than it is able to handle.
+
+When this limit is reached, new jobs are queued to a disk-based FIFO queue and
+processed as slots become available. ``-1`` is the default and disables the limit.
+
+.. note::
+    State runs managed by :conf_minion:`state_queue` will bypass this limit
+    once they are released from the state queue.
 
 .. code-block:: yaml
 

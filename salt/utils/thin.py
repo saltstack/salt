@@ -24,11 +24,16 @@ import idna
 import jinja2
 import looseversion
 import msgpack
-import networkx
 import packaging
 import requests
 import tornado
 import urllib3
+
+try:
+    import charset_normalizer
+except ImportError:
+    charset_normalizer = None
+
 import yaml
 
 import salt
@@ -100,8 +105,7 @@ except ImportError:
     # Python 3.13+ doesn't have backports package
     backports = None
 
-concurrent = None
-
+import concurrent.futures as concurrent
 
 log = logging.getLogger(__name__)
 
@@ -290,10 +294,10 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
         "yaml",
         "tornado",
         "msgpack",
-        "networkx",
         "requests",
         "idna",
         "urllib3",
+        "charset_normalizer",
         "certifi",
         "singledispatch",
         "concurrent",
@@ -347,7 +351,7 @@ def get_ext_tops(config):
     """
     config = copy.deepcopy(config) or {}
     alternatives = {}
-    required = ["jinja2", "yaml", "tornado", "msgpack", "networkx"]
+    required = ["jinja2", "yaml", "tornado", "msgpack"]
     tops = []
     for ns, cfg in config.items():
         alternatives[ns] = cfg
@@ -446,7 +450,6 @@ def get_tops(extra_mods="", so_mods=""):
         yaml,
         tornado,
         msgpack,
-        networkx,
         certifi,
         singledispatch,
         concurrent,
@@ -460,6 +463,7 @@ def get_tops(extra_mods="", so_mods=""):
         requests,
         idna,
         urllib3,
+        charset_normalizer,
     ]
     modules = find_site_modules("contextvars")
     if modules:
@@ -642,11 +646,12 @@ def _get_package_root_mod(mod):
     while level < len(parts):
         root_mod_name = ".".join(parts[: level + 1])
         root_mod = sys.modules[root_mod_name]
-        # importlib.machinery.NamespaceLoader requires Python 3.11+
-        if type(root_mod.__path__) is list:
+        # Namespace packages don't have __file__ (or it's None)
+        if getattr(root_mod, "__file__", None):
             return root_mod, tuple(parts[:level])
         level += 1
-    raise RuntimeError(f"Unable to determine package root mod for {mod}")
+    # If we reached here, it's a namespace package
+    return sys.modules[parts[0]], ()
 
 
 def _discover_saltexts(allowlist=None, blocklist=None):
@@ -655,18 +660,32 @@ def _discover_saltexts(allowlist=None, blocklist=None):
     blocklist = blocklist or []
 
     for entry_point in salt.utils.entrypoints.iter_entry_points("salt.loader"):
-        if allowlist is not None and entry_point.dist.name not in allowlist:
+        try:
+            # We could get this via entry_point.dist._path.name, but that is hacky
+            dist_name = next(
+                iter(
+                    file.parent.name
+                    for file in entry_point.dist.files or []
+                    if file.parent.suffix == ".dist-info"
+                )
+            )
+        except StopIteration:
+            # This can happen if dist.files is None (e.g. editable install)
+            # Fallback to dist.name
+            dist_name = entry_point.dist.name
+
+        if allowlist is not None and dist_name not in allowlist:
             log.debug(
                 "Skipping entry point '%s' of '%s': not in allowlist",
                 entry_point.name,
-                entry_point.dist.name,
+                dist_name,
             )
             continue
-        if entry_point.dist.name in blocklist:
+        if dist_name in blocklist:
             log.debug(
                 "Skipping entry point '%s' of '%s': in blocklist",
                 entry_point.name,
-                entry_point.dist.name,
+                dist_name,
             )
             continue
         with _catch_entry_points_exception(entry_point) as ctx:
@@ -677,27 +696,10 @@ def _discover_saltexts(allowlist=None, blocklist=None):
             log.debug(
                 "Skipping entry point '%s' of '%s': Not a function/module",
                 entry_point.name,
-                entry_point.dist.name,
+                dist_name,
             )
             continue
         if entry_point.dist.name not in loaded_saltexts:
-            try:
-                # We could get this via entry_point.dist._path.name, but that is hacky
-                dist_name = next(
-                    iter(
-                        file.parent.name
-                        for file in entry_point.dist.files
-                        if file.parent.suffix == ".dist-info"
-                    )
-                )
-            except StopIteration:
-                # This should never happen since we have the data to arrive here
-                log.debug(
-                    "Skipping entry point '%s' of '%s': Failed discovering dist-info",
-                    entry_point.name,
-                    entry_point.dist.name,
-                )
-                continue
             loaded_saltexts[entry_point.dist.name] = {
                 "name": dist_name,
                 "entrypoints": {},
@@ -735,9 +737,12 @@ def _pack_saltext_dists(saltext_dists, digest_collector, tfp):
             + "\n".join(f"{name} = {val}" for name, val in data["entrypoints"].items())
             + "\n"
         ).encode("utf-8")
-        info = tarfile.TarInfo(name="py3/" + data["name"] + "/entry_points.txt")
-        info.size = len(defs)
-        tfp.addfile(tarinfo=info, fileobj=io.BytesIO(defs))
+        # Ensure it's in the correct directory for the distribution
+        # Some loaders might expect hyphens, others underscores
+        for name in [data["name"], data["name"].replace("-", "_")]:
+            info = tarfile.TarInfo(name="py3/" + name + ".dist-info/entry_points.txt")
+            info.size = len(defs)
+            tfp.addfile(tarinfo=info, fileobj=io.BytesIO(defs))
         digest_collector.add_data(defs)
 
 
