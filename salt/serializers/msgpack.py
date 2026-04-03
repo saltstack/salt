@@ -94,19 +94,21 @@ else:  # msgpack.version < 0.2.0
             raise DeserializationError(error)
 
 
-serialize = _serialize
-deserialize = _deserialize
-
-serialize.__doc__ = """
+def serialize(obj, **options):
+    """
     Serialize Python data to MsgPack.
 
     :param obj: the data structure to serialize
     :param options: options given to lower msgpack module.
     """
+    return _serialize(obj, **options)
 
-deserialize.__doc__ = """
+
+def deserialize(stream_or_string, **options):
+    """
     Deserialize any string of stream like object into a Python data structure.
 
     :param stream_or_string: stream or string to deserialize.
     :param options: options given to lower msgpack module.
     """
+    return _deserialize(stream_or_string, **options)
