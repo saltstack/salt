@@ -561,19 +561,25 @@ class MinionBase:
         ``discover(opts)``; the return value is a dict of
         ``{resource_type: [resource_id, ...]}``.
 
-        If pillar does not specify any resources, any resources already
-        present in ``opts["resources"]`` (e.g. set directly in the minion
-        config file) are preserved as-is.  This supports testing and simple
-        deployments where pillar-driven discovery is not needed.
+        If the pillar contains no ``resources`` key at all, any resources
+        already present in ``opts["resources"]`` (e.g. set directly in the
+        minion config file) are preserved as-is.  This supports testing and
+        simple deployments where pillar-driven discovery is not needed.
+
+        If the pillar *does* contain a ``resources`` key (even if its value is
+        empty / all entries removed), that is treated as an authoritative
+        declaration and the result will reflect only what the pillar says.
+        This ensures that removing a resource type from the pillar and running
+        sync_all actually clears it at runtime.
 
         Called from :meth:`gen_modules` after pillar is compiled and before
         the per-type execution-module loaders are created.
         """
-        pillar_resources = self.opts.get("pillar", {}).get("resources", {})
-        if not pillar_resources:
-            # No pillar resources — preserve whatever is already in opts
-            # (set directly in the minion config or from a previous discovery).
+        pillar = self.opts.get("pillar", {})
+        if "resources" not in pillar:
+            # Pillar has no opinion — preserve whatever is already in opts.
             return {k: list(v) for k, v in self.opts.get("resources", {}).items()}
+        pillar_resources = pillar.get("resources") or {}
 
         # A minimal resource loader is sufficient here — discover() only reads
         # from the opts dict passed to it and does not need other dunders.
@@ -3361,10 +3367,12 @@ class Minion(MinionBase):
         ``minion_resources`` cache bank is up-to-date.  This allows
         :class:`salt.utils.minions.CkMinions` to include resource IDs when
         expanding glob / non-compound targets (e.g. ``salt '*' test.ping``).
+
+        An empty resource dict is sent deliberately when the minion has no
+        resources — this clears any stale entries left by a previous
+        registration (e.g. after a resource type is removed from the pillar).
         """
         resources = self.opts.get("resources", {})
-        if not resources:
-            return
         load = {
             "cmd": "_register_resources",
             "id": self.opts["id"],
@@ -3480,6 +3488,12 @@ class Minion(MinionBase):
                 )
                 self.opts["pillar"] = new_pillar
                 self.functions.pack["__pillar__"] = self.opts["pillar"]
+                # Re-discover resources now that pillar has changed.  Must
+                # happen *after* opts["pillar"] is updated so that
+                # _discover_resources sees the new resource declarations (or
+                # their absence when a type is removed from the pillar).
+                self.opts["resources"] = self._discover_resources()
+                await self._register_resources_with_master()
             finally:
                 async_pillar.destroy()
         self.matchers_refresh()
@@ -3699,6 +3713,9 @@ class Minion(MinionBase):
             _minion.beacons_refresh()
         elif tag.startswith("matchers_refresh"):
             _minion.matchers_refresh()
+        elif tag.startswith("resource_refresh"):
+            _minion.opts["resources"] = _minion._discover_resources()
+            _minion.io_loop.create_task(_minion._register_resources_with_master())
         elif tag.startswith("manage_schedule"):
             _minion.manage_schedule(tag, data)
         elif tag.startswith("manage_beacons"):
@@ -4461,10 +4478,12 @@ class Minion(MinionBase):
         Return the list of per-resource dicts ``{"id": ..., "type": ...}`` that
         the target expression matches against ``opts["resources"]``.
 
-        For glob/grain/etc. targets (non-resource-aware), returns all managed
-        resources so that ``salt '*' test.ping`` also runs against resources.
+        For wildcard glob targets (e.g. ``salt '*'``), returns all managed
+        resources so that the command also runs against resources.
         For compound T@ targets, returns only the matched resources.
-        For compound expressions with no T@ terms, returns an empty list.
+        For specific-name glob targets (e.g. ``salt 'minion'``), grain, list,
+        pillar, or compound expressions with no T@ terms, returns an empty list
+        — the operator is targeting the minion itself, not its resources.
         Internal/plumbing functions (see ``_NO_RESOURCE_FUNS``) are never
         dispatched to resources.
         """
@@ -4500,8 +4519,19 @@ class Minion(MinionBase):
                             targets.append({"id": rid, "type": pattern})
             return targets
 
-        # Non-compound targets (glob, grain, list, etc.) apply to the minion
-        # AND to all managed resources.
+        # For glob targets, only dispatch to resources when the pattern
+        # contains a wildcard.  A bare name like ``salt 'minion' test.ping``
+        # targets the minion itself; it should not implicitly run against its
+        # resources.  ``salt '*' test.ping`` or ``salt 'web*' test.ping``
+        # opts in to resource dispatch.
+        if (
+            tgt_type == "glob"
+            and isinstance(tgt, str)
+            and not any(c in tgt for c in ("*", "?", "["))
+        ):
+            return []
+
+        # Wildcard glob — dispatch to all managed resources.
         all_resources = []
         for rtype, rids in resources.items():
             for rid in rids:
