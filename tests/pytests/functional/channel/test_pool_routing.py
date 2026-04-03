@@ -217,6 +217,7 @@ def pool_config(tmp_path):
         "__role": "master",
         "master_sign_key_name": "master_sign",
         "permissive_pki_access": True,
+        "transport": "zeromq",
         # Pool configuration
         "worker_pools_enabled": True,
         "worker_pools": {
