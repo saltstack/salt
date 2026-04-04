@@ -50,8 +50,10 @@ def pillar_tree(salt_master, salt_call_cli, salt_run_cli, salt_minion):
             # mine.update fires an event and sleeps 0.5s, but the master may need
             # additional time to process and store the mine data.  Poll until the
             # data is available so that tests don't race against propagation.
+            # Use salt_call_cli (minion-side) so the allow_tgt ACL check passes
+            # — the runner uses the master's ID which is not a minion target.
             for _ in range(10):
-                ret = salt_run_cli.run("mine.get", salt_minion.id, "test_fun")
+                ret = salt_call_cli.run("mine.get", salt_minion.id, "test_fun")
                 if ret.data:
                     break
                 time.sleep(1)
@@ -67,11 +69,18 @@ def pillar_tree(salt_master, salt_call_cli, salt_run_cli, salt_minion):
 
 
 @pytest.mark.usefixtures("pillar_tree", "master_id", "salt_minion_id")
-def test_allow_tgt(salt_run_cli, salt_minion):
+def test_allow_tgt(salt_call_cli, salt_minion):
+    """
+    Test that mine.get returns data when allow_tgt permits the caller.
+    Must use salt_call_cli (minion-side execution module) rather than
+    salt_run_cli (runner), because the runner passes the master's ID as
+    the caller and the master is not a minion target — it will never match
+    the allow_tgt glob and the mine ACL will always deny access.
+    """
     tgt = salt_minion.id
     fun = "test_fun"
 
-    ret = salt_run_cli.run("mine.get", tgt, fun)
+    ret = salt_call_cli.run("mine.get", tgt, fun)
     assert ret.data == {salt_minion.id: "hello test"}
 
 

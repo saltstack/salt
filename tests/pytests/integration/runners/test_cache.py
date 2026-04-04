@@ -3,6 +3,7 @@ Tests for the salt-run command
 """
 
 import logging
+import time
 
 import pytest
 
@@ -21,9 +22,7 @@ def pillar_tree(base_env_pillar_tree_root_dir, salt_minion, salt_sub_minion, sal
         - basic
       '{}':
         - basic
-    """.format(
-        salt_minion.id, salt_sub_minion.id
-    )
+    """.format(salt_minion.id, salt_sub_minion.id)
     basic_pillar_file = """
     monty: python
     """
@@ -118,8 +117,14 @@ def test_pillar_no_tgt(salt_run_cli, pillar_tree, salt_minion, salt_sub_minion):
     supplied. This should return pillar
     data for all minions
     """
-    ret = salt_run_cli.run("cache.pillar")
-    assert ret.returncode == 0
+    # The master's pillar cache may be written asynchronously after
+    # saltutil.refresh_pillar returns.  Retry until both minions appear.
+    for _ in range(10):
+        ret = salt_run_cli.run("cache.pillar")
+        assert ret.returncode == 0
+        if salt_minion.id in ret.data and salt_sub_minion.id in ret.data:
+            break
+        time.sleep(1)
     assert salt_minion.id in ret.data
     assert salt_sub_minion.id in ret.data
 

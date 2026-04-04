@@ -1,3 +1,5 @@
+import time
+
 import pytest
 
 pytestmark = [
@@ -29,9 +31,7 @@ def test_orchestrate_output(salt_run_cli, salt_minion, salt_master):
       salt.state:
         - tgt: {}
         - sls: simple-ping
-    """.format(
-        salt_minion.id
-    )
+    """.format(salt_minion.id)
     simple_ping_sls = """
     simple-ping:
       module.run:
@@ -79,9 +79,7 @@ def test_orchestrate_state_output_with_salt_function(
       salt.function:
         - name: test.ping
         - tgt: {minion_id}
-    """.format(
-        minion_id=salt_minion.id
-    )
+    """.format(minion_id=salt_minion.id)
     with salt_master.state_tree.base.temp_file("orch-function-test.sls", sls_contents):
         ret = salt_run_cli.run(
             "--out=highstate", "state.orchestrate", "orch-function-test"
@@ -107,9 +105,7 @@ def test_orchestrate_nested(salt_run_cli, salt_minion, salt_master, tmp_path):
         - arg:
           - {}
         - failhard: True
-    """.format(
-        salt_minion.id, pytest.helpers.shell_test_false()
-    )
+    """.format(salt_minion.id, pytest.helpers.shell_test_false())
     outer_sls = """
     state.orchestrate:
       salt.runner:
@@ -121,9 +117,7 @@ def test_orchestrate_nested(salt_run_cli, salt_minion, salt_master, tmp_path):
         - tgt: {}
         - arg:
           - touch {}
-    """.format(
-        salt_minion.id, testfile
-    )
+    """.format(salt_minion.id, testfile)
 
     with salt_master.state_tree.base.temp_file(
         "nested/inner.sls", inner_sls
@@ -183,9 +177,7 @@ def test_orchestrate_state_and_function_failure(salt_run_cli, salt_master, salt_
         - name: runtests_helpers.nonzero_retcode_return_false
         - tgt: {minion_id}
         - fail_function: runtests_helpers.fail_function
-    """.format(
-        minion_id=salt_minion.id
-    )
+    """.format(minion_id=salt_minion.id)
     fail_sls = """
     test fail with changes:
       test.fail_with_changes
@@ -254,9 +246,7 @@ def test_orchestrate_salt_function_return_false_failure(
       salt.function:
         - name: test.false
         - tgt: {}
-    """.format(
-        salt_minion.id
-    )
+    """.format(salt_minion.id)
     with salt_master.state_tree.base.temp_file("orch/issue30367.sls", sls_contents):
         ret = salt_run_cli.run("saltutil.sync_modules")
         assert ret.returncode == 0
@@ -295,9 +285,7 @@ def test_orchestrate_target_exists(salt_run_cli, salt_minion, salt_master):
         - tgt: '{minion_id}*'
         - arg:
           - echo test
-    """.format(
-        minion_id=salt_minion.id
-    )
+    """.format(minion_id=salt_minion.id)
     target_test_sls = """
     always_true:
       test.succeed_without_changes
@@ -353,9 +341,7 @@ def test_orchestrate_target_does_not_exist(salt_run_cli, salt_minion, salt_maste
         - tgt: '{minion_id}*'
         - arg:
           - echo test
-    """.format(
-        minion_id=salt_minion.id
-    )
+    """.format(minion_id=salt_minion.id)
     target_test_sls = """
     always_true:
       test.succeed_without_changes
@@ -416,6 +402,9 @@ def test_orchestrate_retcode(salt_run_cli, salt_master):
         assert ret.returncode == 0
         ret = salt_run_cli.run("saltutil.sync_wheel")
         assert ret.returncode == 0
+        # Allow a brief settling period so the newly-synced runners and
+        # wheel modules are fully loaded before the orchestrate call.
+        time.sleep(1)
 
         ret = salt_run_cli.run("state.orchestrate", "orch.retcode")
         assert ret.returncode != 0
@@ -454,16 +443,12 @@ def test_orchestrate_batch_with_failhard_error(
         - batch: 1
         - failhard: True
         - sls: fail
-    """.format(
-        salt_minion.id
-    )
+    """.format(salt_minion.id)
     fail_sls = """
     {}:
       file.managed:
         - source: salt://hnlcfsdjhkzkdhynclarkhmcls
-    """.format(
-        testfile
-    )
+    """.format(testfile)
     with salt_master.state_tree.base.temp_file(
         "orch/batch.sls", sls_contents
     ), salt_master.state_tree.base.temp_file("fail.sls", fail_sls):
