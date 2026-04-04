@@ -560,46 +560,51 @@ class Requirement:
     def __bool__(self):
         return self.has_depend
 
+    def _get_version(self, ver):
+        if isinstance(ver, tuple):
+            return packaging.version.Version(".".join([str(_) for _ in ver]))
+        return packaging.version.Version(ver)
+
     def __eq__(self, other):
         if not self.has_depend:
             return False
-        other_ver = packaging.version.Version(other)
-        dep_ver = packaging.version.Version(self.version)
+        other_ver = self._get_version(other)
+        dep_ver = self._get_version(self.version)
         return dep_ver == other_ver
 
     def __ne__(self, other):
         if not self.has_depend:
             return True
-        other_ver = packaging.version.Version(other)
-        dep_ver = packaging.version.Version(self.version)
+        other_ver = self._get_version(other)
+        dep_ver = self._get_version(self.version)
         return dep_ver != other_ver
 
     def __lt__(self, other):
         if not self.has_depend:
             return False
-        other_ver = packaging.version.Version(other)
-        dep_ver = packaging.version.Version(self.version)
+        other_ver = self._get_version(other)
+        dep_ver = self._get_version(self.version)
         return dep_ver < other_ver
 
     def __le__(self, other):
         if not self.has_depend:
             return False
-        other_ver = packaging.version.Version(other)
-        dep_ver = packaging.version.Version(self.version)
+        other_ver = self._get_version(other)
+        dep_ver = self._get_version(self.version)
         return dep_ver <= other_ver
 
     def __gt__(self, other):
         if not self.has_depend:
             return False
-        other_ver = packaging.version.Version(other)
-        dep_ver = packaging.version.Version(self.version)
+        other_ver = self._get_version(other)
+        dep_ver = self._get_version(self.version)
         return dep_ver > other_ver
 
     def __ge__(self, other):
         if not self.has_depend:
             return False
-        other_ver = packaging.version.Version(other)
-        dep_ver = packaging.version.Version(self.version)
+        other_ver = self._get_version(other)
+        dep_ver = self._get_version(self.version)
         return dep_ver >= other_ver
 
 

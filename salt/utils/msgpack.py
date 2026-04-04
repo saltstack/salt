@@ -64,7 +64,7 @@ def _sanitize_msgpack_unpack_kwargs(kwargs):
     """
     assert isinstance(kwargs, dict)
     if salt.utils.versions.reqs.msgpack:
-        if salt.utils.versions.reqs.msgpack > (0, 5, 2):
+        if salt.utils.versions.reqs.msgpack > "0.5.2":
             kwargs.setdefault("raw", True)
             kwargs.setdefault("strict_map_key", False)
     return _sanitize_msgpack_kwargs(kwargs)

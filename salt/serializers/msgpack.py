@@ -26,7 +26,7 @@ if not salt.utils.versions.reqs.msgpack:
     def _deserialize(stream_or_string, **options):
         _fail()
 
-elif salt.utils.msgpack.version >= (1, 0, 0):
+elif salt.utils.versions.reqs.msgpack >= "1.0.0":
 
     def _serialize(obj, **options):
         try:
@@ -42,7 +42,7 @@ elif salt.utils.msgpack.version >= (1, 0, 0):
         except Exception as error:  # pylint: disable=broad-except
             raise DeserializationError(error)
 
-elif salt.utils.msgpack.version >= (0, 2, 0):
+elif salt.utils.versions.reqs.msgpack >= "0.2.0":
 
     def _serialize(obj, **options):
         try:
