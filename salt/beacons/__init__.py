@@ -26,6 +26,47 @@ class Beacon:
         self.beacons = salt.loader.beacons(opts, functions)
         self.interval_map = interval_map or dict()
 
+    def close_beacons(self):
+        """
+        Close all beacon modules that have a close function.
+        This ensures resources like inotify file descriptors are properly
+        released when beacons are refreshed or the Beacon instance is replaced.
+
+        See: https://github.com/saltstack/salt/issues/66449
+        See: https://github.com/saltstack/salt/issues/58907
+        """
+        beacons = self._get_beacons()
+        for mod in beacons:
+            if mod == "enabled":
+                continue
+
+            current_beacon_config = None
+            if isinstance(beacons[mod], list):
+                current_beacon_config = {}
+                list(map(current_beacon_config.update, beacons[mod]))
+            elif isinstance(beacons[mod], dict):
+                current_beacon_config = beacons[mod]
+
+            if current_beacon_config is None:
+                continue
+
+            beacon_name = None
+            if self._determine_beacon_config(current_beacon_config, "beacon_module"):
+                beacon_name = current_beacon_config["beacon_module"]
+            else:
+                beacon_name = mod
+
+            close_str = f"{beacon_name}.close"
+            if close_str in self.beacons:
+                try:
+                    config = copy.deepcopy(beacons[mod])
+                    if isinstance(config, list):
+                        config.append({"_beacon_name": mod})
+                    log.debug("Closing beacon %s", mod)
+                    self.beacons[close_str](config)
+                except Exception:  # pylint: disable=broad-except
+                    log.debug("Failed to close beacon %s", mod, exc_info=True)
+
     def process(self, config, grains):
         """
         Process the configured beacons

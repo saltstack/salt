@@ -22,9 +22,9 @@ try:
     from mcp.server import Server
     from mcp.server.stdio import stdio_server
     from mcp.types import TextContent, Tool
-except ImportError:
+except ImportError as e:
     print(
-        "Error: MCP SDK not installed. Install with: pip install mcp",
+        f"Error: MCP SDK not installed. Install with: pip install mcp. Error: {e}",
         file=sys.stderr,
     )
     sys.exit(1)
@@ -40,7 +40,7 @@ def run_tool_command(*args, **kwargs) -> dict[str, Any]:
     """
     Run a tools command and return the result.
     """
-    cmd = [sys.executable, "-m", "tools"] + list(args)
+    cmd = [sys.executable, "-m", "ptscripts"] + list(args)
 
     try:
         result = subprocess.run(
@@ -300,6 +300,77 @@ async def list_tools() -> list[Tool]:
                 "properties": {},
             },
         ),
+        # Package building
+        Tool(
+            name="ci_build_pkg",
+            description="Build Salt packages (RPM/Deb) using CI containers",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "pkg_type": {
+                        "type": "string",
+                        "description": "Package type to build",
+                        "enum": ["rpm", "deb", "windows", "macos"],
+                    },
+                    "distro": {
+                        "type": "string",
+                        "description": "Distribution to build on (e.g., 'debian-13', 'rockylinux-9'). Defaults to debian-13 for deb, rockylinux-9 for rpm.",
+                    },
+                    "platform": {
+                        "type": "string",
+                        "description": "Target platform (e.g., 'linux', 'windows', 'macos')",
+                        "enum": ["linux", "windows", "macos"],
+                    },
+                    "arch": {
+                        "type": "string",
+                        "description": "Target architecture (e.g., 'x86_64', 'aarch64')",
+                        "enum": ["x86_64", "aarch64", "amd64"],
+                    },
+                    "relenv_version": {
+                        "type": "string",
+                        "description": "Relenv version to use (e.g., '0.22.4')",
+                    },
+                    "python_version": {
+                        "type": "string",
+                        "description": "Python version to use (e.g., '3.10.19')",
+                    },
+                },
+                "required": ["pkg_type"],
+            },
+        ),
+        Tool(
+            name="ci_test_pkg",
+            description="Run package tests (upgrade/install) in a CI container",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "pkg_type": {
+                        "type": "string",
+                        "description": "Package type (deb/rpm)",
+                        "enum": ["deb", "rpm"],
+                    },
+                    "distro": {
+                        "type": "string",
+                        "description": "Distribution to test on (e.g., 'debian-13')",
+                    },
+                    "test_type": {
+                        "type": "string",
+                        "description": "Test type (upgrade, install)",
+                        "default": "upgrade",
+                    },
+                    "prev_version": {
+                        "type": "string",
+                        "description": "Previous version for upgrade tests (e.g., '3006.22')",
+                    },
+                    "extra_args": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Additional arguments for nox",
+                    },
+                },
+                "required": ["pkg_type"],
+            },
+        ),
     ]
 
 
@@ -392,6 +463,328 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
 
         elif name == "ci_list_platforms":
             cmd_args = ["ts", "container-test", "list-platforms"]
+
+        elif name == "ci_build_pkg":
+            pkg_type = arguments["pkg_type"]
+            distro = arguments.get("distro")
+
+            # Determine image
+            if not distro:
+                if pkg_type == "deb":
+                    distro = "debian-13"
+                elif pkg_type == "rpm":
+                    distro = "rockylinux-9"
+                else:
+                    return [
+                        TextContent(
+                            type="text",
+                            text="Error: distro must be specified for non-linux builds or rely on defaults.",
+                        )
+                    ]
+
+            # Map distro to image (simplified mapping, ideally import from tools)
+            image_map = {
+                "debian-13": "ghcr.io/saltstack/salt-ci-containers/testing:debian-13",
+                "debian-12": "ghcr.io/saltstack/salt-ci-containers/testing:debian-12",
+                "debian-11": "ghcr.io/saltstack/salt-ci-containers/testing:debian-11",
+                "rockylinux-9": "ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-9",
+                "rockylinux-8": "ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-8",
+                "amazonlinux-2": "ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2",
+                "amazonlinux-2023": "ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2023",
+                "ubuntu-22.04": "ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-22.04",
+                "ubuntu-20.04": "ghcr.io/saltstack/salt-ci-containers/testing:ubuntu-20.04",
+            }
+
+            image = image_map.get(distro)
+            if not image:
+                return [
+                    TextContent(
+                        type="text",
+                        text=f"Error: Unknown distro '{distro}'. Supported: {', '.join(image_map.keys())}",
+                    )
+                ]
+
+            container_name = f"salt-build-{pkg_type}-{distro}"
+
+            # 1. Create container
+            create_cmd = ["container", "create", image, "--name", container_name]
+            logger.info(f"Creating container: {' '.join(create_cmd)}")
+
+            # Remove existing container first
+            subprocess.run(
+                ["docker", "rm", "-f", container_name],
+                check=False,
+                stdout=sys.stderr,
+                stderr=sys.stderr,
+            )
+
+            # Use tools module to create container correctly with all mounts
+            # We use run_tool_command to ensure it runs with the correct python environment and cwd
+            create_result = run_tool_command(*create_cmd)
+
+            if not create_result["success"]:
+                return [
+                    TextContent(
+                        type="text",
+                        text=f"Failed to create container:\n{create_result['stderr']}",
+                    )
+                ]
+
+            # 2. Start container
+            start_cmd = ["docker", "start", container_name]
+            subprocess.run(
+                start_cmd, check=False, stdout=sys.stderr, stderr=sys.stderr
+            )  # Ensure it's started
+
+            # Disable IPv6 to prevent pip hangs
+            subprocess.run(
+                [
+                    "docker",
+                    "exec",
+                    container_name,
+                    "sysctl",
+                    "-w",
+                    "net.ipv6.conf.all.disable_ipv6=1",
+                ],
+                check=False,
+                stdout=sys.stderr,
+                stderr=sys.stderr,
+            )
+
+            # 3. Install dependencies
+            if "debian" in distro or "ubuntu" in distro:
+                # Install dependencies exactly as in .github/workflows/build-packages.yml
+                # Plus git, rsync, procps, and basic build tools
+                # Explicitly avoiding libzmq3-dev as per CI/CD
+                # Also install tools requirements for ptscripts
+                install_cmd = [
+                    "docker",
+                    "exec",
+                    container_name,
+                    "bash",
+                    "-c",
+                    "apt-get update && apt-get install -y python3.13-venv devscripts patchelf git rsync procps build-essential debhelper dh-python python3-all python3-setuptools python3-pip bash-completion && python3 -m pip install -r requirements/static/ci/py3.13/tools.txt --break-system-packages --ignore-installed",
+                ]
+                subprocess.run(
+                    install_cmd, check=False, stdout=sys.stderr, stderr=sys.stderr
+                )
+            elif "rocky" in distro or "amazon" in distro or "fedora" in distro:
+                install_cmd = [
+                    "docker",
+                    "exec",
+                    container_name,
+                    "dnf",
+                    "install",
+                    "-y",
+                    "rpm-build",
+                    "rpm-sign",
+                    "python3-devel",
+                    "python3-pip",
+                    "python3-setuptools",
+                    "git",
+                    "bash-completion",
+                    "make",
+                    "gcc",
+                    "gcc-c++",
+                ]
+                subprocess.run(
+                    install_cmd, check=False, stdout=sys.stderr, stderr=sys.stderr
+                )
+                # Install tools requirements (assuming python3 is available)
+                subprocess.run(
+                    [
+                        "docker",
+                        "exec",
+                        container_name,
+                        "python3",
+                        "-m",
+                        "pip",
+                        "install",
+                        "-r",
+                        "requirements/static/ci/py3.10/tools.txt",
+                    ],
+                    check=False,
+                    stdout=sys.stderr,
+                    stderr=sys.stderr,
+                )
+
+            # 4. Run build
+            # We need to ensure environment variables are passed correctly for relenv
+            # SKIP_REQUIREMENTS_INSTALL=1 might be used by some tools, PIP_BREAK_SYSTEM_PACKAGES=1 allows pip to install system packages
+            env_vars = [
+                "-e",
+                "SKIP_REQUIREMENTS_INSTALL=1",
+                "-e",
+                "PIP_BREAK_SYSTEM_PACKAGES=1",
+            ]
+            if arguments.get("relenv_version"):
+                env_vars.extend(
+                    ["-e", f"SALT_RELENV_VERSION={arguments['relenv_version']}"]
+                )
+            if arguments.get("python_version"):
+                env_vars.extend(
+                    ["-e", f"SALT_PYTHON_VERSION={arguments['python_version']}"]
+                )
+            if arguments.get("arch"):
+                env_vars.extend(["-e", f"SALT_PACKAGE_ARCH={arguments['arch']}"])
+
+            # Construct the full build command
+            # Note: We are running 'python3 -m ptscripts pkg build' INSIDE the container
+            build_cmd = (
+                ["docker", "exec"]
+                + env_vars
+                + [
+                    container_name,
+                    "python3",
+                    "-m",
+                    "ptscripts",
+                    "pkg",
+                    "build",
+                    pkg_type,
+                ]
+            )
+
+            if arguments.get("platform"):
+                build_cmd.extend(["--platform", arguments["platform"]])
+            if arguments.get("arch"):
+                build_cmd.extend(["--arch", arguments["arch"]])
+            if arguments.get("relenv_version"):
+                build_cmd.extend(["--relenv-version", arguments["relenv_version"]])
+            if arguments.get("python_version"):
+                build_cmd.extend(["--python-version", arguments["python_version"]])
+
+            logger.info(f"Running build in container: {build_cmd}")
+
+            # Capture output
+            result = subprocess.run(
+                build_cmd,
+                capture_output=True,
+                text=True,
+                timeout=3600,  # 1 hour for build
+            )
+
+            response = ""
+            if result.returncode == 0:
+                response = f"Build successful in container {container_name}!\n\nstdout:\n{result.stdout}"
+            else:
+                response = f"Build failed in container {container_name} (exit code {result.returncode})\n\nstdout:\n{result.stdout}\n\nstderr:\n{result.stderr}"
+
+            return [TextContent(type="text", text=response)]
+
+        elif name == "ci_test_pkg":
+            pkg_type = arguments["pkg_type"]
+            distro = arguments.get("distro")
+            test_type = arguments.get("test_type", "upgrade")
+            prev_version = arguments.get("prev_version")
+
+            if not distro:
+                if pkg_type == "deb":
+                    distro = "debian-13"
+                elif pkg_type == "rpm":
+                    distro = "rockylinux-9"
+
+            image_map = {
+                "debian-13": "ghcr.io/saltstack/salt-ci-containers/testing:debian-13",
+                "debian-12": "ghcr.io/saltstack/salt-ci-containers/testing:debian-12",
+                "rockylinux-9": "ghcr.io/saltstack/salt-ci-containers/testing:rockylinux-9",
+            }
+            image = image_map.get(distro)
+            if not image:
+                return [
+                    TextContent(type="text", text=f"Error: Unknown distro '{distro}'")
+                ]
+
+            container_name = f"salt-test-{pkg_type}-{distro}"
+
+            # 1. Create container
+            create_cmd = ["container", "create", image, "--name", container_name]
+            subprocess.run(
+                ["docker", "rm", "-f", container_name],
+                check=False,
+                stdout=sys.stderr,
+                stderr=sys.stderr,
+            )
+            create_result = run_tool_command(*create_cmd)
+            if not create_result["success"]:
+                return [
+                    TextContent(
+                        type="text",
+                        text=f"Failed to create container:\n{create_result['stderr']}",
+                    )
+                ]
+
+            # 2. Start container
+            subprocess.run(
+                ["docker", "start", container_name],
+                check=False,
+                stdout=sys.stderr,
+                stderr=sys.stderr,
+            )
+
+            # 3. Setup environment (nox, ipv6 fix)
+            setup_cmds = [
+                ["sysctl", "-w", "net.ipv6.conf.all.disable_ipv6=1"],
+                [
+                    "python3",
+                    "-m",
+                    "pip",
+                    "install",
+                    "nox",
+                    "--break-system-packages",
+                ],  # Debian 12+ needs this or venv
+            ]
+
+            for cmd in setup_cmds:
+                subprocess.run(
+                    ["docker", "exec", container_name] + cmd,
+                    check=False,
+                    stdout=sys.stderr,
+                    stderr=sys.stderr,
+                )
+
+            # 4. Copy artifacts (if needed)
+            copy_script = f"""
+            mkdir -p /salt/artifacts/pkg
+            if [ -d /salt/artifacts/{pkg_type} ]; then
+              cp -r /salt/artifacts/{pkg_type}/* /salt/artifacts/pkg/
+            fi
+            ls -l /salt/artifacts/pkg/
+            """
+            subprocess.run(
+                ["docker", "exec", container_name, "bash", "-c", copy_script],
+                check=False,
+                stdout=sys.stderr,
+                stderr=sys.stderr,
+            )
+
+            # 5. Run nox
+            nox_cmd = ["nox", "-e", "ci-test-onedir-pkgs", "--", test_type]
+            if prev_version:
+                nox_cmd.append(f"--prev-version={prev_version}")
+
+            if arguments.get("extra_args"):
+                nox_cmd.extend(arguments["extra_args"])
+
+            full_cmd = [
+                "docker",
+                "exec",
+                "-e",
+                "FORCE_COLOR=1",
+                container_name,
+            ] + nox_cmd
+
+            logger.info(f"Running test in container: {full_cmd}")
+            result = subprocess.run(
+                full_cmd, capture_output=True, text=True, timeout=3600
+            )
+
+            response = ""
+            if result.returncode == 0:
+                response = f"Tests passed in container {container_name}!\n\nstdout:\n{result.stdout}"
+            else:
+                response = f"Tests failed in container {container_name} (exit code {result.returncode})\n\nstdout:\n{result.stdout}\n\nstderr:\n{result.stderr}"
+
+            return [TextContent(type="text", text=response)]
 
         else:
             return [TextContent(type="text", text=f"Unknown tool: {name}")]

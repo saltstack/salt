@@ -39,7 +39,7 @@ class Renderer:
             sls=sls,
             argline=argline,
             renderers=salt.loader.render(config, {}),
-            **kws
+            **kws,
         )
 
 

@@ -43,7 +43,7 @@ def test_exec_kwargs():
         s.tgt_type,
         s.ret,
         s.kwarg,
-        **{"batch": s.batch}
+        **{"batch": s.batch},
     )
     client.cmd_batch.assert_called_with(batch=s.batch, **_cmd_expected_kwargs)
 
@@ -56,7 +56,7 @@ def test_exec_kwargs():
         s.tgt_type,
         s.ret,
         s.kwarg,
-        **{"subset": s.subset}
+        **{"subset": s.subset},
     )
     client.cmd_subset.assert_called_with(
         subset=s.subset, cli=True, **_cmd_expected_kwargs
@@ -71,7 +71,7 @@ def test_exec_kwargs():
         s.tgt_type,
         s.ret,
         s.kwarg,
-        **{"subset": s.subset, "cli": s.cli}
+        **{"subset": s.subset, "cli": s.cli},
     )
     client.cmd_subset.assert_called_with(
         subset=s.subset, cli=s.cli, **_cmd_expected_kwargs
@@ -87,7 +87,7 @@ def test_exec_kwargs():
         s.tgt_type,
         s.ret,
         s.kwarg,
-        **{"subset": s.subset, "batch": s.batch}
+        **{"subset": s.subset, "batch": s.batch},
     )
     client.cmd_batch.assert_called_with(batch=s.batch, **_cmd_expected_kwargs)
 

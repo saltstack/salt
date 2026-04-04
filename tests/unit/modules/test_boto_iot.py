@@ -264,7 +264,7 @@ class BotoIoTThingTypeTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             thingTypeName=thing_type_name,
             thingTypeDescription=thing_type_desc,
             searchableAttributesList=[thing_type_attr_1],
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertTrue(result["created"])
         self.assertTrue(result["thingTypeArn"], thing_type_arn)
@@ -282,7 +282,7 @@ class BotoIoTThingTypeTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             thingTypeName=thing_type_name,
             thingTypeDescription=thing_type_desc,
             searchableAttributesList=[thing_type_attr_1],
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(
             result.get("error", {}).get("message"),
@@ -407,7 +407,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         result = boto_iot.create_policy(
             policyName=policy_ret["policyName"],
             policyDocument=policy_ret["policyDocument"],
-            **conn_parameters
+            **conn_parameters,
         )
 
         self.assertTrue(result["created"])
@@ -424,7 +424,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         result = boto_iot.create_policy(
             policyName=policy_ret["policyName"],
             policyDocument=policy_ret["policyDocument"],
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(
             result.get("error", {}).get("message"),
@@ -540,7 +540,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         result = boto_iot.create_policy_version(
             policyName=policy_ret["policyName"],
             policyDocument=policy_ret["policyDocument"],
-            **conn_parameters
+            **conn_parameters,
         )
 
         self.assertTrue(result["created"])
@@ -557,7 +557,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         result = boto_iot.create_policy_version(
             policyName=policy_ret["policyName"],
             policyDocument=policy_ret["policyDocument"],
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(
             result.get("error", {}).get("message"),
@@ -771,7 +771,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         result = boto_iot.attach_principal_policy(
             policyName="testpolicy",
             principal="us-east-1:GUID-GUID-GUID",
-            **conn_parameters
+            **conn_parameters,
         )
 
         self.assertTrue(result["attached"])
@@ -788,7 +788,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         result = boto_iot.attach_principal_policy(
             policyName="testpolicy",
             principal="us-east-1:GUID-GUID-GUID",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(
             result.get("error", {}).get("message"),
@@ -804,7 +804,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         result = boto_iot.detach_principal_policy(
             policyName="testpolicy",
             principal="us-east-1:GUID-GUID-GUID",
-            **conn_parameters
+            **conn_parameters,
         )
 
         self.assertTrue(result["detached"])
@@ -821,7 +821,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         result = boto_iot.detach_principal_policy(
             policyName="testpolicy",
             principal="us-east-1:GUID-GUID-GUID",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(
             result.get("error", {}).get("message"),
@@ -894,7 +894,7 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             sql=topic_rule_ret["sql"],
             description=topic_rule_ret["description"],
             actions=topic_rule_ret["actions"],
-            **conn_parameters
+            **conn_parameters,
         )
 
         self.assertTrue(result["created"])
@@ -913,7 +913,7 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             sql=topic_rule_ret["sql"],
             description=topic_rule_ret["description"],
             actions=topic_rule_ret["actions"],
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(
             result.get("error", {}).get("message"),
@@ -932,7 +932,7 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             sql=topic_rule_ret["sql"],
             description=topic_rule_ret["description"],
             actions=topic_rule_ret["actions"],
-            **conn_parameters
+            **conn_parameters,
         )
 
         self.assertTrue(result["replaced"])
@@ -951,7 +951,7 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
             sql=topic_rule_ret["sql"],
             description=topic_rule_ret["description"],
             actions=topic_rule_ret["actions"],
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(
             result.get("error", {}).get("message"),

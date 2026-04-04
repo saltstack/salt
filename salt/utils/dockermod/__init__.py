@@ -162,7 +162,7 @@ def translate_input(
     skip_translate=None,
     ignore_collisions=False,
     validate_ip_addrs=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Translate CLI/SLS input into the format the API expects. The ``translator``

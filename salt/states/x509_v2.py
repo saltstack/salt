@@ -188,6 +188,7 @@ import os.path
 from datetime import datetime, timedelta, timezone
 
 import salt.utils.files
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
@@ -227,8 +228,6 @@ def certificate_managed(
     signing_policy=None,
     encoding="pem",
     append_certs=None,
-    copypath=None,
-    prepend_cn=False,
     digest="sha256",
     signing_private_key=None,
     signing_private_key_passphrase=None,
@@ -251,7 +250,7 @@ def certificate_managed(
     Ensure an X.509 certificate is present as specified.
 
     This function accepts the same arguments as :py:func:`x509.create_certificate <salt.modules.x509_v2.create_certificate>`,
-    as well as most ones for `:py:func:`file.managed <salt.states.file.managed>`.
+    as well as most ones for :py:func:`file.managed <salt.states.file.managed>`.
 
     name
         The path the certificate should be present at.
@@ -297,37 +296,49 @@ def certificate_managed(
         The hashing algorithm to use for the signature. Valid values are:
         sha1, sha224, sha256, sha384, sha512, sha512_224, sha512_256, sha3_224,
         sha3_256, sha3_384, sha3_512. Defaults to ``sha256``.
-        This will be ignored for ``ed25519`` and ``ed448`` key types.
-
-    signing_private_key
-        The private key corresponding to the public key in ``signing_cert``. Required.
-
-    signing_private_key_passphrase
-        If ``signing_private_key`` is encrypted, the passphrase to decrypt it.
+        Ignored for ``ed25519`` and ``ed448`` key types.
 
     signing_cert
         The CA certificate to be used for signing the issued certificate.
 
-    public_key
-        The public key the certificate should be issued for. Other ways of passing
-        the required information are ``private_key`` and ``csr``. If neither are set,
-        the public key of the ``signing_private_key`` will be included, i.e.
-        a self-signed certificate is generated.
+        Leave empty to create a self-signed certificate.
+
+    signing_private_key
+        The private key to be used for signing the new certificate. Required.
+
+        Usually, this is the private key corresponding to the public key in ``signing_cert``.
+        When creating self-signed certificates (missing ``signing_cert``), derives
+        the new certificate's embedded public key from this private key.
+
+    signing_private_key_passphrase
+        If ``signing_private_key`` is encrypted, the passphrase to decrypt it.
 
     private_key
-        The private key corresponding to the public key the certificate should
-        be issued for. This is one way of specifying the public key that will
-        be included in the certificate, the other ones being ``public_key`` and ``csr``.
+        A **private key**, which is used to derive the public key the certificate
+        is issued for. If this is unset, checks ``public_key`` or ``csr`` to derive it.
+
+        Ignored when creating self-signed certificates (missing ``signing_cert``).
+
+        .. hint::
+            When ``encoding`` is ``pkcs12``, this private key is embedded into
+            the resulting container.
 
     private_key_passphrase
         If ``private_key`` is specified and encrypted, the passphrase to decrypt it.
 
-    csr
-        A certificate signing request to use as a base for generating the certificate.
-        The following information will be respected, depending on configuration:
+    public_key
+        A **public key**, which is used as the public key the certificate is issued for,
+        but only if ``private_key`` is **not** specified. If this is unset, checks ``csr`` to derive it.
 
-        * public key
-        * extensions, if not otherwise specified (arguments, signing_policy)
+        Ignored when creating self-signed certificates (missing ``signing_cert``).
+
+    csr
+        A **certificate signing request** to use as a base for generating the certificate:
+
+        - Extensions not otherwise specified (arguments, signing_policy) are copied.
+        - If ``private_key`` and ``public_key`` are both unspecified, copies the embedded
+          public key into the certificate. This step is skipped when creating self-signed
+          certificates (missing ``signing_cert``).
 
     subject
         The subject's distinguished name embedded in the certificate. This is one way of
@@ -742,7 +753,7 @@ def crl_managed(
         The hashing algorithm to use for the signature. Valid values are:
         sha1, sha224, sha256, sha384, sha512, sha512_224, sha512_256, sha3_224,
         sha3_256, sha3_384, sha3_512. Defaults to ``sha256``.
-        This will be ignored for ``ed25519`` and ``ed448`` key types.
+        Ignored for ``ed25519`` and ``ed448`` key types.
 
     encoding
         Specify the encoding of the resulting certificate revocation list.
@@ -1047,7 +1058,7 @@ def csr_managed(
         The hashing algorithm to use for the signature. Valid values are:
         sha1, sha224, sha256, sha384, sha512, sha512_224, sha512_256, sha3_224,
         sha3_256, sha3_384, sha3_512. Defaults to ``sha256``.
-        This will be ignored for ``ed25519`` and ``ed448`` key types.
+        Ignored for ``ed25519`` and ``ed448`` key types.
 
     encoding
         Specify the encoding of the resulting certificate revocation list.
@@ -1359,7 +1370,7 @@ def private_key_managed(
     if extra_args:
         raise SaltInvocationError(f"Unrecognized keyword arguments: {list(extra_args)}")
 
-    if not file_args.get("mode"):
+    if not file_args.get("mode") and not salt.utils.platform.is_windows():
         # ensure secure defaults
         file_args["mode"] = "0400"
 
@@ -1591,7 +1602,13 @@ def _file_managed(name, test=None, **kwargs):
         raise SaltInvocationError("test param can only be None or True")
     # work around https://github.com/saltstack/salt/issues/62590
     test = test or __opts__["test"]
-    res = __salt__["state.single"]("file.managed", name, test=test, **kwargs)
+    res = __salt__["state.single"](
+        "file.managed", name, test=test, concurrent=True, **kwargs
+    )
+    if not isinstance(res, dict):
+        raise CommandExecutionError(
+            f"Failed running file.managed in x509_v2 state: {res}"
+        )
     return res[next(iter(res))]
 
 
