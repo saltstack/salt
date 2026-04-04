@@ -15,7 +15,6 @@ import salt.transport
 import salt.utils.data
 import salt.utils.files
 import salt.utils.network
-import salt.utils.pki
 import salt.utils.stringutils
 import salt.utils.versions
 from salt._compat import ipaddress
@@ -283,14 +282,8 @@ class CkMinions:
     def _pki_minions(self, force_scan=False):
         """
         Retrieve complete minion list from PKI dir.
-        Respects cache if configured
+        The cache layer internally uses an mmap index for O(1) performance.
         """
-        if not force_scan and self.opts.get("pki_index_enabled", False):
-            index = salt.utils.pki.PkiIndex(self.opts)
-            minions = index.list()
-            if minions:
-                return set(minions)
-
         minions = set()
 
         try:

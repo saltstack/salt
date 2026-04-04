@@ -245,7 +245,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         self.ipc_publisher = kwargs.pop("ipc_publisher", None)
         super().__init__(**kwargs)
         self.opts = opts
-        self.pki_index = None
+        self.cache = None  # Lazy init in _post_fork_init
         # How often do we perform the maintenance tasks
         self.loop_interval = int(self.opts["loop_interval"])
         # A serializer for general maint operations
@@ -277,12 +277,18 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             self.opts, runner_client.functions_dict(), returners=self.returners
         )
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
+        # Init cache for key operations
+        self.cache = salt.cache.Cache(
+            self.opts, driver=self.opts.get("keys.cache_driver", "localfs_key")
+        )
         # Make Event bus for firing
         self.event = salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=True
         )
         # Init any values needed by the git ext pillar
         self.git_pillar = salt.daemons.masterapi.init_git_pillar(self.opts)
+        # Rebuild PKI index on startup to remove tombstones
+        self._rebuild_pki_index()
 
         if self.opts["maintenance_niceness"] and not salt.utils.platform.is_windows():
             log.info(
@@ -338,7 +344,6 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                 last_git_pillar_update = now
                 self.handle_git_pillar()
             self.handle_schedule()
-            self.handle_pki_index()
             self.handle_key_cache()
             self.handle_presence(old_present)
             self.handle_key_rotate(now)
@@ -347,53 +352,30 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             now = int(time.time())
             time.sleep(self.loop_interval)
 
-    def handle_pki_index(self):
+    def _rebuild_pki_index(self):
         """
-        Evaluate accepted keys and update the PKI index
+        Rebuild PKI index on startup to remove tombstones and ensure consistency.
+        This is called once during _post_fork_init().
         """
-        if not self.opts.get("pki_index_enabled", False):
-            return
+        try:
+            from salt.cache import localfs_key
 
-        if self.pki_index is None:
-            import salt.utils.pki
-
-            self.pki_index = salt.utils.pki.PkiIndex(self.opts)
-            # Full rebuild on first run to ensure source-of-truth sync
-            log.info("Full PKI index rebuild started")
-            self.pki_index.rebuild(self.ckminions._pki_minions(force_scan=True))
-            log.info("Full PKI index rebuild complete")
-
-        while True:
-            # tag is 'salt/key/' or 'salt/pki/index/rebuild'
-            ev = self.event.get_event(wait=0.1, tag="salt/", full=True)
-            if ev is None:
-                break
-
-            tag = ev.get("tag", "")
-            data = ev.get("data", {})
-
-            if tag == "salt/pki/index/rebuild":
-                log.info("Manual PKI index rebuild triggered")
-                res = self.pki_index.rebuild(
-                    self.ckminions._pki_minions(force_scan=True)
+            log.info("Rebuilding PKI index on startup")
+            result = localfs_key.rebuild_index(self.opts)
+            if result:
+                stats = localfs_key.get_index_stats(self.opts)
+                if stats:
+                    log.info(
+                        "PKI index rebuilt: %d keys, load factor %.1f%%",
+                        stats["occupied"],
+                        stats["load_factor"] * 100,
+                    )
+            else:
+                log.warning(
+                    "PKI index rebuild failed, will use fallback directory scan"
                 )
-                self.event.fire_event(
-                    {"result": res}, "salt/pki/index/rebuild/complete"
-                )
-                continue
-
-            if not tag.startswith("salt/key"):
-                continue
-
-            act = data.get("act")
-            mid = data.get("id")
-            if not mid:
-                continue
-
-            if act == "accepted":
-                self.pki_index.add(mid)
-            elif act in ("delete", "rejected"):
-                self.pki_index.delete(mid)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Error rebuilding PKI index: %s", exc)
 
     def handle_key_cache(self):
         """
@@ -408,9 +390,28 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             else:
                 acc = "accepted"
 
-            for fn_ in os.listdir(os.path.join(self.pki_dir, acc)):
-                if not fn_.startswith("."):
-                    keys.append(fn_)
+            # Lazy init cache if not available
+            if self.cache is None:
+                self.cache = salt.cache.Cache(
+                    self.opts,
+                    driver=self.opts.get("keys.cache_driver", "localfs_key"),
+                )
+
+            # Use cache layer (which internally uses mmap index for O(1) performance)
+            try:
+                all_keys = self.cache.list_all("keys")
+                keys = [
+                    minion_id
+                    for minion_id, data in all_keys.items()
+                    if data.get("state") == "accepted"
+                ]
+            except AttributeError:
+                # Fallback for cache backends that don't implement list_all()
+                for id_ in self.cache.list("keys"):
+                    key = self.cache.fetch("keys", id_)
+                    if key and key.get("state") == "accepted":
+                        keys.append(id_)
+
             log.debug("Writing master key cache")
             # Write a temporary file securely
             with salt.utils.atomicfile.atomic_open(

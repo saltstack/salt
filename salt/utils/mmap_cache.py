@@ -37,14 +37,11 @@ class MmapCache:
                 # Ensure directory exists
                 os.makedirs(os.path.dirname(self.path), exist_ok=True)
                 with salt.utils.files.fopen(self.path, "wb") as f:
-                    # Write in chunks to avoid memory issues for very large caches
-                    chunk_size = 1024 * 1024  # 1MB
+                    # Use truncate() to create a sparse file efficiently
+                    # On most systems this creates a sparse file without writing zeros
+                    # mmap will see zeros when reading unwritten regions
                     total_size = self.size * self.slot_size
-                    written = 0
-                    while written < total_size:
-                        to_write = min(chunk_size, total_size - written)
-                        f.write(b"\x00" * to_write)
-                        written += to_write
+                    f.truncate(total_size)
             except OSError as exc:
                 log.error("Failed to initialize mmap cache file: %s", exc)
                 return False
@@ -272,48 +269,153 @@ class MmapCache:
         """
         Return all keys in the cache.
         """
+        return [item[0] for item in self.list_items()]
+
+    def list_items(self):
+        """
+        Return all (key, value) pairs in the cache.
+        If it's a set, value will be True.
+        """
         if not self.open(write=False):
             return []
 
         ret = []
+        mm = self._mm
+        slot_size = self.slot_size
+
         for slot in range(self.size):
-            offset = slot * self.slot_size
-            if self._mm[offset] == OCCUPIED:
-                existing_data = self._mm[offset + 1 : offset + self.slot_size]
-                null_pos = existing_data.find(b"\x00")
-                key_bytes = (
-                    existing_data[:null_pos]
-                    if null_pos != -1
-                    else existing_data.rstrip(b"\x00")
-                )
-                ret.append(salt.utils.stringutils.to_unicode(key_bytes))
+            offset = slot * slot_size
+            if mm[offset] == OCCUPIED:
+                # Get the slot data.
+                # mm[offset:offset+slot_size] is relatively fast.
+                slot_data = mm[offset + 1 : offset + slot_size]
+
+                # Use C-based find for speed
+                null_pos = slot_data.find(b"\x00")
+
+                if null_pos == -1:
+                    key_bytes = slot_data
+                    value = True
+                else:
+                    key_bytes = slot_data[:null_pos]
+
+                    value = True
+                    # Check if there is data after the null
+                    if null_pos < len(slot_data) - 1 and slot_data[null_pos + 1] != 0:
+                        val_data = slot_data[null_pos + 1 :]
+                        val_null_pos = val_data.find(b"\x00")
+                        if val_null_pos == -1:
+                            value_bytes = val_data
+                        else:
+                            value_bytes = val_data[:val_null_pos]
+
+                        if value_bytes:
+                            value = salt.utils.stringutils.to_unicode(value_bytes)
+
+                ret.append((salt.utils.stringutils.to_unicode(key_bytes), value))
         return ret
+
+    def get_stats(self):
+        """
+        Return statistics about the cache state.
+        Returns dict with: {occupied, deleted, empty, total, load_factor}
+        """
+        if not self.open(write=False):
+            return {
+                "occupied": 0,
+                "deleted": 0,
+                "empty": 0,
+                "total": self.size,
+                "load_factor": 0.0,
+            }
+
+        counts = {"occupied": 0, "deleted": 0, "empty": 0}
+        mm = self._mm
+        slot_size = self.slot_size
+
+        for slot in range(self.size):
+            offset = slot * slot_size
+            status = mm[offset]
+            if status == OCCUPIED:
+                counts["occupied"] += 1
+            elif status == DELETED:
+                counts["deleted"] += 1
+            else:  # EMPTY
+                counts["empty"] += 1
+
+        counts["total"] = self.size
+        counts["load_factor"] = (
+            (counts["occupied"] + counts["deleted"]) / self.size
+            if self.size > 0
+            else 0.0
+        )
+        return counts
 
     def atomic_rebuild(self, iterator):
         """
         Rebuild the cache from an iterator of (key, value) or (key,)
         This populates a temporary file and swaps it in atomically.
         """
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(self.path), exist_ok=True)
+
         lock_path = self.path + ".lock"
         tmp_path = self.path + ".tmp"
 
         # We use a separate lock file for the rebuild process
         with salt.utils.files.flopen(lock_path, "wb"):
-            # Create a fresh tmp cache
-            tmp_cache = MmapCache(tmp_path, size=self.size, slot_size=self.slot_size)
-            if not tmp_cache.open(write=True):
-                return False
-
+            # Create temp file directly and write all data at once
             try:
-                for item in iterator:
-                    if isinstance(item, (list, tuple)) and len(item) > 1:
-                        tmp_cache.put(item[0], item[1])
-                    else:
-                        # Set behavior
-                        mid = item[0] if isinstance(item, (list, tuple)) else item
-                        tmp_cache.put(mid)
+                # Initialize empty file with truncate
+                with salt.utils.files.fopen(tmp_path, "wb") as f:
+                    total_size = self.size * self.slot_size
+                    f.truncate(total_size)
 
-                tmp_cache.close()
+                # Open for writing
+                with salt.utils.files.fopen(tmp_path, "r+b") as f:
+                    mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_WRITE)
+
+                    try:
+                        # Bulk insert all items
+                        for item in iterator:
+                            if isinstance(item, (list, tuple)) and len(item) > 1:
+                                key, value = item[0], item[1]
+                            else:
+                                key = (
+                                    item[0] if isinstance(item, (list, tuple)) else item
+                                )
+                                value = None
+
+                            key_bytes = salt.utils.stringutils.to_bytes(key)
+                            val_bytes = (
+                                salt.utils.stringutils.to_bytes(value)
+                                if value is not None
+                                else b""
+                            )
+
+                            data = key_bytes
+                            if value is not None:
+                                data += b"\x00" + val_bytes
+
+                            if len(data) > self.slot_size - 1:
+                                log.warning("Data too long for slot: %s", key)
+                                continue
+
+                            # Find slot using same hash function
+                            h = zlib.adler32(key_bytes) % self.size
+                            for i in range(self.size):
+                                slot = (h + i) % self.size
+                                offset = slot * self.slot_size
+
+                                if mm[offset] != OCCUPIED:
+                                    # Write data then status (reader-safe order)
+                                    mm[offset + 1 : offset + 1 + len(data)] = data
+                                    if len(data) < self.slot_size - 1:
+                                        mm[offset + 1 + len(data)] = 0
+                                    mm[offset] = OCCUPIED
+                                    break
+                    finally:
+                        mm.close()
 
                 # Close current mmap before replacing file
                 self.close()
@@ -321,10 +423,10 @@ class MmapCache:
                 # Atomic swap
                 os.replace(tmp_path, self.path)
                 return True
-            finally:
-                tmp_cache.close()
+            except Exception:
                 if os.path.exists(tmp_path):
                     try:
                         os.remove(tmp_path)
                     except OSError:
                         pass
+                raise
