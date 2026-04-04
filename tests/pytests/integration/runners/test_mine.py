@@ -2,6 +2,8 @@
 integration tests for the mine runner
 """
 
+import time
+
 import pytest
 
 
@@ -45,6 +47,14 @@ def pillar_tree(salt_master, salt_call_cli, salt_run_cli, salt_minion):
             assert ret.data is True
             ret = salt_run_cli.run("mine.update", salt_minion.id)
             assert ret.returncode == 0
+            # mine.update fires an event and sleeps 0.5s, but the master may need
+            # additional time to process and store the mine data.  Poll until the
+            # data is available so that tests don't race against propagation.
+            for _ in range(10):
+                ret = salt_run_cli.run("mine.get", salt_minion.id, "test_fun")
+                if ret.data:
+                    break
+                time.sleep(1)
             ret = salt_call_cli.run("pillar.items")
             assert ret.returncode == 0
             yield
