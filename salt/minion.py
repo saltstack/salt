@@ -3293,9 +3293,7 @@ class Minion(MinionBase):
                 async_pillar.destroy()
         self.matchers_refresh()
         self.beacons_refresh()
-        with salt.utils.event.get_event(
-            "minion", opts=self.opts, listen=False, io_loop=self.io_loop
-        ) as evt:
+        with salt.utils.event.get_event("minion", opts=self.opts, listen=False) as evt:
             evt.fire_event(
                 {"complete": True},
                 tag=salt.defaults.events.MINION_PILLAR_REFRESH_COMPLETE,
@@ -3488,7 +3486,7 @@ class Minion(MinionBase):
                     )
                     raise salt.ext.tornado.gen.Return()
                 with salt.utils.event.get_event(
-                    "minion", opts=self.opts, listen=False, io_loop=self.io_loop
+                    "minion", opts=self.opts, listen=False
                 ) as event:
                     yield event.fire_event_async(
                         {"ret": ret},
@@ -3778,7 +3776,6 @@ class Minion(MinionBase):
                         "minion",
                         opts=self.opts,
                         listen=False,
-                        io_loop=self.io_loop,
                     ) as event:
                         event.fire_event({"beacons": beacons}, "__beacons_return")
 
