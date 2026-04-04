@@ -561,9 +561,11 @@ class Requirement:
         return self.has_depend
 
     def _get_version(self, ver):
-        if isinstance(ver, tuple):
+        if isinstance(ver, (list, tuple)):
             return packaging.version.Version(".".join([str(_) for _ in ver]))
-        return packaging.version.Version(ver)
+        if isinstance(ver, packaging.version.Version):
+            return ver
+        return packaging.version.Version(str(ver))
 
     def __eq__(self, other):
         if not self.has_depend:
