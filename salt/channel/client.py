@@ -431,7 +431,9 @@ class AsyncPubChannel:
         self.transport = transport
         self._closing = False
         self._reconnected = False
-        self.event = salt.utils.event.get_event("minion", opts=self.opts, listen=False)
+        self.event = salt.utils.event.get_event(
+            "minion", opts=self.opts, listen=False, io_loop=self.io_loop
+        )
         self.master_pubkey_path = os.path.join(self.opts["pki_dir"], self.auth.mpub)
 
     @property
@@ -547,7 +549,9 @@ class AsyncPubChannel:
             # may have been restarted
             yield self.send_id(self.token, self._reconnected)
             self.connected = True
-            self.event.fire_event({"master": self.opts["master"]}, "__master_connected")
+            yield self.event.fire_event_async(
+                {"master": self.opts["master"]}, "__master_connected"
+            )
             if self._reconnected:
                 # On reconnects, fire a master event to notify that the minion is
                 # available.
