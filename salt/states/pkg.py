@@ -917,6 +917,10 @@ def _verify_install(desired, new_pkgs, ignore_epoch=None, new_caps=None):
         elif pkgver == "latest":
             _ok.append(pkgname)
             continue
+        elif __grains__["os"] == "FreeBSD" and pkgver:
+            cver = [k for k, v in new_pkgs.items() if v["version"] == pkgver]
+            _ok.append(pkgname)
+            continue
         elif not __salt__["pkg_resource.version_clean"](pkgver):
             _ok.append(pkgname)
             continue
