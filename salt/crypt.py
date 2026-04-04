@@ -841,7 +841,6 @@ class AsyncAuth:
                         self.opts.get("__role"),
                         opts=self.opts,
                         listen=False,
-                        io_loop=self.io_loop,
                     ) as event:
                         event.fire_event(
                             {"key": key, "creds": creds},
