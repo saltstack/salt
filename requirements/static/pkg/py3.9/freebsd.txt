@@ -129,6 +129,8 @@ multidict==6.7.1
     #   yarl
 packaging==24.0
     # via -r requirements/base.txt
+passlib==1.7.4
+    # via -r requirements/base.txt
 platformdirs==4.4.0 ; python_full_version < '3.10'
     # via
     #   python-discovery
