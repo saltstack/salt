@@ -245,6 +245,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         self.ipc_publisher = kwargs.pop("ipc_publisher", None)
         super().__init__(**kwargs)
         self.opts = opts
+        self.pki_index = None
         # How often do we perform the maintenance tasks
         self.loop_interval = int(self.opts["loop_interval"])
         # A serializer for general maint operations
@@ -278,7 +279,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
         # Make Event bus for firing
         self.event = salt.utils.event.get_master_event(
-            self.opts, self.opts["sock_dir"], listen=False
+            self.opts, self.opts["sock_dir"], listen=True
         )
         # Init any values needed by the git ext pillar
         self.git_pillar = salt.daemons.masterapi.init_git_pillar(self.opts)
@@ -337,6 +338,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                 last_git_pillar_update = now
                 self.handle_git_pillar()
             self.handle_schedule()
+            self.handle_pki_index()
             self.handle_key_cache()
             self.handle_presence(old_present)
             self.handle_key_rotate(now)
@@ -344,6 +346,54 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             last = now
             now = int(time.time())
             time.sleep(self.loop_interval)
+
+    def handle_pki_index(self):
+        """
+        Evaluate accepted keys and update the PKI index
+        """
+        if not self.opts.get("pki_index_enabled", False):
+            return
+
+        if self.pki_index is None:
+            import salt.utils.pki
+
+            self.pki_index = salt.utils.pki.PkiIndex(self.opts)
+            # Full rebuild on first run to ensure source-of-truth sync
+            log.info("Full PKI index rebuild started")
+            self.pki_index.rebuild(self.ckminions._pki_minions(force_scan=True))
+            log.info("Full PKI index rebuild complete")
+
+        while True:
+            # tag is 'salt/key/' or 'salt/pki/index/rebuild'
+            ev = self.event.get_event(wait=0.1, tag="salt/", full=True)
+            if ev is None:
+                break
+
+            tag = ev.get("tag", "")
+            data = ev.get("data", {})
+
+            if tag == "salt/pki/index/rebuild":
+                log.info("Manual PKI index rebuild triggered")
+                res = self.pki_index.rebuild(
+                    self.ckminions._pki_minions(force_scan=True)
+                )
+                self.event.fire_event(
+                    {"result": res}, "salt/pki/index/rebuild/complete"
+                )
+                continue
+
+            if not tag.startswith("salt/key"):
+                continue
+
+            act = data.get("act")
+            mid = data.get("id")
+            if not mid:
+                continue
+
+            if act == "accepted":
+                self.pki_index.add(mid)
+            elif act in ("delete", "rejected"):
+                self.pki_index.delete(mid)
 
     def handle_key_cache(self):
         """
