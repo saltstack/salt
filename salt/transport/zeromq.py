@@ -1661,31 +1661,32 @@ class RequestClient(salt.transport.base.RequestClient):
                 send_recv_running = False
                 if not future.done():
                     future.set_exception(exc)
+                break
             except zmq.eventloop.future.CancelledError as exc:
                 log.trace("Loop closed while sending.")
                 # The ioloop was closed before polling finished.
                 send_recv_running = False
                 if not future.done():
                     future.set_exception(exc)
+                break
             except zmq.ZMQError as exc:
+                send_recv_running = False
                 if exc.errno in [
                     zmq.ENOTSOCK,
                     zmq.ETERM,
                     zmq.error.EINTR,
                 ]:
                     log.trace("Send socket closed while sending.")
-                    send_recv_running = False
-                    if not future.done():
-                        future.set_exception(exc)
                 elif exc.errno == zmq.EFSM:
                     log.error("Socket was found in invalid state.")
-                    send_recv_running = False
-                    if not future.done():
-                        future.set_exception(exc)
                 else:
                     log.error("Unhandled Zeromq error durring send/receive: %s", exc)
-                    if not future.done():
-                        future.set_exception(exc)
+
+                if not future.done():
+                    future.set_exception(exc)
+                self.close()
+                await self.connect()
+                break
 
             if future.done():
                 if isinstance(future.exception(), asyncio.CancelledError):
@@ -1713,16 +1714,21 @@ class RequestClient(salt.transport.base.RequestClient):
                     send_recv_running = False
                     if not future.done():
                         future.set_exception(exc)
+                    break
                 except zmq.eventloop.future.CancelledError as exc:
                     log.trace("Loop closed while polling receive socket.")
                     send_recv_running = False
                     if not future.done():
                         future.set_exception(exc)
+                    break
                 except zmq.ZMQError as exc:
                     log.trace("Receive socket closed while polling.")
                     send_recv_running = False
                     if not future.done():
                         future.set_exception(exc)
+                    self.close()
+                    await self.connect()
+                    break
 
                 if ready:
                     try:
@@ -1743,6 +1749,8 @@ class RequestClient(salt.transport.base.RequestClient):
                         send_recv_running = False
                         if not future.done():
                             future.set_exception(exc)
+                        self.close()
+                        await self.connect()
                     break
                 elif future.done():
                     break
@@ -1762,6 +1770,10 @@ class RequestClient(salt.transport.base.RequestClient):
                 await self.connect()
                 send_recv_running = False
             elif received:
-                data = salt.payload.loads(recv)
-                future.set_result(data)
+                try:
+                    data = salt.payload.loads(recv)
+                    future.set_result(data)
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.error("Failed to deserialize response: %s", exc)
+                    future.set_exception(exc)
         log.trace("Send and receive coroutine ending %s", socket)
