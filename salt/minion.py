@@ -773,7 +773,6 @@ class MinionBase:
 
                 if conn:
                     pub_channel = ret_pub_channel
-                    break
 
                 if not conn:
                     if attempts == tries:
@@ -1727,9 +1726,7 @@ class Minion(MinionBase):
                 minion_privkey_path, salt.serializers.msgpack.serialize(load)
             )
             load["sig"] = sig
-        with salt.utils.event.get_event(
-            "minion", opts=self.opts, listen=True, io_loop=self.io_loop
-        ) as event:
+        with salt.utils.event.get_event("minion", opts=self.opts, listen=True) as event:
             request_id = str(uuid.uuid4())
             log.trace("Send request to main id=%s", request_id)
             event.fire_event(
@@ -1757,9 +1754,7 @@ class Minion(MinionBase):
                 minion_privkey_path, salt.serializers.msgpack.serialize(load)
             )
             load["sig"] = sig
-        with salt.utils.event.get_event(
-            "minion", opts=self.opts, listen=True, io_loop=self.io_loop
-        ) as event:
+        with salt.utils.event.get_event("minion", opts=self.opts, listen=True) as event:
             request_id = str(uuid.uuid4())
             log.trace("Send request to main id=%s", request_id)
             yield event.fire_event_async(
