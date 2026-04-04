@@ -209,6 +209,31 @@ class TestCase(_TestCase):
         del self._prerun_instance_attributes
         return outcome
 
+    def assertDictContainsSubset(self, expected, actual, msg=None):
+        """
+        Checks whether all key/value pairs in expected are found in actual.
+        This method was removed in Python 3.12.
+        """
+        missing = []
+        mismatched = []
+        for key, value in expected.items():
+            if key not in actual:
+                missing.append(key)
+            elif value != actual[key]:
+                mismatched.append(
+                    "{!r}, expected: {!r}, actual: {!r}".format(
+                        key, value, actual[key]
+                    )
+                )
+        if missing or mismatched:
+            parts = []
+            if missing:
+                parts.append("Missing: {}".format(", ".join(repr(m) for m in missing)))
+            if mismatched:
+                parts.append("Mismatched values: {}".format(", ".join(mismatched)))
+            standard_msg = "; ".join(parts)
+            self.fail(self._formatMessage(msg, standard_msg))
+
     def shortDescription(self):
         desc = _TestCase.shortDescription(self)
         if HAS_PSUTIL and SHOW_PROC:
