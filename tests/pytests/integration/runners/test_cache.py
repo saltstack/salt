@@ -22,7 +22,9 @@ def pillar_tree(base_env_pillar_tree_root_dir, salt_minion, salt_sub_minion, sal
         - basic
       '{}':
         - basic
-    """.format(salt_minion.id, salt_sub_minion.id)
+    """.format(
+        salt_minion.id, salt_sub_minion.id
+    )
     basic_pillar_file = """
     monty: python
     """
