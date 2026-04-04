@@ -590,29 +590,30 @@ class Key:
 
             index = salt.utils.pki.PkiIndex(self.opts)
             items = index.list_items()
-            ret = {
-                "minions_pre": [],
-                "minions_rejected": [],
-                "minions": [],
-                "minions_denied": [],
-            }
-            for id_, state in items:
-                if state == "accepted":
-                    ret["minions"].append(id_)
-                elif state == "pending":
-                    ret["minions_pre"].append(id_)
-                elif state == "rejected":
-                    ret["minions_rejected"].append(id_)
+            if items:
+                ret = {
+                    "minions_pre": [],
+                    "minions_rejected": [],
+                    "minions": [],
+                    "minions_denied": [],
+                }
+                for id_, state in items:
+                    if state == "accepted":
+                        ret["minions"].append(id_)
+                    elif state == "pending":
+                        ret["minions_pre"].append(id_)
+                    elif state == "rejected":
+                        ret["minions_rejected"].append(id_)
 
-            # Sort for consistent CLI output
-            for key in ret:
-                ret[key] = salt.utils.data.sorted_ignorecase(ret[key])
+                # Sort for consistent CLI output
+                for key in ret:
+                    ret[key] = salt.utils.data.sorted_ignorecase(ret[key])
 
-            # Denied keys are not in the index currently
-            ret["minions_denied"] = salt.utils.data.sorted_ignorecase(
-                self.cache.list("denied_keys")
-            )
-            return ret
+                # Denied keys are not in the index currently
+                ret["minions_denied"] = salt.utils.data.sorted_ignorecase(
+                    self.cache.list("denied_keys")
+                )
+                return ret
 
         ret = {
             "minions_pre": [],

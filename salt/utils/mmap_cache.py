@@ -75,9 +75,23 @@ class MmapCache:
 
         try:
             with salt.utils.files.fopen(self.path, mode) as f:
-                self._ino = os.fstat(f.fileno()).st_ino
+                fd = f.fileno()
+                st = os.fstat(fd)
+                self._ino = st.st_ino
+
+                # Verify file size matches expected size
+                expected_size = self.size * self.slot_size
+                if st.st_size != expected_size:
+                    log.warning(
+                        "MmapCache file size mismatch for %s: expected %d, got %d",
+                        self.path,
+                        expected_size,
+                        st.st_size,
+                    )
+                    return False
+
                 # Use 0 for length to map the whole file
-                self._mm = mmap.mmap(f.fileno(), 0, access=access)
+                self._mm = mmap.mmap(fd, 0, access=access)
             return True
         except OSError as exc:
             log.error("Failed to mmap cache file %s: %s", self.path, exc)
