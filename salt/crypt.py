@@ -841,8 +841,9 @@ class AsyncAuth:
                         self.opts.get("__role"),
                         opts=self.opts,
                         listen=False,
+                        io_loop=self.io_loop,
                     ) as event:
-                        event.fire_event(
+                        yield event.fire_event_async(
                             {"key": key, "creds": creds},
                             salt.utils.event.tagify(prefix="auth", suffix="creds"),
                         )
