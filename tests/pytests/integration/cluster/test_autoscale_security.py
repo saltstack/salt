@@ -166,6 +166,7 @@ def test_autoscale_rejects_path_traversal_in_peer_id(
 
     # Attempt to start - should fail or be rejected
     from pytestshellutils.exceptions import FactoryNotStarted
+
     try:
         with factory.started(start_timeout=30, max_start_attempts=1):
             # Give it a moment to attempt join
