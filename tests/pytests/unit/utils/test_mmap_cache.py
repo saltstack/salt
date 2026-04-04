@@ -131,6 +131,18 @@ def test_mmap_cache_atomic_rebuild(cache_path):
     cache.close()
 
 
+def test_mmap_cache_size_mismatch(cache_path):
+    # Initialize a file with 64-byte slots
+    cache = salt.utils.mmap_cache.MmapCache(cache_path, size=10, slot_size=64)
+    cache.put("test")
+    cache.close()
+
+    # Try to open it with an instance expecting 128-byte slots
+    wrong_cache = salt.utils.mmap_cache.MmapCache(cache_path, size=10, slot_size=128)
+    assert wrong_cache.open(write=False) is False
+    wrong_cache.close()
+
+
 def test_mmap_cache_list_items(cache_path):
     cache = salt.utils.mmap_cache.MmapCache(cache_path, size=100, slot_size=64)
     data = {"key1": "val1", "key2": "val2", "key3": True}
