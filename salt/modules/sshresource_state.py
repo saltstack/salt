@@ -281,6 +281,24 @@ def highstate(test=None, **kwargs):
             if not isinstance(chunk, dict):
                 return chunks_or_errors
 
+        if not chunks_or_errors:
+            # Top file has no match for this resource ID — no SSH round-trip needed.
+            # Return a state dict using the same key format salt uses for a regular
+            # minion's "No Top file" entry so the merged output is consistent.
+            rid = _resource_id()
+            return {
+                "no_|-states_|-states_|-None": {
+                    "result": False,
+                    "comment": (
+                        f"No Top file or master_tops data matches found for"
+                        f" resource '{rid}'."
+                    ),
+                    "name": "states",
+                    "changes": {},
+                    "__run_num__": 0,
+                }
+            }
+
         file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks_or_errors,
             _merge_extra_filerefs(
@@ -436,16 +454,28 @@ def _exec_state_pkg(opts, trans_tar, test):
         except OSError:
             pass
 
-    # parse_ret returns data["local"] = {"jid": ..., "return": {states}, "retcode": N}
-    # The minion dispatcher expects the state dict directly (not the envelope).
-    envelope = salt.client.ssh.wrapper.parse_ret(stdout, stderr, retcode)
+    # parse_ret raises SSHCommandExecutionError on any non-zero retcode, even
+    # when the remote ran states and produced a valid result dict (e.g. some
+    # states failed → retcode 2).  Catch that case and surface the result dict
+    # normally so operators see the full state tree rather than raw JSON.
+    try:
+        envelope = salt.client.ssh.wrapper.parse_ret(stdout, stderr, retcode)
+    except salt.client.ssh.wrapper.SSHCommandExecutionError as exc:
+        local = (exc.parsed or {}).get("local", {})
+        if isinstance(local.get("return"), dict):
+            ret = local["return"]
+            __context__["retcode"] = local.get(  # pylint: disable=undefined-variable
+                "retcode", salt.defaults.exitcodes.EX_STATE_FAILURE
+            )
+            return ret
+        raise
+
     if isinstance(envelope, dict) and "return" in envelope:
         ret = envelope["return"]
-        # Propagate non-zero retcode into context so caller can signal failure.
         remote_retcode = envelope.get("retcode", 0)
         if remote_retcode:
-            __context__["retcode"] = (
-                remote_retcode  # pylint: disable=undefined-variable
+            __context__["retcode"] = (  # pylint: disable=undefined-variable
+                remote_retcode
             )
         return ret
     return envelope

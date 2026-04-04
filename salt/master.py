@@ -1654,20 +1654,21 @@ class AESFuncs(TransportMethods):
 
     def _register_resources(self, load):
         """
-        Store the resource list for a minion in the ``minion_resources`` cache
-        bank.  Called by the minion on startup via ``cmd: "_register_resources"``
+        Update the flat resource index for a minion and persist it to the
+        cache.  Called by the minion on startup via ``cmd: "_register_resources"``
         so that the master knows which resource IDs each minion manages.
 
-        This allows :meth:`salt.utils.minions.CkMinions._augment_with_resources`
-        to include resource IDs when expanding glob / non-compound targets, making
-        ``salt '*' test.ping`` return results for both the minion and its resources.
+        Uses :func:`salt.utils.minions._update_resource_index` which atomically
+        updates both the in-process index (so this worker sees the change
+        immediately) and the single flat ``resource_index`` cache file (so
+        other workers pick it up within their TTL window).
         """
         load = self.__verify_load(load, ("id", "resources"))
         if load is False:
             return {}
         if self.opts.get("minion_data_cache", True):
-            self.masterapi.cache.store(
-                "minion_resources", load["id"], load["resources"]
+            salt.utils.minions._update_resource_index(
+                self.masterapi.cache, load["id"], load["resources"]
             )
             log.debug(
                 "Registered resources for minion '%s': %s",
@@ -2366,7 +2367,10 @@ class ClearFuncs(TransportMethods):
         delimiter = extra.get("delimiter", DEFAULT_TARGET_DELIM)
 
         _res = self.ckminions.check_minions(
-            clear_load["tgt"], clear_load.get("tgt_type", "glob"), delimiter
+            clear_load["tgt"],
+            clear_load.get("tgt_type", "glob"),
+            delimiter,
+            fun=clear_load.get("fun"),
         )
         minions = _res.get("minions", list())
         missing = _res.get("missing", list())
