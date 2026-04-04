@@ -900,12 +900,14 @@ class AsyncReqMessageClient:
         self.socket = None
         self._closing = False
         self._queue = tornado.queues.Queue()
+        self._connect_lock = threading.Lock()
 
     def connect(self):
-        if hasattr(self, "socket") and self.socket:
-            return
-        # wire up sockets
-        self._init_socket()
+        with self._connect_lock:
+            if hasattr(self, "socket") and self.socket:
+                return
+            # wire up sockets
+            self._init_socket()
 
     def close(self):
         if self._closing:
@@ -1654,6 +1656,11 @@ class RequestClient(salt.transport.base.RequestClient):
                 log.trace("Received send/recv shutdown sentinal")
                 send_recv_running = False
                 break
+
+            if future.done():
+                log.trace("Pulled a future that is already done from queue. Skipping.")
+                continue
+
             try:
                 await socket.send(message)
             except asyncio.CancelledError as exc:
@@ -1772,8 +1779,10 @@ class RequestClient(salt.transport.base.RequestClient):
             elif received:
                 try:
                     data = salt.payload.loads(recv)
-                    future.set_result(data)
+                    if not future.done():
+                        future.set_result(data)
                 except Exception as exc:  # pylint: disable=broad-except
                     log.error("Failed to deserialize response: %s", exc)
-                    future.set_exception(exc)
+                    if not future.done():
+                        future.set_exception(exc)
         log.trace("Send and receive coroutine ending %s", socket)
