@@ -26,6 +26,7 @@ runner modules
     net
     network
     pillar
+    pki
     queue
     reactor
     salt
