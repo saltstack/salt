@@ -16,7 +16,7 @@ class PkiIndex:
         self.opts = opts
         self.enabled = opts.get("pki_index_enabled", False)
         size = opts.get("pki_index_size", 1000000)
-        slot_size = opts.get("pki_index_slot_size", 64)
+        slot_size = opts.get("pki_index_slot_size", 128)
         index_path = os.path.join(opts.get("pki_dir", ""), ".pki_index.mmap")
         self._cache = salt.utils.mmap_cache.MmapCache(
             index_path, size=size, slot_size=slot_size

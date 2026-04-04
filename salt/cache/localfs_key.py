@@ -97,8 +97,10 @@ def _get_index(opts):
         if pki_dir:
             # Index lives alongside the pki directories
             index_path = os.path.join(pki_dir, ".pki_index.mmap")
+            size = opts.get("pki_index_size", 1000000)
+            slot_size = opts.get("pki_index_slot_size", 128)
             _index = salt.utils.mmap_cache.MmapCache(
-                path=index_path, size=1000000, slot_size=64
+                path=index_path, size=size, slot_size=slot_size
             )
     return _index
 
