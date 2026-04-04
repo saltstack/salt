@@ -477,7 +477,7 @@ def list_(bank, cachedir, **kwargs):
     return ret
 
 
-def list_all(bank, cachedir, include_data=False, **kwargs):
+def list_all(bank, cachedir=None, include_data=False, **kwargs):
     """
     Return all entries with their data from the specified bank.
     This is much faster than calling list() + fetch() for each item.
