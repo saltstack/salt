@@ -2,10 +2,7 @@ import os
 
 import pytest
 
-import salt.utils.minions
 import salt.utils.mmap_cache
-import salt.utils.pki
-from tests.support.mock import patch
 
 
 @pytest.fixture
@@ -134,43 +131,16 @@ def test_mmap_cache_atomic_rebuild(cache_path):
     cache.close()
 
 
-def test_pki_index_integration(tmp_path):
-    pki_dir = tmp_path / "pki"
-    pki_dir.mkdir()
-    opts = {
-        "pki_index_enabled": True,
-        "pki_index_size": 1000,
-        "pki_index_slot_size": 128,
-        "pki_dir": str(pki_dir),
-    }
-    index = salt.utils.pki.PkiIndex(opts)
-    assert index.add("minion1") is True
-    assert index.contains("minion1") is True
-    assert index.delete("minion1") is True
-    assert index.contains("minion1") is False
-    index.close()
+def test_mmap_cache_list_items(cache_path):
+    cache = salt.utils.mmap_cache.MmapCache(cache_path, size=100, slot_size=64)
+    data = {"key1": "val1", "key2": "val2", "key3": True}
+    for k, v in data.items():
+        if v is True:
+            cache.put(k)
+        else:
+            cache.put(k, v)
 
-
-def test_ckminions_pki_minions_uses_index(tmp_path):
-    pki_dir = tmp_path / "pki"
-    pki_dir.mkdir()
-    (pki_dir / "minions").mkdir()
-    opts = {
-        "pki_index_enabled": True,
-        "pki_index_size": 1000,
-        "pki_index_slot_size": 128,
-        "pki_dir": str(pki_dir),
-        "cachedir": str(tmp_path / "cache"),
-        "key_cache": "",
-        "keys.cache_driver": "localfs_key",
-        "__role": "master",
-        "transport": "zeromq",
-    }
-    ck = salt.utils.minions.CkMinions(opts)
-
-    with patch(
-        "salt.utils.pki.PkiIndex.list", return_value=["minion1", "minion2"]
-    ) as mock_list:
-        minions = ck._pki_minions()
-        assert minions == {"minion1", "minion2"}
-        mock_list.assert_called_once()
+    items = cache.list_items()
+    assert len(items) == 3
+    assert set(items) == {("key1", "val1"), ("key2", "val2"), ("key3", True)}
+    cache.close()

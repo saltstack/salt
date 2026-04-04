@@ -570,9 +570,10 @@ class Key:
                         ret.setdefault(keydir, []).append(key)
         return ret
 
-    def list_keys(self):
+    def list_keys(self, force_scan=False):
         """
-        Return a dict of managed keys and what the key status are
+        Return a dict of managed keys and what the key status are.
+        The cache layer (localfs_key) uses an internal index for fast O(1) lookups.
         """
         if self.opts.get("key_cache") == "sched":
             acc = "accepted"
@@ -583,24 +584,73 @@ class Key:
                 with salt.utils.files.fopen(cache_file, mode="rb") as fn_:
                     return salt.payload.load(fn_)
 
+        # Use cache layer's optimized bulk fetch
+        if not force_scan and self.opts.get("pki_index_enabled", False):
+            import salt.utils.pki
+
+            index = salt.utils.pki.PkiIndex(self.opts)
+            items = index.list_items()
+            ret = {
+                "minions_pre": [],
+                "minions_rejected": [],
+                "minions": [],
+                "minions_denied": [],
+            }
+            for id_, state in items:
+                if state == "accepted":
+                    ret["minions"].append(id_)
+                elif state == "pending":
+                    ret["minions_pre"].append(id_)
+                elif state == "rejected":
+                    ret["minions_rejected"].append(id_)
+
+            # Sort for consistent CLI output
+            for key in ret:
+                ret[key] = salt.utils.data.sorted_ignorecase(ret[key])
+
+            # Denied keys are not in the index currently
+            ret["minions_denied"] = salt.utils.data.sorted_ignorecase(
+                self.cache.list("denied_keys")
+            )
+            return ret
+
         ret = {
             "minions_pre": [],
             "minions_rejected": [],
             "minions": [],
             "minions_denied": [],
         }
-        for id_ in salt.utils.data.sorted_ignorecase(self.cache.list("keys")):
-            key = self.cache.fetch("keys", id_)
 
-            if key["state"] == "accepted":
-                ret["minions"].append(id_)
-            elif key["state"] == "pending":
-                ret["minions_pre"].append(id_)
-            elif key["state"] == "rejected":
-                ret["minions_rejected"].append(id_)
+        # Try to use the optimized list_all() method if available
+        try:
+            all_keys = self.cache.list_all("keys")
+            for minion_id, data in all_keys.items():
+                state = data.get("state")
+                if state == "accepted":
+                    ret["minions"].append(minion_id)
+                elif state == "pending":
+                    ret["minions_pre"].append(minion_id)
+                elif state == "rejected":
+                    ret["minions_rejected"].append(minion_id)
+        except AttributeError:
+            # Fallback for cache backends that don't implement list_all()
+            for id_ in salt.utils.data.sorted_ignorecase(self.cache.list("keys")):
+                key = self.cache.fetch("keys", id_)
+                if key["state"] == "accepted":
+                    ret["minions"].append(id_)
+                elif key["state"] == "pending":
+                    ret["minions_pre"].append(id_)
+                elif key["state"] == "rejected":
+                    ret["minions_rejected"].append(id_)
 
-        for id_ in salt.utils.data.sorted_ignorecase(self.cache.list("denied_keys")):
-            ret["minions_denied"].append(id_)
+        # Sort for consistent output
+        for key in ret:
+            ret[key] = salt.utils.data.sorted_ignorecase(ret[key])
+
+        # Denied keys
+        ret["minions_denied"] = salt.utils.data.sorted_ignorecase(
+            self.cache.list("denied_keys")
+        )
         return ret
 
     def local_keys(self):
@@ -613,19 +663,19 @@ class Key:
                 ret["local"].append(key)
         return ret
 
-    def all_keys(self):
+    def all_keys(self, force_scan=False):
         """
         Merge managed keys with local keys
         """
-        keys = self.list_keys()
+        keys = self.list_keys(force_scan=force_scan)
         keys.update(self.local_keys())
         return keys
 
-    def list_status(self, match):
+    def list_status(self, match, force_scan=False):
         """
         Return a dict of managed keys under a named status
         """
-        ret = self.all_keys()
+        ret = self.all_keys(force_scan=force_scan)
         if match.startswith("acc"):
             return {
                 "minions": salt.utils.data.sorted_ignorecase(ret.get("minions", []))
