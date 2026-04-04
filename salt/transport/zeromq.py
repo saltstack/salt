@@ -1657,12 +1657,14 @@ class RequestClient(salt.transport.base.RequestClient):
             except asyncio.CancelledError as exc:
                 log.trace("Loop closed while sending.")
                 send_recv_running = False
-                future.set_exception(exc)
+                if not future.done():
+                    future.set_exception(exc)
             except zmq.eventloop.future.CancelledError as exc:
                 log.trace("Loop closed while sending.")
                 # The ioloop was closed before polling finished.
                 send_recv_running = False
-                future.set_exception(exc)
+                if not future.done():
+                    future.set_exception(exc)
             except zmq.ZMQError as exc:
                 if exc.errno in [
                     zmq.ENOTSOCK,
@@ -1671,14 +1673,17 @@ class RequestClient(salt.transport.base.RequestClient):
                 ]:
                     log.trace("Send socket closed while sending.")
                     send_recv_running = False
-                    future.set_exception(exc)
+                    if not future.done():
+                        future.set_exception(exc)
                 elif exc.errno == zmq.EFSM:
                     log.error("Socket was found in invalid state.")
                     send_recv_running = False
-                    future.set_exception(exc)
+                    if not future.done():
+                        future.set_exception(exc)
                 else:
                     log.error("Unhandled Zeromq error durring send/receive: %s", exc)
-                    future.set_exception(exc)
+                    if not future.done():
+                        future.set_exception(exc)
 
             if future.done():
                 if isinstance(future.exception(), asyncio.CancelledError):
@@ -1704,15 +1709,18 @@ class RequestClient(salt.transport.base.RequestClient):
                 except asyncio.CancelledError as exc:
                     log.trace("Loop closed while polling receive socket.")
                     send_recv_running = False
-                    future.set_exception(exc)
+                    if not future.done():
+                        future.set_exception(exc)
                 except zmq.eventloop.future.CancelledError as exc:
                     log.trace("Loop closed while polling receive socket.")
                     send_recv_running = False
-                    future.set_exception(exc)
+                    if not future.done():
+                        future.set_exception(exc)
                 except zmq.ZMQError as exc:
                     log.trace("Receive socket closed while polling.")
                     send_recv_running = False
-                    future.set_exception(exc)
+                    if not future.done():
+                        future.set_exception(exc)
 
                 if ready:
                     try:
@@ -1721,15 +1729,18 @@ class RequestClient(salt.transport.base.RequestClient):
                     except asyncio.CancelledError as exc:
                         log.trace("Loop closed while receiving.")
                         send_recv_running = False
-                        future.set_exception(exc)
+                        if not future.done():
+                            future.set_exception(exc)
                     except zmq.eventloop.future.CancelledError as exc:
                         log.trace("Loop closed while receiving.")
                         send_recv_running = False
-                        future.set_exception(exc)
+                        if not future.done():
+                            future.set_exception(exc)
                     except zmq.ZMQError as exc:
                         log.trace("Receive socket closed while receiving.")
                         send_recv_running = False
-                        future.set_exception(exc)
+                        if not future.done():
+                            future.set_exception(exc)
                     break
                 elif future.done():
                     break
