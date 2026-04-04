@@ -1539,7 +1539,7 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
     if "not_before" in kwargs:
         try:
             time = datetime.datetime.strptime(kwargs["not_before"], fmt)
-        except:
+        except BaseException:
             raise salt.exceptions.SaltInvocationError(
                 "not_before: {} is not in required format {}".format(
                     kwargs["not_before"], fmt
@@ -1557,7 +1557,7 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
     if "not_after" in kwargs:
         try:
             time = datetime.datetime.strptime(kwargs["not_after"], fmt)
-        except:
+        except BaseException:
             raise salt.exceptions.SaltInvocationError(
                 "not_after: {} is not in required format {}".format(
                     kwargs["not_after"], fmt
