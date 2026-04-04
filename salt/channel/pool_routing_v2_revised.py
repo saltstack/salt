@@ -83,7 +83,6 @@ class PoolRoutingChannelV2Revised:
 
                 # Each pool gets its own IPC socket
                 pool_opts["workers_ipc_name"] = f"workers-{pool_name}.ipc"
-                
 
             # Create RequestServer for this pool using transport factory
             pool_server = salt.transport.request_server(pool_opts)
@@ -114,8 +113,8 @@ class PoolRoutingChannelV2Revised:
         self.default_pool = None
 
         for pool_name, config in self.worker_pools.items():
-            for cmd in config.get('commands', []):
-                if cmd == '*':
+            for cmd in config.get("commands", []):
+                if cmd == "*":
                     self.default_pool = pool_name
                 else:
                     self.command_to_pool[cmd] = pool_name
@@ -133,7 +132,7 @@ class PoolRoutingChannelV2Revised:
             else:
                 # IPC socket: connect to pool's socket
                 pool_opts["workers_ipc_name"] = f"workers-{pool_name}.ipc"
-                
+
                 sock_dir = pool_opts.get("sock_dir", "/tmp/salt")
 
             # Create RequestClient that connects to pool's IPC RequestServer
@@ -184,7 +183,13 @@ class PoolRoutingChannelV2Revised:
         """
         try:
             # Determine which pool
-            cmd = payload.get("load", {}).get("cmd", "unknown")
+            load = payload.get("load", {})
+            if isinstance(load, dict):
+                cmd = load.get("cmd", "unknown")
+            else:
+                # Encrypted payload (bytes), can't extract command
+                cmd = "unknown"
+
             pool_name = self.command_to_pool.get(cmd, self.default_pool)
 
             if not pool_name:
