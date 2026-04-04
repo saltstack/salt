@@ -378,6 +378,23 @@ def test_check_minions_merge_fun_all_merge_funs_skip(ck_with_resources):
         assert "dummy-01" not in result["minions"], f"augmented for {fun}"
 
 
+def test_check_minions_list_fun_still_augments(ck_with_resources):
+    """
+    A multifunction job passes fun as a list.  A list is not hashable and must
+    not cause a TypeError — augmentation must proceed normally.
+    """
+    with patch.object(
+        ck_with_resources,
+        "_check_glob_minions",
+        return_value={"minions": ["minion"], "missing": []},
+    ):
+        result = ck_with_resources.check_minions(
+            "*", tgt_type="glob", fun=["test.arg", "test.arg"]
+        )
+    assert "dummy-01" in result["minions"]
+    assert "minion" in result["minions"]
+
+
 def test_check_minions_non_merge_fun_still_augments(ck_with_resources):
     """
     A non-merge function such as test.ping with a wildcard glob must still

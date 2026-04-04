@@ -1001,7 +1001,7 @@ class CkMinions:
                 tgt_type == "glob"
                 and isinstance(expr, str)
                 and any(c in expr for c in ("*", "?", "["))
-                and fun not in _MERGE_RESOURCE_FUNS
+                and not (isinstance(fun, str) and fun in _MERGE_RESOURCE_FUNS)
             ):
                 _res["minions"] = self._augment_with_resources(_res["minions"])
             _res["ssh_minions"] = False
