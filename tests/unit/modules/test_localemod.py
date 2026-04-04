@@ -511,6 +511,69 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
             exc_info.value
         )
 
+    @patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/update-locale"))
+    @patch(
+        "salt.modules.localemod.__grains__",
+        {"os": "Debian", "os_family": "Debian", "osmajorrelease": 13},
+    )
+    @patch("salt.modules.localemod.dbus", None)
+    @patch("salt.modules.localemod.__salt__", MagicMock())
+    @patch("salt.modules.localemod._localectl_set", MagicMock())
+    @patch("salt.utils.systemd.booted", MagicMock(return_value=True))
+    def test_set_locale_with_systemd_debian13(self):
+        """
+        Test that set_locale on Debian 13+ with systemd uses update-locale
+        instead of localectl, since localectl set-locale is no longer supported
+        on Debian 13 (Trixie) and later.
+        :return:
+        """
+        loc = "de_DE.utf8"
+        localemod.set_locale(loc)
+        assert not localemod._localectl_set.called
+        assert localemod.__salt__["cmd.run"].called
+        assert (
+            localemod.__salt__["file.replace"].call_args[0][0] == "/etc/default/locale"
+        )
+        assert localemod.__salt__["file.replace"].call_args[0][1] == "^LANG=.*"
+        assert localemod.__salt__["file.replace"].call_args[0][2] == f'LANG="{loc}"'
+
+    @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/localectl"))
+    @patch(
+        "salt.modules.localemod.__grains__",
+        {"os": "Debian", "os_family": "Debian", "osmajorrelease": 12},
+    )
+    @patch("salt.modules.localemod.dbus", None)
+    @patch("salt.modules.localemod._localectl_set", MagicMock())
+    @patch("salt.utils.systemd.booted", MagicMock(return_value=True))
+    def test_set_locale_with_systemd_debian12(self):
+        """
+        Test that set_locale on Debian 12 with systemd still uses localectl.
+        :return:
+        """
+        loc = "de_DE.utf8"
+        localemod.set_locale(loc)
+        assert localemod._localectl_set.called
+        assert localemod._localectl_set.call_args[0][0] == loc
+
+    @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/localectl"))
+    @patch(
+        "salt.modules.localemod.__grains__",
+        {"os": "Ubuntu", "os_family": "Debian", "osmajorrelease": 22},
+    )
+    @patch("salt.modules.localemod.dbus", None)
+    @patch("salt.modules.localemod._localectl_set", MagicMock())
+    @patch("salt.utils.systemd.booted", MagicMock(return_value=True))
+    def test_set_locale_with_systemd_ubuntu22(self):
+        """
+        Test that set_locale on Ubuntu 22 with systemd still uses localectl
+        (the Debian 13+ workaround must not affect Ubuntu).
+        :return:
+        """
+        loc = "de_DE.utf8"
+        localemod.set_locale(loc)
+        assert localemod._localectl_set.called
+        assert localemod._localectl_set.call_args[0][0] == loc
+
     @patch("salt.utils.path.which", MagicMock(return_value=None))
     @patch(
         "salt.modules.localemod.__grains__",
