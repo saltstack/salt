@@ -57,7 +57,13 @@ def run_common_cache_tests(subtests, cache):
             assert actual_thing is new_thing
         else:
             assert actual_thing is not new_thing
-        assert actual_thing == new_thing
+
+        try:
+            assert actual_thing == new_thing
+        except AssertionError:
+            # json storage disallows int object keys, which some storages use
+            new_thing["42"] = new_thing.pop(42)
+            assert actual_thing == new_thing
 
     with subtests.test("contains returns true if key in bank"):
         assert cache.contains(bank=bank, key=good_key)
@@ -125,13 +131,14 @@ def run_common_cache_tests(subtests, cache):
         assert timestamp is None
 
     with subtests.test("Updated for key should return a reasonable time"):
-        before_storage = int(time.time())
+        before_storage = time.time()
         cache.store(bank="fnord", key="updated test part 2", data="fnord")
-        after_storage = int(time.time())
+        after_storage = time.time()
 
         timestamp = cache.updated(bank="fnord", key="updated test part 2")
 
-        assert before_storage <= timestamp <= after_storage
+        # the -1/+1 because mysql timestamps are janky
+        assert before_storage - 1 <= timestamp <= after_storage + 1
 
     with subtests.test(
         "If the module raises SaltCacheError then it should make it out of updated"

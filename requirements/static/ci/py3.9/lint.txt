@@ -233,6 +233,10 @@ google-auth==2.35.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
+greenlet==3.2.5
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   sqlalchemy
 h11==0.14.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -737,6 +741,10 @@ sniffio==1.3.0
     #   anyio
     #   httpcore
     #   httpx
+sqlalchemy==2.0.48
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   -r requirements/static/ci/common.in
 sqlparse==0.5.5
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -808,6 +816,7 @@ typing-extensions==4.15.0
     #   napalm
     #   pylint
     #   pyopenssl
+    #   sqlalchemy
     #   virtualenv
 urllib3==1.26.20
     # via
