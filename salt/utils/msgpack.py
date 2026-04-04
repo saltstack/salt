@@ -35,9 +35,13 @@ elif msgpack:
     exceptions = msgpack.exceptions
 
 # One-to-one mappings
-Packer = msgpack.Packer
-ExtType = msgpack.ExtType
-version = (0, 0, 0) if not msgpack else msgpack.version
+Packer = None
+ExtType = None
+version = (0, 0, 0)
+if msgpack:
+    Packer = msgpack.Packer
+    ExtType = msgpack.ExtType
+    version = msgpack.version
 
 
 def _sanitize_msgpack_kwargs(kwargs):
@@ -59,20 +63,34 @@ def _sanitize_msgpack_unpack_kwargs(kwargs):
     https://github.com/msgpack/msgpack-python/blob/master/ChangeLog.rst
     """
     assert isinstance(kwargs, dict)
-    kwargs.setdefault("raw", True)
-    kwargs.setdefault("strict_map_key", False)
+    if salt.utils.versions.reqs.msgpack:
+        if salt.utils.versions.reqs.msgpack > (0, 5, 2):
+            kwargs.setdefault("raw", True)
+            kwargs.setdefault("strict_map_key", False)
     return _sanitize_msgpack_kwargs(kwargs)
 
 
-class Unpacker(msgpack.Unpacker):
-    """
-    Wraps the msgpack.Unpacker and removes non-relevant arguments
-    """
+if msgpack:
 
-    def __init__(self, *args, **kwargs):
-        msgpack.Unpacker.__init__(
-            self, *args, **_sanitize_msgpack_unpack_kwargs(kwargs)
-        )
+    class Unpacker(msgpack.Unpacker):
+        """
+        Wraps the msgpack.Unpacker and removes non-relevant arguments
+        """
+
+        def __init__(self, *args, **kwargs):
+            msgpack.Unpacker.__init__(
+                self, *args, **_sanitize_msgpack_unpack_kwargs(kwargs)
+            )
+
+else:
+
+    class Unpacker:
+        """
+        Stub for msgpack.Unpacker
+        """
+
+        def __init__(self, *args, **kwargs):
+            raise RuntimeError("msgpack is not available")
 
 
 def pack(o, stream, **kwargs):
@@ -85,6 +103,8 @@ def pack(o, stream, **kwargs):
     By default, this function uses the msgpack module and falls back to
     msgpack_pure, if the msgpack is not available.
     """
+    if not msgpack:
+        raise RuntimeError("msgpack is not available")
     # Writes to a stream, there is no return
     msgpack.pack(o, stream, **_sanitize_msgpack_kwargs(kwargs))
 
@@ -99,6 +119,8 @@ def packb(o, **kwargs):
     By default, this function uses the msgpack module and falls back to
     msgpack_pure, if the msgpack is not available.
     """
+    if not msgpack:
+        raise RuntimeError("msgpack is not available")
     return msgpack.packb(o, **_sanitize_msgpack_kwargs(kwargs))
 
 
@@ -111,6 +133,8 @@ def unpack(stream, **kwargs):
     By default, this function uses the msgpack module and falls back to
     msgpack_pure, if the msgpack is not available.
     """
+    if not msgpack:
+        raise RuntimeError("msgpack is not available")
     return msgpack.unpack(stream, **_sanitize_msgpack_unpack_kwargs(kwargs))
 
 
@@ -123,6 +147,8 @@ def unpackb(packed, **kwargs):
     By default, this function uses the msgpack module and falls back to
     msgpack_pure.
     """
+    if not msgpack:
+        raise RuntimeError("msgpack is not available")
     return msgpack.unpackb(packed, **_sanitize_msgpack_unpack_kwargs(kwargs))
 
 
