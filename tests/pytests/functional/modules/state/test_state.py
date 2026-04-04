@@ -1227,11 +1227,8 @@ def test_state_requires_missing(state, state_tree):
         ret = state.sls("req_any_missing")
         # Ensure we got something back
         assert ret
-        # If it returns a list of errors (compile failure)
-        if isinstance(ret, list):
-            assert any("Referenced state does not exist" in err for err in ret)
-        else:
-            # If it returns results with errors in comments (runtime discovery)
+        # If it returns results with errors in comments (runtime discovery)
+        if isinstance(ret, dict):
             state_id = 'cmd_|-changing_state_|-echo "Changed!"_|-run'
             assert state_id in ret
             assert ret[state_id]["result"] is True
@@ -1241,4 +1238,10 @@ def test_state_requires_missing(state, state_tree):
             assert "The following requisites were not found" in ret[tag]["comment"]
             assert "onchanges_any" in ret[tag]["comment"]
             assert "onchanges" in ret[tag]["comment"]
+        else:
+            # If it returns a list of errors or MultiStateResult (compile failure)
+            err_str = str(ret)
+            assert "Referenced state does not exist" in err_str
+            assert "onchanges" in err_str
+            # Note: onchanges_any might be there too if it reached it
 
