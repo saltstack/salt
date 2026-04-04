@@ -1485,14 +1485,16 @@ class RequestClient(salt.transport.base.RequestClient):
         self._closing = False
         self.socket = None
         self._queue = asyncio.Queue()
+        self._connect_lock = asyncio.Lock()
 
     async def connect(self):  # pylint: disable=invalid-overridden-method
-        if self.socket is None:
-            self._connect_called = True
-            self._closing = False
-            # wire up sockets
-            self._queue = asyncio.Queue()
-            self._init_socket()
+        async with self._connect_lock:
+            if self.socket is None:
+                self._connect_called = True
+                self._closing = False
+                # wire up sockets
+                self._queue = asyncio.Queue()
+                self._init_socket()
 
     def _init_socket(self):
         if self.socket is not None:

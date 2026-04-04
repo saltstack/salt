@@ -122,12 +122,8 @@ class TestRequestServerIntegration:
         assert (
             "process_manager" in sig.parameters
         ), "pre_fork should have process_manager parameter"
-        assert (
-            "args" in sig.parameters
-        ), "pre_fork should have *args parameter"
-        assert (
-            "kwargs" in sig.parameters
-        ), "pre_fork should have **kwargs parameter"
+        assert "args" in sig.parameters, "pre_fork should have *args parameter"
+        assert "kwargs" in sig.parameters, "pre_fork should have **kwargs parameter"
 
     def test_request_server_has_zmq_device_pooled_method(self):
         """
