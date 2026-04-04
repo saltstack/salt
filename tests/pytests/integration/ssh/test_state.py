@@ -122,10 +122,9 @@ def test_state_show_top(salt_ssh_cli, base_env_state_tree_root_dir):
         ret = None
         for _ in range(3):
             ret = salt_ssh_cli.run("state.show_top")
-            if (
-                ret.returncode == 0
-                and ret.data == {"base": ["core", "master_tops_test"]}
-            ):
+            if ret.returncode == 0 and ret.data == {
+                "base": ["core", "master_tops_test"]
+            }:
                 break
             time.sleep(2)
         assert ret.returncode == 0
