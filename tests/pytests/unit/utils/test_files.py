@@ -336,9 +336,9 @@ def test_copyfile_preserves_perms_before_move(tmp_path):
     source = str(tmp_path / "source")
     dest = str(tmp_path / "dest")
 
-    with open(source, "w") as f:
+    with salt.utils.files.fopen(source, "w") as f:
         f.write("new content")
-    with open(dest, "w") as f:
+    with salt.utils.files.fopen(dest, "w") as f:
         f.write("old content")
     os.chmod(dest, 0o644)
 
@@ -350,7 +350,7 @@ def test_copyfile_preserves_perms_before_move(tmp_path):
 
     dest_mode_after = stat_mod.S_IMODE(os.stat(dest).st_mode)
     assert dest_mode_after == dest_mode_before
-    with open(dest) as f:
+    with salt.utils.files.fopen(dest) as f:
         assert f.read() == "new content"
 
 
@@ -367,9 +367,9 @@ def test_copyfile_perms_applied_before_move(tmp_path):
     source = str(tmp_path / "source")
     dest = str(tmp_path / "dest")
 
-    with open(source, "w") as f:
+    with salt.utils.files.fopen(source, "w") as f:
         f.write("new content")
-    with open(dest, "w") as f:
+    with salt.utils.files.fopen(dest, "w") as f:
         f.write("old content")
     os.chmod(dest, 0o644)
 
@@ -405,9 +405,9 @@ def test_copyfile_perms_applied_before_move(tmp_path):
             return fake_stat
         return result
 
-    with patch("salt.utils.files.shutil.move", side_effect=capturing_move), \
-         patch("salt.utils.files.os.chown", side_effect=capturing_chown), \
-         patch("salt.utils.files.os.stat", side_effect=patched_stat):
+    with patch("salt.utils.files.shutil.move", side_effect=capturing_move), patch(
+        "salt.utils.files.os.chown", side_effect=capturing_chown
+    ), patch("salt.utils.files.os.stat", side_effect=patched_stat):
         salt.utils.files.copyfile(source, dest)
 
     assert move_called, "shutil.move was not called"
@@ -426,10 +426,10 @@ def test_copyfile_new_file(tmp_path):
     source = str(tmp_path / "source")
     dest = str(tmp_path / "dest")
 
-    with open(source, "w") as f:
+    with salt.utils.files.fopen(source, "w") as f:
         f.write("content")
 
     salt.utils.files.copyfile(source, dest)
 
-    with open(dest) as f:
+    with salt.utils.files.fopen(dest) as f:
         assert f.read() == "content"
