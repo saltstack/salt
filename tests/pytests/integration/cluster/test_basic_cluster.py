@@ -26,22 +26,22 @@ def test_basic_cluster_setup(
     ret.data.sort()
     assert ["127.0.0.1", "127.0.0.3"] == ret.data
 
-    # Check for shared keys. Note: The third master 127.0.0.3 was never
+    # Check for shared keys. Note: The third master cluster-master-3 was never
     # started.
     peers_path = cluster_pki_path / "peers"
     unexpected = False
     found = []
     for key_path in peers_path.iterdir():
-        if key_path.name == "127.0.0.1.pub":
-            found.append("127.0.0.1")
-        elif key_path.name == "127.0.0.2.pub":
-            found.append("127.0.0.2")
+        if key_path.name == "cluster-master-1.pub":
+            found.append("cluster-master-1")
+        elif key_path.name == "cluster-master-2.pub":
+            found.append("cluster-master-2")
         else:
             unexpected = True
 
     found.sort()
 
-    assert ["127.0.0.1", "127.0.0.2"] == found
+    assert ["cluster-master-1", "cluster-master-2"] == found
     assert unexpected is False
 
     assert (cluster_pki_path / ".aes").exists()

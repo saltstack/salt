@@ -1097,7 +1097,8 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
                     args=(self.opts, self.master_key, self.key, req_channels),
                     name=name,
                 )
-        self.process_manager.run()
+        import asyncio
+        asyncio.run(self.process_manager.run())
 
     def run(self):
         """
