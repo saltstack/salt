@@ -9,6 +9,7 @@ import os
 import subprocess
 import time
 
+import salt.utils.path
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -68,7 +69,7 @@ def split_username(username):
     return str(user_name), str(domain)
 
 
-def create_env(user_token, inherit, timeout=1):
+def create_env(username, user_token, inherit=False, timeout=1):
     """
     CreateEnvironmentBlock might fail when we close a login session and then
     try to re-open one very quickly. Run the method multiple times to work
@@ -77,15 +78,30 @@ def create_env(user_token, inherit, timeout=1):
     start = time.time()
     env = None
     exc = None
-    while True:
-        try:
-            env = win32profile.CreateEnvironmentBlock(user_token, False)
-        except pywintypes.error as exc:
-            pass
-        else:
-            break
-        if time.time() - start > timeout:
-            break
+    profile_info_dict = {"UserName": username}
+    try:
+        profile_handle = win32profile.LoadUserProfile(user_token, profile_info_dict)
+        while True:
+            try:
+                env = win32profile.CreateEnvironmentBlock(user_token, inherit)
+                if env is not None:
+                    break
+            except pywintypes.error as exc:
+                pass
+            else:
+                break
+            if time.time() - start > timeout:
+                break
+    except (win32api.error, pywintypes.error) as e:
+        msg = f"Failed to load user profile: {e}"
+        raise CommandExecutionError(msg)
+
+    try:
+        win32profile.UnloadUserProfile(user_token, profile_handle)
+    except (win32api.error, pywintypes.error) as e:
+        msg = f"Failed to unload user profile: {e}"
+        raise CommandExecutionError(msg)
+
     if env is not None:
         return env
     if exc is not None:
@@ -95,8 +111,8 @@ def create_env(user_token, inherit, timeout=1):
 def runas(cmd, username, password=None, cwd=None):
     """
     Run a command as another user. If the process is running as an admin or
-    system account this method does not require a password. Other non
-    privileged accounts need to provide a password for the user to runas.
+    system account, this method does not require a password. Other
+    non-privileged accounts need to provide a password for the user to "runas".
     Commands are run in with the highest level privileges possible for the
     account provided.
     """
@@ -115,10 +131,12 @@ def runas(cmd, username, password=None, cwd=None):
     # Elevate the token from the current process
     access = win32security.TOKEN_QUERY | win32security.TOKEN_ADJUST_PRIVILEGES
     th = win32security.OpenProcessToken(win32api.GetCurrentProcess(), access)
+    import salt.platform.win
+
     salt.platform.win.elevate_token(th)
 
     # Try to impersonate the SYSTEM user. This process needs to be running as a
-    # user who as been granted the SeImpersonatePrivilege, Administrator
+    # user who has been granted the SeImpersonatePrivilege, Administrator
     # accounts have this permission by default.
     try:
         impersonation_token = salt.platform.win.impersonate_sid(
@@ -211,7 +229,14 @@ def runas(cmd, username, password=None, cwd=None):
     )
 
     # Create the environment for the user
-    env = create_env(user_token, False)
+    env = create_env(username, user_token, inherit=False)
+    application_name = None
+    # TODO: Maybe it has something to do with applicationname
+    # application_name = salt.utils.path.which("cmd.exe")
+    # application_name = cmd
+    # import salt.utils.args
+    # if salt.utils.args.shlex_split(cmd)[0].endswith((".bat", "cmd", "cmd.exe")):
+    #     application_name = salt.utils.path.which("cmd.exe")
 
     hProcess = None
     try:
@@ -219,7 +244,7 @@ def runas(cmd, username, password=None, cwd=None):
         process_info = salt.platform.win.CreateProcessWithTokenW(
             int(user_token),
             logonflags=1,
-            applicationname=None,
+            applicationname=application_name,
             commandline=cmd,
             currentdirectory=cwd,
             creationflags=creationflags,
@@ -232,7 +257,7 @@ def runas(cmd, username, password=None, cwd=None):
         dwProcessId = process_info.dwProcessId
         dwThreadId = process_info.dwThreadId
 
-        # We don't use these so let's close the handle
+        # We don't use these, so let's close the handle
         salt.platform.win.kernel32.CloseHandle(stdin_write.handle)
         salt.platform.win.kernel32.CloseHandle(stdout_write.handle)
         salt.platform.win.kernel32.CloseHandle(stderr_write.handle)
