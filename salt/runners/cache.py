@@ -9,7 +9,6 @@ import os
 import salt.cache
 import salt.config
 import salt.fileserver.gitfs
-import salt.payload
 import salt.pillar.git_pillar
 import salt.runners.winrepo
 import salt.utils.args
@@ -466,3 +465,58 @@ def flush(bank, key=None, cachedir=None):
     except TypeError:
         cache = salt.cache.Cache(__opts__)
     return cache.flush(bank, key)
+
+
+def migrate(target=None, bank=None):
+    """
+    Migrate cache contents from the current configured/running cache to another.
+
+    .. note:: This will NOT migrate ttl values, if set in the source cache.
+
+    target
+      The configured, but not enabled (via cache/master_job_cache/cache_driver config) cache backend
+
+    bank
+      If you only want to migrate a specific bank (instead of all), the name of the bank(s), csv delimited.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-run cache.migrate target=sqlalchemy
+        salt-run cache.migrate target=redis bank=keys,denied_keys,master_keys
+    """
+    # if specific drivers are not set for these, Cache will just fall back to base cache
+    key_cache = salt.cache.Cache(__opts__, driver=__opts__["keys.cache_driver"])
+    token_cache = salt.cache.Cache(
+        __opts__, driver=__opts__["eauth_tokens.cache_driver"]
+    )
+    mdc_cache = salt.cache.Cache(__opts__, driver=__opts__["pillar.cache_driver"])
+    base_cache = salt.cache.Cache(__opts__)
+    dst_cache = salt.cache.Cache(__opts__, driver=target)
+
+    # unfortunately there is no 'list all cache banks' in the cache api
+    banks = {
+        "keys": key_cache,
+        "master_keys": key_cache,
+        "denied_keys": key_cache,
+        "tokens": token_cache,
+        "pillar": mdc_cache,
+        "grains": base_cache,
+        "mine": base_cache,
+    }
+
+    if bank:
+        bank = bank.split(",")
+    else:
+        bank = banks.keys()
+
+    for _bank in bank:
+        cache = banks[_bank]
+        keys = cache.list(_bank)
+        log.info("bank %s: migrating %s keys", _bank, len(keys))
+        for key in keys:
+            value = cache.fetch(_bank, key)
+            dst_cache.store(_bank, key, value)
+
+    return True

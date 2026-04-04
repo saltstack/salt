@@ -162,6 +162,8 @@ gitpython==3.1.46
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
+greenlet==3.3.2
+    # via sqlalchemy
 h11==0.14.0
     # via httpcore
 hglib==2.6.2
@@ -525,6 +527,8 @@ sniffio==1.3.1
     # via
     #   anyio
     #   httpx
+sqlalchemy==2.0.48
+    # via -r requirements/static/ci/common.in
 sqlparse==0.5.5
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
@@ -552,7 +556,9 @@ trustme==1.2.0
 twilio==9.3.4
     # via -r requirements/static/ci/linux.in
 typing-extensions==4.12.2
-    # via pytest-system-statistics
+    # via
+    #   pytest-system-statistics
+    #   sqlalchemy
 urllib3==2.6.3
     # via
     #   -c requirements/static/pkg/py3.13/linux.txt
