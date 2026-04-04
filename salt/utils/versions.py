@@ -561,31 +561,43 @@ class Requirement:
         return self.has_depend
 
     def __eq__(self, other):
+        if not self.has_depend:
+            return False
         other_ver = packaging.version.Version(other)
         dep_ver = packaging.version.Version(self.version)
         return dep_ver == other_ver
 
     def __ne__(self, other):
+        if not self.has_depend:
+            return True
         other_ver = packaging.version.Version(other)
         dep_ver = packaging.version.Version(self.version)
         return dep_ver != other_ver
 
     def __lt__(self, other):
+        if not self.has_depend:
+            return False
         other_ver = packaging.version.Version(other)
         dep_ver = packaging.version.Version(self.version)
         return dep_ver < other_ver
 
     def __le__(self, other):
+        if not self.has_depend:
+            return False
         other_ver = packaging.version.Version(other)
         dep_ver = packaging.version.Version(self.version)
         return dep_ver <= other_ver
 
     def __gt__(self, other):
+        if not self.has_depend:
+            return False
         other_ver = packaging.version.Version(other)
         dep_ver = packaging.version.Version(self.version)
         return dep_ver > other_ver
 
     def __ge__(self, other):
+        if not self.has_depend:
+            return False
         other_ver = packaging.version.Version(other)
         dep_ver = packaging.version.Version(self.version)
         return dep_ver >= other_ver
@@ -631,17 +643,26 @@ class Requirements:
             self.deps_map = DEPS_MAP
         else:
             self.deps_map = deps_map
+        self._cached_reqs = {}
+
+    def clear(self):
+        """
+        Clear the cached requirements.
+        """
+        self._cached_reqs = {}
 
     def __getattr__(self, val):
         if val not in self.deps_map:
             raise RequirementNotRegistered(f"Unknown dependency: {val}")
 
-        module_getter, version_getter = self.deps_map[val]
-        return Requirement(
-            val,
-            module_getter or default_module_getter,
-            version_getter or default_version_getter,
-        )
+        if val not in self._cached_reqs:
+            module_getter, version_getter = self.deps_map[val]
+            self._cached_reqs[val] = Requirement(
+                val,
+                module_getter or default_module_getter,
+                version_getter or default_version_getter,
+            )
+        return self._cached_reqs[val]
 
 
 reqs = Requirements()

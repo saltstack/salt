@@ -510,3 +510,18 @@ def test_depends_not_registered():
     reqs = salt.utils.versions.Requirements()
     with pytest.raises(salt.utils.versions.RequirementNotRegistered):
         reqs.module_not_registered == "0.0.0"  # pylint: disable=pointless-statement
+
+
+def test_dependency_missing_comparisons():
+    def my_module_getter(name):
+        return None
+
+    deps_map = {"missing": salt.utils.versions.Getters(my_module_getter, None)}
+    reqs = salt.utils.versions.Requirements(deps_map)
+    assert bool(reqs.missing) is False
+    assert (reqs.missing == "1.0.0") is False
+    assert (reqs.missing != "1.0.0") is True
+    assert (reqs.missing < "1.0.0") is False
+    assert (reqs.missing <= "1.0.0") is False
+    assert (reqs.missing > "1.0.0") is False
+    assert (reqs.missing >= "1.0.0") is False
