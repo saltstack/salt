@@ -209,21 +209,19 @@ class TestCase(_TestCase):
         del self._prerun_instance_attributes
         return outcome
 
-    def assertDictContainsSubset(self, expected, actual, msg=None):
+    def assertDictContainsSubset(self, subset, dictionary, msg=None):
         """
-        Checks whether all key/value pairs in expected are found in actual.
+        Checks whether all key/value pairs in subset are found in dictionary.
         This method was removed in Python 3.12.
         """
         missing = []
         mismatched = []
-        for key, value in expected.items():
-            if key not in actual:
+        for key, value in subset.items():
+            if key not in dictionary:
                 missing.append(key)
-            elif value != actual[key]:
+            elif value != dictionary[key]:
                 mismatched.append(
-                    "{!r}, expected: {!r}, actual: {!r}".format(
-                        key, value, actual[key]
-                    )
+                    "{!r}, expected: {!r}, actual: {!r}".format(key, value, dictionary[key])
                 )
         if missing or mismatched:
             parts = []
