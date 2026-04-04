@@ -141,11 +141,12 @@ def test_autoscale_single_master_joins_successfully(
         "open_mode": True,
         "transport": autoscale_bootstrap_master.config["transport"],
     }
+    bootstrap_port = autoscale_bootstrap_master.config["tcp_master_pull_port"]
     config_overrides = {
         "interface": "127.0.0.2",
         "id": "joining-master-1",
         "cluster_id": "functional_autoscale_cluster",
-        "cluster_peers": ["127.0.0.1"],  # Bootstrap peer only
+        "cluster_peers": [f"127.0.0.1:{bootstrap_port}"],  # Bootstrap peer only
         "cluster_secret": autoscale_cluster_secret,
         "cluster_pki_dir": autoscale_bootstrap_master.config["cluster_pki_dir"],
         "cache_dir": autoscale_bootstrap_master.config["cache_dir"],
@@ -248,11 +249,12 @@ def test_autoscale_minion_keys_synchronized(
         "open_mode": True,
         "transport": autoscale_bootstrap_master.config["transport"],
     }
+    bootstrap_port = autoscale_bootstrap_master.config["tcp_master_pull_port"]
     config_overrides = {
         "interface": "127.0.0.2",
         "id": "joining-master-sync",
         "cluster_id": "functional_autoscale_cluster",
-        "cluster_peers": ["127.0.0.1"],
+        "cluster_peers": [f"127.0.0.1:{bootstrap_port}"],
         "cluster_secret": autoscale_cluster_secret,
         "cluster_pki_dir": str(cluster_pki_dir),
         "cache_dir": autoscale_bootstrap_master.config["cache_dir"],
@@ -320,11 +322,13 @@ def test_autoscale_multiple_masters_join_sequentially(
         "open_mode": True,
         "transport": autoscale_bootstrap_master.config["transport"],
     }
-    config_1_overrides = {
+    bootstrap_port = autoscale_bootstrap_master.config["tcp_master_pull_port"]
+    config_overrides = {
         "interface": "127.0.0.2",
-        "id": "joining-master-seq-1",
+        "id": "joining-master-1",
         "cluster_id": "functional_autoscale_cluster",
-        "cluster_peers": ["127.0.0.1"],
+        "cluster_peers": [f"127.0.0.1:{bootstrap_port}"],
+
         "cluster_secret": autoscale_cluster_secret,
         "cluster_pki_dir": str(cluster_pki_dir),
         "cache_dir": autoscale_bootstrap_master.config["cache_dir"],
@@ -355,7 +359,7 @@ def test_autoscale_multiple_masters_join_sequentially(
             "interface": "127.0.0.3",
             "id": "joining-master-seq-2",
             "cluster_id": "functional_autoscale_cluster",
-            "cluster_peers": ["127.0.0.1"],  # Can join via bootstrap
+            "cluster_peers": [f"127.0.0.1:{bootstrap_port}"],  # Can join via bootstrap
             "cluster_secret": autoscale_cluster_secret,
             "cluster_pki_dir": str(cluster_pki_dir),
             "cache_dir": autoscale_bootstrap_master.config["cache_dir"],
@@ -434,11 +438,13 @@ def test_autoscale_join_with_cluster_pub_signature(
         "open_mode": True,
         "transport": autoscale_bootstrap_master.config["transport"],
     }
+    bootstrap_port = autoscale_bootstrap_master.config["tcp_master_pull_port"]
     config_overrides = {
         "interface": "127.0.0.2",
-        "id": "joining-master-sig",
+        "id": "joining-master-1",
         "cluster_id": "functional_autoscale_cluster",
-        "cluster_peers": ["127.0.0.1"],
+        "cluster_peers": [f"127.0.0.1:{bootstrap_port}"],
+
         "cluster_secret": autoscale_cluster_secret,
         "cluster_pub_signature": cluster_pub_signature,  # Add signature validation
         "cluster_pki_dir": str(cluster_pub_path.parent),
@@ -493,11 +499,13 @@ def test_autoscale_handles_restart_during_join(
         "open_mode": True,
         "transport": autoscale_bootstrap_master.config["transport"],
     }
+    bootstrap_port = autoscale_bootstrap_master.config["tcp_master_pull_port"]
     config_overrides = {
         "interface": "127.0.0.2",
-        "id": "joining-master-restart",
+        "id": "joining-master-1",
         "cluster_id": "functional_autoscale_cluster",
-        "cluster_peers": ["127.0.0.1"],
+        "cluster_peers": [f"127.0.0.1:{bootstrap_port}"],
+
         "cluster_secret": autoscale_cluster_secret,
         "cluster_pki_dir": str(cluster_pki_dir),
         "cache_dir": autoscale_bootstrap_master.config["cache_dir"],

@@ -158,7 +158,7 @@ def test_autoscale_rejects_path_traversal_in_peer_id(
     config_overrides["id"] = "../../../malicious"
 
     factory = salt_factories.salt_master_daemon(
-        "malicious-master",
+        "joining-master-path-traversal",
         defaults=config_defaults,
         overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
@@ -339,7 +339,7 @@ def test_autoscale_rejects_wrong_cluster_secret(
     config_overrides["cluster_peers"] = [f"127.0.0.1:{bootstrap_port}"]
 
     factory = salt_factories.salt_master_daemon(
-        "unauthorized-master",
+        "joining-master-secret-failure",
         defaults=config_defaults,
         overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],

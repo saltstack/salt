@@ -63,7 +63,8 @@ class NetapiClient:
             # No custom signal handling was added, install our own
             signal.signal(signal.SIGTERM, self._handle_signals)
 
-        self.process_manager.run()
+        import asyncio
+        asyncio.run(self.process_manager.run())
 
     def _handle_signals(self, signum, sigframe):
         # escalate the signals to the process manager

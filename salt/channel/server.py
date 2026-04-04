@@ -1185,13 +1185,29 @@ class MasterPubServerChannel:
         if opts.get("cluster_id"):
             # For master clusters, we need a TCP transport
             tcp_master_pool_port = opts.get("tcp_master_pull_port", 4520)
-            transport = salt.transport.tcp.PublishServer(
-                opts,
-                pub_host=opts.get("interface", "0.0.0.0"),
-                pub_port=opts.get("publish_port", 4505),
-                pull_host="0.0.0.0",
-                pull_port=tcp_master_pool_port,
-            )
+            try:
+                transport = salt.transport.tcp.PublishServer(
+                    opts,
+                    pub_host=opts.get("interface", "0.0.0.0"),
+                    pub_port=opts.get("publish_port", 4505),
+                    pull_host="0.0.0.0",
+                    pull_port=tcp_master_pool_port,
+                )
+            except OSError as exc:
+                if exc.errno == 98:  # Address already in use
+                    log.warning(
+                        "Cluster pool port %s already in use, binding to dynamic port",
+                        tcp_master_pool_port,
+                    )
+                    transport = salt.transport.tcp.PublishServer(
+                        opts,
+                        pub_host=opts.get("interface", "0.0.0.0"),
+                        pub_port=opts.get("publish_port", 4505),
+                        pull_host="0.0.0.0",
+                        pull_port=0,
+                    )
+                else:
+                    raise
         else:
             transport = salt.transport.ipc_publish_server("master", opts)
         return cls(opts, transport, _discover_event=_discover_event)
@@ -1361,13 +1377,29 @@ class MasterPubServerChannel:
             if not isinstance(self.transport, salt.transport.tcp.PublishServer):
                 log.info("Forcing TCP transport for master cluster in EventPublisher")
                 tcp_master_pool_port = self.opts.get("tcp_master_pull_port", 4520)
-                self.transport = salt.transport.tcp.PublishServer(
-                    self.opts,
-                    pub_host=self.opts.get("interface", "0.0.0.0"),
-                    pub_port=self.opts.get("publish_port", 4505),
-                    pull_host="0.0.0.0",
-                    pull_port=tcp_master_pool_port,
-                )
+                try:
+                    self.transport = salt.transport.tcp.PublishServer(
+                        self.opts,
+                        pub_host=self.opts.get("interface", "0.0.0.0"),
+                        pub_port=self.opts.get("publish_port", 4505),
+                        pull_host="0.0.0.0",
+                        pull_port=tcp_master_pool_port,
+                    )
+                except OSError as exc:
+                    if exc.errno == 98:  # Address already in use
+                        log.warning(
+                            "Cluster pool port %s already in use, binding to dynamic port",
+                            tcp_master_pool_port,
+                        )
+                        self.transport = salt.transport.tcp.PublishServer(
+                            self.opts,
+                            pub_host=self.opts.get("interface", "0.0.0.0"),
+                            pub_port=self.opts.get("publish_port", 4505),
+                            pull_host="0.0.0.0",
+                            pull_port=0,
+                        )
+                    else:
+                        raise
                 # We need to start the publisher task for the new transport
                 aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
                 aio_loop.create_task(
@@ -1383,6 +1415,10 @@ class MasterPubServerChannel:
         self.tcp_master_pool_port = self.opts.get("tcp_master_pull_port")
         if not self.tcp_master_pool_port or self.tcp_master_pool_port == 4506:
             self.tcp_master_pool_port = self.opts.get("cluster_pool_port", 4520)
+
+        if self.opts.get("cluster_id") and hasattr(self.transport, "pull_port"):
+            # Update with actual bound port (could be dynamic)
+            self.tcp_master_pool_port = self.transport.pull_port
         self.pushers = []
         self.auth_errors = {}
         for peer in self.opts.get("cluster_peers", []):
@@ -1578,9 +1614,12 @@ class MasterPubServerChannel:
                     {"sig": sig, "payload": tosign},
                 )
                 # Send reply back to the provided port
-                await self.pusher(payload["peer_id"], port=payload.get("port")).publish(
-                    event_data
-                )
+                try:
+                    await self.pusher(peer_id, port=payload.get("port")).publish(
+                        event_data
+                    )
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.error("Unable to send discover-reply to %s: %s", peer_id, exc)
             elif tag.startswith("cluster/peer/discover-reply"):
                 payload = salt.payload.loads(data["payload"])
 
@@ -1698,7 +1737,10 @@ class MasterPubServerChannel:
                     fp.write(payload["pub"])
                 pusher = self.pusher(payload["peer_id"], port=peer_port)
                 self.pushers.append(pusher)
-                await pusher.publish(event_data)
+                try:
+                    await pusher.publish(event_data)
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.error("Unable to send join request to %s: %s", payload["peer_id"], exc)
             elif tag.startswith("cluster/peer/join-notify"):
                 # Verify this is a properly signed notification
                 if "payload" not in data or "sig" not in data:
@@ -2255,6 +2297,12 @@ class MasterPubServerChannel:
             # and if this is a cluster/peer event, ensure it's not a discovery event
             # that we're trying to send to someone who hasn't discovered us yet.
             log.info("Publish event to peer %s:%s", pusher.pull_host, pusher.pull_port)
+            if tag.startswith("cluster/peer/"):
+                # Always send protocol messages unencrypted
+                tasks.append(
+                    asyncio.create_task(pusher.publish(load), name=pusher.pull_host)
+                )
+                continue
             if tag.startswith("cluster/peer"):
                 # log.info("Send %s %r", tag, load)
                 tasks.append(
