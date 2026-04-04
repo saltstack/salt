@@ -116,15 +116,18 @@ class TestRequestServerIntegration:
 
     def test_pre_fork_with_worker_pools(self):
         """
-        Test that pre_fork method exists and accepts worker_pools parameter.
+        Test that pre_fork method exists and accepts *args and **kwargs.
         """
         sig = inspect.signature(salt.transport.zeromq.RequestServer.pre_fork)
         assert (
             "process_manager" in sig.parameters
         ), "pre_fork should have process_manager parameter"
         assert (
-            "worker_pools" in sig.parameters
-        ), "pre_fork should have worker_pools parameter"
+            "args" in sig.parameters
+        ), "pre_fork should have *args parameter"
+        assert (
+            "kwargs" in sig.parameters
+        ), "pre_fork should have **kwargs parameter"
 
     def test_request_server_has_zmq_device_pooled_method(self):
         """
