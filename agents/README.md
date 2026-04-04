@@ -57,6 +57,11 @@ The `docs/` directory contains comprehensive guides that are referenced by all a
   - CI failure reproduction workflow
   - Container setup and debugging
 
+- **[package-building.md](docs/package-building.md)** - Package Building Guide
+  - Building RPMs locally using CI containers
+  - Building DEBs locally
+  - Creating source tarballs and onedir artifacts
+
 - **[troubleshooting.md](docs/troubleshooting.md)** - Common issues and solutions
   - Import order issues
   - Module discovery problems

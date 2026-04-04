@@ -587,7 +587,7 @@ def test_user_addmedia(conn_args, set_zabbix_version, query_return, mock_login):
             period="1-7,00:00-24:00",
             sendto="support2@example.com",
             severity="63",
-            **conn_args
+            **conn_args,
         )
         == module_return
     )
@@ -613,7 +613,7 @@ def test_user_addmedia_v40(conn_args, set_zabbix_version, query_return, mock_log
             period="1-7,00:00-24:00",
             sendto="support2@example.com",
             severity="63",
-            **conn_args
+            **conn_args,
         )
         == module_return
     )

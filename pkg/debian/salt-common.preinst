@@ -43,7 +43,6 @@ case "$1" in
     # 4. adjust passwd entry
     usermod -c "$SALT_NAME" \
             -d $SALT_HOME   \
-            -s $SALT_SHELL  \
             -g $SALT_GROUP  \
              $SALT_USER
 

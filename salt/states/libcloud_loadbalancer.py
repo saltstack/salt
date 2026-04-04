@@ -104,7 +104,7 @@ def balancer_present(
             profile,
             algorithm=algorithm,
             members=starting_members,
-            **libcloud_kwargs
+            **libcloud_kwargs,
         )
         return state_result(True, "Created new load balancer", name, balancer)
 

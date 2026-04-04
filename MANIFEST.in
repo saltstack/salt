@@ -7,6 +7,8 @@ include README.rst
 include SUPPORT.rst
 include run.py
 include pyproject.toml
+include tools/pkg/__init__.py
+include tools/pkg/salt_build_backend.py
 include tests/*.py
 recursive-include tests *
 recursive-include requirements *.txt

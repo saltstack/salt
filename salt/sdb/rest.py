@@ -111,7 +111,7 @@ def query(key, value=None, service=None, profile=None):  # pylint: disable=W0613
         blacklist,
         whitelist,
         input_data=profile[key]["url"],
-        **key_vars
+        **key_vars,
     )
 
     extras = {}

@@ -51,6 +51,8 @@ def execute(opts, data, func, args, kwargs):
         "-u",
         opts.get("sudo_user"),
         "salt-call",
+        "--priv",
+        opts.get("sudo_user"),
         "--out",
         "json",
         "--metadata",

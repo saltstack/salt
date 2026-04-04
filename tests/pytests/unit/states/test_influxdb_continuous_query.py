@@ -43,7 +43,7 @@ def test_when_present_is_called_it_should_pass_client_args_to_create_module(
             query="fnord",
             resample_time="whatever",
             coverage_period="fnord",
-            **expected_kwargs
+            **expected_kwargs,
         )
 
     actual_kwargs = influx_module.create_continuous_query.mock_calls[0].kwargs

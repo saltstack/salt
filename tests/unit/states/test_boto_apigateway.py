@@ -571,7 +571,7 @@ class BotoApiGatewayTestCase(
                 "test",
                 False,
                 "arn:aws:iam::1234:role/apigatewayrole",
-                **conn_parameters
+                **conn_parameters,
             )
 
         self.assertFalse(result.get("result", True))
@@ -596,7 +596,7 @@ class BotoApiGatewayTestCase(
                 "test",
                 False,
                 "arn:aws:iam::1234:role/apigatewayrole",
-                **conn_parameters
+                **conn_parameters,
             )
         self.assertFalse(result.get("abort"))
         self.assertTrue(result.get("current"))
@@ -624,7 +624,7 @@ class BotoApiGatewayTestCase(
                 False,
                 "arn:aws:iam::1234:role/apigatewayrole",
                 stage_variables={"var1": "val1"},
-                **conn_parameters
+                **conn_parameters,
             )
 
         self.assertFalse(result.get("abort"))
@@ -657,7 +657,7 @@ class BotoApiGatewayTestCase(
                 "test",
                 False,
                 "arn:aws:iam::1234:role/apigatewayrole",
-                **conn_parameters
+                **conn_parameters,
             )
 
         self.assertTrue(result.get("publish"))
@@ -713,7 +713,7 @@ class BotoApiGatewayTestCase(
                     "test",
                     False,
                     "arn:aws:iam::1234:role/apigatewayrole",
-                    **conn_parameters
+                    **conn_parameters,
                 )
 
         self.assertIs(result.get("result"), True)
@@ -742,7 +742,7 @@ class BotoApiGatewayTestCase(
                 "test",
                 False,
                 "arn:aws:iam::1234:role/apigatewayrole",
-                **conn_parameters
+                **conn_parameters,
             )
 
         self.assertIs(result.get("abort"), True)
@@ -774,7 +774,7 @@ class BotoApiGatewayTestCase(
                 "test",
                 False,
                 "arn:aws:iam::1234:role/apigatewayrole",
-                **conn_parameters
+                **conn_parameters,
             )
 
         self.assertIs(result.get("abort"), True)
@@ -812,7 +812,7 @@ class BotoApiGatewayTestCase(
                 "test",
                 False,
                 "arn:aws:iam::1234:role/apigatewayrole",
-                **conn_parameters
+                **conn_parameters,
             )
         self.assertIs(result.get("abort"), True)
         self.assertIs(result.get("result"), False)
@@ -862,7 +862,7 @@ class BotoApiGatewayTestCase(
                     "test",
                     False,
                     "arn:aws:iam::1234:role/apigatewayrole",
-                    **conn_parameters
+                    **conn_parameters,
                 )
 
         self.assertIs(result.get("abort"), True)
@@ -916,7 +916,7 @@ class BotoApiGatewayTestCase(
                     "test",
                     False,
                     "arn:aws:iam::1234:role/apigatewayrole",
-                    **conn_parameters
+                    **conn_parameters,
                 )
 
         self.assertIs(result.get("result"), False)
@@ -973,7 +973,7 @@ class BotoApiGatewayTestCase(
                     "test",
                     False,
                     "arn:aws:iam::1234:role/apigatewayrole",
-                    **conn_parameters
+                    **conn_parameters,
                 )
 
         self.assertIs(result.get("abort"), True)
@@ -1030,7 +1030,7 @@ class BotoApiGatewayTestCase(
                     "test",
                     False,
                     "arn:aws:iam::1234:role/apigatewayrole",
-                    **conn_parameters
+                    **conn_parameters,
                 )
 
         self.assertIs(result.get("abort"), True)
@@ -1089,7 +1089,7 @@ class BotoApiGatewayTestCase(
                     "test",
                     False,
                     "arn:aws:iam::1234:role/apigatewayrole",
-                    **conn_parameters
+                    **conn_parameters,
                 )
 
         self.assertIs(result.get("abort"), True)
@@ -1111,7 +1111,7 @@ class BotoApiGatewayTestCase(
             "no_such_rest_api",
             "no_such_stage",
             nuke_api=False,
-            **conn_parameters
+            **conn_parameters,
         )
 
         self.assertIs(result.get("result"), True)
@@ -1131,7 +1131,7 @@ class BotoApiGatewayTestCase(
             "unit test api",
             "no_such_stage",
             nuke_api=False,
-            **conn_parameters
+            **conn_parameters,
         )
 
         self.assertTrue(result.get("abort", False))
@@ -1555,7 +1555,7 @@ class BotoApiGatewayUsagePlanTestCase(
                     "name",
                     "plan_name",
                     throttle={"rateLimit": throttle_rateLimit},
-                    **conn_parameters
+                    **conn_parameters,
                 )
 
                 self.assertIn("result", result)
@@ -1592,7 +1592,7 @@ class BotoApiGatewayUsagePlanTestCase(
                 "name",
                 "plan_name",
                 throttle={"rateLimit": throttle_rateLimit},
-                **conn_parameters
+                **conn_parameters,
             )
 
             self.assertIn("result", result)
@@ -1617,7 +1617,7 @@ class BotoApiGatewayUsagePlanTestCase(
                 "name",
                 "plan_name",
                 throttle={"rateLimit": throttle_rateLimit},
-                **conn_parameters
+                **conn_parameters,
             )
 
             self.assertIn("result", result)

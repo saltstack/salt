@@ -132,7 +132,7 @@ class StateTests(TestCase):
             "file",
             "managed",
             require=self.File("/usr/local/bin"),
-            **self.pydmesg_kwargs
+            **self.pydmesg_kwargs,
         )
 
         self.assertEqual(f(), self.pydmesg_expected)
@@ -141,7 +141,7 @@ class StateTests(TestCase):
         self.File.managed(
             "/usr/local/bin/pydmesg",
             require=self.File("/usr/local/bin"),
-            **self.pydmesg_kwargs
+            **self.pydmesg_kwargs,
         )
 
         self.assertEqual(
@@ -178,7 +178,7 @@ class StateTests(TestCase):
         self.File.managed(
             "/usr/local/bin/pydmesg",
             require=self.File("/usr/local/bin"),
-            **self.pydmesg_kwargs
+            **self.pydmesg_kwargs,
         )
 
         self.assertEqual(

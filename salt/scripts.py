@@ -611,10 +611,14 @@ def _get_onedir_env_path():
     return None
 
 
-def salt_pip():
+def salt_pip(config_dir=None):
     """
     Proxy to current python's pip
     """
+    import salt.config
+    import salt.utils.user
+    import salt.utils.verify
+
     relenv_path = _get_onedir_env_path()
     if relenv_path is None:
         print(
@@ -626,6 +630,26 @@ def salt_pip():
         sys.exit(salt.defaults.exitcodes.EX_GENERIC)
     else:
         extras = str(relenv_path / "extras-{}.{}".format(*sys.version_info))
+
+    # Use provided config_dir, or SALT_CONFIG_DIR env var, or SALT_MINION_CONFIG env var, or fall back to default location
+    if config_dir:
+        config_file = os.path.join(config_dir, "minion")
+    elif os.environ.get("SALT_CONFIG_DIR"):
+        salt_config_dir = os.environ.get("SALT_CONFIG_DIR")
+        config_file = os.path.join(salt_config_dir, "minion")
+    elif os.environ.get("SALT_MINION_CONFIG"):
+        config_file = os.environ.get("SALT_MINION_CONFIG")
+    else:
+        config_file = salt.config.DEFAULT_MINION_OPTS["conf_file"]
+    opts = salt.config.minion_config(config_file)
+
+    user = opts.get("user")
+    current_user = salt.utils.user.get_user()
+
+    # Switch to the configured user if it's not root
+    if user and user != "root" and user != current_user:
+        salt.utils.verify.check_user(user)
+
     env = _pip_environment(os.environ.copy(), extras)
     args = _pip_args(sys.argv[1:], extras)
     command = [
