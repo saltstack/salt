@@ -1177,7 +1177,10 @@ class MasterPubServerChannel:
 
     @classmethod
     def factory(cls, opts, **kwargs):
-        log.info("MasterPubServerChannel.factory called with cluster_id=%s", opts.get("cluster_id"))
+        log.info(
+            "MasterPubServerChannel.factory called with cluster_id=%s",
+            opts.get("cluster_id"),
+        )
         _discover_event = kwargs.get("_discover_event", None)
         if opts.get("cluster_id"):
             # For master clusters, we need a TCP transport
@@ -1269,8 +1272,8 @@ class MasterPubServerChannel:
                 salt.utils.event.tagify("discover", "peer", "cluster"),
                 data,
             )
-            # Use target_pusher to send directly
-            self.io_loop.add_callback(target_pusher.publish, event_data)
+            # Use publish_payload to send to all peers (including target_pusher we just created)
+            self.io_loop.add_callback(self.publish_payload, event_data)
 
     def send_aes_key_event(self):
         import traceback
@@ -1338,6 +1341,7 @@ class MasterPubServerChannel:
     def _publish_daemon(self, **kwargs):
         # Initialize asyncio loop first
         import asyncio
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
@@ -1452,10 +1456,10 @@ class MasterPubServerChannel:
 
     def private_key(self):
         """
-        The public key string associated with this node.
+        The private key string associated with this node.
         """
         # XXX Do not read every time
-        path = self.master_key.master_rsa_path
+        path = os.path.join(self.opts["pki_dir"], "master.pem")
         with salt.utils.files.fopen(path, "r") as fp:
             return fp.read()
 
@@ -1464,7 +1468,7 @@ class MasterPubServerChannel:
         The public key string associated with this node.
         """
         # XXX Do not read every time
-        path = self.master_key.master_pub_path
+        path = os.path.join(self.opts["pki_dir"], "master.pub")
         with salt.utils.files.fopen(path, "r") as fp:
             return fp.read()
 
@@ -1473,18 +1477,21 @@ class MasterPubServerChannel:
         The private key associated with this cluster.
         """
         # XXX Do not read every time
-        path = pathlib.Path(self.master_key.cluster_rsa_path)
-        if path.exists():
-            return path.read_text(encoding="utf-8")
+        path = os.path.join(self.opts["cluster_pki_dir"], "cluster.pem")
+        if os.path.exists(path):
+            with salt.utils.files.fopen(path, "r") as fp:
+                return fp.read()
 
     def cluster_public_key(self):
         """
-        The private key associated with this cluster.
+        The public key string associated with this cluster.
         """
         # XXX Do not read every time
-        path = pathlib.Path(self.master_key.cluster_pub_path)
-        if path.exists():
-            return path.read_text(encoding="utf-8")
+        path = os.path.join(self.opts["cluster_pki_dir"], "cluster.pub")
+        if os.path.exists(path):
+            with salt.utils.files.fopen(path, "r") as fp:
+                return fp.read()
+
 
     def pusher(self, peer, port=None):
         if ":" in peer:
@@ -1618,6 +1625,7 @@ class MasterPubServerChannel:
                     log.warning("Invalid signature of cluster discover payload")
                     return
 
+                peer_id = payload.get("peer_id")
                 # Store this peer as a candidate if not already there (bootstrap peer)
                 if peer_id not in self._discover_candidates:
                     self._discover_candidates[peer_id] = {
@@ -1644,7 +1652,7 @@ class MasterPubServerChannel:
                     )
                     return
 
-                log.info("Cluster discover reply from %s", payload["peer_id"])
+                log.info("Cluster discover reply from %s", peer_id)
                 key = salt.crypt.PublicKeyString(payload["pub"])
                 self._discover_token = self.gen_token()
                 tosign = salt.payload.package(
@@ -1943,7 +1951,6 @@ class MasterPubServerChannel:
             elif tag.startswith("cluster/peer/join"):
                 payload = salt.payload.loads(data["payload"])
                 log.info("RECEIVED JOIN REQUEST FROM PEER %s", payload.get("peer_id"))
-
 
                 # Verify we have a discovery candidate for this peer
                 if payload["peer_id"] not in self._discover_candidates:
