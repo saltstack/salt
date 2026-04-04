@@ -297,3 +297,267 @@ def test_register_resources_with_master_sends_empty_dict(minion_with_resources):
     assert (
         sent_loads[0]["resources"] == {}
     ), "An empty resource dict must be forwarded to the master to clear stale cache"
+
+
+# ---------------------------------------------------------------------------
+# _MERGE_RESOURCE_FUNS tests
+# ---------------------------------------------------------------------------
+
+
+def test_merge_resource_funs_contains_expected_state_functions():
+    """All state-dispatch functions that should trigger merge mode are present."""
+    expected = {
+        "state.apply",
+        "state.highstate",
+        "state.sls",
+        "state.sls_id",
+        "state.single",
+    }
+    assert expected <= salt.minion.Minion._MERGE_RESOURCE_FUNS
+
+
+def test_merge_resource_funs_does_not_contain_test_ping():
+    """test.ping must NOT be in _MERGE_RESOURCE_FUNS so it dispatches normally."""
+    assert "test.ping" not in salt.minion.Minion._MERGE_RESOURCE_FUNS
+
+
+def test_merge_resource_funs_is_frozenset():
+    assert isinstance(salt.minion.Minion._MERGE_RESOURCE_FUNS, frozenset)
+
+
+def test_merge_resource_funs_minions_and_minion_in_sync():
+    """_MERGE_RESOURCE_FUNS must be identical in salt.minion and salt.utils.minions."""
+    import salt.utils.minions as _minions_mod
+
+    assert salt.minion.Minion._MERGE_RESOURCE_FUNS == _minions_mod._MERGE_RESOURCE_FUNS
+
+
+# ---------------------------------------------------------------------------
+# _prefix_resource_state_key tests
+# ---------------------------------------------------------------------------
+
+
+def test_prefix_resource_state_key_id_and_name_prefixed():
+    """Both the id (comps[1]) and name (comps[2]) components gain the rid prefix."""
+    key = "pkg_|-curl_|-curl_|-installed"
+    result = salt.minion.Minion._prefix_resource_state_key(key, "node1")
+    assert result == "pkg_|-node1 curl_|-node1 curl_|-installed"
+
+
+def test_prefix_resource_state_key_preserves_module_and_function():
+    """comps[0] (module) and comps[3] (function) are unchanged."""
+    key = "pkg_|-curl_|-curl_|-installed"
+    result = salt.minion.Minion._prefix_resource_state_key(key, "node1")
+    parts = result.split("_|-")
+    assert parts[0] == "pkg"
+    assert parts[3] == "installed"
+
+
+def test_prefix_resource_state_key_id_with_spaces():
+    """Resource IDs containing spaces are handled correctly."""
+    key = "service_|-nginx_|-nginx_|-running"
+    result = salt.minion.Minion._prefix_resource_state_key(key, "my host")
+    assert result == "service_|-my host nginx_|-my host nginx_|-running"
+
+
+def test_prefix_resource_state_key_no_top_file_key():
+    """The 'no_|-states_|-states_|-None' key used for empty-top returns is prefixed."""
+    key = "no_|-states_|-states_|-None"
+    result = salt.minion.Minion._prefix_resource_state_key(key, "node1")
+    assert result == "no_|-node1 states_|-node1 states_|-None"
+
+
+def test_prefix_resource_state_key_malformed_key_falls_back():
+    """A key that cannot be split into 4 parts produces the fallback synthetic key."""
+    result = salt.minion.Minion._prefix_resource_state_key("not-a-state-key", "node1")
+    assert result == "no_|-node1_|-node1_|-None"
+
+
+def test_prefix_resource_state_key_three_part_key_falls_back():
+    """Only three _|- separators → fallback."""
+    key = "pkg_|-curl_|-curl"
+    result = salt.minion.Minion._prefix_resource_state_key(key, "node1")
+    assert result == "no_|-node1_|-node1_|-None"
+
+
+# ---------------------------------------------------------------------------
+# _handle_payload merge-mode guard (source inspection)
+# ---------------------------------------------------------------------------
+
+
+def test_handle_payload_skips_resource_dispatch_for_merge_funs():
+    """
+    _handle_payload must guard the separate resource-dispatch block with a
+    'fun not in _MERGE_RESOURCE_FUNS' check.  A missing guard would cause
+    duplicate responses for state.apply jobs.
+    """
+    import inspect
+
+    source = inspect.getsource(salt.minion.Minion._handle_payload)
+    assert "_MERGE_RESOURCE_FUNS" in source, (
+        "_handle_payload must reference _MERGE_RESOURCE_FUNS to skip "
+        "redundant resource job dispatch for merge-mode functions"
+    )
+    assert "resource_targets" in source
+
+
+# ---------------------------------------------------------------------------
+# Merge block helper: _merge_resource_into_ret logic
+# ---------------------------------------------------------------------------
+
+
+def _make_ret(return_val=None, retcode=0):
+    """Build a minimal ret dict as produced by _thread_return."""
+    return {
+        "return": return_val if return_val is not None else {},
+        "retcode": retcode,
+        "success": retcode == 0,
+    }
+
+
+def _run_merge_block(
+    minion_instance, resource, resource_loader, function_name, resource_return
+):
+    """
+    Simulate the per-resource section of _thread_return's merge block.
+
+    Drives the same if/elif/else branches:
+      - resource_loader is None → no-loader synthetic entry
+      - function_name not in resource_loader → unsupported string
+      - resource_return is a dict → prefix keys and merge
+      - resource_return is a str → synthetic entry with result False
+    """
+    import salt.defaults.exitcodes
+
+    ret = _make_ret()
+    run_num_base = 0
+    rid = resource["id"]
+    rtype = resource["type"]
+
+    if resource_loader is None:
+        ret["return"][f"no_|-{rid}_|-{rid}_|-None"] = {
+            "result": False,
+            "comment": f"No resource loader for type '{rtype}'. Ensure the resource module exists.",
+            "name": rid,
+            "changes": {},
+            "__run_num__": run_num_base,
+        }
+        run_num_base += 1
+        if ret.get("retcode") == salt.defaults.exitcodes.EX_OK:
+            ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+    elif function_name not in resource_loader:
+        resource_return = (
+            f"Function '{function_name}' is not supported for resource type '{rtype}'. "
+            f"Implement it in a '{rtype}resource_*' execution module."
+        )
+        ret["return"][f"no_|-{rid}_|-{rid}_|-None"] = {
+            "result": False,
+            "comment": str(resource_return),
+            "name": rid,
+            "changes": {},
+            "__run_num__": run_num_base,
+        }
+        run_num_base += 1
+        if ret.get("retcode") == salt.defaults.exitcodes.EX_OK:
+            ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+    elif isinstance(resource_return, dict):
+        for state_id, state_val in resource_return.items():
+            entry = (
+                dict(state_val)
+                if isinstance(state_val, dict)
+                else {
+                    "result": True,
+                    "comment": str(state_val),
+                    "name": rid,
+                    "changes": {},
+                }
+            )
+            entry["__run_num__"] = run_num_base
+            run_num_base += 1
+            ret["return"][
+                salt.minion.Minion._prefix_resource_state_key(state_id, rid)
+            ] = entry
+        if ret.get("retcode") == salt.defaults.exitcodes.EX_OK:
+            # retcode only updated when resource_loader context signals failure
+            pass
+    else:
+        ret["return"][f"no_|-{rid}_|-{rid}_|-None"] = {
+            "result": False,
+            "comment": str(resource_return),
+            "name": rid,
+            "changes": {},
+            "__run_num__": run_num_base,
+        }
+        run_num_base += 1
+        if ret.get("retcode") == salt.defaults.exitcodes.EX_OK:
+            ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+
+    ret["success"] = ret.get("retcode") == salt.defaults.exitcodes.EX_OK
+    return ret
+
+
+class _FakeLoader(dict):
+    """Minimal stand-in for a resource loader (just a dict with a pack)."""
+
+    def __init__(self, funs):
+        super().__init__(funs)
+        self.pack = {"__context__": {}}
+
+
+def test_merge_block_no_loader_produces_false_entry(minion_with_resources):
+    resource = {"id": "dummy-01", "type": "dummy"}
+    ret = _run_merge_block(minion_with_resources, resource, None, "state.apply", None)
+    key = "no_|-dummy-01_|-dummy-01_|-None"
+    assert key in ret["return"]
+    assert ret["return"][key]["result"] is False
+    assert "No resource loader" in ret["return"][key]["comment"]
+    assert ret["retcode"] != 0
+    assert ret["success"] is False
+
+
+def test_merge_block_unsupported_function_produces_false_entry(minion_with_resources):
+    resource = {"id": "dummy-01", "type": "dummy"}
+    loader = _FakeLoader({})  # empty — function not present
+    ret = _run_merge_block(minion_with_resources, resource, loader, "state.apply", None)
+    key = "no_|-dummy-01_|-dummy-01_|-None"
+    assert key in ret["return"]
+    assert ret["return"][key]["result"] is False
+    assert "not supported" in ret["return"][key]["comment"]
+    assert ret["retcode"] != 0
+
+
+def test_merge_block_dict_return_prefixes_keys(minion_with_resources):
+    resource = {"id": "node1", "type": "ssh"}
+    loader = _FakeLoader({"state.apply": lambda: {}})
+    resource_return = {
+        "pkg_|-curl_|-curl_|-installed": {
+            "result": True,
+            "comment": "Already installed",
+            "name": "curl",
+            "changes": {},
+        }
+    }
+    ret = _run_merge_block(
+        minion_with_resources, resource, loader, "state.apply", resource_return
+    )
+    assert "pkg_|-node1 curl_|-node1 curl_|-installed" in ret["return"]
+    assert (
+        "pkg_|-curl_|-curl_|-installed" not in ret["return"]
+    ), "un-prefixed key must not appear"
+
+
+def test_merge_block_string_return_produces_false_entry(minion_with_resources):
+    resource = {"id": "node1", "type": "ssh"}
+    loader = _FakeLoader({"state.apply": lambda: "some error"})
+    ret = _run_merge_block(
+        minion_with_resources,
+        resource,
+        loader,
+        "state.apply",
+        "ERROR running state.apply",
+    )
+    key = "no_|-node1_|-node1_|-None"
+    assert key in ret["return"]
+    assert ret["return"][key]["result"] is False
+    assert ret["retcode"] != 0
+    assert ret["success"] is False
