@@ -531,7 +531,7 @@ pyzmq==27.1.0
     #   -c requirements/static/pkg/py3.9/freebsd.txt
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
-requests==2.31.0 ; python_full_version == '3.10.*'
+requests==2.33.0 ; python_full_version == '3.10.*'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.txt
     #   -r requirements/base.txt
