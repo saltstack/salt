@@ -233,3 +233,8 @@ def test_ext_pillar_dunder_in_modules_in_pillar(temp_salt_minion):
     # Loader should pack the opts pillar dict from the ext_pillar() call
     # and the rendered pillar data
     assert pillar.functions.pack["__pillar__"] == dict(**ext_value, **pil_value)
+
+    # Ensure a module function can access the pillar data
+    assert pillar.functions["pillar.get"]("ext") == "some ext value"
+    assert pillar.functions["pillar.get"]("pillar") == "some pillar value"
+
