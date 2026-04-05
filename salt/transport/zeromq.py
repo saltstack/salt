@@ -683,6 +683,11 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         :param func process_manager: An instance of salt.utils.process.ProcessManager
         :param dict worker_pools: Optional worker pools configuration for pooled routing
         """
+        # If we are a pool-specific RequestServer, we don't need a device.
+        # We connect directly to the sockets created by the main pooled device.
+        if self.opts.get("pool_name"):
+            return
+
         worker_pools = kwargs.get("worker_pools") or (args[0] if args else None)
         if worker_pools:
             # Use pooled routing device
@@ -1001,8 +1006,7 @@ class AsyncReqMessageClient:
                 try:
                     # For some reason yielding here doesn't work becaues the
                     # future always has a result?
-                    poll_future = socket.poll(0, zmq.POLLOUT)
-                    poll_future.result()
+                    yield socket.poll(0, zmq.POLLOUT)
                 except _TimeoutError:
                     # This is what we expect if the socket is still alive
                     pass
@@ -1488,6 +1492,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self.socket = None
         self._queue = asyncio.Queue()
         self._connect_lock = asyncio.Lock()
+        self.send_recv_task = None
 
     async def connect(self):  # pylint: disable=invalid-overridden-method
         async with self._connect_lock:
@@ -1499,11 +1504,19 @@ class RequestClient(salt.transport.base.RequestClient):
                 self._init_socket()
 
     def _init_socket(self):
+        # Clean up old task if it exists
+        if self.send_recv_task is not None:
+            if not self.send_recv_task.done():
+                self.send_recv_task.cancel()
+            self.send_recv_task = None
+
         if self.socket is not None:
+            self.socket.close()
+            self.socket = None
+
+        if self.context is None:
             self.context = zmq.asyncio.Context()
-            self.socket.close()  # pylint: disable=E0203
-            del self.socket
-        self.context = zmq.asyncio.Context()
+
         self.socket = self.context.socket(zmq.REQ)
         self.socket.setsockopt(zmq.LINGER, -1)
 
@@ -1532,18 +1545,21 @@ class RequestClient(salt.transport.base.RequestClient):
         self._closing = True
         # Save socket reference before clearing it for use in callback
         self._queue.put_nowait((None, None))
-        task_socket = self.socket
         if self.socket:
             self.socket.close()
             self.socket = None
         if self.context and self.context.closed is False:
             # This hangs if closing the stream causes an import error
-            self.context.term()
+            try:
+                self.context.term()
+            except Exception:  # pylint: disable=broad-except
+                pass
             self.context = None
-        # if getattr(self, "send_recv_task", None):
-        #    task = self.send_recv_task
-        #    if not task.done():
-        #        task.cancel()
+
+        if self.send_recv_task:
+            if not self.send_recv_task.done():
+                self.send_recv_task.cancel()
+            self.send_recv_task = None
 
         #        # Suppress "Task was destroyed but it is pending!" warnings
         #        # by ensuring the task knows its exception will be handled
