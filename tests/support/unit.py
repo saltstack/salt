@@ -221,7 +221,9 @@ class TestCase(_TestCase):
                 missing.append(key)
             elif value != dictionary[key]:
                 mismatched.append(
-                    "{!r}, expected: {!r}, actual: {!r}".format(key, value, dictionary[key])
+                    "{!r}, expected: {!r}, actual: {!r}".format(
+                        key, value, dictionary[key]
+                    )
                 )
         if missing or mismatched:
             parts = []
