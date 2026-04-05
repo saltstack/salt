@@ -127,56 +127,61 @@ class MmapCache:
         if not self.open(write=True):
             return False
 
-        key_bytes = salt.utils.stringutils.to_bytes(key)
-        val_bytes = salt.utils.stringutils.to_bytes(value) if value is not None else b""
+        try:
+            key_bytes = salt.utils.stringutils.to_bytes(key)
+            val_bytes = (
+                salt.utils.stringutils.to_bytes(value) if value is not None else b""
+            )
 
-        # We store: [STATUS][KEY][NULL][VALUE][NULL...]
-        # For simplicity in this generic version, let's just store the key and value separated by null
-        # or just the key if it's a set.
+            # We store: [STATUS][KEY][NULL][VALUE][NULL...]
+            # For simplicity in this generic version, let's just store the key and value separated by null
+            # or just the key if it's a set.
 
-        data = key_bytes
-        if value is not None:
-            data += b"\x00" + val_bytes
+            data = key_bytes
+            if value is not None:
+                data += b"\x00" + val_bytes
 
-        if len(data) > self.slot_size - 1:
-            log.warning("Data too long for mmap cache slot: %s", key)
+            if len(data) > self.slot_size - 1:
+                log.warning("Data too long for mmap cache slot: %s", key)
+                return False
+
+            h = self._hash(key_bytes)
+            for i in range(self.size):
+                slot = (h + i) % self.size
+                offset = slot * self.slot_size
+                status = self._mm[offset]
+
+                if status == OCCUPIED:
+                    # Check if it's the same key
+                    existing_data = self._mm[offset + 1 : offset + self.slot_size]
+                    # Key is everything before first null
+                    null_pos = existing_data.find(b"\x00")
+                    existing_key = (
+                        existing_data[:null_pos]
+                        if null_pos != -1
+                        else existing_data.rstrip(b"\x00")
+                    )
+
+                    if existing_key == key_bytes:
+                        # Update value if needed
+                        self._mm[offset + 1 : offset + 1 + len(data)] = data
+                        if len(data) < self.slot_size - 1:
+                            self._mm[offset + 1 + len(data)] = 0
+                        return True
+                    continue
+
+                # Found an empty or deleted slot.
+                # Write data FIRST, then flip status byte to ensure reader safety.
+                self._mm[offset + 1 : offset + 1 + len(data)] = data
+                if len(data) < self.slot_size - 1:
+                    self._mm[offset + 1 + len(data)] = 0
+                self._mm[offset] = OCCUPIED
+                return True
+
+            log.error("Mmap cache is full!")
             return False
-
-        h = self._hash(key_bytes)
-        for i in range(self.size):
-            slot = (h + i) % self.size
-            offset = slot * self.slot_size
-            status = self._mm[offset]
-
-            if status == OCCUPIED:
-                # Check if it's the same key
-                existing_data = self._mm[offset + 1 : offset + self.slot_size]
-                # Key is everything before first null
-                null_pos = existing_data.find(b"\x00")
-                existing_key = (
-                    existing_data[:null_pos]
-                    if null_pos != -1
-                    else existing_data.rstrip(b"\x00")
-                )
-
-                if existing_key == key_bytes:
-                    # Update value if needed
-                    self._mm[offset + 1 : offset + 1 + len(data)] = data
-                    if len(data) < self.slot_size - 1:
-                        self._mm[offset + 1 + len(data)] = 0
-                    return True
-                continue
-
-            # Found an empty or deleted slot.
-            # Write data FIRST, then flip status byte to ensure reader safety.
-            self._mm[offset + 1 : offset + 1 + len(data)] = data
-            if len(data) < self.slot_size - 1:
-                self._mm[offset + 1 + len(data)] = 0
-            self._mm[offset] = OCCUPIED
-            return True
-
-        log.error("Mmap cache is full!")
-        return False
+        finally:
+            self.close()
 
     def get(self, key, default=None):
         """
@@ -186,57 +191,60 @@ class MmapCache:
         if not self.open(write=False):
             return default
 
-        key_bytes = salt.utils.stringutils.to_bytes(key)
-        h = self._hash(key_bytes)
+        try:
+            key_bytes = salt.utils.stringutils.to_bytes(key)
+            h = self._hash(key_bytes)
 
-        for i in range(self.size):
-            slot = (h + i) % self.size
-            offset = slot * self.slot_size
-            status = self._mm[offset]
+            for i in range(self.size):
+                slot = (h + i) % self.size
+                offset = slot * self.slot_size
+                status = self._mm[offset]
 
-            if status == EMPTY:
-                return default
+                if status == EMPTY:
+                    return default
 
-            if status == DELETED:
-                continue
+                if status == DELETED:
+                    continue
 
-            # Occupied, check key
-            existing_data = self._mm[offset + 1 : offset + self.slot_size]
-            null_pos = existing_data.find(b"\x00")
-            existing_key = (
-                existing_data[:null_pos]
-                if null_pos != -1
-                else existing_data.rstrip(b"\x00")
-            )
+                # Occupied, check key
+                existing_data = self._mm[offset + 1 : offset + self.slot_size]
+                null_pos = existing_data.find(b"\x00")
+                existing_key = (
+                    existing_data[:null_pos]
+                    if null_pos != -1
+                    else existing_data.rstrip(b"\x00")
+                )
 
-            if existing_key == key_bytes:
-                # If there's no data after the key, it was stored as a set
-                if (
-                    len(existing_data) <= len(key_bytes) + 1
-                    or existing_data[len(key_bytes)] == 0
-                    and (
-                        len(existing_data) == len(key_bytes) + 1
-                        or existing_data[len(key_bytes) + 1] == 0
-                    )
-                ):
-                    # This is getting complicated, let's simplify.
-                    # If stored as set, we have [KEY][\x00][\x00...]
-                    # If stored as kv, we have [KEY][\x00][VALUE][\x00...]
-                    if null_pos != -1:
-                        if (
-                            null_pos == len(existing_data) - 1
-                            or existing_data[null_pos + 1] == 0
-                        ):
+                if existing_key == key_bytes:
+                    # If there's no data after the key, it was stored as a set
+                    if (
+                        len(existing_data) <= len(key_bytes) + 1
+                        or existing_data[len(key_bytes)] == 0
+                        and (
+                            len(existing_data) == len(key_bytes) + 1
+                            or existing_data[len(key_bytes) + 1] == 0
+                        )
+                    ):
+                        # This is getting complicated, let's simplify.
+                        # If stored as set, we have [KEY][\x00][\x00...]
+                        # If stored as kv, we have [KEY][\x00][VALUE][\x00...]
+                        if null_pos != -1:
+                            if (
+                                null_pos == len(existing_data) - 1
+                                or existing_data[null_pos + 1] == 0
+                            ):
+                                return True
+                        else:
                             return True
-                    else:
-                        return True
 
-                value_part = existing_data[null_pos + 1 :]
-                val_null_pos = value_part.find(b"\x00")
-                if val_null_pos != -1:
-                    value_part = value_part[:val_null_pos]
-                return salt.utils.stringutils.to_unicode(value_part)
-        return default
+                    value_part = existing_data[null_pos + 1 :]
+                    val_null_pos = value_part.find(b"\x00")
+                    if val_null_pos != -1:
+                        value_part = value_part[:val_null_pos]
+                    return salt.utils.stringutils.to_unicode(value_part)
+            return default
+        finally:
+            self.close()
 
     def delete(self, key):
         """
@@ -245,32 +253,35 @@ class MmapCache:
         if not self.open(write=True):
             return False
 
-        key_bytes = salt.utils.stringutils.to_bytes(key)
-        h = self._hash(key_bytes)
+        try:
+            key_bytes = salt.utils.stringutils.to_bytes(key)
+            h = self._hash(key_bytes)
 
-        for i in range(self.size):
-            slot = (h + i) % self.size
-            offset = slot * self.slot_size
-            status = self._mm[offset]
+            for i in range(self.size):
+                slot = (h + i) % self.size
+                offset = slot * self.slot_size
+                status = self._mm[offset]
 
-            if status == EMPTY:
-                return False
+                if status == EMPTY:
+                    return False
 
-            if status == DELETED:
-                continue
+                if status == DELETED:
+                    continue
 
-            existing_data = self._mm[offset + 1 : offset + self.slot_size]
-            null_pos = existing_data.find(b"\x00")
-            existing_key = (
-                existing_data[:null_pos]
-                if null_pos != -1
-                else existing_data.rstrip(b"\x00")
-            )
+                existing_data = self._mm[offset + 1 : offset + self.slot_size]
+                null_pos = existing_data.find(b"\x00")
+                existing_key = (
+                    existing_data[:null_pos]
+                    if null_pos != -1
+                    else existing_data.rstrip(b"\x00")
+                )
 
-            if existing_key == key_bytes:
-                self._mm[offset] = DELETED
-                return True
-        return False
+                if existing_key == key_bytes:
+                    self._mm[offset] = DELETED
+                    return True
+            return False
+        finally:
+            self.close()
 
     def contains(self, key):
         """
@@ -293,41 +304,47 @@ class MmapCache:
         if not self.open(write=False):
             return []
 
-        ret = []
-        mm = self._mm
-        slot_size = self.slot_size
+        try:
+            ret = []
+            mm = self._mm
+            slot_size = self.slot_size
 
-        for slot in range(self.size):
-            offset = slot * slot_size
-            if mm[offset] == OCCUPIED:
-                # Get the slot data.
-                # mm[offset:offset+slot_size] is relatively fast.
-                slot_data = mm[offset + 1 : offset + slot_size]
+            for slot in range(self.size):
+                offset = slot * slot_size
+                if mm[offset] == OCCUPIED:
+                    # Get the slot data.
+                    # mm[offset:offset+slot_size] is relatively fast.
+                    slot_data = mm[offset + 1 : offset + slot_size]
 
-                # Use C-based find for speed
-                null_pos = slot_data.find(b"\x00")
+                    # Use C-based find for speed
+                    null_pos = slot_data.find(b"\x00")
 
-                if null_pos == -1:
-                    key_bytes = slot_data
-                    value = True
-                else:
-                    key_bytes = slot_data[:null_pos]
+                    if null_pos == -1:
+                        key_bytes = slot_data
+                        value = True
+                    else:
+                        key_bytes = slot_data[:null_pos]
 
-                    value = True
-                    # Check if there is data after the null
-                    if null_pos < len(slot_data) - 1 and slot_data[null_pos + 1] != 0:
-                        val_data = slot_data[null_pos + 1 :]
-                        val_null_pos = val_data.find(b"\x00")
-                        if val_null_pos == -1:
-                            value_bytes = val_data
-                        else:
-                            value_bytes = val_data[:val_null_pos]
+                        value = True
+                        # Check if there is data after the null
+                        if (
+                            null_pos < len(slot_data) - 1
+                            and slot_data[null_pos + 1] != 0
+                        ):
+                            val_data = slot_data[null_pos + 1 :]
+                            val_null_pos = val_data.find(b"\x00")
+                            if val_null_pos == -1:
+                                value_bytes = val_data
+                            else:
+                                value_bytes = val_data[:val_null_pos]
 
-                        if value_bytes:
-                            value = salt.utils.stringutils.to_unicode(value_bytes)
+                            if value_bytes:
+                                value = salt.utils.stringutils.to_unicode(value_bytes)
 
-                ret.append((salt.utils.stringutils.to_unicode(key_bytes), value))
-        return ret
+                    ret.append((salt.utils.stringutils.to_unicode(key_bytes), value))
+            return ret
+        finally:
+            self.close()
 
     def get_stats(self):
         """
@@ -343,27 +360,30 @@ class MmapCache:
                 "load_factor": 0.0,
             }
 
-        counts = {"occupied": 0, "deleted": 0, "empty": 0}
-        mm = self._mm
-        slot_size = self.slot_size
+        try:
+            counts = {"occupied": 0, "deleted": 0, "empty": 0}
+            mm = self._mm
+            slot_size = self.slot_size
 
-        for slot in range(self.size):
-            offset = slot * slot_size
-            status = mm[offset]
-            if status == OCCUPIED:
-                counts["occupied"] += 1
-            elif status == DELETED:
-                counts["deleted"] += 1
-            else:  # EMPTY
-                counts["empty"] += 1
+            for slot in range(self.size):
+                offset = slot * slot_size
+                status = mm[offset]
+                if status == OCCUPIED:
+                    counts["occupied"] += 1
+                elif status == DELETED:
+                    counts["deleted"] += 1
+                else:  # EMPTY
+                    counts["empty"] += 1
 
-        counts["total"] = self.size
-        counts["load_factor"] = (
-            (counts["occupied"] + counts["deleted"]) / self.size
-            if self.size > 0
-            else 0.0
-        )
-        return counts
+            counts["total"] = self.size
+            counts["load_factor"] = (
+                (counts["occupied"] + counts["deleted"]) / self.size
+                if self.size > 0
+                else 0.0
+            )
+            return counts
+        finally:
+            self.close()
 
     def atomic_rebuild(self, iterator):
         """
