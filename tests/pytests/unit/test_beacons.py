@@ -287,3 +287,78 @@ def test_close_beacons_dict_config(minion_opts):
     close_mock.assert_called_once()
     call_args = close_mock.call_args[0][0]
     assert isinstance(call_args, dict)
+
+
+def test_delete_beacon_calls_close(minion_opts):
+    """
+    Test that delete_beacon() calls the beacon's close function before
+    removing it, so resources like inotify file descriptors are released.
+    """
+    minion_opts["id"] = "minion"
+    minion_opts["__role"] = "minion"
+    minion_opts["beacons"] = {
+        "inotify": [
+            {"files": {"/etc/fstab": {}}},
+        ],
+    }
+
+    beacon = salt.beacons.Beacon(minion_opts, [])
+    close_mock = MagicMock()
+    beacon.beacons["inotify.close"] = close_mock
+
+    with patch("salt.utils.event.get_event"):
+        beacon.delete_beacon("inotify")
+
+    close_mock.assert_called_once()
+    call_args = close_mock.call_args[0][0]
+    assert isinstance(call_args, list)
+    assert {"_beacon_name": "inotify"} in call_args
+    assert "inotify" not in minion_opts["beacons"]
+
+
+def test_delete_beacon_calls_close_with_beacon_module(minion_opts):
+    """
+    Test that delete_beacon() respects beacon_module and calls close
+    on the correct underlying module.
+    """
+    minion_opts["id"] = "minion"
+    minion_opts["__role"] = "minion"
+    minion_opts["beacons"] = {
+        "watch_apache": [
+            {"processes": {"apache2": "stopped"}},
+            {"beacon_module": "ps"},
+        ],
+    }
+
+    beacon = salt.beacons.Beacon(minion_opts, [])
+    close_mock = MagicMock()
+    beacon.beacons["ps.close"] = close_mock
+
+    with patch("salt.utils.event.get_event"):
+        beacon.delete_beacon("watch_apache")
+
+    close_mock.assert_called_once()
+    call_args = close_mock.call_args[0][0]
+    assert {"_beacon_name": "watch_apache"} in call_args
+    assert "watch_apache" not in minion_opts["beacons"]
+
+
+def test_delete_beacon_without_close(minion_opts):
+    """
+    Test that delete_beacon() works when the beacon module has no close function.
+    """
+    minion_opts["id"] = "minion"
+    minion_opts["__role"] = "minion"
+    minion_opts["beacons"] = {
+        "status": [
+            {"time": ["all"]},
+        ],
+    }
+
+    beacon = salt.beacons.Beacon(minion_opts, [])
+    assert "status.close" not in beacon.beacons
+
+    with patch("salt.utils.event.get_event"):
+        beacon.delete_beacon("status")
+
+    assert "status" not in minion_opts["beacons"]
