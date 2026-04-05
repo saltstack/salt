@@ -3297,7 +3297,7 @@ class Minion(MinionBase):
             "minion", opts=self.opts, listen=False, io_loop=self.io_loop
         ) as evt:
             try:
-                yield evt.fire_event_async(
+                evt.fire_event(
                     {"complete": True},
                     tag=salt.defaults.events.MINION_PILLAR_REFRESH_COMPLETE,
                 )
@@ -3494,7 +3494,7 @@ class Minion(MinionBase):
                     "minion", opts=self.opts, listen=False, io_loop=self.io_loop
                 ) as event:
                     try:
-                        yield event.fire_event_async(
+                        event.fire_event(
                             {"ret": ret},
                             f"__master_req_channel_return/{request_id}",
                         )
