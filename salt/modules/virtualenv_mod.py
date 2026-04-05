@@ -382,8 +382,14 @@ def get_distribution_path(venv, distribution):
 
     ret = __salt__["cmd.exec_code_all"](
         bin_path,
-        "import pkg_resources; "
-        "print(pkg_resources.get_distribution('{}').location)".format(distribution),
+        "try:\n"
+        "    import importlib.metadata, pathlib\n"
+        "    print(str(pathlib.Path(importlib.metadata.distribution('{}').locate_file('.')).resolve()))\n"
+        "except Exception:\n"
+        "    import pkg_resources\n"
+        "    print(pkg_resources.get_distribution('{}').location)\n".format(
+            distribution, distribution
+        ),
     )
 
     if ret["retcode"] != 0:
