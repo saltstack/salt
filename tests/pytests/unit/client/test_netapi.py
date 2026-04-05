@@ -1,7 +1,7 @@
 import logging
-
+import asyncio
 import salt.client.netapi
-from tests.support.mock import Mock, patch
+from tests.support.mock import Mock, patch, MagicMock
 
 
 def test_run_log(caplog, master_opts):
@@ -9,9 +9,16 @@ def test_run_log(caplog, master_opts):
     test salt.client.netapi logs correct message
     """
     master_opts["rest_cherrypy"] = {"port": 8000}
-    mock_process = Mock()
+    mock_process = MagicMock()
     mock_process.add_process.return_value = True
-    patch_process = patch.object(salt.utils.process, "ProcessManager", mock_process)
+
+    # mock_process.run() needs to be a coroutine because netapi.run() calls asyncio.run()
+    async def mock_run():
+        return True
+
+    mock_process.run = MagicMock(side_effect=mock_run)
+
+    patch_process = patch.object(salt.utils.process, "ProcessManager", return_value=mock_process)
     with caplog.at_level(logging.INFO):
         with patch_process:
             netapi = salt.client.netapi.NetapiClient(master_opts)
