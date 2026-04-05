@@ -420,8 +420,9 @@ def get_discussion_category_id(
     ``name`` and its ``slug``.  Returns ``None`` and logs an error if no
     match is found.
     """
+    category_lower = category.lower()
     for cat in categories:
-        if cat["name"].lower() == category.lower() or cat["slug"].lower() == category.lower():
+        if cat["name"].lower() == category_lower or cat["slug"].lower() == category_lower:
             return cat["id"]
     available = ", ".join(c["name"] for c in categories)
     ctx.error(

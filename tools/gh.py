@@ -113,7 +113,8 @@ query ListDiscussions($owner: String!, $name: String!, $first: Int!, $categoryId
         if data is None:
             ctx.exit(1)
 
-        discussions = data["repository"]["discussions"]["nodes"]
+        repo_data = data.get("repository") or {}
+        discussions = (repo_data.get("discussions") or {}).get("nodes", [])
         if not discussions:
             ctx.info("No discussions found.")
             return
@@ -208,7 +209,10 @@ mutation CreateDiscussion($repositoryId: ID!, $categoryId: ID!, $title: String!,
         if data is None:
             ctx.exit(1)
 
-        discussion = data["createDiscussion"]["discussion"]
+        discussion = (data.get("createDiscussion") or {}).get("discussion")
+        if discussion is None:
+            ctx.error("Unexpected response: discussion data missing from GraphQL response")
+            ctx.exit(1)
         ctx.info(
             f"Created discussion #{discussion['number']}: {discussion['url']}"
         )
@@ -277,7 +281,7 @@ query GetDiscussion($owner: String!, $name: String!, $number: Int!) {
         if lookup_data is None:
             ctx.exit(1)
 
-        discussion_node = lookup_data["repository"]["discussion"]
+        discussion_node = (lookup_data.get("repository") or {}).get("discussion")
         if discussion_node is None:
             ctx.error(
                 f"Discussion #{discussion_number} not found in repository {repository!r}"
@@ -306,7 +310,10 @@ mutation AddDiscussionComment($discussionId: ID!, $body: String!) {
         if data is None:
             ctx.exit(1)
 
-        comment = data["addDiscussionComment"]["comment"]
+        comment = ((data.get("addDiscussionComment") or {}).get("comment"))
+        if comment is None:
+            ctx.error("Unexpected response: comment data missing from GraphQL response")
+            ctx.exit(1)
         ctx.info(f"Comment added: {comment['url']}")
 
 
