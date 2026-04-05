@@ -230,7 +230,7 @@ class CkMinions:
         Return the minions found by looking via globs
         """
         if minions:
-            matched = {"minions": fnmatch.filter(minions, expr), "missing": []}
+            matched = fnmatch.filter(minions, expr)
         else:
             matched = self.key.glob_match(expr).get(self.key.ACC, [])
 
@@ -279,18 +279,19 @@ class CkMinions:
             "missing": [],
         }
 
-    def _pki_minions(self):
+    def _pki_minions(self, force_scan=False):
         """
         Retrieve complete minion list from PKI dir.
-        Respects cache if configured
+        The cache layer internally uses an mmap index for O(1) performance.
         """
-
         minions = set()
 
         try:
-            accepted = self.key.list_status("accepted").get("minions")
-            if accepted:
-                minions = minions | set(accepted)
+            res = self.key.list_status("accepted")
+            if res:
+                accepted = res.get("minions")
+                if accepted:
+                    minions = minions | set(accepted)
         except OSError as exc:
             log.error(
                 "Encountered OSError while evaluating minions in PKI dir: %s", exc

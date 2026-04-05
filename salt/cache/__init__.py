@@ -77,7 +77,7 @@ class Cache:
     def modules(self):
         return salt.loader.cache(self.opts)
 
-    @cached_property
+    @property
     def kwargs(self):
         try:
             return self.modules[f"{self.driver}.init_kwargs"](self._kwargs)
@@ -259,6 +259,36 @@ class Cache:
         """
         fun = f"{self.driver}.list"
         return self.modules[fun](bank, **self.kwargs)
+
+    def list_all(self, bank, include_data=False):
+        """
+        Lists all entries with their data from the specified bank.
+        This is more efficient than calling list() + fetch() for each entry.
+
+        :param bank:
+            The name of the location inside the cache which will hold the key
+            and its associated data.
+
+        :param include_data:
+            Whether to include the full data for each entry. For some drivers
+            (like localfs_key), setting this to False avoids expensive disk reads.
+
+        :return:
+            A dict of {key: data} for all entries in the bank. Returns an empty
+            dict if the bank doesn't exist or the driver doesn't support list_all.
+
+        :raises SaltCacheError:
+            Raises an exception if cache driver detected an error accessing data
+            in the cache backend (auth, permissions, etc).
+        """
+        fun = f"{self.driver}.list_all"
+        if fun in self.modules:
+            return self.modules[fun](bank, include_data=include_data, **self.kwargs)
+        else:
+            # Fallback for drivers that don't implement list_all
+            raise AttributeError(
+                f"Cache driver '{self.driver}' does not implement list_all"
+            )
 
     def contains(self, bank, key=None):
         """

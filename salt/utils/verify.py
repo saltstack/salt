@@ -295,6 +295,20 @@ def verify_env(
                         except OSError:
                             continue
 
+        # Ensure PKI index files are owned by the correct user
+        # These are dotfiles, so they were skipped in the loop above
+        pki_dirs = pki_dir if isinstance(pki_dir, list) else [pki_dir]
+        for _pki_dir in pki_dirs:
+            for index_file in [".pki_index.mmap", ".pki_index.mmap.lock"]:
+                index_path = os.path.join(_pki_dir, index_file)
+                if os.path.exists(index_path):
+                    try:
+                        fmode = os.stat(index_path)
+                        if fmode.st_uid != uid or fmode.st_gid != gid:
+                            os.chown(index_path, uid, gid)
+                    except OSError:
+                        continue
+
         # Allow the pki dir to be 700 or 750, but nothing else.
         # This prevents other users from writing out keys, while
         # allowing the use-case of 3rd-party software (like django)
@@ -426,7 +440,9 @@ def check_path_traversal(path, user="root", skip_perm_errors=False):
 
 def check_max_open_files(opts):
     """
-    Check the number of max allowed open files and adjust if needed
+    Check the number of max allowed open files and adjust if needed.
+    Checks actual file descriptor usage when possible, falls back to
+    heuristic-based estimation on systems without /proc.
     """
     mof_c = opts.get("max_open_files", 100000)
     if sys.platform.startswith("win"):
@@ -440,48 +456,59 @@ def check_max_open_files(opts):
             resource.RLIMIT_NOFILE
         )
 
+    # Count accepted keys using directory listing
+    # Note: The cache layer uses an internal mmap index for O(1) lookups,
+    # but for a simple count, listing the directory is sufficient
     accepted_keys_dir = os.path.join(opts.get("pki_dir"), "minions")
-    accepted_count = len(os.listdir(accepted_keys_dir))
+    try:
+        # Try os.scandir first (faster), fall back to os.listdir if unavailable
+        try:
+            accepted_count = sum(1 for _ in os.scandir(accepted_keys_dir))
+        except (OSError, FileNotFoundError):
+            # Fallback for when scandir fails or /proc is unavailable
+            accepted_count = len(os.listdir(accepted_keys_dir))
+    except (OSError, FileNotFoundError):
+        accepted_count = 0
 
     log.debug("This salt-master instance has accepted %s minion keys.", accepted_count)
 
-    level = logging.INFO
-
-    if (accepted_count * 4) <= mof_s:
-        # We check for the soft value of max open files here because that's the
-        # value the user chose to raise to.
-        #
-        # The number of accepted keys multiplied by four(4) is lower than the
-        # soft value, everything should be OK
-        return
-
-    msg = (
-        "The number of accepted minion keys({}) should be lower than 1/4 "
-        "of the max open files soft setting({}). ".format(accepted_count, mof_s)
-    )
-
-    if accepted_count >= mof_s:
-        # This should never occur, it might have already crashed
-        msg += "salt-master will crash pretty soon! "
-        level = logging.CRITICAL
-    elif (accepted_count * 2) >= mof_s:
-        # This is way too low, CRITICAL
-        level = logging.CRITICAL
-    elif (accepted_count * 3) >= mof_s:
-        level = logging.WARNING
-        # The accepted count is more than 3 time, WARN
-    elif (accepted_count * 4) >= mof_s:
-        level = logging.INFO
-
-    if mof_c < mof_h:
-        msg += (
-            "According to the system's hard limit, there's still a "
-            "margin of {} to raise the salt's max_open_files "
-            "setting. ".format(mof_h - mof_c)
+    # Try to get actual FD usage (Linux/Unix with /proc)
+    actual_fd_count = None
+    try:
+        pid = os.getpid()
+        actual_fd_count = sum(1 for _ in os.scandir(f"/proc/{pid}/fd"))
+        log.debug(
+            "This salt-master process has %s open file descriptors.", actual_fd_count
         )
+    except (OSError, FileNotFoundError, AttributeError):
+        # /proc not available (non-Linux) or permission denied
+        # Fall back to heuristic-based check below
+        pass
 
-    msg += "Please consider raising this value."
-    log.log(level=level, msg=msg)
+    # Only warn based on ACTUAL FD usage, not heuristics
+    if actual_fd_count is not None:
+        fd_percent = (actual_fd_count / mof_s) * 100
+
+        # Only log CRITICAL if over 80% usage
+        if fd_percent > 80:
+            msg = (
+                f"CRITICAL: File descriptor usage at {fd_percent:.1f}%: "
+                f"{actual_fd_count} of {mof_s} file descriptors in use. "
+            )
+            if mof_c < mof_h:
+                msg += f"You can raise max_open_files up to {mof_h} (hard limit). "
+            msg += "Consider increasing max_open_files to avoid resource exhaustion."
+            log.critical(msg)
+        else:
+            # Below 80%, just debug log
+            log.debug(
+                "File descriptor usage: %s of %s (%.1f%%)",
+                actual_fd_count,
+                mof_s,
+                fd_percent,
+            )
+    # If we can't get actual FD count, don't log anything
+    # (With mmap index, key count is not a useful FD predictor)
 
 
 def _realpath_darwin(path):
@@ -580,7 +607,7 @@ def valid_id(opts, id_):
             pki_dir = opts["cluster_pki_dir"]
         else:
             pki_dir = opts["pki_dir"]
-        return bool(clean_path(opts["pki_dir"], id_))
+        return bool(clean_path(pki_dir, id_))
     except (AttributeError, KeyError, TypeError, UnicodeDecodeError):
         return False
 

@@ -29,6 +29,8 @@ from pathlib import Path
 
 import salt.utils.atomicfile
 import salt.utils.files
+import salt.utils.mmap_cache
+import salt.utils.pki
 import salt.utils.stringutils
 from salt.exceptions import SaltCacheError
 from salt.utils.verify import clean_path, valid_id
@@ -36,6 +38,9 @@ from salt.utils.verify import clean_path, valid_id
 log = logging.getLogger(__name__)
 
 __func_alias__ = {"list_": "list"}
+
+# Module-level index (lazy initialized)
+_index = None
 
 
 BASE_MAPPING = {
@@ -81,6 +86,84 @@ def init_kwargs(kwargs):
     return {"cachedir": pki_dir, "user": user}
 
 
+def _get_index(opts):
+    """
+    Get or create the PKI index.
+    The index is an internal optimization for fast O(1) lookups.
+    """
+    global _index
+    if _index is None:
+        if "cluster_id" in opts and opts["cluster_id"]:
+            pki_dir = opts["cluster_pki_dir"]
+        else:
+            pki_dir = opts.get("pki_dir")
+
+        if pki_dir:
+            # Index lives alongside the pki directories
+            index_path = os.path.join(pki_dir, ".pki_index.mmap")
+            size = opts.get("pki_index_size", 1000000)
+            slot_size = opts.get("pki_index_slot_size", 128)
+            _index = salt.utils.mmap_cache.MmapCache(
+                path=index_path, size=size, slot_size=slot_size
+            )
+    return _index
+
+
+def rebuild_index(opts):
+    """
+    Rebuild the PKI index from filesystem.
+    Returns True on success, False on failure.
+    """
+    index = _get_index(opts)
+    if not index:
+        return False
+
+    if "cluster_id" in opts and opts["cluster_id"]:
+        pki_dir = opts["cluster_pki_dir"]
+    else:
+        pki_dir = opts.get("pki_dir")
+
+    if not pki_dir:
+        return False
+
+    # Build list of all keys from filesystem
+    items = []
+    state_mapping = {
+        "minions": "accepted",
+        "minions_pre": "pending",
+        "minions_rejected": "rejected",
+    }
+
+    for dir_name, state in state_mapping.items():
+        dir_path = os.path.join(pki_dir, dir_name)
+        if not os.path.isdir(dir_path):
+            continue
+
+        try:
+            with os.scandir(dir_path) as it:
+                for entry in it:
+                    if entry.is_file() and not entry.is_symlink():
+                        if entry.name.startswith("."):
+                            continue
+                        items.append((entry.name, state))
+        except OSError as exc:
+            log.error("Error scanning %s: %s", dir_path, exc)
+
+    # Atomically rebuild index
+    return index.atomic_rebuild(items)
+
+
+def get_index_stats(opts):
+    """
+    Get statistics about the PKI index.
+    Returns dict with stats or None if index unavailable.
+    """
+    index = _get_index(opts)
+    if not index:
+        return None
+    return index.get_stats()
+
+
 def store(bank, key, data, cachedir, user, **kwargs):
     """
     Store key state information. storing a accepted/pending/rejected state
@@ -97,7 +180,10 @@ def store(bank, key, data, cachedir, user, **kwargs):
     else:
         umask = 0o0750
 
+    # Save state for index update (before we modify data)
+    state_for_index = None
     if bank == "keys":
+        state_for_index = data["state"]
         if data["state"] == "rejected":
             base = "minions_rejected"
         elif data["state"] == "pending":
@@ -165,6 +251,15 @@ def store(bank, key, data, cachedir, user, **kwargs):
         raise SaltCacheError(
             f"There was an error writing the cache file, base={base}: {exc}"
         )
+
+    # Update index after successful filesystem write
+    if bank == "keys" and state_for_index:
+        try:
+            index = _get_index(__opts__)
+            if index:
+                index.put(key, state_for_index)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.warning("Failed to update PKI index: %s", exc)
 
 
 def fetch(bank, key, cachedir, **kwargs):
@@ -316,14 +411,43 @@ def flush(bank, key=None, cachedir=None, **kwargs):
         except OSError as exc:
             if exc.errno != errno.ENOENT:
                 raise SaltCacheError(f'There was an error removing "{target}": {exc}')
+
+    # Update index after successful filesystem deletion
+    if bank == "keys" and key is not None and flushed:
+        try:
+            index = _get_index(__opts__)
+            if index:
+                index.delete(key)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.warning("Failed to update PKI index: %s", exc)
+
     return flushed
 
 
 def list_(bank, cachedir, **kwargs):
     """
     Return an iterable object containing all entries stored in the specified bank.
+    Uses internal mmap index for O(1) performance when available.
     """
     if bank == "keys":
+        # Try to use index first (internal optimization)
+        try:
+            index = _get_index(__opts__)
+            if index:
+                items = index.list_items()
+                if items:
+                    # Filter by state (accepted/pending/rejected, not denied)
+                    minions = [
+                        mid
+                        for mid, state in items
+                        if state in ("accepted", "pending", "rejected")
+                    ]
+                    if minions:
+                        return minions
+        except Exception as exc:  # pylint: disable=broad-except
+            log.debug("PKI index unavailable, falling back to directory scan: %s", exc)
+
+        # Fallback to directory scan
         bases = [base for base in BASE_MAPPING if base != "minions_denied"]
     elif bank == "denied_keys":
         bases = ["minions_denied"]
@@ -334,37 +458,137 @@ def list_(bank, cachedir, **kwargs):
 
     ret = []
     for base in bases:
-        base = os.path.join(cachedir, os.path.normpath(base))
-        if not os.path.isdir(base):
+        base_path = os.path.join(cachedir, os.path.normpath(base))
+        if not os.path.isdir(base_path):
             continue
         try:
-            items = os.listdir(base)
+            with os.scandir(base_path) as it:
+                for entry in it:
+                    if entry.is_file() and not entry.is_symlink():
+                        item = entry.name
+                        # salt foolishly dumps a file here for key cache, ignore it
+                        if item == ".key_cache":
+                            continue
+
+                        if (
+                            bank in ["keys", "denied_keys"]
+                            and not valid_id(__opts__, item)
+                        ) or not clean_path(cachedir, entry.path, subdir=True):
+                            log.error("saw invalid id %s, discarding", item)
+                            continue
+
+                        ret.append(item)
         except OSError as exc:
             raise SaltCacheError(
-                f'There was an error accessing directory "{base}": {exc}'
+                f'There was an error accessing directory "{base_path}": {exc}'
             )
-        for item in items:
-            # salt foolishly dumps a file here for key cache, ignore it
-            keyfile = Path(cachedir, base, item)
+    return ret
 
-            if (
-                bank in ["keys", "denied_keys"] and not valid_id(__opts__, item)
-            ) or not clean_path(cachedir, str(keyfile), subdir=True):
-                log.error("saw invalid id %s, discarding", item)
 
-            if keyfile.is_file() and not keyfile.is_symlink():
-                ret.append(item)
+def list_all(bank, cachedir, include_data=False, **kwargs):
+    """
+    Return all entries with their data from the specified bank.
+    This is much faster than calling list() + fetch() for each item.
+    Returns a dict of {key: data}.
+
+    If include_data is False (default), only the state is returned for 'keys' bank,
+    avoiding expensive file reads.
+    """
+    if bank not in ["keys", "denied_keys"]:
+        raise SaltCacheError(f"Unrecognized bank: {bank}")
+
+    ret = {}
+
+    if bank == "keys":
+
+        # Map directory names to states
+        state_mapping = {
+            "minions": "accepted",
+            "minions_pre": "pending",
+            "minions_rejected": "rejected",
+        }
+
+        for dir_name, state in state_mapping.items():
+            dir_path = os.path.join(cachedir, dir_name)
+            if not os.path.isdir(dir_path):
+                continue
+
+            try:
+                with os.scandir(dir_path) as it:
+                    for entry in it:
+                        if not entry.is_file() or entry.is_symlink():
+                            continue
+                        if entry.name.startswith("."):
+                            continue
+                        # Use direct check instead of valid_id to avoid __opts__ dependency in loop
+                        if any(x in entry.name for x in ("/", "\\", "\0")):
+                            continue
+                        if not clean_path(cachedir, entry.path, subdir=True):
+                            continue
+
+                        if include_data:
+                            # Read the public key
+                            try:
+                                with salt.utils.files.fopen(entry.path, "r") as fh_:
+                                    pub_key = fh_.read()
+                                ret[entry.name] = {"state": state, "pub": pub_key}
+                            except OSError as exc:
+                                log.error(
+                                    "Error reading key file %s: %s", entry.path, exc
+                                )
+                        else:
+                            # Just return the state, no disk read
+                            ret[entry.name] = {"state": state}
+            except OSError as exc:
+                log.error("Error scanning directory %s: %s", dir_path, exc)
+
+    elif bank == "denied_keys":
+        # Denied keys work differently - multiple keys per minion ID
+        dir_path = os.path.join(cachedir, "minions_denied")
+        if os.path.isdir(dir_path):
+            try:
+                with os.scandir(dir_path) as it:
+                    for entry in it:
+                        if not entry.is_file() or entry.is_symlink():
+                            continue
+                        if not valid_id(__opts__, entry.name):
+                            continue
+                        if not clean_path(cachedir, entry.path, subdir=True):
+                            continue
+
+                        try:
+                            with salt.utils.files.fopen(entry.path, "r") as fh_:
+                                ret[entry.name] = fh_.read()
+                        except OSError as exc:
+                            log.error(
+                                "Error reading denied key %s: %s", entry.path, exc
+                            )
+            except OSError as exc:
+                log.error("Error scanning denied keys directory: %s", exc)
+
     return ret
 
 
 def contains(bank, key, cachedir, **kwargs):
     """
     Checks if the specified bank contains the specified key.
+    Uses internal mmap index for O(1) performance when available.
     """
     if bank in ["keys", "denied_keys"] and not valid_id(__opts__, key):
         raise SaltCacheError(f"key {key} is not a valid minion_id")
 
     if bank == "keys":
+        # Try index first (internal optimization)
+        try:
+            index = _get_index(__opts__)
+            if index:
+                state = index.get(key)
+                if state:
+                    return True
+        except Exception:  # pylint: disable=broad-except
+            pass  # Fall through to filesystem check
+
+        # Fallback to filesystem check
         bases = [base for base in BASE_MAPPING if base != "minions_denied"]
     elif bank == "denied_keys":
         bases = ["minions_denied"]
