@@ -2,6 +2,7 @@
 The main entry point for salt-api
 """
 
+import asyncio
 import logging
 import signal
 
@@ -63,7 +64,6 @@ class NetapiClient:
             # No custom signal handling was added, install our own
             signal.signal(signal.SIGTERM, self._handle_signals)
 
-        import asyncio
         asyncio.run(self.process_manager.run())
 
     def _handle_signals(self, signum, sigframe):
