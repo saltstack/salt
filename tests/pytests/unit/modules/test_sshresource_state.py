@@ -42,6 +42,44 @@ _BASE_OPTS = {
 _BASE_RESOURCE = {"id": _RESOURCE_ID, "type": "ssh"}
 
 
+# ---------------------------------------------------------------------------
+# _relenv_path(): returns tarball or None
+# ---------------------------------------------------------------------------
+
+
+class TestRelenvPath:
+    """_relenv_path() returns the first existing tarball or None."""
+
+    def _run(self, existing_files=()):
+        import salt.modules.sshresource_state as mod
+
+        opts = _BASE_OPTS.copy()
+        with patch.object(mod, "__opts__", opts, create=True), patch.object(
+            mod, "__resource__", dict(_BASE_RESOURCE), create=True
+        ), patch.object(mod, "__context__", {}, create=True), patch.object(
+            mod, "__salt__", {}, create=True
+        ), patch(
+            "os.path.exists", side_effect=lambda p: p in existing_files
+        ):
+            return mod._relenv_path()
+
+    def test_returns_x86_64_when_present(self):
+        path = "/tmp/relenv/linux/x86_64/salt-relenv.tar.xz"
+        assert self._run(existing_files=(path,)) == path
+
+    def test_returns_arm64_when_present(self):
+        path = "/tmp/relenv/linux/arm64/salt-relenv.tar.xz"
+        assert self._run(existing_files=(path,)) == path
+
+    def test_returns_none_when_no_tarball(self):
+        assert self._run(existing_files=()) is None
+
+    def test_prefers_x86_64_over_arm64(self):
+        x86 = "/tmp/relenv/linux/x86_64/salt-relenv.tar.xz"
+        arm = "/tmp/relenv/linux/arm64/salt-relenv.tar.xz"
+        assert self._run(existing_files=(x86, arm)) == x86
+
+
 def _make_ssh_error(parsed):
     """Build a fake SSHCommandExecutionError with .parsed attribute."""
     import salt.client.ssh.wrapper
@@ -140,6 +178,8 @@ class TestExecStatePkg:
         ), patch.object(
             mod, "_relenv_path", return_value="/tmp/relenv.tar.xz"
         ), patch.object(
+            mod, "_file_client", return_value=MagicMock()
+        ), patch.object(
             mod, "_connection_kwargs", return_value={}
         ), patch(
             "salt.utils.hashutils.get_hash", return_value="abc123"
@@ -201,6 +241,8 @@ class TestExecStatePkg:
         ), patch.object(
             mod, "_relenv_path", return_value="/tmp/relenv.tar.xz"
         ), patch.object(
+            mod, "_file_client", return_value=MagicMock()
+        ), patch.object(
             mod, "_connection_kwargs", return_value={}
         ), patch(
             "salt.utils.hashutils.get_hash", return_value="abc123"
@@ -243,6 +285,8 @@ class TestExecStatePkgNormalPath:
         ), patch.object(
             mod, "_relenv_path", return_value="/tmp/relenv.tar.xz"
         ), patch.object(
+            mod, "_file_client", return_value=MagicMock()
+        ), patch.object(
             mod, "_connection_kwargs", return_value={}
         ), patch(
             "salt.utils.hashutils.get_hash", return_value="abc123"
@@ -276,3 +320,42 @@ class TestExecStatePkgNormalPath:
         envelope = {"return": _VALID_STATE_RETURN, "retcode": 0}
         _, context = self._run(envelope)
         assert context.get("retcode", 0) == 0
+
+    def test_single_receives_fsclient(self):
+        """Single must be constructed with a fsclient so cmd_block can call mod_data."""
+        import salt.modules.sshresource_state as mod
+
+        opts = _BASE_OPTS.copy()
+        mock_fsclient = MagicMock()
+
+        with patch.object(mod, "__opts__", opts, create=True), patch.object(
+            mod, "__resource__", dict(_BASE_RESOURCE), create=True
+        ), patch.object(mod, "__context__", {}, create=True), patch.object(
+            mod, "__salt__", {}, create=True
+        ), patch.object(
+            mod, "_resource_id", return_value=_RESOURCE_ID
+        ), patch.object(
+            mod, "_relenv_path", return_value="/tmp/relenv.tar.xz"
+        ), patch.object(
+            mod, "_file_client", return_value=mock_fsclient
+        ), patch.object(
+            mod, "_connection_kwargs", return_value={}
+        ), patch(
+            "salt.utils.hashutils.get_hash", return_value="abc123"
+        ), patch(
+            "os.remove"
+        ), patch(
+            "salt.client.ssh.Single"
+        ) as mock_single_cls, patch(
+            "salt.client.ssh.wrapper.parse_ret",
+            return_value={"return": _VALID_STATE_RETURN, "retcode": 0},
+        ):
+            mock_single = MagicMock()
+            mock_single.cmd_block.return_value = ("", "", 0)
+            mock_single.shell = MagicMock()
+            mock_single_cls.return_value = mock_single
+
+            mod._exec_state_pkg(opts, "/tmp/fake.tgz", False)
+
+            _, kwargs = mock_single_cls.call_args
+            assert kwargs.get("fsclient") is mock_fsclient
