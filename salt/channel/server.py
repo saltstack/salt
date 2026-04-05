@@ -1342,9 +1342,7 @@ class MasterPubServerChannel:
                     break
             attempts -= 1
             if attempts > 0:
-                log.debug(
-                    "Retrying initial AES key event (%d attempts left)", attempts
-                )
+                log.debug("Retrying initial AES key event (%d attempts left)", attempts)
                 time.sleep(1)
 
         if not success:
@@ -1406,9 +1404,7 @@ class MasterPubServerChannel:
                     tcp_master_pool_port = self.opts.get("cluster_pool_port", 4520)
 
                 # Local communication still needs IPC path
-                pull_path = os.path.join(
-                    self.opts["sock_dir"], "master_event_pull.ipc"
-                )
+                pull_path = os.path.join(self.opts["sock_dir"], "master_event_pull.ipc")
                 try:
                     self.transport = salt.transport.tcp.PublishServer(
                         self.opts,
@@ -1566,7 +1562,6 @@ class MasterPubServerChannel:
             with salt.utils.files.fopen(path, "r") as fp:
                 return fp.read()
 
-
     def pusher(self, peer, port=None):
         if ":" in peer:
             peer, peer_port = peer.rsplit(":", 1)
@@ -1591,9 +1586,7 @@ class MasterPubServerChannel:
 
                 payload = salt.payload.loads(data["payload"])
                 peer_id = payload.get("peer_id")
-                log.info(
-                    "RECEIVED DISCOVER REQUEST FROM PEER %s", peer_id
-                )
+                log.info("RECEIVED DISCOVER REQUEST FROM PEER %s", peer_id)
 
                 # Validate peer_id early (before storing in candidates)
                 # Note: We don't construct a path yet, but validate the ID is safe
@@ -1606,9 +1599,7 @@ class MasterPubServerChannel:
                         subdir=True,
                     )
                 except (SaltValidationError, KeyError) as e:
-                    log.error(
-                        "Invalid peer_id in discover %s: %s", peer_id, e
-                    )
+                    log.error("Invalid peer_id in discover %s: %s", peer_id, e)
                     return
 
                 try:
@@ -1720,9 +1711,7 @@ class MasterPubServerChannel:
                     # Update token and port from reply
                     self._discover_candidates[peer_id]["token"] = payload["token"]
                     if payload.get("port"):
-                        self._discover_candidates[peer_id][
-                            "port"
-                        ] = payload.get("port")
+                        self._discover_candidates[peer_id]["port"] = payload.get("port")
 
                 expected_token = self._discover_candidates[peer_id].get("token")
                 peer_port = self._discover_candidates[peer_id].get("port")
@@ -1951,9 +1940,7 @@ class MasterPubServerChannel:
                         return
 
                     # Extract the actual cluster key (remove token prefix)
-                    cluster_key_pem = cluster_key_bytes[
-                        len(expected_prefix) :
-                    ].decode()
+                    cluster_key_pem = cluster_key_bytes[len(expected_prefix) :].decode()
 
                     # Load and validate it's a valid private key
                     cluster_key_obj = salt.crypt.PrivateKeyString(cluster_key_pem)
@@ -2276,8 +2263,7 @@ class MasterPubServerChannel:
                                 event_data = self.extract_cluster_event(peer_id, data)
                             except salt.exceptions.AuthenticationError:
                                 log.error(
-                                    "Event from peer failed "
-                                    "authentication: %s",
+                                    "Event from peer failed " "authentication: %s",
                                     peer_id,
                                 )
                             else:
