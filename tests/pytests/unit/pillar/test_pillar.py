@@ -237,4 +237,3 @@ def test_ext_pillar_dunder_in_modules_in_pillar(temp_salt_minion):
     # Ensure a module function can access the pillar data
     assert pillar.functions["pillar.get"]("ext") == "some ext value"
     assert pillar.functions["pillar.get"]("pillar") == "some pillar value"
-
