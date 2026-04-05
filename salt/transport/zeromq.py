@@ -1023,11 +1023,18 @@ class AsyncReqMessageClient:
                     # The ioloop was closed before polling finished.
                     send_recv_running = False
                     break
-                except zmq.ZMQError:
-                    log.trace("Send socket closed while polling.")
+                except zmq.ZMQError as exc:
+                    if exc.errno == zmq.EFSM:
+                        log.trace("Socket in invalid state during poll. Reconnecting.")
+                    else:
+                        log.trace("Send socket closed while polling: %s", exc)
                     send_recv_running = False
                     break
                 continue
+
+            if task_id is not None and task_id != self.send_recv_task_id:
+                log.trace("Task %s is no longer active after queue.get. Exiting.", task_id)
+                break
 
             try:
                 yield socket.send(message)
@@ -1055,6 +1062,11 @@ class AsyncReqMessageClient:
                     future.set_exception(exc)
                 self.close()
                 self.connect()
+                break
+
+            if task_id is not None and task_id != self.send_recv_task_id:
+                log.trace("Task %s is no longer active after socket.send. Exiting.", task_id)
+                send_recv_running = False
                 break
 
             if future.done():
@@ -1091,6 +1103,11 @@ class AsyncReqMessageClient:
                         future.set_exception(exc)
                     self.close()
                     self.connect()
+                    break
+
+                if task_id is not None and task_id != self.send_recv_task_id:
+                    log.trace("Task %s is no longer active after poll. Exiting.", task_id)
+                    send_recv_running = False
                     break
 
                 if ready:
@@ -1528,7 +1545,6 @@ class RequestClient(salt.transport.base.RequestClient):
                 self._connect_called = True
                 self._closing = False
                 # wire up sockets
-                self._queue = asyncio.Queue()
                 self._init_socket()
 
     def _init_socket(self):
@@ -1697,11 +1713,18 @@ class RequestClient(salt.transport.base.RequestClient):
                     # The ioloop was closed before polling finished.
                     send_recv_running = False
                     break
-                except zmq.ZMQError:
-                    log.trace("Send socket closed while polling.")
+                except zmq.ZMQError as exc:
+                    if exc.errno == zmq.EFSM:
+                        log.trace("Socket in invalid state during poll. Reconnecting.")
+                    else:
+                        log.trace("Send socket closed while polling: %s", exc)
                     send_recv_running = False
                     break
                 continue
+
+            if task_id is not None and task_id != self.send_recv_task_id:
+                log.trace("Task %s is no longer active after queue.get. Exiting.", task_id)
+                break
 
             if future is None:
                 log.trace("Received send/recv shutdown sentinal")
@@ -1746,6 +1769,11 @@ class RequestClient(salt.transport.base.RequestClient):
                 await self.connect()
                 break
 
+            if task_id is not None and task_id != self.send_recv_task_id:
+                log.trace("Task %s is no longer active after socket.send. Exiting.", task_id)
+                send_recv_running = False
+                break
+
             if future.done():
                 if isinstance(future.exception(), asyncio.CancelledError):
                     send_recv_running = False
@@ -1786,6 +1814,11 @@ class RequestClient(salt.transport.base.RequestClient):
                         future.set_exception(exc)
                     self.close()
                     await self.connect()
+                    break
+
+                if task_id is not None and task_id != self.send_recv_task_id:
+                    log.trace("Task %s is no longer active after poll. Exiting.", task_id)
+                    send_recv_running = False
                     break
 
                 if ready:
