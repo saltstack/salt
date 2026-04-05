@@ -283,7 +283,6 @@ class TestMsgpack(TestCase):
     def _test_unpacker_ext_hook(self, pack_func, **kwargs):
         class MyUnpacker(salt.utils.msgpack.Unpacker):
             def __init__(self):
-                my_kwargs = {}
                 super().__init__(ext_hook=self._hook, raw=False)
 
             def _hook(self, code, data):
