@@ -51,7 +51,9 @@ log = logging.getLogger(__name__)
 
 
 class ClosingError(Exception):
-    """ """
+    """
+    Exception raised when an operation is attempted on a closing or closed connection.
+    """
 
 
 async def _null_callback(*args, **kwargs):

@@ -1178,7 +1178,10 @@ class PubServerChannel:
 
 
 class MasterPubServerChannel:
-    """ """
+    """
+    The salt master's publish server channel. This is the component that
+    broadcasts messages to minions and other masters in the cluster.
+    """
 
     @classmethod
     def factory(cls, opts, **kwargs):
@@ -2263,7 +2266,7 @@ class MasterPubServerChannel:
                                 event_data = self.extract_cluster_event(peer_id, data)
                             except salt.exceptions.AuthenticationError:
                                 log.error(
-                                    "Event from peer failed " "authentication: %s",
+                                    "Event from peer failed authentication: %s",
                                     peer_id,
                                 )
                             else:
