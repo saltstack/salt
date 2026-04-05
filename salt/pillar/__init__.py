@@ -1165,6 +1165,7 @@ class Pillar:
             mopts = dict(self.opts)
             if "grains" in mopts:
                 mopts.pop("grains")
+            mopts.pop("pillar", None)
             mopts["saltversion"] = __version__
             pillar["master"] = mopts
         if "pillar" in self.opts and self.opts.get("ssh_merge_pillar", False):
