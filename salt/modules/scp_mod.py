@@ -143,7 +143,7 @@ def put(
     recursive=False,
     preserve_times=False,
     saltenv="base",
-    **kwargs
+    **kwargs,
 ):
     """
     Transfer files and directories to remote host.

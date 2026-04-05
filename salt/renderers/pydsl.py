@@ -370,7 +370,7 @@ def render(template, saltenv="base", sls="", tmplpath=None, rendered_sls=None, *
         __env__=saltenv,
         __sls__=sls,
         __file__=tmplpath,
-        **kws
+        **kws,
     )
 
     dsl_sls.get_render_stack().append(dsl_sls)

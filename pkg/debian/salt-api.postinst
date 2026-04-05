@@ -26,7 +26,11 @@ case "$1" in
           touch /var/log/salt/api
           chmod 640 /var/log/salt/api
         fi
-        chown $RET:$RET /var/log/salt/api
+        # Only set ownership on fresh install, preserve on upgrade
+        if [ -z "$2" ]; then
+            chown $RET:$RET /var/log/salt/api
+            chown -R $RET:$RET /opt/saltstack/salt || true
+        fi
       fi
     fi
   ;;

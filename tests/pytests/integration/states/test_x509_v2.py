@@ -3,8 +3,10 @@ Tests for the x509_v2 module
 """
 
 import base64
+import json
 import logging
 import shutil
+import time
 from pathlib import Path
 
 import pytest
@@ -673,6 +675,71 @@ def test_certificate_managed_remote_renew(x509_salt_call_cli, cert_args):
     assert ret.returncode == 0
     cert_new = _get_cert(cert_args["name"])
     assert cert_new.serial_number != cert_cur.serial_number
+
+
+def test_certificate_managed_works_with_queued_state_application(
+    x509_salt_master, x509_salt_call_cli, x509_salt_minion, cert_args
+):
+    sleep_tpl = """
+    Sleep to allow queueing state run:
+      module.run:
+        - test.sleep:
+          - length: {}
+    """
+    cert_state = (
+        sleep_tpl.format("3")
+        + f"""
+    Some private key is present:
+      x509.certificate_managed:
+        - name: {json.dumps(cert_args['name'])}
+        - ca_server: {cert_args['ca_server']}
+        - signing_policy: {cert_args['signing_policy']}
+        - private_key: {json.dumps(cert_args['private_key'])}
+    """
+    )
+    tgt = Path(cert_args["name"])
+    salt_cli = x509_salt_master.salt_cli()
+
+    def jobwait(jid, exp):
+        cnt = 0
+        while (
+            bool(
+                x509_salt_call_cli.run(
+                    "saltutil.find_job", jid, minion_tgt=x509_salt_minion.id
+                ).data
+            )
+            is not exp
+        ):
+            cnt += 1
+            if cnt > 100:
+                raise AssertionError(
+                    f"Timeout waiting for jid {jid} to {exp and 'start' or 'finish'}"
+                )
+            time.sleep(0.1)
+
+    with x509_salt_master.state_tree.base.temp_file(
+        "queued_staterun_test.sls", cert_state
+    ), x509_salt_master.state_tree.base.temp_file("sleep.sls", sleep_tpl.format("0.1")):
+        res = salt_cli.run(
+            "state.apply",
+            "queued_staterun_test",
+            "--async",
+            minion_tgt=x509_salt_minion.id,
+        )
+        job_id = res.stdout.rsplit("ID: ", maxsplit=1)[-1].strip()
+        jobwait(job_id, True)  # ensure scheduling order
+        salt_cli.run(
+            "state.apply",
+            "sleep",
+            "queue=true",
+            "--async",
+            minion_tgt=x509_salt_minion.id,
+        )
+        assert not tgt.exists()
+        jobwait(job_id, False)
+
+    assert tgt.exists()
+    assert _get_cert(tgt)
 
 
 @pytest.mark.usefixtures("privkey_new")

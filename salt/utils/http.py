@@ -639,12 +639,13 @@ def query(
         except tornado.httpclient.HTTPError as exc:
             ret["status"] = exc.code
             ret["error"] = str(exc)
-            ret["body"], _ = _decode_result(
-                exc.response.body,
-                exc.response.headers,
-                backend,
-                decode_body=decode_body,
-            )
+            if exc.response is not None:
+                ret["body"], _ = _decode_result(
+                    exc.response.body,
+                    exc.response.headers,
+                    backend,
+                    decode_body=decode_body,
+                )
             return ret
         except (socket.herror, OSError, TimeoutError, socket.gaierror) as exc:
             if status is True:
