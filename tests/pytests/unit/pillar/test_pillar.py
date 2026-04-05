@@ -7,7 +7,7 @@ import pytest
 import salt.loader
 import salt.pillar
 import salt.utils.cache
-from tests.support.mock import MagicMock
+from tests.support.mock import MagicMock, patch
 
 
 @pytest.mark.parametrize(
@@ -208,3 +208,32 @@ def test_remote_pillar_timeout(temp_salt_minion, tmp_path):
     msg = r"^Pillar timed out after \d{1,4} seconds$"
     with pytest.raises(salt.exceptions.SaltClientError):
         pillar.compile_pillar()
+
+
+def test_ext_pillar_dunder_in_modules_in_pillar(temp_salt_minion):
+    """
+    Test that ext_pillar is available in __pillar__ inside execution modules
+    during pillar render when using ext_pillar_first=true
+    """
+    opts = temp_salt_minion.config.copy()
+    opts["ext_pillar_first"] = True
+
+    grains = salt.loader.grains(opts)
+    pillar = salt.pillar.Pillar(opts, grains, temp_salt_minion.id, "base")
+    # Pillar should be empty to start with
+    assert pillar.functions.pack["__pillar__"] == {}
+
+    ext_value = {"ext": "some ext value"}
+    pil_value = {"pillar": "some pillar value"}
+    with patch.object(pillar, "ext_pillar", return_value=(ext_value, [])):
+        with patch.object(pillar, "render_pillar", return_value=(pil_value, [])):
+            compiled = pillar.compile_pillar()
+            assert compiled == dict(**ext_value, **pil_value)
+
+    # Loader should pack the opts pillar dict from the ext_pillar() call
+    # and the rendered pillar data
+    assert pillar.functions.pack["__pillar__"] == dict(**ext_value, **pil_value)
+
+    # Ensure a module function can access the pillar data
+    assert pillar.functions["pillar.get"]("ext") == "some ext value"
+    assert pillar.functions["pillar.get"]("pillar") == "some pillar value"
