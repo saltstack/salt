@@ -27,6 +27,290 @@ cgroup = command_group(
 
 
 @cgroup.command(
+    name="list-discussions",
+    arguments={
+        "repository": {
+            "help": "GitHub repository (owner/name).",
+        },
+        "category": {
+            "help": "Filter by discussion category name or slug.",
+        },
+        "limit": {
+            "help": "Maximum number of discussions to return.",
+        },
+    },
+)
+def list_discussions(
+    ctx: Context,
+    repository: str = "saltstack/salt",
+    category: str | None = None,
+    limit: int = 20,
+):
+    """
+    List discussions in a GitHub repository.
+    """
+    github_token = tools.utils.gh.get_github_token(ctx)
+    if github_token is None:
+        ctx.error("Listing discussions requires being authenticated to GitHub.")
+        ctx.info(
+            "Either set 'GITHUB_TOKEN' to a valid token, or configure the 'gh' tool such that "
+            "'gh auth token' returns a token."
+        )
+        ctx.exit(1)
+
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {github_token}",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    with ctx.web as web:
+        web.headers.update(headers)
+
+        category_id: str | None = None
+        if category is not None:
+            repo_info = tools.utils.gh.get_repository_info(ctx, web, repository)
+            if repo_info is None:
+                ctx.exit(1)
+            category_id = tools.utils.gh.get_discussion_category_id(
+                ctx, repo_info["discussionCategories"], category
+            )
+            if category_id is None:
+                ctx.exit(1)
+
+        owner, name = repository.split("/", 1)
+        query = """
+query ListDiscussions($owner: String!, $name: String!, $first: Int!, $categoryId: ID) {
+  repository(owner: $owner, name: $name) {
+    discussions(first: $first, categoryId: $categoryId) {
+      nodes {
+        number
+        title
+        url
+        createdAt
+        author {
+          login
+        }
+        category {
+          name
+        }
+        comments {
+          totalCount
+        }
+      }
+    }
+  }
+}
+"""
+        variables = {
+            "owner": owner,
+            "name": name,
+            "first": limit,
+        }
+        if category_id is not None:
+            variables["categoryId"] = category_id
+
+        data = tools.utils.gh.run_graphql_query(ctx, web, query, variables)
+        if data is None:
+            ctx.exit(1)
+
+        discussions = data["repository"]["discussions"]["nodes"]
+        if not discussions:
+            ctx.info("No discussions found.")
+            return
+
+        for discussion in discussions:
+            ctx.info(
+                f"#{discussion['number']}  [{discussion['category']['name']}]  "
+                f"{discussion['title']}  ({discussion['comments']['totalCount']} comments)  "
+                f"by {discussion['author']['login']}  {discussion['url']}"
+            )
+
+
+@cgroup.command(
+    name="create-discussion",
+    arguments={
+        "repository": {
+            "help": "GitHub repository (owner/name).",
+        },
+        "title": {
+            "help": "Title of the discussion.",
+            "required": True,
+        },
+        "body": {
+            "help": "Body text of the discussion (Markdown).",
+            "required": True,
+        },
+        "category": {
+            "help": "Discussion category name or slug.",
+            "required": True,
+        },
+    },
+)
+def create_discussion(
+    ctx: Context,
+    title: str,
+    body: str,
+    category: str,
+    repository: str = "saltstack/salt",
+):
+    """
+    Create a new discussion in a GitHub repository.
+    """
+    github_token = tools.utils.gh.get_github_token(ctx)
+    if github_token is None:
+        ctx.error("Creating discussions requires being authenticated to GitHub.")
+        ctx.info(
+            "Either set 'GITHUB_TOKEN' to a valid token, or configure the 'gh' tool such that "
+            "'gh auth token' returns a token."
+        )
+        ctx.exit(1)
+
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {github_token}",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    with ctx.web as web:
+        web.headers.update(headers)
+
+        repo_info = tools.utils.gh.get_repository_info(ctx, web, repository)
+        if repo_info is None:
+            ctx.exit(1)
+
+        category_id = tools.utils.gh.get_discussion_category_id(
+            ctx, repo_info["discussionCategories"], category
+        )
+        if category_id is None:
+            ctx.exit(1)
+
+        mutation = """
+mutation CreateDiscussion($repositoryId: ID!, $categoryId: ID!, $title: String!, $body: String!) {
+  createDiscussion(input: {
+    repositoryId: $repositoryId
+    categoryId: $categoryId
+    title: $title
+    body: $body
+  }) {
+    discussion {
+      number
+      url
+    }
+  }
+}
+"""
+        variables = {
+            "repositoryId": repo_info["id"],
+            "categoryId": category_id,
+            "title": title,
+            "body": body,
+        }
+        data = tools.utils.gh.run_graphql_query(ctx, web, mutation, variables)
+        if data is None:
+            ctx.exit(1)
+
+        discussion = data["createDiscussion"]["discussion"]
+        ctx.info(
+            f"Created discussion #{discussion['number']}: {discussion['url']}"
+        )
+
+
+@cgroup.command(
+    name="comment-on-discussion",
+    arguments={
+        "repository": {
+            "help": "GitHub repository (owner/name).",
+        },
+        "discussion_number": {
+            "help": "The number of the discussion to comment on.",
+            "required": True,
+        },
+        "body": {
+            "help": "Comment text (Markdown).",
+            "required": True,
+        },
+    },
+)
+def comment_on_discussion(
+    ctx: Context,
+    discussion_number: int,
+    body: str,
+    repository: str = "saltstack/salt",
+):
+    """
+    Add a comment to an existing GitHub discussion.
+    """
+    github_token = tools.utils.gh.get_github_token(ctx)
+    if github_token is None:
+        ctx.error("Commenting on discussions requires being authenticated to GitHub.")
+        ctx.info(
+            "Either set 'GITHUB_TOKEN' to a valid token, or configure the 'gh' tool such that "
+            "'gh auth token' returns a token."
+        )
+        ctx.exit(1)
+
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {github_token}",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    with ctx.web as web:
+        web.headers.update(headers)
+
+        owner, name = repository.split("/", 1)
+        lookup_query = """
+query GetDiscussion($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    discussion(number: $number) {
+      id
+      title
+      url
+    }
+  }
+}
+"""
+        lookup_data = tools.utils.gh.run_graphql_query(
+            ctx,
+            web,
+            lookup_query,
+            {"owner": owner, "name": name, "number": discussion_number},
+        )
+        if lookup_data is None:
+            ctx.exit(1)
+
+        discussion_node = lookup_data["repository"]["discussion"]
+        if discussion_node is None:
+            ctx.error(
+                f"Discussion #{discussion_number} not found in repository {repository!r}"
+            )
+            ctx.exit(1)
+
+        mutation = """
+mutation AddDiscussionComment($discussionId: ID!, $body: String!) {
+  addDiscussionComment(input: {
+    discussionId: $discussionId
+    body: $body
+  }) {
+    comment {
+      id
+      url
+    }
+  }
+}
+"""
+        data = tools.utils.gh.run_graphql_query(
+            ctx,
+            web,
+            mutation,
+            {"discussionId": discussion_node["id"], "body": body},
+        )
+        if data is None:
+            ctx.exit(1)
+
+        comment = data["addDiscussionComment"]["comment"]
+        ctx.info(f"Comment added: {comment['url']}")
+
+
+@cgroup.command(
     name="sync-os-labels",
     arguments={
         "repository": {

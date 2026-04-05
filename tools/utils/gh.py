@@ -8,7 +8,7 @@ import shutil
 import sys
 import tempfile
 import zipfile
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from ptscripts import Context
 
@@ -342,6 +342,92 @@ def download_artifact(
     if found_artifact is None:
         ctx.error(f"Failed to find an artifact by the name of {artifact_name!r}")
     return found_artifact
+
+
+def run_graphql_query(
+    ctx: Context,
+    web: Any,
+    query: str,
+    variables: dict | None = None,
+) -> dict | None:
+    """
+    Execute a GraphQL query or mutation against the GitHub GraphQL API.
+    """
+    payload: dict = {"query": query}
+    if variables:
+        payload["variables"] = variables
+    ret = web.post("https://api.github.com/graphql", json=payload)
+    if ret.status_code != 200:
+        ctx.error(f"GraphQL request failed: {ret.reason}")
+        return None
+    data = ret.json()
+    if "errors" in data:
+        for error in data["errors"]:
+            ctx.error(f"GraphQL error: {error['message']}")
+        return None
+    return data.get("data")
+
+
+def get_repository_info(
+    ctx: Context,
+    web: Any,
+    repository: str,
+) -> dict | None:
+    """
+    Fetch repository node ID and discussion categories via GraphQL.
+
+    Returns a dict with keys ``id`` and ``discussionCategories``, or ``None``
+    on failure.  ``discussionCategories`` is a list of dicts, each with
+    ``id``, ``name``, and ``slug`` keys.
+    """
+    owner, name = repository.split("/", 1)
+    query = """
+query GetRepositoryInfo($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
+    id
+    discussionCategories(first: 25) {
+      nodes {
+        id
+        name
+        slug
+      }
+    }
+  }
+}
+"""
+    data = run_graphql_query(ctx, web, query, {"owner": owner, "name": name})
+    if data is None:
+        return None
+    repo = data.get("repository")
+    if repo is None:
+        ctx.error(f"Repository {repository!r} not found")
+        return None
+    return {
+        "id": repo["id"],
+        "discussionCategories": repo["discussionCategories"]["nodes"],
+    }
+
+
+def get_discussion_category_id(
+    ctx: Context,
+    categories: list,
+    category: str,
+) -> str | None:
+    """
+    Return the node ID for the named discussion category.
+
+    *category* is matched case-insensitively against both the category's
+    ``name`` and its ``slug``.  Returns ``None`` and logs an error if no
+    match is found.
+    """
+    for cat in categories:
+        if cat["name"].lower() == category.lower() or cat["slug"].lower() == category.lower():
+            return cat["id"]
+    available = ", ".join(c["name"] for c in categories)
+    ctx.error(
+        f"Category {category!r} not found. Available categories: {available}"
+    )
+    return None
 
 
 def discover_run_id(
