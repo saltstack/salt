@@ -3296,10 +3296,13 @@ class Minion(MinionBase):
         with salt.utils.event.get_event(
             "minion", opts=self.opts, listen=False, io_loop=self.io_loop
         ) as evt:
-            yield evt.fire_event_async(
-                {"complete": True},
-                tag=salt.defaults.events.MINION_PILLAR_REFRESH_COMPLETE,
-            )
+            try:
+                yield evt.fire_event_async(
+                    {"complete": True},
+                    tag=salt.defaults.events.MINION_PILLAR_REFRESH_COMPLETE,
+                )
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error firing pillar refresh complete event: %s", exc)
 
     def manage_schedule(self, tag, data):
         """
@@ -3490,10 +3493,13 @@ class Minion(MinionBase):
                 with salt.utils.event.get_event(
                     "minion", opts=self.opts, listen=False, io_loop=self.io_loop
                 ) as event:
-                    yield event.fire_event_async(
-                        {"ret": ret},
-                        f"__master_req_channel_return/{request_id}",
-                    )
+                    try:
+                        yield event.fire_event_async(
+                            {"ret": ret},
+                            f"__master_req_channel_return/{request_id}",
+                        )
+                    except Exception as exc:  # pylint: disable=broad-except
+                        log.error("Error firing master request return event: %s", exc)
             else:
                 log.debug(
                     "Skipping req for other master: cmd=%s master=%s id=%s",
@@ -3519,7 +3525,7 @@ class Minion(MinionBase):
                 data.get("force_refresh", False)
                 or _minion.grains_cache != _minion.opts["grains"]
             ):
-                _minion.pillar_refresh(force_refresh=True)
+                yield _minion.pillar_refresh(force_refresh=True)
                 _minion.grains_cache = _minion.opts["grains"]
         elif tag.startswith("environ_setenv"):
             self.environ_setenv(tag, data)
