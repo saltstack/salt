@@ -115,7 +115,7 @@ propcache==0.4.1
     #   yarl
 psutil==5.9.6
     # via -r requirements/base.txt
-pyasn1==0.6.2
+pyasn1==0.6.3
     # via -r requirements/base.txt
 pycparser==2.21
     # via
