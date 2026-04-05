@@ -251,7 +251,7 @@ pyzmq==25.1.2
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/zeromq.txt
-requests==2.31.0
+requests==2.33.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/base.txt

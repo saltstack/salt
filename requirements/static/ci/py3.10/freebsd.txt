@@ -479,7 +479,7 @@ requests==2.31.0 ; python_full_version < '3.11'
     #   responses
     #   vcert
     #   vultr
-requests==2.32.5 ; python_full_version >= '3.11'
+requests==2.33.0 ; python_full_version >= '3.11'
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.txt
     #   -r requirements/base.txt
