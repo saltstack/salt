@@ -357,6 +357,9 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         Rebuild PKI index on startup to remove tombstones and ensure consistency.
         This is called once during _post_fork_init().
         """
+        if self.opts.get("keys.cache_driver", "localfs_key") != "localfs_key":
+            return
+
         try:
             from salt.cache import localfs_key
 
