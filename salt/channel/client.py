@@ -549,9 +549,7 @@ class AsyncPubChannel:
             # may have been restarted
             yield self.send_id(self.token, self._reconnected)
             self.connected = True
-            yield self.event.fire_event_async(
-                {"master": self.opts["master"]}, "__master_connected"
-            )
+            self.event.fire_event({"master": self.opts["master"]}, "__master_connected")
             if self._reconnected:
                 # On reconnects, fire a master event to notify that the minion is
                 # available.
