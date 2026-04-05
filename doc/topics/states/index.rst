@@ -38,8 +38,8 @@ resources to learn more about state and renderers.
 
         moe:
           user.rename:
-            - new_name: larry
-            - onlyif: id moe
+            new_name: larry
+            onlyif: id moe
 
     You must use the :mod:`module <salt.states.module>` states to call
     execution modules directly. Here's an example:
@@ -48,10 +48,10 @@ resources to learn more about state and renderers.
 
        rename_moe:
          module.run:
-           - name: user.rename
-           - m_name: moe
-           - new_name: larry
-           - onlyif: id moe
+           name: user.rename
+           m_name: moe
+           new_name: larry
+           onlyif: id moe
 
 **Renderers**
     Renderers use state configuration files written in a variety of languages,

@@ -36,8 +36,8 @@ with ``salt://|`` rather than ``salt://``.
 
     /etc/marathon/conf/?checkpoint:
       file.managed:
-        - source: salt://|hw/config/?checkpoint
-        - makedirs: True
+        source: salt://|hw/config/?checkpoint
+        makedirs: True
 
 Environments
 ````````````

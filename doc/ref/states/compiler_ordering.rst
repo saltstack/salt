@@ -60,10 +60,10 @@ As an example, a state written thusly:
 
     apache:
       pkg.installed:
-        - name: httpd
+        name: httpd
       service.running:
-        - name: httpd
-        - watch:
+        name: httpd
+        watch:
           - file: apache_conf
           - pkg: apache
 
@@ -78,34 +78,24 @@ Will have High Data which looks like this represented in json:
 
     {
         "apache": {
-            "pkg": [
-                {
-                    "name": "httpd"
-                },
-                "installed",
-                {
-                    "order": 10000
-                }
-            ],
-            "service": [
-                {
-                    "name": "httpd"
-                },
-                {
-                    "watch": [
-                        {
-                            "file": "apache_conf"
-                        },
-                        {
-                            "pkg": "apache"
-                        }
-                    ]
-                },
-                "running",
-                {
-                    "order": 10001
-                }
-            ],
+            "pkg": {
+                "name": "httpd",
+                "fun": "installed",
+                "order": 10000
+            },
+            "service": {
+                "name": "httpd",
+                "watch": [
+                    {
+                        "file": "apache_conf"
+                    },
+                    {
+                        "pkg": "apache"
+                    }
+                ],
+                "fun": "running",
+                "order": 10001
+            },
             "__sls__": "blah",
             "__env__": "base"
         },
@@ -247,8 +237,8 @@ ordering can be explicitly overridden using the ``order`` flag in states:
 
     apache:
       pkg.installed:
-        - name: httpd
-        - order: 1
+        name: httpd
+        order: 1
 
 This order flag will over ride the definition order, this makes it very
 simple to create states that are always executed first, last or in specific
