@@ -2389,10 +2389,7 @@ class Minion(MinionBase):
 
                         log.info("Re-submitting queued job %s", data.get("jid"))
 
-                        if hasattr(self, "io_loop"):
-                            self.io_loop.create_task(self._handle_decoded_payload(data))
-                        else:
-                            self.io_loop.create_task(self._handle_decoded_payload(data))
+                        self.io_loop.create_task(self._handle_decoded_payload(data))
 
                         # Remove from queue
                         try:
@@ -4000,8 +3997,7 @@ class Minion(MinionBase):
                     if hasattr(self, "io_loop"):
                         self.io_loop.create_task(self._handle_decoded_payload(data))
                     else:
-                        # Fallback if io_loop is not explicit (should not happen in Minion)
-                        self.io_loop.create_task(self._handle_decoded_payload(data))
+                        await self._handle_decoded_payload(data)
 
                     # Remove from queue
                     try:

@@ -270,10 +270,10 @@ class CacheRegex:
             self.clear()
             self.timestamp = time.time()
         else:
-            paterns = list(self.cache.values())
-            paterns.sort()
+            patterns = list(self.cache.values())
+            patterns.sort(key=lambda x: x[0])
             for idx in range(self.clear_size):
-                del self.cache[paterns[idx][2]]
+                del self.cache[patterns[idx][2]]
 
     def get(self, pattern):
         """

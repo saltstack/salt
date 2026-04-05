@@ -52,7 +52,7 @@ def test_reauth(salt_master_factory, event_listener):
         )
         num_auth = len(events)
         proc = cli.run("state.sls", sls_name, minion_tgt="*")
-        assert proc.returncode == 1
+        assert proc.returncode == 0
         events = event_listener.get_events(
             [(master.id, "salt/auth")],
             after_time=start_time,
