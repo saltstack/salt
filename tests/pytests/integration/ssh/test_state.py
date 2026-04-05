@@ -241,6 +241,7 @@ def test_state_run_request(salt_ssh_cli):
     assert exists.data is True
 
 
+@pytest.mark.timeout(300, func_only=True)
 def test_state_running(
     salt_master, salt_ssh_cli, salt_ssh_roster_file, sshd_config_dir
 ):
