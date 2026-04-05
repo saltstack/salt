@@ -13,6 +13,7 @@ import salt.cache
 import salt.client
 import salt.crypt
 import salt.exceptions
+import salt.output
 import salt.payload
 import salt.transport
 import salt.utils.args
