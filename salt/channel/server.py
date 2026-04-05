@@ -115,13 +115,13 @@ class ReqServerChannel:
         )
         return self.sessions[minion][1]
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, *args, **kwargs):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be bind and listen (or the equivalent for your network library)
         """
         if hasattr(self.transport, "pre_fork"):
-            self.transport.pre_fork(process_manager)
+            self.transport.pre_fork(process_manager, *args, **kwargs)
 
     def post_fork(self, payload_handler, io_loop):
         """
@@ -972,6 +972,82 @@ class ReqServerChannel:
             self.event.destroy()
 
 
+class PoolDispatcherChannel:
+    """
+    Dispatcher channel that receives requests from the front-end channel
+    and routes them to pool-specific channels based on command classification.
+    """
+
+    def __init__(self, opts, frontend_channels, pool_channels):
+        """
+        :param opts: Master configuration options
+        :param frontend_channels: List of frontend ReqServerChannel instances (where minions connect)
+        :param pool_channels: Dict mapping pool_name to ReqServerChannel instances
+        """
+        self.opts = opts
+        self.frontend_channels = frontend_channels
+        self.pool_channels = pool_channels
+        self.router = None  # Will be initialized in post_fork
+        self.io_loop = None
+
+    def post_fork(self, io_loop):
+        """
+        Called in the dispatcher process after forking.
+        Sets up the dispatcher to receive from front-end and route to pools.
+
+        :param IOLoop io_loop: Tornado IOLoop instance
+        """
+        import salt.master
+
+        self.io_loop = io_loop
+        self.router = salt.master.RequestRouter(self.opts)
+
+        # Connect to frontend channels as a worker
+        for channel in self.frontend_channels:
+            channel.post_fork(self._dispatch_handler, io_loop)
+
+        log.info(
+            "Pool dispatcher started, routing to pools: %s",
+            list(self.pool_channels.keys()),
+        )
+
+    async def _dispatch_handler(self, payload):
+        """
+        Handle incoming message from front-end, classify it, and forward to the appropriate pool.
+
+        :param payload: The request payload from a minion
+        :return: The response from the pool worker
+        """
+        try:
+            # Classify the request to determine target pool
+            pool_name = self.router.route_request(payload)
+
+            if not pool_name:
+                log.error("Router returned no pool name for request")
+                return {"error": "Unable to route request"}
+
+            if pool_name not in self.pool_channels:
+                log.error(
+                    "Router returned unknown pool '%s'. Available pools: %s",
+                    pool_name,
+                    list(self.pool_channels.keys()),
+                )
+                return {"error": f"Unknown pool: {pool_name}"}
+
+            # Forward to the pool's transport
+            channel = self.pool_channels[pool_name]
+            log.debug("Routing request to pool '%s'", pool_name)
+
+            # Forward the message through the pool's transport
+            reply = await channel.transport.forward_message(payload)
+
+            return reply
+
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Error in dispatcher handler: %s", exc, exc_info=True)
+            return {"error": "Dispatcher error"}
+
+
 class PubServerChannel:
     """
     Factory class to create subscription channels to the master's Publisher
@@ -1035,7 +1111,7 @@ class PubServerChannel:
             self.aes_funcs.destroy()
             self.aes_funcs = None
 
-    def pre_fork(self, process_manager, kwargs=None):
+    def pre_fork(self, process_manager, *args, **kwargs):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
@@ -1044,7 +1120,11 @@ class PubServerChannel:
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         """
         if hasattr(self.transport, "publish_daemon"):
-            process_manager.add_process(self._publish_daemon, kwargs=kwargs)
+            # Extract kwargs for the process.
+            # We check for a named 'kwargs' key first (from salt/master.py),
+            # then fallback to the entire kwargs dict.
+            proc_kwargs = kwargs.pop("kwargs", kwargs)
+            process_manager.add_process(self._publish_daemon, kwargs=proc_kwargs)
 
     def _publish_daemon(self, **kwargs):
         if self.opts["pub_server_niceness"] and not salt.utils.platform.is_windows():
@@ -1240,7 +1320,7 @@ class MasterPubServerChannel:
     def close(self):
         self.transport.close()
 
-    def pre_fork(self, process_manager, kwargs=None):
+    def pre_fork(self, process_manager, *args, **kwargs):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
@@ -1249,11 +1329,14 @@ class MasterPubServerChannel:
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         """
         if hasattr(self.transport, "publish_daemon"):
+            proc_kwargs = kwargs.pop("kwargs", kwargs)
             process_manager.add_process(
-                self._publish_daemon, kwargs=kwargs, name="EventPublisher"
+                self._publish_daemon, kwargs=proc_kwargs, name="EventPublisher"
             )
 
     def _publish_daemon(self, **kwargs):
+        import salt.master
+
         if (
             self.opts["event_publisher_niceness"]
             and not salt.utils.platform.is_windows()
@@ -1263,6 +1346,11 @@ class MasterPubServerChannel:
                 self.opts["event_publisher_niceness"],
             )
             os.nice(self.opts["event_publisher_niceness"])
+
+        secrets = kwargs.get("secrets", None)
+        if secrets is not None:
+            salt.master.SMaster.secrets = secrets
+
         self.io_loop = tornado.ioloop.IOLoop.current()
         tcp_master_pool_port = self.opts["cluster_pool_port"]
         self.pushers = []

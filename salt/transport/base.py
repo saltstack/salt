@@ -349,7 +349,7 @@ class RequestServer:
 
 
 class DaemonizedRequestServer(RequestServer):
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, *args, **kwargs):
         raise NotImplementedError
 
     def post_fork(self, message_handler, io_loop):
@@ -357,6 +357,15 @@ class DaemonizedRequestServer(RequestServer):
         The message handler is a coroutine that will be called called when a
         new request comes into the server. The return from the message handler
         will be send back to the RequestClient
+        """
+        raise NotImplementedError
+
+    async def forward_message(self, payload):
+        """
+        Forward a message into this transport's worker queue.
+        Used by the pool dispatcher to route messages to pool-specific transports.
+
+        :param payload: The message payload to forward
         """
         raise NotImplementedError
 
@@ -432,7 +441,7 @@ class DaemonizedPublishServer(PublishServer):
         raise NotImplementedError
 
     @abstractmethod
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, *args, **kwargs):
         raise NotImplementedError
 
     @abstractmethod

@@ -14,5 +14,6 @@ def iter_transport_opts(opts):
         transports.add(transport)
         yield transport, t_opts
 
-    if opts["transport"] not in transports:
-        yield opts["transport"], opts
+    transport = opts.get("transport", "zeromq")
+    if transport not in transports:
+        yield transport, opts
