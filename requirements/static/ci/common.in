@@ -64,3 +64,5 @@ genshi>=0.7.3
 cheetah3>=3.2.2
 mako
 wempy
+psycopg2-binary; sys_platform != 'win32' or platform_machine != 'x86'
+psycopg2; sys_platform == 'win32' and platform_machine == 'x86'
