@@ -2,7 +2,7 @@
     :codeauthor: Bo Maryniuk <bo@suse.de>
 """
 
-import imp  # pylint: disable=deprecated-module
+import importlib.util
 import os
 
 import pytest
@@ -41,7 +41,9 @@ class ZyppPluginsTestCase(TestCase):
         Returns:
 
         """
-        zyppnotify = imp.load_source("zyppnotify", ZYPPNOTIFY_FILE)
+        spec = importlib.util.spec_from_file_location("zyppnotify", ZYPPNOTIFY_FILE)
+        zyppnotify = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(zyppnotify)
         drift = zyppnotify.DriftDetector()
         drift._get_mtime = MagicMock(return_value=123)
         drift._get_checksum = MagicMock(return_value="deadbeef")
