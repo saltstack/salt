@@ -1,8 +1,7 @@
-import asyncio
 import logging
 
 import salt.client.netapi
-from tests.support.mock import MagicMock, Mock, patch
+from tests.support.mock import MagicMock, patch
 
 
 def test_run_log(caplog, master_opts):
