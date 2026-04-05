@@ -210,7 +210,7 @@ pycryptodomex==3.21.0
     #   -r requirements/crypto.txt
 pyenchant==3.2.2
     # via sphinxcontrib-spelling
-pygments==2.18.0
+pygments==2.20.0
     # via sphinx
 pyopenssl==25.3.0
     # via
