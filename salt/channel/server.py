@@ -1008,8 +1008,34 @@ class PubServerChannel:
                 # 'Maintenance' process.
                 presence_events = True
         if opts.get("cluster_id"):
-            # For master clusters, we connect to the local publisher via IPC
-            transport = salt.transport.publish_client(opts, **kwargs)
+            # For master clusters, we connect to the local publisher via IPC.
+            # Try multiple times to give the EventPublisher time to start up.
+            io_loop = kwargs.get("io_loop")
+            if io_loop is None:
+                io_loop = tornado.ioloop.IOLoop.current()
+            attempts = 5
+            while attempts > 0:
+                try:
+                    transport = salt.transport.publish_client(opts, io_loop, **kwargs)
+                    break
+                except Exception as exc:  # pylint: disable=broad-except
+                    attempts -= 1
+                    if attempts > 0:
+                        log.debug(
+                            "Retrying local publisher connection "
+                            "(%d attempts left): %s",
+                            attempts,
+                            exc,
+                        )
+                        time.sleep(1)
+                    else:
+                        log.error(
+                            "Unable to connect to local publisher after "
+                            "multiple attempts: %s",
+                            exc,
+                        )
+                        # Fallback to server transport if client connection fails
+                        transport = salt.transport.publish_server(opts, **kwargs)
         else:
             transport = salt.transport.publish_server(opts, **kwargs)
         return cls(opts, transport, presence_events=presence_events)
@@ -1373,7 +1399,9 @@ class MasterPubServerChannel:
                     break
             attempts -= 1
             if attempts > 0:
-                log.debug("Retrying initial AES key event (%d attempts left)", attempts)
+                log.debug(
+                    "Retrying initial AES key event (%d attempts left)", attempts
+                )
                 time.sleep(1)
 
         if not success:
@@ -1435,7 +1463,9 @@ class MasterPubServerChannel:
                     tcp_master_pool_port = self.opts.get("cluster_pool_port", 4520)
 
                 # Local communication still needs IPC path
-                pull_path = os.path.join(self.opts["sock_dir"], "master_event_pull.ipc")
+                pull_path = os.path.join(
+                    self.opts["sock_dir"], "master_event_pull.ipc"
+                )
                 try:
                     self.transport = salt.transport.tcp.PublishServer(
                         self.opts,
@@ -1742,7 +1772,9 @@ class MasterPubServerChannel:
                     # Update token and port from reply
                     self._discover_candidates[peer_id]["token"] = payload["token"]
                     if payload.get("port"):
-                        self._discover_candidates[peer_id]["port"] = payload.get("port")
+                        self._discover_candidates[peer_id][
+                            "port"
+                        ] = payload.get("port")
 
                 expected_token = self._discover_candidates[peer_id].get("token")
                 peer_port = self._discover_candidates[peer_id].get("port")
@@ -1971,7 +2003,9 @@ class MasterPubServerChannel:
                         return
 
                     # Extract the actual cluster key (remove token prefix)
-                    cluster_key_pem = cluster_key_bytes[len(expected_prefix) :].decode()
+                    cluster_key_pem = cluster_key_bytes[
+                        len(expected_prefix) :
+                    ].decode()
 
                     # Load and validate it's a valid private key
                     cluster_key_obj = salt.crypt.PrivateKeyString(cluster_key_pem)
