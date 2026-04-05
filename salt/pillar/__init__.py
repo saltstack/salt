@@ -1119,6 +1119,8 @@ class Pillar:
                 # matchers needs pillar in opts
                 pillar, errors = self.ext_pillar(self.pillar_override)
                 self.pillar_data.update(pillar)
+                if hasattr(self.functions, "pack"):
+                    self.functions.pack["__pillar__"] = self.pillar_data
                 self.rend = salt.loader.render(
                     self.opts, self.functions, pillar=self.pillar_data
                 )
@@ -1132,16 +1134,32 @@ class Pillar:
                     self.opts.get("pillar_merge_lists", False),
                 )
                 self.pillar_data.update(pillar)
+                if hasattr(self.functions, "pack"):
+                    self.functions.pack["__pillar__"] = self.pillar_data
+                if hasattr(self.matchers, "pack"):
+                    self.matchers.pack["__pillar__"] = self.pillar_data
             else:
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches)
                 self.pillar_data.update(pillar)
+                if hasattr(self.functions, "pack"):
+                    self.functions.pack["__pillar__"] = self.pillar_data
+                if hasattr(self.matchers, "pack"):
+                    self.matchers.pack["__pillar__"] = self.pillar_data
                 pillar, errors = self.ext_pillar(self.pillar_data, errors=errors)
                 self.pillar_data.update(pillar)
+                if hasattr(self.functions, "pack"):
+                    self.functions.pack["__pillar__"] = self.pillar_data
+                if hasattr(self.matchers, "pack"):
+                    self.matchers.pack["__pillar__"] = self.pillar_data
         else:
             matches = self.top_matches(top)
             pillar, errors = self.render_pillar(matches)
             self.pillar_data.update(pillar)
+            if hasattr(self.functions, "pack"):
+                self.functions.pack["__pillar__"] = self.pillar_data
+            if hasattr(self.matchers, "pack"):
+                self.matchers.pack["__pillar__"] = self.pillar_data
         errors.extend(top_errors)
         if self.opts.get("pillar_opts", False):
             mopts = dict(self.opts)
@@ -1158,6 +1176,10 @@ class Pillar:
                 self.opts.get("pillar_merge_lists", False),
             )
             self.pillar_data.update(pillar)
+            if hasattr(self.functions, "pack"):
+                self.functions.pack["__pillar__"] = self.pillar_data
+            if hasattr(self.matchers, "pack"):
+                self.matchers.pack["__pillar__"] = self.pillar_data
         if errors:
             for error in errors:
                 log.critical("Pillar render error: %s", error)
@@ -1172,6 +1194,10 @@ class Pillar:
                 self.opts.get("pillar_merge_lists", False),
             )
             self.pillar_data.update(pillar)
+            if hasattr(self.functions, "pack"):
+                self.functions.pack["__pillar__"] = self.pillar_data
+            if hasattr(self.matchers, "pack"):
+                self.matchers.pack["__pillar__"] = self.pillar_data
 
         decrypt_errors = self.decrypt_pillar(self.pillar_data)
         if decrypt_errors:
