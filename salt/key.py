@@ -50,7 +50,7 @@ class KeyCLI:
 
     def __init__(self, opts):
         self.opts = opts
-        import salt.wheel as wheel
+        from salt import wheel
 
         self.client = wheel.WheelClient(opts)
         # instantiate the key object for masterless mode
@@ -127,7 +127,7 @@ class KeyCLI:
             # low, prompt the user to enter auth credentials
             if "token" not in low and "key" not in low and self.opts["eauth"]:
                 # This is expensive. Don't do it unless we need to.
-                import salt.auth as auth
+                from salt import auth
 
                 resolver = auth.Resolver(self.opts)
                 res = resolver.cli(self.opts["eauth"])
@@ -142,7 +142,7 @@ class KeyCLI:
                 low["eauth"] = self.opts["eauth"]
         else:
             # late import to avoid circular import
-            import salt.utils.master as master_utils
+            from salt.utils import master as master_utils
 
             low["user"] = salt.utils.user.get_specific_user()
             low["key"] = master_utils.get_master_key(
@@ -587,7 +587,7 @@ class Key:
 
         # Use cache layer's optimized bulk fetch
         if not force_scan and self.opts.get("pki_index_enabled", False):
-            import salt.utils.pki as pki_utils
+            from salt.utils import pki as pki_utils
 
             index = pki_utils.PkiIndex(self.opts)
             items = index.list_items()
