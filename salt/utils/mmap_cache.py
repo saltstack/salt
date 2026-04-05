@@ -37,11 +37,22 @@ class MmapCache:
                 # Ensure directory exists
                 os.makedirs(os.path.dirname(self.path), exist_ok=True)
                 with salt.utils.files.fopen(self.path, "wb") as f:
-                    # Use truncate() to create a sparse file efficiently
-                    # On most systems this creates a sparse file without writing zeros
-                    # mmap will see zeros when reading unwritten regions
+                    # Write zeros to the whole file to ensure it's fully allocated
+                    # and consistent across different platforms (macOS/Windows).
+                    # Using a 1MB chunk size for efficiency.
                     total_size = self.size * self.slot_size
-                    f.truncate(total_size)
+                    chunk_size = 1024 * 1024
+                    zeros = b"\x00" * min(chunk_size, total_size)
+                    bytes_written = 0
+                    while bytes_written < total_size:
+                        to_write = min(chunk_size, total_size - bytes_written)
+                        if to_write < chunk_size:
+                            f.write(zeros[:to_write])
+                        else:
+                            f.write(zeros)
+                        bytes_written += to_write
+                    f.flush()
+                    os.fsync(f.fileno())
             except OSError as exc:
                 log.error("Failed to initialize mmap cache file: %s", exc)
                 return False
@@ -167,6 +178,7 @@ class MmapCache:
                         self._mm[offset + 1 : offset + 1 + len(data)] = data
                         if len(data) < self.slot_size - 1:
                             self._mm[offset + 1 + len(data)] = 0
+                        self._mm.flush()
                         return True
                     continue
 
@@ -176,6 +188,7 @@ class MmapCache:
                 if len(data) < self.slot_size - 1:
                     self._mm[offset + 1 + len(data)] = 0
                 self._mm[offset] = OCCUPIED
+                self._mm.flush()
                 return True
 
             log.error("Mmap cache is full!")
@@ -278,6 +291,7 @@ class MmapCache:
 
                 if existing_key == key_bytes:
                     self._mm[offset] = DELETED
+                    self._mm.flush()
                     return True
             return False
         finally:
@@ -448,6 +462,7 @@ class MmapCache:
                                         mm[offset + 1 + len(data)] = 0
                                     mm[offset] = OCCUPIED
                                     break
+                        mm.flush()
                     finally:
                         mm.close()
 
