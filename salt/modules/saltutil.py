@@ -400,6 +400,69 @@ def refresh_grains(**kwargs):
     return True
 
 
+def refresh_resources():
+    """
+    Signal the minion to re-discover its managed resources from current pillar
+    data and re-register them with the master.
+
+    This fires a ``resource_refresh`` event on the minion bus.  The minion
+    handles the event by calling ``_discover_resources()`` (using the current
+    ``opts["pillar"]``) and then re-registering the result with the master's
+    ``minion_resources`` cache.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.refresh_resources
+    """
+    try:
+        return __salt__["event.fire"]({}, "resource_refresh")
+    except KeyError:
+        return False
+
+
+def sync_resources(
+    saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None
+):
+    """
+    Sync custom resource-type modules from ``salt://_resources`` to the minion
+    and signal the minion to re-discover its managed resources from pillar data
+    and re-register them with the master.
+
+    saltenv
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for resource modules to sync. If no top
+        files are found, then the ``base`` environment will be synced.
+
+    refresh : True
+        If ``True``, signal the minion to re-discover its managed resources
+        and re-register them with the master. This refresh will be performed
+        even if no new resource modules are synced. Set to ``False`` to
+        prevent this refresh.
+
+    extmod_whitelist : None
+        comma-separated list of modules to sync
+
+    extmod_blacklist : None
+        comma-separated list of modules to blacklist
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_resources
+        salt '*' saltutil.sync_resources saltenv=base,dev
+    """
+    ret = _sync("resources", saltenv, extmod_whitelist, extmod_blacklist)
+    if refresh:
+        refresh_resources()
+    return ret
+
+
 def sync_grains(
     saltenv=None,
     refresh=True,
@@ -1208,6 +1271,9 @@ def sync_all(
         saltenv, False, extmod_whitelist, extmod_blacklist
     )
     ret["matchers"] = sync_matchers(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret["resources"] = sync_resources(
+        saltenv, False, extmod_whitelist, extmod_blacklist
+    )
     if __opts__["file_client"] == "local":
         ret["pillar"] = sync_pillar(saltenv, False, extmod_whitelist, extmod_blacklist)
         ret["wrapper"] = sync_wrapper(

@@ -6,6 +6,8 @@ expected to return
 import fnmatch
 import logging
 import re
+import threading
+import time
 
 import salt.cache
 import salt.key
@@ -34,10 +36,9 @@ log = logging.getLogger(__name__)
 TARGET_REX = re.compile(
     r"""(?x)
         (
-            (?P<engine>G|P|I|J|L|N|S|E|R)  # Possible target engines
-            (?P<delimiter>(?<=G|P|I|J).)?  # Optional delimiter for specific engines
-        @)?                                # Engine+delimiter are separated by a '@'
-                                           # character and are optional for the target
+            (?P<engine>G|P|I|J|L|N|S|E|R|T|M)  # Possible target engines
+            (?P<delimiter>(?<=G|P|I|J).)?        # Optional delimiter (G/P/I/J only)
+        @)?                                      # Engine+delimiter separated by '@', optional
         (?P<pattern>.+)$"""  # The pattern passed to the target engine
 )
 
@@ -195,6 +196,136 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
         return ret
 
 
+# ---------------------------------------------------------------------------
+# Resource index — O(1) lookup for T@ targeting and wildcard augmentation
+# ---------------------------------------------------------------------------
+#
+# A single flat dict stored in one cache file replaces the old per-minion
+# ``minion_resources/<id>`` files.  Each master worker keeps an in-process
+# copy that is refreshed from disk at most once every _RESOURCE_INDEX_TTL
+# seconds.  AESFuncs._register_resources updates the in-process copy AND
+# the on-disk file immediately, so the current worker is always consistent.
+
+_RESOURCE_INDEX_BANK = "resource_index"
+_RESOURCE_INDEX_KEY = "index"
+_RESOURCE_INDEX_TTL = 5.0  # seconds
+
+# Functions where resources run inline and their results are merged into the
+# managing minion's own response.  The operator sees ONE combined block + ONE
+# Summary section instead of separate blocks per resource.
+_MERGE_RESOURCE_FUNS = frozenset(
+    {
+        "state.apply",
+        "state.highstate",
+        "state.sls",
+        "state.sls_id",
+        "state.single",
+    }
+)
+
+_resource_index_lock = threading.Lock()
+_resource_index: dict = {"by_id": {}, "by_type": {}, "by_minion": {}}
+_resource_index_ts: float = 0.0
+
+
+def _build_resource_index(by_minion):
+    """
+    Build the three-way flat index from a ``{minion_id: {rtype: [rid, ...]}}``
+    mapping.
+
+    Returns::
+
+        {
+            "by_id":     {rid: {"minion": minion_id, "type": rtype}, ...},
+            "by_type":   {rtype: [rid, ...], ...},
+            "by_minion": {minion_id: {rtype: [rid, ...]}, ...},
+        }
+    """
+    by_id = {}
+    by_type = {}
+    for minion_id, resources in by_minion.items():
+        for rtype, rids in resources.items():
+            if rtype not in by_type:
+                by_type[rtype] = []
+            for rid in rids:
+                by_id[rid] = {"minion": minion_id, "type": rtype}
+                if rid not in by_type[rtype]:
+                    by_type[rtype].append(rid)
+    return {"by_id": by_id, "by_type": by_type, "by_minion": dict(by_minion)}
+
+
+def _get_resource_index(cache):
+    """
+    Return the in-process resource index, refreshing from disk if the TTL has
+    expired.  Thread-safe via double-checked locking.
+    """
+    global _resource_index, _resource_index_ts  # pylint: disable=global-statement
+    now = time.monotonic()
+    if now - _resource_index_ts < _RESOURCE_INDEX_TTL:
+        return _resource_index
+    with _resource_index_lock:
+        if now - _resource_index_ts < _RESOURCE_INDEX_TTL:
+            return _resource_index
+        try:
+            loaded = cache.fetch(_RESOURCE_INDEX_BANK, _RESOURCE_INDEX_KEY) or {}
+        except Exception:  # pylint: disable=broad-except
+            log.error("Failed to load resource index from cache", exc_info=True)
+            loaded = {}
+        _resource_index = loaded or {"by_id": {}, "by_type": {}, "by_minion": {}}
+        _resource_index_ts = now
+    return _resource_index
+
+
+def _update_resource_index(cache, minion_id, resources):
+    """
+    Surgically update the in-process index for one minion and persist it to
+    disk.
+
+    Called from ``AESFuncs._register_resources`` so the current worker's index
+    is immediately consistent after a minion registers without waiting for the
+    TTL to expire.
+
+    Cost is O(r) where r is the number of resources for *this minion* — the
+    old per-minion entries are removed individually and the new ones are
+    inserted directly, without rebuilding the entire index.
+    """
+    global _resource_index, _resource_index_ts  # pylint: disable=global-statement
+    with _resource_index_lock:
+        by_id = _resource_index.get("by_id", {})
+        by_type = _resource_index.get("by_type", {})
+        by_minion = _resource_index.get("by_minion", {})
+
+        # Remove old entries for this minion only.
+        old = by_minion.pop(minion_id, {})
+        for rtype, rids in old.items():
+            old_set = set(rids)
+            for rid in rids:
+                by_id.pop(rid, None)
+            if rtype in by_type:
+                by_type[rtype] = [r for r in by_type[rtype] if r not in old_set]
+                if not by_type[rtype]:
+                    del by_type[rtype]
+
+        # Insert new entries.
+        if resources:
+            by_minion[minion_id] = resources
+            for rtype, rids in resources.items():
+                existing = by_type.setdefault(rtype, [])
+                existing_set = set(existing)
+                for rid in rids:
+                    by_id[rid] = {"minion": minion_id, "type": rtype}
+                    if rid not in existing_set:
+                        existing.append(rid)
+                        existing_set.add(rid)
+
+        _resource_index = {"by_id": by_id, "by_type": by_type, "by_minion": by_minion}
+        try:
+            cache.store(_RESOURCE_INDEX_BANK, _RESOURCE_INDEX_KEY, _resource_index)
+        except Exception:  # pylint: disable=broad-except
+            log.error("Failed to persist resource index to cache", exc_info=True)
+        _resource_index_ts = time.monotonic()
+
+
 class CkMinions:
     """
     Used to check what minions should respond from a target
@@ -209,6 +340,7 @@ class CkMinions:
         self.opts = opts
         self.cache = salt.cache.factory(opts)
         self.key = salt.key.get_key(opts)
+        # TODO(resources): self.registry = ResourceRegistry(opts)
         # TODO: this is actually an *auth* check
         if self.opts.get("transport", "zeromq") in salt.transport.TRANSPORTS:
             self.acc = "minions"
@@ -526,6 +658,8 @@ class CkMinions:
                 "S": self._check_ipcidr_minions,
                 "E": self._check_pcre_minions,
                 "R": self._all_minions,
+                "T": self._check_resource_minions,
+                "M": self._check_managing_minion_minions,
             }
             if pillar_exact:
                 ref["I"] = self._check_pillar_exact_minions
@@ -722,8 +856,112 @@ class CkMinions:
 
         return {"minions": minions, "missing": []}
 
+    def _check_resource_minions(self, expr, greedy, minions=None):
+        """
+        Return the resource IDs that match the ``T@`` pattern ``expr``.
+
+        ``expr`` is either a bare resource type (``dummy``) or a full SRN
+        (``dummy:dummy-01``).
+
+        Unlike other ``_check_*_minions`` methods, the returned IDs are
+        **resource IDs**, not managing-minion IDs.  This is intentional: the
+        CLI uses this list to know which return IDs to expect, and resource
+        returns are keyed by resource ID (remapped by the master's ``_return``
+        handler after the transport security check passes).
+
+        Job delivery is handled separately: the job is published with the
+        original ``T@`` target expression and ``tgt_type=compound``; managing
+        minions receive it via broadcast and filter locally with
+        ``resource_match.match()``.
+
+        Lookups are O(1) dict access against the in-process resource index
+        (refreshed from a single flat cache file at most once per TTL).
+        """
+        if ":" in expr:
+            resource_type, resource_id = expr.split(":", 1)
+            # Treat a trailing colon with no ID (e.g. "dummy:") as a bare-type
+            # expression so it matches all resources of that type rather than
+            # returning an invalid empty-string resource ID.
+            if not resource_id:
+                resource_id = None
+        else:
+            resource_type, resource_id = expr, None
+
+        index = _get_resource_index(self.cache)
+
+        if resource_id is not None:
+            # Full SRN: O(1) lookup by resource ID.
+            if resource_id in index["by_id"]:
+                return {"minions": [resource_id], "missing": []}
+            log.debug(
+                "T@%s not in resource index; using resource ID from expression",
+                expr,
+            )
+            return {"minions": [resource_id], "missing": []}
+
+        # Bare type: O(1) lookup by type.
+        rids = index["by_type"].get(resource_type)
+        if rids:
+            return {"minions": list(rids), "missing": []}
+
+        log.warning(
+            "T@%s: resource registry has no entries of this type. "
+            "Restart or sync_all the managing minion to populate the registry.",
+            expr,
+        )
+        return {"minions": [], "missing": []}
+
+    def _augment_with_resources(self, minion_ids):
+        """
+        Append the resource IDs managed by each matched minion to the list.
+
+        Called by :meth:`check_minions` for wildcard glob targets so that
+        ``salt '*' test.ping`` also includes returns from managed resources.
+
+        Lookups are O(1) dict access per minion against the in-process
+        resource index.  If the index is unavailable the method logs an error
+        and returns ``minion_ids`` unchanged so ordinary targeting is never
+        disrupted by a resource-cache failure.
+        """
+        try:
+            index = _get_resource_index(self.cache)
+        except Exception:  # pylint: disable=broad-except
+            log.error(
+                "Failed to load resource index; resource IDs will not be "
+                "included in this target expansion.",
+                exc_info=True,
+            )
+            return list(minion_ids)
+        by_minion = index.get("by_minion", {})
+        if not by_minion:
+            return list(minion_ids)
+        result = list(minion_ids)
+        seen = set(result)
+        for minion_id in minion_ids:
+            resources = by_minion.get(minion_id, {})
+            for rids in resources.values():
+                for rid in rids:
+                    if rid not in seen:
+                        result.append(rid)
+                        seen.add(rid)
+        return result
+
+    def _check_managing_minion_minions(self, expr, greedy, minions=None):
+        """
+        Return the minion set for a ``M@`` managing-minion expression.
+
+        ``expr`` is a minion ID glob.  Returns any accepted minion whose ID
+        matches ``expr``.
+        """
+        return self._check_glob_minions(expr, greedy, minions=minions)
+
     def check_minions(
-        self, expr, tgt_type="glob", delimiter=DEFAULT_TARGET_DELIM, greedy=True
+        self,
+        expr,
+        tgt_type="glob",
+        delimiter=DEFAULT_TARGET_DELIM,
+        greedy=True,
+        fun=None,
     ):
         """
         Check the passed regex against the available minions' public keys
@@ -749,6 +987,23 @@ class CkMinions:
                 # pylint: enable=not-callable
             else:
                 _res = check_func(expr, greedy)  # pylint: disable=not-callable
+            # For wildcard glob targets (e.g. ``salt '*'``), include resource
+            # IDs managed by matched minions so that the master keeps its
+            # response window open long enough to receive resource results.
+            # Specific name targets (e.g. ``salt 'minion'``) are intentionally
+            # NOT augmented — targeting a minion by name should not implicitly
+            # include its resources.
+            # Compound targets handle resource matching explicitly via T@/M@.
+            # Merge-mode functions (state.apply etc.) run resources inline on
+            # the managing minion and return ONE combined response, so the
+            # master must NOT add separate resource IDs to its wait-list.
+            if (
+                tgt_type == "glob"
+                and isinstance(expr, str)
+                and any(c in expr for c in ("*", "?", "["))
+                and not (isinstance(fun, str) and fun in _MERGE_RESOURCE_FUNS)
+            ):
+                _res["minions"] = self._augment_with_resources(_res["minions"])
             _res["ssh_minions"] = False
             if self.opts.get("enable_ssh_minions", False) is True and isinstance(
                 "tgt", str

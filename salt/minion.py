@@ -463,6 +463,11 @@ class MinionBase:
                 pillarenv=self.opts.get("pillarenv"),
             ).compile_pillar()
 
+        # Populate opts["resources"] from pillar now that pillar is available.
+        # Must happen before the resource loader loop below so that per-type
+        # execution module loaders are created for the correct set of types.
+        self.opts["resources"] = self._discover_resources()
+
         self.utils = salt.loader.utils(self.opts, context=context)
         self.functions = salt.loader.minion_mods(
             self.opts, utils=self.utils, context=context
@@ -474,6 +479,59 @@ class MinionBase:
         self.proxy = salt.loader.proxy(
             self.opts, functions=self.functions, returners=self.returners
         )
+        # Load resource connection modules (salt/resource/*.py) and build
+        # one execution-module loader per managed resource type.
+        self.resource_funcs = salt.loader.resource(
+            self.opts,
+            functions=self.functions,
+            utils=self.utils,
+            context=context,
+        )
+        self.resource_funcs.pack["__salt__"] = self.functions
+        # Build resource_loaders into a local dict before assigning to
+        # self.resource_loaders.  Without this, the previous pattern:
+        #
+        #   self.resource_loaders = {}          ← exposes empty dict
+        #   for ...: self.resource_loaders[t] = …
+        #
+        # creates a window where a concurrent thread (multiprocessing: False)
+        # calling gen_modules() can read resource_loaders.get(type) == None
+        # and fail with "No resource loader available".  A single dict
+        # assignment is atomic in CPython, so the old loaders remain visible
+        # until the new complete set is ready.
+        _new_resource_loaders = {}
+        for resource_type in self.opts.get("resources", {}):
+            rtype_base = (
+                f"{self.opts.get('loaded_base_name', 'salt.loaded.int')}"
+                f".resource.{resource_type}"
+            )
+            _new_resource_loaders[resource_type] = salt.loader.resource_modules(
+                self.opts,
+                resource_type,
+                resource_funcs=self.resource_funcs,
+                utils=self.utils,
+                context=context,
+                loaded_base_name=rtype_base,
+            )
+        self.resource_loaders = _new_resource_loaders
+
+        # Call init() on each resource type so that __context__ is populated
+        # before any per-resource operations (grains, ping, etc.) are dispatched.
+        # Mirrors how proxy.init() is called during proxy-minion startup.
+        for resource_type in self.opts.get("resources", {}):
+            init_fn = f"{resource_type}.init"
+            if init_fn in self.resource_funcs:
+                try:
+                    self.resource_funcs[init_fn](self.opts)
+                    log.debug("Initialized resource type '%s'", resource_type)
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.error(
+                        "Failed to initialize resource type '%s': %s",
+                        resource_type,
+                        exc,
+                        exc_info=True,
+                    )
+
         # TODO: remove
         self.function_errors = {}  # Keep the funcs clean
         self.states = salt.loader.states(
@@ -492,6 +550,66 @@ class MinionBase:
         self.executors = salt.loader.executors(
             self.opts, functions=self.functions, proxy=self.proxy, context=context
         )
+
+    def _discover_resources(self):
+        """
+        Build ``opts["resources"]`` by calling each resource type's
+        ``discover(opts)`` function.
+
+        Resource types are read from ``opts["pillar"]["resources"]``.  A
+        temporary resource loader is used to call each type's
+        ``discover(opts)``; the return value is a dict of
+        ``{resource_type: [resource_id, ...]}``.
+
+        If the pillar contains no ``resources`` key at all, any resources
+        already present in ``opts["resources"]`` (e.g. set directly in the
+        minion config file) are preserved as-is.  This supports testing and
+        simple deployments where pillar-driven discovery is not needed.
+
+        If the pillar *does* contain a ``resources`` key (even if its value is
+        empty / all entries removed), that is treated as an authoritative
+        declaration and the result will reflect only what the pillar says.
+        This ensures that removing a resource type from the pillar and running
+        sync_all actually clears it at runtime.
+
+        Called from :meth:`gen_modules` after pillar is compiled and before
+        the per-type execution-module loaders are created.
+        """
+        pillar = self.opts.get("pillar", {})
+        if "resources" not in pillar:
+            # Pillar has no opinion — preserve whatever is already in opts.
+            return {k: list(v) for k, v in self.opts.get("resources", {}).items()}
+        pillar_resources = pillar.get("resources") or {}
+
+        # A minimal resource loader is sufficient here — discover() only reads
+        # from the opts dict passed to it and does not need other dunders.
+        discovery_loader = salt.loader.resource(self.opts)
+        discovered = {}
+        for resource_type in pillar_resources:
+            discover_fn = f"{resource_type}.discover"
+            if discover_fn not in discovery_loader:
+                log.warning(
+                    "No resource module found for type '%s'; skipping discovery.",
+                    resource_type,
+                )
+                continue
+            try:
+                ids = discovery_loader[discover_fn](self.opts)
+                if ids:
+                    discovered[resource_type] = list(ids)
+                    log.debug(
+                        "Discovered %d resource(s) of type '%s': %s",
+                        len(ids),
+                        resource_type,
+                        ids,
+                    )
+            except Exception as exc:  # pylint: disable=broad-except
+                log.warning(
+                    "Resource discovery failed for type '%s': %s",
+                    resource_type,
+                    exc,
+                )
+        return discovered
 
     @staticmethod
     def process_schedule(minion, loop_interval):
@@ -1928,7 +2046,13 @@ class Minion(MinionBase):
         # Check bypass flag early to prevent deduplication of queued jobs
         bypass_check = data.get("__ignore_process_count_max", False)
         if self.jid_queue is not None:
-            if data["jid"] in self.jid_queue:
+            if data.get("resource_job"):
+                # Resource jobs intentionally share the parent job's JID so
+                # that returns are filed under the same job ID.  Skip the
+                # deduplication gate entirely — each resource is a distinct
+                # execution even though the JID is the same.
+                pass
+            elif data["jid"] in self.jid_queue:
                 if not bypass_check:
                     return
             else:
@@ -2455,12 +2579,18 @@ class Minion(MinionBase):
                 return Minion._thread_return(minion_instance, opts, data)
 
     def _execute_job_function(
-        self, function_name, function_args, executors, opts, data
+        self, function_name, function_args, executors, opts, data, functions=None
     ):
         """
         Executes a function within a job given it's name, the args and the executors.
         It also checks if the function is allowed to run if 'blackout mode' is enabled.
+
+        ``functions`` defaults to ``self.functions`` but callers may pass a
+        different loader (e.g. a per-resource-type loader) to route execution
+        to the correct module set.
         """
+        if functions is None:
+            functions = self.functions
         minion_blackout_violation = False
         if self.connected and self.opts["pillar"].get("minion_blackout", False):
             whitelist = self.opts["pillar"].get("minion_blackout_whitelist", [])
@@ -2485,14 +2615,14 @@ class Minion(MinionBase):
                 "saltutil.refresh_pillar allowed in blackout mode."
             )
 
-        if function_name in self.functions:
-            func = self.functions[function_name]
+        if function_name in functions:
+            func = functions[function_name]
             args, kwargs = load_args_and_kwargs(func, function_args, data)
         else:
-            # only run if function_name is not in minion_instance.functions and allow_missing_funcs is True
+            # only run if function_name is not in functions and allow_missing_funcs is True
             func = function_name
             args, kwargs = function_args, data
-        self.functions.pack["__context__"]["retcode"] = 0
+        functions.pack["__context__"]["retcode"] = 0
 
         if isinstance(executors, str):
             executors = [executors]
@@ -2554,13 +2684,53 @@ class Minion(MinionBase):
                     if f"{executor}.allow_missing_func" in minion_instance.executors
                 ]
             )
+            # Resolve which execution-module loader to use.  For resource
+            # jobs we use the per-type loader so that resource-specific
+            # execution modules (e.g. dummyresource_test.py) take
+            # precedence over the managing minion's own modules.
+            # Unknown functions for a resource type fail loudly rather than
+            # silently falling through to execute on the managing minion.
+            resource_target = data.get("resource_target")
+            if resource_target:
+                resource_type = resource_target["type"]
+                functions_to_use = minion_instance.resource_loaders.get(resource_type)
+                if functions_to_use is None:
+                    ret["return"] = (
+                        f"No resource loader available for type '{resource_type}'. "
+                        "Ensure the resource module exists and the minion is "
+                        "configured to manage resources of this type."
+                    )
+                    ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+                else:
+                    # Set the per-call resource context via resource_ctxvar.
+                    # contextvars are per-thread, so this value is invisible
+                    # to other threads.  LazyLoader.run() calls copy_context()
+                    # fresh on every invocation, capturing this value in the
+                    # snapshot before _run_as executes — fully isolated from
+                    # concurrent resource jobs sharing the same loader object.
+                    import salt.loader.context as _loader_ctx
+
+                    _loader_ctx.resource_ctxvar.set(resource_target)
+                    grains_fn = f"{resource_type}.grains"
+                    if grains_fn in minion_instance.resource_funcs:
+                        functions_to_use.pack["__grains__"] = (
+                            minion_instance.resource_funcs[grains_fn]()
+                        )
+            else:
+                functions_to_use = minion_instance.functions
             if (
-                function_name in minion_instance.functions
-                or allow_missing_funcs is True
+                ret.get("retcode") is None
+                and functions_to_use is not None
+                and (function_name in functions_to_use or allow_missing_funcs is True)
             ):
                 try:
                     return_data = minion_instance._execute_job_function(
-                        function_name, function_args, executors, opts, data
+                        function_name,
+                        function_args,
+                        executors,
+                        opts,
+                        data,
+                        functions=functions_to_use,
                     )
                     log.info(
                         "Job %s execution finished, return_data: %s",
@@ -2588,7 +2758,7 @@ class Minion(MinionBase):
                     else:
                         ret["return"] = return_data
 
-                    retcode = minion_instance.functions.pack["__context__"].get(
+                    retcode = functions_to_use.pack["__context__"].get(
                         "retcode", salt.defaults.exitcodes.EX_OK
                     )
                     if retcode == salt.defaults.exitcodes.EX_OK:
@@ -2646,14 +2816,10 @@ class Minion(MinionBase):
                     ret["out"] = "nested"
                     ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
                 except TypeError as exc:
-                    # XXX: This can ba extreemly missleading when something outside of a
-                    # execution module call raises a TypeError. Make this it's own
-                    # type of exception when we start validating state and
-                    # execution argument module inputs.
                     msg = "Passed invalid arguments to {}: {}\n{}".format(
                         function_name,
                         exc,
-                        minion_instance.functions[function_name].__doc__ or "",
+                        functions_to_use[function_name].__doc__ or "",
                     )
                     log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                     ret["return"] = msg
@@ -2668,6 +2834,20 @@ class Minion(MinionBase):
                     ret["return"] = f"{msg}: {traceback.format_exc()}"
                     ret["out"] = "nested"
                     ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+            elif resource_target:
+                if functions_to_use is not None:
+                    # Resource type has a loader but function is not implemented.
+                    # Fail loudly rather than silently falling through to the
+                    # managing minion — the caller explicitly targeted a resource.
+                    ret["return"] = (
+                        f"Function '{function_name}' is not supported for "
+                        f"resource type '{resource_type}'. Implement it in a "
+                        f"'{resource_type}resource_*' execution module."
+                    )
+                    ret["success"] = False
+                    ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+                    ret["out"] = "nested"
+                # else: no-loader case already populated ret above
             else:
                 docs = minion_instance.functions["sys.doc"](f"{function_name}*")
                 if docs:
@@ -2688,6 +2868,129 @@ class Minion(MinionBase):
                 ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
                 ret["out"] = "nested"
 
+            # -------------------------------------------------------------------
+            # Merge-mode: for state functions the managing minion runs each
+            # resource's function inline here and folds the results into its own
+            # state dict.  The operator then sees ONE combined block + ONE Summary
+            # section instead of a separate block per resource.
+            # -------------------------------------------------------------------
+            if (
+                not data.get("resource_target")
+                and data.get("fun") in cls._MERGE_RESOURCE_FUNS
+                and data.get("resource_targets")
+                and isinstance(ret.get("return"), dict)
+            ):
+                import salt.loader.context as _loader_ctx  # noqa: PLC0415
+
+                _prefix_state_key = minion_instance._prefix_resource_state_key
+
+                run_num_base = (
+                    max(
+                        (
+                            v.get("__run_num__", 0)
+                            for v in ret["return"].values()
+                            if isinstance(v, dict)
+                        ),
+                        default=0,
+                    )
+                    + 1
+                )
+
+                for resource in data["resource_targets"]:
+                    rid = resource["id"]
+                    rtype = resource["type"]
+                    resource_loader = getattr(
+                        minion_instance, "resource_loaders", {}
+                    ).get(rtype)
+                    if resource_loader is None:
+                        ret["return"][f"no_|-{rid}_|-{rid}_|-None"] = {
+                            "result": False,
+                            "comment": (
+                                f"No resource loader for type '{rtype}'. "
+                                "Ensure the resource module exists."
+                            ),
+                            "name": rid,
+                            "changes": {},
+                            "__run_num__": run_num_base,
+                        }
+                        run_num_base += 1
+                        if ret.get("retcode") == salt.defaults.exitcodes.EX_OK:
+                            ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+                        continue
+
+                    if function_name not in resource_loader:
+                        # Function not implemented for this resource type —
+                        # same message the separate-job path would return.
+                        resource_return = (
+                            f"Function '{function_name}' is not supported for "
+                            f"resource type '{rtype}'. Implement it in a "
+                            f"'{rtype}resource_*' execution module."
+                        )
+                    else:
+                        token = _loader_ctx.resource_ctxvar.set(resource)
+                        try:
+                            resource_return = minion_instance._execute_job_function(
+                                function_name,
+                                function_args,
+                                executors,
+                                opts,
+                                data,
+                                functions=resource_loader,
+                            )
+                        except Exception as exc:  # pylint: disable=broad-except
+                            log.error(
+                                "Inline resource execution for '%s' raised: %s",
+                                rid,
+                                exc,
+                                exc_info=True,
+                            )
+                            resource_return = (
+                                f"ERROR running {function_name} for '{rid}': {exc}"
+                            )
+                        finally:
+                            _loader_ctx.resource_ctxvar.reset(token)
+
+                    if isinstance(resource_return, dict):
+                        for state_id, state_val in resource_return.items():
+                            if isinstance(state_val, dict):
+                                entry = dict(state_val)
+                                entry["__run_num__"] = run_num_base
+                            else:
+                                entry = {
+                                    "result": True,
+                                    "comment": str(state_val),
+                                    "name": f"[{rid}]",
+                                    "changes": {},
+                                    "__run_num__": run_num_base,
+                                }
+                            run_num_base += 1
+                            ret["return"][_prefix_state_key(state_id, rid)] = entry
+                        r_retcode = resource_loader.pack["__context__"].get(
+                            "retcode", 0
+                        )
+                        if (
+                            r_retcode
+                            and ret.get("retcode") == salt.defaults.exitcodes.EX_OK
+                        ):
+                            ret["retcode"] = r_retcode
+                    else:
+                        # String result means the resource couldn't fulfill the
+                        # operation (e.g. "not supported" for dummy resources).
+                        # Mark as False — the state was NOT applied, so reporting
+                        # True would silently mask unactioned resources.
+                        ret["return"][f"no_|-{rid}_|-{rid}_|-None"] = {
+                            "result": False,
+                            "comment": str(resource_return),
+                            "name": rid,
+                            "changes": {},
+                            "__run_num__": run_num_base,
+                        }
+                        run_num_base += 1
+                        if ret.get("retcode") == salt.defaults.exitcodes.EX_OK:
+                            ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+
+                ret["success"] = ret.get("retcode") == salt.defaults.exitcodes.EX_OK
+
             if isinstance(ret["return"], dict) and ret["return"].get("__no_return__"):
                 # This is used to suppress the return for queued jobs
                 # The job will be executed later and will return then
@@ -2701,6 +3004,11 @@ class Minion(MinionBase):
             ret["jid"] = data["jid"]
             ret["fun"] = data["fun"]
             ret["fun_args"] = data["arg"]
+            if data.get("resource_target"):
+                log.info(
+                    "resource_target in _thread_return: %s", data["resource_target"]
+                )
+                ret["resource_id"] = data["resource_target"]["id"]
             if "user" in data:
                 ret["user"] = data["user"]
             if "master_id" in data:
@@ -3174,6 +3482,32 @@ class Minion(MinionBase):
             include_startup_grains=include_grains,
         )
 
+    async def _register_resources_with_master(self):
+        """
+        Send this minion's resource list to the master for registry population.
+
+        Called on startup (and reconnect) so that the master's
+        ``minion_resources`` cache bank is up-to-date.  This allows
+        :class:`salt.utils.minions.CkMinions` to include resource IDs when
+        expanding glob / non-compound targets (e.g. ``salt '*' test.ping``).
+
+        An empty resource dict is sent deliberately when the minion has no
+        resources — this clears any stale entries left by a previous
+        registration (e.g. after a resource type is removed from the pillar).
+        """
+        resources = self.opts.get("resources", {})
+        load = {
+            "cmd": "_register_resources",
+            "id": self.opts["id"],
+            "resources": resources,
+            "tok": self.tok,
+        }
+        try:
+            await self._send_req_async_main(load, timeout=self._return_retry_timer())
+            log.debug("Registered resources with master: %s", list(resources.keys()))
+        except Exception as err:  # pylint: disable=broad-except
+            log.warning("Unable to register resources with master: %s", err)
+
     def module_refresh(self, force_refresh=False, notify=False):
         """
         Refresh the functions and returners.
@@ -3277,6 +3611,12 @@ class Minion(MinionBase):
                 )
                 self.opts["pillar"] = new_pillar
                 self.functions.pack["__pillar__"] = self.opts["pillar"]
+                # Re-discover resources now that pillar has changed.  Must
+                # happen *after* opts["pillar"] is updated so that
+                # _discover_resources sees the new resource declarations (or
+                # their absence when a type is removed from the pillar).
+                self.opts["resources"] = self._discover_resources()
+                await self._register_resources_with_master()
             finally:
                 async_pillar.destroy()
         self.matchers_refresh()
@@ -3496,6 +3836,9 @@ class Minion(MinionBase):
             _minion.beacons_refresh()
         elif tag.startswith("matchers_refresh"):
             _minion.matchers_refresh()
+        elif tag.startswith("resource_refresh"):
+            _minion.opts["resources"] = _minion._discover_resources()
+            _minion.io_loop.create_task(_minion._register_resources_with_master())
         elif tag.startswith("manage_schedule"):
             _minion.manage_schedule(tag, data)
         elif tag.startswith("manage_beacons"):
@@ -3613,6 +3956,7 @@ class Minion(MinionBase):
                     self.schedule.functions = self.functions
                     self.pub_channel.on_recv(self._handle_payload)
                     await self._fire_master_minion_start()
+                    await self._register_resources_with_master()
                     log.info("Minion is ready to receive requests!")
 
                     # update scheduled job to run with the new master addr
@@ -4070,6 +4414,7 @@ class Minion(MinionBase):
             self.sync_connect_master()
         if self.connected:
             self.io_loop.create_task(self._fire_master_minion_start())
+            self.io_loop.create_task(self._register_resources_with_master())
             log.info("Minion is ready to receive requests!")
 
         # Make sure to gracefully handle SIGUSR1
@@ -4152,7 +4497,26 @@ class Minion(MinionBase):
     async def _handle_payload(self, payload):
         if payload is not None and payload["enc"] == "aes":
             if self._target_load(payload["load"]):
-                await self._handle_decoded_payload(payload["load"])
+                load = payload["load"]
+
+                if load.get("minion_is_target", True):
+                    await self._handle_decoded_payload(load)
+
+                # For merge-mode functions (state.apply etc.) resources are
+                # executed inline inside _thread_return and folded into the
+                # managing minion's own response.  Dispatching them as
+                # separate jobs would send duplicate responses the master is
+                # no longer waiting for.
+                if load.get("fun") not in self._MERGE_RESOURCE_FUNS:
+                    for resource in load.get("resource_targets", []):
+                        resource_load = dict(load)
+                        resource_load["resource_target"] = resource
+                        # Flag so _handle_decoded_payload_impl can bypass JID
+                        # deduplication — resource jobs share the parent JID by
+                        # design but are independent executions.
+                        resource_load["resource_job"] = True
+                        await self._handle_decoded_payload(resource_load)
+
             elif self.opts["zmq_filtering"]:
                 # In the filtering enabled case, we'd like to know when minion sees something it shouldn't
                 log.trace(
@@ -4188,15 +4552,150 @@ class Minion(MinionBase):
                 return False
             if load["tgt_type"] in ("grain", "grain_pcre", "pillar"):
                 delimiter = load.get("delimiter", DEFAULT_TARGET_DELIM)
-                if not match_func(load["tgt"], delimiter=delimiter):
-                    return False
-            elif not match_func(load["tgt"]):
-                return False
+                minion_matches = match_func(load["tgt"], delimiter=delimiter)
+            else:
+                minion_matches = match_func(load["tgt"])
         else:
-            if not self.matchers["glob_match.match"](load["tgt"]):
-                return False
+            minion_matches = self.matchers["glob_match.match"](load["tgt"])
 
+        resource_targets = self._resolve_resource_targets(load)
+        load["resource_targets"] = resource_targets
+        load["minion_is_target"] = bool(
+            minion_matches
+        ) and not self._is_pure_resource_target(load)
+
+        if not load["minion_is_target"] and not resource_targets:
+            return False
         return True
+
+    def _is_pure_resource_target(self, load):
+        """
+        Return True when the target expression contains only T@/M@ engines with
+        no glob/grain/pillar/list terms that would match the minion itself.
+        """
+        tgt = load.get("tgt", "")
+        tgt_type = load.get("tgt_type", "glob")
+        if tgt_type != "compound":
+            return False
+        words = tgt.split() if isinstance(tgt, str) else list(tgt)
+        opers = {"and", "or", "not", "(", ")"}
+        return all(
+            w in opers or w.startswith("T@") or w.startswith("M@") for w in words
+        )
+
+    # Functions that are internal Salt plumbing and should never be dispatched
+    # to managed resources.  Resources don't participate in job-status queries,
+    # module refreshes, or other minion-only housekeeping calls.
+    _NO_RESOURCE_FUNS = frozenset(
+        {
+            "saltutil.find_job",
+            "saltutil.running",
+            "saltutil.is_running",
+            "saltutil.kill_job",
+            "saltutil.signal_job",
+            "saltutil.term_job",
+            "saltutil.refresh_grains",
+            "saltutil.sync_all",
+            "saltutil.sync_grains",
+            "saltutil.sync_modules",
+            "sys.reload_modules",
+        }
+    )
+
+    # Functions where resource results are merged into the managing minion's
+    # own response rather than dispatched as independent jobs.  This produces
+    # ONE combined block + Summary section per managing minion instead of
+    # separate blocks per resource, matching how any other minion looks.
+    _MERGE_RESOURCE_FUNS = frozenset(
+        {
+            "state.apply",
+            "state.highstate",
+            "state.sls",
+            "state.sls_id",
+            "state.single",
+        }
+    )
+
+    @staticmethod
+    def _prefix_resource_state_key(sid, rid):
+        """Re-label the ID/name components of a state result key with rid.
+
+        Key format: {module}_|-{id}_|-{name}_|-{function}
+        Only comps[1] and comps[2] (id and name) are prefixed so the
+        highstate formatter still reads {comps[0]}.{comps[3]} correctly,
+        preserving ``Function: pkg.installed`` while showing ``ID: node1 curl``.
+        """
+        parts = sid.split("_|-", 3)
+        if len(parts) == 4:
+            parts[1] = f"{rid} {parts[1]}"
+            parts[2] = f"{rid} {parts[2]}"
+            return "_|-".join(parts)
+        return f"no_|-{rid}_|-{rid}_|-None"
+
+    def _resolve_resource_targets(self, load):
+        """
+        Return the list of per-resource dicts ``{"id": ..., "type": ...}`` that
+        the target expression matches against ``opts["resources"]``.
+
+        For wildcard glob targets (e.g. ``salt '*'``), returns all managed
+        resources so that the command also runs against resources.
+        For compound T@ targets, returns only the matched resources.
+        For specific-name glob targets (e.g. ``salt 'minion'``), grain, list,
+        pillar, or compound expressions with no T@ terms, returns an empty list
+        — the operator is targeting the minion itself, not its resources.
+        Internal/plumbing functions (see ``_NO_RESOURCE_FUNS``) are never
+        dispatched to resources.
+        """
+        resources = self.opts.get("resources", {})
+        if not resources:
+            return []
+
+        if load.get("fun") in self._NO_RESOURCE_FUNS:
+            return []
+
+        tgt = load.get("tgt", "")
+        tgt_type = load.get("tgt_type", "glob")
+
+        if tgt_type == "compound":
+            words = tgt.split() if isinstance(tgt, str) else list(tgt)
+            opers = {"and", "or", "not", "(", ")"}
+            targets = []
+            for word in words:
+                if word in opers:
+                    continue
+                if word.startswith("T@"):
+                    pattern = word[2:]
+                    if ":" in pattern:
+                        rtype, rid = pattern.split(":", 1)
+                        if not rid:
+                            # "T@type:" with trailing colon — treat as bare type
+                            for r in resources.get(rtype, []):
+                                targets.append({"id": r, "type": rtype})
+                        elif rid in resources.get(rtype, []):
+                            targets.append({"id": rid, "type": rtype})
+                    else:
+                        for rid in resources.get(pattern, []):
+                            targets.append({"id": rid, "type": pattern})
+            return targets
+
+        # For glob targets, only dispatch to resources when the pattern
+        # contains a wildcard.  A bare name like ``salt 'minion' test.ping``
+        # targets the minion itself; it should not implicitly run against its
+        # resources.  ``salt '*' test.ping`` or ``salt 'web*' test.ping``
+        # opts in to resource dispatch.
+        if (
+            tgt_type == "glob"
+            and isinstance(tgt, str)
+            and not any(c in tgt for c in ("*", "?", "["))
+        ):
+            return []
+
+        # Wildcard glob — dispatch to all managed resources.
+        all_resources = []
+        for rtype, rids in resources.items():
+            for rid in rids:
+                all_resources.append({"id": rid, "type": rtype})
+        return all_resources
 
     def destroy(self):
         """

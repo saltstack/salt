@@ -1085,7 +1085,7 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
                     args=(self.opts, self.master_key, self.key, req_channels),
                     name=name,
                 )
-        self.process_manager.run()
+        asyncio.run(self.process_manager.run())
 
     def run(self):
         """
@@ -1359,6 +1359,7 @@ class AESFuncs(TransportMethods):
         "_mine",
         "_mine_delete",
         "_mine_flush",
+        "_register_resources",
         "_file_recv",
         "_pillar",
         "_minion_event",
@@ -1651,6 +1652,31 @@ class AESFuncs(TransportMethods):
         else:
             return self.masterapi._mine_flush(load, skip_verify=True)
 
+    def _register_resources(self, load):
+        """
+        Update the flat resource index for a minion and persist it to the
+        cache.  Called by the minion on startup via ``cmd: "_register_resources"``
+        so that the master knows which resource IDs each minion manages.
+
+        Uses :func:`salt.utils.minions._update_resource_index` which atomically
+        updates both the in-process index (so this worker sees the change
+        immediately) and the single flat ``resource_index`` cache file (so
+        other workers pick it up within their TTL window).
+        """
+        load = self.__verify_load(load, ("id", "resources"))
+        if load is False:
+            return {}
+        if self.opts.get("minion_data_cache", True):
+            salt.utils.minions._update_resource_index(
+                self.masterapi.cache, load["id"], load["resources"]
+            )
+            log.debug(
+                "Registered resources for minion '%s': %s",
+                load["id"],
+                list(load["resources"].keys()),
+            )
+        return True
+
     def _file_recv(self, load):
         """
         Allows minions to send files to the master, files are sent to the
@@ -1851,6 +1877,13 @@ class AESFuncs(TransportMethods):
                         " still accepted."
                     )
             load["sig"] = sig
+
+        # Transport security uses load["id"] (the minion's authenticated ID) for
+        # the channel check above.  For resource returns the minion embeds the
+        # resource ID separately so we can remap here, after authentication, so
+        # the event and job cache are keyed by the resource ID instead.
+        if "resource_id" in load:
+            load["id"] = load.pop("resource_id")
 
         try:
             salt.utils.job.store_job(
@@ -2334,7 +2367,10 @@ class ClearFuncs(TransportMethods):
         delimiter = extra.get("delimiter", DEFAULT_TARGET_DELIM)
 
         _res = self.ckminions.check_minions(
-            clear_load["tgt"], clear_load.get("tgt_type", "glob"), delimiter
+            clear_load["tgt"],
+            clear_load.get("tgt_type", "glob"),
+            delimiter,
+            fun=clear_load.get("fun"),
         )
         minions = _res.get("minions", list())
         missing = _res.get("missing", list())
