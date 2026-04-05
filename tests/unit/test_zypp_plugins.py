@@ -2,6 +2,7 @@
     :codeauthor: Bo Maryniuk <bo@suse.de>
 """
 
+import importlib.machinery
 import importlib.util
 import os
 
@@ -41,7 +42,8 @@ class ZyppPluginsTestCase(TestCase):
         Returns:
 
         """
-        spec = importlib.util.spec_from_file_location("zyppnotify", ZYPPNOTIFY_FILE)
+        loader = importlib.machinery.SourceFileLoader("zyppnotify", ZYPPNOTIFY_FILE)
+        spec = importlib.util.spec_from_loader("zyppnotify", loader)
         zyppnotify = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(zyppnotify)
         drift = zyppnotify.DriftDetector()
