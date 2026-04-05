@@ -151,6 +151,8 @@ def test_request_client_send_recv_loop_closed(minion_opts, port, caplog):
     serve_socket.bind(minion_opts["master_uri"])
     minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
     request_client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
+    # Initialize the socket before trying to access it
+    request_client._init_socket()
 
     def poll(*args, **kwargs):
         """

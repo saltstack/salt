@@ -5,12 +5,26 @@ Functions various time manipulations.
 # Import Python
 import logging
 import re
+import sys
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 # Import Salt modules
 
 log = logging.getLogger(__name__)
+
+
+def utcnow():
+    """
+    Return current UTC time.
+
+    In Python 3.12+, datetime.utcnow() is deprecated in favor of
+    datetime.now(timezone.utc). This function provides compatibility.
+    """
+    if sys.version_info >= (3, 12):
+        return datetime.now(timezone.utc)
+    else:
+        return datetime.utcnow()
 
 
 def get_timestamp_at(time_in=None, time_at=None):
@@ -34,7 +48,7 @@ def get_timestamp_at(time_in=None, time_at=None):
                 minutes = 0
             hours, minutes = int(hours), int(minutes)
         dt = timedelta(hours=hours, minutes=minutes)
-        time_now = datetime.utcnow()
+        time_now = utcnow()
         time_at = time_now + dt
         return time.mktime(time_at.timetuple())
     elif time_at:
