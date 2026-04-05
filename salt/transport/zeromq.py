@@ -927,8 +927,8 @@ class AsyncReqMessageClient:
                 if self.context is not None and self.context.closed is False:
                     self.context.term()
                     self.context = None
-            finally:
-                self._closing = False
+            except Exception:  # pylint: disable=broad-except
+                pass
 
     def _init_socket(self):
         self._closing = False
@@ -954,6 +954,7 @@ class AsyncReqMessageClient:
             self._send_recv, self.socket, task_id=self.send_recv_task_id
         )
 
+    @tornado.gen.coroutine
     def send(self, message, timeout=None, callback=None):
         """
         Return a future which will be completed when the message has a response
@@ -1003,7 +1004,12 @@ class AsyncReqMessageClient:
         # been closed.
         while send_recv_running:
             if task_id is not None and task_id != self.send_recv_task_id:
-                log.trace("Task %s is no longer the active task. Exiting.", task_id)
+                # Re-queue the message so the new task can pick it up
+                self._queue.put_nowait((future, message))
+                log.trace(
+                    "Task %s is no longer active after queue.get. Re-queued and exiting.",
+                    task_id,
+                )
                 break
 
             try:
@@ -1032,13 +1038,10 @@ class AsyncReqMessageClient:
                     break
                 continue
 
-            if task_id is not None and task_id != self.send_recv_task_id:
-                log.trace("Task %s is no longer active after queue.get. Exiting.", task_id)
-                break
-
             try:
                 yield socket.send(message)
             except zmq.eventloop.future.CancelledError as exc:
+
                 log.trace("Loop closed while sending.")
                 # The ioloop was closed before polling finished.
                 send_recv_running = False
@@ -1062,11 +1065,6 @@ class AsyncReqMessageClient:
                     future.set_exception(exc)
                 self.close()
                 self.connect()
-                break
-
-            if task_id is not None and task_id != self.send_recv_task_id:
-                log.trace("Task %s is no longer active after socket.send. Exiting.", task_id)
-                send_recv_running = False
                 break
 
             if future.done():
@@ -1103,11 +1101,6 @@ class AsyncReqMessageClient:
                         future.set_exception(exc)
                     self.close()
                     self.connect()
-                    break
-
-                if task_id is not None and task_id != self.send_recv_task_id:
-                    log.trace("Task %s is no longer active after poll. Exiting.", task_id)
-                    send_recv_running = False
                     break
 
                 if ready:
@@ -1692,7 +1685,12 @@ class RequestClient(salt.transport.base.RequestClient):
         # been closed.
         while send_recv_running:
             if task_id is not None and task_id != self.send_recv_task_id:
-                log.trace("Task %s is no longer the active task. Exiting.", task_id)
+                # Re-queue the message so the new task can pick it up
+                self._queue.put_nowait((future, message))
+                log.trace(
+                    "Task %s is no longer active after queue.get. Re-queued and exiting.",
+                    task_id,
+                )
                 break
 
             try:
@@ -1723,7 +1721,9 @@ class RequestClient(salt.transport.base.RequestClient):
                 continue
 
             if task_id is not None and task_id != self.send_recv_task_id:
-                log.trace("Task %s is no longer active after queue.get. Exiting.", task_id)
+                log.trace(
+                    "Task %s is no longer active after queue.get. Exiting.", task_id
+                )
                 break
 
             if future is None:
@@ -1769,11 +1769,6 @@ class RequestClient(salt.transport.base.RequestClient):
                 await self.connect()
                 break
 
-            if task_id is not None and task_id != self.send_recv_task_id:
-                log.trace("Task %s is no longer active after socket.send. Exiting.", task_id)
-                send_recv_running = False
-                break
-
             if future.done():
                 if isinstance(future.exception(), asyncio.CancelledError):
                     send_recv_running = False
@@ -1814,11 +1809,6 @@ class RequestClient(salt.transport.base.RequestClient):
                         future.set_exception(exc)
                     self.close()
                     await self.connect()
-                    break
-
-                if task_id is not None and task_id != self.send_recv_task_id:
-                    log.trace("Task %s is no longer active after poll. Exiting.", task_id)
-                    send_recv_running = False
                     break
 
                 if ready:
