@@ -607,7 +607,7 @@ def valid_id(opts, id_):
             pki_dir = opts["cluster_pki_dir"]
         else:
             pki_dir = opts["pki_dir"]
-        return bool(clean_path(opts["pki_dir"], id_))
+        return bool(clean_path(pki_dir, id_))
     except (AttributeError, KeyError, TypeError, UnicodeDecodeError):
         return False
 

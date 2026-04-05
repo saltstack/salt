@@ -230,7 +230,7 @@ class CkMinions:
         Return the minions found by looking via globs
         """
         if minions:
-            matched = {"minions": fnmatch.filter(minions, expr), "missing": []}
+            matched = fnmatch.filter(minions, expr)
         else:
             matched = self.key.glob_match(expr).get(self.key.ACC, [])
 

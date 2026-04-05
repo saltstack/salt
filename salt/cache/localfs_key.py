@@ -485,7 +485,7 @@ def list_(bank, cachedir, **kwargs):
     return ret
 
 
-def list_all(bank, cachedir=None, include_data=False, **kwargs):
+def list_all(bank, cachedir, include_data=False, **kwargs):
     """
     Return all entries with their data from the specified bank.
     This is much faster than calling list() + fetch() for each item.
@@ -500,6 +500,7 @@ def list_all(bank, cachedir=None, include_data=False, **kwargs):
     ret = {}
 
     if bank == "keys":
+
         # Map directory names to states
         state_mapping = {
             "minions": "accepted",
@@ -519,7 +520,8 @@ def list_all(bank, cachedir=None, include_data=False, **kwargs):
                             continue
                         if entry.name.startswith("."):
                             continue
-                        if not valid_id(__opts__, entry.name):
+                        # Use direct check instead of valid_id to avoid __opts__ dependency in loop
+                        if any(x in entry.name for x in ("/", "\\", "\0")):
                             continue
                         if not clean_path(cachedir, entry.path, subdir=True):
                             continue
