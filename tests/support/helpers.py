@@ -1613,7 +1613,10 @@ class VirtualEnv:
     @pip_requirement.default
     def _default_pip_requirement(self):
         if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
-            return "pip>=22.3.1,<23.0"
+            # pip < 23.2 vendors pkg_resources that uses pkgutil.ImpImporter,
+            # which was removed in Python 3.12. Require 23.2+ to avoid
+            # AttributeError: module 'pkgutil' has no attribute 'ImpImporter'.
+            return "pip>=23.2"
         return "pip>=20.2.4,<21.2"
 
     @setuptools_requirement.default

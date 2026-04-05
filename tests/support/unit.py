@@ -209,6 +209,31 @@ class TestCase(_TestCase):
         del self._prerun_instance_attributes
         return outcome
 
+    def assertDictContainsSubset(self, subset, dictionary, msg=None):
+        """
+        Checks whether all key/value pairs in subset are found in dictionary.
+        This method was removed in Python 3.12.
+        """
+        missing = []
+        mismatched = []
+        for key, value in subset.items():
+            if key not in dictionary:
+                missing.append(key)
+            elif value != dictionary[key]:
+                mismatched.append(
+                    "{!r}, expected: {!r}, actual: {!r}".format(
+                        key, value, dictionary[key]
+                    )
+                )
+        if missing or mismatched:
+            parts = []
+            if missing:
+                parts.append("Missing: {}".format(", ".join(repr(m) for m in missing)))
+            if mismatched:
+                parts.append("Mismatched values: {}".format(", ".join(mismatched)))
+            standard_msg = "; ".join(parts)
+            self.fail(self._formatMessage(msg, standard_msg))
+
     def shortDescription(self):
         desc = _TestCase.shortDescription(self)
         if HAS_PSUTIL and SHOW_PROC:
