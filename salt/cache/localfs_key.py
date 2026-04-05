@@ -93,7 +93,11 @@ def _get_index(opts):
     """
     global _index
     if _index is None:
-        pki_dir = opts.get("pki_dir")
+        if "cluster_id" in opts and opts["cluster_id"]:
+            pki_dir = opts["cluster_pki_dir"]
+        else:
+            pki_dir = opts.get("pki_dir")
+
         if pki_dir:
             # Index lives alongside the pki directories
             index_path = os.path.join(pki_dir, ".pki_index.mmap")
