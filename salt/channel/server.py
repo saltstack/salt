@@ -979,7 +979,11 @@ class PubServerChannel:
                 # be handled here. Otherwise, it will be handled in the
                 # 'Maintenance' process.
                 presence_events = True
-        transport = salt.transport.publish_server(opts, **kwargs)
+        if opts.get("cluster_id"):
+            # For master clusters, we connect to the local publisher via IPC
+            transport = salt.transport.publish_client(opts, **kwargs)
+        else:
+            transport = salt.transport.publish_server(opts, **kwargs)
         return cls(opts, transport, presence_events=presence_events)
 
     def __init__(self, opts, transport, presence_events=False):
@@ -1028,7 +1032,8 @@ class PubServerChannel:
         primarily be used to create IPC channels and create our daemon process to
         do the actual publishing
 
-        :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
+        :param func process_manager: A ProcessManager, from
+            salt.utils.process.ProcessManager
         """
         if hasattr(self.transport, "publish_daemon"):
             process_manager.add_process(self._publish_daemon, kwargs=kwargs)
@@ -1185,6 +1190,7 @@ class MasterPubServerChannel:
         if opts.get("cluster_id"):
             # For master clusters, we need a TCP transport
             tcp_master_pool_port = opts.get("tcp_master_pull_port", 4520)
+            pull_path = os.path.join(opts["sock_dir"], "master_event_pull.ipc")
             try:
                 transport = salt.transport.tcp.PublishServer(
                     opts,
@@ -1192,11 +1198,13 @@ class MasterPubServerChannel:
                     pub_port=opts.get("publish_port", 4505),
                     pull_host="0.0.0.0",
                     pull_port=tcp_master_pool_port,
+                    pull_path=pull_path,
                 )
             except OSError as exc:
                 if exc.errno == 98:  # Address already in use
                     log.warning(
-                        "Cluster pool port %s already in use, binding to dynamic port",
+                        "Cluster pool port %s already in use, binding to "
+                        "dynamic port",
                         tcp_master_pool_port,
                     )
                     transport = salt.transport.tcp.PublishServer(
@@ -1205,6 +1213,7 @@ class MasterPubServerChannel:
                         pub_port=opts.get("publish_port", 4505),
                         pull_host="0.0.0.0",
                         pull_port=0,
+                        pull_path=pull_path,
                     )
                 else:
                     raise
@@ -1288,7 +1297,8 @@ class MasterPubServerChannel:
                 salt.utils.event.tagify("discover", "peer", "cluster"),
                 data,
             )
-            # Use publish_payload to send to all peers (including target_pusher we just created)
+            # Use publish_payload to send to all peers (including
+            # target_pusher we just created)
             self.io_loop.add_callback(self.publish_payload, event_data)
 
     def send_aes_key_event(self):
@@ -1315,16 +1325,30 @@ class MasterPubServerChannel:
                 log.warning("Peer key missing %r", peer_pub)
                 # request peer key
                 data["peers"][peer] = {}
-        with salt.utils.event.get_master_event(
-            self.opts, self.opts["sock_dir"], listen=False
-        ) as event:
-            success = event.fire_event(
-                data,
-                salt.utils.event.tagify(self.opts["id"], "peer", "cluster"),
-                timeout=30000,  # 30 second timeout
-            )
-            if not success:
-                log.error("Unable to send aes key event")
+        # Try multiple times to fire the initial event to give the
+        # EventPublisher time to start up and bind its IPC socket
+        success = False
+        attempts = 5
+        while attempts > 0:
+            with salt.utils.event.get_master_event(
+                self.opts, self.opts["sock_dir"], listen=False
+            ) as event:
+                if event.fire_event(
+                    data,
+                    salt.utils.event.tagify(self.opts["id"], "peer", "cluster"),
+                    timeout=30000,  # 30 second timeout
+                ):
+                    success = True
+                    break
+            attempts -= 1
+            if attempts > 0:
+                log.debug(
+                    "Retrying initial AES key event (%d attempts left)", attempts
+                )
+                time.sleep(1)
+
+        if not success:
+            log.error("Unable to send aes key event after multiple attempts")
 
     def __getstate__(self):
         return {
@@ -1347,7 +1371,8 @@ class MasterPubServerChannel:
         primarily be used to create IPC channels and create our daemon process to
         do the actual publishing
 
-        :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
+        :param func process_manager: A ProcessManager, from
+            salt.utils.process.ProcessManager
         """
         if hasattr(self.transport, "publish_daemon"):
             process_manager.add_process(
@@ -1376,7 +1401,12 @@ class MasterPubServerChannel:
             # Ensure we are using TCP transport for master cluster
             if not isinstance(self.transport, salt.transport.tcp.PublishServer):
                 log.info("Forcing TCP transport for master cluster in EventPublisher")
-                tcp_master_pool_port = self.opts.get("tcp_master_pull_port", 4520)
+                tcp_master_pool_port = self.opts.get("tcp_master_pull_port")
+                if not tcp_master_pool_port or tcp_master_pool_port == 4506:
+                    tcp_master_pool_port = self.opts.get("cluster_pool_port", 4520)
+
+                # Local communication still needs IPC path
+                pull_path = os.path.join(self.opts["sock_dir"], "master_event_pull.ipc")
                 try:
                     self.transport = salt.transport.tcp.PublishServer(
                         self.opts,
@@ -1384,11 +1414,13 @@ class MasterPubServerChannel:
                         pub_port=self.opts.get("publish_port", 4505),
                         pull_host="0.0.0.0",
                         pull_port=tcp_master_pool_port,
+                        pull_path=pull_path,
                     )
                 except OSError as exc:
                     if exc.errno == 98:  # Address already in use
                         log.warning(
-                            "Cluster pool port %s already in use, binding to dynamic port",
+                            "Cluster pool port %s already in use, binding to "
+                            "dynamic port",
                             tcp_master_pool_port,
                         )
                         self.transport = salt.transport.tcp.PublishServer(
@@ -1397,6 +1429,7 @@ class MasterPubServerChannel:
                             pub_port=self.opts.get("publish_port", 4505),
                             pull_host="0.0.0.0",
                             pull_port=0,
+                            pull_path=pull_path,
                         )
                     else:
                         raise
@@ -1411,7 +1444,8 @@ class MasterPubServerChannel:
 
         # Re-initialize master_key in the daemon process
         self.master_key = salt.crypt.MasterKeys(self.opts)
-        # Default cluster port is 4520, but prioritize tcp_master_pull_port if it's set (usual for tests)
+        # Default cluster port is 4520, but prioritize
+        # tcp_master_pull_port if it's set (usual for tests)
         self.tcp_master_pool_port = self.opts.get("tcp_master_pull_port")
         if not self.tcp_master_pool_port or self.tcp_master_pool_port == 4506:
             self.tcp_master_pool_port = self.opts.get("cluster_pool_port", 4520)
@@ -1447,7 +1481,8 @@ class MasterPubServerChannel:
                 self.pushers.append(pusher)
 
         if self.opts.get("cluster_id", None):
-            # Always bind to 0.0.0.0 for cluster pool to allow cross-interface communication
+            # Always bind to 0.0.0.0 for cluster pool to allow
+            # cross-interface communication
             self.pool_puller = salt.transport.tcp.TCPPuller(
                 host="0.0.0.0",
                 port=self.tcp_master_pool_port,
@@ -1459,7 +1494,8 @@ class MasterPubServerChannel:
             except OSError as exc:
                 if exc.errno == 98:  # Address already in use
                     log.warning(
-                        "Cluster pool port %s already in use, binding to dynamic port",
+                        "Cluster pool port %s already in use, binding to "
+                        "dynamic port",
                         self.tcp_master_pool_port,
                     )
                     self.pool_puller.port = 0
@@ -1552,8 +1588,9 @@ class MasterPubServerChannel:
             if tag.startswith("cluster/peer/discover"):
 
                 payload = salt.payload.loads(data["payload"])
+                peer_id = payload.get("peer_id")
                 log.info(
-                    "RECEIVED DISCOVER REQUEST FROM PEER %s", payload.get("peer_id")
+                    "RECEIVED DISCOVER REQUEST FROM PEER %s", peer_id
                 )
 
                 # Validate peer_id early (before storing in candidates)
@@ -1563,12 +1600,12 @@ class MasterPubServerChannel:
                     _ = salt.utils.verify.clean_join(
                         self.opts["cluster_pki_dir"],
                         "peers",
-                        f"{payload.get('peer_id', '')}.pub",
+                        f"{peer_id or ''}.pub",
                         subdir=True,
                     )
                 except (SaltValidationError, KeyError) as e:
                     log.error(
-                        "Invalid peer_id in discover %s: %s", payload.get("peer_id"), e
+                        "Invalid peer_id in discover %s: %s", peer_id, e
                     )
                     return
 
@@ -1582,11 +1619,11 @@ class MasterPubServerChannel:
                         "Invalid public key or signature in cluster discover payload"
                     )
                     return
-                log.info("Cluster discovery from %s", payload["peer_id"])
+                log.info("Cluster discovery from %s", peer_id)
                 token = self.gen_token()
                 # Store this peer as a candidate.
                 # XXX Add timestamp so we can clean up old candidates
-                self._discover_candidates[payload["peer_id"]] = {
+                self._discover_candidates[peer_id] = {
                     "pub": payload["pub"],
                     "token": token,
                     "port": payload.get("port"),
@@ -1619,7 +1656,11 @@ class MasterPubServerChannel:
                         event_data
                     )
                 except Exception as exc:  # pylint: disable=broad-except
-                    log.error("Unable to send discover-reply to %s: %s", peer_id, exc)
+                    log.error(
+                        "Unable to send discover-reply to %s: %s",
+                        peer_id,
+                        exc,
+                    )
             elif tag.startswith("cluster/peer/discover-reply"):
                 payload = salt.payload.loads(data["payload"])
 
@@ -1645,8 +1686,9 @@ class MasterPubServerChannel:
                     if self.opts.get("cluster_pub_signature_required", True):
                         log.error(
                             "cluster_pub_signature is required for autoscale join "
-                            "(set cluster_pub_signature_required=False to allow TOFU). "
-                            "Refusing to join cluster with unknown key: %s",
+                            "(set cluster_pub_signature_required=False to "
+                            "allow TOFU). Refusing to join cluster with "
+                            "unknown key: %s",
                             digest,
                         )
                         return
@@ -1676,7 +1718,9 @@ class MasterPubServerChannel:
                     # Update token and port from reply
                     self._discover_candidates[peer_id]["token"] = payload["token"]
                     if payload.get("port"):
-                        self._discover_candidates[peer_id]["port"] = payload.get("port")
+                        self._discover_candidates[peer_id][
+                            "port"
+                        ] = payload.get("port")
 
                 expected_token = self._discover_candidates[peer_id].get("token")
                 peer_port = self._discover_candidates[peer_id].get("port")
@@ -1740,7 +1784,11 @@ class MasterPubServerChannel:
                 try:
                     await pusher.publish(event_data)
                 except Exception as exc:  # pylint: disable=broad-except
-                    log.error("Unable to send join request to %s: %s", payload["peer_id"], exc)
+                    log.error(
+                        "Unable to send join request to %s: %s",
+                        payload["peer_id"],
+                        exc,
+                    )
             elif tag.startswith("cluster/peer/join-notify"):
                 # Verify this is a properly signed notification
                 if "payload" not in data or "sig" not in data:
@@ -1797,7 +1845,8 @@ class MasterPubServerChannel:
                         return
                 except (OSError, InvalidKeyError) as e:
                     log.error(
-                        "Error loading sender public key for signature verification: %s",
+                        "Error loading sender public key for signature "
+                        "verification: %s",
                         e,
                     )
                     return
@@ -1863,7 +1912,8 @@ class MasterPubServerChannel:
                         return
                 except (OSError, InvalidKeyError) as e:
                     log.error(
-                        "Error loading bootstrap public key for signature verification: %s",
+                        "Error loading bootstrap public key for signature "
+                        "verification: %s",
                         e,
                     )
                     return
@@ -1899,7 +1949,9 @@ class MasterPubServerChannel:
                         return
 
                     # Extract the actual cluster key (remove token prefix)
-                    cluster_key_pem = cluster_key_bytes[len(expected_prefix) :].decode()
+                    cluster_key_pem = cluster_key_bytes[
+                        len(expected_prefix) :
+                    ].decode()
 
                     # Load and validate it's a valid private key
                     cluster_key_obj = salt.crypt.PrivateKeyString(cluster_key_pem)
@@ -2085,7 +2137,8 @@ class MasterPubServerChannel:
                 )
 
                 for pusher in self.pushers:
-                    # Send signed and encrypted join notification to all cluster members
+                    # Send signed and encrypted join notification
+                    # to all cluster members
                     event_data = salt.utils.event.SaltEvent.pack(
                         salt.utils.event.tagify("join-notify", "peer", "cluster"),
                         crypticle.dumps(
@@ -2178,8 +2231,10 @@ class MasterPubServerChannel:
                 # Protocol events have more parts: 'cluster/peer/discover', etc.
                 tag_parts = tag.split("/")
                 if len(tag_parts) != 3:
-                    # This is likely a protocol event that we don't have a handler for yet
-                    # or it was meant for one of the startswith handlers above but they were reordered.
+                    # This is likely a protocol event that we don't
+                    # have a handler for yet or it was meant for
+                    # one of the startswith handlers above but
+                    # they were reordered.
                     log.debug("Ignoring cluster/peer protocol event: %s", tag)
                     return
 
@@ -2219,7 +2274,9 @@ class MasterPubServerChannel:
                                 event_data = self.extract_cluster_event(peer_id, data)
                             except salt.exceptions.AuthenticationError:
                                 log.error(
-                                    "Event from peer failed authentication: %s", peer_id
+                                    "Event from peer failed "
+                                    "authentication: %s",
+                                    peer_id,
                                 )
                             else:
                                 await self.transport.publish_payload(

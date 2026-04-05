@@ -1513,7 +1513,21 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 payload_handler=publish_payload,
             )
             # Securely create socket
-            self.pull_sock.start()
+            try:
+                self.pull_sock.start()
+            except OSError as exc:
+                if exc.errno == 98 and not self.pull_path:  # Address already in use
+                    log.warning(
+                        "Publish server pull port %s already in use, binding to "
+                        "dynamic port",
+                        self.pull_port,
+                    )
+                    self.pull_sock.port = 0
+                    self.pull_sock.start()
+                    # Update our port so peers can find us
+                    self.pull_port = self.pull_sock.port
+                else:
+                    raise
         self.started.set()
 
     def pre_fork(self, process_manager):
