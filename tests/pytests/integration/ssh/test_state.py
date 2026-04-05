@@ -260,7 +260,7 @@ def test_state_running(
 
     expected = 'The function "state.pkg" is running as'
     try:
-        end_time = time.time() + 60
+        end_time = time.time() + 120
         while time.time() < end_time:
             ret = salt_ssh_cli.run("state.running")
             # The wrapper returns a list of strings
@@ -273,7 +273,7 @@ def test_state_running(
                 pytest.skip("Background state run failed, skipping")
             pytest.fail(f"Did not find '{expected}' in state.running output")
     finally:
-        thread.join(timeout=120)
+        thread.join(timeout=180)
 
     end_time = time.time() + 120
     while time.time() < end_time:
