@@ -475,6 +475,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                     break
         finally:
             self.clients.discard(ws)
+        return ws
 
     async def _connect(self):
         if self.pull_path:
@@ -604,6 +605,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 await ws.send_bytes(salt.payload.dumps(reply))
             elif msg.type == aiohttp.WSMsgType.ERROR:
                 log.error("ws connection closed with exception %s", ws.exception())
+        return ws
 
     def close(self):
         if self._run is not None:
