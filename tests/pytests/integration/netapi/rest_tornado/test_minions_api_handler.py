@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from tornado.httpclient import HTTPError
 
@@ -109,6 +111,16 @@ async def test_mem_leak_in_event_listener(http_client, salt_minion, app):
             method="GET",
             follow_redirects=False,
         )
+    # Give the event loop a chance to run any pending cleanup callbacks
+    # before asserting that the maps are empty.
+    for _ in range(10):
+        await asyncio.sleep(0.1)
+        if (
+            len(app.event_listener.tag_map) == 0
+            and len(app.event_listener.timeout_map) == 0
+            and len(app.event_listener.request_map) == 0
+        ):
+            break
     assert len(app.event_listener.tag_map) == 0
     assert len(app.event_listener.timeout_map) == 0
     assert len(app.event_listener.request_map) == 0

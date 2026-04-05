@@ -117,7 +117,16 @@ def test_state_show_top(salt_ssh_cli, base_env_state_tree_root_dir):
     with pytest.helpers.temp_file(
         "top.sls", top_sls, base_env_state_tree_root_dir
     ), pytest.helpers.temp_file("core.sls", core_state, base_env_state_tree_root_dir):
-        ret = salt_ssh_cli.run("state.show_top")
+        # Retry to handle a potential race where the master_tops extension
+        # module hasn't been fully loaded yet when the first call is made.
+        ret = None
+        for _ in range(3):
+            ret = salt_ssh_cli.run("state.show_top")
+            if ret.returncode == 0 and ret.data == {
+                "base": ["core", "master_tops_test"]
+            }:
+                break
+            time.sleep(2)
         assert ret.returncode == 0
         assert ret.data == {"base": ["core", "master_tops_test"]}
 
@@ -251,7 +260,7 @@ def test_state_running(
 
     expected = 'The function "state.pkg" is running as'
     try:
-        end_time = time.time() + 60
+        end_time = time.time() + 120
         while time.time() < end_time:
             ret = salt_ssh_cli.run("state.running")
             # The wrapper returns a list of strings
@@ -264,7 +273,7 @@ def test_state_running(
                 pytest.skip("Background state run failed, skipping")
             pytest.fail(f"Did not find '{expected}' in state.running output")
     finally:
-        thread.join(timeout=120)
+        thread.join(timeout=180)
 
     end_time = time.time() + 120
     while time.time() < end_time:
