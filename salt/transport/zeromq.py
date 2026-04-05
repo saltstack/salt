@@ -690,6 +690,8 @@ class AsyncReqMessageClient:
             received = False
             ready = False
             while True:
+                if future.done():
+                    break
                 try:
                     # Time is in milliseconds.
                     ready = yield socket.poll(300, zmq.POLLIN)
