@@ -1633,8 +1633,7 @@ class RequestClient(salt.transport.base.RequestClient):
                 try:
                     # For some reason yielding here doesn't work becaues the
                     # future always has a result?
-                    poll_future = socket.poll(0, zmq.POLLOUT)
-                    poll_future.result()
+                    await socket.poll(0, zmq.POLLOUT)
                 except _TimeoutError:
                     # This is what we expect if the socket is still alive
                     pass

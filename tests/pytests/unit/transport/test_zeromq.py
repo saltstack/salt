@@ -1718,6 +1718,8 @@ async def test_client_send_recv_on_cancelled_error(minion_opts, io_loop):
         client.socket = AsyncMock()
         client.socket.poll.side_effect = zmq.eventloop.future.CancelledError
         client._queue.put_nowait((mock_future, {"meh": "bah"}))
+        # Add a sentinel to stop the loop, otherwise it will wait for more items
+        client._queue.put_nowait((None, None))
         await client._send_recv(client.socket, client._queue)
         mock_future.set_exception.assert_not_called()
     finally:
