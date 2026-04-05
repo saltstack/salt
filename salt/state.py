@@ -1905,6 +1905,43 @@ class State:
                 high.pop(id_)
         return high
 
+    @staticmethod
+    def _add_to_extend(
+        extend,
+        id_to_extend,
+        state_mod_name,
+        req_type,
+        req_id,
+        req_state_mod_name,
+    ):
+        """
+        Add req_id as a requisite for id_to_extend
+        """
+
+        if id_to_extend not in extend:
+            # The state does not exist yet: create it
+            extend[id_to_extend] = HashableOrderedDict()
+
+        if (state_args := extend[id_to_extend].get(state_mod_name)) is None:
+            # The state module is not present yet, create it and initialize it
+            extend[id_to_extend][state_mod_name] = [
+                {req_type: [{req_state_mod_name: req_id}]}
+            ]
+            return
+
+        # Lookup req_type in state_args
+        for state_arg in state_args:
+            if (req_items := state_arg.get(req_type)) is not None:
+                for req_item in req_items:
+                    if req_item.get(req_state_mod_name) == req_id:
+                        # (req_state_mode_name, req_id) is already defined as a requisiste
+                        return
+                # Extending again
+                state_arg[req_type].append({req_state_mod_name: req_id})
+                return
+        # req_type does not exist already for this state module
+        state_args.append({req_type: [{req_state_mod_name: req_id}]})
+
     def requisite_in(self, high):
         """
         Extend the data reference with requisite_in arguments
@@ -1955,11 +1992,7 @@ class State:
                         if isinstance(items, dict):
                             # Formatted as a single req_in
                             for _state, name in items.items():
-
                                 # Not a use requisite_in
-                                found = False
-                                if name not in extend:
-                                    extend[name] = HashableOrderedDict()
                                 if "." in _state:
                                     errors.append(
                                         "Invalid requisite in {}: {} for "
@@ -1973,23 +2006,12 @@ class State:
                                         )
                                     )
                                     _state = _state.split(".")[0]
-                                if _state not in extend[name]:
-                                    extend[name][_state] = []
+                                self._add_to_extend(
+                                    extend, name, _state, rkey, id_, state
+                                )
                                 extend[name]["__env__"] = body["__env__"]
                                 extend[name]["__sls__"] = body["__sls__"]
-                                for ind in range(len(extend[name][_state])):
-                                    if next(iter(extend[name][_state][ind])) == rkey:
-                                        # Extending again
-                                        extend[name][_state][ind][rkey].append(
-                                            {state: id_}
-                                        )
-                                        found = True
-                                if found:
-                                    continue
-                                # The rkey is not present yet, create it
-                                extend[name][_state].append({rkey: [{state: id_}]})
-
-                        if isinstance(items, list):
+                        elif isinstance(items, list):
                             # Formed as a list of requisite additions
                             hinges = []
                             for ind in items:
@@ -2125,27 +2147,13 @@ class State:
                                                     continue
                                                 extend[id_][state].append(arg)
                                         continue
-                                    found = False
-                                    if name not in extend:
-                                        extend[name] = HashableOrderedDict()
-                                    if _state not in extend[name]:
-                                        extend[name][_state] = []
+                                    self._add_to_extend(
+                                        extend, name, _state, rkey, id_, state
+                                    )
+
                                     extend[name]["__env__"] = body["__env__"]
                                     extend[name]["__sls__"] = body["__sls__"]
-                                    for ind in range(len(extend[name][_state])):
-                                        if (
-                                            next(iter(extend[name][_state][ind]))
-                                            == rkey
-                                        ):
-                                            # Extending again
-                                            extend[name][_state][ind][rkey].append(
-                                                {state: id_}
-                                            )
-                                            found = True
-                                    if found:
-                                        continue
-                                    # The rkey is not present yet, create it
-                                    extend[name][_state].append({rkey: [{state: id_}]})
+
         high["__extend__"] = []
         for key, val in extend.items():
             high["__extend__"].append({key: val})
