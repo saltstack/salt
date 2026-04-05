@@ -384,11 +384,11 @@ def get_distribution_path(venv, distribution):
         bin_path,
         "try:\n"
         "    import importlib.metadata, pathlib\n"
-        "    print(str(pathlib.Path(importlib.metadata.distribution('{}').locate_file('.')).resolve()))\n"
+        "    print(str(pathlib.Path(importlib.metadata.distribution('{dist}').locate_file('.')).resolve()))\n"
         "except Exception:\n"
         "    import pkg_resources\n"
-        "    print(pkg_resources.get_distribution('{}').location)\n".format(
-            distribution, distribution
+        "    print(pkg_resources.get_distribution('{dist}').location)\n".format(
+            dist=distribution
         ),
     )
 
