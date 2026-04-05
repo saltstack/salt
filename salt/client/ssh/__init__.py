@@ -277,9 +277,6 @@ fi
 echo "{RSTR}"
 echo "{RSTR}" >&2
 
-# Debug: Show the actual command being executed
-echo "SALT_CALL_CMD: $SALT_CALL_BIN --retcode-passthrough --local --metadata --out=json -lquiet -c {THIN_DIR} -- {ARGS}" >&2
-
 exec $SUDO "$SALT_CALL_BIN" --retcode-passthrough --local --metadata --out=json -lquiet -c "{THIN_DIR}" -- {ARGS}
 EOF
 """.split(
