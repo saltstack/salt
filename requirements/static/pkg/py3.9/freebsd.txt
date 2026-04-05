@@ -2,7 +2,7 @@
 #    uv pip compile requirements/base.txt requirements/zeromq.txt requirements/static/pkg/freebsd.in --universal --python-version=3.9 --no-emit-index-url -o=requirements/static/pkg/py3.9/freebsd.txt
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.13.3
+aiohttp==3.13.4
     # via -r requirements/base.txt
 aiosignal==1.4.0
     # via aiohttp
