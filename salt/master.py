@@ -1230,6 +1230,8 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
                     pool_worker_channels = []
                     for transport, opts in iter_transport_opts(pool_opts):
                         worker_chan = salt.channel.server.ReqServerChannel.factory(opts)
+                        # Ensure pool-specific transport is initialized (e.g. bind TCP socket)
+                        worker_chan.pre_fork(self.process_manager)
                         pool_worker_channels.append(worker_chan)
                         # Only use first transport
                         break
