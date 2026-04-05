@@ -1406,7 +1406,9 @@ class MasterPubServerChannel:
                     tcp_master_pool_port = self.opts.get("cluster_pool_port", 4520)
 
                 # Local communication still needs IPC path
-                pull_path = os.path.join(self.opts["sock_dir"], "master_event_pull.ipc")
+                pull_path = os.path.join(
+                    self.opts["sock_dir"], "master_event_pull.ipc"
+                )
                 try:
                     self.transport = salt.transport.tcp.PublishServer(
                         self.opts,

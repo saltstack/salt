@@ -1179,7 +1179,9 @@ class PubServer(tornado.tcpserver.TCPServer):
                         except tornado.iostream.StreamClosedError:
                             to_remove.append(client)
                 if not sent:
-                    log.debug("Publish target %s not connected %r", topic, self.clients)
+                    log.debug(
+                        "Publish target %s not connected %r", topic, self.clients
+                    )
         else:
             for client in list(self.clients):
                 try:
