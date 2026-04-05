@@ -79,7 +79,12 @@ def syndic_opts(tmp_path):
 def mocked_tcp_pub_client():
     transport = MagicMock(spec=salt.transport.tcp.PublishClient)
     transport.connect = MagicMock()
-    future = asyncio.Future()
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    future = loop.create_future()
     transport.connect.return_value = future
     future.set_result(True)
     with patch("salt.transport.tcp.PublishClient", transport):
