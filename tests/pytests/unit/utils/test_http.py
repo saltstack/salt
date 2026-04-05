@@ -184,7 +184,7 @@ def test_query_tornado_httperror_no_response():
     mock_client = MagicMock()
     mock_client.fetch.side_effect = http_error
 
-    with patch("salt.utils.http.HTTPClient", return_value=mock_client):
+    with patch("salt.utils.http.AsyncHTTPClient", return_value=mock_client):
         ret = http.query("https://example.com/test", backend="tornado")
 
     assert isinstance(ret, dict)

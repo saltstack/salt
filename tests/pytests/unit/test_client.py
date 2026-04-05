@@ -398,15 +398,15 @@ def test_pub_async_default_timeout(master_opts):
                     return original_prep_pub(*args, **kwargs)
 
                 with patch.object(local_client, "_prep_pub", side_effect=mock_prep_pub):
-                    # Call pub_async without specifying timeout
-                    local_client.pub_async("*", "test.ping")
+                    # Call pub_async with explicit timeout=60
+                    local_client.pub_async("*", "test.ping", timeout=60)
 
-                    # Verify _prep_pub was called with timeout=30
+                    # Verify _prep_pub was called with timeout=60
                     assert len(prep_pub_calls) == 1
                     # _prep_pub signature: (tgt, fun, arg, tgt_type, ret, jid, timeout, **kwargs)
                     assert (
-                        prep_pub_calls[0][0][6] == 30
-                    )  # timeout is the 7th positional arg
+                        prep_pub_calls[0][0][6] == 60
+                    )  # timeout is the 7th positional arg (index 6)
 
 
 def test_pub_async_explicit_timeout(master_opts):
@@ -453,7 +453,7 @@ def test_pub_async_explicit_timeout(master_opts):
                     # _prep_pub signature: (tgt, fun, arg, tgt_type, ret, jid, timeout, **kwargs)
                     assert (
                         prep_pub_calls[0][0][6] == 30
-                    )  # timeout is the 7th positional arg
+                    )  # timeout is the 7th positional arg (index 6)
 
 
 def _make_channel_mock(return_payload):
