@@ -287,9 +287,11 @@ class CkMinions:
         minions = set()
 
         try:
-            accepted = self.key.list_status("accepted").get("minions")
-            if accepted:
-                minions = minions | set(accepted)
+            res = self.key.list_status("accepted")
+            if res:
+                accepted = res.get("minions")
+                if accepted:
+                    minions = minions | set(accepted)
         except OSError as exc:
             log.error(
                 "Encountered OSError while evaluating minions in PKI dir: %s", exc

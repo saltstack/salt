@@ -118,7 +118,11 @@ def rebuild_index(opts):
     if not index:
         return False
 
-    pki_dir = opts.get("pki_dir")
+    if "cluster_id" in opts and opts["cluster_id"]:
+        pki_dir = opts["cluster_pki_dir"]
+    else:
+        pki_dir = opts.get("pki_dir")
+
     if not pki_dir:
         return False
 
