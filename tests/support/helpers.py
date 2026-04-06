@@ -1612,10 +1612,11 @@ class VirtualEnv:
 
     @pip_requirement.default
     def _default_pip_requirement(self):
-        if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
+        if os.environ.get("ONEDIR_TESTRUN", "0") == "1" or sys.version_info >= (3, 12):
             # pip < 23.2 vendors pkg_resources that uses pkgutil.ImpImporter,
             # which was removed in Python 3.12. Require 23.2+ to avoid
             # AttributeError: module 'pkgutil' has no attribute 'ImpImporter'.
+            # Also, pip < 23.0 tries to import distutils which was removed in Python 3.12.
             return "pip>=23.2"
         return "pip>=20.2.4,<21.2"
 
