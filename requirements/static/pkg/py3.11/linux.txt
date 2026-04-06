@@ -2,7 +2,7 @@
 #    uv pip compile requirements/base.txt requirements/zeromq.txt requirements/crypto.txt requirements/static/pkg/linux.in --constraint requirements/constraints.txt --no-emit-index-url --python-platform=linux --python-version=3.11 -o=requirements/static/pkg/py3.11/linux.txt
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.13.3
+aiohttp==3.13.5
     # via -r requirements/base.txt
 aiosignal==1.4.0
     # via aiohttp
