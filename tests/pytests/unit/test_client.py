@@ -7,6 +7,10 @@ import logging
 
 import pytest
 
+import salt.client
+import salt.config
+import salt.ext.tornado.gen
+import salt.ext.tornado.ioloop
 import salt.utils.platform
 from salt import client
 from salt.exceptions import (
@@ -290,9 +294,18 @@ def test_invalid_event_tag_65727(master_opts, caplog):
             assert "Skipping non return event: salt/job/0815/return/" in caplog.text
 
 
+def test_publish_timeout_in_default_master_opts():
+    """
+    publish_timeout must be present in DEFAULT_MASTER_OPTS with a value of 30
+    so that any LocalClient not given explicit opts still gets a sane pub timeout.
+    """
+    assert "publish_timeout" in salt.config.DEFAULT_MASTER_OPTS
+    assert salt.config.DEFAULT_MASTER_OPTS["publish_timeout"] == 30
+
+
 def test_pub_default_timeout(master_opts):
     """
-    Test that LocalClient.pub uses a default timeout of 15 seconds.
+    Test that LocalClient.pub uses a default timeout of 30 seconds.
     """
     with client.LocalClient(mopts=master_opts) as local_client:
         with patch("os.path.exists", return_value=True):
@@ -313,11 +326,11 @@ def test_pub_default_timeout(master_opts):
                 # Call pub without specifying timeout
                 result = local_client.pub("*", "test.ping")
 
-                # Verify the channel.send was called with timeout=15
+                # Verify the channel.send was called with timeout=30
                 assert mock_channel.send.called
                 call_kwargs = mock_channel.send.call_args
                 # The timeout is passed to channel.send in the first call
-                assert call_kwargs[1]["timeout"] == 15
+                assert call_kwargs[1]["timeout"] == 30
 
 
 def test_pub_explicit_timeout(master_opts):
@@ -351,7 +364,7 @@ def test_pub_explicit_timeout(master_opts):
 
 def test_pub_async_default_timeout(master_opts):
     """
-    Test that LocalClient.pub_async uses a default timeout of 15 seconds.
+    Test that LocalClient.pub_async uses a default timeout of 30 seconds.
     """
     with client.LocalClient(mopts=master_opts) as local_client:
         with patch("os.path.exists", return_value=True):
@@ -388,11 +401,11 @@ def test_pub_async_default_timeout(master_opts):
                     # Call pub_async without specifying timeout
                     local_client.pub_async("*", "test.ping")
 
-                    # Verify _prep_pub was called with timeout=15
+                    # Verify _prep_pub was called with timeout=30
                     assert len(prep_pub_calls) == 1
                     # _prep_pub signature: (tgt, fun, arg, tgt_type, ret, jid, timeout, **kwargs)
                     assert (
-                        prep_pub_calls[0][0][6] == 15
+                        prep_pub_calls[0][0][6] == 30
                     )  # timeout is the 7th positional arg
 
 
@@ -441,3 +454,139 @@ def test_pub_async_explicit_timeout(master_opts):
                     assert (
                         prep_pub_calls[0][0][6] == 30
                     )  # timeout is the 7th positional arg
+
+
+def _make_channel_mock(return_payload):
+    """
+    Build a ReqChannel context-manager mock whose .send() returns return_payload.
+    """
+    mock_channel = MagicMock()
+    mock_channel.__enter__ = MagicMock(return_value=mock_channel)
+    mock_channel.__exit__ = MagicMock(return_value=False)
+    mock_channel.send = MagicMock(return_value=return_payload)
+    return mock_channel
+
+
+def test_pub_uses_publish_timeout_from_config(master_opts):
+    """
+    pub() must honor a custom publish_timeout set in opts, overriding the 30s default.
+    """
+    master_opts = dict(master_opts, publish_timeout=30)
+    with client.LocalClient(mopts=master_opts) as local_client:
+        mock_channel = _make_channel_mock(
+            {"load": {"jid": "test_jid", "minions": ["m1"]}}
+        )
+        with patch("os.path.exists", return_value=True), patch(
+            "salt.channel.client.ReqChannel.factory", return_value=mock_channel
+        ):
+            local_client.event.connect_pub = MagicMock(return_value=True)
+            local_client.pub("*", "test.ping")
+            assert mock_channel.send.call_args[1]["timeout"] == 30
+
+
+def test_pub_async_uses_publish_timeout_from_config(master_opts):
+    """
+    pub_async() must honor a custom publish_timeout set in opts.
+    """
+    master_opts = dict(master_opts, publish_timeout=30)
+    with client.LocalClient(mopts=master_opts) as local_client:
+        captured = {}
+
+        @salt.ext.tornado.gen.coroutine
+        def mock_send(payload, timeout=None):
+            captured["timeout"] = timeout
+            raise salt.ext.tornado.gen.Return(
+                {"load": {"jid": "test_jid", "minions": ["m1"]}}
+            )
+
+        mock_channel = MagicMock()
+        mock_channel.__enter__ = MagicMock(return_value=mock_channel)
+        mock_channel.__exit__ = MagicMock(return_value=False)
+        mock_channel.send = mock_send
+
+        with patch("os.path.exists", return_value=True), patch(
+            "salt.channel.client.AsyncReqChannel.factory", return_value=mock_channel
+        ):
+            local_client.event.connect_pub = MagicMock(return_value=True)
+            io_loop = salt.ext.tornado.ioloop.IOLoop()
+            io_loop.run_sync(lambda: local_client.pub_async("*", "test.ping"))
+
+        assert captured["timeout"] == 30
+
+
+# ---------------------------------------------------------------------------
+# run_job / run_job_async – timeout propagation to pub / pub_async
+# ---------------------------------------------------------------------------
+
+
+def test_run_job_passes_none_to_pub_when_no_timeout(master_opts):
+    """
+    run_job() called without an explicit timeout must pass timeout=None to pub()
+    so that pub() resolves the value via publish_timeout (30 by default) rather
+    than the 5-second salt command timeout.
+    """
+    with client.LocalClient(mopts=master_opts) as local_client:
+        with patch.object(
+            local_client,
+            "pub",
+            return_value={"jid": "1234", "minions": ["m1"]},
+        ) as mock_pub:
+            local_client.run_job("*", "test.ping")
+            assert mock_pub.call_args[1]["timeout"] is None
+
+
+def test_run_job_passes_explicit_timeout_to_pub(master_opts):
+    """
+    run_job() called with an explicit timeout must forward that value to pub()
+    unchanged so caller-controlled timeouts are honored (e.g. CLI -t flag).
+    """
+    with client.LocalClient(mopts=master_opts) as local_client:
+        with patch.object(
+            local_client,
+            "pub",
+            return_value={"jid": "1234", "minions": ["m1"]},
+        ) as mock_pub:
+            local_client.run_job("*", "test.ping", timeout=30)
+            assert mock_pub.call_args[1]["timeout"] == 30
+
+
+def test_run_job_async_passes_none_to_pub_async_when_no_timeout(master_opts):
+    """
+    run_job_async() called without an explicit timeout must pass timeout=None
+    to pub_async() so that pub_async() uses publish_timeout (30 by default).
+    """
+    captured = {}
+
+    @salt.ext.tornado.gen.coroutine
+    def fake_pub_async(*args, **kwargs):
+        captured["timeout"] = kwargs.get("timeout")
+        raise salt.ext.tornado.gen.Return({"jid": "1234", "minions": ["m1"]})
+
+    with client.LocalClient(mopts=master_opts) as local_client:
+        with patch.object(local_client, "pub_async", side_effect=fake_pub_async):
+            io_loop = salt.ext.tornado.ioloop.IOLoop()
+            io_loop.run_sync(lambda: local_client.run_job_async("*", "test.ping"))
+
+    assert captured["timeout"] is None
+
+
+def test_run_job_async_passes_explicit_timeout_to_pub_async(master_opts):
+    """
+    run_job_async() called with an explicit timeout must forward that value to
+    pub_async() unchanged.
+    """
+    captured = {}
+
+    @salt.ext.tornado.gen.coroutine
+    def fake_pub_async(*args, **kwargs):
+        captured["timeout"] = kwargs.get("timeout")
+        raise salt.ext.tornado.gen.Return({"jid": "1234", "minions": ["m1"]})
+
+    with client.LocalClient(mopts=master_opts) as local_client:
+        with patch.object(local_client, "pub_async", side_effect=fake_pub_async):
+            io_loop = salt.ext.tornado.ioloop.IOLoop()
+            io_loop.run_sync(
+                lambda: local_client.run_job_async("*", "test.ping", timeout=30)
+            )
+
+    assert captured["timeout"] == 30

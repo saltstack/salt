@@ -3,6 +3,7 @@ Functions for identifying which platform a machine is
 """
 
 import contextlib
+import functools
 import multiprocessing
 import os
 import platform
@@ -11,7 +12,36 @@ import sys
 
 import distro
 
-from salt.utils.decorators import memoize as real_memoize
+
+# Use a local wraps-based memoize rather than importing from salt.utils.decorators.
+# This module is synced to the remote's extmods/utils/platform.py, and in
+# Python 3.14+ (forkserver default start method) it can be accidentally
+# imported as the stdlib ``platform`` module when extmods/utils/ sits at
+# sys.path[0].  Importing from salt.utils.decorators in that context
+# creates a circular import:
+#   salt.utils.decorators → salt.utils.versions → salt.version
+#   → import platform (ourselves!) → salt.utils.decorators  (cycle)
+# functools is part of the stdlib and has no such dependency.
+#
+# We cannot use functools.cache/lru_cache directly as the decorator because
+# those produce functools._lru_cache_wrapper objects which fail
+# inspect.isfunction(), causing the Salt loader to skip them when loading
+# salt.utils.platform as a utils module (salt/loader/lazy.py line ~1109).
+def real_memoize(func):
+    """Cache the result of a zero-or-more-argument function (stdlib-only, loader-safe)."""
+    cache = {}
+    _sentinel = object()
+
+    @functools.wraps(func)
+    def _wrapper(*args, **kwargs):
+        key = (args, tuple(sorted(kwargs.items())))
+        result = cache.get(key, _sentinel)
+        if result is _sentinel:
+            result = func(*args, **kwargs)
+            cache[key] = result
+        return result
+
+    return _wrapper
 
 
 def linux_distribution(full_distribution_name=True):
@@ -237,12 +267,20 @@ def is_aarch64():
 
 def spawning_platform():
     """
-    Returns True if multiprocessing.get_start_method(allow_none=False) returns "spawn"
+    Returns True if the multiprocessing start method requires pickling to transfer
+    process state to the child.  This is the case for both "spawn" and "forkserver".
 
-    This is the default for Windows Python >= 3.4 and macOS on Python >= 3.8.
-    Salt, however, will force macOS to spawning by default on all python versions
+    "spawn" is the default on Windows (Python >= 3.4) and macOS (Python >= 3.8).
+    Salt forces macOS to spawning by default on all Python versions.
+
+    "forkserver" became the Linux default in Python 3.14 (via PEP 741).  Like
+    "spawn", it transfers the Process object to the child via pickle rather than
+    inheriting it through a plain fork of the parent process.  Salt must therefore
+    treat it identically: capture *args/**kwargs in __new__ so that __getstate__
+    can reconstruct the object on the other side, and skip parent-inherited
+    logging teardown since the child starts with a clean file-descriptor table.
     """
-    return multiprocessing.get_start_method(allow_none=False) == "spawn"
+    return multiprocessing.get_start_method(allow_none=False) in ("spawn", "forkserver")
 
 
 def get_machine_identifier():

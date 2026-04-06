@@ -1,3 +1,46 @@
+[build-system]
+requires = [
+    "setuptools>=62.0",
+    "wheel",
+    "looseversion",
+    "packaging",
+    "importlib-metadata>=8.7.0",
+]
+build-backend = "salt_build_backend"
+backend-path = ["tools/pkg"]
+
+[project]
+name = "salt"
+description = "Portable, distributed, remote execution and configuration management system"
+readme = "README.rst"
+requires-python = ">=3.8"
+license = {text = "Apache Software License 2.0"}
+authors = [
+  {name = "Thomas S Hatch", email = "thatch45@gmail.com"},
+]
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Cython",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: System :: Clustering",
+    "Topic :: System :: Distributed Computing",
+]
+dynamic = ["version", "dependencies", "optional-dependencies", "scripts", "entry-points"]
+
+[project.urls]
+Homepage = "https://saltproject.io"
+
 [tool.black]
 exclude= """
 /(

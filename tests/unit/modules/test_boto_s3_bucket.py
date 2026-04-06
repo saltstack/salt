@@ -443,7 +443,7 @@ class BotoS3BucketTestCase(BotoS3BucketTestCaseBase, BotoS3BucketTestCaseMixin):
             TargetBucket="arn:::::",
             TargetPrefix="asdf",
             TargetGrants="[]",
-            **conn_parameters
+            **conn_parameters,
         )
 
         self.assertTrue(result["updated"])
@@ -460,7 +460,7 @@ class BotoS3BucketTestCase(BotoS3BucketTestCaseBase, BotoS3BucketTestCaseMixin):
             TargetBucket="arn:::::",
             TargetPrefix="asdf",
             TargetGrants="[]",
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(
             result.get("error", {}).get("message"),

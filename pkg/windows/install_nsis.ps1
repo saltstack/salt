@@ -68,7 +68,7 @@ if ( Test-Path -Path "$check_file" ) {
     Write-Result "Missing" -ForegroundColor Yellow
 
     Write-Host "Downloading NSIS: " -NoNewline
-    $url = "$DEPS_URL/nsis-3.10-setup.exe"
+    $url = "$DEPS_URL/nsis-3.11-setup.exe"
     $file = "$env:TEMP\install_nsis.exe"
     Invoke-WebRequest -Uri $url -OutFile "$file"
     if ( Test-Path -Path "$file" ) {
@@ -327,6 +327,99 @@ if ( (Test-Path -Path $check_file_a) -and (Test-Path -Path $check_file_u) ) {
     }
     if ( Test-Path -Path "$env:TEMP\nsisaccesscontrol" ) {
         # Not a hard fail
+        Write-Result "Failed" -ForegroundColor Yellow
+    } else {
+        Write-Result "Success" -ForegroundColor Green
+    }
+}
+
+#-------------------------------------------------------------------------------
+# NSIS SimpleSC Plugin
+#-------------------------------------------------------------------------------
+
+Write-Host "Looking for NSIS SimpleSC Plugin: " -NoNewline
+$check_file_a = "$NSIS_PLUG_A\SimpleSC.dll"
+$check_file_u = "$NSIS_PLUG_U\SimpleSC.dll"
+if ( (Test-Path -Path $check_file_a) -and (Test-Path -Path $check_file_u) ) {
+    Write-Result "Success" -ForegroundColor Green
+} else {
+    Write-Result "Missing" -ForegroundColor Yellow
+
+    Write-Host "Downloading NSIS SimpleSC (ansi) Plugin: " -NoNewline
+    $url = "$DEPS_URL/nsis-plugin-simplesc.zip"
+    $file = "$env:TEMP\nsisSimpleSC.zip"
+    Invoke-WebRequest -Uri $url -OutFile "$file"
+    if ( Test-Path -Path "$file" ) {
+        Write-Result "Success" -ForegroundColor Green
+    } else {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
+    }
+
+    Write-Host "Extracting NSIS SimpleSC (ansi) Plugin: " -NoNewline
+    Expand-Archive -Path "$file" -DestinationPath "$env:TEMP\nsisSimpleSC\"
+    if ( Test-Path -Path "$env:TEMP\nsisSimpleSC\SimpleSC.dll" ) {
+        Write-Result "Success" -ForegroundColor Green
+    } else {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
+    }
+
+    Write-Host "Moving DLL to plugins directory: " -NoNewline
+    Move-Item -Path "$env:TEMP\nsisSimpleSC\SimpleSC.dll" -Destination "$check_file_a" -Force
+    if ( Test-Path -Path $check_file_a ) {
+        Write-Result "Success" -ForegroundColor Green
+    } else {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
+    }
+
+    Write-Host "Cleaning up: " -NoNewline
+    Remove-Item -Path $file -Force
+    Remove-Item -Path "$env:TEMP\nsisSimpleSC" -Force -Recurse | Out-Null
+    if ( Test-Path -Path "$file" ) {
+        Write-Result "Failed" -ForegroundColor Yellow
+    } elseif ( Test-Path -Path "$env:TEMP\nsisSimpleSC" ) {
+        Write-Result "Failed" -ForegroundColor Yellow
+    } else {
+        Write-Result "Success" -ForegroundColor Green
+    }
+
+    Write-Host "Downloading NSIS SimpleSC (unicode) Plugin: " -NoNewline
+    $url = "$DEPS_URL/nsis-plugin-simplescu.zip"
+    $file = "$env:TEMP\nsisSimpleSCu.zip"
+    Invoke-WebRequest -Uri $url -OutFile "$file"
+    if ( Test-Path -Path "$file" ) {
+        Write-Result "Success" -ForegroundColor Green
+    } else {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
+    }
+
+    Write-Host "Extracting NSIS SimpleSC (unicode) Plugin: " -NoNewline
+    Expand-Archive -Path "$file" -DestinationPath "$env:TEMP\nsisSimpleSCu\"
+    if ( Test-Path -Path "$env:TEMP\nsisSimpleSCu\SimpleSC.dll" ) {
+        Write-Result "Success" -ForegroundColor Green
+    } else {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
+    }
+
+    Write-Host "Moving DLL to plugins directory: " -NoNewline
+    Move-Item -Path "$env:TEMP\nsisSimpleSCu\SimpleSC.dll" -Destination "$check_file_u" -Force
+    if ( Test-Path -Path $check_file_u ) {
+        Write-Result "Success" -ForegroundColor Green
+    } else {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
+    }
+
+    Write-Host "Cleaning up: " -NoNewline
+    Remove-Item -Path $file -Force
+    Remove-Item -Path "$env:TEMP\nsisSimpleSCu" -Force -Recurse | Out-Null
+    if ( Test-Path -Path "$file" ) {
+        Write-Result "Failed" -ForegroundColor Yellow
+    } elseif ( Test-Path -Path "$env:TEMP\nsisSimpleSCu" ) {
         Write-Result "Failed" -ForegroundColor Yellow
     } else {
         Write-Result "Success" -ForegroundColor Green

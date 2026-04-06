@@ -31,6 +31,12 @@ case "$1" in
     then
         CUR_USER=$(ls -dl /run/salt-minion.pid | cut -d ' ' -f 3)
         CUR_GROUP=$(ls -dl /run/salt-minion.pid | cut -d ' ' -f 4)
+    elif [ -d /etc/salt/pki/minion ]; then
+        CUR_USER=$(ls -dl /etc/salt/pki/minion | cut -d ' ' -f 3)
+        CUR_GROUP=$(ls -dl /etc/salt/pki/minion | cut -d ' ' -f 4)
+    elif [ -d /var/cache/salt/minion ]; then
+        CUR_USER=$(ls -dl /var/cache/salt/minion | cut -d ' ' -f 3)
+        CUR_GROUP=$(ls -dl /var/cache/salt/minion | cut -d ' ' -f 4)
     else
         CUR_USER=$SALT_USER
         CUR_GROUP=$SALT_GROUP

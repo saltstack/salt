@@ -38,5 +38,5 @@ def serialize(obj, **options):
         salt.utils.json.loads(
             salt.utils.json.dumps(obj, _json_module=_json), _json_module=_json
         ),
-        **options
+        **options,
     )

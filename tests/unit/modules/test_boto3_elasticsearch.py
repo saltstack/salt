@@ -686,7 +686,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                     domain_name="testdomain",
                     instance_type="foo",
                     elasticsearch_version="1.0",
-                    **CONN_PARAMETERS
+                    **CONN_PARAMETERS,
                 ),
                 {"result": True, "response": ret_val["LimitsByRole"]},
             )
@@ -707,7 +707,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 domain_name="testdomain",
                 instance_type="foo",
                 elasticsearch_version="1.0",
-                **CONN_PARAMETERS
+                **CONN_PARAMETERS,
             )
             self.assertFalse(result["result"])
             self.assertEqual(
@@ -1123,7 +1123,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 boto3_elasticsearch.purchase_reserved_elasticsearch_instance_offering(
                     reserved_elasticsearch_instance_offering_id="foo",
                     reservation_name="bar",
-                    **CONN_PARAMETERS
+                    **CONN_PARAMETERS,
                 ),
                 {"result": True, "response": ret_val},
             )
@@ -1144,7 +1144,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 boto3_elasticsearch.purchase_reserved_elasticsearch_instance_offering(
                     reserved_elasticsearch_instance_offering_id="foo",
                     reservation_name="bar",
-                    **CONN_PARAMETERS
+                    **CONN_PARAMETERS,
                 )
             )
             self.assertFalse(result["result"])

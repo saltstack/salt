@@ -390,7 +390,7 @@ class LocalClient:
                 tgt_type,
                 ret,
                 jid=jid,
-                timeout=self._get_timeout(timeout),
+                timeout=self._get_timeout(timeout) if timeout is not None else None,
                 listen=listen,
                 **kwargs,
             )
@@ -454,7 +454,7 @@ class LocalClient:
                 tgt_type,
                 ret,
                 jid=jid,
-                timeout=self._get_timeout(timeout),
+                timeout=self._get_timeout(timeout) if timeout is not None else None,
                 io_loop=io_loop,
                 listen=listen,
                 **kwargs,
@@ -1850,7 +1850,7 @@ class LocalClient:
         tgt_type="glob",
         ret="",
         jid="",
-        timeout=15,
+        timeout=None,
         listen=False,
         **kwargs,
     ):
@@ -1875,6 +1875,9 @@ class LocalClient:
             minions:
                 A set, the targets that the tgt passed should match.
         """
+        if timeout is None:
+            timeout = self.opts.get("publish_timeout", 30)
+
         # Make sure the publisher is running by checking the unix socket
         if self.opts.get("ipc_mode", "") != "tcp" and not os.path.exists(
             os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
@@ -1951,7 +1954,7 @@ class LocalClient:
         tgt_type="glob",
         ret="",
         jid="",
-        timeout=15,
+        timeout=None,
         io_loop=None,
         listen=True,
         **kwargs,
@@ -1977,6 +1980,9 @@ class LocalClient:
             minions:
                 A set, the targets that the tgt passed should match.
         """
+        if timeout is None:
+            timeout = self.opts.get("publish_timeout", 30)
+
         # Make sure the publisher is running by checking the unix socket
         if self.opts.get("ipc_mode", "") != "tcp" and not os.path.exists(
             os.path.join(self.opts["sock_dir"], "publish_pull.ipc")

@@ -188,7 +188,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         result = boto_cloudtrail.create(
             Name=trail_ret["Name"],
             S3BucketName=trail_ret["S3BucketName"],
-            **conn_parameters
+            **conn_parameters,
         )
 
         self.assertTrue(result["created"])
@@ -203,7 +203,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         result = boto_cloudtrail.create(
             Name=trail_ret["Name"],
             S3BucketName=trail_ret["S3BucketName"],
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(
             result.get("error", {}).get("message"), error_message.format("create_trail")
@@ -334,7 +334,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         result = boto_cloudtrail.update(
             Name=trail_ret["Name"],
             S3BucketName=trail_ret["S3BucketName"],
-            **conn_parameters
+            **conn_parameters,
         )
 
         self.assertTrue(result["updated"])
@@ -349,7 +349,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         result = boto_cloudtrail.update(
             Name=trail_ret["Name"],
             S3BucketName=trail_ret["S3BucketName"],
-            **conn_parameters
+            **conn_parameters,
         )
         self.assertEqual(
             result.get("error", {}).get("message"), error_message.format("update_trail")

@@ -85,6 +85,7 @@ class SaltPkgInstall:
     file_ext: bool = attr.ib(default=None)
     relenv: bool = attr.ib(default=True)
     installer_timeout: int = attr.ib(default=attr.NOTHING)
+    install_env: dict = attr.ib(factory=dict)
 
     @proc.default
     def _default_proc(self):
@@ -225,6 +226,11 @@ class SaltPkgInstall:
         if not self.upgrade and not self.use_prev_version:
             version = self.artifact_version
         else:
+            if self.prev_version is None:
+                raise ValueError(
+                    "prev_version must be provided for upgrade tests. "
+                    "Use --prev-version option to specify the previous version."
+                )
             version = self.prev_version
             parsed = packaging.version.parse(version)
             version = f"{parsed.major}.{parsed.minor}"
@@ -491,6 +497,18 @@ class SaltPkgInstall:
                 )
                 log.info("MSI returncode: %s", ret.returncode)
                 assert ret.returncode in [0, 3010]
+
+                if upgrade:
+                    # MSI major upgrades with mismatched component GUIDs can
+                    # remove files that should be kept. Running a repair
+                    # ensures all files from the new product are on disk.
+                    repair_cmd = f'msiexec.exe /qn /fa "{pkg}" /norestart'
+                    repair_ret = subprocess.run(
+                        repair_cmd,
+                        shell=True,  # nosec
+                        check=False,
+                    )
+                    log.info("MSI repair returncode: %s", repair_ret.returncode)
             else:
                 log.error("Invalid package: %s", pkg)
                 return False
@@ -575,6 +593,12 @@ class SaltPkgInstall:
                 env=env,
             )
         else:
+            # Fresh install path
+            env = os.environ.copy()
+            # Add any custom install environment variables
+            if self.install_env:
+                env.update(self.install_env)
+
             args = ["install", "-y"]
             if self.distro_id == "photon":
                 ret = self.proc.run(
@@ -588,7 +612,7 @@ class SaltPkgInstall:
                     args.append("--nogpgcheck")
             log.info("Installing packages:\n%s", pprint.pformat(self.pkgs))
             args += self.pkgs
-            ret = self.proc.run(self.pkg_mngr, *args)
+            ret = self.proc.run(self.pkg_mngr, *args, env=env)
 
         if not platform.is_darwin() and not platform.is_windows():
             # Make sure we don't have any trailing references to old package file locations
@@ -863,9 +887,7 @@ class SaltPkgInstall:
             self._check_retcode(ret)
             pref_file = pathlib.Path("/etc", "apt", "preferences.d", "salt-pin-1001")
             pref_file.parent.mkdir(exist_ok=True)
-            pin = f"{self.prev_version.rsplit('.', 1)[0]}.*"
-            if downgrade:
-                pin = self.prev_version
+            pin = self.prev_version
             with salt.utils.files.fopen(pref_file, "w") as fp:
                 fp.write(
                     f"Package: salt-*\n" f"Pin: version {pin}\n" f"Pin-Priority: 1001"

@@ -838,12 +838,18 @@ class AsyncAuth:
                 # Notify the bus about creds change
                 if self.opts.get("auth_events") is True:
                     with salt.utils.event.get_event(
-                        self.opts.get("__role"), opts=self.opts, listen=False
+                        self.opts.get("__role"),
+                        opts=self.opts,
+                        listen=False,
+                        io_loop=self.io_loop,
                     ) as event:
-                        event.fire_event(
-                            {"key": key, "creds": creds},
-                            salt.utils.event.tagify(prefix="auth", suffix="creds"),
-                        )
+                        try:
+                            yield event.fire_event_async(
+                                {"key": key, "creds": creds},
+                                salt.utils.event.tagify(prefix="auth", suffix="creds"),
+                            )
+                        except Exception as exc:  # pylint: disable=broad-except
+                            log.error("Error firing auth creds event: %s", exc)
 
     @salt.ext.tornado.gen.coroutine
     def sign_in(self, timeout=60, safe=True, tries=1, channel=None):

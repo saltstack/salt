@@ -26,6 +26,55 @@ class Beacon:
         self.beacons = salt.loader.beacons(opts, functions)
         self.interval_map = interval_map or dict()
 
+    def _close_beacon(self, name):
+        """
+        Close a single beacon module if it has a close function.
+        This releases resources like inotify file descriptors.
+        """
+        beacon_config = self.opts["beacons"].get(name)
+        if beacon_config is None:
+            return
+
+        current_beacon_config = None
+        if isinstance(beacon_config, list):
+            current_beacon_config = {}
+            list(map(current_beacon_config.update, beacon_config))
+        elif isinstance(beacon_config, dict):
+            current_beacon_config = beacon_config
+
+        if current_beacon_config is None:
+            return
+
+        beacon_name = name
+        if self._determine_beacon_config(current_beacon_config, "beacon_module"):
+            beacon_name = current_beacon_config["beacon_module"]
+
+        close_str = f"{beacon_name}.close"
+        if close_str in self.beacons:
+            try:
+                config = copy.deepcopy(beacon_config)
+                if isinstance(config, list):
+                    config.append({"_beacon_name": name})
+                log.debug("Closing beacon %s", name)
+                self.beacons[close_str](config)
+            except Exception:  # pylint: disable=broad-except
+                log.debug("Failed to close beacon %s", name, exc_info=True)
+
+    def close_beacons(self):
+        """
+        Close all beacon modules that have a close function.
+        This ensures resources like inotify file descriptors are properly
+        released when beacons are refreshed or the Beacon instance is replaced.
+
+        See: https://github.com/saltstack/salt/issues/66449
+        See: https://github.com/saltstack/salt/issues/58907
+        """
+        beacons = self._get_beacons()
+        for mod in beacons:
+            if mod == "enabled":
+                continue
+            self._close_beacon(mod)
+
     def process(self, config, grains):
         """
         Process the configured beacons
@@ -405,6 +454,9 @@ class Beacon:
             complete = False
         else:
             if name in self.opts["beacons"]:
+                # Close the beacon module to release resources (e.g. inotify fds)
+                # before removing it from the configuration.
+                self._close_beacon(name)
                 del self.opts["beacons"][name]
                 comment = f"Deleting beacon item: {name}"
             else:

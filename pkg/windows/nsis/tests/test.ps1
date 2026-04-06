@@ -58,7 +58,8 @@ Write-Host $("-" * 80)
 #-------------------------------------------------------------------------------
 if ( !(Test-Path -Path "$SCRIPT_DIR\venv\Scripts\activate.ps1") ) {
     Write-Host "Could not find virtual environment"
-    Write-Host "You must run setup.cmd before running this script"
+    Write-Host "You must run setup.ps1 before running this script"
+    exit 1
 }
 
 Write-Host "Activating venv: " -NoNewline
@@ -91,6 +92,7 @@ if ($Tests) {
 }
 
 pytest -vvv -rPx --showlocals -- $pytest_args
+$pytest_exit = $LASTEXITCODE  # capture before anything else can overwrite it
 
 #-------------------------------------------------------------------------------
 # Script Complete
@@ -99,3 +101,5 @@ pytest -vvv -rPx --showlocals -- $pytest_args
 Write-Host $("-" * 80)
 Write-Host "Run Tests" -ForegroundColor Cyan
 Write-Host $("=" * 80)
+
+exit $pytest_exit  # propagate pytest's exit code so CI/CD sees failures

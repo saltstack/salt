@@ -184,7 +184,7 @@ def test_zip():
             **{
                 "isdir": MagicMock(return_value=False),
                 "exists": MagicMock(return_value=True),
-            }
+            },
         ):
             with patch("zipfile.ZipFile", MagicMock()):
                 ret = archive.zip_(

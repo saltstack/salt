@@ -2948,6 +2948,12 @@ class SaltCallOptionParser(
             default=False,
             help="Report only those states that have changed.",
         )
+        self.add_option(
+            "--priv",
+            dest="user",
+            default=None,
+            help="Username to run salt-call as.",
+        )
 
     def _mixin_after_parsed(self):
         if not self.args and not self.options.grains_run and not self.options.doc:

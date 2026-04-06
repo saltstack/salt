@@ -111,7 +111,7 @@ def test_present_when_failing_to_describe_rule(global_config, session_instance):
         Description=global_config.rule_desc,
         ScheduleExpression=global_config.rule_sched,
         Targets=[{"Id": "target1", "Arn": "arn::::::*"}],
-        **global_config.conn_parameters
+        **global_config.conn_parameters,
     )
     assert result.get("result") is False
     assert "error on list rules" in result.get("comment", {})
@@ -134,7 +134,7 @@ def test_present_when_failing_to_create_a_new_rule(global_config, session_instan
         Description=global_config.rule_desc,
         ScheduleExpression=global_config.rule_sched,
         Targets=[{"Id": "target1", "Arn": "arn::::::*"}],
-        **global_config.conn_parameters
+        **global_config.conn_parameters,
     )
     assert result.get("result") is False
     assert "put_rule" in result.get("comment", "")
@@ -158,7 +158,7 @@ def test_present_when_failing_to_describe_the_new_rule(global_config, session_in
         Description=global_config.rule_desc,
         ScheduleExpression=global_config.rule_sched,
         Targets=[{"Id": "target1", "Arn": "arn::::::*"}],
-        **global_config.conn_parameters
+        **global_config.conn_parameters,
     )
     assert result.get("result") is False
     assert "describe_rule" in result.get("comment", "")
@@ -185,7 +185,7 @@ def test_present_when_failing_to_create_a_new_rules_targets(
         Description=global_config.rule_desc,
         ScheduleExpression=global_config.rule_sched,
         Targets=[{"Id": "target1", "Arn": "arn::::::*"}],
-        **global_config.conn_parameters
+        **global_config.conn_parameters,
     )
     assert result.get("result") is False
     assert "put_targets" in result.get("comment", "")
@@ -208,7 +208,7 @@ def test_present_when_rule_does_not_exist(global_config, session_instance):
         Description=global_config.rule_desc,
         ScheduleExpression=global_config.rule_sched,
         Targets=[{"Id": "target1", "Arn": "arn::::::*"}],
-        **global_config.conn_parameters
+        **global_config.conn_parameters,
     )
     assert result.get("result") is True
 
@@ -231,7 +231,7 @@ def test_present_when_failing_to_update_an_existing_rule(
         Description=global_config.rule_desc,
         ScheduleExpression=global_config.rule_sched,
         Targets=[{"Id": "target1", "Arn": "arn::::::*"}],
-        **global_config.conn_parameters
+        **global_config.conn_parameters,
     )
     assert result.get("result") is False
     assert "describe_rule" in result.get("comment", "")
@@ -256,7 +256,7 @@ def test_present_when_failing_to_get_targets(global_config, session_instance):
         Description=global_config.rule_desc,
         ScheduleExpression=global_config.rule_sched,
         Targets=[{"Id": "target1", "Arn": "arn::::::*"}],
-        **global_config.conn_parameters
+        **global_config.conn_parameters,
     )
     assert result.get("result") is False
     assert "list_targets" in result.get("comment", "")
@@ -282,7 +282,7 @@ def test_present_when_failing_to_put_targets(global_config, session_instance):
         Description=global_config.rule_desc,
         ScheduleExpression=global_config.rule_sched,
         Targets=[{"Id": "target1", "Arn": "arn::::::*"}],
-        **global_config.conn_parameters
+        **global_config.conn_parameters,
     )
     assert result.get("result") is False
     assert "put_targets" in result.get("comment", "")
@@ -306,7 +306,7 @@ def test_present_when_putting_targets(global_config, session_instance):
         Description=global_config.rule_desc,
         ScheduleExpression=global_config.rule_sched,
         Targets=[{"Id": "target1", "Arn": "arn::::::*"}],
-        **global_config.conn_parameters
+        **global_config.conn_parameters,
     )
     assert result.get("result") is True
 
@@ -329,7 +329,7 @@ def test_present_when_removing_targets(global_config, session_instance):
         Description=global_config.rule_desc,
         ScheduleExpression=global_config.rule_sched,
         Targets=[{"Id": "target1", "Arn": "arn::::::*"}],
-        **global_config.conn_parameters
+        **global_config.conn_parameters,
     )
     assert result.get("result") is True
 
@@ -346,7 +346,7 @@ def test_absent_when_failing_to_describe_rule(global_config, session_instance):
     result = boto_cloudwatch_event.__states__["boto_cloudwatch_event.absent"](
         name="test present",
         Name=global_config.rule_name,
-        **global_config.conn_parameters
+        **global_config.conn_parameters,
     )
     assert result.get("result") is False
     assert "error on list rules" in result.get("comment", {})
@@ -362,7 +362,7 @@ def test_absent_when_rule_does_not_exist(global_config, session_instance):
     result = boto_cloudwatch_event.__states__["boto_cloudwatch_event.absent"](
         name="test absent",
         Name=global_config.rule_name,
-        **global_config.conn_parameters
+        **global_config.conn_parameters,
     )
     assert result.get("result") is True
     assert result["changes"] == {}
@@ -381,7 +381,7 @@ def test_absent_when_failing_to_list_targets(global_config, session_instance):
     result = boto_cloudwatch_event.__states__["boto_cloudwatch_event.absent"](
         name="test absent",
         Name=global_config.rule_name,
-        **global_config.conn_parameters
+        **global_config.conn_parameters,
     )
     assert result.get("result") is False
     assert "list_targets" in result.get("comment", "")
@@ -403,7 +403,7 @@ def test_absent_when_failing_to_remove_targets_exception(
     result = boto_cloudwatch_event.__states__["boto_cloudwatch_event.absent"](
         name="test absent",
         Name=global_config.rule_name,
-        **global_config.conn_parameters
+        **global_config.conn_parameters,
     )
     assert result.get("result") is False
     assert "remove_targets" in result.get("comment", "")
@@ -423,7 +423,7 @@ def test_absent_when_failing_to_remove_targets_nonexception(
     result = boto_cloudwatch_event.__states__["boto_cloudwatch_event.absent"](
         name="test absent",
         Name=global_config.rule_name,
-        **global_config.conn_parameters
+        **global_config.conn_parameters,
     )
     assert result.get("result") is False
 
@@ -443,7 +443,7 @@ def test_absent_when_failing_to_delete_rule(global_config, session_instance):
     result = boto_cloudwatch_event.__states__["boto_cloudwatch_event.absent"](
         name="test absent",
         Name=global_config.rule_name,
-        **global_config.conn_parameters
+        **global_config.conn_parameters,
     )
     assert result.get("result") is False
     assert "delete_rule" in result.get("comment", "")
@@ -461,6 +461,6 @@ def test_absent(global_config, session_instance):
     result = boto_cloudwatch_event.__states__["boto_cloudwatch_event.absent"](
         name="test absent",
         Name=global_config.rule_name,
-        **global_config.conn_parameters
+        **global_config.conn_parameters,
     )
     assert result.get("result") is True
