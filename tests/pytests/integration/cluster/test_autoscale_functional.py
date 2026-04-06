@@ -323,12 +323,11 @@ def test_autoscale_multiple_masters_join_sequentially(
         "transport": autoscale_bootstrap_master.config["transport"],
     }
     bootstrap_port = autoscale_bootstrap_master.config["tcp_master_pull_port"]
-    config_overrides = {
+    config_1_overrides = {
         "interface": "127.0.0.2",
         "id": "joining-master-1",
         "cluster_id": "functional_autoscale_cluster",
         "cluster_peers": [f"127.0.0.1:{bootstrap_port}"],
-
         "cluster_secret": autoscale_cluster_secret,
         "cluster_pki_dir": str(cluster_pki_dir),
         "cache_dir": autoscale_bootstrap_master.config["cache_dir"],
@@ -444,7 +443,6 @@ def test_autoscale_join_with_cluster_pub_signature(
         "id": "joining-master-1",
         "cluster_id": "functional_autoscale_cluster",
         "cluster_peers": [f"127.0.0.1:{bootstrap_port}"],
-
         "cluster_secret": autoscale_cluster_secret,
         "cluster_pub_signature": cluster_pub_signature,  # Add signature validation
         "cluster_pki_dir": str(cluster_pub_path.parent),
@@ -505,7 +503,6 @@ def test_autoscale_handles_restart_during_join(
         "id": "joining-master-1",
         "cluster_id": "functional_autoscale_cluster",
         "cluster_peers": [f"127.0.0.1:{bootstrap_port}"],
-
         "cluster_secret": autoscale_cluster_secret,
         "cluster_pki_dir": str(cluster_pki_dir),
         "cache_dir": autoscale_bootstrap_master.config["cache_dir"],
