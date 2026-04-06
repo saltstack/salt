@@ -224,7 +224,9 @@ def update_git_repos(opts=None, clean=False, masterless=False):
                         # one level down.
                         key = next(iter(result))
                         result = result[key]
-                winrepo_result[result["name"]] = result["result"]
+                # Store the target path (gittarget) not the boolean result,
+                # to match the behavior of the non-legacy gitfs code
+                winrepo_result[result["name"]] = gittarget
             ret.update(winrepo_result)
         else:
             # New winrepo code utilizing salt.utils.gitfs
