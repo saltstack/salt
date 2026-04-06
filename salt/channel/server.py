@@ -120,10 +120,14 @@ class ReqServerChannel:
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be bind and listen (or the equivalent for your network library)
         """
+        import salt.master
+
+        if "secrets" not in kwargs:
+            kwargs["secrets"] = salt.master.SMaster.secrets
         if hasattr(self.transport, "pre_fork"):
             self.transport.pre_fork(process_manager, *args, **kwargs)
 
-    def post_fork(self, payload_handler, io_loop):
+    def post_fork(self, payload_handler, io_loop, **kwargs):
         """
         Do anything you need post-fork. This should handle all incoming payloads
         and call payload_handler. You will also be passed io_loop, for all of your
@@ -155,7 +159,7 @@ class ReqServerChannel:
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.payload_handler = payload_handler
         if hasattr(self.transport, "post_fork"):
-            self.transport.post_fork(self.handle_message, io_loop)
+            self.transport.post_fork(self.handle_message, io_loop, **kwargs)
 
     async def handle_message(self, payload):
         if (
@@ -1123,7 +1127,13 @@ class PubServerChannel:
             # Extract kwargs for the process.
             # We check for a named 'kwargs' key first (from salt/master.py),
             # then fallback to the entire kwargs dict.
-            proc_kwargs = kwargs.pop("kwargs", kwargs)
+            proc_kwargs = kwargs.pop("kwargs", kwargs).copy()
+            if "secrets" not in proc_kwargs:
+                import salt.master
+
+                proc_kwargs["secrets"] = salt.master.SMaster.secrets
+            if "started" not in proc_kwargs:
+                proc_kwargs["started"] = self.transport.started
             process_manager.add_process(self._publish_daemon, kwargs=proc_kwargs)
 
     def _publish_daemon(self, **kwargs):
@@ -1133,12 +1143,19 @@ class PubServerChannel:
                 self.opts["pub_server_niceness"],
             )
             os.nice(self.opts["pub_server_niceness"])
-        secrets = kwargs.get("secrets", None)
+        secrets = kwargs.pop("secrets", None)
+        started = kwargs.pop("started", None)
         if secrets is not None:
+            import salt.master
+
             salt.master.SMaster.secrets = secrets
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.transport.publish_daemon(
-            self.publish_payload, self.presence_callback, self.remove_presence_callback
+            self.publish_payload,
+            self.presence_callback,
+            self.remove_presence_callback,
+            secrets=secrets,
+            started=started,
         )
 
     def presence_callback(self, subscriber, msg):

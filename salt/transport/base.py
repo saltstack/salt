@@ -425,6 +425,8 @@ class DaemonizedPublishServer(PublishServer):
         publish_payload,
         presence_callback=None,
         remove_presence_callback=None,
+        secrets=None,
+        started=None,
     ):
         """
         If a daemon is needed to act as a broker implement it here.
@@ -437,6 +439,8 @@ class DaemonizedPublishServer(PublishServer):
                                               callbacks call this method to
                                               notify the channel a client is no
                                               longer present
+        :param dict secrets: The master's secrets
+        :param multiprocessing.Event started: An event to signal when the daemon has started
         """
         raise NotImplementedError
 

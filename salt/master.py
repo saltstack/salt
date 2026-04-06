@@ -898,10 +898,10 @@ class Master(SMaster):
                 kwargs["secrets"] = SMaster.secrets
 
             self.process_manager.add_process(
-                ReqServer,
+                RequestServer,
                 args=(self.opts, self.key, self.master_key),
                 kwargs=kwargs,
-                name="ReqServer",
+                name="RequestServer",
             )
 
             self.process_manager.add_process(
@@ -1021,14 +1021,16 @@ class RequestRouter:
     them to the appropriate worker pool based on user-defined configuration.
     """
 
-    def __init__(self, opts):
+    def __init__(self, opts, secrets=None):
         """
         Initialize the request router.
 
         Args:
             opts: Master configuration dictionary
+            secrets: Master secrets dictionary (optional)
         """
         self.opts = opts
+        self.secrets = secrets
         self.cmd_to_pool = {}  # cmd -> pool_name mapping (built from config)
         self.default_pool = opts.get("worker_pool_default")
         self.pools = {}  # pool_name -> dealer_socket mapping (populated later)
@@ -1128,15 +1130,42 @@ class RequestRouter:
         """
         try:
             load = payload.get("load", {})
+            if isinstance(load, bytes) and self.secrets:
+                # Payload is encrypted. Try to decrypt it to extract the command.
+                # This is common for netapi and minion-to-master communication.
+                try:
+                    # Determine which key to use based on the 'enc' field
+                    enc = payload.get("enc", "aes")
+                    if enc == "aes":
+                        key = self.secrets.get("aes", {}).get("secret", {}).value
+                        if key:
+                            import salt.crypt
+
+                            crypticle = salt.crypt.Crypticle(self.opts, key)
+                            load = crypticle.decrypt(load)
+                    elif enc == "pub":
+                        # RSA encryption
+                        import salt.crypt
+
+                        mkey = salt.crypt.MasterKeys(self.opts)
+                        load = mkey.priv_decrypt(load)
+
+                    if isinstance(load, bytes):
+                        import salt.payload
+
+                        load = salt.payload.loads(load)
+                except Exception:  # pylint: disable=broad-except
+                    # If decryption fails, we can't extract the command
+                    pass
+
             if isinstance(load, dict):
                 return load.get("cmd", "")
-            # If load is encrypted (bytes), we can't extract the command
             return ""
         except (AttributeError, KeyError):
             return ""
 
 
-class ReqServer(salt.utils.process.SignalHandlingProcess):
+class RequestServer(salt.utils.process.SignalHandlingProcess):
     """
     Starts up the master request server, minions send results to this
     interface.
@@ -1150,7 +1179,7 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         :key dict: The user starting the server and the AES key
         :mkey dict: The user starting the server and the RSA key
 
-        :rtype: ReqServer
+        :rtype: RequestServer
         :returns: Request server
         """
         super().__init__(**kwargs)
@@ -1186,92 +1215,51 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
             name="ReqServer_ProcessManager", wait_for_kill=1
         )
 
+        # Create request server channels
+        req_channels = []
+        worker_pools = None
         if self.opts.get("worker_pools_enabled", True):
-            # Multi-pool mode with pooled routing
             from salt.config.worker_pools import get_worker_pools_config
 
             worker_pools = get_worker_pools_config(self.opts)
 
-            # Create single request server transport with pooled routing
-            # Only ZeroMQ transport supports worker pools
-            req_channels = []
-            for transport, opts in iter_transport_opts(self.opts):
-                chan = salt.channel.server.ReqServerChannel.factory(opts)
-                # Pass worker_pools to pre_fork. Transports that don't support it
-                # (like TCP/WS) will just ignore it.
-                chan.pre_fork(self.process_manager, worker_pools=worker_pools)
-                req_channels.append(chan)
+        for transport, opts in iter_transport_opts(self.opts):
+            chan = salt.channel.server.ReqServerChannel.factory(opts)
+            # Pass worker_pools to pre_fork. Transports that support it (ZeroMQ)
+            # will start the router/device. Others will just bind/initialize.
+            chan.pre_fork(self.process_manager, worker_pools=worker_pools)
+            req_channels.append(chan)
 
-            if (
-                self.opts["req_server_niceness"]
-                and not salt.utils.platform.is_windows()
-            ):
-                log.info(
-                    "setting ReqServer_ProcessManager niceness to %d",
-                    self.opts["req_server_niceness"],
-                )
-                os.nice(self.opts["req_server_niceness"])
+        if self.opts["req_server_niceness"] and not salt.utils.platform.is_windows():
+            log.info(
+                "setting ReqServer_ProcessManager niceness to %d",
+                self.opts["req_server_niceness"],
+            )
+            os.nice(self.opts["req_server_niceness"])
 
-            # Reset signals to default ones before adding processes to the process
-            # manager. We don't want the processes being started to inherit those
-            # signal handlers
-            with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-                # Create workers for each pool
-                # Workers connect to pool-specific IPC sockets (workers-{pool_name}.ipc)
+        # Reset signals to default ones before adding processes to the process
+        # manager. We don't want the processes being started to inherit those
+        # signal handlers
+        with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+            if worker_pools:
+                # Multi-pool mode: Create workers for each pool
                 for pool_name, pool_config in worker_pools.items():
                     worker_count = pool_config.get("worker_count", 1)
-
-                    # Create pool-specific options
-                    pool_opts = self.opts.copy()
-                    pool_opts["pool_name"] = pool_name
-
-                    # Create pool-specific channels for workers to connect to
-                    # These channels are shared by all workers in the same pool
-                    pool_worker_channels = []
-                    for transport, opts in iter_transport_opts(pool_opts):
-                        worker_chan = salt.channel.server.ReqServerChannel.factory(opts)
-                        # Ensure pool-specific transport is initialized (e.g. bind TCP socket)
-                        worker_chan.pre_fork(self.process_manager)
-                        pool_worker_channels.append(worker_chan)
-                        # Only use first transport
-                        break
-
                     for pool_index in range(worker_count):
                         name = f"MWorker-{pool_name}-{pool_index}"
                         self.process_manager.add_process(
                             MWorker,
                             args=(
-                                pool_opts,
+                                self.opts,
                                 self.master_key,
                                 self.key,
-                                pool_worker_channels,
+                                req_channels,
                             ),
                             kwargs={"pool_name": pool_name, "pool_index": pool_index},
                             name=name,
                         )
-        else:
-            # Legacy single-pool mode
-            req_channels = []
-            for transport, opts in iter_transport_opts(self.opts):
-                chan = salt.channel.server.ReqServerChannel.factory(opts)
-                chan.pre_fork(self.process_manager)
-                req_channels.append(chan)
-
-            if (
-                self.opts["req_server_niceness"]
-                and not salt.utils.platform.is_windows()
-            ):
-                log.info(
-                    "setting ReqServer_ProcessManager niceness to %d",
-                    self.opts["req_server_niceness"],
-                )
-                os.nice(self.opts["req_server_niceness"])
-
-            # Reset signals to default ones before adding processes to the process
-            # manager. We don't want the processes being started to inherit those
-            # signal handlers
-            with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-                # Legacy mode: create workers using worker_threads
+            else:
+                # Legacy single-pool mode
                 for ind in range(int(self.opts["worker_threads"])):
                     name = f"MWorker-{ind}"
                     self.process_manager.add_process(
@@ -1284,7 +1272,7 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
 
     def run(self):
         """
-        Start up the ReqServer
+        Start up the RequestServer
         """
         self.__bind()
 
@@ -1336,10 +1324,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         self.pool_name = pool_name or "default"
         self.pool_index = pool_index if pool_index is not None else 0
 
-        # Add pool_name to opts so transport can use it for URI construction
-        if pool_name:
-            self.opts["pool_name"] = pool_name
-
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
     # Otherwise, 'SMaster.secrets' won't be copied over to the spawned process
     # on Windows since spawning processes on Windows requires pickling.
@@ -1380,7 +1364,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         asyncio.set_event_loop(self.io_loop)
         for req_channel in self.req_channels:
             req_channel.post_fork(
-                self._handle_payload, io_loop=self.io_loop
+                self._handle_payload, io_loop=self.io_loop, pool_name=self.pool_name
             )  # TODO: cleaner? Maybe lazily?
         try:
             self.io_loop.run_forever()
@@ -1504,7 +1488,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             if self.opts["req_server_niceness"]:
                 if salt.utils.user.get_user() == "root":
                     log.info(
-                        "%s decrementing inherited ReqServer niceness to 0", self.name
+                        "%s decrementing inherited RequestServer niceness to 0",
+                        self.name,
                     )
                     os.nice(-1 * self.opts["req_server_niceness"])
                 else:

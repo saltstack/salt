@@ -344,10 +344,14 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         publish_payload,
         presence_callback=None,
         remove_presence_callback=None,
+        secrets=None,
+        started=None,
     ):
         """
         Bind to the interface specified in the configuration file
         """
+        if started is not None:
+            self.started = started
         # Use asyncio event loop directly like ZeroMQ does
         io_loop = salt.utils.asynchronous.aioloop(tornado.ioloop.IOLoop())
 
@@ -550,7 +554,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             self._socket.setblocking(0)
             self._socket.bind(_get_bind_addr(self.opts, "ret_port"))
 
-    def post_fork(self, message_handler, io_loop):
+    def post_fork(self, message_handler, io_loop, **kwargs):
         """
         After forking we need to create all of the local sockets to listen to the
         router
