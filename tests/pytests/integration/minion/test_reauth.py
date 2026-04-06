@@ -45,7 +45,7 @@ def test_reauth(salt_master_factory, event_listener):
     )
     cli = master.salt_cli()
     start_time = time.time()
-    with master.started(), minion.started():
+    with master.started(), minion.started(), sls_tempfile:
         events = event_listener.get_events(
             [(master.id, "salt/auth")],
             after_time=start_time,
