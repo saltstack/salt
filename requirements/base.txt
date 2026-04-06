@@ -40,8 +40,8 @@ pythonnet>=3.0.1; sys_platform == 'win32'
 pywin32>=305; sys_platform == 'win32'
 pycryptodomex>=3.9.8
 PyYAML
-requests<2.32.0 ; python_version < '3.10'
-requests>=2.32.5 ; python_version >= '3.10'
+requests>=2.32.0 ; python_version < '3.10'
+requests>=2.33.1 ; python_version >= '3.10'
 rpm-vercmp; sys_platform == 'linux'
 setproctitle>=1.2.3
 urllib3>=1.26.20,<2.0.0; python_version < '3.10'
