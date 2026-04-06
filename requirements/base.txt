@@ -1,7 +1,7 @@
 # Dependencies are listed alphabetically by package name.
 # Multiple entries for the same package (with different version constraints) are grouped together.
 
-aiohttp>=3.13.3
+aiohttp>=3.13.5
 certifi>=2024.7.4
 cffi>=2.0.0
 # cheroot 8.5.2 fails to build with modern setuptools due to setuptools_scm_git_archive dependency
