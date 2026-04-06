@@ -424,7 +424,7 @@ pyzmq==25.1.2
     #   -c requirements/static/pkg/py3.10/darwin.txt
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
-requests==2.32.5
+requests==2.33.1
     # via
     #   -c requirements/static/pkg/py3.10/darwin.txt
     #   -r requirements/base.txt
