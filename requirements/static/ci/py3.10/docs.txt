@@ -68,7 +68,7 @@ croniter==6.0.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/base.txt
-cryptography==46.0.5
+cryptography==46.0.6
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/base.txt
