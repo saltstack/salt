@@ -217,7 +217,11 @@ def _file_client():
         (master_opts or {}).get("file_roots"),
     )
     if master_opts:
-        return salt.fileclient.FSClient(master_opts)
+        mo = dict(master_opts)
+        mo.setdefault(
+            "cachedir", __opts__.get("cachedir", "")
+        )  # pylint: disable=undefined-variable
+        return salt.fileclient.FSClient(mo)
     log.warning(
         "sshresource_state: no cached master opts in context, "
         "falling back to RemoteClient for file access"
