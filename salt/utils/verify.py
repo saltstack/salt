@@ -295,20 +295,6 @@ def verify_env(
                         except OSError:
                             continue
 
-        # Ensure PKI index files are owned by the correct user
-        # These are dotfiles, so they were skipped in the loop above
-        pki_dirs = pki_dir if isinstance(pki_dir, list) else [pki_dir]
-        for _pki_dir in pki_dirs:
-            for index_file in [".pki_index.mmap", ".pki_index.mmap.lock"]:
-                index_path = os.path.join(_pki_dir, index_file)
-                if os.path.exists(index_path):
-                    try:
-                        fmode = os.stat(index_path)
-                        if fmode.st_uid != uid or fmode.st_gid != gid:
-                            os.chown(index_path, uid, gid)
-                    except OSError:
-                        continue
-
         # Allow the pki dir to be 700 or 750, but nothing else.
         # This prevents other users from writing out keys, while
         # allowing the use-case of 3rd-party software (like django)
@@ -342,6 +328,25 @@ def verify_env(
     if skip_extra is False:
         # Run the extra verification checks
         zmq_version()
+
+    # Ensure PKI index files are owned by the correct user
+    # These are dotfiles, so they were skipped in the directory walk loops above
+    if not salt.utils.platform.is_windows() and os.getuid() == 0 and pki_dir:
+        pki_dirs = pki_dir if isinstance(pki_dir, list) else [pki_dir]
+        for _pki_dir in pki_dirs:
+            if not _pki_dir:
+                continue
+            for index_file in [".pki_index.mmap", ".pki_index.mmap.lock"]:
+                index_path = os.path.join(_pki_dir, index_file)
+                if os.path.exists(index_path):
+                    try:
+                        # Set permissions to 600 (read/write for owner only)
+                        os.chmod(index_path, 0o600)
+                        fmode = os.stat(index_path)
+                        if fmode.st_uid != uid or fmode.st_gid != gid:
+                            os.chown(index_path, uid, gid)
+                    except OSError:
+                        continue
 
 
 def check_user(user):

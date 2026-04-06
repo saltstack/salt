@@ -39,8 +39,9 @@ log = logging.getLogger(__name__)
 
 __func_alias__ = {"list_": "list"}
 
-# Module-level index (lazy initialized)
-_index = None
+# Module-level index cache (lazy initialized)
+# Keyed by pki_dir to support multiple Master instances in tests
+_indices = {}
 
 
 BASE_MAPPING = {
@@ -88,25 +89,26 @@ def init_kwargs(kwargs):
 
 def _get_index(opts):
     """
-    Get or create the PKI index.
+    Get or create the PKI index for the given options.
     The index is an internal optimization for fast O(1) lookups.
     """
-    global _index
-    if _index is None:
-        if "cluster_id" in opts and opts["cluster_id"]:
-            pki_dir = opts["cluster_pki_dir"]
-        else:
-            pki_dir = opts.get("pki_dir")
+    if "cluster_id" in opts and opts["cluster_id"]:
+        pki_dir = opts["cluster_pki_dir"]
+    else:
+        pki_dir = opts.get("pki_dir")
 
-        if pki_dir:
-            # Index lives alongside the pki directories
-            index_path = os.path.join(pki_dir, ".pki_index.mmap")
-            size = opts.get("pki_index_size", 1000000)
-            slot_size = opts.get("pki_index_slot_size", 128)
-            _index = salt.utils.mmap_cache.MmapCache(
-                path=index_path, size=size, slot_size=slot_size
-            )
-    return _index
+    if not pki_dir:
+        return None
+
+    if pki_dir not in _indices:
+        # Index lives alongside the pki directories
+        index_path = os.path.join(pki_dir, ".pki_index.mmap")
+        size = opts.get("pki_index_size", 1000000)
+        slot_size = opts.get("pki_index_slot_size", 128)
+        _indices[pki_dir] = salt.utils.mmap_cache.MmapCache(
+            path=index_path, size=size, slot_size=slot_size
+        )
+    return _indices[pki_dir]
 
 
 def rebuild_index(opts):
