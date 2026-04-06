@@ -100,6 +100,7 @@ def _get_index(opts):
     if not pki_dir:
         return None
 
+    pki_dir = os.path.abspath(pki_dir)
     if pki_dir not in _indices:
         # Index lives alongside the pki directories
         index_path = os.path.join(pki_dir, ".pki_index.mmap")
