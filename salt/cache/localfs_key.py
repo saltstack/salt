@@ -503,7 +503,6 @@ def list_all(bank, cachedir, include_data=False, **kwargs):
     ret = {}
 
     if bank == "keys":
-
         # Map directory names to states
         state_mapping = {
             "minions": "accepted",
@@ -513,23 +512,40 @@ def list_all(bank, cachedir, include_data=False, **kwargs):
 
         for dir_name, state in state_mapping.items():
             dir_path = os.path.join(cachedir, dir_name)
+            log.error("list_all: scanning dir_path: %s", dir_path)
             if not os.path.isdir(dir_path):
+                log.error("list_all: not a directory: %s", dir_path)
                 continue
 
             try:
                 with os.scandir(dir_path) as it:
                     for entry in it:
+                        log.error("list_all: found entry: %s", entry.name)
                         if not entry.is_file() or entry.is_symlink():
+                            log.error(
+                                "list_all: skipping entry (not file or is symlink): %s",
+                                entry.name,
+                            )
                             continue
                         if entry.name.startswith("."):
                             continue
                         # Use direct check instead of valid_id to avoid __opts__ dependency in loop
                         if any(x in entry.name for x in ("/", "\\", "\0")):
+                            log.error(
+                                "list_all: skipping entry (illegal chars): %s",
+                                entry.name,
+                            )
                             continue
                         if not clean_path(cachedir, entry.path, subdir=True):
+                            log.error(
+                                "list_all: skipping entry (clean_path failed): %s, cachedir: %s",
+                                entry.path,
+                                cachedir,
+                            )
                             continue
 
                         if include_data:
+
                             # Read the public key
                             try:
                                 with salt.utils.files.fopen(entry.path, "r") as fh_:
