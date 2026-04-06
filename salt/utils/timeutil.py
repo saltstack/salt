@@ -16,15 +16,35 @@ log = logging.getLogger(__name__)
 
 def utcnow():
     """
-    Return current UTC time.
+    Return current UTC time as a naive datetime object.
 
     In Python 3.12+, datetime.utcnow() is deprecated in favor of
-    datetime.now(timezone.utc). This function provides compatibility.
+    datetime.now(timezone.utc). This function provides compatibility
+    by returning a naive datetime (without timezone info) to match
+    the behavior of the deprecated datetime.utcnow().
     """
     if sys.version_info >= (3, 12):
-        return datetime.now(timezone.utc)
+        return datetime.now(timezone.utc).replace(tzinfo=None)
     else:
         return datetime.utcnow()
+
+
+def utcfromtimestamp(timestamp):
+    """
+    Return a naive datetime from a POSIX timestamp.
+
+    In Python 3.12+, datetime.utcfromtimestamp() is deprecated in favor of
+    datetime.fromtimestamp(timestamp, tz=timezone.utc). This function provides
+    compatibility by returning a naive datetime (without timezone info) to match
+    the behavior of the deprecated datetime.utcfromtimestamp().
+
+    Args:
+        timestamp: POSIX timestamp (seconds since epoch)
+    """
+    if sys.version_info >= (3, 12):
+        return datetime.fromtimestamp(timestamp, tz=timezone.utc).replace(tzinfo=None)
+    else:
+        return datetime.utcfromtimestamp(timestamp)
 
 
 def get_timestamp_at(time_in=None, time_at=None):
