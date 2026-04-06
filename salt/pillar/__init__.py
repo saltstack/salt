@@ -456,6 +456,8 @@ class Pillar:
         # Keep the incoming opts ID intact, ie, the master id
         if "id" in opts:
             ext_pillar_opts["id"] = opts["id"]
+        elif "id" in self.opts:
+            ext_pillar_opts["id"] = self.opts["id"]
         self.merge_strategy = "smart"
         if opts.get("pillar_source_merging_strategy"):
             self.merge_strategy = opts["pillar_source_merging_strategy"]
