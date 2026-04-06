@@ -194,17 +194,50 @@ def _thin_dir(cfg):
 
 def _relenv_path():
     """
-    Return the local path of our pre-built custom relenv tarball.
+    Return the path to a pre-built relenv tarball if one exists locally, otherwise
+    ``None`` so ``Single.__init__`` can detect the remote arch and fetch the right
+    tarball (same strategy as :func:`salt.modules.sshresource_state._relenv_path`).
 
-    The tarball lives in the minion's cache directory under the
-    ``relenv/linux/x86_64/`` sub-path that :func:`salt.utils.relenv.gen_relenv`
-    would populate for a linux/x86_64 target.  By pre-resolving the path here
-    (rather than calling ``detect_os_arch()`` inside ``Single.__init__``) we
-    avoid an SSH round-trip during object construction, which caused hangs when
-    ``Single`` was instantiated inside a minion job worker.
+    Pre-resolving an existing local path avoids an extra SSH round-trip during
+    ``Single`` construction when ``Single`` was instantiated inside a minion job
+    worker (where ``detect_os_arch()`` hung or added latency).
     """
     cachedir = __opts__.get("cachedir", "")  # pylint: disable=undefined-variable
-    return os.path.join(cachedir, "relenv", "linux", "x86_64", "salt-relenv.tar.xz")
+    for arch in ("x86_64", "arm64"):
+        path = os.path.join(cachedir, "relenv", "linux", arch, "salt-relenv.tar.xz")
+        if os.path.exists(path):
+            return path
+    return None
+
+
+def _file_client():
+    """
+    Return a file client for ``Single.cmd_block()`` to use when regenerating
+    extension modules via ``mod_data(fsclient)``.
+
+    Uses the master opts cached during :func:`init` to build an ``FSClient``
+    (local-filesystem, no network channel) — the same approach used by
+    ``sshresource_state._file_client()``.  Falls back to a ``RemoteClient``
+    when no cached master opts are available.
+    """
+    master_opts = __context__.get(
+        CONTEXT_KEY, {}
+    ).get(  # pylint: disable=undefined-variable
+        "master_opts"
+    )
+    if master_opts:
+        mo = dict(master_opts)
+        mo.setdefault(
+            "cachedir", __opts__.get("cachedir", "")
+        )  # pylint: disable=undefined-variable
+        return salt.fileclient.FSClient(mo)
+    log.warning(
+        "ssh resource: no cached master opts in context, "
+        "falling back to RemoteClient for fsclient"
+    )
+    return salt.fileclient.get_file_client(
+        __opts__
+    )  # pylint: disable=undefined-variable
 
 
 def _make_single(resource_id, argv):
@@ -238,6 +271,7 @@ def _make_single(resource_id, argv):
         argv,
         resource_id,
         thin=_relenv_path(),
+        fsclient=_file_client(),
         host=cfg["host"],
         user=cfg.get("user", "root"),
         port=cfg.get("port", 22),
@@ -291,6 +325,8 @@ def init(opts):
         master_conf = os.path.join(conf_dir, "master")
         if os.path.isfile(master_conf):
             master_opts = salt.config.master_config(master_conf)
+            # roots.FSChan expects cachedir; minimal or test master configs may omit it.
+            master_opts.setdefault("cachedir", opts.get("cachedir", ""))
             __context__[CONTEXT_KEY][
                 "master_opts"
             ] = master_opts  # pylint: disable=undefined-variable
@@ -301,6 +337,7 @@ def init(opts):
             master_opts = file_client.master_opts()
             if isinstance(master_opts, dict) and master_opts:
                 master_opts.setdefault("fileserver_backend", ["roots"])
+                master_opts.setdefault("cachedir", opts.get("cachedir", ""))
                 __context__[CONTEXT_KEY][
                     "master_opts"
                 ] = master_opts  # pylint: disable=undefined-variable

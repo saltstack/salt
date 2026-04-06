@@ -1217,7 +1217,7 @@ class Single:
             # (required for slsutil functions and other fileserver operations)
             self.minion_opts["file_roots"] = self.opts["file_roots"]
             self.minion_opts["pillar_roots"] = self.opts["pillar_roots"]
-            self.minion_opts["ext_pillar"] = self.opts["ext_pillar"]
+            self.minion_opts["ext_pillar"] = self.opts.get("ext_pillar", [])
             # For relenv, override extension_modules to point to where the shim
             # extracts the tarball on the remote system.
             self.minion_opts["extension_modules"] = (
