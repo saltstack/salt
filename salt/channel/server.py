@@ -1013,7 +1013,14 @@ class PubServerChannel:
             io_loop = kwargs.get("io_loop")
             if io_loop is None:
                 io_loop = tornado.ioloop.IOLoop.current()
-            attempts = 5
+
+            # Ensure we have the IPC path for local communication
+            if "ipc_master_pub_path" not in opts:
+                opts["ipc_master_pub_path"] = os.path.join(
+                    opts["sock_dir"], "master_event_pull.ipc"
+                )
+
+            attempts = 10
             while attempts > 0:
                 try:
                     transport = salt.transport.publish_client(opts, io_loop, **kwargs)
@@ -1034,8 +1041,9 @@ class PubServerChannel:
                             "multiple attempts: %s",
                             exc,
                         )
-                        # Fallback to server transport if client connection fails
-                        transport = salt.transport.publish_server(opts, **kwargs)
+                        # Re-raise to crash properly rather than failing with
+                        # confusing transport errors later
+                        raise
         else:
             transport = salt.transport.publish_server(opts, **kwargs)
         return cls(opts, transport, presence_events=presence_events)
