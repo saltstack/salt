@@ -231,7 +231,13 @@ def verify_files(files, user):
 
 
 def verify_env(
-    dirs, user, permissive=False, pki_dir="", skip_extra=False, root_dir=ROOT_DIR
+    dirs,
+    user,
+    permissive=False,
+    pki_dir="",
+    skip_extra=False,
+    root_dir=ROOT_DIR,
+    opts=None,
 ):
     """
     Verify that the named directories are in place and that the environment
@@ -239,7 +245,11 @@ def verify_env(
     """
     if salt.utils.platform.is_windows():
         return win_verify_env(
-            root_dir, dirs, permissive=permissive, skip_extra=skip_extra
+            root_dir,
+            dirs,
+            permissive=permissive,
+            pki_dir=pki_dir,
+            skip_extra=skip_extra,
         )
 
     # after confirming not running Windows
@@ -331,13 +341,22 @@ def verify_env(
 
     # Ensure PKI index files are owned by the correct user
     # These are dotfiles, so they were skipped in the directory walk loops above
-    if not salt.utils.platform.is_windows() and os.getuid() == 0 and pki_dir:
-        pki_dirs = pki_dir if isinstance(pki_dir, list) else [pki_dir]
-        for _pki_dir in pki_dirs:
-            if not _pki_dir:
+    if not salt.utils.platform.is_windows() and os.getuid() == 0:
+        # Check both cachedir (new) and pki_dir (old location)
+        search_dirs = []
+        if opts and opts.get("cachedir"):
+            search_dirs.append(opts["cachedir"])
+        if pki_dir:
+            if isinstance(pki_dir, list):
+                search_dirs.extend(pki_dir)
+            else:
+                search_dirs.append(pki_dir)
+
+        for _dir in search_dirs:
+            if not _dir:
                 continue
             for index_file in [".pki_index.mmap", ".pki_index.mmap.lock"]:
-                index_path = os.path.join(_pki_dir, index_file)
+                index_path = os.path.join(_dir, index_file)
                 if os.path.exists(index_path):
                     try:
                         # Set permissions to 600 (read/write for owner only)

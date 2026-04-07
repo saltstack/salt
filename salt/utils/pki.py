@@ -23,7 +23,9 @@ class PkiIndex:
         else:
             pki_dir = opts.get("pki_dir", "")
 
-        index_path = os.path.join(pki_dir, ".pki_index.mmap")
+        # Index lives in cachedir instead of etc
+        cachedir = opts.get("cachedir", "/var/cache/salt/master")
+        index_path = os.path.join(cachedir, ".pki_index.mmap")
         self._cache = salt.utils.mmap_cache.MmapCache(
             index_path, size=size, slot_size=slot_size
         )

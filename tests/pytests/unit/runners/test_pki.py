@@ -15,6 +15,7 @@ def opts(tmp_path):
     return {
         "pki_dir": str(pki_dir),
         "sock_dir": str(tmp_path / "sock"),
+        "cachedir": str(tmp_path / "cache"),
     }
 
 

@@ -102,8 +102,9 @@ def _get_index(opts):
 
     pki_dir = os.path.abspath(pki_dir)
     if pki_dir not in _indices:
-        # Index lives alongside the pki directories
-        index_path = os.path.join(pki_dir, ".pki_index.mmap")
+        # Index lives in cachedir instead of etc
+        cachedir = opts.get("cachedir", "/var/cache/salt/master")
+        index_path = os.path.join(cachedir, ".pki_index.mmap")
         size = opts.get("pki_index_size", 1000000)
         slot_size = opts.get("pki_index_slot_size", 128)
         _indices[pki_dir] = salt.utils.mmap_cache.MmapCache(
