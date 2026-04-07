@@ -102,6 +102,7 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "reload_pillar",
         "runas",
         "runas_password",
+        "no_log",
         "fire_event",
         "saltenv",
         "umask",
@@ -878,6 +879,9 @@ class State:
                     self.opts.get("renderer", "yaml"),
                     self.opts.get("pillar_merge_lists", False),
                 )
+        self.opts["pillar"] = salt.utils.safepillar.wrap_pillar_tree(
+            self.opts["pillar"]
+        )
         log.debug("Finished gathering pillar data for state run")
         if context is None:
             self.state_con = {}
@@ -1420,7 +1424,7 @@ class State:
 
         if data.get("reload_pillar", False):
             log.debug("Refreshing pillar...")
-            new_pillar = self._gather_pillar()
+            new_pillar = salt.utils.safepillar.wrap_pillar_tree(self._gather_pillar())
             # Use mutate_key if available (OptsDict), otherwise mutate in place (plain dict)
             if hasattr(self.opts, "mutate_key"):
                 self.opts.mutate_key("pillar", new_pillar)
@@ -2366,6 +2370,15 @@ class State:
         ret["__sls__"] = low.get("__sls__")
         ret["__run_num__"] = self.__run_num
         self.__run_num += 1
+        liter = salt.utils.safepillar.iter_pillar_secret_literals(
+            self.opts.get("pillar", {})
+        )
+        if low.get("no_log"):
+            salt.utils.safepillar.apply_no_log_mask(ret)
+        elif liter:
+            redacted = salt.utils.safepillar.redact_known_literals(ret, liter)
+            ret.clear()
+            ret.update(redacted)
         format_log(ret)
         self.check_refresh(low, ret)
         utc_finish_time = datetime.datetime.now(tz=datetime.timezone.utc)
@@ -4107,7 +4120,9 @@ class BaseHighState:
         syncd = self.state.functions["saltutil.sync_all"](list(matches), refresh=False)
         if syncd["grains"]:
             self.opts["grains"] = salt.loader.grains(self.opts)
-            self.state.opts["pillar"] = self.state._gather_pillar()
+            self.state.opts["pillar"] = salt.utils.safepillar.wrap_pillar_tree(
+                self.state._gather_pillar()
+            )
         self.state.module_refresh()
 
     def render_state(self, sls, saltenv, mods, matches, local=False, context=None):
