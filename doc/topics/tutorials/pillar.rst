@@ -40,6 +40,18 @@ Arbitrary Data:
     so a key/value store can be defined making it easy to iterate over a group
     of values in sls formulas.
 
+.. versionadded:: 3009
+
+On the minion, compiled pillar is stored using :mod:`salt.utils.safepillar`
+containers: string and bytes leaves are wrapped with Pydantic ``SecretStr`` and
+``SecretBytes``, and mappings/lists use ``SafeDict`` / ``SafeList`` so later
+in-place updates stay wrapped. State returns and minion logs redact known pillar
+literals where possible. States may set ``no_log: true`` (runtime keyword, not
+passed to the state function) to mask that state's ``comment`` and ``changes``
+in output. Custom code that assumes ``isinstance(value, str)`` for pillar
+values may need to use ``get_secret_value()`` on secret types or compare with
+``SecretStr``.
+
 Pillar is therefore one of the most important systems when using Salt. This
 walkthrough is designed to get a simple Pillar up and running in a few minutes
 and then to dive into the capabilities of Pillar and where the data is

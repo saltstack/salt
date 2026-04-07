@@ -271,7 +271,7 @@ def items(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
         pillar_override=pillar_override,
         pillarenv=pillarenv,
     )
-    return pillar.compile_pillar()
+    return salt.utils.safepillar.wrap_pillar_tree(pillar.compile_pillar())
 
 
 # Allow pillar.data to also be used to return pillar data
@@ -608,7 +608,7 @@ def ext(external, pillar=None):
 
     ret = pillar_obj.compile_pillar()
 
-    return ret
+    return salt.utils.safepillar.wrap_pillar_tree(ret)
 
 
 def keys(key, delimiter=DEFAULT_TARGET_DELIM):
