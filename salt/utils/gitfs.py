@@ -1356,7 +1356,7 @@ class GitProvider:
                     exc,
                     exc_info=True,
                 )
-            self.fetch()
+            self.fetch(proxy=True)
             return True
         return False
 
@@ -1522,7 +1522,7 @@ class GitPython(GitProvider):
                 self.role,
                 self.id,
             )
-            self.fetch()
+            self.fetch(proxy=True)
             return self.checkout(fetch_on_fail=False)
         log.error(
             "Failed to checkout %s from %s remote '%s': remote ref does not exist",
@@ -1606,9 +1606,9 @@ class GitPython(GitProvider):
         origin = self.repo.remotes[0]
 
         try:
-            fetch_results = origin.fetch()
+            fetch_results = origin.fetch(proxy=True)
         except AssertionError:
-            fetch_results = origin.fetch()
+            fetch_results = origin.fetch(proxy=True)
 
         new_objs = False
 
@@ -2008,7 +2008,7 @@ class Pygit2(GitProvider):
                 self.role,
                 self.id,
             )
-            self.fetch()
+            self.fetch(proxy=True)
             return self.checkout(fetch_on_fail=False)
         log.error(
             "Failed to checkout %s from %s remote '%s': remote ref does not exist",
@@ -2175,7 +2175,7 @@ class Pygit2(GitProvider):
             # pruning only available in pygit2 >= 0.26.2
             pass
         try:
-            fetch_results = origin.fetch(**fetch_kwargs)
+            fetch_results = origin.fetch(proxy=True, **fetch_kwargs)
 
         except GitError as exc:  # pylint: disable=broad-except
             exc_str = get_error_message(exc).lower()
@@ -2754,7 +2754,7 @@ class GitBase:
                 # Sanity check and assign the credential parameter
                 if self.opts["__role"] == "minion" and repo_obj.new:
                     # Perform initial fetch on masterless minion
-                    repo_obj.fetch()
+                    repo_obj.fetch(proxy=True)
 
                 # Reverse map to be used when running envs() to detect the
                 # available envs.
@@ -2962,7 +2962,7 @@ class GitBase:
                                 )
                         else:
                             log.error("Failed to make fetch request: %s", fetch_path)
-                    if repo.fetch():
+                    if repo.fetch(proxy=True):
                         # We can't just use the return value from repo.fetch()
                         # because the data could still have changed if old
                         # remotes were cleared above. Additionally, we're
