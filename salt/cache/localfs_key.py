@@ -120,6 +120,7 @@ def rebuild_index(opts):
     """
     index = _get_index(opts)
     if not index:
+        log.error("rebuild_index: failed to get index object")
         return False
 
     if "cluster_id" in opts and opts["cluster_id"]:
@@ -127,7 +128,9 @@ def rebuild_index(opts):
     else:
         pki_dir = opts.get("pki_dir")
 
+    log.debug("rebuild_index: pki_dir=%s", pki_dir)
     if not pki_dir:
+        log.error("rebuild_index: pki_dir missing in opts")
         return False
 
     # Build list of all keys from filesystem
