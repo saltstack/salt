@@ -6,8 +6,8 @@ aiohttp==3.13.5
     # via -r requirements/base.txt
 aiosignal==1.4.0
     # via aiohttp
-annotated-doc==0.0.4
-    # via typer
+annotated-types==0.7.0
+    # via pydantic
 apache-libcloud==3.9.0
     # via -r requirements/base.txt
 async-timeout==5.0.1
@@ -134,9 +134,11 @@ pycparser==3.0
     #   cffi
 pycryptodomex==3.23.0
     # via -r requirements/crypto.txt
-pygments==2.19.2
-    # via rich
-pymssql==2.3.11
+pydantic==2.12.5
+    # via -r requirements/base.txt
+pydantic-core==2.41.5
+    # via pydantic
+pymssql==2.3.1
     # via -r requirements/base.txt
 pymysql==1.1.2
     # via -r requirements/base.txt
@@ -196,8 +198,13 @@ typing-extensions==4.15.0
     #   aiosignal
     #   cryptography
     #   multidict
+    #   pydantic
+    #   pydantic-core
     #   pyopenssl
+    #   typing-inspection
     #   virtualenv
+typing-inspection==0.4.2
+    # via pydantic
 urllib3==2.6.3
     # via
     #   -r requirements/base.txt

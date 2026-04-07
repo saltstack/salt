@@ -17,22 +17,30 @@ SECRET = "VCOPS77716_integration_secret_value_xyz"
 def pillar_and_sls(
     salt_minion, base_env_pillar_tree_root_dir, base_env_state_tree_root_dir
 ):
-    top_pillar = textwrap.dedent("""
+    top_pillar = textwrap.dedent(
+        """
         base:
           '{}':
             - secret_pillar
-        """).format(salt_minion.id)
-    pillar_sls = textwrap.dedent("""
+        """
+    ).format(salt_minion.id)
+    pillar_sls = textwrap.dedent(
+        """
         secret_key: {}
-        """.format(SECRET))
-    state_sls = textwrap.dedent("""
+        """.format(
+            SECRET
+        )
+    )
+    state_sls = textwrap.dedent(
+        """
         demo_secret_state:
           test.configurable_test_state:
             - name: show_secret
             - changes: true
             - result: true
             - comment: "Rendered pillar contains {{ pillar['secret_key'] }}"
-        """)
+        """
+    )
     with pytest.helpers.temp_file(
         "top.sls", top_pillar, base_env_pillar_tree_root_dir
     ), pytest.helpers.temp_file(
@@ -60,7 +68,8 @@ def test_state_apply_redacts_pillar_from_cli_output(salt_cli, salt_minion):
 
 @pytest.mark.usefixtures("pillar_and_sls")
 def test_no_log_masks_state_chunk(salt_cli, salt_minion, base_env_state_tree_root_dir):
-    sls = textwrap.dedent("""
+    sls = textwrap.dedent(
+        """
         nolog_demo:
           test.configurable_test_state:
             - name: nolog_show
@@ -68,7 +77,8 @@ def test_no_log_masks_state_chunk(salt_cli, salt_minion, base_env_state_tree_roo
             - result: true
             - no_log: true
             - comment: "should not appear {{ pillar['secret_key'] }}"
-        """)
+        """
+    )
     with pytest.helpers.temp_file(
         "safepillar_nolog.sls", sls, base_env_state_tree_root_dir
     ):
