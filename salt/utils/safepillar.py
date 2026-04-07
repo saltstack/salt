@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import copy
 import logging
-from typing import Any
+from typing import Any, Iterable
 
 from pydantic import SecretBytes, SecretStr
 
@@ -17,31 +17,39 @@ REDACT_PLACEHOLDER = "**********"
 
 
 def _morph_leaf(value: Any) -> Any:
+    """
+    Morph a leaf value into a secret-safe container.
+    Args:
+        value: The value to morph.
+    Returns:
+        The morphed value.
+    """
     if value is None or isinstance(value, (bool, int, float)):
         return value
-    if isinstance(value, SecretStr):
+    elif isinstance(value, SecretStr):
         return value
-    if isinstance(value, SecretBytes):
+    elif isinstance(value, SecretBytes):
         return value
-    if isinstance(value, str):
+    elif isinstance(value, str):
         return SecretStr(value)
-    if isinstance(value, bytes):
+    elif isinstance(value, bytes):
         return SecretBytes(value)
-    if isinstance(value, SafeDict):
+    elif isinstance(value, SafeDict):
         return value
-    if isinstance(value, dict):
+    elif isinstance(value, dict):
         return wrap_pillar_tree(value)
-    if isinstance(value, SafeList):
+    elif isinstance(value, SafeList):
         return value
-    if isinstance(value, (list, tuple)):
-        return SafeList(_morph_leaf(x) for x in value)
-    if isinstance(value, set):
+    elif isinstance(value, set):
         try:
             ordered = sorted(value, key=repr)
         except TypeError:
             ordered = list(value)
         return SafeList(_morph_leaf(x) for x in ordered)
-    return value
+    elif isinstance(value, Iterable):
+        return SafeList(_morph_leaf(x) for x in value)
+    else:
+        return value
 
 
 class SafeDict(dict):

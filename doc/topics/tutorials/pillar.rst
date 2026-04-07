@@ -40,7 +40,7 @@ Arbitrary Data:
     so a key/value store can be defined making it easy to iterate over a group
     of values in sls formulas.
 
-.. versionadded:: 3009
+.. versionadded:: 3008
 
 On the minion, compiled pillar is stored using :mod:`salt.utils.safepillar`
 containers: string and bytes leaves are wrapped with Pydantic ``SecretStr`` and

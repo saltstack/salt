@@ -14,6 +14,10 @@ aiosignal==1.4.0
     # via
     #   -c requirements/static/pkg/py3.9/darwin.txt
     #   aiohttp
+annotated-types==0.7.0
+    # via
+    #   -c requirements/static/pkg/py3.9/darwin.txt
+    #   pydantic
 apache-libcloud==3.8.0
     # via
     #   -c requirements/static/pkg/py3.9/darwin.txt
@@ -355,6 +359,14 @@ pycryptodomex==3.19.1
     # via
     #   -c requirements/static/pkg/py3.9/darwin.txt
     #   -r requirements/crypto.txt
+pydantic==2.12.5
+    # via
+    #   -c requirements/static/pkg/py3.9/darwin.txt
+    #   -r requirements/base.txt
+pydantic-core==2.41.5
+    # via
+    #   -c requirements/static/pkg/py3.9/darwin.txt
+    #   pydantic
 pyeapi==1.0.0
     # via napalm
 pyfakefs==5.3.1
@@ -560,10 +572,17 @@ typing-extensions==4.15.0
     #   gitpython
     #   multidict
     #   napalm
+    #   pydantic
+    #   pydantic-core
     #   pyopenssl
     #   pytest-shell-utilities
     #   pytest-system-statistics
+    #   typing-inspection
     #   virtualenv
+typing-inspection==0.4.2
+    # via
+    #   -c requirements/static/pkg/py3.9/darwin.txt
+    #   pydantic
 urllib3==1.26.20
     # via
     #   -c requirements/static/pkg/py3.9/darwin.txt

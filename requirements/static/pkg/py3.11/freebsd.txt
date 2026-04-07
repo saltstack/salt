@@ -6,6 +6,8 @@ aiohttp==3.13.3
     # via -r requirements/base.txt
 aiosignal==1.4.0
     # via aiohttp
+annotated-types==0.7.0
+    # via pydantic
 apache-libcloud==3.9.0
     # via -r requirements/base.txt
 attrs==23.2.0
@@ -136,6 +138,10 @@ pycparser==2.21
     #   cffi
 pycryptodomex==3.19.1
     # via -r requirements/crypto.txt
+pydantic==2.12.5
+    # via -r requirements/base.txt
+pydantic-core==2.41.5
+    # via pydantic
 pymssql==2.3.11 ; sys_platform == 'win32'
     # via -r requirements/base.txt
 pymysql==1.1.2 ; sys_platform == 'win32'
@@ -196,10 +202,15 @@ timelib==0.3.0
     #   -r requirements/static/pkg/freebsd.in
 tornado==6.5.4
     # via -r requirements/base.txt
-typing-extensions==4.14.1 ; python_full_version < '3.13'
+typing-extensions==4.14.1
     # via
     #   aiosignal
+    #   pydantic
+    #   pydantic-core
     #   pyopenssl
+    #   typing-inspection
+typing-inspection==0.4.2
+    # via pydantic
 urllib3==2.6.3
     # via
     #   -r requirements/base.txt
