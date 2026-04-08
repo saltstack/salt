@@ -141,6 +141,7 @@ from tests.support.helpers import (
 from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import,wildcard-import
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import check_required_sminion_attributes, create_sminion
+from tests.support.sshd_runtime import ensure_sshd_privilege_separation_directories
 
 os.environ["REPO_ROOT_DIR"] = str(CODE_DIR)
 
@@ -1573,6 +1574,7 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
         sshd_config_dict=sshd_config_dict,
         config_dir=sshd_config_dir,
     )
+    ensure_sshd_privilege_separation_directories(factory.config_dir / "sshd_config")
     with factory.started():
         yield factory
 
