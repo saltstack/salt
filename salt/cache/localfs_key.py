@@ -118,9 +118,11 @@ def rebuild_index(opts):
     Rebuild the PKI index from filesystem.
     Returns True on success, False on failure.
     """
+    if not opts.get("pki_index_enabled", False):
+        return True
+
     index = _get_index(opts)
     if not index:
-        log.error("rebuild_index: failed to get index object")
         return False
 
     if "cluster_id" in opts and opts["cluster_id"]:
@@ -128,9 +130,7 @@ def rebuild_index(opts):
     else:
         pki_dir = opts.get("pki_dir")
 
-    log.debug("rebuild_index: pki_dir=%s", pki_dir)
     if not pki_dir:
-        log.error("rebuild_index: pki_dir missing in opts")
         return False
 
     # Build list of all keys from filesystem
@@ -260,7 +260,7 @@ def store(bank, key, data, cachedir, user, **kwargs):
         )
 
     # Update index after successful filesystem write
-    if bank == "keys" and state_for_index:
+    if bank == "keys" and state_for_index and __opts__.get("pki_index_enabled", False):
         try:
             index = _get_index(__opts__)
             if index:
@@ -420,7 +420,12 @@ def flush(bank, key=None, cachedir=None, **kwargs):
                 raise SaltCacheError(f'There was an error removing "{target}": {exc}')
 
     # Update index after successful filesystem deletion
-    if bank == "keys" and key is not None and flushed:
+    if (
+        bank == "keys"
+        and key is not None
+        and flushed
+        and __opts__.get("pki_index_enabled", False)
+    ):
         try:
             index = _get_index(__opts__)
             if index:
@@ -438,21 +443,24 @@ def list_(bank, cachedir, **kwargs):
     """
     if bank == "keys":
         # Try to use index first (internal optimization)
-        try:
-            index = _get_index(__opts__)
-            if index:
-                items = index.list_items()
-                if items:
-                    # Filter by state (accepted/pending/rejected, not denied)
-                    minions = [
-                        mid
-                        for mid, state in items
-                        if state in ("accepted", "pending", "rejected")
-                    ]
-                    if minions:
-                        return minions
-        except Exception as exc:  # pylint: disable=broad-except
-            log.debug("PKI index unavailable, falling back to directory scan: %s", exc)
+        if __opts__.get("pki_index_enabled", False):
+            try:
+                index = _get_index(__opts__)
+                if index:
+                    items = index.list_items()
+                    if items:
+                        # Filter by state (accepted/pending/rejected, not denied)
+                        minions = [
+                            mid
+                            for mid, state in items
+                            if state in ("accepted", "pending", "rejected")
+                        ]
+                        if minions:
+                            return minions
+            except Exception as exc:  # pylint: disable=broad-except
+                log.debug(
+                    "PKI index unavailable, falling back to directory scan: %s", exc
+                )
 
         # Fallback to directory scan
         bases = [base for base in BASE_MAPPING if base != "minions_denied"]
@@ -516,36 +524,20 @@ def list_all(bank, cachedir, include_data=False, **kwargs):
 
         for dir_name, state in state_mapping.items():
             dir_path = os.path.join(cachedir, dir_name)
-            log.error("list_all: scanning dir_path: %s", dir_path)
             if not os.path.isdir(dir_path):
-                log.error("list_all: not a directory: %s", dir_path)
                 continue
 
             try:
                 with os.scandir(dir_path) as it:
                     for entry in it:
-                        log.error("list_all: found entry: %s", entry.name)
                         if not entry.is_file() or entry.is_symlink():
-                            log.error(
-                                "list_all: skipping entry (not file or is symlink): %s",
-                                entry.name,
-                            )
                             continue
                         if entry.name.startswith("."):
                             continue
                         # Use direct check instead of valid_id to avoid __opts__ dependency in loop
                         if any(x in entry.name for x in ("/", "\\", "\0")):
-                            log.error(
-                                "list_all: skipping entry (illegal chars): %s",
-                                entry.name,
-                            )
                             continue
                         if not clean_path(cachedir, entry.path, subdir=True):
-                            log.error(
-                                "list_all: skipping entry (clean_path failed): %s, cachedir: %s",
-                                entry.path,
-                                cachedir,
-                            )
                             continue
 
                         if include_data:
@@ -602,14 +594,15 @@ def contains(bank, key, cachedir, **kwargs):
 
     if bank == "keys":
         # Try index first (internal optimization)
-        try:
-            index = _get_index(__opts__)
-            if index:
-                state = index.get(key)
-                if state:
-                    return True
-        except Exception:  # pylint: disable=broad-except
-            pass  # Fall through to filesystem check
+        if __opts__.get("pki_index_enabled", False):
+            try:
+                index = _get_index(__opts__)
+                if index:
+                    state = index.get(key)
+                    if state:
+                        return True
+            except Exception:  # pylint: disable=broad-except
+                pass  # Fall through to filesystem check
 
         # Fallback to filesystem check
         bases = [base for base in BASE_MAPPING if base != "minions_denied"]

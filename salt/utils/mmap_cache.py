@@ -70,21 +70,14 @@ class MmapCache:
             # Check for staleness (Atomic Swap detection)
             try:
                 if os.stat(self.path).st_ino != self._ino:
-                    log.debug(
-                        "MmapCache staleness detected for %s, re-opening", self.path
-                    )
                     self.close()
                 else:
                     return True
             except OSError:
                 # File might be temporarily missing during a swap or deleted.
                 # If deleted, we should close current mm and try to re-init/open.
-                log.debug(
-                    "MmapCache file missing for %s during staleness check", self.path
-                )
                 self.close()
 
-        log.debug("MmapCache.open() path=%s, write=%s", self.path, write)
         if write:
             if not self._init_file():
                 return False
@@ -92,7 +85,6 @@ class MmapCache:
             access = mmap.ACCESS_WRITE
         else:
             if not os.path.exists(self.path):
-                log.debug("MmapCache.open() failed: file missing: %s", self.path)
                 return False
             mode = "rb"
             access = mmap.ACCESS_READ
@@ -422,7 +414,6 @@ class MmapCache:
         Rebuild the cache from an iterator of (key, value) or (key,)
         This populates a temporary file and swaps it in atomically.
         """
-        log.debug("MmapCache.atomic_rebuild() path=%s", self.path)
         # Ensure directory exists
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
 
