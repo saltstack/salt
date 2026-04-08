@@ -482,6 +482,10 @@ psutil==5.9.6
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -c requirements/static/pkg/py3.9/linux.txt
     #   -r requirements/base.txt
+psycopg2-binary==2.9.11
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   -r requirements/static/ci/common.in
 pyasn1==0.6.2
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
