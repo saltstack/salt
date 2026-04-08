@@ -3,7 +3,7 @@ Tests for salt.utils.safepillar (SafeDict, SafeList, SecretStr wrapping, redacti
 """
 
 import pytest
-from pydantic import SecretBytes, SecretStr
+from pydantic import SecretBytes, SecretStr  # pylint: disable=3rd-party-module-not-gated
 
 import salt.utils.safepillar as sp
 
