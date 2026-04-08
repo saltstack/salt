@@ -37,7 +37,7 @@ clr-loader==0.2.10 ; python_full_version < '3.13' and sys_platform == 'win32'
     # via pythonnet
 croniter==2.0.5 ; sys_platform != 'win32'
     # via -r requirements/base.txt
-cryptography==46.0.5
+cryptography==46.0.7
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
