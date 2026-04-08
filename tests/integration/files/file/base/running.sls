@@ -1,4 +1,4 @@
 sleep_running:
   module.run:
     - name: test.sleep
-    - length: 60
+    - length: 120

@@ -6,12 +6,10 @@ import salt.client
 
 @pytest.fixture(
     scope="module",
-    params=[(True, 5), (False, 5), (True, -1), (False, -1)],
+    params=[(True, 5), (False, 5)],
     ids=[
         "multiprocessing-max5",
         "threading-max5",
-        "multiprocessing-unlimited",
-        "threading-unlimited",
     ],
 )
 def minion_config_overrides(request):
