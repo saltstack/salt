@@ -1,8 +1,6 @@
 import logging
 import os
 
-import salt.utils.mmap_cache
-
 log = logging.getLogger(__name__)
 
 
@@ -13,6 +11,8 @@ class PkiIndex:
     """
 
     def __init__(self, opts):
+        import salt.utils.mmap_cache
+
         self.opts = opts
         self.enabled = opts.get("pki_index_enabled", False)
         size = opts.get("pki_index_size", 1000000)

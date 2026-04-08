@@ -13,7 +13,6 @@ import salt.cache
 import salt.client
 import salt.crypt
 import salt.exceptions
-import salt.output
 import salt.payload
 import salt.transport
 import salt.utils.args
@@ -245,9 +244,12 @@ class KeyCLI:
 
     def run(self):
         """
-        Run the logic for saltkey
+        Run the logic for salt-key
         """
+        import salt.output
+
         self._update_opts()
+
         cmd = self.opts["fun"]
 
         veri = None

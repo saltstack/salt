@@ -29,8 +29,6 @@ from pathlib import Path
 
 import salt.utils.atomicfile
 import salt.utils.files
-import salt.utils.mmap_cache
-import salt.utils.pki
 import salt.utils.stringutils
 from salt.exceptions import SaltCacheError
 from salt.utils.verify import clean_path, valid_id
@@ -92,6 +90,8 @@ def _get_index(opts):
     Get or create the PKI index for the given options.
     The index is an internal optimization for fast O(1) lookups.
     """
+    import salt.utils.mmap_cache
+
     if "cluster_id" in opts and opts["cluster_id"]:
         pki_dir = opts["cluster_pki_dir"]
     else:
@@ -151,6 +151,8 @@ def rebuild_index(opts):
                 for entry in it:
                     if entry.is_file() and not entry.is_symlink():
                         if entry.name.startswith("."):
+                            continue
+                        if not valid_id(opts, entry.name):
                             continue
                         items.append((entry.name, state))
         except OSError as exc:
@@ -534,10 +536,7 @@ def list_all(bank, cachedir, include_data=False, **kwargs):
                             continue
                         if entry.name.startswith("."):
                             continue
-                        # Use direct check instead of valid_id to avoid __opts__ dependency in loop
-                        if any(x in entry.name for x in ("/", "\\", "\0")):
-                            continue
-                        if not clean_path(cachedir, entry.path, subdir=True):
+                        if not valid_id(__opts__, entry.name):
                             continue
 
                         if include_data:
