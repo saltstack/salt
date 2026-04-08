@@ -6,6 +6,7 @@
     ~~~~~~~~~~~~~~~~~~~~~~
 """
 
+import json
 import logging
 import os
 import shutil
@@ -17,8 +18,10 @@ import pytest
 import salt.config
 import salt.exceptions
 import salt.fileclient
+import salt.pillar
 import salt.utils.stringutils
 from salt.utils.files import fopen
+from salt.utils.safepillar import SafeDict
 from tests.support.mock import ANY, MagicMock, call, patch
 from tests.support.runtests import RUNTIME_VARS
 
@@ -1277,6 +1280,30 @@ def test_compile_pillar_disk_cache(master_opts, grains):
 
         # Assert all calls match the pattern
         store_mock.assert_has_calls(expected_stores, any_order=False)
+
+
+def test_pillar_cache_compile_returns_plain_dict_for_transport(master_opts, grains):
+    """
+    PillarCache is used on the master when pillar_cache or minion_data_cache is set.
+    The returned pillar must use plain dict/str types for master→minion crypto/msgpack;
+    SecretStr/SafeDict wrapping belongs on the minion after RemotePillar.fetch.
+    """
+    master_opts.update({"pillar_cache_ttl": 3600, "pillar_cache": True})
+    pillar = salt.pillar.PillarCache(
+        master_opts,
+        grains,
+        "mocked_minion",
+        "fake_env",
+        pillarenv="base",
+    )
+    with patch.object(
+        salt.pillar.Pillar,
+        "compile_pillar",
+        return_value={"info": "test", "nested": {"k": "v"}},
+    ):
+        out = pillar.compile_pillar()
+    assert not isinstance(out, SafeDict)
+    json.dumps(out)
 
 
 def test_remote_pillar_bad_return(grains, tmp_pki):

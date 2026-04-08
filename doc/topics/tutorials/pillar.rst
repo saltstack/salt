@@ -52,6 +52,11 @@ in output. Custom code that assumes ``isinstance(value, str)`` for pillar
 values may need to use ``get_secret_value()`` on secret types or compare with
 ``SecretStr``.
 
+The execution functions ``pillar.items`` and ``pillar.get`` are exceptions: they
+return plain Python strings, bytes, dicts, and lists (unwrapped) because the
+operator explicitly asked for pillar data. Other code paths use wrapped
+in-memory pillar unless they call those functions.
+
 Pillar is therefore one of the most important systems when using Salt. This
 walkthrough is designed to get a simple Pillar up and running in a few minutes
 and then to dive into the capabilities of Pillar and where the data is
