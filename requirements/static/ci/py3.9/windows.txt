@@ -95,7 +95,7 @@ clustershell==1.9.1
     # via -r requirements/static/ci/common.in
 colorama==0.4.6
     # via pytest
-cryptography==46.0.5
+cryptography==46.0.7
     # via
     #   -c requirements/static/pkg/py3.9/windows.txt
     #   -r requirements/base.txt
