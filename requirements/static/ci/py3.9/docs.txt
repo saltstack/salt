@@ -15,7 +15,9 @@ aiosignal==1.4.0
 alabaster==0.7.13
     # via sphinx
 annotated-types==0.7.0
-    # via pydantic
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   pydantic
 apache-libcloud==3.8.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -220,9 +222,13 @@ pycryptodomex==3.19.1
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/crypto.txt
 pydantic==2.12.5
-    # via -r requirements/base.txt
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   -r requirements/base.txt
 pydantic-core==2.41.5
-    # via pydantic
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   pydantic
 pyenchant==3.2.2
     # via sphinxcontrib-spelling
 pygments==2.17.2
@@ -330,7 +336,9 @@ typing-extensions==4.15.0
     #   typing-inspection
     #   virtualenv
 typing-inspection==0.4.2
-    # via pydantic
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   pydantic
 uc-micro-py==1.0.2
     # via linkify-it-py
 urllib3==1.26.20
