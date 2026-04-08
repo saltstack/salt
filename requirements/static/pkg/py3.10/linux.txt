@@ -37,7 +37,7 @@ cherrypy==18.8.0
     #   -r requirements/static/pkg/linux.in
 croniter==2.0.5
     # via -r requirements/base.txt
-cryptography==46.0.5
+cryptography==46.0.7
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.in

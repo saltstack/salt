@@ -35,7 +35,7 @@ cherrypy==18.8.0
     # via -r requirements/base.txt
 clr-loader==0.2.6
     # via pythonnet
-cryptography==46.0.5
+cryptography==46.0.7
     # via
     #   -r requirements/base.txt
     #   pyopenssl
