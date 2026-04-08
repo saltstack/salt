@@ -514,6 +514,30 @@ def list_all(bank, cachedir, include_data=False, **kwargs):
     if bank not in ["keys", "denied_keys"]:
         raise SaltCacheError(f"Unrecognized bank: {bank}")
 
+    # Try index first (internal optimization)
+    if bank == "keys" and __opts__.get("pki_index_enabled", False):
+        try:
+            index = _get_index(__opts__)
+            if index:
+                items = index.list_items()
+                if items:
+                    ret = {}
+                    for mid, state in items:
+                        if state in ("accepted", "pending", "rejected"):
+                            if include_data:
+                                # We still need to read from disk if data is requested
+                                # This is rare for list_all calls from master.py
+                                pass
+                            else:
+                                ret[mid] = {"state": state}
+                    # If we found items and didn't need data, return now.
+                    # If we need data, we'll fall through to directory scan for now
+                    # as PkiIndex doesn't store public keys currently.
+                    if ret and not include_data:
+                        return ret
+        except Exception as exc:  # pylint: disable=broad-except
+            log.debug("PKI index unavailable, falling back to directory scan: %s", exc)
+
     ret = {}
 
     if bank == "keys":

@@ -573,7 +573,7 @@ class Key:
                         ret.setdefault(keydir, []).append(key)
         return ret
 
-    def list_keys(self, force_scan=False):
+    def list_keys(self):
         """
         Return a dict of managed keys and what the key status are.
         The cache layer (localfs_key) uses an internal index for fast O(1) lookups.
@@ -588,7 +588,7 @@ class Key:
                     return salt.payload.load(fn_)
 
         # Use cache layer's optimized bulk fetch
-        if not force_scan and self.opts.get("pki_index_enabled", False):
+        if self.opts.get("pki_index_enabled", False):
             from salt.utils import pki as pki_utils
 
             index = pki_utils.PkiIndex(self.opts)
@@ -667,19 +667,19 @@ class Key:
                 ret["local"].append(key)
         return ret
 
-    def all_keys(self, force_scan=False):
+    def all_keys(self):
         """
         Merge managed keys with local keys
         """
-        keys = self.list_keys(force_scan=force_scan)
+        keys = self.list_keys()
         keys.update(self.local_keys())
         return keys
 
-    def list_status(self, match, force_scan=False):
+    def list_status(self, match):
         """
         Return a dict of managed keys under a named status
         """
-        ret = self.all_keys(force_scan=force_scan)
+        ret = self.all_keys()
         if match.startswith("acc"):
             return {
                 "minions": salt.utils.data.sorted_ignorecase(ret.get("minions", []))
