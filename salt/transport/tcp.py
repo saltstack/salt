@@ -1141,6 +1141,13 @@ class PubServer(tornado.tcpserver.TCPServer):
                 unpacker.feed(wire_bytes)
                 for framed_msg in unpacker:
                     framed_msg = salt.transport.frame.decode_embedded_strs(framed_msg)
+                    if not isinstance(framed_msg, dict):
+                        log.error(
+                            "Received malformed framed message from %s: %r",
+                            client.address,
+                            framed_msg,
+                        )
+                        continue
                     body = framed_msg["body"]
                     if self.presence_callback:
                         self.presence_callback(client, body)
@@ -1545,7 +1552,11 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 sock = tornado.netutil.bind_unix_socket(
                     self.pub_path, self.pub_path_perms
                 )
-        else:
+            sock.listen(self.backlog)
+            # pub_server will take ownership of the socket
+            self.pub_server.add_socket(sock)
+
+        if self.pub_host and self.pub_port:
             log.debug(
                 "Publish server binding pub to %s:%s ssl=%r",
                 self.pub_host,
@@ -1557,9 +1568,12 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             _set_tcp_keepalive(sock, self.opts)
             sock.setblocking(0)
             sock.bind((self.pub_host, self.pub_port))
-        sock.listen(self.backlog)
-        # pub_server will take ownership of the socket
-        self.pub_server.add_socket(sock)
+            sock.listen(self.backlog)
+            # pub_server will take ownership of the socket
+            self.pub_server.add_socket(sock)
+
+        if not self.pub_path and not (self.pub_host and self.pub_port):
+            raise Exception("A host and port or a path must be provided")
 
         # Set up Salt IPC server
         if self.pull_path:

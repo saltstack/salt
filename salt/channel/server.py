@@ -1258,11 +1258,13 @@ class MasterPubServerChannel:
             # For master clusters, we need a TCP transport
             tcp_master_pool_port = opts.get("tcp_master_pull_port", 4520)
             pull_path = os.path.join(opts["sock_dir"], "master_event_pull.ipc")
+            pub_path = os.path.join(opts["sock_dir"], "master_event_pub.ipc")
             try:
                 transport = salt.transport.tcp.PublishServer(
                     opts,
                     pub_host=opts.get("interface", "0.0.0.0"),
                     pub_port=opts.get("publish_port", 4505),
+                    pub_path=pub_path,
                     pull_host="0.0.0.0",
                     pull_port=tcp_master_pool_port,
                     pull_path=pull_path,
@@ -1278,6 +1280,7 @@ class MasterPubServerChannel:
                         opts,
                         pub_host=opts.get("interface", "0.0.0.0"),
                         pub_port=opts.get("publish_port", 4505),
+                        pub_path=pub_path,
                         pull_host="0.0.0.0",
                         pull_port=0,
                         pull_path=pull_path,
@@ -1470,13 +1473,15 @@ class MasterPubServerChannel:
                 if not tcp_master_pool_port or tcp_master_pool_port == 4506:
                     tcp_master_pool_port = self.opts.get("cluster_pool_port", 4520)
 
-                # Local communication still needs IPC path
+                # Local communication still needs IPC paths
                 pull_path = os.path.join(self.opts["sock_dir"], "master_event_pull.ipc")
+                pub_path = os.path.join(self.opts["sock_dir"], "master_event_pub.ipc")
                 try:
                     self.transport = salt.transport.tcp.PublishServer(
                         self.opts,
                         pub_host=self.opts.get("interface", "0.0.0.0"),
                         pub_port=self.opts.get("publish_port", 4505),
+                        pub_path=pub_path,
                         pull_host="0.0.0.0",
                         pull_port=tcp_master_pool_port,
                         pull_path=pull_path,
@@ -1492,6 +1497,7 @@ class MasterPubServerChannel:
                             self.opts,
                             pub_host=self.opts.get("interface", "0.0.0.0"),
                             pub_port=self.opts.get("publish_port", 4505),
+                            pub_path=pub_path,
                             pull_host="0.0.0.0",
                             pull_port=0,
                             pull_path=pull_path,
