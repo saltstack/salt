@@ -26,18 +26,40 @@ def gen_relenv(
     :param overwrite: Whether to overwrite the existing cached tarball.
     :return: The path to the recompressed .tgz file.
     """
+    # Normalize kernel/arch
+    kernel = kernel.lower()
+    os_arch = os_arch.lower()
+    if os_arch in ("amd64", "x86_64"):
+        os_arch = "x86_64"
+    elif os_arch in ("aarch64", "arm64"):
+        os_arch = "arm64"
+
     # Set up directories
     relenv_dir = os.path.join(cachedir, "relenv", kernel, os_arch)
     if not os.path.isdir(relenv_dir):
         os.makedirs(relenv_dir)
 
-    relenv_url = get_tarball(kernel, os_arch)
     tarball_path = os.path.join(relenv_dir, "salt-relenv.tar.xz")
 
     # Download the tarball if it doesn't exist or overwrite is True
     if overwrite or not os.path.exists(tarball_path):
-        if not download(cachedir, relenv_url, tarball_path):
-            return False
+        # Check for shared test cache first (for integration tests)
+        import shutil
+        import tempfile
+
+        shared_cache = os.path.join(tempfile.gettempdir(), "salt_ssh_test_relenv_cache")
+        shared_tarball = os.path.join(
+            shared_cache, "relenv", kernel, os_arch, "salt-relenv.tar.xz"
+        )
+
+        if os.path.exists(shared_tarball):
+            log.info("Copying tarball from shared test cache: %s", shared_tarball)
+            shutil.copy(shared_tarball, tarball_path)
+        else:
+            # Download from repository
+            relenv_url = get_tarball(kernel, os_arch)
+            if not download(cachedir, relenv_url, tarball_path):
+                return False
 
     return tarball_path
 

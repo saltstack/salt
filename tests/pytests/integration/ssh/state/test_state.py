@@ -12,11 +12,11 @@ pytestmark = [
 ]
 
 
-def test_state_with_import(salt_ssh_cli, state_tree):
+def test_state_with_import(state_tree, salt_ssh_cli_parameterized):
     """
     verify salt-ssh can use imported map files in states
     """
-    ret = salt_ssh_cli.run("state.sls", "test")
+    ret = salt_ssh_cli_parameterized.run("state.sls", "test")
     assert ret.returncode == 0
     assert ret.data
 
@@ -82,37 +82,39 @@ def test_state_with_import_dir(salt_ssh_cli, state_tree_dir, ssh_cmd):
     assert ret.data
 
 
-def test_state_with_import_from_dir(salt_ssh_cli, nested_state_tree):
+def test_state_with_import_from_dir(nested_state_tree, salt_ssh_cli_parameterized):
     """
     verify salt-ssh can use imported map files in states
     """
-    ret = salt_ssh_cli.run(
+    ret = salt_ssh_cli_parameterized.run(
         "--extra-filerefs=salt://foo/map.jinja", "state.apply", "foo"
     )
     assert ret.returncode == 0
     assert ret.data
 
 
-def test_state_low(salt_ssh_cli):
+def test_state_low(salt_ssh_cli_parameterized):
     """
     test state.low with salt-ssh
     """
-    ret = salt_ssh_cli.run(
+    ret = salt_ssh_cli_parameterized.run(
         "state.low", '{"state": "cmd", "fun": "run", "name": "echo blah"}'
     )
     assert ret.data["cmd_|-echo blah_|-echo blah_|-run"]["changes"]["stdout"] == "blah"
 
 
-def test_state_high(salt_ssh_cli):
+def test_state_high(salt_ssh_cli_parameterized):
     """
     test state.high with salt-ssh
     """
-    ret = salt_ssh_cli.run("state.high", '{"echo blah": {"cmd": ["run"]}}')
+    ret = salt_ssh_cli_parameterized.run(
+        "state.high", '{"echo blah": {"cmd": ["run"]}}'
+    )
     assert ret.data["cmd_|-echo blah_|-echo blah_|-run"]["changes"]["stdout"] == "blah"
 
 
-def test_state_test(salt_ssh_cli, state_tree):
-    ret = salt_ssh_cli.run("state.test", "test")
+def test_state_test(state_tree, salt_ssh_cli_parameterized):
+    ret = salt_ssh_cli_parameterized.run("state.test", "test")
     assert ret.returncode == 0
     assert ret.data
     assert (

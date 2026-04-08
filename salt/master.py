@@ -1608,7 +1608,7 @@ class AESFuncs(TransportMethods):
         if load is False:
             return {}
         else:
-            return self.masterapi._mine_get(load, skip_verify=True)
+            return self.masterapi._mine_get(load, skip_verify=False)
 
     def _mine(self, load):
         """
@@ -1622,7 +1622,7 @@ class AESFuncs(TransportMethods):
         load = self.__verify_load(load, ("id", "data"))
         if load is False:
             return {}
-        return self.masterapi._mine(load, skip_verify=True)
+        return self.masterapi._mine(load, skip_verify=False)
 
     def _mine_delete(self, load):
         """

@@ -56,8 +56,8 @@ def state_tree_render_module_exception(base_env_state_tree_root_dir):
         (("state.top", "top.sls"), EX_AGGREGATE),
     ),
 )
-def test_it(salt_ssh_cli, args, retcode):
-    ret = salt_ssh_cli.run(*args)
+def test_it(salt_ssh_cli_parameterized, args, retcode):
+    ret = salt_ssh_cli_parameterized.run(*args)
 
     assert ret.returncode == retcode
     assert isinstance(ret.data, list)
