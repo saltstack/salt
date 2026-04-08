@@ -34,6 +34,9 @@ def salt_minion_factory(salt_master):
             "fips_mode": FIPS_TESTRUN,
             "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
             "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+            # Speed up reconnection so the test completes faster on CI
+            "recon_default": 100,
+            "recon_max": 1000,
         },
     )
     return factory

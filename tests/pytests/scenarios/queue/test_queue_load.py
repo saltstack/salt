@@ -59,7 +59,7 @@ def test_queue_load_50(salt_master, salt_minion, salt_client, sleep_sls):
 
     completed_count = 0
     queued_responses_count = 0
-    timeout = 600
+    timeout = 120
     start_wait = time.time()
 
     seen_jids = set()

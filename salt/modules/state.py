@@ -596,7 +596,7 @@ def low(data, queue=None, **kwargs):
     ret = st_.call(data)
     if isinstance(ret, list):
         __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
-    if __utils__["state.check_result"](ret):
+    if not __utils__["state.check_result"](ret):
         __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_FAILURE
     return ret
 

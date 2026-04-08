@@ -42,7 +42,7 @@ def test_empty_config():
 
 def test_log_match(stub_log_entry, caplog):
     with patch("salt.utils.files.fopen", mock_open(read_data=stub_log_entry)):
-        with caplog.at_level(logging.TRACE):
+        with caplog.at_level(logging.TRACE, logger="salt.beacons.log_beacon"):
             config = [
                 {"file": "/var/log/auth.log", "tags": {"sshd": {"regex": ".*sshd.*"}}}
             ]

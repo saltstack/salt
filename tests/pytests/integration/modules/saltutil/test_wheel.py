@@ -31,7 +31,9 @@ def setup_test_module(salt_call_cli, salt_master, salt_minion):
 @pytest.fixture(autouse=True)
 def refresh_pillar(salt_cli, salt_minion, salt_sub_minion):
     ret = salt_cli.run("saltutil.refresh_pillar", wait=True, minion_tgt="*")
-    assert ret.returncode == 0
+    # Don't assert on returncode here: targeting '*' may match extra minions in
+    # the test environment that time-out, causing returncode=1 even when the
+    # minions we actually care about responded successfully.
     assert ret.data
     assert salt_minion.id in ret.data
     assert ret.data[salt_minion.id] is True

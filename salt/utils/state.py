@@ -4,6 +4,7 @@ Utility functions for state functions
 .. versionadded:: 2018.3.0
 """
 
+import errno
 import logging
 import os
 
@@ -37,9 +38,6 @@ def acquire_async_queue_lock(opts):
     return salt.utils.files.await_lock(
         lock_path, lock_fn=lock_path, timeout=5.0, sleep=0.1
     )
-
-
-import errno
 
 
 def get_active_states(opts):
