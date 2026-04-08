@@ -91,7 +91,7 @@ croniter==2.0.5
     # via
     #   -c requirements/static/pkg/py3.12/darwin.txt
     #   -r requirements/base.txt
-cryptography==46.0.5
+cryptography==46.0.7
     # via
     #   -c requirements/static/pkg/py3.12/darwin.txt
     #   -r requirements/base.txt
