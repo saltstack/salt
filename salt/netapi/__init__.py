@@ -258,6 +258,10 @@ class NetapiClient:
         :return: Returns the result from the runner module
         """
         kwargs["fun"] = fun
+
+        if timeout is not None:
+            timeout = float(timeout)
+
         runner = salt.runner.RunnerClient(self.opts)
         return runner.cmd_sync(kwargs, timeout=timeout, full_return=full_return)
 
