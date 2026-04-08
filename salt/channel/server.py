@@ -1023,7 +1023,9 @@ class PubServerChannel:
             attempts = 10
             while attempts > 0:
                 try:
-                    transport = salt.transport.publish_client(opts, io_loop, **kwargs)
+                    transport = salt.transport.publish_client(
+                        opts, io_loop, path=opts["ipc_master_pub_path"], **kwargs
+                    )
                     break
                 except Exception as exc:  # pylint: disable=broad-except
                     attempts -= 1
@@ -1651,6 +1653,9 @@ class MasterPubServerChannel:
 
                 payload = salt.payload.loads(data["payload"])
                 peer_id = payload.get("peer_id")
+                if peer_id == self.opts["id"]:
+                    log.debug("Skipping our own discover request")
+                    return
                 log.info("RECEIVED DISCOVER REQUEST FROM PEER %s", peer_id)
 
                 # Validate peer_id early (before storing in candidates)
@@ -1721,6 +1726,10 @@ class MasterPubServerChannel:
                     )
             elif tag.startswith("cluster/peer/discover-reply"):
                 payload = salt.payload.loads(data["payload"])
+                peer_id = payload.get("peer_id")
+                if peer_id == self.opts["id"]:
+                    log.debug("Skipping our own discover-reply")
+                    return
 
                 # Verify digest (using SHA-256 for security)
                 digest = hashlib.sha256(payload["cluster_pub"].encode()).hexdigest()
@@ -2098,7 +2107,11 @@ class MasterPubServerChannel:
                     event.set()
             elif tag.startswith("cluster/peer/join"):
                 payload = salt.payload.loads(data["payload"])
-                log.info("RECEIVED JOIN REQUEST FROM PEER %s", payload.get("peer_id"))
+                peer_id = payload.get("peer_id")
+                if peer_id == self.opts["id"]:
+                    log.debug("Skipping our own join request")
+                    return
+                log.info("RECEIVED JOIN REQUEST FROM PEER %s", peer_id)
 
                 # Verify we have a discovery candidate for this peer
                 if payload["peer_id"] not in self._discover_candidates:
