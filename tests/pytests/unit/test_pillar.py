@@ -745,6 +745,7 @@ def test_topfile_order():
     }
 
     def _run_test(nodegroup_order, glob_order, expected):
+        os.makedirs(RUNTIME_VARS.TMP, exist_ok=True)
         tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         try:
             sls_files = _setup_test_topfile_sls(tempdir, nodegroup_order, glob_order)

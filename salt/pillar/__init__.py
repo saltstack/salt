@@ -1355,4 +1355,6 @@ class PillarCache(Pillar):
                 self.opts.get("pillar_merge_lists", False),
             )
 
-        return salt.utils.safepillar.wrap_pillar_tree(pillar_data)
+        # Plain dict for master→minion transport (msgpack/AES). Minion-side
+        # RemotePillar.compile_pillar wraps after crypted_transfer_decode_dictentry.
+        return pillar_data
