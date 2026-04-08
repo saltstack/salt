@@ -14,6 +14,10 @@ aiosignal==1.4.0
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.txt
     #   aiohttp
+annotated-types==0.7.0
+    # via
+    #   -c requirements/static/pkg/py3.10/freebsd.txt
+    #   pydantic
 apache-libcloud==3.9.0
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.txt
@@ -341,6 +345,14 @@ pycryptodomex==3.19.1
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.txt
     #   -r requirements/crypto.txt
+pydantic==2.12.5
+    # via
+    #   -c requirements/static/pkg/py3.10/freebsd.txt
+    #   -r requirements/base.txt
+pydantic-core==2.41.5
+    # via
+    #   -c requirements/static/pkg/py3.10/freebsd.txt
+    #   pydantic
 pyfakefs==5.3.1
     # via -r requirements/pytest.txt
 pyinotify==0.9.6 ; platform_system != 'openbsd' and sys_platform != 'darwin' and sys_platform != 'win32'
@@ -568,9 +580,16 @@ typing-extensions==4.15.0
     #   aiosignal
     #   cryptography
     #   multidict
+    #   pydantic
+    #   pydantic-core
     #   pyopenssl
     #   pytest-system-statistics
+    #   typing-inspection
     #   virtualenv
+typing-inspection==0.4.2
+    # via
+    #   -c requirements/static/pkg/py3.10/freebsd.txt
+    #   pydantic
 urllib3==2.6.3
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.txt

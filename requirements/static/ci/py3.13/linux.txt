@@ -18,6 +18,10 @@ aiosignal==1.4.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   aiohttp
+annotated-types==0.7.0
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   pydantic
 ansible==13.4.0
     # via -r requirements/static/ci/linux.in
 ansible-core==2.20.3
@@ -339,6 +343,14 @@ pycryptodomex==3.21.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/crypto.txt
+pydantic==2.12.5
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   -r requirements/base.txt
+pydantic-core==2.41.5
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   pydantic
 pyfakefs==5.7.1
     # via -r requirements/pytest.txt
 pygit2==1.16.0
@@ -551,8 +563,17 @@ trustme==1.2.0
     # via -r requirements/pytest.txt
 twilio==9.3.4
     # via -r requirements/static/ci/linux.in
-typing-extensions==4.12.2
-    # via pytest-system-statistics
+typing-extensions==4.15.0
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   pydantic
+    #   pydantic-core
+    #   pytest-system-statistics
+    #   typing-inspection
+typing-inspection==0.4.2
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   pydantic
 urllib3==2.6.3
     # via
     #   -c requirements/static/pkg/py3.13/linux.txt

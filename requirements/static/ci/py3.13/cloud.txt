@@ -17,6 +17,11 @@ aiosignal==1.4.0
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   aiohttp
+annotated-types==0.7.0
+    # via
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   pydantic
 apache-libcloud==3.9.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -426,6 +431,16 @@ pycryptodomex==3.21.0
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/crypto.txt
+pydantic==2.12.5
+    # via
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   -r requirements/base.txt
+pydantic-core==2.41.5
+    # via
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   pydantic
 pyfakefs==5.7.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -700,10 +715,19 @@ trustme==1.2.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/pytest.txt
-typing-extensions==4.12.2
+typing-extensions==4.15.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   pydantic
+    #   pydantic-core
     #   pytest-system-statistics
+    #   typing-inspection
+typing-inspection==0.4.2
+    # via
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   pydantic
 urllib3==2.6.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt

@@ -7,7 +7,8 @@ from __future__ import annotations
 
 import copy
 import logging
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 from pydantic import SecretBytes, SecretStr
 

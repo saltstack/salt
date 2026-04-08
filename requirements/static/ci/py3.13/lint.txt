@@ -23,6 +23,11 @@ aiosignal==1.4.0
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   aiohttp
+annotated-types==0.7.0
+    # via
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   pydantic
 ansible==13.4.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -447,6 +452,16 @@ pycryptodomex==3.21.0
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/crypto.txt
+pydantic==2.12.5
+    # via
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   -r requirements/base.txt
+pydantic-core==2.41.5
+    # via
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   pydantic
 pygit2==1.16.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -705,6 +720,18 @@ twilio==9.3.4
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/static/ci/linux.in
+typing-extensions==4.15.0
+    # via
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   pydantic
+    #   pydantic-core
+    #   typing-inspection
+typing-inspection==0.4.2
+    # via
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   pydantic
 urllib3==2.6.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
