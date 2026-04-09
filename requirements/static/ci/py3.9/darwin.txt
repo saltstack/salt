@@ -348,7 +348,7 @@ psutil==5.9.8
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-pyasn1==0.6.2
+pyasn1==0.6.3
     # via
     #   -c requirements/static/pkg/py3.9/darwin.txt
     #   -r requirements/base.txt

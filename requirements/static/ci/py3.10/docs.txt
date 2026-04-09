@@ -211,7 +211,7 @@ psutil==7.2.2
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/base.txt
-pyasn1==0.6.2
+pyasn1==0.6.3
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/base.txt

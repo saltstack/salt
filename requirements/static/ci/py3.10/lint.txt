@@ -456,7 +456,7 @@ psutil==7.2.2
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -c requirements/static/pkg/py3.10/linux.txt
     #   -r requirements/base.txt
-pyasn1==0.6.2
+pyasn1==0.6.3
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -c requirements/static/pkg/py3.10/linux.txt
@@ -486,7 +486,7 @@ pyinotify==0.9.6
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/common.in
-pyjwt==2.7.0
+pyjwt==2.12.1
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   twilio
@@ -557,7 +557,6 @@ pytz==2024.1
     #   -c requirements/static/pkg/py3.10/linux.txt
     #   croniter
     #   tempora
-    #   twilio
 pyvmomi==8.0.1.0.1
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
@@ -718,7 +717,7 @@ transitions==0.9.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   junos-eznc
-twilio==8.2.2
+twilio==9.10.4
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/linux.in
@@ -733,6 +732,7 @@ typing-extensions==4.14.1
     #   aiosignal
     #   astroid
     #   cryptography
+    #   pyjwt
     #   pyopenssl
     #   virtualenv
 urllib3==2.6.3

@@ -53,6 +53,6 @@ zipp>=3.19.1
 apache-libcloud>=3.8.0
 idna>=2.8
 more-itertools>=9.1.0
-pyasn1>=0.6.2
+pyasn1>=0.6.3
 pycparser>=2.21
 vultr>=1.0.1
