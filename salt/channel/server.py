@@ -1241,6 +1241,15 @@ class PubServerChannel:
         await self.transport.publish(payload)
 
 
+class NullPusher:
+    """
+    A pusher that does nothing. Used to filter out self-connections in master clusters.
+    """
+
+    async def publish(self, load):
+        pass
+
+
 class MasterPubServerChannel:
     """
     The salt master's publish server channel. This is the component that
@@ -1467,51 +1476,58 @@ class MasterPubServerChannel:
 
         if self.opts.get("cluster_id"):
             # Ensure we are using TCP transport for master cluster
-            if not isinstance(self.transport, salt.transport.tcp.PublishServer):
-                log.info("Forcing TCP transport for master cluster in EventPublisher")
-                tcp_master_pool_port = self.opts.get("tcp_master_pull_port")
-                if not tcp_master_pool_port or tcp_master_pool_port == 4506:
-                    tcp_master_pool_port = self.opts.get("cluster_pool_port", 4520)
+            # and that it's correctly initialized in the daemon process
+            log.info("Initializing TCP transport for master cluster in EventPublisher")
+            tcp_master_pool_port = self.opts.get("tcp_master_pull_port")
+            if not tcp_master_pool_port or tcp_master_pool_port == 4506:
+                tcp_master_pool_port = self.opts.get("cluster_pool_port", 4520)
 
-                # Local communication still needs IPC paths
-                pull_path = os.path.join(self.opts["sock_dir"], "master_event_pull.ipc")
-                pub_path = os.path.join(self.opts["sock_dir"], "master_event_pub.ipc")
-                try:
+            # Local communication still needs IPC paths
+            pull_path = os.path.join(self.opts["sock_dir"], "master_event_pull.ipc")
+            pub_path = os.path.join(self.opts["sock_dir"], "master_event_pub.ipc")
+            try:
+                self.transport = salt.transport.tcp.PublishServer(
+                    self.opts,
+                    pub_host=self.opts.get("interface", "0.0.0.0"),
+                    pub_port=self.opts.get("publish_port", 4505),
+                    pub_path=pub_path,
+                    pull_host="0.0.0.0",
+                    pull_port=tcp_master_pool_port,
+                    pull_path=pull_path,
+                )
+            except OSError as exc:
+                if exc.errno == 98:  # Address already in use
+                    log.warning(
+                        "Cluster pool port %s already in use, binding to "
+                        "dynamic port",
+                        tcp_master_pool_port,
+                    )
                     self.transport = salt.transport.tcp.PublishServer(
                         self.opts,
                         pub_host=self.opts.get("interface", "0.0.0.0"),
                         pub_port=self.opts.get("publish_port", 4505),
                         pub_path=pub_path,
                         pull_host="0.0.0.0",
-                        pull_port=tcp_master_pool_port,
+                        pull_port=0,
                         pull_path=pull_path,
                     )
-                except OSError as exc:
-                    if exc.errno == 98:  # Address already in use
-                        log.warning(
-                            "Cluster pool port %s already in use, binding to "
-                            "dynamic port",
-                            tcp_master_pool_port,
-                        )
-                        self.transport = salt.transport.tcp.PublishServer(
-                            self.opts,
-                            pub_host=self.opts.get("interface", "0.0.0.0"),
-                            pub_port=self.opts.get("publish_port", 4505),
-                            pub_path=pub_path,
-                            pull_host="0.0.0.0",
-                            pull_port=0,
-                            pull_path=pull_path,
-                        )
-                    else:
-                        raise
-                # We need to start the publisher task for the new transport
-                aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
-                aio_loop.create_task(
-                    self.transport.publisher(
-                        self.publish_payload,
-                        io_loop=self.io_loop,
-                    )
+                else:
+                    raise
+            # We need to start the publisher task for the transport
+            # in the daemon process
+            aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
+            aio_loop.create_task(
+                self.transport.publisher(
+                    self.publish_payload,
+                    io_loop=self.io_loop,
                 )
+            )
+        else:
+            self.transport.publish_daemon(
+                self.publish_payload,
+                presence_callback=self._remove_client_present,
+                io_loop=self.io_loop,
+            )
 
         # Re-initialize master_key in the daemon process
         self.master_key = salt.crypt.MasterKeys(self.opts)
@@ -1527,6 +1543,15 @@ class MasterPubServerChannel:
         self.pushers = []
         self.auth_errors = {}
         for peer in self.opts.get("cluster_peers", []):
+            peer_host = peer
+            if ":" in peer:
+                peer_host, _ = peer.rsplit(":", 1)
+            # Skip self-connections (by interface or by ID if provided in peer list)
+            if (
+                peer_host == self.opts.get("interface", "127.0.0.1")
+                or peer == self.opts["id"]
+            ):
+                continue
             pusher = salt.transport.tcp.PublishServer(
                 self.opts,
                 pull_host=peer,
@@ -1636,10 +1661,17 @@ class MasterPubServerChannel:
                 return fp.read()
 
     def pusher(self, peer, port=None):
+        peer_host = peer
         if ":" in peer:
-            peer, peer_port = peer.rsplit(":", 1)
+            peer_host, peer_port = peer.rsplit(":", 1)
             if port is None:
                 port = int(peer_port)
+
+        # Skip self-connections
+        if peer_host == self.opts.get("interface", "127.0.0.1"):
+            log.debug("Pusher: skipping self-connection to %s", peer_host)
+            return NullPusher()
+
         if port is None:
             port = self.tcp_master_pool_port
         return salt.transport.tcp.PublishServer(
@@ -1873,6 +1905,9 @@ class MasterPubServerChannel:
                     return
 
                 sender_id = notify_data.get("peer_id")
+                if sender_id == self.opts["id"]:
+                    log.debug("Skipping our own join-notify")
+                    return
                 join_peer_id = notify_data.get("join_peer_id")
 
                 log.info(
@@ -1951,6 +1986,11 @@ class MasterPubServerChannel:
                     payload = salt.payload.loads(data["payload"])
                 except SaltDeserializationError as e:
                     log.error("Failed to deserialize join-reply payload: %s", e)
+                    return
+
+                peer_id = payload.get("peer_id")
+                if peer_id == self.opts["id"]:
+                    log.debug("Skipping our own join-reply")
                     return
 
                 # Verify the peer_id matches who we're expecting (bootstrap peer)
@@ -2374,6 +2414,9 @@ class MasterPubServerChannel:
                             )
             elif tag.startswith("cluster/event"):
                 peer_id, parsed_tag = self.parse_cluster_tag(tag)
+                if peer_id == self.opts["id"]:
+                    log.debug("Skipping our own cluster event")
+                    return
                 try:
                     event_data = self.extract_cluster_event(peer_id, data)
                 except salt.exceptions.AuthenticationError:
