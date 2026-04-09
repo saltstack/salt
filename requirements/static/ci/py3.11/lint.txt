@@ -144,7 +144,7 @@ croniter==6.0.0
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -c requirements/static/pkg/py3.11/linux.txt
     #   -r requirements/base.txt
-cryptography==46.0.6
+cryptography==46.0.7
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -c requirements/static/pkg/py3.11/linux.txt

@@ -32,7 +32,7 @@ contextvars==2.4
     # via -r requirements/base.txt
 croniter==6.0.0
     # via -r requirements/base.txt
-cryptography==46.0.6
+cryptography==46.0.7
     # via
     #   -r requirements/base.txt
     #   pyopenssl

@@ -111,7 +111,7 @@ croniter==6.0.0 ; sys_platform != 'win32'
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.txt
     #   -r requirements/base.txt
-cryptography==46.0.6
+cryptography==46.0.7
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.txt
     #   -r requirements/base.txt
