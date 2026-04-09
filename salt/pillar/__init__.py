@@ -1171,8 +1171,6 @@ class Pillar:
                 self.opts.get("renderer", "yaml"),
                 self.opts.get("pillar_merge_lists", False),
             )
-            self.pillar_data.update(pillar)
-            self._update_loader_packs()
         if errors:
             for error in errors:
                 log.critical("Pillar render error: %s", error)
@@ -1186,8 +1184,6 @@ class Pillar:
                 self.opts.get("renderer", "yaml"),
                 self.opts.get("pillar_merge_lists", False),
             )
-            self.pillar_data.update(pillar)
-            self._update_loader_packs()
 
         decrypt_errors = self.decrypt_pillar(self.pillar_data)
         if decrypt_errors:
