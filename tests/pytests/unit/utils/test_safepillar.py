@@ -60,6 +60,17 @@ def test_unwrap_roundtrip():
     assert back == raw
 
 
+def test_unwrap_blackout_whitelist_for_str_membership():
+    wrapped = sp.wrap_pillar_tree(
+        {"minion_blackout_whitelist": ["test.ping", "test.fib"]}
+    )
+    wl = wrapped["minion_blackout_whitelist"]
+    assert "test.ping" not in wl
+    plain = sp.unwrap_blackout_whitelist(wl)
+    assert plain == ["test.ping", "test.fib"]
+    assert "test.ping" in plain
+
+
 def test_iter_pillar_secret_literals_order():
     p = sp.wrap_pillar_tree({"short": "ab", "longer": "abcd"})
     lit = sp.iter_pillar_secret_literals(p)

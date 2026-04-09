@@ -152,6 +152,22 @@ def unwrap_pillar_tree(obj: Any) -> Any:
     return obj
 
 
+def unwrap_blackout_whitelist(whitelist: Any) -> list:
+    """
+    Normalize ``minion_blackout_whitelist`` for ``str in whitelist`` checks.
+
+    Pillar string leaves may be :class:`pydantic.SecretStr`; comparing a job's
+    ``function_name`` (a ``str``) with ``x not in whitelist`` would otherwise
+    fail because ``SecretStr`` does not compare equal to ``str``.
+    """
+    if not whitelist:
+        return []
+    unwrapped = unwrap_pillar_tree(whitelist)
+    if isinstance(unwrapped, (list, tuple)):
+        return list(unwrapped)
+    return [unwrapped]
+
+
 def iter_pillar_secret_literals(pillar: Any) -> list[str]:
     """
     Collect all secret string and bytes-as-utf8 literals from a (possibly wrapped) pillar.

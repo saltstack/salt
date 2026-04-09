@@ -2463,7 +2463,9 @@ class Minion(MinionBase):
         """
         minion_blackout_violation = False
         if self.connected and self.opts["pillar"].get("minion_blackout", False):
-            whitelist = self.opts["pillar"].get("minion_blackout_whitelist", [])
+            whitelist = salt.utils.safepillar.unwrap_blackout_whitelist(
+                self.opts["pillar"].get("minion_blackout_whitelist", [])
+            )
             # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
             if (
                 function_name != "saltutil.refresh_pillar"
@@ -2472,7 +2474,9 @@ class Minion(MinionBase):
                 minion_blackout_violation = True
         # use minion_blackout_whitelist from grains if it exists
         if self.opts["grains"].get("minion_blackout", False):
-            whitelist = self.opts["grains"].get("minion_blackout_whitelist", [])
+            whitelist = salt.utils.safepillar.unwrap_blackout_whitelist(
+                self.opts["grains"].get("minion_blackout_whitelist", [])
+            )
             if (
                 function_name != "saltutil.refresh_pillar"
                 and function_name not in whitelist
