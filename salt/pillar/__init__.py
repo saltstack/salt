@@ -22,6 +22,7 @@ import salt.utils.crypt
 import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.master
+import salt.utils.safepillar
 import salt.utils.url
 from salt.exceptions import SaltClientError
 from salt.template import compile_template
@@ -283,7 +284,7 @@ class AsyncRemotePillar(RemotePillarMixin):
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
-        return ret_pillar
+        return salt.utils.safepillar.wrap_pillar_tree(ret_pillar)
 
     def destroy(self):
         if self._closing:
@@ -374,7 +375,7 @@ class RemotePillar(RemotePillarMixin):
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
-        return ret_pillar
+        return salt.utils.safepillar.wrap_pillar_tree(ret_pillar)
 
     def destroy(self):
         if hasattr(self, "_closing") and self._closing:
@@ -1257,7 +1258,7 @@ class AsyncPillar(Pillar):
         self, ext=True
     ):  # pylint: disable=invalid-overridden-method
         ret = super().compile_pillar(ext=ext)
-        return ret
+        return salt.utils.safepillar.wrap_pillar_tree(ret)
 
 
 class PillarCache(Pillar):
@@ -1354,4 +1355,6 @@ class PillarCache(Pillar):
                 self.opts.get("pillar_merge_lists", False),
             )
 
+        # Plain dict for master→minion transport (msgpack/AES). Minion-side
+        # RemotePillar.compile_pillar wraps after crypted_transfer_decode_dictentry.
         return pillar_data

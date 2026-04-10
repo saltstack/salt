@@ -59,6 +59,7 @@ import salt.utils.minions
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.safepillar
 import salt.utils.schedule
 import salt.utils.ssdp
 import salt.utils.state
@@ -455,13 +456,15 @@ class MinionBase:
         if context is None:
             context = {}
         if initial_load:
-            self.opts["pillar"] = salt.pillar.get_pillar(
-                self.opts,
-                self.opts["grains"],
-                self.opts["id"],
-                self.opts["saltenv"],
-                pillarenv=self.opts.get("pillarenv"),
-            ).compile_pillar()
+            self.opts["pillar"] = salt.utils.safepillar.wrap_pillar_tree(
+                salt.pillar.get_pillar(
+                    self.opts,
+                    self.opts["grains"],
+                    self.opts["id"],
+                    self.opts["saltenv"],
+                    pillarenv=self.opts.get("pillarenv"),
+                ).compile_pillar()
+            )
 
         self.utils = salt.loader.utils(self.opts, context=context)
         self.functions = salt.loader.minion_mods(
@@ -2460,7 +2463,9 @@ class Minion(MinionBase):
         """
         minion_blackout_violation = False
         if self.connected and self.opts["pillar"].get("minion_blackout", False):
-            whitelist = self.opts["pillar"].get("minion_blackout_whitelist", [])
+            whitelist = salt.utils.safepillar.unwrap_blackout_whitelist(
+                self.opts["pillar"].get("minion_blackout_whitelist", [])
+            )
             # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
             if (
                 function_name != "saltutil.refresh_pillar"
@@ -2469,7 +2474,9 @@ class Minion(MinionBase):
                 minion_blackout_violation = True
         # use minion_blackout_whitelist from grains if it exists
         if self.opts["grains"].get("minion_blackout", False):
-            whitelist = self.opts["grains"].get("minion_blackout_whitelist", [])
+            whitelist = salt.utils.safepillar.unwrap_blackout_whitelist(
+                self.opts["grains"].get("minion_blackout_whitelist", [])
+            )
             if (
                 function_name != "saltutil.refresh_pillar"
                 and function_name not in whitelist
@@ -2559,6 +2566,16 @@ class Minion(MinionBase):
                     return_data = minion_instance._execute_job_function(
                         function_name, function_args, executors, opts, data
                     )
+                    if isinstance(return_data, dict) and function_name.startswith(
+                        "state."
+                    ):
+                        _liter = salt.utils.safepillar.iter_pillar_secret_literals(
+                            opts.get("pillar", {})
+                        )
+                        if _liter:
+                            return_data = salt.utils.safepillar.redact_known_literals(
+                                return_data, _liter
+                            )
                     log.info(
                         "Job %s execution finished, return_data: %s",
                         data["jid"],

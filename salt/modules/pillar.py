@@ -121,6 +121,11 @@ def get(
 
         salt '*' pillar.get pkg:apache
         salt '*' pillar.get abc::def|ghi delimiter='|'
+
+    .. note::
+
+        Like :py:func:`items`, this returns plain Python values (secret wrappers
+        are removed) because the caller requested a specific pillar key.
     """
     if default == NOT_SET:
         default = KeyError
@@ -145,8 +150,10 @@ def get(
             )
             if isinstance(ret, Mapping):
                 default = copy.deepcopy(default)
-                return salt.utils.dictupdate.update(
-                    default, ret, merge_lists=opt_merge_lists
+                return salt.utils.safepillar.unwrap_pillar_tree(
+                    salt.utils.dictupdate.update(
+                        default, ret, merge_lists=opt_merge_lists
+                    )
                 )
             else:
                 log.error(
@@ -164,7 +171,7 @@ def get(
             if isinstance(ret, list):
                 default = copy.deepcopy(default)
                 default.extend([x for x in ret if x not in default])
-                return default
+                return salt.utils.safepillar.unwrap_pillar_tree(default)
             else:
                 log.error(
                     "pillar.get: Default (%s) is a list, but the returned "
@@ -186,7 +193,7 @@ def get(
     if ret is KeyError:
         raise KeyError(f"Pillar key not found: {key}")
 
-    return ret
+    return salt.utils.safepillar.unwrap_pillar_tree(ret)
 
 
 def items(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
@@ -239,6 +246,14 @@ def items(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
     .. code-block:: bash
 
         salt '*' pillar.items
+
+    .. note::
+
+        This function returns plain Python strings, bytes, dicts, and lists
+        (secret wrappers are removed) because the caller explicitly requested
+        pillar data. In-memory :ref:`pillar-in-memory` (``__pillar__``) and
+        other interfaces keep :mod:`salt.utils.safepillar` types unless they
+        delegate here or to :py:func:`get`.
     """
     # Preserve backwards compatibility
     if args:
@@ -271,7 +286,7 @@ def items(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
         pillar_override=pillar_override,
         pillarenv=pillarenv,
     )
-    return pillar.compile_pillar()
+    return salt.utils.safepillar.unwrap_pillar_tree(pillar.compile_pillar())
 
 
 # Allow pillar.data to also be used to return pillar data
@@ -608,7 +623,7 @@ def ext(external, pillar=None):
 
     ret = pillar_obj.compile_pillar()
 
-    return ret
+    return salt.utils.safepillar.wrap_pillar_tree(ret)
 
 
 def keys(key, delimiter=DEFAULT_TARGET_DELIM):

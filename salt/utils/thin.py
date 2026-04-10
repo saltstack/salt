@@ -19,14 +19,19 @@ import tempfile
 import types
 import zipfile
 
+import annotated_types
 import distro
 import idna
 import jinja2
 import looseversion
 import msgpack
 import packaging
+import pydantic
+import pydantic_core
 import requests
 import tornado
+import typing_extensions
+import typing_inspection
 import urllib3
 
 try:
@@ -307,6 +312,11 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
         "backports_abc",
         "looseversion",
         "packaging",
+        "annotated_types",
+        "pydantic",
+        "pydantic_core",
+        "typing_extensions",
+        "typing_inspection",
     ]
     # backports package doesn't exist in Python 3.13+
     if sys.version_info < (3, 13):
@@ -464,6 +474,11 @@ def get_tops(extra_mods="", so_mods=""):
         idna,
         urllib3,
         charset_normalizer,
+        annotated_types,
+        pydantic,
+        pydantic_core,
+        typing_extensions,
+        typing_inspection,
     ]
     modules = find_site_modules("contextvars")
     if modules:

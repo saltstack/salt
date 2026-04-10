@@ -3,6 +3,7 @@ from collections import OrderedDict
 import pytest
 
 import salt.modules.pillar as pillarmod
+import salt.utils.safepillar as safepillar
 from tests.support.mock import MagicMock, call, patch
 
 
@@ -190,3 +191,33 @@ def test_ls_pass_kwargs(pillar_value):
     with patch("salt.modules.pillar.items", MagicMock(return_value=pillar_value)):
         ls = sorted(pillarmod.ls(pillarenv="base"))
         assert ls == ["a", "b"]
+
+
+def test_items_returns_plain_unwrapped_values(configure_loader_modules):
+    """pillar.items unwraps so explicit CLI/API requests see real strings."""
+    wrapped = safepillar.wrap_pillar_tree({"secret": "hunter2", "n": 1})
+    pillar_obj = MagicMock()
+    pillar_obj.compile_pillar.return_value = wrapped
+    with patch("salt.pillar.get_pillar", return_value=pillar_obj), patch.dict(
+        pillarmod.__opts__,
+        {
+            "id": "test-minion",
+            "pillarenv": "",
+            "pillarenv_from_saltenv": False,
+            "saltenv": "base",
+        },
+    ), patch.dict(pillarmod.__grains__, {"os": "linux"}):
+        ret = pillarmod.items()
+    assert ret == {"secret": "hunter2", "n": 1}
+    assert isinstance(ret["secret"], str)
+
+
+def test_get_unwraps_value_from_wrapped_pillar(configure_loader_modules):
+    """pillar.get unwraps in-memory __pillar__ for explicit key requests."""
+    wrapped = safepillar.wrap_pillar_tree({"k": "plain"})
+    with patch.dict(
+        pillarmod.__opts__,
+        {"pillar_raise_on_missing": False},
+    ):
+        with patch.dict(pillarmod.__pillar__, wrapped, clear=True):
+            assert pillarmod.get("k") == "plain"

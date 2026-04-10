@@ -6,6 +6,8 @@ aiohttp==3.13.3
     # via -r requirements/base.txt
 aiosignal==1.4.0
     # via aiohttp
+annotated-types==0.7.0
+    # via pydantic
 apache-libcloud==3.9.0
     # via -r requirements/base.txt
 attrs==24.2.0
@@ -119,6 +121,10 @@ pycparser==2.22
     #   cffi
 pycryptodomex==3.21.0
     # via -r requirements/crypto.txt
+pydantic==2.12.5
+    # via -r requirements/base.txt
+pydantic-core==2.41.5
+    # via pydantic
 pyopenssl==25.3.0
     # via -r requirements/base.txt
 python-dateutil==2.9.0.post0
@@ -159,6 +165,13 @@ timelib==0.3.0
     #   -r requirements/static/pkg/darwin.in
 tornado==6.5.4
     # via -r requirements/base.txt
+typing-extensions==4.15.0
+    # via
+    #   pydantic
+    #   pydantic-core
+    #   typing-inspection
+typing-inspection==0.4.2
+    # via pydantic
 urllib3==2.6.3
     # via
     #   -r requirements/base.txt
