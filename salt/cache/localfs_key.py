@@ -104,7 +104,15 @@ def _get_index(opts):
     if pki_dir not in _indices:
         # Index lives in cachedir instead of etc
         cachedir = opts.get("cachedir", "/var/cache/salt/master")
-        index_path = os.path.join(cachedir, ".pki_index.mmap")
+
+        # Make the index filename unique per pki_dir to support multiple Master instances
+        import hashlib
+
+        pki_hash = hashlib.sha256(salt.utils.stringutils.to_bytes(pki_dir)).hexdigest()[
+            :8
+        ]
+        index_path = os.path.join(cachedir, f".pki_index_{pki_hash}.mmap")
+
         size = opts.get("pki_index_size", 1000000)
         slot_size = opts.get("pki_index_slot_size", 128)
         _indices[pki_dir] = salt.utils.mmap_cache.MmapCache(
@@ -561,6 +569,8 @@ def list_all(bank, cachedir, include_data=False, **kwargs):
                         if entry.name.startswith("."):
                             continue
                         if not valid_id(__opts__, entry.name):
+                            continue
+                        if not clean_path(cachedir, entry.path, subdir=True):
                             continue
 
                         if include_data:

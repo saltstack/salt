@@ -401,19 +401,28 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                 )
 
             # Use cache layer (which internally uses mmap index for O(1) performance)
-            try:
-                all_keys = self.cache.list_all("keys")
-                keys = [
-                    minion_id
-                    for minion_id, data in all_keys.items()
-                    if data.get("state") == "accepted"
-                ]
-            except AttributeError:
-                # Fallback for cache backends that don't implement list_all()
-                for id_ in self.cache.list("keys"):
-                    key = self.cache.fetch("keys", id_)
-                    if key and key.get("state") == "accepted":
-                        keys.append(id_)
+            if self.opts.get("pki_index_enabled", False):
+                try:
+                    all_keys = self.cache.list_all("keys")
+                    keys = [
+                        minion_id
+                        for minion_id, data in all_keys.items()
+                        if data.get("state") == "accepted"
+                    ]
+                except AttributeError:
+                    # Fallback for cache backends that don't implement list_all()
+                    for id_ in self.cache.list("keys"):
+                        key = self.cache.fetch("keys", id_)
+                        if key and key.get("state") == "accepted":
+                            keys.append(id_)
+            else:
+                # Legacy behavior: direct filesystem scan
+                # This is more compatible with existing mocks in unit tests
+                acc_path = os.path.join(self.pki_dir, acc)
+                if os.path.isdir(acc_path):
+                    for fn_ in os.listdir(acc_path):
+                        if not fn_.startswith("."):
+                            keys.append(fn_)
 
             log.debug("Writing master key cache")
             # Write a temporary file securely

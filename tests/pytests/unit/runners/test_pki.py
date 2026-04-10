@@ -41,7 +41,7 @@ def test_rebuild_index(opts, tmp_path):
 
     if not hasattr(salt.runners.pki, "__opts__"):
         salt.runners.pki.__opts__ = {}
-    with patch.dict(salt.runners.pki.__opts__, opts):
+    with patch.dict(salt.runners.pki.__opts__, {**opts, "pki_index_enabled": True}):
         result = salt.runners.pki.rebuild_index()
         assert "successfully" in result
         assert "3" in result  # Should show 3 keys

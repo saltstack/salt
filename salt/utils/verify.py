@@ -353,19 +353,26 @@ def verify_env(
                 search_dirs.append(pki_dir)
 
         for _dir in search_dirs:
-            if not _dir:
+            if not _dir or not os.path.isdir(_dir):
                 continue
-            for index_file in [".pki_index.mmap", ".pki_index.mmap.lock"]:
-                index_path = os.path.join(_dir, index_file)
-                if os.path.exists(index_path):
-                    try:
-                        # Set permissions to 600 (read/write for owner only)
-                        os.chmod(index_path, 0o600)
-                        fmode = os.stat(index_path)
-                        if fmode.st_uid != uid or fmode.st_gid != gid:
-                            os.chown(index_path, uid, gid)
-                    except OSError:
-                        continue
+            # Handle both legacy names and new hashed names
+            try:
+                for index_file in os.listdir(_dir):
+                    if index_file.startswith(".pki_index") and (
+                        index_file.endswith(".mmap")
+                        or index_file.endswith(".mmap.lock")
+                    ):
+                        index_path = os.path.join(_dir, index_file)
+                        try:
+                            # Set permissions to 600 (read/write for owner only)
+                            os.chmod(index_path, 0o600)
+                            fmode = os.stat(index_path)
+                            if fmode.st_uid != uid or fmode.st_gid != gid:
+                                os.chown(index_path, uid, gid)
+                        except OSError:
+                            continue
+            except OSError:
+                continue
 
 
 def check_user(user):
