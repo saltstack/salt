@@ -57,4 +57,4 @@ def salt_key_cli(salt_master):
 @pytest.fixture(scope="package")
 def salt_cli(salt_master):
     assert salt_master.is_running()
-    return salt_master.salt_cli()
+    return salt_master.salt_cli(timeout=30)
