@@ -26,7 +26,7 @@ jobs:
     outputs:
       files: ${{ steps.list-files.outputs.files }}
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: ${{ inputs.name }}
           path: artifacts
@@ -48,7 +48,7 @@ jobs:
       matrix:
         include: ${{ fromJSON(needs.list-files.outputs.files) }}
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: ${{ inputs.name }}
           path: artifacts
@@ -59,7 +59,7 @@ jobs:
 
       - name: Upload ${{ matrix.file }}
         id: upload-release-asset-source
-        uses: actions/upload-release-asset@v1
+        uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:

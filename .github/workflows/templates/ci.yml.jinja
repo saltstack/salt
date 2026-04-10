@@ -67,10 +67,10 @@
     needs:
       - prepare-workflow
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Set up Python <{ gh_actions_workflows_python_version }>
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "<{ gh_actions_workflows_python_version }>"
 
@@ -129,7 +129,7 @@
           tools docs man
 
       - name: Upload MAN Pages Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: man-pages-${{ needs.prepare-workflow.outputs.salt-version }}
           path: doc/man/
@@ -181,7 +181,7 @@
           git format-patch --keep-subject --binary --stdout HEAD^ > salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
 
       - name: Upload Changes Diff Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
@@ -222,10 +222,10 @@
       - build-docs
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Set up Python <{ gh_actions_workflows_python_version }>
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "<{ gh_actions_workflows_python_version }>"
 
@@ -241,7 +241,7 @@
           salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
 
       - name: Download Man Pages Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs-man.tar.xz
 
@@ -320,10 +320,10 @@
       - <{ need }>
       <%- endfor %>
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Set up Python <{ gh_actions_workflows_python_version }>
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "<{ gh_actions_workflows_python_version }>"
 
@@ -366,7 +366,7 @@
 
       - name: Get coverage reports
         id: get-coverage-reports
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           path: artifacts/coverage/
           pattern: coverage*
@@ -402,7 +402,7 @@
           nox --force-color -e create-html-coverage-report -- salt
 
       - name: Upload Salt Code Coverage HTML Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: code-coverage-salt-html-report
           path: artifacts/coverage/html/salt
@@ -419,7 +419,7 @@
           nox --force-color -e create-json-coverage-reports
 
       - name: Upload Combined Code Coverage JSON Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: code-coverage-full-json-report
           path: artifacts/coverage/coverage.json
@@ -432,7 +432,7 @@
           nox --force-color -e create-html-coverage-report
 
       - name: Upload Combined Code Coverage HTML Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: code-coverage-full-html-report
           path: artifacts/coverage/html/full

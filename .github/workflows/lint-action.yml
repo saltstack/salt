@@ -34,7 +34,7 @@ jobs:
         run: |
           git config --global --add safe.directory "$(pwd)"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install Nox
         run: |
@@ -74,7 +74,7 @@ jobs:
         run: |
           git config --global --add safe.directory "$(pwd)"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install Nox
         run: |
