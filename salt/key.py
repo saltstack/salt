@@ -585,7 +585,9 @@ class Key:
 
         # Use cache layer's optimized bulk fetch
         if self.opts.get("pki_index_enabled", False):
-            from salt.utils import pki as pki_utils
+            from salt.utils import (
+                pki as pki_utils,  # pylint: disable=import-outside-toplevel
+            )
 
             index = pki_utils.PkiIndex(self.opts)
             items = index.list_items()
