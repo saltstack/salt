@@ -483,30 +483,30 @@ def list_(bank, cachedir, **kwargs):
 
     ret = []
     for base in bases:
-        base_path = os.path.join(cachedir, os.path.normpath(base))
-        if not os.path.isdir(base_path):
+        base = os.path.join(cachedir, os.path.normpath(base))
+        if not os.path.isdir(base):
             continue
         try:
-            with os.scandir(base_path) as it:
-                for entry in it:
-                    if entry.is_file() and not entry.is_symlink():
-                        item = entry.name
-                        # salt foolishly dumps a file here for key cache, ignore it
-                        if item == ".key_cache":
-                            continue
-
-                        if (
-                            bank in ["keys", "denied_keys"]
-                            and not valid_id(__opts__, item)
-                        ) or not clean_path(cachedir, entry.path, subdir=True):
-                            log.error("saw invalid id %s, discarding", item)
-                            continue
-
-                        ret.append(item)
+            items = os.listdir(base)
         except OSError as exc:
             raise SaltCacheError(
-                f'There was an error accessing directory "{base_path}": {exc}'
+                f'There was an error accessing directory "{base}": {exc}'
             )
+        for item in items:
+            # salt foolishly dumps a file here for key cache, ignore it
+            if item == ".key_cache":
+                continue
+
+            keyfile = Path(cachedir, base, item)
+
+            if (
+                bank in ["keys", "denied_keys"] and not valid_id(__opts__, item)
+            ) or not clean_path(cachedir, str(keyfile), subdir=True):
+                log.error("saw invalid id %s, discarding", item)
+                continue
+
+            if keyfile.is_file() and not keyfile.is_symlink():
+                ret.append(item)
     return ret
 
 
