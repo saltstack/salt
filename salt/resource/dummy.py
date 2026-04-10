@@ -29,6 +29,7 @@ from contextlib import contextmanager
 
 import salt.utils.files
 import salt.utils.msgpack
+import salt.utils.resources
 
 log = logging.getLogger(__name__)
 
@@ -118,15 +119,15 @@ def init(opts):
     Initialize the dummy resource type for this minion.
 
     Called once when the resource type is loaded, before any per-resource
-    operations are performed.  Reads the resource type configuration from
-    ``opts["pillar"]["resources"]["dummy"]`` and sets up shared type-level
+    operations are performed.  Reads the resource type configuration from the
+    ``dummy`` entry under the pillar subtree selected by ``resource_pillar_key``
+    (see :func:`salt.utils.resources.pillar_resources_tree`) and sets up shared type-level
     state in ``__context__["dummy_resource"]``.
 
     :param dict opts: The Salt opts dict.
     """
     resource_ids = (
-        opts.get("pillar", {})
-        .get("resources", {})
+        salt.utils.resources.pillar_resources_tree(opts)
         .get("dummy", {})
         .get("resource_ids", [])
     )
@@ -157,7 +158,8 @@ def discover(opts):
 
     Called by ``saltutil.refresh_resources`` to populate the master's
     Resource Registry.  For the dummy module the list of IDs is read from
-    ``opts["pillar"]["resources"]["dummy"]["resource_ids"]``.
+    ``resource_ids`` under the ``dummy`` type in the configured resource pillar
+    subtree.
 
     Returns a list of bare resource IDs (not full SRNs) — e.g.
     ``["dummy-01", "dummy-02"]``.
@@ -166,8 +168,7 @@ def discover(opts):
     :rtype: list[str]
     """
     resource_ids = (
-        opts.get("pillar", {})
-        .get("resources", {})
+        salt.utils.resources.pillar_resources_tree(opts)
         .get("dummy", {})
         .get("resource_ids", [])
     )

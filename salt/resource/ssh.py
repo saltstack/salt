@@ -11,7 +11,8 @@ execution (``cmd_run``, ``ping``) and :class:`salt.client.ssh.Single` with
 the salt-thin bundle for grain collection (``grains.items``), giving the same
 complete, accurate grain set that ``salt-ssh`` provides.
 
-Configuration (via Pillar)::
+Configuration (via Pillar; top-level key defaults to ``resources``, overridable
+with minion option ``resource_pillar_key``)::
 
     resources:
       ssh:
@@ -80,6 +81,7 @@ import salt.fileclient
 import salt.utils.json
 import salt.utils.network
 import salt.utils.path
+import salt.utils.resources
 
 log = logging.getLogger(__name__)
 
@@ -300,14 +302,15 @@ def init(opts):
     Initialize the ``ssh`` resource type for this minion.
 
     Called once when the resource type is loaded, before any per-resource
-    operations are dispatched.  Reads host configs from
-    ``opts["pillar"]["resources"]["ssh"]["hosts"]``, caches them in
+    operations are dispatched.  Reads host configs from the ``ssh`` entry under
+    the pillar subtree selected by ``resource_pillar_key`` (see
+    :func:`salt.utils.resources.pillar_resources_tree`), caches them in
     ``__context__["ssh_resource"]``, and pre-resolves the SSH binary version
     so that :func:`_shell_opts` never has to run a subprocess during a job.
 
     :param dict opts: The Salt opts dict.
     """
-    resource_cfg = opts.get("pillar", {}).get("resources", {}).get("ssh", {})
+    resource_cfg = salt.utils.resources.pillar_resources_tree(opts).get("ssh", {})
     hosts = resource_cfg.get("hosts", {})
     __context__[CONTEXT_KEY] = {  # pylint: disable=undefined-variable
         "initialized": True,
@@ -363,15 +366,17 @@ def discover(opts):
     """
     Return the list of SSH resource IDs managed by this minion.
 
-    The list is the set of keys under
-    ``opts["pillar"]["resources"]["ssh"]["hosts"]``.  Adding or removing a
+    The list is the set of keys under ``hosts`` for the ``ssh`` type under the
+    configured resource pillar subtree.  Adding or removing a
     host from that Pillar key and running ``saltutil.refresh_resources``
     updates the Master's Resource Registry without any process restart.
 
     :param dict opts: The Salt opts dict.
     :rtype: list[str]
     """
-    hosts = opts.get("pillar", {}).get("resources", {}).get("ssh", {}).get("hosts", {})
+    hosts = (
+        salt.utils.resources.pillar_resources_tree(opts).get("ssh", {}).get("hosts", {})
+    )
     resource_ids = list(hosts)
     log.debug("ssh resource discover() returning: %s", resource_ids)
     return resource_ids

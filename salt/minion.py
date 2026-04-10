@@ -59,6 +59,7 @@ import salt.utils.minions
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.resources
 import salt.utils.schedule
 import salt.utils.ssdp
 import salt.utils.state
@@ -556,30 +557,27 @@ class MinionBase:
         Build ``opts["resources"]`` by calling each resource type's
         ``discover(opts)`` function.
 
-        Resource types are read from ``opts["pillar"]["resources"]``.  A
-        temporary resource loader is used to call each type's
+        Resource types are read from the pillar subtree at
+        ``opts["pillar"][opts["resource_pillar_key"]]`` (default key
+        ``"resources"``, configurable via minion option ``resource_pillar_key``).
+        A temporary resource loader is used to call each type's
         ``discover(opts)``; the return value is a dict of
         ``{resource_type: [resource_id, ...]}``.
 
-        If the pillar contains no ``resources`` key at all, any resources
-        already present in ``opts["resources"]`` (e.g. set directly in the
-        minion config file) are preserved as-is.  This supports testing and
-        simple deployments where pillar-driven discovery is not needed.
+        If the merged pillar contains no key by that name, that is treated the
+        same as an empty mapping: no pillar-declared resource types, so
+        discovery returns an empty dict (no stale IDs left in
+        ``opts["resources"]``).
 
-        If the pillar *does* contain a ``resources`` key (even if its value is
-        empty / all entries removed), that is treated as an authoritative
-        declaration and the result will reflect only what the pillar says.
-        This ensures that removing a resource type from the pillar and running
-        sync_all actually clears it at runtime.
+        If the pillar *does* contain that key (even if its value is empty /
+        all entries removed), that is an authoritative declaration and the
+        result reflects only what the pillar says (via ``discover()`` per
+        type).
 
         Called from :meth:`gen_modules` after pillar is compiled and before
         the per-type execution-module loaders are created.
         """
-        pillar = self.opts.get("pillar", {})
-        if "resources" not in pillar:
-            # Pillar has no opinion — preserve whatever is already in opts.
-            return {k: list(v) for k, v in self.opts.get("resources", {}).items()}
-        pillar_resources = pillar.get("resources") or {}
+        pillar_resources = salt.utils.resources.pillar_resources_tree(self.opts)
 
         # A minimal resource loader is sufficient here — discover() only reads
         # from the opts dict passed to it and does not need other dunders.
