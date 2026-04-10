@@ -1099,6 +1099,8 @@ class PubServerChannel:
         :param func process_manager: A ProcessManager, from
             salt.utils.process.ProcessManager
         """
+        if kwargs is None:
+            kwargs = {}
         if hasattr(self.transport, "publish_daemon"):
             process_manager.add_process(self._publish_daemon, kwargs=kwargs)
 
@@ -1318,6 +1320,12 @@ class MasterPubServerChannel:
         self._discover_token = _discover_token
         self._discover_candidates = {}
 
+    def _remove_client_present(self, client):
+        """
+        No-op for MasterPubServerChannel. Presence events are handled
+        differently in clustered environments.
+        """
+
     def gen_token(self):
         return "".join(random.choices(string.ascii_letters + string.digits, k=32))
 
@@ -1451,6 +1459,8 @@ class MasterPubServerChannel:
         :param func process_manager: A ProcessManager, from
             salt.utils.process.ProcessManager
         """
+        if kwargs is None:
+            kwargs = {}
         if hasattr(self.transport, "publish_daemon"):
             process_manager.add_process(
                 self._publish_daemon, kwargs=kwargs, name="EventPublisher"
