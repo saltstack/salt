@@ -280,6 +280,12 @@ class PublishClient(salt.transport.base.PublishClient):
             self._socket.connect(master_pub_uri)
         if connect_callback:
             await connect_callback(True)
+            # Start ZMQ socket monitor to detect reconnections and trigger re-auth
+            if HAS_ZMQ_MONITOR and not getattr(self, "_monitor", None):
+                self._monitor = ZeroMQSocketMonitor(
+                    self._socket, reconnect_callback=connect_callback
+                )
+                self._monitor.start_io_loop(self.io_loop)
 
     async def connect_uri(self, uri, connect_callback=None, disconnect_callback=None):
         self._connect_called = True
@@ -874,7 +880,7 @@ class AsyncReqMessageClient:
 class ZeroMQSocketMonitor:
     __EVENT_MAP = None
 
-    def __init__(self, socket):
+    def __init__(self, socket, reconnect_callback=None):
         """
         Create ZMQ monitor sockets
 
@@ -885,6 +891,8 @@ class ZeroMQSocketMonitor:
         self._monitor_socket = self._socket.get_monitor_socket()
         self._monitor_task = None
         self._running = asyncio.Event()
+        self._reconnect_callback = reconnect_callback
+        self._initial_connect_done = False
 
     def start_io_loop(self, io_loop):
         log.trace("Event monitor start!")
@@ -937,6 +945,11 @@ class ZeroMQSocketMonitor:
         log.debug("ZeroMQ event: %s", evt)
         if evt["event"] == zmq.EVENT_MONITOR_STOPPED:
             self.stop()
+        elif evt["event"] == zmq.EVENT_CONNECTED:
+            if self._initial_connect_done and self._reconnect_callback:
+                log.debug("ZMQ socket reconnected, triggering re-authentication")
+                asyncio.ensure_future(self._reconnect_callback(True))
+            self._initial_connect_done = True
 
     def stop(self):
         if self._socket is None:
