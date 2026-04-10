@@ -38,7 +38,7 @@ jobs:
     environment: release-check
     steps:
       - name: Check For Admin Permission
-        uses: actions-cool/check-user-permission@v2
+        uses: actions-cool/check-user-permission@c21884f3dda18dafc2f8b402fe807ccc9ec1aa5e # v2
         with:
           require: admin
           username: ${{ github.triggering_actor }}
@@ -59,12 +59,12 @@ jobs:
       releases: ${{ steps.get-salt-releases.outputs.releases }}
       nox-archive-hash: ${{ steps.nox-archive-hash.outputs.nox-archive-hash }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0  # Full clone to also get the tags to get the right salt version
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.11"
 
@@ -112,12 +112,12 @@ jobs:
     environment: release
     steps:
       - name: Clone The Salt Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ssh-key: ${{ secrets.GHA_SSH_KEY }}
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.11"
 
@@ -190,10 +190,10 @@ jobs:
     env:
       USE_S3_CACHE: 'false'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.11"
 
@@ -239,7 +239,7 @@ jobs:
       - release
       - publish-pypi
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Publish Release v${{ needs.prepare-workflow.outputs.salt-version }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -261,7 +261,7 @@ jobs:
     steps:
       - name: Get workflow information
         id: get-workflow-info
-        uses: im-open/workflow-conclusion@v2
+        uses: im-open/workflow-conclusion@fce18569e28a9f2ed1feca1e6d4251e6a7365fdc # v2
 
       - run: |
           # shellcheck disable=SC2129
