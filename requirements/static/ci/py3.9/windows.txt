@@ -156,6 +156,8 @@ gitpython==3.1.43
     #   -r requirements/static/ci/common.in
 google-auth==2.35.0
     # via -r requirements/static/ci/common.in
+greenlet==3.2.5
+    # via sqlalchemy
 idna==3.7
     # via
     #   -c requirements/static/pkg/py3.9/windows.txt
@@ -468,6 +470,8 @@ smmap==5.0.1
     # via
     #   -c requirements/static/pkg/py3.9/windows.txt
     #   gitdb
+sqlalchemy==2.0.48
+    # via -r requirements/static/ci/common.in
 sqlparse==0.5.5
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
@@ -503,6 +507,7 @@ typing-extensions==4.15.0
     #   pyopenssl
     #   pytest-shell-utilities
     #   pytest-system-statistics
+    #   sqlalchemy
     #   virtualenv
 urllib3==1.26.20
     # via
