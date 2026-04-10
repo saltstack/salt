@@ -20,6 +20,7 @@ from collections import OrderedDict
 
 import salt.acl
 import salt.auth
+import salt.cache.localfs_key
 import salt.channel.server
 import salt.client
 import salt.client.ssh.client
@@ -340,9 +341,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             self.handle_key_cache()
             if self.opts.get("pki_index_enabled", False):
                 try:
-                    from salt.cache import localfs_key
-
-                    localfs_key.rebuild_index(self.opts)
+                    salt.cache.localfs_key.rebuild_index(self.opts)
                 except Exception as exc:  # pylint: disable=broad-except
                     log.error("Failed to rebuild PKI index: %s", exc)
             self.handle_presence(old_present)

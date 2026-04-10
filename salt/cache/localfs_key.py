@@ -19,9 +19,15 @@ the .p file extension to work with legacy keys via banks.
 """
 
 import errno
+import hashlib
 import logging
 import os
 import os.path
+
+try:
+    import pwd
+except ImportError:
+    pwd = None
 import shutil
 import stat
 import tempfile
@@ -90,7 +96,7 @@ def _get_index(opts):
     Get or create the PKI index for the given options.
     The index is an internal optimization for fast O(1) lookups.
     """
-    import salt.utils.mmap_cache
+    import salt.utils.mmap_cache  # pylint: disable=import-outside-toplevel
 
     if "cluster_id" in opts and opts["cluster_id"]:
         pki_dir = opts["cluster_pki_dir"]
@@ -106,8 +112,6 @@ def _get_index(opts):
         cachedir = opts.get("cachedir", "/var/cache/salt/master")
 
         # Make the index filename unique per pki_dir to support multiple Master instances
-        import hashlib
-
         pki_hash = hashlib.sha256(salt.utils.stringutils.to_bytes(pki_dir)).hexdigest()[
             :8
         ]
@@ -245,11 +249,9 @@ def store(bank, key, data, cachedir, user, **kwargs):
 
     if user:
         try:
-            import pwd
-
             uid = pwd.getpwnam(user).pw_uid
             os.chown(tmpfname, uid, -1)
-        except (KeyError, ImportError, OSError):
+        except (KeyError, ImportError, OSError, NameError):
             # The specified user was not found, allow the backup systems to
             # report the error
             pass
