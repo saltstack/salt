@@ -575,8 +575,7 @@ class Key:
 
     def list_keys(self):
         """
-        Return a dict of managed keys and what the key status are.
-        The cache layer (localfs_key) uses an internal index for fast O(1) lookups.
+        Return a dict of managed keys and what the key status are
         """
         if self.opts.get("key_cache") == "sched":
             acc = "accepted"
@@ -613,9 +612,10 @@ class Key:
                     ret[key] = salt.utils.data.sorted_ignorecase(ret[key])
 
                 # Denied keys are not in the index currently
-                ret["minions_denied"] = salt.utils.data.sorted_ignorecase(
+                for id_ in salt.utils.data.sorted_ignorecase(
                     self.cache.list("denied_keys")
-                )
+                ):
+                    ret["minions_denied"].append(id_)
                 return ret
 
         ret = {
@@ -624,37 +624,18 @@ class Key:
             "minions": [],
             "minions_denied": [],
         }
+        for id_ in salt.utils.data.sorted_ignorecase(self.cache.list("keys")):
+            key = self.cache.fetch("keys", id_)
 
-        # Try to use the optimized list_all() method if available
-        try:
-            all_keys = self.cache.list_all("keys")
-            for minion_id, data in all_keys.items():
-                state = data.get("state")
-                if state == "accepted":
-                    ret["minions"].append(minion_id)
-                elif state == "pending":
-                    ret["minions_pre"].append(minion_id)
-                elif state == "rejected":
-                    ret["minions_rejected"].append(minion_id)
-        except AttributeError:
-            # Fallback for cache backends that don't implement list_all()
-            for id_ in salt.utils.data.sorted_ignorecase(self.cache.list("keys")):
-                key = self.cache.fetch("keys", id_)
-                if key["state"] == "accepted":
-                    ret["minions"].append(id_)
-                elif key["state"] == "pending":
-                    ret["minions_pre"].append(id_)
-                elif key["state"] == "rejected":
-                    ret["minions_rejected"].append(id_)
+            if key["state"] == "accepted":
+                ret["minions"].append(id_)
+            elif key["state"] == "pending":
+                ret["minions_pre"].append(id_)
+            elif key["state"] == "rejected":
+                ret["minions_rejected"].append(id_)
 
-        # Sort for consistent output
-        for key in ret:
-            ret[key] = salt.utils.data.sorted_ignorecase(ret[key])
-
-        # Denied keys
-        ret["minions_denied"] = salt.utils.data.sorted_ignorecase(
-            self.cache.list("denied_keys")
-        )
+        for id_ in salt.utils.data.sorted_ignorecase(self.cache.list("denied_keys")):
+            ret["minions_denied"].append(id_)
         return ret
 
     def local_keys(self):
