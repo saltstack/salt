@@ -523,10 +523,10 @@ Now, to beef up the vim SLS formula, a ``vimrc`` can be added:
 
     /etc/vimrc:
       file.managed:
-        - source: salt://vimrc
-        - mode: 644
-        - user: root
-        - group: root
+        source: salt://vimrc
+        mode: 644
+        user: root
+        group: root
 
 Now the desired ``vimrc`` needs to be copied into the Salt file server to
 ``/srv/salt/vimrc``. In Salt, everything is a file, so no path redirection needs
@@ -555,7 +555,7 @@ make an nginx subdirectory and add an init.sls file:
     nginx:
       pkg.installed: []
       service.running:
-        - require:
+        require:
           - pkg: nginx
 
 A few concepts are introduced in this SLS formula.
@@ -605,10 +605,10 @@ called ``edit`` and change the ``vim.sls`` file to reflect the change:
 
     /etc/vimrc:
       file.managed:
-        - source: salt://edit/vimrc
-        - mode: 644
-        - user: root
-        - group: root
+        source: salt://edit/vimrc
+        mode: 644
+        user: root
+        group: root
 
 Only the source path to the vimrc file has changed. Now the formula is
 referenced as ``edit.vim`` because it resides in the edit subdirectory.

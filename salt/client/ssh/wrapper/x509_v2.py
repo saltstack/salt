@@ -939,7 +939,7 @@ def certificate_managed_wrapper(
         ret[name + "_crt"] = {
             "x509.certificate_managed_ssh": [{k: v} for k, v in cert_ret.items()]
         }
-        ret[name + "_crt"]["x509.certificate_managed_ssh"].append(
+        ret[name + "_crt"]["x509.certificate_managed_ssh"].extend(
             {k: v} for k, v in cert_file_args.items()
         )
     except (CommandExecutionError, SaltInvocationError) as err:
