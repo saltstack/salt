@@ -1,19 +1,54 @@
 """
 Integration test fixtures for Salt Resources.
 
-Spins up a master and a minion configured with two dummy resources
-(dummy-01, dummy-02).  All tests in this package run against these
-two daemons.
+Spins up a master and a minion whose dummy resources (dummy-01, dummy-02) are
+declared only in Pillar under ``resources:`` — not in the minion config file.
+All tests in this package run against these two daemons.
 """
 
+import textwrap
 import time
 
 import pytest
 
 from tests.conftest import FIPS_TESTRUN
 
+MINION_ID = "resources-minion"
+
 # Dummy resource IDs that the minion manages in every test in this package.
 DUMMY_RESOURCES = ["dummy-01", "dummy-02"]
+
+
+@pytest.fixture(scope="package")
+def pillar_tree_dummy_resources(salt_master):
+    """
+    Pillar declaring ``resources.dummy.resource_ids`` for the test minion.
+
+    Resource discovery reads this tree via ``pillar_resources_tree``; the minion
+    must not rely on a static ``resources:`` key in minion opts.
+    """
+    top_file = textwrap.dedent(
+        f"""
+        base:
+          '{MINION_ID}':
+            - dummy_resources
+        """
+    )
+    pillar_sls = textwrap.dedent(
+        """
+        resources:
+          dummy:
+            resource_ids:
+              - dummy-01
+              - dummy-02
+        """
+    )
+    top_tempfile = salt_master.pillar_tree.base.temp_file("top.sls", top_file)
+    sls_tempfile = salt_master.pillar_tree.base.temp_file(
+        "dummy_resources.sls", pillar_sls
+    )
+    with top_tempfile, sls_tempfile:
+        yield
 
 
 @pytest.fixture(scope="package")
@@ -36,19 +71,17 @@ def salt_master(request, salt_factories):
 
 
 @pytest.fixture(scope="package")
-def salt_minion(salt_master):
+def salt_minion(salt_master, pillar_tree_dummy_resources):
     config_overrides = {
         "fips_mode": FIPS_TESTRUN,
         "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
-        # Configure dummy resources so the minion dispatches resource jobs.
-        "resources": {"dummy": DUMMY_RESOURCES},
         # Use threads (not processes) — this is the path our Race 1/Race 2 fixes
         # target and the most common deployment mode for resource-managing minions.
         "multiprocessing": False,
     }
     factory = salt_master.salt_minion_daemon(
-        "resources-minion",
+        MINION_ID,
         overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
@@ -57,6 +90,9 @@ def salt_minion(salt_master):
     )
     with factory.started(start_timeout=120):
         salt_call_cli = factory.salt_call_cli()
+        ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True, _timeout=120)
+        assert ret.returncode == 0, ret
+        assert ret.data is True, ret
         ret = salt_call_cli.run("saltutil.sync_all", _timeout=120)
         assert ret.returncode == 0, ret
         # The minion fires _register_resources_with_master() as a background
