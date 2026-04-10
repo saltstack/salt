@@ -33,6 +33,13 @@ if PY3:
 else:
     import urllib as urllib_parse  # py2
 
+if PY3:
+    import http.cookies as _stdlib_cookie
+else:
+    import Cookie as _stdlib_cookie
+
+CookieError = _stdlib_cookie.CookieError
+
 wsgi_safe_tests = []
 
 
@@ -211,6 +218,63 @@ class CookieTest(WebTestCase):
                 self.set_cookie("semicolon", "a;b")
                 self.set_cookie("quote", 'a"b')
 
+        class SetCookieForbiddenCharHandler(RequestHandler):
+            def get(self):
+                # Special characters are allowed in cookie values (see
+                # SetCookieSpecialCharHandler); this tests names/attributes.
+                for char in list(map(chr, range(0x20))) + [chr(0x7F), ";"]:
+                    try:
+                        self.set_cookie("foo" + char, "bar")
+                        self.write(
+                            "Didn't get expected exception for char %r in name\n"
+                            % (char,)
+                        )
+                    except CookieError as e:
+                        if "Invalid cookie attribute name" not in str(e):
+                            self.write(
+                                "unexpected exception for char %r in name: %s\n"
+                                % (char, e)
+                            )
+
+                    try:
+                        self.set_cookie("foo", "bar", domain="example" + char + ".com")
+                        self.write(
+                            "Didn't get expected exception for char %r in domain\n"
+                            % (char,)
+                        )
+                    except CookieError as e:
+                        if "Invalid cookie attribute domain" not in str(e):
+                            self.write(
+                                "unexpected exception for char %r in domain: %s\n"
+                                % (char, e)
+                            )
+
+                    try:
+                        self.set_cookie("foo", "bar", path="/" + char)
+                        self.write(
+                            "Didn't get expected exception for char %r in path\n"
+                            % (char,)
+                        )
+                    except CookieError as e:
+                        if "Invalid cookie attribute path" not in str(e):
+                            self.write(
+                                "unexpected exception for char %r in path: %s\n"
+                                % (char, e)
+                            )
+
+                    try:
+                        self.set_cookie("foo", "bar", samesite="a" + char)
+                        self.write(
+                            "Didn't get expected exception for char %r in samesite\n"
+                            % (char,)
+                        )
+                    except CookieError as e:
+                        if "Invalid cookie attribute samesite" not in str(e):
+                            self.write(
+                                "unexpected exception for char %r in samesite: %s\n"
+                                % (char, e)
+                            )
+
         class SetCookieOverwriteHandler(RequestHandler):
             def get(self):
                 self.set_cookie("a", "b", domain="example.com")
@@ -238,6 +302,7 @@ class CookieTest(WebTestCase):
                 ("/get", GetCookieHandler),
                 ("/set_domain", SetCookieDomainHandler),
                 ("/special_char", SetCookieSpecialCharHandler),
+                ("/forbidden_char", SetCookieForbiddenCharHandler),
                 ("/set_overwrite", SetCookieOverwriteHandler),
                 ("/set_max_age", SetCookieMaxAgeHandler),
                 ("/set_expires_days", SetCookieExpiresDaysHandler),
@@ -289,6 +354,12 @@ class CookieTest(WebTestCase):
             logging.debug("trying %r", header)
             response = self.fetch("/get", headers={"Cookie": header})
             self.assertEqual(response.body, utf8(expected))
+
+    def test_set_cookie_forbidden_char(self):
+        response = self.fetch("/forbidden_char")
+        self.assertEqual(response.code, 200)
+        self.maxDiff = 10000
+        self.assertMultiLineEqual(to_unicode(response.body), "")
 
     def test_set_cookie_overwrite(self):
         response = self.fetch("/set_overwrite")
