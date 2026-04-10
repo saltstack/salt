@@ -85,7 +85,7 @@ if IS_WINDOWS:
 else:
     ONEDIR_PYTHON_PATH = ONEDIR_ARTIFACT_PATH / "bin" / "python3"
 # Python versions to run against
-_PYTHON_VERSIONS = ("3", "3.8", "3.9", "3.10", "3.11")
+_PYTHON_VERSIONS = ("3", "3.8", "3.9", "3.10", "3.11", "3.12")
 
 # Nox options
 #  Reuse existing virtualenvs

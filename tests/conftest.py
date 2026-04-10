@@ -1359,6 +1359,8 @@ def sshd_config_dir(salt_factories):
 
 @pytest.fixture(scope="module")
 def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
+    if not salt.utils.path.which("sshd"):
+        pytest.skip("The 'sshd' binary was not found. Skipping salt-ssh tests.")
     sshd_config_dict = {
         "Protocol": "2",
         # Turn strict modes off so that we can operate in /tmp

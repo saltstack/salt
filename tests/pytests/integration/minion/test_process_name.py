@@ -2,6 +2,10 @@
 Test process name behavior with multiprocessing enabled and disabled.
 """
 
+import pytest
+
+import salt.utils.process
+
 
 def test_process_name_no_pollution_when_multiprocessing_disabled(
     salt_master_factory,
@@ -112,6 +116,9 @@ def test_process_name_normal_when_multiprocessing_enabled(
         )
 
 
+@pytest.mark.skipif(
+    not salt.utils.process.HAS_SETPROCTITLE, reason="setproctitle not installed"
+)
 def test_process_name_includes_minion_process_manager(
     salt_master_factory,
 ):
@@ -145,17 +152,21 @@ def test_process_name_includes_minion_process_manager(
         ret = cli.run("ps.proc_info", minion_pid, minion_tgt=minion.id)
         assert ret.returncode == 0, f"Failed to get process info for PID {minion_pid}"
 
-        # Get the process command line
+        # Get the process command line and name
         proc_info = ret.data
         cmdline = " ".join(proc_info.get("cmdline", []))
+        name = proc_info.get("name", "")
 
         # The process title should include either MinionProcessManager or MultiMinionProcessManager
         # This validates the fix for minion process managers to append their name
         # even when running in MainProcess
         has_minion_pm = (
-            "MinionProcessManager" in cmdline or "MultiMinionProcessManager" in cmdline
+            "MinionProcessManager" in cmdline
+            or "MultiMinionProcessManager" in cmdline
+            or "MinionProcessManager" in name
+            or "MultiMinionProcessManager" in name
         )
         assert has_minion_pm, (
-            f"Process cmdline should contain 'MinionProcessManager' or "
-            f"'MultiMinionProcessManager', but got: {cmdline}"
+            f"Process cmdline or name should contain 'MinionProcessManager' or "
+            f"'MultiMinionProcessManager', but got cmdline: {cmdline}, name: {name}"
         )

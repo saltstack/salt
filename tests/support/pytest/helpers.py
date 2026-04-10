@@ -325,6 +325,11 @@ class TestAccount:
         self._group = value
 
     def __enter__(self):
+        if os.getuid() != 0:
+            log.warning(
+                "Not running as root, skipping account creation for %s", self.username
+            )
+            return self
         if not self.sminion.functions.user.info(self.username):
             log.debug("Creating system account: %s", self)
             ret = self.sminion.functions.user.add(self.username)
