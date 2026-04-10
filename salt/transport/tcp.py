@@ -1573,7 +1573,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.pub_server.add_socket(sock)
 
         if not self.pub_path and not (self.pub_host and self.pub_port):
-            raise Exception("A host and port or a path must be provided")
+            log.debug("No pub_path or pub_host/port provided for PublishServer")
 
         # Set up Salt IPC server
         if self.pull_path:
