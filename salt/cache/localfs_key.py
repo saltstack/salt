@@ -190,6 +190,7 @@ def store(bank, key, data, cachedir, user, **kwargs):
     Store key state information. storing a accepted/pending/rejected state
     means clearing it from the other 2. denied is handled separately
     """
+    base = None
     if bank in ["keys", "denied_keys"] and not valid_id(__opts__, key):
         raise SaltCacheError(f"key {key} is not a valid minion_id")
 
@@ -228,23 +229,23 @@ def store(bank, key, data, cachedir, user, **kwargs):
             cachedir = __opts__["pki_dir"]
 
     savefn = Path(cachedir) / base / key
-    base = savefn.parent
+    base_dir = savefn.parent
 
     if not clean_path(cachedir, str(savefn), subdir=True):
         raise SaltCacheError(f"key {key} is not a valid key path.")
 
     try:
-        os.makedirs(base)
+        os.makedirs(base_dir)
     except OSError as exc:
         if exc.errno != errno.EEXIST:
             raise SaltCacheError(
-                f"The cache directory, {base}, could not be created: {exc}"
+                f"The cache directory, {base_dir}, could not be created: {exc}"
             )
 
     # delete current state before re-serializing new state
     flush(bank, key, cachedir, **kwargs)
 
-    tmpfh, tmpfname = tempfile.mkstemp(dir=base)
+    tmpfh, tmpfname = tempfile.mkstemp(dir=base_dir)
     os.close(tmpfh)
 
     if user:
