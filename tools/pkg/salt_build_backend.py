@@ -9,11 +9,69 @@ if PROJECT_ROOT not in sys.path:
 from setuptools import build_meta as _orig
 
 # PEP 517 hooks
-prepare_metadata_for_build_wheel = _orig.prepare_metadata_for_build_wheel
-build_wheel = _orig.build_wheel
+def prepare_metadata_for_build_wheel(metadata_directory, config_settings=None):
+    # This hook is used by 'pip install' and 'build' to get metadata without building a wheel
+    # We need to make sure the metadata we return includes our dynamic fields
+    # Setuptools doesn't automatically call get_dynamic_metadata for us in all versions
+    
+    # First, let setuptools do its thing
+    ret = _orig.prepare_metadata_for_build_wheel(metadata_directory, config_settings)
+    
+    # Now we need to update the PKG-INFO/METADATA file it created
+    # The name of the directory is usually salt-<version>.dist-info
+    dist_info_dir = os.path.join(metadata_directory, ret)
+    metadata_file = os.path.join(dist_info_dir, "METADATA")
+    
+    with open(metadata_file, "r", encoding="utf-8") as f:
+        content = f.read()
+    
+    # If it already has Requires-Dist, we don't want to double it
+    if "Requires-Dist:" not in content:
+        requires = get_install_requires()
+        new_lines = []
+        for req in requires:
+            new_lines.append(f"Requires-Dist: {req}")
+        
+        # Insert before the description (first empty line followed by content)
+        if "\n\n" in content:
+            parts = content.split("\n\n", 1)
+            content = parts[0] + "\n" + "\n".join(new_lines) + "\n\n" + parts[1]
+        else:
+            content += "\n" + "\n".join(new_lines)
+            
+        with open(metadata_file, "w", encoding="utf-8") as f:
+            f.write(content)
+            
+    return ret
+
+def build_wheel(wheel_directory, config_settings=None, metadata_directory=None):
+    # If metadata_directory is provided, setuptools should use it.
+    # If not, we might want to create it ourselves to ensure dependencies are there.
+    if metadata_directory is None:
+        import tempfile
+        with tempfile.TemporaryDirectory() as td:
+            metadata_directory = td
+            prepare_metadata_for_build_wheel(metadata_directory, config_settings)
+            return _orig.build_wheel(wheel_directory, config_settings, metadata_directory)
+    return _orig.build_wheel(wheel_directory, config_settings, metadata_directory)
+
 build_sdist = _orig.build_sdist
 get_requires_for_build_wheel = _orig.get_requires_for_build_wheel
 get_requires_for_build_sdist = _orig.get_requires_for_build_sdist
+
+
+def get_dynamic_metadata(name, settings=None):
+    if name == "version":
+        return get_salt_version()
+    if name == "dependencies":
+        return get_install_requires()
+    if name == "optional-dependencies":
+        return get_extras_require()
+    if name == "entry-points":
+        return get_entry_points()
+    if name == "scripts":
+        return get_scripts()
+    raise AttributeError(name)
 
 
 def _parse_requirements_file(requirements_file):
