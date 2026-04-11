@@ -264,7 +264,7 @@ if ( ! $? ) {
 & "$SCRIPT_DIR\msi\build_pkg.ps1" @KeywordArguments
 
 if ( ! $? ) {
-    Write-Host "Failed to build NSIS package"
+    Write-Host "Failed to build MSI package"
     exit 1
 }
 

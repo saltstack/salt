@@ -85,6 +85,7 @@ class SaltPkgInstall:
     file_ext: bool = attr.ib(default=None)
     relenv: bool = attr.ib(default=True)
     installer_timeout: int = attr.ib(default=attr.NOTHING)
+    install_env: dict = attr.ib(factory=dict)
 
     @proc.default
     def _default_proc(self):
@@ -225,6 +226,11 @@ class SaltPkgInstall:
         if not self.upgrade and not self.use_prev_version:
             version = self.artifact_version
         else:
+            if self.prev_version is None:
+                raise ValueError(
+                    "prev_version must be provided for upgrade tests. "
+                    "Use --prev-version option to specify the previous version."
+                )
             version = self.prev_version
             parsed = packaging.version.parse(version)
             version = f"{parsed.major}.{parsed.minor}"
@@ -491,18 +497,22 @@ class SaltPkgInstall:
                 )
                 log.info("MSI returncode: %s", ret.returncode)
                 assert ret.returncode in [0, 3010]
+
+                if upgrade:
+                    # MSI major upgrades with mismatched component GUIDs can
+                    # remove files that should be kept. Running a repair
+                    # ensures all files from the new product are on disk.
+                    repair_cmd = f'msiexec.exe /qn /fa "{pkg}" /norestart'
+                    repair_ret = subprocess.run(
+                        repair_cmd,
+                        shell=True,  # nosec
+                        check=False,
+                    )
+                    log.info("MSI repair returncode: %s", repair_ret.returncode)
             else:
                 log.error("Invalid package: %s", pkg)
                 return False
 
-            # XXX This should be temporary. See also a similar thing happening
-            # in tests/pytests/pkg/conftest.py
-            grainsdir = pathlib.Path(
-                r"C:\Program Files\Salt Project\Salt\Lib\site-packages\salt\grains"
-            )
-            shutil.copy(r"salt\grains\disks.py", grainsdir)
-
-            # Remove the service installed by the installer
             log.debug("Removing installed salt-minion service")
             self.proc.run(str(self.ssm_bin), "stop", "salt-minion", "confirm")
             subprocess.run(
@@ -583,6 +593,12 @@ class SaltPkgInstall:
                 env=env,
             )
         else:
+            # Fresh install path
+            env = os.environ.copy()
+            # Add any custom install environment variables
+            if self.install_env:
+                env.update(self.install_env)
+
             args = ["install", "-y"]
             if self.distro_id == "photon":
                 ret = self.proc.run(
@@ -596,7 +612,7 @@ class SaltPkgInstall:
                     args.append("--nogpgcheck")
             log.info("Installing packages:\n%s", pprint.pformat(self.pkgs))
             args += self.pkgs
-            ret = self.proc.run(self.pkg_mngr, *args)
+            ret = self.proc.run(self.pkg_mngr, *args, env=env)
 
         if not platform.is_darwin() and not platform.is_windows():
             # Make sure we don't have any trailing references to old package file locations
@@ -838,7 +854,6 @@ class SaltPkgInstall:
                 *pkgs_to_install,
                 "-y",
             )
-            log.error("**WTF %r", ret)
             self._check_retcode(ret)
 
         elif distro_name in ["debian", "ubuntu"]:
@@ -872,9 +887,7 @@ class SaltPkgInstall:
             self._check_retcode(ret)
             pref_file = pathlib.Path("/etc", "apt", "preferences.d", "salt-pin-1001")
             pref_file.parent.mkdir(exist_ok=True)
-            pin = f"{self.prev_version.rsplit('.', 1)[0]}.*"
-            if downgrade:
-                pin = self.prev_version
+            pin = self.prev_version
             with salt.utils.files.fopen(pref_file, "w") as fp:
                 fp.write(
                     f"Package: salt-*\n" f"Pin: version {pin}\n" f"Pin-Priority: 1001"
@@ -968,15 +981,14 @@ class SaltPkgInstall:
                 )
                 assert ret.returncode in [0, 3010]
             else:
-                ret = self.proc.run(str(pkg_path), "/start-minion=0", "/S", timeout=600)
+                # ret = self.proc.run("start", "/wait", f"\"{pkg_path} /start-minion=0 /S\"")
+                batch_file = pkg_path.parent / "install_nsis.cmd"
+                batch_content = f"start /wait {str(pkg_path)} /start-minion=0 /S"
+                with salt.utils.files.fopen(batch_file, "w") as fp:
+                    fp.write(batch_content)
+                # Now run the batch file
+                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
-
-            # XXX This should be temporary. See also a similar thing happening
-            # in tests/pytests/pkg/conftest.py
-            grainsdir = pathlib.Path(
-                r"C:\Program Files\Salt Project\Salt\Lib\site-packages\salt\grains"
-            )
-            shutil.copy(r"salt\grains\disks.py", grainsdir)
 
             log.debug("Removing installed salt-minion service")
             ret = self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
@@ -1194,11 +1206,7 @@ class SaltPkgInstall:
         # Did we left anything running?!
         procs = []
         for proc in psutil.process_iter():
-            try:
-                name = proc.name()
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                continue
-            if "salt" in name:
+            if "salt" in proc.name():
                 cmdl_strg = " ".join(str(element) for element in _get_cmdline(proc))
                 if "/opt/saltstack" in cmdl_strg:
                     procs.append(proc)
@@ -1340,8 +1348,8 @@ class PkgLaunchdSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
 
         # Dereference the internal _process attribute
         self._process = None
-        # Let's log and kill any child processes left behind, including the main
-        # subprocess if it failed to properly stop
+        # Lets log and kill any child processes left behind, including the main subprocess
+        # if it failed to properly stop
         terminate_process(
             pid=pid,
             kill_children=True,
@@ -1625,20 +1633,6 @@ class SaltMasterWindows(SaltMaster):
             script_name="salt-master",
             code_dir=self.factories_manager.code_dir.parent,
         )
-
-        # XXX: Add install path to cli_scripts.generate_scripts?
-        def patch_script(script):
-            text = script.read_text()
-            newlines = []
-            for line in text.splitlines():
-                newlines.append(line)
-                if line == "sys.path.insert(0, CODE_DIR)":
-                    newlines.append(
-                        'sys.path.insert(0, "C:\\Program Files\\Salt Project\\Salt\\Lib\\site-packages")'
-                    )
-            script.write_text(os.linesep.join(newlines))
-
-        patch_script(self.factories_manager.scripts_dir / "cli_salt_master.py")
 
     def _get_impl_class(self):
         return DaemonImpl
