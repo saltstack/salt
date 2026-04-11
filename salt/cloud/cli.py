@@ -58,7 +58,6 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                     [os.path.dirname(self.config["conf_file"])],
                     salt_master_user,
                     root_dir=self.config["root_dir"],
-                    opts=self.config,
                 )
         except OSError as err:
             log.error("Error while verifying the environment: %s", err)
