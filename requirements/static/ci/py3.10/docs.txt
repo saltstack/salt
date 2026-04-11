@@ -185,6 +185,10 @@ packaging==24.0
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/base.txt
     #   sphinx
+passlib==1.7.4
+    # via
+    #   -c requirements/static/ci/py3.10/linux.txt
+    #   -r requirements/base.txt
 platformdirs==4.9.4
     # via
     #   -c requirements/static/ci/py3.10/linux.txt

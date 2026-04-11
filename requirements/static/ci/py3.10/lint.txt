@@ -416,6 +416,8 @@ paramiko==3.4.0
 passlib==1.7.4
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
+    #   -c requirements/static/pkg/py3.10/linux.txt
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
 pathspec==0.11.1
     # via
