@@ -463,6 +463,8 @@ VALID_OPTS = immutabletypes.freeze(
         "return_retry_tries": int,
         # Configures amount of retries for Syndic to Master of Masters
         "syndic_retries": int,
+        # Top-level pillar key for per-type resource configuration (default: resources)
+        "resource_pillar_key": str,
         # Specify one or more returners in which all events will be sent to. Requires that the returners
         # in question have an event_return(event) function!
         "event_return": (list, str),
@@ -1277,6 +1279,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "return_retry_timer": 5,
         "return_retry_timer_max": 10,
         "return_retry_tries": 3,
+        "resource_pillar_key": "resources",
         "syndic_retries": 3,
         "random_reauth_delay": 10,
         "winrepo_source_dir": "salt://win/repo-ng/",
