@@ -1115,9 +1115,16 @@ class PubServerChannel:
         if secrets is not None:
             salt.master.SMaster.secrets = secrets
         self.master_key = salt.crypt.MasterKeys(self.opts)
-        self.transport.publish_daemon(
-            self.publish_payload, self.presence_callback, self.remove_presence_callback
-        )
+        if hasattr(self.transport, "publish_daemon"):
+            daemon_kwargs = {}
+            if type(self.transport).__name__ == "_TCPPubServerPublisher":
+                daemon_kwargs["io_loop"] = self.io_loop
+            self.transport.publish_daemon(
+                self.publish_payload,
+                self.presence_callback,
+                self.remove_presence_callback,
+                **daemon_kwargs,
+            )
 
     def presence_callback(self, subscriber, msg):
         if msg["enc"] != "aes":
@@ -1533,11 +1540,15 @@ class MasterPubServerChannel:
                 )
             )
         else:
-            self.transport.publish_daemon(
-                self.publish_payload,
-                presence_callback=self._remove_client_present,
-                io_loop=self.io_loop,
-            )
+            if hasattr(self.transport, "publish_daemon"):
+                daemon_kwargs = {}
+                if type(self.transport).__name__ == "_TCPPubServerPublisher":
+                    daemon_kwargs["io_loop"] = self.io_loop
+                self.transport.publish_daemon(
+                    self.publish_payload,
+                    presence_callback=self._remove_client_present,
+                    **daemon_kwargs,
+                )
 
         # Re-initialize master_key in the daemon process
         self.master_key = salt.crypt.MasterKeys(self.opts)
