@@ -30,7 +30,6 @@ class SPM(parsers.SPMParser):
             v_dirs,
             self.config["user"],
             root_dir=self.config["root_dir"],
-            opts=self.config,
         )
         client = salt.spm.SPMClient(ui, self.config)
         client.run(self.args)

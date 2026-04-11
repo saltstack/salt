@@ -168,7 +168,6 @@ class Master(
             permissive=self.config["permissive_pki_access"],
             root_dir=self.config["root_dir"],
             pki_dir=pki_dir,
-            opts=self.config,
         )
 
     def prepare(self):
@@ -297,7 +296,6 @@ class Minion(
                     permissive=self.config["permissive_pki_access"],
                     root_dir=self.config["root_dir"],
                     pki_dir=self.config["pki_dir"],
-                    opts=self.config,
                 )
         except OSError as error:
             self.environment_failure(error)
@@ -489,7 +487,6 @@ class ProxyMinion(
                     permissive=self.config["permissive_pki_access"],
                     root_dir=self.config["root_dir"],
                     pki_dir=self.config["pki_dir"],
-                    opts=self.config,
                 )
         except OSError as error:
             self.environment_failure(error)
@@ -595,7 +592,6 @@ class Syndic(
                     permissive=self.config["permissive_pki_access"],
                     root_dir=self.config["root_dir"],
                     pki_dir=self.config["pki_dir"],
-                    opts=self.config,
                 )
         except OSError as error:
             self.environment_failure(error)
