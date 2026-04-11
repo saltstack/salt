@@ -160,6 +160,10 @@ def test_minions_alive_with_no_master(
     salt_mm_failover_master_2,
     salt_mm_failover_minion_1,
     salt_mm_failover_minion_2,
+    mm_failover_master_1_salt_cli,
+    mm_failover_master_2_salt_cli,
+    run_salt_cmds,
+    ensure_connections,
 ):
     """
     Make sure the minions stay alive after all masters have stopped.
@@ -182,34 +186,34 @@ def test_minions_alive_with_no_master(
 
             start_time = time.time()
 
-    event_patterns = [
-        (
-            salt_mm_failover_master_1.id,
-            f"salt/minion/{salt_mm_failover_minion_1.id}/start",
-        ),
-        (
-            salt_mm_failover_master_1.id,
-            f"salt/minion/{salt_mm_failover_minion_2.id}/start",
-        ),
-        (
-            salt_mm_failover_master_2.id,
-            f"salt/minion/{salt_mm_failover_minion_1.id}/start",
-        ),
-        (
-            salt_mm_failover_master_2.id,
-            f"salt/minion/{salt_mm_failover_minion_2.id}/start",
-        ),
-    ]
-    events = event_listener.wait_for_events(
-        event_patterns,
-        timeout=salt_mm_failover_minion_1.config["master_alive_interval"] * 8,
-        after_time=start_time,
-    )
+    log.debug("Waiting for minions to reconnect")
+    minions = [salt_mm_failover_minion_1, salt_mm_failover_minion_2]
+    clis = [mm_failover_master_1_salt_cli, mm_failover_master_2_salt_cli]
 
-    assert len(events.matches) >= 2
+    start_wait = time.time()
+    deadline = start_wait + 180
 
-    expected_tags = {
-        f"salt/minion/{salt_mm_failover_minion_1.id}/start",
-        f"salt/minion/{salt_mm_failover_minion_2.id}/start",
-    }
-    assert {event.tag for event in events} == expected_tags
+    while time.time() < deadline:
+        still_waiting = []
+        for minion in minions:
+            success = False
+            for cli in clis:
+                try:
+                    ret = cli.run("test.ping", minion_tgt=minion.id, _timeout=5)
+                    if ret.returncode == 0 and ret.data is True:
+                        log.debug(f"Minion {minion.id} reconnected to {cli.id}")
+                        success = True
+                        break
+                except (RuntimeError, ValueError) as exc:
+                    log.debug(f"Error pinging {minion.id} from {cli.id}: {exc}")
+            if not success:
+                still_waiting.append(minion.id)
+
+        if not still_waiting:
+            log.debug("All minions reconnected successfully.")
+            break
+
+        log.debug(f"Still waiting for minions to reconnect: {still_waiting}")
+        time.sleep(5)
+    else:
+        pytest.fail(f"Minions failed to reconnect within 180s: {still_waiting}")

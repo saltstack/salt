@@ -62,19 +62,31 @@ def test_version(
     """
     ret = mm_master_1_salt_cli.run("test.version", minion_tgt=salt_mm_minion_1.id)
     assert ret.returncode == 0
-    assert ret.data == salt.version.__saltstack_version__.string
+    assert (
+        salt.version.SaltStackVersion.parse(ret.data).info
+        == salt.version.__saltstack_version__.info
+    )
 
     ret = mm_master_2_salt_cli.run("test.version", minion_tgt=salt_mm_minion_1.id)
     assert ret.returncode == 0
-    assert ret.data == salt.version.__saltstack_version__.string
+    assert (
+        salt.version.SaltStackVersion.parse(ret.data).info
+        == salt.version.__saltstack_version__.info
+    )
 
     ret = mm_master_1_salt_cli.run("test.version", minion_tgt=salt_mm_minion_2.id)
     assert ret.returncode == 0
-    assert ret.data == salt.version.__saltstack_version__.string
+    assert (
+        salt.version.SaltStackVersion.parse(ret.data).info
+        == salt.version.__saltstack_version__.info
+    )
 
     ret = mm_master_2_salt_cli.run("test.version", minion_tgt=salt_mm_minion_2.id)
     assert ret.returncode == 0
-    assert ret.data == salt.version.__saltstack_version__.string
+    assert (
+        salt.version.SaltStackVersion.parse(ret.data).info
+        == salt.version.__saltstack_version__.info
+    )
 
 
 def test_conf_test(

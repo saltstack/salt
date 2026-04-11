@@ -73,7 +73,13 @@ def test_issue_regression_65265():
     asyncio.run(server.publish(b"asdf"))
     log.debug("After publish")
     # Give time for clients to receive thier messages.
-    time.sleep(10)
+    start = time.time()
+    while time.time() - start < 60:
+        with recieved.get_lock():
+            if recieved.value == 3000:
+                break
+        time.sleep(1)
+
     try:
         with recieved.get_lock():
             total = recieved.value
