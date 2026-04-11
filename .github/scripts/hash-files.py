@@ -108,7 +108,7 @@ def hash_files(file_paths):
                 # Read in chunks to handle large files efficiently
                 while chunk := f.read(8192):
                     hasher.update(chunk)
-        except (OSError, IOError) as e:
+        except OSError as e:
             # Print warning but continue with other files
             print(f"Warning: Could not read {file_path}: {e}", file=sys.stderr)
             continue

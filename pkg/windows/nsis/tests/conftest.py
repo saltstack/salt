@@ -1,6 +1,7 @@
 import os
 import re
 import shutil
+import stat
 import subprocess
 import time
 import winreg
@@ -60,10 +61,62 @@ PROCESSES = [
     "Un_B.exe",
     "Un_C.exe",
     "Un_D.exe",
-    "Un_D.exe",
+    "Un_E.exe",
     "Un_F.exe",
     "Un_G.exe",
 ]
+
+# Max seconds to wait for each discrete cleanup phase before giving up and
+# force-killing.  These are all far longer than the normal happy-path times
+# (typically < 3 s each) so they only trigger when something is genuinely stuck.
+PROC_WAIT_SECS = 30  # installer/uninstaller processes to exit
+INST_DIR_WAIT_SECS = 30  # install dir to be deleted by Un.exe
+SCM_WAIT_SECS = 15  # SCM to remove the salt-minion service registry key
+
+
+def _kill_lingering_processes():
+    """Force-kill any installer/uninstaller processes that are still running."""
+    for name in PROCESSES:
+        subprocess.run(
+            ["taskkill", "/F", "/T", "/IM", name],
+            capture_output=True,
+        )
+
+
+def _live_processes():
+    """Return the set of process names currently in the process list."""
+    live = set()
+    for p in psutil.process_iter():
+        try:
+            live.add(p.name())
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+    return live
+
+
+def _wait_for_processes(wait_secs=PROC_WAIT_SECS):
+    """
+    Wait up to wait_secs for every name in PROCESSES to leave the process list.
+    If the timeout expires, force-kill them all, then wait up to 5 s for the
+    OS to remove them from the process table.
+    Returns True if they exited cleanly, False if they had to be force-killed.
+    Callers should treat False as a test failure signal.
+    """
+    elapsed = 0.0
+    while elapsed < wait_secs:
+        if not any(name in _live_processes() for name in PROCESSES):
+            return True
+        elapsed += 0.1
+        time.sleep(0.1)
+
+    # Timed out — force-kill, then give the OS up to 5 s to clean up.
+    _kill_lingering_processes()
+    for _ in range(50):
+        time.sleep(0.1)
+        if not any(name in _live_processes() for name in PROCESSES):
+            break
+
+    return False  # signal to caller: processes were force-killed
 
 
 def reg_key_exists(hive=winreg.HKEY_LOCAL_MACHINE, key=None):
@@ -75,7 +128,7 @@ def reg_key_exists(hive=winreg.HKEY_LOCAL_MACHINE, key=None):
     try:
         with winreg.OpenKey(hive, key, 0, winreg.KEY_READ):
             return True
-    except:
+    except OSError:
         return False
 
 
@@ -109,9 +162,16 @@ def clean_fragments(inst_dir=INST_DIR):
         shutil.rmtree(inst_dir)
     assert not os.path.exists(inst_dir)
 
-    # Remove old salt dir (C:\salt)
+    # Remove old salt dir (C:\salt).  PKI files (minion.pem etc.) are created
+    # with restrictive NTFS permissions by the Salt installer, so a plain
+    # rmtree raises PermissionError.  The onerror handler clears the read-only
+    # attribute and retries so the tree is always removed cleanly.
+    def _force_remove(func, path, _exc):
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
+
     if os.path.exists(OLD_DIR):
-        shutil.rmtree(OLD_DIR)
+        shutil.rmtree(OLD_DIR, onerror=_force_remove)
     assert not os.path.exists(OLD_DIR)
 
     # Remove custom config
@@ -134,47 +194,89 @@ def clean_fragments(inst_dir=INST_DIR):
 
 
 @pytest.helpers.register
-def clean_env(inst_dir=INST_DIR, timeout=300):
-    # Let's make sure none of the install/uninstall processes are running
-    for proc in PROCESSES:
-        try:
-            assert proc not in (p.name() for p in psutil.process_iter())
-        except psutil.NoSuchProcess:
-            continue
+def clean_env(inst_dir=INST_DIR):
+    # Track whether any process had to be force-killed.  If so we return
+    # False so the caller's `assert clean_env()` fails the test — a forced
+    # kill means something got stuck, which is exactly what this test suite
+    # is designed to catch.
+    killed = False
 
-    # Uninstall existing installation
-    # Run the uninstaller.
+    # Un.exe (the NSIS temp-copy uninstaller) is still alive when the
+    # previous iteration's run_command() returns — it continues stripping
+    # parent directories and registry entries after uninst.exe exits.
+    # Wait (and kill if stuck) before asserting so we don't race the tail
+    # of the previous uninstall.
+    if not _wait_for_processes():
+        killed = True
+
+    # Verify all installer/uninstaller processes are gone after the wait.
+    # We do NOT raise AssertionError here — if a process is still visible
+    # (e.g. Un.exe appeared between the wait and this check), treat it as
+    # a force-kill failure so the test is marked ERROR rather than crashing
+    # the fixture with an unhandled exception.
+    live = _live_processes()
+    for proc in PROCESSES:
+        if proc in live:
+            print(f"\nWARNING: {proc} still in process list after wait — force-killing")
+            _kill_lingering_processes()
+            killed = True
+            break  # _kill_lingering_processes covers all PROCESSES at once
+
+    # Uninstall existing installation if one is present.
     for uninst_bin in [f"{inst_dir}\\uninst.exe", f"{OLD_DIR}\\uninst.exe"]:
         if os.path.exists(uninst_bin):
             install_dir = os.path.dirname(uninst_bin)
             cmd = [f'"{uninst_bin}"', "/S", "/delete-root-dir", "/delete-install-dir"]
-            run_command(cmd)
+            if not run_command(cmd):
+                killed = True
 
-            # Uninst.exe launches a 2nd binary (Un.exe or Un_*.exe)
-            # Let's get the name of the process
-            proc_name = ""
-            for proc in PROCESSES:
+            # uninst.exe immediately re-launches itself as Un.exe (or Un_*.exe)
+            # from a temp path so it can delete its own binary, then exits.
+            # run_command() returns at that point while Un.exe is still working.
+            # Give Un.exe a moment to appear in the OS process table before we
+            # start polling — without this pause _wait_for_processes() may poll
+            # in the brief window between uninst.exe launching Un.exe and Un.exe
+            # actually appearing in the process table, causing a false-positive
+            # "no processes" result while Un.exe is still doing its cleanup.
+            time.sleep(0.5)
+            if not _wait_for_processes():
+                killed = True
+
+            # Un.exe's last act is RMDir $INSTDIR.  Waiting here until the
+            # directory is gone is a belt-and-suspenders check that every
+            # file-system operation in the uninstall has completed.
+            elapsed_time = 0
+            while os.path.exists(install_dir) and elapsed_time < INST_DIR_WAIT_SECS:
+                elapsed_time += 0.1
+                time.sleep(0.1)
+
+            # Wait for the Windows SCM to finish removing the salt-minion
+            # service entry from the registry.  ssm.exe remove marks the
+            # service for deletion, but SCM keeps the
+            # HKLM\SYSTEM\CurrentControlSet\Services\salt-minion key alive
+            # until all open handles (including its own internal ones) are
+            # closed.  If CreateService for the *next* iteration races with
+            # this cleanup, Windows can return ERROR_SERVICE_MARKED_FOR_DELETE
+            # or leave NSSM in a state where SetServiceStatus(RUNNING) blocks
+            # on an SCM-internal lock — causing `nssm start` to hang.
+            scm_key = r"SYSTEM\CurrentControlSet\Services\salt-minion"
+            scm_elapsed = 0.0
+            while scm_elapsed < SCM_WAIT_SECS:
                 try:
-                    if proc in (p.name() for p in psutil.process_iter()):
-                        proc_name = proc
-                except psutil.NoSuchProcess:
-                    continue
+                    with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, scm_key):
+                        pass  # key still present
+                except OSError:
+                    break  # key gone — SCM cleanup complete
+                scm_elapsed += 0.5
+                time.sleep(0.5)
 
-            # We need to give the process time to exit
-            if proc_name:
-                elapsed_time = 0
-                while elapsed_time < timeout:
-                    try:
-                        if proc_name not in (p.name() for p in psutil.process_iter()):
-                            break
-                    except psutil.NoSuchProcess:
-                        continue
-                    elapsed_time += 0.1
-                    time.sleep(0.1)
+            try:
+                clean_fragments(inst_dir=install_dir)
+            except Exception as exc:
+                print(f"\nERROR in clean_fragments({install_dir!r}): {exc}")
+                killed = True
 
-            assert clean_fragments(inst_dir=install_dir)
-
-    return True
+    return not killed
 
 
 @pytest.helpers.register
@@ -234,7 +336,9 @@ def install_salt(args):
         cmd.extend(args)
     else:
         raise TypeError(f"Invalid args format: {args}")
-    run_command(cmd)
+    assert run_command(
+        cmd
+    ), "Installer failed (non-zero exit or force-killed on timeout)"
 
     # Let's make sure none of the install/uninstall processes are running
     try:
@@ -259,8 +363,32 @@ def is_file_locked(path):
     return False
 
 
+def _kill_process_tree(proc):
+    """
+    Kill a subprocess and every descendant it spawned.
+    proc.kill() alone only terminates the top-level process; child processes
+    (e.g. the nssm start child launched by the NSIS installer via Exec, or
+    the salt-minion service process that NSSM itself started) keep running
+    and leave the system in a dirty state for the next iteration.
+    """
+    try:
+        parent = psutil.Process(proc.pid)
+        for child in parent.children(recursive=True):
+            try:
+                child.kill()
+            except psutil.NoSuchProcess:
+                pass
+    except psutil.NoSuchProcess:
+        pass
+    proc.kill()
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        pass
+
+
 @pytest.helpers.register
-def run_command(cmd_args, timeout=300):
+def run_command(cmd_args, timeout=60):
     if isinstance(cmd_args, list):
         cmd_args = " ".join(cmd_args)
 
@@ -273,21 +401,30 @@ def run_command(cmd_args, timeout=300):
         elapsed_time += 0.1
         time.sleep(0.1)
 
-    proc = subprocess.Popen(cmd_args, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-
-    elapsed_time = 0
-    while (
-        os.path.exists(bin_file) and is_file_locked(bin_file) and elapsed_time < timeout
-    ):
-        elapsed_time += 0.1
-        time.sleep(0.1)
+    # Use DEVNULL instead of PIPE for stdout/stderr.  PIPE creates inheritable
+    # handles: NSIS's Exec (bInheritHandles=TRUE) passes them to the
+    # "ssm.exe start salt-minion" child, which then holds the write-end of
+    # the pipe open even after the installer itself has exited.
+    # proc.communicate() can never see EOF while that child is alive, so the
+    # test blocks indefinitely.  DEVNULL avoids creating any pipe handles,
+    # so proc.wait() returns as soon as the installer process exits.
+    proc = subprocess.Popen(
+        cmd_args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
 
     try:
-        out, err = proc.communicate(timeout=timeout)
-        assert proc.returncode == 0
+        proc.wait(timeout=timeout)
+        if proc.returncode != 0:
+            print(
+                f"\nWARNING: process exited with code {proc.returncode}: {cmd_args[:120]}"
+            )
+            return False
+        return True
     except subprocess.TimeoutExpired:
-        # This hides the hung installer/uninstaller problem
-        proc.kill()
-        out = "process killed"
-
-    return out
+        # Kill the installer/uninstaller and every child it spawned (nssm,
+        # salt-minion, etc.) so they don't linger into the next iteration.
+        print(
+            f"\nWARNING: process timed out after {timeout}s — force-killing: {cmd_args[:120]}"
+        )
+        _kill_process_tree(proc)
+        return False
