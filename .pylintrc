@@ -763,4 +763,5 @@ allowed-3rd-party-modules=msgpack,
                           pytest_timeout,
                           salt,
                           tests,
-                          backports
+                          backports,
+                          salt_build_backend

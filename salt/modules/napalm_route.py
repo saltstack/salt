@@ -150,5 +150,5 @@ def show(destination, protocol=None, **kwargs):  # pylint: disable=unused-argume
     return salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         "get_route_to",
-        **{"destination": destination, "protocol": protocol}
+        **{"destination": destination, "protocol": protocol},
     )

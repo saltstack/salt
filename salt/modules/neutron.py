@@ -1198,7 +1198,7 @@ def create_ipsec_site_connection(
     psk,
     admin_state_up=True,
     profile=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Creates a new IPsecSiteConnection
@@ -1243,7 +1243,7 @@ def create_ipsec_site_connection(
         peer_id,
         psk,
         admin_state_up,
-        **kwargs
+        **kwargs,
     )
 
 

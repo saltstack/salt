@@ -170,6 +170,29 @@ def test_query_error_handling():
     assert isinstance(ret.get("error", None), str)
 
 
+def test_query_tornado_httperror_no_response():
+    """
+    Tests that http.query handles a Tornado HTTPError where exc.response is None.
+    This happens on connection-level failures such as a connect timeout (HTTP 599)
+    where no HTTP response is ever received from the server.
+    """
+    import tornado.httpclient
+
+    http_error = tornado.httpclient.HTTPError(599, "Timeout while connecting")
+    assert http_error.response is None
+
+    mock_client = MagicMock()
+    mock_client.fetch.side_effect = http_error
+
+    with patch("salt.utils.http.AsyncHTTPClient", return_value=mock_client):
+        ret = http.query("https://example.com/test", backend="tornado")
+
+    assert isinstance(ret, dict)
+    assert ret.get("status") == 599
+    assert "Timeout while connecting" in ret.get("error", "")
+    assert "body" not in ret
+
+
 def test_parse_cookie_header():
     header = "; ".join(
         [

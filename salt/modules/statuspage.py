@@ -135,7 +135,7 @@ def create(
     page_id=None,
     api_key=None,
     api_version=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Insert a new entry under a specific endpoint.
@@ -354,7 +354,7 @@ def update(
     page_id=None,
     api_key=None,
     api_version=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Update attribute(s) of a specific endpoint.

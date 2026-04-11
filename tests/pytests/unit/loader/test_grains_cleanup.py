@@ -266,6 +266,17 @@ def test_clean_modules_removes_from_sys_modules(minion_opts):
         f"{loaded_base_name}.ext.{tag}",
     }
 
+    # Prefixes for modules that belong specifically to this loader's tag.
+    # clean_modules() only removes modules under these prefixes, so we only
+    # check these prefixes — not ALL salt.loaded.* modules.  Checking the
+    # broader namespace would make the test sensitive to modules loaded by
+    # other tests that ran in the same process (e.g. salt.loaded.int.modules.*
+    # from execution-module unit tests).
+    tag_prefixes = (
+        f"{loaded_base_name}.int.{tag}.",
+        f"{loaded_base_name}.ext.{tag}.",
+    )
+
     # Load some modules
     for key in list(loader.keys())[:5]:
         try:
@@ -273,8 +284,10 @@ def test_clean_modules_removes_from_sys_modules(minion_opts):
         except Exception:  # pylint: disable=broad-except
             pass
 
-    # Find modules that were loaded
-    loaded_before = [m for m in sys.modules if m.startswith(loaded_base_name)]
+    # Find tag-specific modules that were loaded
+    loaded_before = [
+        m for m in sys.modules if any(m.startswith(p) for p in tag_prefixes)
+    ]
     assert len(loaded_before) > 0, "No modules were loaded for testing"
 
     # Clean modules
@@ -285,7 +298,7 @@ def test_clean_modules_removes_from_sys_modules(minion_opts):
 
     # All remaining modules should be base stubs or utils modules (shared infrastructure)
     # Filter out both base stubs and utils modules
-    unexpected = []
+    remaining_tag = []
     for m in remaining:
         # Skip base stubs
         if m in expected_base_stubs:
@@ -296,11 +309,11 @@ def test_clean_modules_removes_from_sys_modules(minion_opts):
         if len(parts) >= 4 and parts[3] in ("utils", "wrapper"):
             continue
         # Anything else is unexpected
-        unexpected.append(m)
+        remaining_tag.append(m)
 
     assert (
-        len(unexpected) == 0
-    ), f"clean_modules() failed to remove {len(unexpected)} modules: {unexpected}"
+        len(remaining_tag) == 0
+    ), f"clean_modules() failed to remove {len(remaining_tag)} modules: {remaining_tag}"
 
     # Base stubs should still be present
     for stub in expected_base_stubs:

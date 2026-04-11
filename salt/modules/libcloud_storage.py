@@ -238,7 +238,7 @@ def download_object(
     profile,
     overwrite_existing=False,
     delete_on_failure=True,
-    **libcloud_kwargs
+    **libcloud_kwargs,
 ):
     """
     Download an object to the specified destination path.
@@ -295,7 +295,7 @@ def upload_object(
     extra=None,
     verify_hash=True,
     headers=None,
-    **libcloud_kwargs
+    **libcloud_kwargs,
 ):
     """
     Upload an object currently located on a disk.
@@ -346,7 +346,7 @@ def upload_object(
         extra,
         verify_hash,
         headers,
-        **libcloud_kwargs
+        **libcloud_kwargs,
     )
     return obj.name
 

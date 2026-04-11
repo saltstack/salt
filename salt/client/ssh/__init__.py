@@ -219,7 +219,7 @@ class SSH(MultiprocessingStateMixin):
             )
         else:
             self.event = None
-        self.opts = opts
+        self.opts = copy.deepcopy(opts)
         if self.opts["regen_thin"]:
             self.opts["ssh_wipe"] = True
         if not salt.utils.path.which("ssh"):
@@ -1324,7 +1324,6 @@ class Single:
             minion_opts=self.minion_opts,
             **self.target,
         )
-        wrapper.fsclient.opts["cachedir"] = opts["cachedir"]
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs
 

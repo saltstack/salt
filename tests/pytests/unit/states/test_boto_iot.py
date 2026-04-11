@@ -153,7 +153,7 @@ def test_present_when_thing_type_does_not_exist(session_instance):
         thingTypeName=GlobalConfig.thing_type_name,
         thingTypeDescription=GlobalConfig.thing_type_desc,
         searchableAttributesList=[GlobalConfig.thing_type_attr_1],
-        **GlobalConfig.conn_parameters
+        **GlobalConfig.conn_parameters,
     )
     assert result["result"]
     assert (
@@ -171,7 +171,7 @@ def test_present_when_thing_type_exists(session_instance):
         thingTypeName=GlobalConfig.thing_type_name,
         thingTypeDescription=GlobalConfig.thing_type_desc,
         searchableAttributesList=[GlobalConfig.thing_type_attr_1],
-        **GlobalConfig.conn_parameters
+        **GlobalConfig.conn_parameters,
     )
     assert result["result"]
     assert result["changes"] == {}
@@ -193,7 +193,7 @@ def test_present_with_failure(session_instance):
         thingTypeName=GlobalConfig.thing_type_name,
         thingTypeDescription=GlobalConfig.thing_type_desc,
         searchableAttributesList=[GlobalConfig.thing_type_attr_1],
-        **GlobalConfig.conn_parameters
+        **GlobalConfig.conn_parameters,
     )
     assert not result["result"]
     assert "An error occurred" in result["comment"]

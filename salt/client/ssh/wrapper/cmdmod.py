@@ -51,7 +51,7 @@ def script(
     success_retcodes=None,
     success_stdout=None,
     success_stderr=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Download a script from a remote location and execute the script locally.
@@ -306,7 +306,7 @@ def script(
             success_stdout=success_stdout,
             success_stderr=success_stderr,
             hide_output=hide_output,
-            **kwargs
+            **kwargs,
         )
     finally:
         _cleanup_tempfile(path)
@@ -335,7 +335,7 @@ def script_retcode(
     success_retcodes=None,
     success_stdout=None,
     success_stderr=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Download a script from a remote location and execute the script locally.
@@ -514,7 +514,7 @@ def script_retcode(
         success_retcodes=success_retcodes,
         success_stdout=success_stdout,
         success_stderr=success_stderr,
-        **kwargs
+        **kwargs,
     )["retcode"]
 
 

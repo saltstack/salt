@@ -1397,7 +1397,7 @@ def test_update_inventory_values_without_clear_existing_data(
             interfaces,
             inventory=inventory,
             inventory_clean=False,
-            **kwargs
+            **kwargs,
         )
         host_present_changes = ast.literal_eval(
             host_present_ret["changes"]["inventory"]
@@ -1681,7 +1681,7 @@ def test_clear_inventory_value_sending_an_empty_key(
             interfaces,
             inventory=inventory,
             inventory_clean=False,
-            **kwargs
+            **kwargs,
         )
         host_present_changes = ast.literal_eval(
             host_present_ret["changes"]["inventory"]

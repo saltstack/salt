@@ -452,7 +452,7 @@ class TestMsgpack(TestCase):
             # Run the test without the salt.utils.msgpack module for comparison
             vanilla_run = self.no_fail_run(
                 test_func,
-                **{"pack_func": msgpack.packb, "unpack_func": msgpack.unpackb}
+                **{"pack_func": msgpack.packb, "unpack_func": msgpack.unpackb},
             )
 
             for func_args in functions:
