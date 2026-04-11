@@ -1674,17 +1674,12 @@ def regen_keys():
 
         salt '*' saltutil.regen_keys
     """
-    pki_dir = __opts__["pki_dir"]
-    try:
-        with os.scandir(pki_dir) as it:
-            for entry in it:
-                if entry.is_file():
-                    try:
-                        os.remove(entry.path)
-                    except OSError:
-                        pass
-    except OSError:
-        pass
+    for fn_ in os.listdir(__opts__["pki_dir"]):
+        path = os.path.join(__opts__["pki_dir"], fn_)
+        try:
+            os.remove(path)
+        except OSError:
+            pass
     # TODO: move this into a channel function? Or auth?
     # create a channel again, this will force the key regen
     with salt.channel.client.ReqChannel.factory(__opts__) as channel:
