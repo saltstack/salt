@@ -67,9 +67,7 @@ def test_verify_env_race_condition():
     ):
 
         # verify this runs without issues, even though FNFE is raised
-        salt.utils.verify.verify_env(
-            ["/tmp/salt-dir"], "root", skip_extra=True, opts={"cachedir": "/tmp"}
-        )
+        salt.utils.verify.verify_env(["/tmp/salt-dir"], "root", skip_extra=True)
 
         # and verify it got actually called with the valid paths
         mock_stat.assert_any_call("/tmp/salt-dir/file1")
