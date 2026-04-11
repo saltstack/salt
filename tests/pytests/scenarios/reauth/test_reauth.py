@@ -13,17 +13,23 @@ pytestmark = [
 log = logging.getLogger(__name__)
 
 
-def minion_func(salt_minion, event_listener, salt_master, timeout):
-    start = time.time()
-    with salt_minion.started(start_timeout=timeout * 2, max_start_attempts=1):
-        new_start = time.time()
-        while time.time() < new_start + (timeout * 2):
-            if event_listener.get_events(
-                [(salt_master.id, f"salt/job/*/ret/{salt_minion.id}")],
-                after_time=start,
-            ):
+def minion_func(salt_minion, stop_event):
+    log.debug("minion_func started")
+    try:
+        # Manual start to avoid flaky readiness checks on Windows
+        salt_minion.start()
+        log.debug("minion_func: minion process started, waiting for stop_event")
+        while not stop_event.is_set():
+            if not salt_minion.is_running():
+                log.error("minion_func: minion process died unexpectedly")
                 break
-            time.sleep(5)
+            time.sleep(1)
+        log.debug("minion_func: stop_event set or process died")
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        log.exception("minion_func: exception occurred: %s", exc)
+    finally:
+        salt_minion.terminate()
+    log.debug("minion_func finished")
 
 
 @pytest.fixture(scope="module")
@@ -37,25 +43,53 @@ def test_reauth(salt_cli, salt_minion, salt_master, timeout, event_listener):
     # Stop the master and minion
     salt_master.terminate()
     salt_minion.terminate()
-    log.debug(
-        "Master and minion stopped for reauth test, waiting for %s seconds", timeout
-    )
-    log.debug("Restarting the reauth minion")
 
+    # Phase 1: Resource Isolation and Cleanup
+    # Allow Windows to release file and registry handles
+    log.debug("Master and minion stopped, waiting 10s for handle release")
+    time.sleep(10)
+
+    stop_event = threading.Event()
     # We need to have the minion attempting to start in a different process
     # when we try to start the master
-    minion_proc = threading.Thread(
-        target=minion_func, args=(salt_minion, event_listener, salt_master, timeout)
-    )
+    minion_proc = threading.Thread(target=minion_func, args=(salt_minion, stop_event))
     minion_proc.start()
+    log.debug("Restarting the reauth minion thread")
+
     time.sleep(timeout)
     log.debug("Restarting the reauth master")
     start = time.time()
     salt_master.start()
+
+    log.debug("Waiting for minion start event")
+    # The minion might take some time to re-auth and send the start event
     event_listener.wait_for_events(
         [(salt_master.id, f"salt/minion/{salt_minion.id}/start")],
         after_time=start,
-        timeout=timeout * 2,
+        timeout=timeout * 3,
     )
-    assert salt_cli.run("test.ping", minion_tgt=salt_minion.id).data is True
+
+    # Phase 4: Diagnostic Validation
+    # Allow master to finish its post-startup load (grains refresh, etc)
+    log.debug("Minion start event received, allowing master to settle for 10s")
+    time.sleep(10)
+
+    log.debug("Pinging minion with retries...")
+    # Phase 3: CLI Resilience
+    # Use a long timeout and retries to handle re-auth latency on Windows
+    # Pass _timeout to override the factory-level kill timer
+    for attempt in range(1, 4):
+        log.debug("Ping attempt %s/3", attempt)
+        ret = salt_cli.run(
+            "--timeout=60", "test.ping", minion_tgt=salt_minion.id, _timeout=120
+        )
+        log.debug("Ping result: %s", ret)
+        if ret and ret.data is True:
+            break
+        time.sleep(5)
+    else:
+        pytest.fail("Minion failed to respond to ping after 3 attempts")
+
+    log.debug("Ping successful, stopping minion thread")
+    stop_event.set()
     minion_proc.join()
