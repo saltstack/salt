@@ -193,6 +193,10 @@ gitpython==3.1.46
     #   -r requirements/static/ci/common.in
 google-auth==2.35.0 ; python_full_version < '3.10'
     # via -r requirements/static/ci/common.in
+greenlet==3.2.5 ; (python_full_version < '3.10' and platform_machine == 'AMD64') or (python_full_version < '3.10' and platform_machine == 'WIN32') or (python_full_version < '3.10' and platform_machine == 'aarch64') or (python_full_version < '3.10' and platform_machine == 'amd64') or (python_full_version < '3.10' and platform_machine == 'ppc64le') or (python_full_version < '3.10' and platform_machine == 'win32') or (python_full_version < '3.10' and platform_machine == 'x86_64')
+    # via sqlalchemy
+greenlet==3.3.2 ; (python_full_version >= '3.10' and platform_machine == 'AMD64') or (python_full_version >= '3.10' and platform_machine == 'WIN32') or (python_full_version >= '3.10' and platform_machine == 'aarch64') or (python_full_version >= '3.10' and platform_machine == 'amd64') or (python_full_version >= '3.10' and platform_machine == 'ppc64le') or (python_full_version >= '3.10' and platform_machine == 'win32') or (python_full_version >= '3.10' and platform_machine == 'x86_64')
+    # via sqlalchemy
 hglib==2.6.2
     # via -r requirements/static/ci/freebsd.in
 idna==3.7
@@ -604,6 +608,8 @@ smmap==5.0.3
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.txt
     #   gitdb
+sqlalchemy==2.0.48
+    # via -r requirements/static/ci/common.in
 sqlparse==0.5.5
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
@@ -654,6 +660,7 @@ typing-extensions==4.15.0
     #   pyopenssl
     #   pytest-shell-utilities
     #   pytest-system-statistics
+    #   sqlalchemy
     #   virtualenv
 urllib3==1.26.20 ; python_full_version < '3.10'
     # via

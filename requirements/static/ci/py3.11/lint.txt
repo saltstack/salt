@@ -214,6 +214,10 @@ gitpython==3.1.46
     #   -c requirements/static/pkg/py3.11/linux.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
+greenlet==3.3.2
+    # via
+    #   -c requirements/static/ci/py3.11/linux.txt
+    #   sqlalchemy
 h11==0.14.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
@@ -665,6 +669,10 @@ sniffio==1.3.0
     #   anyio
     #   httpcore
     #   httpx
+sqlalchemy==2.0.48
+    # via
+    #   -c requirements/static/ci/py3.11/linux.txt
+    #   -r requirements/static/ci/common.in
 sqlparse==0.5.5
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
@@ -718,6 +726,7 @@ typing-extensions==4.14.1
     #   -c requirements/static/pkg/py3.11/linux.txt
     #   aiosignal
     #   pyopenssl
+    #   sqlalchemy
 urllib3==2.6.3
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
