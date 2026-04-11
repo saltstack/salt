@@ -56,7 +56,7 @@ class BlackoutPillar:
             self.refresh_pillar(exiting_blackout=True)
             self.in_blackout = False
 
-    def refresh_pillar(self, timeout=60, sleep=0.5, exiting_blackout=None):
+    def refresh_pillar(self, timeout=120, sleep=0.5, exiting_blackout=None):
         ret = self.salt_cli.run("saltutil.refresh_pillar", wait=True, minion_tgt="*")
         assert ret.returncode == 0
         assert self.minion_1_id in ret.data

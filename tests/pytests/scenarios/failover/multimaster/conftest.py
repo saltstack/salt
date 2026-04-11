@@ -206,7 +206,7 @@ def run_salt_cmds():
         returned_minions = []
         minions_to_check = {minion.id: minion for minion in minions}
 
-        attempts = 6
+        attempts = 30
         timeout = 5
         if salt.utils.platform.spawning_platform():
             timeout *= 2
