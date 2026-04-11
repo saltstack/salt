@@ -77,7 +77,7 @@ class Cache:
     def modules(self):
         return salt.loader.cache(self.opts)
 
-    @property
+    @cached_property
     def kwargs(self):
         try:
             return self.modules[f"{self.driver}.init_kwargs"](self._kwargs)
