@@ -25,7 +25,7 @@ def rebuild_index(dry_run=False):
         # Check status without rebuilding (dry-run)
         salt-run pki.rebuild_index dry_run=True
     """
-    from salt.cache import localfs_key
+    from salt.cache import localfs_key  # pylint: disable=import-outside-toplevel
 
     stats_before = localfs_key.get_index_stats(__opts__)
 
