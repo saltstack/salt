@@ -338,13 +338,6 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                 self.handle_git_pillar()
             self.handle_schedule()
             self.handle_key_cache()
-            if self.opts.get("pki_index_enabled", False):
-                try:
-                    import salt.cache.localfs_key as localfs_key_cache  # pylint: disable=import-outside-toplevel
-
-                    localfs_key_cache.rebuild_index(self.opts)
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.error("Failed to rebuild PKI index: %s", exc)
             self.handle_presence(old_present)
             self.handle_key_rotate(now)
             salt.utils.verify.check_max_open_files(self.opts)
