@@ -117,6 +117,8 @@ def mm_master_2_salt_cli(salt_mm_master_2):
 def _salt_mm_minion_1(_salt_mm_master_1, _salt_mm_master_2):
     config_defaults = {
         "transport": _salt_mm_master_1.config["transport"],
+        "zmq_monitor": False,
+        "master_tries": 1,
     }
 
     mm_master_1_port = _salt_mm_master_1.config["ret_port"]
@@ -158,6 +160,8 @@ def salt_mm_minion_1(_salt_mm_minion_1, salt_mm_master_1, salt_mm_master_2):
 def _salt_mm_minion_2(_salt_mm_master_1, _salt_mm_master_2):
     config_defaults = {
         "transport": _salt_mm_master_1.config["transport"],
+        "zmq_monitor": False,
+        "master_tries": 1,
     }
 
     mm_master_1_port = _salt_mm_master_1.config["ret_port"]
