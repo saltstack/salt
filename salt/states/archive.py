@@ -1883,3 +1883,226 @@ def extracted(
                 ret.setdefault("warnings", []).append(result["comment"])
 
     return ret
+
+def compressed(
+    name,
+    sources,
+    archive_format="zip",
+    compression=None,
+    options=None,
+    user=None,
+    group=None,
+    mode=None,
+    overwrite=False,
+    **kwargs,
+):
+    """
+    Ensure that specified files/directories are compressed into an archive.
+
+    .. versionadded:: TBD
+
+    name
+        Full path to the archive file to create (e.g., /path/to/archive.zip)
+
+    sources
+        List of files and/or directories to include in the archive.
+        Can be a string (single path) or list of paths.
+
+    archive_format : zip
+        Format of the archive to create. Supported: 'zip', 'tar', 'tar.gz', 'tar.bz2', 'tar.xz'
+
+    compression
+        Compression level (for zip: 0-9, where 9 is maximum compression)
+
+    options
+        Additional command-line options to pass to the archiving tool
+
+    user
+        Owner of the created archive file
+
+    group
+        Group owner of the created archive file
+
+    mode
+        Permissions mode for the created archive file (e.g., '0644')
+
+    overwrite : False
+        If True, recreate the archive even if it already exists
+
+    **Examples**
+
+    Basic zip creation:
+
+    .. code-block:: yaml
+
+        create_backup_archive:
+          archive.compressed:
+            - name: /backup/myfiles.zip
+            - sources:
+              - /var/www/html
+              - /etc/nginx/nginx.conf
+            - user: backup
+            - group: backup
+
+    Tar with gzip compression:
+
+    .. code-block:: yaml
+
+        compress_config_files:
+          archive.compressed:
+            - name: /backup/configs.tar.gz
+            - sources:
+              - /etc/
+            - archive_format: tar.gz
+            - user: root
+            - group: root
+
+    Create zip with maximum compression:
+
+    .. code-block:: yaml
+
+        create_compressed_backup:
+          archive.compressed:
+            - name: /backups/website-backup.zip
+            - sources:
+              - /var/www/mysite
+            - compression: 9
+            - user: www-data
+            - group: www-data
+            - mode: '0640'
+
+    Overwrite existing archive:
+
+    .. code-block:: yaml
+
+        daily_backup:
+          archive.compressed:
+            - name: /backups/daily.tar.gz
+            - sources:
+              - /home/user/documents
+              - /home/user/projects
+            - archive_format: tar.gz
+            - overwrite: True
+    """
+    ret = {"name": name, "result": False, "changes": {}, "comment": ""}
+
+    # Clean kwargs
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+
+    # Validate name path
+    if not _path_is_abs(name):
+        ret["comment"] = f"{name} is not an absolute path"
+        return ret
+
+    # Normalize sources to list
+    if isinstance(sources, str):
+        sources = [sources]
+    elif not isinstance(sources, list):
+        ret["comment"] = "'sources' must be a string or list of paths"
+        return ret
+
+    # Validate sources exist
+    missing_sources = []
+    for source in sources:
+        if not os.path.exists(source):
+            missing_sources.append(source)
+
+    if missing_sources:
+        ret["comment"] = "The following source paths do not exist:\n"
+        ret["comment"] += "\n".join([f"- {s}" for s in missing_sources])
+        return ret
+
+    # Check if archive already exists
+    archive_exists = os.path.isfile(name)
+
+    if archive_exists and not overwrite:
+        ret["result"] = True
+        ret["comment"] = f"Archive {name} already exists"
+        return ret
+
+    # Test mode
+    if __opts__["test"]:
+        ret["result"] = None
+        if archive_exists:
+            ret["comment"] = f"Archive {name} would be recreated"
+        else:
+            ret["comment"] = f"Archive {name} would be created from {len(sources)} source(s)"
+        return ret
+
+    # Create archive directory if needed
+    archive_dir = os.path.dirname(name)
+    if archive_dir and not os.path.exists(archive_dir):
+        try:
+            os.makedirs(archive_dir)
+            ret["changes"]["directories_created"] = [archive_dir]
+        except OSError as exc:
+            ret["comment"] = f"Failed to create directory {archive_dir}: {exc}"
+            return ret
+
+    # Create the archive using the execution module
+    try:
+        if archive_format == "zip":
+            # Call archive.zip execution module
+            # Standard signature: archive.zip(zip_file, *sources, template=None, cwd=None, runas=None)
+            result = __salt__["archive.zip"](
+                name,
+                *sources,
+            )
+        elif archive_format in ["tar", "tar.gz", "tar.bz2", "tar.xz"]:
+            # Determine tar options
+            if archive_format == "tar.gz":
+                tar_options = "czf"
+            elif archive_format == "tar.bz2":
+                tar_options = "cjf"
+            elif archive_format == "tar.xz":
+                tar_options = "cJf"
+            else:
+                tar_options = "cf"
+            
+            # Call archive.tar execution module
+            # Standard signature: archive.tar(options, tarfile, sources, ...)
+            result = __salt__["archive.tar"](
+                tar_options,
+                name,
+                sources,
+            )
+        else:
+            ret["comment"] = f"Unsupported archive format: {archive_format}"
+            return ret
+
+        # Check result from execution module
+        if result:
+            ret["changes"]["created"] = name
+            ret["changes"]["sources_added"] = sources
+            ret["comment"] = f"Successfully created archive {name}"
+            ret["result"] = True
+        else:
+            ret["comment"] = f"Failed to create archive {name}"
+            return ret
+
+    except (CommandExecutionError, CommandNotFoundError) as exc:
+        ret["comment"] = f"Error creating archive: {exc}"
+        return ret
+    except Exception as exc:
+        ret["comment"] = f"Unexpected error creating archive: {exc}"
+        return ret
+
+    # Set ownership and permissions if requested
+    if user or group or mode:
+        try:
+            ownership_result = __states__["file.managed"](
+                name,
+                user=user,
+                group=group,
+                mode=mode,
+                replace=False,
+            )
+            
+            if ownership_result.get("changes"):
+                ret["changes"]["ownership"] = ownership_result["changes"]
+        except Exception as exc:
+            ret.setdefault("warnings", []).append(
+                f"Failed to set ownership/permissions: {exc}"
+            )
+
+    return ret
