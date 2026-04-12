@@ -75,6 +75,7 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
+import salt.utils.timeutil
 import salt.utils.zeromq
 from salt.exceptions import SaltDeserializationError, SaltInvocationError
 from salt.utils.versions import warn_until
@@ -782,7 +783,7 @@ class SaltEvent:
             if not self.connect_pull(timeout=timeout_s):
                 return False
 
-        data["_stamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        data["_stamp"] = salt.utils.timeutil.utcnow().isoformat()
         event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
         self.pusher.publish(msg)
@@ -817,7 +818,7 @@ class SaltEvent:
             if not self.connect_pull(timeout=timeout_s):
                 return False
 
-        data["_stamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        data["_stamp"] = salt.utils.timeutil.utcnow().isoformat()
         event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
         if self._run_io_loop_sync:

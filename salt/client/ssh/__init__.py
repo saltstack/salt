@@ -46,6 +46,7 @@ import salt.utils.platform
 import salt.utils.relenv
 import salt.utils.stringutils
 import salt.utils.thin
+import salt.utils.timeutil
 import salt.utils.url
 import salt.utils.verify
 from salt._logging import LOG_LEVELS
@@ -512,7 +513,7 @@ class SSH(MultiprocessingStateMixin):
                         '# Automatically added by "{s_user}" at {s_time}\n{hostname}:\n'
                         "    host: {hostname}\n    user: {user}\n    passwd: {passwd}\n".format(
                             s_user=getpass.getuser(),
-                            s_time=datetime.datetime.utcnow().isoformat(),
+                            s_time=salt.utils.timeutil.utcnow().isoformat(),
                             hostname=self.opts.get("tgt", ""),
                             user=self.opts.get("ssh_user", ""),
                             passwd=self.opts.get("ssh_passwd", ""),

@@ -1352,13 +1352,18 @@ def bridge_pytest_and_runtests(
 
 @pytest.fixture(scope="session")
 def sshd_config_dir(salt_factories):
+    if not salt.utils.path.which("sshd"):
+        pytest.skip("The 'sshd' binary was not found. Skipping salt-ssh tests.")
     config_dir = salt_factories.get_root_dir_for_daemon("sshd")
+
     yield config_dir
     shutil.rmtree(str(config_dir), ignore_errors=True)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
+    if not salt.utils.path.which("sshd"):
+        pytest.skip("The 'sshd' binary was not found. Skipping salt-ssh tests.")
     sshd_config_dict = {
         "Protocol": "2",
         # Turn strict modes off so that we can operate in /tmp

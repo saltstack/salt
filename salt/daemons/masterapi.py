@@ -1052,6 +1052,8 @@ class RemoteFuncs:
         pub_load["raw"] = True
         ret = {}
         for minion in self.local.cmd_iter(**pub_load):
+            if not minion:
+                continue
             if load.get("form", "") == "full":
                 data = minion
                 if "jid" in minion:
@@ -1062,11 +1064,13 @@ class RemoteFuncs:
                 ret[minion["id"]] = minion["return"]
                 if "jid" in minion:
                     ret["__jid__"] = minion["jid"]
-        for key, val in self.local.get_cache_returns(ret["__jid__"]).items():
-            if key not in ret:
-                ret[key] = val
-        if load.get("form", "") != "full":
-            ret.pop("__jid__")
+
+        if "__jid__" in ret:
+            for key, val in self.local.get_cache_returns(ret["__jid__"]).items():
+                if key not in ret:
+                    ret[key] = val
+            if load.get("form", "") != "full":
+                ret.pop("__jid__")
         return ret
 
     def revoke_auth(self, load):

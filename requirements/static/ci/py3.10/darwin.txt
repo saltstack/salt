@@ -176,6 +176,8 @@ importlib-metadata==8.7.0
     #   -r requirements/base.txt
 iniconfig==2.0.0
     # via pytest
+invoke==2.2.1
+    # via paramiko
 jaraco-collections==4.1.0
     # via
     #   -c requirements/static/pkg/py3.10/darwin.txt
@@ -214,7 +216,7 @@ jsonschema==3.2.0
     # via -r requirements/static/ci/common.in
 junit-xml==1.9
     # via -r requirements/static/ci/common.in
-junos-eznc==2.6.7
+junos-eznc==2.7.6
     # via -r requirements/static/ci/common.in
 jxmlease==1.0.3
     # via -r requirements/static/ci/common.in
@@ -226,7 +228,7 @@ looseversion==1.3.0
     # via
     #   -c requirements/static/pkg/py3.10/darwin.txt
     #   -r requirements/base.txt
-lxml==4.9.2
+lxml==6.0.2
     # via
     #   junos-eznc
     #   ncclient
@@ -240,7 +242,7 @@ markupsafe==2.1.3
     #   jinja2
     #   mako
     #   werkzeug
-mercurial==6.4.4
+mercurial==7.2
     # via -r requirements/static/ci/darwin.in
 mock==5.1.0
     # via -r requirements/pytest.txt
@@ -265,10 +267,10 @@ multidict==6.7.1
     #   -c requirements/static/pkg/py3.10/darwin.txt
     #   aiohttp
     #   yarl
-ncclient==0.6.13
-    # via junos-eznc
-netaddr==0.8.0
-    # via junos-eznc
+ncclient==0.7.0
+    # via
+    #   -r requirements/static/ci/common.in
+    #   junos-eznc
 oauthlib==3.3.1
     # via requests-oauthlib
 oscrypto==1.3.0
@@ -278,7 +280,7 @@ packaging==24.0
     #   -c requirements/static/pkg/py3.10/darwin.txt
     #   -r requirements/base.txt
     #   pytest
-paramiko==3.4.0
+paramiko==4.0.0
     # via
     #   junos-eznc
     #   ncclient
@@ -325,7 +327,7 @@ pycryptodomex==3.19.1
     #   -r requirements/crypto.txt
 pyfakefs==5.3.1
     # via -r requirements/pytest.txt
-pygit2==1.13.1
+pygit2==1.18.2
     # via -r requirements/static/ci/darwin.in
 pynacl==1.5.0
     # via
@@ -416,7 +418,7 @@ pyyaml==6.0.1
     #   pytest-salt-factories
     #   responses
     #   yamllint
-    #   yamlordereddictloader
+    #   yamlloader
 pyzmq==25.1.2
     # via
     #   -c requirements/static/pkg/py3.10/darwin.txt
@@ -460,7 +462,6 @@ six==1.16.0
     #   junit-xml
     #   junos-eznc
     #   kubernetes
-    #   ncclient
     #   python-dateutil
     #   pyvmomi
     #   textfsm
@@ -548,7 +549,7 @@ xmltodict==0.13.0
     # via moto
 yamllint==1.32.0
     # via -r requirements/static/ci/darwin.in
-yamlordereddictloader==0.4.0
+yamlloader==1.6.0
     # via junos-eznc
 yarl==1.23.0
     # via
