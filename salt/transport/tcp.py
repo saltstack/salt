@@ -1567,7 +1567,19 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             _set_tcp_keepalive(sock, self.opts)
             sock.setblocking(0)
-            sock.bind((self.pub_host, self.pub_port))
+            try:
+                sock.bind((self.pub_host, self.pub_port))
+            except OSError as exc:
+                if exc.errno == 98:  # Address already in use
+                    log.warning(
+                        "Publisher port %s already in use, binding to dynamic port",
+                        self.pub_port,
+                    )
+                    sock.bind((self.pub_host, 0))
+                    # Update our port so peers can find us
+                    self.pub_port = sock.getsockname()[1]
+                else:
+                    raise
             sock.listen(self.backlog)
             # pub_server will take ownership of the socket
             self.pub_server.add_socket(sock)
