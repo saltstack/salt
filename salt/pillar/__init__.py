@@ -418,7 +418,9 @@ class Pillar:
         self.client = salt.fileclient.get_file_client(self.opts, True)
         self.fileclient = salt.fileclient.get_file_client(self.opts, False)
         self.avail = self.__gather_avail()
-        self.pillar_data = {}
+        self.pillar_data = self.opts.get("pillar", {})
+        if not isinstance(self.pillar_data, dict):
+            self.pillar_data = {}
 
         if opts.get("file_client", "") == "local" and not opts.get(
             "use_master_when_local", False
@@ -751,6 +753,7 @@ class Pillar:
         matches = {}
         if reload:
             self.matchers = salt.loader.matchers(self.opts)
+            self._update_loader_packs()
         for saltenv, body in top.items():
             if self.opts["pillarenv"]:
                 if saltenv != self.opts["pillarenv"]:
@@ -1120,7 +1123,6 @@ class Pillar:
         """
         Render the pillar data and return
         """
-        self.opts["pillar"] = self.pillar_data
         top, top_errors = self.get_top()
         if ext:
             if self.opts.get("ext_pillar_first", False):
