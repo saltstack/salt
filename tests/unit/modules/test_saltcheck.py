@@ -27,7 +27,13 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
 
         # Mock salt.client.Caller to avoid initializing a real SMinion which tries to access /var/cache/salt
         self.mock_caller = MagicMock()
-        self.mock_caller.cmd.return_value = "This works!"
+
+        def mock_cmd(fun, *args, **kwargs):
+            if fun == "test.echo" and args:
+                return args[0]
+            return "This works!"
+
+        self.mock_caller.cmd.side_effect = mock_cmd
 
         patchers = [
             patch("salt.config.minion_config", MagicMock(return_value=local_opts)),

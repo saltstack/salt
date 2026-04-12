@@ -271,7 +271,7 @@ msgpack==1.1.2
     #   -c requirements/static/pkg/py3.11/freebsd.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.0.4
+multidict==6.1.0
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.txt
     #   aiohttp

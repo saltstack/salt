@@ -340,7 +340,7 @@ msgpack==1.0.7
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.0.4
+multidict==6.1.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -c requirements/static/pkg/py3.12/linux.txt
@@ -675,7 +675,6 @@ textfsm==1.1.3
     #   -r requirements/static/ci/common.in
 timelib==0.3.0
     # via
-    #   -c requirements/static/ci/py3.12/linux.txt
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.in

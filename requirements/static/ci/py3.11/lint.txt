@@ -373,7 +373,7 @@ msgpack==1.0.7
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -c requirements/static/pkg/py3.11/linux.txt
     #   -r requirements/base.txt
-multidict==6.0.4
+multidict==6.1.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -c requirements/static/pkg/py3.11/linux.txt

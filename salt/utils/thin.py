@@ -699,8 +699,8 @@ def _discover_saltexts(allowlist=None, blocklist=None):
                 dist_name,
             )
             continue
-        if entry_point.dist.name not in loaded_saltexts:
-            loaded_saltexts[entry_point.dist.name] = {
+        if dist_name not in loaded_saltexts:
+            loaded_saltexts[dist_name] = {
                 "name": dist_name,
                 "entrypoints": {},
             }
@@ -711,9 +711,7 @@ def _discover_saltexts(allowlist=None, blocklist=None):
         if ctx.exception_caught:
             continue
 
-        loaded_saltexts[entry_point.dist.name]["entrypoints"][
-            entry_point.name
-        ] = entry_point.value
+        loaded_saltexts[dist_name]["entrypoints"][entry_point.name] = entry_point.value
         _add_dependency(mods, root_mod, namespace=namespace)
 
     # We need the mods to be in a deterministic order for the hash digest later
