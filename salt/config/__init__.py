@@ -180,6 +180,14 @@ VALID_OPTS = immutabletypes.freeze(
         # 'maint': Runs on a schedule as a part of the maintenance process.
         # '': Disable the key cache [default]
         "key_cache": str,
+        # Enable the O(1) PKI index
+        "pki_index_enabled": bool,
+        # Total slots per shard (keep 2x your minion count for best performance)
+        "pki_index_size": int,
+        # Number of index shards (allows the index to span multiple files)
+        "pki_index_shards": int,
+        # Max length of a Minion ID in bytes
+        "pki_index_slot_size": int,
         # The user under which the daemon should run
         "user": str,
         # The root directory prepended to these options: pki_dir, cachedir,
@@ -1388,6 +1396,10 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "root_dir": salt.syspaths.ROOT_DIR,
         "pki_dir": os.path.join(salt.syspaths.LIB_STATE_DIR, "pki", "master"),
         "key_cache": "",
+        "pki_index_enabled": False,
+        "pki_index_size": 1000000,
+        "pki_index_shards": 1,
+        "pki_index_slot_size": 128,
         "cachedir": os.path.join(salt.syspaths.CACHE_DIR, "master"),
         "file_roots": {
             "base": [salt.syspaths.BASE_FILE_ROOTS_DIR, salt.syspaths.SPM_FORMULA_PATH]
