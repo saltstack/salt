@@ -1253,8 +1253,8 @@ def create_csr(
             )
         )
 
-    ret = f'Created Private Key: "{csr_path}{csr_filename}.key" '
-    ret += f'Created CSR for "{CN}": "{csr_path}{csr_filename}.csr"'
+    ret = f'Created Private Key: "{os.path.join(csr_path, csr_filename)}.key" '
+    ret += f'Created CSR for "{CN}": "{os.path.join(csr_path, csr_filename)}.csr"'
 
     return ret
 
