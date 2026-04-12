@@ -1923,7 +1923,7 @@ ARGS = {arguments}\n'''.format(
             code_checksum=thin_code_digest,
             arguments=self.argv,
         )
-        py_code = SSH_PY_SHIM.replace("#%%OPTS", arg_str)
+        py_code = SSH_PY_SHIM.replace("# %%OPTS", arg_str)
         py_code_enc = base64.encodebytes(py_code.encode("utf-8")).decode("utf-8")
         if not self.winrm:
             cmd = SSH_SH_SHIM.format(

@@ -58,7 +58,7 @@ def cluster_master_1(request, salt_factories, cluster_pki_path, cluster_cache_pa
         ),
     }
     factory = salt_factories.salt_master_daemon(
-        "127.0.0.1",
+        "cluster-master-1",
         defaults=config_defaults,
         overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
@@ -104,7 +104,7 @@ def cluster_master_2(salt_factories, cluster_master_1):
     ):
         config_overrides[key] = cluster_master_1.config[key]
     factory = salt_factories.salt_master_daemon(
-        "127.0.0.2",
+        "cluster-master-2",
         defaults=config_defaults,
         overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
@@ -150,7 +150,7 @@ def cluster_master_3(salt_factories, cluster_master_1):
     ):
         config_overrides[key] = cluster_master_1.config[key]
     factory = salt_factories.salt_master_daemon(
-        "127.0.0.3",
+        "cluster-master-3",
         defaults=config_defaults,
         overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],

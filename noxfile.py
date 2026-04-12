@@ -1291,8 +1291,9 @@ def decompress_dependencies(session):
                         "base-exec-prefix",
                         "base-executable",
                     ]:
-                        root, _path = v.split("artifacts" + os.path.sep, 1)
-                        v = str(REPO_ROOT / "artifacts" / _path)
+                        if "artifacts" + os.path.sep in v:
+                            root, _path = v.split("artifacts" + os.path.sep, 1)
+                            v = str(REPO_ROOT / "artifacts" / _path)
                     pyenv_vars.append((k, v))
             with open(pyenv, "w", encoding="utf-8") as fp:
                 for k, v in pyenv_vars:
