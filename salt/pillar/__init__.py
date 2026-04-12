@@ -1120,6 +1120,7 @@ class Pillar:
         """
         Render the pillar data and return
         """
+        self.opts["pillar"] = self.pillar_data
         top, top_errors = self.get_top()
         if ext:
             if self.opts.get("ext_pillar_first", False):
