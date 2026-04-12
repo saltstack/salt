@@ -50,6 +50,8 @@ def match(tgt, opts=None, minion_id=None):
         "N": None,  # Nodegroups should already be expanded
         "S": "ipcidr",
         "E": "pcre",
+        "T": "resource",
+        "M": "managing_minion",
     }
     if HAS_RANGE:
         ref["R"] = "range"

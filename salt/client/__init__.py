@@ -1259,8 +1259,19 @@ class LocalClient:
             # re-do the ping
             if time.time() > timeout_at and minions_running:
                 # since this is a new ping, no one has responded yet
-                jinfo = self.gather_job_info(
-                    jid, list(minions - found), "list", **kwargs
+                # Only send gather_job_info to IDs that are accepted minions.
+                # Resource IDs (e.g. "dummy-01") are not PKI keys; sending
+                # saltutil.find_job to them as a list target would fail and
+                # print a misleading "No minions matched" message.
+                pending = minions - found
+                accepted_minions = set(
+                    salt.utils.minions.CkMinions(self.opts)._pki_minions()
+                )
+                minion_pending = list(pending & accepted_minions)
+                jinfo = (
+                    self.gather_job_info(jid, minion_pending, "list", **kwargs)
+                    if minion_pending
+                    else {}
                 )
                 minions_running = False
                 # if we weren't assigned any jid that means the master thinks

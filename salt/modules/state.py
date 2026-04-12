@@ -72,6 +72,12 @@ def __virtual__():
     """
     Set the virtualname
     """
+    # Resource-type loaders (resource_modules) use per-type override modules
+    # such as sshresource_state.py.  Returning False here yields the "state"
+    # virtualname slot to those overrides so they are dispatched correctly
+    # when jobs are targeted at resources.
+    if __opts__.get("resource_type"):  # pylint: disable=undefined-variable
+        return False, "state: not loaded in resource-type loaders"
     # Update global namespace with functions that are cloned in this module
     global _orchestrate
     _orchestrate = salt.utils.functools.namespaced_function(_orchestrate, globals())
