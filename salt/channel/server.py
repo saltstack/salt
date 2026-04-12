@@ -2445,8 +2445,10 @@ class MasterPubServerChannel:
                         (tag, data)
                     )
                 else:
+                    topic_list = event_data.get("topic_lst")
                     await self.transport.publish_payload(
-                        salt.utils.event.SaltEvent.pack(parsed_tag, event_data)
+                        salt.utils.event.SaltEvent.pack(parsed_tag, event_data),
+                        topic_list=topic_list,
                     )
             else:
                 log.error("This cluster tag not valid %s", tag)
