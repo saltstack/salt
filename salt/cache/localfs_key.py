@@ -107,11 +107,16 @@ def _get_index(opts):
         return None
 
     pki_dir = os.path.abspath(pki_dir)
+    if not opts.get("pki_index_enabled", False):
+        return None
+
     if pki_dir not in _indices:
         # Index lives in cachedir instead of etc
-        cachedir = opts.get("cachedir", "/var/cache/salt/master")
-
-        # Make the index filename unique per pki_dir to support multiple Master instances
+        # cachedir = opts.get("cachedir", "/var/cache/salt/master")
+        # Fixed: Use proper cachedir from opts
+        cachedir = opts.get("cachedir")
+        if not cachedir:
+            return None
         pki_hash = hashlib.sha256(salt.utils.stringutils.to_bytes(pki_dir)).hexdigest()[
             :8
         ]

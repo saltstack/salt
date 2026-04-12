@@ -95,9 +95,12 @@ def test_mmap_cache_staleness_detection(cache_path):
     other_cache.put("key2", "val2")
     other_cache.close()
 
+    # On Windows we can't replace an open file.
+    # We close it but keep the object, which still holds the old _cache_id (or _ino).
+    cache.close()
     os.replace(tmp_path, cache_path)
 
-    # The original cache instance should detect the Inode change on next open/access
+    # The original cache instance should detect the change on next open/access
     # Our get() calls open(write=False)
     assert cache.get("key2") == "val2"
     assert cache.contains("key1") is False

@@ -1,10 +1,22 @@
+import contextlib
 import logging
 import mmap
 import os
 import zlib
 
 import salt.utils.files
+import salt.utils.platform
 import salt.utils.stringutils
+
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
+
+try:
+    import msvcrt
+except ImportError:
+    msvcrt = None
 
 log = logging.getLogger(__name__)
 
@@ -25,11 +37,66 @@ class MmapCache:
         self.size = size
         self.slot_size = slot_size
         self._mm = None
-        self._ino = None
+        self._cache_id = None
 
     @property
     def _lock_path(self):
         return self.path + ".lock"
+
+    @contextlib.contextmanager
+    def _lock(self):
+        """
+        Cross-platform file locking.
+        """
+        # Ensure directory exists for lock file
+        os.makedirs(os.path.dirname(self._lock_path), exist_ok=True)
+        with salt.utils.files.fopen(self._lock_path, "w") as lock_f:
+            fd = lock_f.fileno()
+            if salt.utils.platform.is_windows():
+                if msvcrt:
+                    # msvcrt.locking(fd, mode, nbytes)
+                    # LK_LOCK: Locks the specified bytes. If the bytes cannot be locked,
+                    # the program immediately tries again after 1 second and continues
+                    # to do so until the bytes are locked.
+                    # We lock just the first byte of the lock file.
+                    try:
+                        msvcrt.locking(fd, msvcrt.LK_LOCK, 1)
+                        yield
+                    finally:
+                        try:
+                            msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+                        except OSError:
+                            pass
+                else:
+                    # Fallback if msvcrt is somehow missing
+                    yield
+            else:
+                if fcntl:
+                    fcntl.flock(fd, fcntl.LOCK_EX)
+                    try:
+                        yield
+                    finally:
+                        fcntl.flock(fd, fcntl.LOCK_UN)
+                else:
+                    # Fallback if fcntl is missing (e.g. some weird environments)
+                    yield
+
+    def _get_cache_id(self):
+        """
+        Return a unique identifier for the current file on disk to detect atomic swaps.
+        On Unix we use st_ino. On Windows we use a combination of creation time and size,
+        or better, just use st_ino if it's available and non-zero (Python 3.11+ on Windows
+        usually provides it if the FS supports it).
+        """
+        try:
+            st = os.stat(self.path)
+            # Use st_ino if it's non-zero (Unix or modern Python on Windows/NTFS)
+            if st.st_ino:
+                return st.st_ino
+            # Fallback for Windows if st_ino is 0
+            return (st.st_mtime, st.st_ctime, st.st_size)
+        except OSError:
+            return None
 
     def _init_file(self):
         """
@@ -68,15 +135,11 @@ class MmapCache:
         """
         if self._mm:
             # Check for staleness (Atomic Swap detection)
-            try:
-                if os.stat(self.path).st_ino != self._ino:
-                    self.close()
-                else:
-                    return True
-            except OSError:
-                # File might be temporarily missing during a swap or deleted.
-                # If deleted, we should close current mm and try to re-init/open.
+            current_id = self._get_cache_id()
+            if current_id != self._cache_id:
                 self.close()
+            else:
+                return True
 
         if write:
             if not self._init_file():
@@ -92,10 +155,10 @@ class MmapCache:
         try:
             with salt.utils.files.fopen(self.path, mode) as f:
                 fd = f.fileno()
-                st = os.fstat(fd)
-                self._ino = st.st_ino
+                self._cache_id = self._get_cache_id()
 
                 # Verify file size matches expected size
+                st = os.fstat(fd)
                 expected_size = self.size * self.slot_size
                 if st.st_size != expected_size:
                     log.error(
@@ -121,11 +184,11 @@ class MmapCache:
         if self._mm:
             try:
                 self._mm.close()
-            except BufferError:
+            except (BufferError, OSError):
                 # Handle cases where buffers might still be in use
                 pass
             self._mm = None
-        self._ino = None
+        self._cache_id = None
 
     def _hash(self, key_bytes):
         """
@@ -160,49 +223,41 @@ class MmapCache:
 
         h = self._hash(key_bytes)
         # Use file locking for multi-process safety on writes
-        import fcntl
-
         try:
-            with salt.utils.files.fopen(self._lock_path, "w") as lock_f:
-                fcntl.flock(lock_f.fileno(), fcntl.LOCK_EX)
-                try:
-                    for i in range(self.size):
-                        slot = (h + i) % self.size
-                        offset = slot * self.slot_size
-                        status = self._mm[offset]
+            with self._lock():
+                for i in range(self.size):
+                    slot = (h + i) % self.size
+                    offset = slot * self.slot_size
+                    status = self._mm[offset]
 
-                        if status == OCCUPIED:
-                            # Check if it's the same key
-                            existing_data = self._mm[
-                                offset + 1 : offset + self.slot_size
-                            ]
-                            # Key is everything before first null
-                            null_pos = existing_data.find(b"\x00")
-                            existing_key = (
-                                existing_data[:null_pos]
-                                if null_pos != -1
-                                else existing_data.rstrip(b"\x00")
-                            )
+                    if status == OCCUPIED:
+                        # Check if it's the same key
+                        existing_data = self._mm[offset + 1 : offset + self.slot_size]
+                        # Key is everything before first null
+                        null_pos = existing_data.find(b"\x00")
+                        existing_key = (
+                            existing_data[:null_pos]
+                            if null_pos != -1
+                            else existing_data.rstrip(b"\x00")
+                        )
 
-                            if existing_key == key_bytes:
-                                # Update value if needed
-                                self._mm[offset + 1 : offset + 1 + len(data)] = data
-                                if len(data) < self.slot_size - 1:
-                                    self._mm[offset + 1 + len(data)] = 0
-                                self._mm.flush()
-                                return True
-                            continue
+                        if existing_key == key_bytes:
+                            # Update value if needed
+                            self._mm[offset + 1 : offset + 1 + len(data)] = data
+                            if len(data) < self.slot_size - 1:
+                                self._mm[offset + 1 + len(data)] = 0
+                            self._mm.flush()
+                            return True
+                        continue
 
-                        # Found an empty or deleted slot.
-                        # Write data FIRST, then flip status byte to ensure reader safety.
-                        self._mm[offset + 1 : offset + 1 + len(data)] = data
-                        if len(data) < self.slot_size - 1:
-                            self._mm[offset + 1 + len(data)] = 0
-                        self._mm[offset] = OCCUPIED
-                        self._mm.flush()
-                        return True
-                finally:
-                    fcntl.flock(lock_f.fileno(), fcntl.LOCK_UN)
+                    # Found an empty or deleted slot.
+                    # Write data FIRST, then flip status byte to ensure reader safety.
+                    self._mm[offset + 1 : offset + 1 + len(data)] = data
+                    if len(data) < self.slot_size - 1:
+                        self._mm[offset + 1 + len(data)] = 0
+                    self._mm[offset] = OCCUPIED
+                    self._mm.flush()
+                    return True
 
             log.error("Mmap cache is full!")
             return False
@@ -280,37 +335,31 @@ class MmapCache:
         key_bytes = salt.utils.stringutils.to_bytes(key)
         h = self._hash(key_bytes)
 
-        import fcntl
-
         try:
-            with salt.utils.files.fopen(self._lock_path, "w") as lock_f:
-                fcntl.flock(lock_f.fileno(), fcntl.LOCK_EX)
-                try:
-                    for i in range(self.size):
-                        slot = (h + i) % self.size
-                        offset = slot * self.slot_size
-                        status = self._mm[offset]
+            with self._lock():
+                for i in range(self.size):
+                    slot = (h + i) % self.size
+                    offset = slot * self.slot_size
+                    status = self._mm[offset]
 
-                        if status == EMPTY:
-                            return False
+                    if status == EMPTY:
+                        return False
 
-                        if status == DELETED:
-                            continue
+                    if status == DELETED:
+                        continue
 
-                        existing_data = self._mm[offset + 1 : offset + self.slot_size]
-                        null_pos = existing_data.find(b"\x00")
-                        existing_key = (
-                            existing_data[:null_pos]
-                            if null_pos != -1
-                            else existing_data.rstrip(b"\x00")
-                        )
+                    existing_data = self._mm[offset + 1 : offset + self.slot_size]
+                    null_pos = existing_data.find(b"\x00")
+                    existing_key = (
+                        existing_data[:null_pos]
+                        if null_pos != -1
+                        else existing_data.rstrip(b"\x00")
+                    )
 
-                        if existing_key == key_bytes:
-                            self._mm[offset] = DELETED
-                            self._mm.flush()
-                            return True
-                finally:
-                    fcntl.flock(lock_f.fileno(), fcntl.LOCK_UN)
+                    if existing_key == key_bytes:
+                        self._mm[offset] = DELETED
+                        self._mm.flush()
+                        return True
             return False
         except OSError as exc:
             log.error("Error deleting from mmap cache %s: %s", self.path, exc)
@@ -418,86 +467,79 @@ class MmapCache:
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
 
         tmp_path = self.path + ".tmp"
-        import fcntl
 
         # We use the same lock file for consistency
         try:
-            with salt.utils.files.fopen(self._lock_path, "w") as lock_f:
-                fcntl.flock(lock_f.fileno(), fcntl.LOCK_EX)
-                try:
-                    # Initialize empty file with explicit writes (no sparse files)
-                    with salt.utils.files.fopen(tmp_path, "wb") as f:
-                        total_size = self.size * self.slot_size
-                        chunk_size = 1024 * 1024
-                        zeros = b"\x00" * min(chunk_size, total_size)
-                        bytes_written = 0
-                        while bytes_written < total_size:
-                            to_write = min(chunk_size, total_size - bytes_written)
-                            if to_write < chunk_size:
-                                f.write(zeros[:to_write])
+            with self._lock():
+                # Initialize empty file with explicit writes (no sparse files)
+                with salt.utils.files.fopen(tmp_path, "wb") as f:
+                    total_size = self.size * self.slot_size
+                    chunk_size = 1024 * 1024
+                    zeros = b"\x00" * min(chunk_size, total_size)
+                    bytes_written = 0
+                    while bytes_written < total_size:
+                        to_write = min(chunk_size, total_size - bytes_written)
+                        if to_write < chunk_size:
+                            f.write(zeros[:to_write])
+                        else:
+                            f.write(zeros)
+                        bytes_written += to_write
+                    f.flush()
+                    os.fsync(f.fileno())
+
+                # Open for writing
+                with salt.utils.files.fopen(tmp_path, "r+b") as f:
+                    mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_WRITE)
+
+                    try:
+                        # Bulk insert all items
+                        for item in iterator:
+                            if isinstance(item, (list, tuple)) and len(item) > 1:
+                                key, value = item[0], item[1]
                             else:
-                                f.write(zeros)
-                            bytes_written += to_write
-                        f.flush()
-                        os.fsync(f.fileno())
-
-                    # Open for writing
-                    with salt.utils.files.fopen(tmp_path, "r+b") as f:
-                        mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_WRITE)
-
-                        try:
-                            # Bulk insert all items
-                            for item in iterator:
-                                if isinstance(item, (list, tuple)) and len(item) > 1:
-                                    key, value = item[0], item[1]
-                                else:
-                                    key = (
-                                        item[0]
-                                        if isinstance(item, (list, tuple))
-                                        else item
-                                    )
-                                    value = None
-
-                                key_bytes = salt.utils.stringutils.to_bytes(key)
-                                val_bytes = (
-                                    salt.utils.stringutils.to_bytes(value)
-                                    if value is not None
-                                    else b""
+                                key = (
+                                    item[0] if isinstance(item, (list, tuple)) else item
                                 )
+                                value = None
 
-                                data = key_bytes
-                                if value is not None:
-                                    data += b"\x00" + val_bytes
+                            key_bytes = salt.utils.stringutils.to_bytes(key)
+                            val_bytes = (
+                                salt.utils.stringutils.to_bytes(value)
+                                if value is not None
+                                else b""
+                            )
 
-                                if len(data) > self.slot_size - 1:
-                                    log.warning("Data too long for slot: %s", key)
-                                    continue
+                            data = key_bytes
+                            if value is not None:
+                                data += b"\x00" + val_bytes
 
-                                # Find slot using same hash function
-                                h = zlib.adler32(key_bytes) % self.size
-                                for i in range(self.size):
-                                    slot = (h + i) % self.size
-                                    offset = slot * self.slot_size
+                            if len(data) > self.slot_size - 1:
+                                log.warning("Data too long for slot: %s", key)
+                                continue
 
-                                    if mm[offset] != OCCUPIED:
-                                        # Write data then status (reader-safe order)
-                                        mm[offset + 1 : offset + 1 + len(data)] = data
-                                        if len(data) < self.slot_size - 1:
-                                            mm[offset + 1 + len(data)] = 0
-                                        mm[offset] = OCCUPIED
-                                        break
-                            mm.flush()
-                        finally:
-                            mm.close()
+                            # Find slot using same hash function
+                            h = zlib.adler32(key_bytes) % self.size
+                            for i in range(self.size):
+                                slot = (h + i) % self.size
+                                offset = slot * self.slot_size
 
-                    # Close current mmap before replacing file
-                    self.close()
+                                if mm[offset] != OCCUPIED:
+                                    # Write data then status (reader-safe order)
+                                    mm[offset + 1 : offset + 1 + len(data)] = data
+                                    if len(data) < self.slot_size - 1:
+                                        mm[offset + 1 + len(data)] = 0
+                                    mm[offset] = OCCUPIED
+                                    break
+                        mm.flush()
+                    finally:
+                        mm.close()
 
-                    # Atomic swap
-                    os.replace(tmp_path, self.path)
-                    return True
-                finally:
-                    fcntl.flock(lock_f.fileno(), fcntl.LOCK_UN)
+                # Close current mmap before replacing file
+                self.close()
+
+                # Atomic swap
+                os.replace(tmp_path, self.path)
+                return True
         except OSError as exc:
             log.error("Error rebuilding mmap cache %s: %s", self.path, exc)
             if os.path.exists(tmp_path):

@@ -16,6 +16,9 @@ def opts(tmp_path):
         "pki_dir": str(pki_dir),
         "sock_dir": str(tmp_path / "sock"),
         "cachedir": str(tmp_path / "cache"),
+        "pki_index_enabled": True,
+        "pki_index_size": 100,
+        "pki_index_slot_size": 64,
     }
 
 
