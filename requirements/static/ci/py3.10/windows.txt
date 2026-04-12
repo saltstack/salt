@@ -318,7 +318,7 @@ pyfakefs==5.3.1
     # via -r requirements/pytest.txt
 pygit2==1.13.1
     # via -r requirements/static/ci/windows.in
-pygments==2.19.2
+pygments==2.20.0
     # via
     #   -c requirements/static/pkg/py3.10/windows.txt
     #   rich
