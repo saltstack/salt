@@ -344,10 +344,14 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         publish_payload,
         presence_callback=None,
         remove_presence_callback=None,
+        secrets=None,
+        started=None,
     ):
         """
         Bind to the interface specified in the configuration file
         """
+        if started is not None:
+            self.started = started
         # Use asyncio event loop directly like ZeroMQ does
         io_loop = salt.utils.asynchronous.aioloop(tornado.ioloop.IOLoop())
 
@@ -443,7 +447,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             for msg in unpacker:
                 await self._pub_payload(msg)
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, *args, **kwargs):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
@@ -475,6 +479,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                     break
         finally:
             self.clients.discard(ws)
+        return ws
 
     async def _connect(self):
         if self.pull_path:
@@ -531,7 +536,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self._run = None
         self._socket = None
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, *args, **kwargs):
         """
         Pre-fork we need to create the zmq router device
         """
@@ -549,7 +554,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             self._socket.setblocking(0)
             self._socket.bind(_get_bind_addr(self.opts, "ret_port"))
 
-    def post_fork(self, message_handler, io_loop):
+    def post_fork(self, message_handler, io_loop, **kwargs):
         """
         After forking we need to create all of the local sockets to listen to the
         router
@@ -604,6 +609,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 await ws.send_bytes(salt.payload.dumps(reply))
             elif msg.type == aiohttp.WSMsgType.ERROR:
                 log.error("ws connection closed with exception %s", ws.exception())
+        return ws
 
     def close(self):
         if self._run is not None:
@@ -612,6 +618,19 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             self._socket.shutdown(socket.SHUT_RDWR)
             self._socket.close()
             self._socket = None
+
+    async def forward_message(self, payload):
+        """
+        Forward a message into this transport's worker queue.
+
+        Not implemented for WebSocket transport. Worker pool routing is only
+        supported for ZeroMQ transport.
+        """
+        log.warning(
+            "Worker pool message forwarding is not supported for WebSocket transport. "
+            "Use ZeroMQ transport for worker pool routing."
+        )
+        return None
 
 
 class RequestClient(salt.transport.base.RequestClient):
