@@ -445,9 +445,13 @@ class Pillar:
                 )
         else:
             self.functions = functions
+            if hasattr(self.functions, "pack"):
+                self.functions.pack["__pillar__"] = self.pillar_data
 
         self.opts["minion_id"] = minion_id
         self.matchers = salt.loader.matchers(self.opts)
+        if hasattr(self.matchers, "pack"):
+            self.matchers.pack["__pillar__"] = self.pillar_data
         self.rend = salt.loader.render(
             self.opts,
             self.functions,
@@ -1117,7 +1121,6 @@ class Pillar:
         """
         Render the pillar data and return
         """
-        self.opts["pillar"] = self.pillar_data
         top, top_errors = self.get_top()
         if ext:
             if self.opts.get("ext_pillar_first", False):
@@ -1134,7 +1137,7 @@ class Pillar:
                 matches = self.top_matches(top, reload=True)
                 pillar, errors = self.render_pillar(matches, errors=errors)
                 pillar = merge(
-                    self.opts["pillar"],
+                    self.pillar_data,
                     pillar,
                     self.merge_strategy,
                     self.opts.get("renderer", "yaml"),
@@ -1186,7 +1189,7 @@ class Pillar:
                 self.opts.get("pillar_merge_lists", False),
             )
 
-        decrypt_errors = self.decrypt_pillar(self.pillar_data)
+        decrypt_errors = self.decrypt_pillar(pillar)
         if decrypt_errors:
             pillar.setdefault("_errors", []).extend(decrypt_errors)
         return pillar
