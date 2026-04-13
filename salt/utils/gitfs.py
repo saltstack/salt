@@ -2592,20 +2592,28 @@ class GitCLI(GitProvider):
         # Ensure all required attributes are available before calling init_remote
         # These are normally set in GitProvider.__init__ but we'll ensure they exist
         # to avoid race conditions during object construction.
-        self.ssl_verify = getattr(self, "ssl_verify", self.opts.get(f"{self.role}_ssl_verify", True))
+        self.ssl_verify = getattr(
+            self, "ssl_verify", self.opts.get(f"{self.role}_ssl_verify", True)
+        )
         self.proxy = getattr(self, "proxy", self.opts.get(f"{self.role}_proxy", ""))
         self.user = getattr(self, "user", self.opts.get(f"{self.role}_user", ""))
-        self.password = getattr(self, "password", self.opts.get(f"{self.role}_password", ""))
+        self.password = getattr(
+            self, "password", self.opts.get(f"{self.role}_password", "")
+        )
         self.pubkey = getattr(self, "pubkey", self.opts.get(f"{self.role}_pubkey", ""))
-        self.privkey = getattr(self, "privkey", self.opts.get(f"{self.role}_privkey", ""))
+        self.privkey = getattr(
+            self, "privkey", self.opts.get(f"{self.role}_privkey", "")
+        )
         self.base = getattr(self, "base", self.opts.get(f"{self.role}_base", "master"))
         self.branch = getattr(self, "branch", self.base)
         self.ref_types = getattr(self, "ref_types", ["branch", "tag", "sha"])
         self.disable_saltenv_mapping = getattr(
-            self, "disable_saltenv_mapping", self.opts.get(f"{self.role}_disable_saltenv_mapping", False)
+            self,
+            "disable_saltenv_mapping",
+            self.opts.get(f"{self.role}_disable_saltenv_mapping", False),
         )
         self.saltenv_revmap = getattr(self, "saltenv_revmap", {})
-        
+
         # Handle gitfs_depth / git_pillar_depth etc.
         self.depth = self.opts.get(f"{self.role}_depth", 1)
         # Ensure it's an integer
@@ -2872,7 +2880,9 @@ class GitCLI(GitProvider):
         # If we have a root, we need to join it
         tree_path = path
         if self.root(tgt_env):
-            tree_path = salt.utils.path.join(self.root(tgt_env), path, use_posixpath=True)
+            tree_path = salt.utils.path.join(
+                self.root(tgt_env), path, use_posixpath=True
+            )
 
         res = self._run_git(["ls-tree", git_ref, tree_path])
         if res.returncode != 0 or not res.stdout:
@@ -2893,20 +2903,20 @@ class GitCLI(GitProvider):
             depth += 1
             if depth > SYMLINK_RECURSE_DEPTH:
                 return None, None, None
-            
+
             sres = self._run_git(["show", obj_sha])
             if sres.returncode != 0:
                 return None, None, None
-            
+
             link_tgt = sres.stdout.decode().strip()
             tree_path = salt.utils.path.join(
                 os.path.dirname(tree_path), link_tgt, use_posixpath=True
             )
-            
+
             res = self._run_git(["ls-tree", git_ref, tree_path])
             if res.returncode != 0 or not res.stdout:
                 return None, None, None
-            
+
             line = res.stdout.decode().splitlines()[0]
             parts = line.split(None, 3)
             mode = parts[0]
@@ -2992,7 +3002,12 @@ class GitCLI(GitProvider):
         GitCLI doesn't use pygit2.Keypair, so we just check files.
         """
         if self.privkey and not os.path.isfile(self.privkey):
-            log.error("SSH privkey %s for %s remote '%s' not found", self.privkey, self.role, self.id)
+            log.error(
+                "SSH privkey %s for %s remote '%s' not found",
+                self.privkey,
+                self.role,
+                self.id,
+            )
             return False
         return True
 
@@ -3000,7 +3015,6 @@ class GitCLI(GitProvider):
         """
         GitCLI doesn't use callbacks
         """
-        pass
 
     def get_tree_from_branch(self, ref):
         """
@@ -3263,10 +3277,7 @@ class GitBase:
             # or expect it to be checked after construction.
             if hasattr(repo_obj, "repo") or self.provider == "mocked":
                 # Sanity check and assign the credential parameter
-                if (
-                    self.opts["__role"] == "minion"
-                    and getattr(repo_obj, "new", False)
-                ):
+                if self.opts["__role"] == "minion" and getattr(repo_obj, "new", False):
                     # Perform initial fetch on masterless minion
                     repo_obj.fetch()
 

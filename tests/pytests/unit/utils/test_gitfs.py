@@ -68,7 +68,9 @@ def test_provider_case_insensitive_gitfs_provider(minion_opts, role_name, role_c
     key = f"{role_name}_provider"
     with patch.object(role_class, "verify_gitpython", MagicMock(return_value=True)):
         with patch.object(role_class, "verify_pygit2", MagicMock(return_value=False)):
-            with patch.object(role_class, "verify_gitcli", MagicMock(return_value=False)):
+            with patch.object(
+                role_class, "verify_gitcli", MagicMock(return_value=False)
+            ):
                 args = [minion_opts, {}]
                 kwargs = {"init_remotes": False}
                 if role_name == "winrepo":
