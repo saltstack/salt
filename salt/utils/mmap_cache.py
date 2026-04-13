@@ -1,4 +1,5 @@
 import contextlib
+import errno
 import logging
 import mmap
 import os
@@ -132,6 +133,8 @@ class MmapCache:
     def open(self, write=False):
         """
         Open the memory-mapped file.
+        Readers (write=False) do not use any locks.
+        Writers (write=True) use file initialization if needed.
         """
         if self._mm:
             # Check for staleness (Atomic Swap detection)
@@ -153,6 +156,9 @@ class MmapCache:
             access = mmap.ACCESS_READ
 
         try:
+            # Note: We do NOT use _lock() here for readers.
+            # Atomic swap (os.replace) ensures readers see either the old file
+            # or the new file, but never a partially initialized one.
             with salt.utils.files.fopen(self.path, mode) as f:
                 fd = f.fileno()
                 self._cache_id = self._get_cache_id()
@@ -161,6 +167,10 @@ class MmapCache:
                 st = os.fstat(fd)
                 expected_size = self.size * self.slot_size
                 if st.st_size != expected_size:
+                    if not write:
+                        # For readers, a size mismatch is a sign of a partial write
+                        # (even with atomic swap, this can happen on some networked FS)
+                        return False
                     log.error(
                         "MmapCache file size mismatch for %s: expected %d, got %d",
                         self.path,
@@ -173,6 +183,8 @@ class MmapCache:
                 self._mm = mmap.mmap(fd, 0, access=access)
             return True
         except OSError as exc:
+            if not write and exc.errno == errno.ENOENT:
+                return False
             log.error("Failed to mmap cache file %s: %s", self.path, exc)
             self.close()
             return False
@@ -466,13 +478,18 @@ class MmapCache:
         # Ensure directory exists
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
 
-        tmp_path = self.path + ".tmp"
+        # Use a unique temp file to avoid clashes with other processes or readers
+        import tempfile
 
-        # We use the same lock file for consistency
+        tmp_dir = os.path.dirname(self.path)
+        tmp_fd, tmp_path = tempfile.mkstemp(dir=tmp_dir, prefix=".pki_rebuild_")
+
         try:
+            # We use the lock file to prevent multiple concurrent rebuilds
             with self._lock():
                 # Initialize empty file with explicit writes (no sparse files)
-                with salt.utils.files.fopen(tmp_path, "wb") as f:
+                # We use the already open tmp_fd
+                with os.fdopen(tmp_fd, "wb") as f:
                     total_size = self.size * self.slot_size
                     chunk_size = 1024 * 1024
                     zeros = b"\x00" * min(chunk_size, total_size)
@@ -487,7 +504,7 @@ class MmapCache:
                     f.flush()
                     os.fsync(f.fileno())
 
-                # Open for writing
+                # Open for writing the actual data
                 with salt.utils.files.fopen(tmp_path, "r+b") as f:
                     mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_WRITE)
 
@@ -548,3 +565,9 @@ class MmapCache:
                 except OSError:
                     pass
             return False
+        finally:
+            # Ensure tmp_fd is always closed if it hasn't been by os.fdopen
+            try:
+                os.close(tmp_fd)
+            except OSError:
+                pass

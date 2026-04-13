@@ -107,7 +107,7 @@ def _get_index(opts):
         return None
 
     pki_dir = os.path.abspath(pki_dir)
-    if not opts.get("pki_index_enabled", False):
+    if not opts.get("pki_index_enabled") is True:
         return None
 
     if pki_dir not in _indices:
@@ -135,7 +135,7 @@ def rebuild_index(opts):
     Rebuild the PKI index from filesystem.
     Returns True on success, False on failure.
     """
-    if not opts.get("pki_index_enabled", False):
+    if not opts.get("pki_index_enabled") is True:
         return True
 
     index = _get_index(opts)
@@ -278,7 +278,7 @@ def store(bank, key, data, cachedir, user, **kwargs):
         )
 
     # Update index after successful filesystem write
-    if bank == "keys" and state_for_index and __opts__.get("pki_index_enabled", False):
+    if bank == "keys" and state_for_index and __opts__.get("pki_index_enabled") is True:
         try:
             index = _get_index(__opts__)
             if index:
@@ -442,7 +442,7 @@ def flush(bank, key=None, cachedir=None, **kwargs):
         bank == "keys"
         and key is not None
         and flushed
-        and __opts__.get("pki_index_enabled", False)
+        and __opts__.get("pki_index_enabled") is True
     ):
         try:
             index = _get_index(__opts__)
@@ -461,7 +461,7 @@ def list_(bank, cachedir, **kwargs):
     """
     if bank == "keys":
         # Try to use index first (internal optimization)
-        if __opts__.get("pki_index_enabled", False):
+        if __opts__.get("pki_index_enabled") is True:
             try:
                 index = _get_index(__opts__)
                 if index:
@@ -531,8 +531,9 @@ def list_all(bank, cachedir, include_data=False, **kwargs):
         raise SaltCacheError(f"Unrecognized bank: {bank}")
 
     # Try index first (internal optimization)
-    if bank == "keys" and __opts__.get("pki_index_enabled", False):
+    if bank == "keys" and __opts__.get("pki_index_enabled") is True:
         try:
+
             index = _get_index(__opts__)
             if index:
                 items = index.list_items()
@@ -635,7 +636,7 @@ def contains(bank, key, cachedir, **kwargs):
 
     if bank == "keys":
         # Try index first (internal optimization)
-        if __opts__.get("pki_index_enabled", False):
+        if __opts__.get("pki_index_enabled") is True:
             try:
                 index = _get_index(__opts__)
                 if index:

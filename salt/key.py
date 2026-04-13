@@ -584,7 +584,7 @@ class Key:
                     return salt.payload.load(fn_)
 
         # Use cache layer's optimized bulk fetch
-        if self.opts.get("pki_index_enabled", False):
+        if self.opts.get("pki_index_enabled") is True:
             from salt.utils import (
                 pki as pki_utils,  # pylint: disable=import-outside-toplevel
             )
@@ -771,7 +771,7 @@ class Key:
             sys.stderr.write(f"Unable to accept invalid key for {key}.\n")
 
         # Update PKI index if enabled
-        if self.opts.get("pki_index_enabled", False):
+        if self.opts.get("pki_index_enabled") is True:
             try:
                 import salt.cache.localfs_key as localfs_key_cache  # pylint: disable=import-outside-toplevel
 
@@ -858,7 +858,7 @@ class Key:
                 self.opts["cachedir"], self.opts["user"], self.opts["id"]
             )
         # Update PKI index if enabled
-        if self.opts.get("pki_index_enabled", False):
+        if self.opts.get("pki_index_enabled") is True:
             try:
                 import salt.cache.localfs_key as localfs_key_cache  # pylint: disable=import-outside-toplevel
 
