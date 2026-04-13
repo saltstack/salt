@@ -1215,14 +1215,14 @@ class Pillar:
                         loader.pack["__pillar__"] = self.pillar_data
                 else:
                     loader.pack["__pillar__"] = self.pillar_data
-        
+
         # Also update matchers in context if they exist
         context = {}
         if hasattr(self.functions, "pack"):
             context = self.functions.pack.get("__context__", {})
         if not context and hasattr(self.matchers, "pack"):
             context = self.matchers.pack.get("__context__", {})
-        
+
         if hasattr(context, "value"):
             context = context.value()
 
