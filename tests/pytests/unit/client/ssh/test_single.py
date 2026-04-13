@@ -474,7 +474,7 @@ def test_run_ssh_pre_flight_no_connect(opts, target, tmp_path, caplog, mock_bin_
     send_mock = MagicMock(return_value=ret_send)
     patch_send = patch("salt.client.ssh.shell.Shell.send", send_mock)
 
-    with caplog.at_level(logging.DEBUG, logger="salt.client.ssh"):
+    with caplog.at_level(5, logger="salt.client.ssh"):
         with patch_send, patch_exec_cmd, patch_tmp:
             ret = single.run_ssh_pre_flight()
 
@@ -569,7 +569,7 @@ def test_run_ssh_pre_flight_connect(opts, target, tmp_path, caplog, mock_bin_pat
     send_mock = MagicMock(return_value=ret_send)
     patch_send = patch("salt.client.ssh.shell.Shell.send", send_mock)
 
-    with caplog.at_level(logging.DEBUG, logger="salt.client.ssh"):
+    with caplog.at_level(5, logger="salt.client.ssh"):
         with patch_send, patch_exec_cmd, patch_tmp:
             ret = single.run_ssh_pre_flight()
 

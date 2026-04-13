@@ -1345,24 +1345,26 @@ def bridge_pytest_and_runtests(
     RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR = os.path.dirname(
         salt_syndic_factory.config["conf_file"]
     )
-    RUNTIME_VARS.TMP_SSH_CONF_DIR = str(sshd_config_dir)
+    if sshd_config_dir:
+        RUNTIME_VARS.TMP_SSH_CONF_DIR = str(sshd_config_dir)
     with reap_stray_processes():
         yield
 
 
 @pytest.fixture(scope="session")
 def sshd_config_dir(salt_factories):
-    if not salt.utils.path.which("sshd"):
-        pytest.skip("The 'sshd' binary was not found. Skipping salt-ssh tests.")
+    if not shutil.which("sshd"):
+        yield None
+        return
     config_dir = salt_factories.get_root_dir_for_daemon("sshd")
 
     yield config_dir
     shutil.rmtree(str(config_dir), ignore_errors=True)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
-    if not salt.utils.path.which("sshd"):
+    if not shutil.which("sshd"):
         pytest.skip("The 'sshd' binary was not found. Skipping salt-ssh tests.")
     sshd_config_dict = {
         "Protocol": "2",
