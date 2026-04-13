@@ -373,7 +373,7 @@ pyrsistent==0.19.3
     # via jsonschema
 pyserial==3.5 ; sys_platform != 'win32'
     # via junos-eznc
-pytest==8.1.1
+pytest==9.0.3
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
