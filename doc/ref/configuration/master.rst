@@ -235,10 +235,29 @@ Default: ``1000000``
 
 The number of slots in the PKI index. For best performance and minimal
 collisions, this should be set to approximately 2x your total minion count.
+This value applies to each shard if sharding is enabled.
 
 .. code-block:: yaml
 
     pki_index_size: 1000000
+
+.. conf_master:: pki_index_shards
+
+``pki_index_shards``
+--------------------
+
+.. versionadded:: 3009.0
+
+Default: ``1``
+
+The number of shards to split the PKI index across. Sharding allows the index
+to span multiple memory-mapped files, which can improve concurrency and
+performance in extremely large environments or on filesystems with specific
+locking characteristics.
+
+.. code-block:: yaml
+
+    pki_index_shards: 1
 
 .. conf_master:: pki_index_slot_size
 
@@ -250,7 +269,8 @@ collisions, this should be set to approximately 2x your total minion count.
 Default: ``128``
 
 The size in bytes of each slot in the PKI index. This must be large enough
-to hold your longest minion ID plus approximately 10 bytes of overhead.
+to hold your longest minion ID plus approximately 10 bytes of internal
+overhead (state information and separators).
 
 .. code-block:: yaml
 
