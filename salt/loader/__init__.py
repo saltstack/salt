@@ -417,19 +417,35 @@ def metaproxy(opts, loaded_base_name=None):
     )
 
 
-def matchers(opts, loaded_base_name=None):
+def matchers(opts, loaded_base_name=None, context=None, pillar=None):
     """
     Return the matcher services plugins
 
     :param dict opts: The Salt options dictionary
     :param str loaded_base_name: The imported modules namespace when imported
                                  by the salt loader.
+    :param dict context: The Salt context dictionary
+    :param dict pillar: The Salt pillar dictionary
     """
+    if context is None:
+        context = {}
+
+    pack = {
+        "__salt__": {},
+        "__runners__": {},
+        "__grains__": opts.get("grains", {}),
+        "__context__": context,
+        "__file_client__": None,
+    }
+    if pillar is not None:
+        pack["__pillar__"] = pillar
+
     return LazyLoader(
         _module_dirs(opts, "matchers"),
         opts,
         tag="matchers",
         loaded_base_name=loaded_base_name,
+        pack=pack,
     )
 
 
