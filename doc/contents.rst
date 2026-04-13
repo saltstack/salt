@@ -36,6 +36,7 @@ Salt Table of Contents
     topics/api
     topics/topology/index
     topics/cache/index
+    topics/performance/index
     topics/slots/index
     topics/windows/index
     topics/development/index
