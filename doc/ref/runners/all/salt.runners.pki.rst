@@ -1,3 +1,6 @@
+.. _all-salt.runners.pki:
+
+================
 salt.runners.pki
 ================
 

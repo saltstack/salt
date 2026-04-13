@@ -207,6 +207,56 @@ following the Filesystem Hierarchy Standard (FHS) might set it to
     pki_dir: /etc/salt/pki/master
 
 
+.. conf_master:: pki_index_enabled
+
+``pki_index_enabled``
+---------------------
+
+.. versionadded:: 3009.0
+
+Default: ``False``
+
+Enable the O(1) PKI index optimization. This uses a memory-mapped hash table
+to speed up minion public key lookups, which can substantially decrease
+master publish times and authentication overhead in large environments.
+
+.. code-block:: yaml
+
+    pki_index_enabled: True
+
+.. conf_master:: pki_index_size
+
+``pki_index_size``
+------------------
+
+.. versionadded:: 3009.0
+
+Default: ``1000000``
+
+The number of slots in the PKI index. For best performance and minimal
+collisions, this should be set to approximately 2x your total minion count.
+
+.. code-block:: yaml
+
+    pki_index_size: 1000000
+
+.. conf_master:: pki_index_slot_size
+
+``pki_index_slot_size``
+-----------------------
+
+.. versionadded:: 3009.0
+
+Default: ``128``
+
+The size in bytes of each slot in the PKI index. This must be large enough
+to hold your longest minion ID plus approximately 10 bytes of overhead.
+
+.. code-block:: yaml
+
+    pki_index_slot_size: 128
+
+
 .. conf_master:: cluster_id
 
 ``cluster_id``
