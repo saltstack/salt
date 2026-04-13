@@ -1,5 +1,6 @@
 import locale
 import random
+import sys
 
 import pytest
 
@@ -113,8 +114,12 @@ def test_get_auditpol_dump():
 
 
 def test_auditpol_backup_encoding_mbcs_fallback():
-    with patch.object(locale, "getencoding", side_effect=AttributeError):
+    if sys.version_info < (3, 11):
+        # locale.getencoding does not exist; implementation falls back to mbcs.
         assert win_lgpo_auditpol._auditpol_backup_encoding() == "mbcs"
+    else:
+        with patch.object(locale, "getencoding", side_effect=AttributeError):
+            assert win_lgpo_auditpol._auditpol_backup_encoding() == "mbcs"
 
 
 def test_get_auditpol_dump_non_utf8_csv(tmp_path):
