@@ -58,6 +58,8 @@ htmlcov/
 /*.iml
 *.sublime-project
 *.sublime-workspace
+.cursor
+.cursorrules
 
 # ignore ctags file
 tags

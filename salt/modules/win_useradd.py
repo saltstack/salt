@@ -501,6 +501,8 @@ def get_user_sid(username):
 
         salt '*' user.get_user_sid jsnuffy
     """
+    if not isinstance(username, str):
+        username = str(username)
     domain = win32api.GetComputerName()
     if username.find("\\") != -1:
         domain = username.split("\\")[0]
