@@ -1,3 +1,4 @@
+import locale
 import random
 
 import pytest
@@ -109,3 +110,38 @@ def test_get_auditpol_dump():
                 found = True
                 break
         assert found is True
+
+
+def test_auditpol_backup_encoding_mbcs_fallback():
+    with patch.object(locale, "getencoding", side_effect=AttributeError):
+        assert win_lgpo_auditpol._auditpol_backup_encoding() == "mbcs"
+
+
+def test_get_auditpol_dump_non_utf8_csv(tmp_path):
+    """
+    auditpol /backup CSV uses system ANSI encoding (e.g. cp1252), not UTF-8.
+    """
+    csv_path = tmp_path / "auditpol-backup.csv"
+    # 0xDC is "Ü" in cp1252 — invalid as UTF-8 alone (issue #68354).
+    csv_path.write_bytes(b"col1;col2\nMachine Name;\xdcber\n")
+
+    class FakeTmp:
+        name = str(csv_path)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    with patch.object(
+        win_lgpo_auditpol.tempfile, "NamedTemporaryFile", return_value=FakeTmp()
+    ):
+        with patch.object(win_lgpo_auditpol, "_auditpol_cmd", MagicMock()):
+            with patch.object(
+                win_lgpo_auditpol,
+                "_auditpol_backup_encoding",
+                return_value="cp1252",
+            ):
+                lines = win_lgpo_auditpol.get_auditpol_dump()
+    assert any("Über" in line for line in lines), lines

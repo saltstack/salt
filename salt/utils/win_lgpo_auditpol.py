@@ -59,6 +59,7 @@ Usage:
                                              value='No Auditing')
 """
 
+import locale
 import logging
 import re
 import tempfile
@@ -277,6 +278,17 @@ def set_setting(name, value):
     return True
 
 
+def _auditpol_backup_encoding():
+    """
+    Encoding used by ``auditpol /backup`` CSV files: the system ANSI / locale
+    encoding, not UTF-8 (see Salt issue #68354 on localized Windows).
+    """
+    try:
+        return locale.getencoding()
+    except AttributeError:
+        return "mbcs"
+
+
 def get_auditpol_dump():
     """
     Gets the contents of an auditpol /backup. Used by the LGPO module to get
@@ -301,5 +313,5 @@ def get_auditpol_dump():
     cmd = f"/backup /file:{csv_file}"
     _auditpol_cmd(cmd)
 
-    with salt.utils.files.fopen(csv_file) as fp:
+    with salt.utils.files.fopen(csv_file, encoding=_auditpol_backup_encoding()) as fp:
         return fp.readlines()
