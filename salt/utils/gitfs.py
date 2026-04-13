@@ -3271,7 +3271,11 @@ class GitBase:
             )
             # Some providers (like MockedProvider in tests) might not set .repo until later
             # or expect it to be checked after construction.
-            if hasattr(repo_obj, "repo") or self.provider not in ("pygit2", "gitpython", "gitcli"):
+            if hasattr(repo_obj, "repo") or self.provider not in (
+                "pygit2",
+                "gitpython",
+                "gitcli",
+            ):
                 # Sanity check and assign the credential parameter
                 if self.opts["__role"] == "minion" and getattr(repo_obj, "new", False):
                     # Perform initial fetch on masterless minion
