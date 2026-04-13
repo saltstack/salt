@@ -895,11 +895,15 @@ def reap_stray_processes(pid: int = os.getpid()):
         if alive:
             # Give up
             for child in alive:
-                log.warning(
-                    "Process %s survived SIGKILL, giving up:\n%s",
-                    child,
-                    pprint.pformat(child.as_dict()),
-                )
+                try:
+                    log.warning(
+                        "Process %s survived SIGKILL, giving up:\n%s",
+                        child,
+                        pprint.pformat(child.as_dict()),
+                    )
+                except psutil.NoSuchProcess:
+                    # Process killed between the alive check and the log statement
+                    continue
 
 
 # Only allow star importing the functions defined in this module
