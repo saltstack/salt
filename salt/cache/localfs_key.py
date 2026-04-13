@@ -253,7 +253,7 @@ def store(bank, key, data, cachedir, user, **kwargs):
     tmpfh, tmpfname = tempfile.mkstemp(dir=base_dir)
     os.close(tmpfh)
 
-    if user:
+    if user and not salt.utils.platform.is_windows():
         try:
             uid = pwd.getpwnam(user).pw_uid
             os.chown(tmpfname, uid, -1)

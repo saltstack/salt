@@ -134,7 +134,7 @@ def dropfile(cachedir, user=None, master_id=""):
         with salt.utils.files.fopen(dfn_next, "w+") as fp_:
             fp_.write(master_id)
         os.chmod(dfn_next, stat.S_IRUSR)
-        if user:
+        if user and not salt.utils.platform.is_windows():
             try:
                 import pwd
 
