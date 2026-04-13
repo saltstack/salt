@@ -419,7 +419,10 @@ def _run(
             ):
                 cmd = _prep_powershell_cmd(win_shell, cmd, encoded_cmd)
             elif any(win_shell_lower.endswith(word) for word in ["cmd.exe"]):
-                if python_shell:
+                # runas uses win_runas/CreateProcess*; the user command must be the
+                # single quoted argument to cmd /c (see prepend_cmd) so & | etc.
+                # are handled by cmd.exe, not split by shlex or the outer process.
+                if python_shell or runas:
                     cmd = salt.platform.win.prepend_cmd(win_shell, cmd)
                     # prepend_cmd may have silently converted -Command { } to
                     # -EncodedCommand; treat that the same as encoded_cmd=True so

@@ -1341,14 +1341,26 @@ def CreateProcessWithLogonW(
     return process_info
 
 
+def _cmd_exe_cswitch_quoted_argument(payload: str) -> str:
+    """
+    Wrap ``payload`` for use as the argument to ``cmd.exe``'s ``/c`` switch.
+
+    Doubles embedded double quotes per ``cmd.exe`` parsing rules so the entire
+    payload is one argument when passed through ``CreateProcess`` /
+    ``CreateProcessWithTokenW`` command lines (so ``&``, ``|``, etc. are not
+    parsed at the outer process level).
+    """
+    return '"' + payload.replace('"', '""') + '"'
+
+
 def prepend_cmd(win_shell, cmd):
     """
     Prep cmd when shell is cmd.exe. Always use a command string instead of a
     list to satisfy both CreateProcess and CreateProcessWithToken.
 
-    cmd must be double-quoted to ensure proper handling of space characters.
-    The first opening quote and the closing quote are stripped automatically by
-    the Win32 API.
+    The user payload is wrapped in double quotes after ``/c`` so compound
+    commands (e.g. ``cd /d ... & dir``) and paths with spaces behave correctly
+    under ``CreateProcessWithTokenW``.
     """
     if isinstance(cmd, (list, tuple)):
         args = subprocess.list2cmdline(cmd)
@@ -1363,9 +1375,7 @@ def prepend_cmd(win_shell, cmd):
         # object instead of executing it. Converting to -EncodedCommand avoids this
         # and also sidesteps cmd.exe quoting issues with double quotes inside the block.
         args = _maybe_encode_powershell_block(args)
-    new_cmd = f"{win_shell} /c {args}"
-
-    return new_cmd
+    return f"{win_shell} /c {_cmd_exe_cswitch_quoted_argument(args)}"
 
 
 # Matches: powershell[-Command { block }] when the block is the last argument.

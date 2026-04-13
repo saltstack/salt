@@ -197,6 +197,45 @@ def test_run_windows_preserves_cmd_string_quoting():
         mock_shlex.assert_not_called()
 
 
+@pytest.mark.skip_unless_on_windows
+def test_run_windows_cmd_runas_passes_compound_to_cmd():
+    """
+    runas + cmd.exe must use prepend_cmd so the user string is one cmd /c
+    argument; otherwise shlex splits on & and the child never sees a compound
+    line (regression: cd ... & dir under runas).
+    """
+    win_runas_mock = MagicMock(
+        return_value={"pid": 1, "retcode": 0, "stdout": "ok", "stderr": ""}
+    )
+    cmd_str = r"cd /d C:\salt_test_dir & echo marker_compound_runas"
+    with patch("salt.modules.cmdmod._is_valid_shell", MagicMock(return_value=True)):
+        with patch("salt.utils.platform.is_windows", MagicMock(return_value=True)):
+            with patch("salt.modules.cmdmod.HAS_WIN_RUNAS", True):
+                with patch("salt.modules.cmdmod.win_runas", win_runas_mock):
+                    with patch(
+                        "salt.utils.path.which",
+                        return_value="C:\\Windows\\System32\\cmd.exe",
+                    ):
+                        with patch(
+                            "salt.utils.win_chcp.get_codepage_id",
+                            MagicMock(return_value=65001),
+                        ):
+                            cmdmod._run(
+                                cmd_str,
+                                cwd=tempfile.gettempdir(),
+                                runas="someuser",
+                                password="secret",
+                                shell="cmd",
+                                python_shell=False,
+                            )
+    passed = win_runas_mock.call_args[0][0]
+    assert isinstance(passed, (list, tuple))
+    assert len(passed) == 3
+    assert passed[1] == "/c"
+    assert "&" in passed[2]
+    assert "marker_compound_runas" in passed[2]
+
+
 def test_run_with_tuple():
     """
     Tests return when cmd is a tuple
