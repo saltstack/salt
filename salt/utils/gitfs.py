@@ -2568,6 +2568,27 @@ class GitCLI(GitProvider):
         role="gitfs",
     ):
         self.provider = "gitcli"
+        self.role = role
+        # Ensure all required attributes are available before calling super().__init__
+        # as it may call verify_auth() via verify_provider()
+        self.ssl_verify = getattr(
+            self, "ssl_verify", opts.get(f"{self.role}_ssl_verify", True)
+        )
+        self.proxy = getattr(self, "proxy", opts.get(f"{self.role}_proxy", ""))
+        self.user = getattr(self, "user", opts.get(f"{self.role}_user", ""))
+        self.password = getattr(self, "password", opts.get(f"{self.role}_password", ""))
+        self.pubkey = getattr(self, "pubkey", opts.get(f"{self.role}_pubkey", ""))
+        self.privkey = getattr(self, "privkey", opts.get(f"{self.role}_privkey", ""))
+        self.base = getattr(self, "base", opts.get(f"{self.role}_base", "master"))
+        self.branch = getattr(self, "branch", self.base)
+        self.ref_types = getattr(self, "ref_types", ["branch", "tag", "sha"])
+        self.disable_saltenv_mapping = getattr(
+            self,
+            "disable_saltenv_mapping",
+            opts.get(f"{self.role}_disable_saltenv_mapping", False),
+        )
+        self.saltenv_revmap = getattr(self, "saltenv_revmap", {})
+
         super().__init__(
             opts,
             remote,
@@ -2588,31 +2609,6 @@ class GitCLI(GitProvider):
                 self.git_version or "Unknown",
             )
             failhard(self.role)
-
-        # Ensure all required attributes are available before calling init_remote
-        # These are normally set in GitProvider.__init__ but we'll ensure they exist
-        # to avoid race conditions during object construction.
-        self.ssl_verify = getattr(
-            self, "ssl_verify", self.opts.get(f"{self.role}_ssl_verify", True)
-        )
-        self.proxy = getattr(self, "proxy", self.opts.get(f"{self.role}_proxy", ""))
-        self.user = getattr(self, "user", self.opts.get(f"{self.role}_user", ""))
-        self.password = getattr(
-            self, "password", self.opts.get(f"{self.role}_password", "")
-        )
-        self.pubkey = getattr(self, "pubkey", self.opts.get(f"{self.role}_pubkey", ""))
-        self.privkey = getattr(
-            self, "privkey", self.opts.get(f"{self.role}_privkey", "")
-        )
-        self.base = getattr(self, "base", self.opts.get(f"{self.role}_base", "master"))
-        self.branch = getattr(self, "branch", self.base)
-        self.ref_types = getattr(self, "ref_types", ["branch", "tag", "sha"])
-        self.disable_saltenv_mapping = getattr(
-            self,
-            "disable_saltenv_mapping",
-            self.opts.get(f"{self.role}_disable_saltenv_mapping", False),
-        )
-        self.saltenv_revmap = getattr(self, "saltenv_revmap", {})
 
         # Handle gitfs_depth / git_pillar_depth etc.
         self.depth = self.opts.get(f"{self.role}_depth", 1)
