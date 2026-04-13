@@ -110,6 +110,18 @@ warnings.filterwarnings(
     category=DeprecationWarning,
 )
 
+# Filter dateutil's deprecated datetime calls in Python 3.12
+warnings.filterwarnings(
+    "ignore",
+    message="datetime.datetime.utcfromtimestamp\\(\\) is deprecated and scheduled for removal.*",
+    category=DeprecationWarning,
+)
+warnings.filterwarnings(
+    "ignore",
+    message="datetime.datetime.utcnow\\(\\) is deprecated and scheduled for removal.*",
+    category=DeprecationWarning,
+)
+
 
 def __define_global_system_encoding_variable__():
     import builtins

@@ -758,9 +758,17 @@ class LoadBalancerWorker(SaltMessageServer):
                 # Schedule handling the connection using the event loop.
                 # Must use call_soon_threadsafe since we're in a background thread
                 aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
-                aio_loop.call_soon_threadsafe(
-                    self._handle_connection, client_socket, address
-                )
+                try:
+                    aio_loop.call_soon_threadsafe(
+                        self._handle_connection, client_socket, address
+                    )
+                except RuntimeError as exc:
+                    if "Event loop is closed" not in str(exc):
+                        raise
+                    log.trace(
+                        "Loop closed while scheduling connection in LoadBalancerWorker."
+                    )
+                    break
         except (KeyboardInterrupt, SystemExit):
             pass
 
