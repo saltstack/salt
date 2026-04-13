@@ -68,7 +68,7 @@ except AttributeError:
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="module", params=["gitpython", "pygit2"], autouse=True)
+@pytest.fixture(scope="module", params=["gitpython", "pygit2", "gitcli"], autouse=True)
 def provider(request):
     if not HAS_GITPYTHON:
         pytest.skip(
