@@ -247,7 +247,7 @@ msgpack==1.1.2
     #   -c requirements/static/pkg/py3.12/windows.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.7.1
+multidict==6.1.0
     # via
     #   -c requirements/static/pkg/py3.12/windows.txt
     #   aiohttp
@@ -478,6 +478,7 @@ tempora==5.8.1
     #   portend
 textfsm==2.1.0
     # via -r requirements/static/ci/common.in
+timelib==0.3.0
     # via
     #   -c requirements/static/pkg/py3.12/windows.txt
     #   -r requirements/base.txt

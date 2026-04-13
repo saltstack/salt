@@ -295,7 +295,9 @@ tempora==5.3.0
     #   -c requirements/static/ci/py3.12/linux.txt
     #   portend
 timelib==0.3.0
-    # via -r requirements/base.txt
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
 tornado==6.5.4
     # via
     #   -c requirements/static/ci/py3.12/linux.txt

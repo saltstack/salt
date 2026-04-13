@@ -301,7 +301,7 @@ msgpack==1.0.7
     #   -c requirements/static/pkg/py3.9/linux.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.7.1
+multidict==6.1.0
     # via
     #   -c requirements/static/pkg/py3.9/linux.txt
     #   aiohttp
