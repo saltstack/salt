@@ -4,6 +4,7 @@ import pathlib
 import pytest
 
 import salt.states.ssh_auth as ssh_auth_state
+import salt.utils.asynchronous
 import salt.utils.files
 
 log = logging.getLogger(__name__)
@@ -11,7 +12,13 @@ log = logging.getLogger(__name__)
 
 @pytest.fixture
 def configure_loader_modules(modules, minion_opts):
-    loader = {"__salt__": modules, "__opts__": minion_opts, "__env__": "base"}
+    io_loop = salt.utils.asynchronous.get_ioloop()
+    loader = {
+        "__salt__": modules,
+        "__opts__": minion_opts,
+        "__env__": "base",
+        "io_loop": io_loop,
+    }
     return {ssh_auth_state: loader}
 
 
@@ -35,11 +42,11 @@ def test_ssh_auth_config(tmp_path, system_user, state_tree):
     ret = ssh_auth_state.manage(
         name="test",
         user=system_user.username,
-        ssh_keys=["ssh-dss AAAAB3NzaCL0sQ9fJ5bYTEyY== root@domain"],
+        ssh_keys=["ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC6G9ID root@domain"],
     )
     with salt.utils.files.fopen(user_ssh_dir / "authorized_keys") as fp:
         pre_data = fp.read()
-    file_contents = "ssh-dss AAAAB3NzaCL0sQ9fJ5bYTEyY== root@domain"
+    file_contents = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC6G9ID root@domain"
     new_auth_file = tmp_path / "authorized_keys3"
     with pytest.helpers.temp_file("authorized", file_contents, state_tree):
         ssh_auth_state.manage(
@@ -47,7 +54,7 @@ def test_ssh_auth_config(tmp_path, system_user, state_tree):
             user=system_user.username,
             source="salt://authorized",
             config=str(new_auth_file),
-            ssh_keys=[""],
+            ssh_keys=["ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC6G9ID root@domain"],
         )
     with salt.utils.files.fopen(user_ssh_dir / "authorized_keys") as fp:
         post_data = fp.read()
