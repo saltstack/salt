@@ -1070,7 +1070,7 @@ class AsyncEventPublisher:
         default_minion_sock_dir = self.opts["sock_dir"]
         self.opts.update(opts)
 
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        self.io_loop = io_loop or salt.utils.asynchronous.get_ioloop()
         self._closing = False
         self.publisher = None
         self.puller = None

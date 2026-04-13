@@ -666,7 +666,7 @@ class AsyncReqMessageClient:
         self.addr = addr
         self.linger = linger
         if io_loop is None:
-            self.io_loop = tornado.ioloop.IOLoop.current()
+            self.io_loop = salt.utils.asynchronous.get_ioloop()
         else:
             self.io_loop = io_loop
         self.context = zmq.eventloop.future.Context()
@@ -1117,7 +1117,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         io_loop=None,
     ):
         if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
+            io_loop = salt.utils.asynchronous.get_ioloop()
         self.daemon_context = zmq.asyncio.Context()
         (
             self.daemon_pull_sock,
@@ -1252,7 +1252,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self.linger = linger
         if io_loop is None:
             self.io_loop = salt.utils.asynchronous.aioloop(
-                tornado.ioloop.IOLoop.current()
+                salt.utils.asynchronous.get_ioloop()
             )
         else:
             self.io_loop = salt.utils.asynchronous.aioloop(io_loop)

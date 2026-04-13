@@ -30,13 +30,38 @@ def aioloop(io_loop, warn=False):
         raise RuntimeError("Loop must be AbstractEventLoop (prefered) or IOLoop")
 
 
+def get_event_loop():
+    """
+    Get the current event loop. If one is not set, create one and set it.
+    """
+    try:
+        return asyncio.get_running_loop()
+    except RuntimeError:
+        try:
+            return asyncio.get_event_loop_policy().get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            return loop
+
+
+def get_ioloop():
+    """
+    Get the current IOLoop. If one is not set, create one and set it.
+    """
+    try:
+        return tornado.ioloop.IOLoop.current()
+    except RuntimeError:
+        return tornado.ioloop.IOLoop(asyncio_loop=get_event_loop())
+
+
 @contextlib.contextmanager
 def current_ioloop(io_loop):
     """
     A context manager that will set the current ioloop to io_loop for the context
     """
     try:
-        orig_loop = tornado.ioloop.IOLoop.current()
+        orig_loop = get_ioloop()
     except RuntimeError:
         orig_loop = None
 
@@ -172,7 +197,7 @@ class SyncWrapper:
 
     def _target(self, key, args, kwargs, results, asyncio_loop):
         asyncio.set_event_loop(asyncio_loop)
-        io_loop = tornado.ioloop.IOLoop.current()
+        io_loop = get_ioloop()
         try:
             result = io_loop.run_sync(lambda: getattr(self.obj, key)(*args, **kwargs))
             results.append(True)

@@ -650,7 +650,7 @@ class SaltMessageServer(tornado.tcpserver.TCPServer):
     """
 
     def __init__(self, message_handler, *args, **kwargs):
-        io_loop = kwargs.pop("io_loop", None) or tornado.ioloop.IOLoop.current()
+        io_loop = kwargs.pop("io_loop", None) or salt.utils.asynchronous.get_ioloop()
         self._closing = False
         super().__init__(*args, **kwargs)
         self.io_loop = io_loop
@@ -829,7 +829,7 @@ class MessageClient:
         self.connect_callback = connect_callback
         self.disconnect_callback = disconnect_callback
         if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
+            io_loop = salt.utils.asynchronous.get_ioloop()
         self.io_loop = io_loop
         self.asyncio_loop = salt.utils.asynchronous.aioloop(io_loop)
         self._tcp_client = TCPClientKeepAlive(opts, resolver=resolver)
@@ -1103,7 +1103,7 @@ class PubServer(tornado.tcpserver.TCPServer):
         super().__init__(ssl_options=ssl)
         if io_loop is None:
             self.io_loop = salt.utils.asynchronous.aioloop(
-                tornado.ioloop.IOLoop.current()
+                salt.utils.asynchronous.get_ioloop()
             )
         else:
             self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
@@ -1313,7 +1313,7 @@ class TCPPuller:
         self.sock = None
         if io_loop is None:
             self.io_loop = salt.utils.asynchronous.aioloop(
-                tornado.ioloop.IOLoop.current()
+                salt.utils.asynchronous.get_ioloop()
             )
         else:
             self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
@@ -1531,7 +1531,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         io_loop=None,
     ):
         if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
+            io_loop = salt.utils.asynchronous.get_ioloop()
         # Spin up the publisher
         ctx = None
         if self.ssl is not None:
@@ -1681,7 +1681,7 @@ class _TCPPubServerPublisher:
     import salt.config
     import salt.transport.ipc
 
-    io_loop = tornado.ioloop.IOLoop.current()
+    io_loop = salt.utils.asynchronous.get_ioloop()
 
     ipc_server_socket_path = '/var/run/ipc_server.ipc'
 
@@ -1714,7 +1714,7 @@ class _TCPPubServerPublisher:
         """
         if io_loop is None:
             self.io_loop = salt.utils.asynchronous.aioloop(
-                tornado.ioloop.IOLoop.current()
+                salt.utils.asynchronous.get_ioloop()
             )
         else:
             self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
