@@ -330,7 +330,7 @@ pyparsing==3.2.0
     # via junos-eznc
 pyserial==3.5
     # via junos-eznc
-pytest==8.3.3
+pytest==9.0.3
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
