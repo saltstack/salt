@@ -207,6 +207,76 @@ following the Filesystem Hierarchy Standard (FHS) might set it to
     pki_dir: /etc/salt/pki/master
 
 
+.. conf_master:: pki_index_enabled
+
+``pki_index_enabled``
+---------------------
+
+.. versionadded:: 3009.0
+
+Default: ``False``
+
+Enable the O(1) PKI index optimization. This uses a memory-mapped hash table
+to speed up minion public key lookups, which can substantially decrease
+master publish times and authentication overhead in large environments.
+
+.. code-block:: yaml
+
+    pki_index_enabled: True
+
+.. conf_master:: pki_index_size
+
+``pki_index_size``
+------------------
+
+.. versionadded:: 3009.0
+
+Default: ``1000000``
+
+The number of slots in the PKI index. For best performance and minimal
+collisions, this should be set to approximately 2x your total minion count.
+This value applies to each shard if sharding is enabled.
+
+.. code-block:: yaml
+
+    pki_index_size: 1000000
+
+.. conf_master:: pki_index_shards
+
+``pki_index_shards``
+--------------------
+
+.. versionadded:: 3009.0
+
+Default: ``1``
+
+The number of shards to split the PKI index across. Sharding allows the index
+to span multiple memory-mapped files, which can improve concurrency and
+performance in extremely large environments or on filesystems with specific
+locking characteristics.
+
+.. code-block:: yaml
+
+    pki_index_shards: 1
+
+.. conf_master:: pki_index_slot_size
+
+``pki_index_slot_size``
+-----------------------
+
+.. versionadded:: 3009.0
+
+Default: ``128``
+
+The size in bytes of each slot in the PKI index. This must be large enough
+to hold your longest minion ID plus approximately 10 bytes of internal
+overhead (state information and separators).
+
+.. code-block:: yaml
+
+    pki_index_slot_size: 128
+
+
 .. conf_master:: cluster_id
 
 ``cluster_id``
