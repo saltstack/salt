@@ -240,14 +240,15 @@ def test_resource_ctxvar_concurrent_threads_isolated():
 # ---------------------------------------------------------------------------
 
 
-def test_discover_resources_no_pillar_key_preserves_opts(minion_with_resources):
+def test_discover_resources_no_pillar_key_clears_like_empty(minion_with_resources):
     """
     When the pillar contains no 'resources' key at all, _discover_resources
-    preserves whatever is already in opts["resources"].
+    must behave like pillar['resources'] == {}: return {} and not preserve
+    stale opts["resources"].
     """
     minion_with_resources.opts["pillar"] = {}
     result = minion_with_resources._discover_resources()
-    assert result == {k: list(v) for k, v in RESOURCES.items()}
+    assert result == {}
 
 
 def test_discover_resources_empty_pillar_key_clears_opts(minion_with_resources):
