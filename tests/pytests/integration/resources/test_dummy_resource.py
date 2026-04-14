@@ -6,13 +6,8 @@ These tests verify the full dispatch pipeline:
   salt CLI → master targeting (CkMinions) → minion (_resolve_resource_targets)
   → resource loader → return → master re-key → CLI response
 
-The minion under test is configured with::
-
-    resources:
-      dummy:
-        - dummy-01
-        - dummy-02
-    multiprocessing: False
+The minion under test loads dummy resources from Pillar only (``resources.dummy``
+with ``resource_ids``) and uses ``multiprocessing: False``.
 
 The ``dummy`` resource module (``salt/resource/dummy.py``) and its execution
 module (``salt/modules/dummyresource_test.py``) are pure-Python in-process
