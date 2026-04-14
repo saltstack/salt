@@ -210,7 +210,7 @@ async def test_request_client_send_msg_socket_closed(
                 if errno == zmq.EFSM:
                     assert "Socket was found in invalid state." in caplog.messages
                 elif errno != 321:
-                    assert "Recieve socket closed while polling." in caplog.messages
+                    assert "Receive socket closed while polling." in caplog.messages
                 else:
                     assert (
                         "Unhandled Zeromq error durring send/receive: Unknown error 321"
@@ -317,7 +317,7 @@ async def test_request_client_recv_poll_socket_closed(
             try:
                 await request_client.send("meh")
                 await asyncio.sleep(0.3)
-                assert "Recieve socket closed while polling." in caplog.messages
+                assert "Receive socket closed while polling." in caplog.messages
                 assert f"Send and receive coroutine ending {socket}" in caplog.messages
             finally:
                 request_client.close()

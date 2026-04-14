@@ -37,12 +37,10 @@ def get_event_loop():
     try:
         return asyncio.get_running_loop()
     except RuntimeError:
-        try:
-            return asyncio.get_event_loop_policy().get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            return loop
+        pass
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    return loop
 
 
 def get_ioloop():
@@ -50,9 +48,13 @@ def get_ioloop():
     Get the current IOLoop. If one is not set, create one and set it.
     """
     try:
-        return tornado.ioloop.IOLoop.current()
+        # We try to get the current asyncio loop first
+        asyncio.get_running_loop()
     except RuntimeError:
-        return tornado.ioloop.IOLoop(asyncio_loop=get_event_loop())
+        # No running loop, create/set one to avoid tornado triggering warning
+        get_event_loop()
+
+    return tornado.ioloop.IOLoop.current()
 
 
 @contextlib.contextmanager
@@ -197,9 +199,10 @@ class SyncWrapper:
 
     def _target(self, key, args, kwargs, results, asyncio_loop):
         asyncio.set_event_loop(asyncio_loop)
-        io_loop = get_ioloop()
         try:
-            result = io_loop.run_sync(lambda: getattr(self.obj, key)(*args, **kwargs))
+            result = self.io_loop.run_sync(
+                lambda: getattr(self.obj, key)(*args, **kwargs)
+            )
             results.append(True)
             results.append(result)
         except Exception:  # pylint: disable=broad-except
