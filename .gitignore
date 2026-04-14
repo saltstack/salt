@@ -155,3 +155,7 @@ nox.*.tar.xz
 /.aiderignore
 /aider.conf.yml
 /.gemini
+venv310/
+venv312/
+*.json
+*.txt

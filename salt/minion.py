@@ -1058,11 +1058,7 @@ class MinionManager(MinionBase):
         self.max_auth_wait = self.opts["acceptance_wait_time_max"]
         self.minions = []
         self.jid_queue = []
-        try:
-            self.io_loop = asyncio.get_running_loop()
-        except RuntimeError:
-            self.io_loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self.io_loop)
+        self.io_loop = salt.utils.asynchronous.get_event_loop()
         self.process_manager = ProcessManager(name="MultiMinionProcessManager")
         self.io_loop.create_task(self.process_manager.run(asynchronous=True))
         self.event_publisher = None
@@ -1343,11 +1339,7 @@ class Minion(MinionBase):
         self._system_resource_limit_hit_timestamp = 0
 
         if io_loop is None:
-            try:
-                self.io_loop = asyncio.get_running_loop()
-            except RuntimeError:
-                self.io_loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(self.io_loop)
+            self.io_loop = salt.utils.asynchronous.get_event_loop()
         else:
             # Accept either asyncio loop or Tornado IOLoop (extract asyncio loop)
             if isinstance(io_loop, asyncio.AbstractEventLoop):
@@ -4431,11 +4423,7 @@ class SyndicManager(MinionBase):
         self.jid_forward_cache = set()
 
         if io_loop is None:
-            try:
-                self.io_loop = asyncio.get_running_loop()
-            except RuntimeError:
-                self.io_loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(self.io_loop)
+            self.io_loop = salt.utils.asynchronous.get_event_loop()
         else:
             # Accept either asyncio loop or Tornado IOLoop (extract asyncio loop)
             if isinstance(io_loop, asyncio.AbstractEventLoop):

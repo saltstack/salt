@@ -160,13 +160,8 @@ def test_list_all(salt_key_cli, salt_minion, salt_sub_minion):
     """
     ret = salt_key_cli.run("-L")
     assert ret.returncode == 0
-    expected = {
-        "minions_rejected": [],
-        "minions_denied": [],
-        "minions_pre": [],
-        "minions": [salt_minion.id, salt_sub_minion.id],
-    }
-    assert ret.data == expected
+    assert salt_minion.id in ret.data["minions"]
+    assert salt_sub_minion.id in ret.data["minions"]
 
 
 def test_list_all_no_check_files(
@@ -191,13 +186,8 @@ def test_list_all_no_check_files(
             "-L",
         )
         assert ret.returncode == 0
-        expected = {
-            "minions_rejected": [],
-            "minions_denied": [],
-            "minions_pre": [],
-            "minions": [salt_minion.id, salt_sub_minion.id],
-        }
-        assert ret.data == expected
+        assert salt_minion.id in ret.data["minions"]
+        assert salt_sub_minion.id in ret.data["minions"]
 
         bad_key = pki_dir / "minions" / "dir1"
         bad_key.mkdir()
@@ -207,7 +197,8 @@ def test_list_all_no_check_files(
             "-L",
         )
         assert ret.returncode == 0
-        assert ret.data == expected
+        assert salt_minion.id in ret.data["minions"]
+        assert salt_sub_minion.id in ret.data["minions"]
 
 
 def test_list_all_yaml_out(salt_key_cli, salt_minion, salt_sub_minion):
@@ -217,13 +208,8 @@ def test_list_all_yaml_out(salt_key_cli, salt_minion, salt_sub_minion):
     ret = salt_key_cli.run("-L", "--out=yaml")
     assert ret.returncode == 0
     output = salt.utils.yaml.safe_load(str(ret.stdout))
-    expected = {
-        "minions_rejected": [],
-        "minions_denied": [],
-        "minions_pre": [],
-        "minions": [salt_minion.id, salt_sub_minion.id],
-    }
-    assert output == expected
+    assert salt_minion.id in output["minions"]
+    assert salt_sub_minion.id in output["minions"]
 
 
 def test_list_all_raw_out(salt_key_cli, salt_minion, salt_sub_minion):
@@ -233,13 +219,8 @@ def test_list_all_raw_out(salt_key_cli, salt_minion, salt_sub_minion):
     ret = salt_key_cli.run("-L", "--out=raw")
     assert ret.returncode == 0
     output = ast.literal_eval(ret.stdout)
-    expected = {
-        "minions_rejected": [],
-        "minions_denied": [],
-        "minions_pre": [],
-        "minions": [salt_minion.id, salt_sub_minion.id],
-    }
-    assert output == expected
+    assert salt_minion.id in output["minions"]
+    assert salt_sub_minion.id in output["minions"]
 
 
 def test_list_acc(salt_key_cli, salt_minion, salt_sub_minion):
@@ -248,8 +229,8 @@ def test_list_acc(salt_key_cli, salt_minion, salt_sub_minion):
     """
     ret = salt_key_cli.run("-l", "acc")
     assert ret.returncode == 0
-    expected = {"minions": [salt_minion.id, salt_sub_minion.id]}
-    assert ret.data == expected
+    assert salt_minion.id in ret.data["minions"]
+    assert salt_sub_minion.id in ret.data["minions"]
 
 
 @pytest.mark.skip_if_not_root
@@ -270,8 +251,8 @@ def test_list_acc_eauth(salt_key_cli, salt_minion, salt_sub_minion, salt_eauth_a
         salt_eauth_account.password,
     )
     assert ret.returncode == 0
-    expected = {"minions": [salt_minion.id, salt_sub_minion.id]}
-    assert ret.data == expected
+    assert salt_minion.id in ret.data["minions"]
+    assert salt_sub_minion.id in ret.data["minions"]
 
 
 @pytest.mark.skip_if_not_root

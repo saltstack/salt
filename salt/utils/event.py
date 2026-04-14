@@ -1256,7 +1256,15 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
             self.puller.close()
             self.puller = None
         if self.io_loop is not None:
-            self.io_loop.close()
+            # We can only close the loop if it is not running
+            try:
+                if not salt.utils.asynchronous.aioloop(self.io_loop).is_running():
+                    self.io_loop.close()
+                else:
+                    self.io_loop.stop()
+            except RuntimeError:
+                # If we're already closing or the loop is in a weird state
+                pass
             self.io_loop = None
 
     def _handle_signals(self, signum, sigframe):
