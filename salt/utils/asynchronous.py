@@ -34,19 +34,29 @@ def get_event_loop():
     """
     Get the current event loop. If one is not set, create one and set it.
     """
+    import warnings
+
     try:
         return asyncio.get_running_loop()
     except RuntimeError:
         pass
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    return loop
+
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            return asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        return loop
 
 
 def get_ioloop():
     """
     Get the current IOLoop. If one is not set, create one and set it.
     """
+    import warnings
+
     try:
         # We try to get the current asyncio loop first
         asyncio.get_running_loop()
@@ -54,7 +64,9 @@ def get_ioloop():
         # No running loop, create/set one to avoid tornado triggering warning
         get_event_loop()
 
-    return tornado.ioloop.IOLoop.current()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        return tornado.ioloop.IOLoop.current()
 
 
 @contextlib.contextmanager

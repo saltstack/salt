@@ -94,8 +94,8 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
         def close_server():
             if evt.wait(1):
                 return
-            client2.close()
-            self.stop()
+            self.io_loop.add_callback(client2.close)
+            self.io_loop.add_callback(self.stop)
 
         watchdog = threading.Thread(target=close_server)
         watchdog.start()
@@ -140,8 +140,8 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
         def close_server():
             if evt.wait(0.001):
                 return
-            client1.close()
-            self.stop()
+            self.io_loop.add_callback(client1.close)
+            self.io_loop.add_callback(self.stop)
 
         watchdog = threading.Thread(target=close_server)
         watchdog.start()

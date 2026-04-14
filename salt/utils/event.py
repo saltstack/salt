@@ -1060,9 +1060,8 @@ class AsyncEventPublisher:
 
     def __init__(self, opts, io_loop=None):
         warn_until(
-            3008,
-            "salt.utils.event.AsyncEventPublisher is deprecated. "
-            "Please use salt.transport.publish_server instead.",
+            3009,
+            "salt.utils.event.AsyncEventPublisher is deprecated. Please use salt.transport.publish_server instead.",
         )
         import salt.transport.ipc
 
@@ -1167,9 +1166,8 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
 
     def __init__(self, opts, **kwargs):
         warn_until(
-            3008,
-            "salt.utils.event.EventPublisher is deprecated. "
-            "Please use salt.transport.publish_server instead.",
+            3009,
+            "salt.utils.event.EventPublisher is deprecated. Please use salt.transport.publish_server instead.",
         )
         super().__init__(**kwargs)
         self.opts = salt.config.DEFAULT_MASTER_OPTS.copy()
