@@ -1163,6 +1163,8 @@ class Pillar:
             pillar, errors = self.render_pillar(matches)
             self.pillar_data.update(pillar)
             self._update_loader_packs()
+
+        pillar = self.pillar_data
         errors.extend(top_errors)
         if self.opts.get("pillar_opts", False):
             mopts = {}
@@ -1194,9 +1196,11 @@ class Pillar:
                 self.opts.get("pillar_merge_lists", False),
             )
 
-        decrypt_errors = self.decrypt_pillar(self.pillar_data)
+        decrypt_errors = self.decrypt_pillar(pillar)
         if decrypt_errors:
             pillar.setdefault("_errors", []).extend(decrypt_errors)
+        self.pillar_data.update(pillar)
+        self._update_loader_packs()
         return pillar
 
     def _update_loader_packs(self):

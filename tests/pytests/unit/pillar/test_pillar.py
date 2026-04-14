@@ -237,3 +237,102 @@ def test_ext_pillar_dunder_in_modules_in_pillar(temp_salt_minion):
     # Ensure a module function can access the pillar data
     assert pillar.functions["pillar.get"]("ext") == "some ext value"
     assert pillar.functions["pillar.get"]("pillar") == "some pillar value"
+
+def test_pillar_opts_in_dunder_pillar(temp_salt_minion):
+    """
+    Test that pillar_opts=True correctly includes master config in __pillar__
+    during the pillar rendering process.
+    """
+    opts = temp_salt_minion.config.copy()
+    opts["pillar_opts"] = True
+    # Ensure some master config is present
+    opts["master_key"] = "master_secret"
+
+    grains = salt.loader.grains(opts)
+    pillar = salt.pillar.Pillar(opts, grains, temp_salt_minion.id, "base")
+
+    pil_value = {"pillar_key": "pillar_value"}
+    with patch.object(pillar, "render_pillar", return_value=(pil_value, [])):
+        compiled = pillar.compile_pillar()
+        # Compiled pillar should include master opts nested under "master" when pillar_opts=True
+        assert "master" in compiled
+        assert compiled["master"]["master_key"] == "master_secret"
+        assert compiled["pillar_key"] == "pillar_value"
+
+    # The loader pack should also contain the master opts
+    assert "master" in pillar.functions.pack["__pillar__"]
+    assert pillar.functions.pack["__pillar__"]["master"]["master_key"] == "master_secret"
+    assert pillar.functions["pillar.get"]("master:master_key") == "master_secret"
+
+
+def test_ssh_merge_pillar_in_dunder_pillar(temp_salt_minion):
+    """
+    Test that ssh_merge_pillar correctly merges extra pillar data from opts["pillar"] into __pillar__
+    """
+    opts = temp_salt_minion.config.copy()
+    opts["ssh_merge_pillar"] = True
+    opts["pillar"] = {"ssh_key": "ssh_value"}
+
+    grains = salt.loader.grains(opts)
+    pillar = salt.pillar.Pillar(opts, grains, temp_salt_minion.id, "base")
+
+    pil_value = {"normal_key": "normal_value"}
+    with patch.object(pillar, "render_pillar", return_value=(pil_value, [])):
+        compiled = pillar.compile_pillar()
+        assert compiled["ssh_key"] == "ssh_value"
+        assert compiled["normal_key"] == "normal_value"
+
+    # The loader pack should contain the merged SSH pillar
+    assert pillar.functions.pack["__pillar__"]["ssh_key"] == "ssh_value"
+    assert pillar.functions["pillar.get"]("ssh_key") == "ssh_value"
+
+
+def test_decrypt_pillar_in_dunder_pillar(temp_salt_minion):
+    """
+    Test that __pillar__ contains decrypted values if decryption is performed.
+    """
+    opts = temp_salt_minion.config.copy()
+
+    grains = salt.loader.grains(opts)
+    pillar = salt.pillar.Pillar(opts, grains, temp_salt_minion.id, "base")
+
+    # Mock encrypted and decrypted data
+    encrypted_pil = {"secret": "encrypted_value"}
+    decrypted_pil = {"secret": "decrypted_value"}
+
+    with patch.object(pillar, "render_pillar", return_value=(encrypted_pil, [])):
+        # Mock the decrypt_pillar method of the Pillar class
+        with patch.object(pillar, "decrypt_pillar", side_effect=lambda p: p.update(decrypted_pil) or []):
+            compiled = pillar.compile_pillar()
+            assert compiled["secret"] == "decrypted_value"
+
+    # The loader pack should contain the decrypted pillar
+    assert pillar.functions.pack["__pillar__"]["secret"] == "decrypted_value"
+    assert pillar.functions["pillar.get"]("secret") == "decrypted_value"
+
+
+def test_ext_pillar_after_dunder_pillar(temp_salt_minion):
+    """
+    Test that ext_pillar is correctly merged into __pillar__ when ext_pillar_first=False
+    """
+    opts = temp_salt_minion.config.copy()
+    opts["ext_pillar_first"] = False
+
+    grains = salt.loader.grains(opts)
+    pillar = salt.pillar.Pillar(opts, grains, temp_salt_minion.id, "base")
+
+    pil_value = {"normal": "value"}
+    ext_value = {"ext": "value"}
+
+    with patch.object(pillar, "render_pillar", return_value=(pil_value, [])):
+        with patch.object(pillar, "ext_pillar", return_value=(ext_value, [])):
+            compiled = pillar.compile_pillar()
+            # Verify both are present in the final result
+            assert compiled["normal"] == "value"
+            assert compiled["ext"] == "value"
+
+    # Loader should have both
+    assert pillar.functions.pack["__pillar__"]["normal"] == "value"
+    assert pillar.functions.pack["__pillar__"]["ext"] == "value"
+    assert pillar.functions["pillar.get"]("ext") == "value"
+    assert pillar.functions["pillar.get"]("normal") == "value"
