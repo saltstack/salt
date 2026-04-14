@@ -126,7 +126,7 @@ if ( ! $SkipInstall ) {
   Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
                 -ArgumentList "install", "-r", "$SALT_DEPS", "-U" `
                 -WorkingDirectory "$PROJECT_DIR" `
-                -Wait -WindowStyle Hidden
+                -Wait
   if ( Test-Path -Path "$SCRIPTS_DIR\distro.exe" ) {
       Write-Result "Success" -ForegroundColor Green
   } else {
@@ -256,7 +256,7 @@ if ( ! $SkipInstall ) {
       Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
                 -ArgumentList "install", $InstallPath `
                 -WorkingDirectory "$PROJECT_DIR" `
-                -Wait -WindowStyle Hidden
+                -Wait
   } finally {
       Remove-Item env:\RELENV_PIP_DIR
   }

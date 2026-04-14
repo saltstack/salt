@@ -107,8 +107,10 @@ jobs:
       - name: Install build dependencies
         run: |
           apt-get update -y
-          # Installing python3.13-venv for Python 3.13 support
-          apt-get install -y python3.13-venv
+          # Installing python3.13-venv and python3.13-dev for Python 3.13 support
+          apt-get install -y python3.13-venv python3.13-dev
+          # Installing build tools for source compilation of dependencies (e.g. pyzmq)
+          apt-get install -y cmake g++ pkg-config libssl-dev
           # Installing devscripts for source package builds (provides debuild)
           apt-get install -y devscripts
           # Installing patchelf for relenv ELF binary patching
@@ -221,6 +223,10 @@ jobs:
       - name: Install rpmsign
         run: |
           dnf install -y rpmsign
+          if [ "${{ inputs.source }}" == "src" ]; then
+            # Installing python3-devel and build tools for source compilation of dependencies
+            dnf install -y python3-devel cmake gcc-c++ pkgconfig openssl-devel
+          fi
 
       - name: Download Onedir Tarball as an Artifact
         if:  inputs.source == 'onedir'
