@@ -122,14 +122,16 @@ if ( ! $SkipInstall ) {
   #-------------------------------------------------------------------------------
   # Installing dependencies
   #-------------------------------------------------------------------------------
-  Write-Host "Installing dependencies: " -NoNewline
-  Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
+  Write-Host "Installing dependencies from $SALT_DEPS"
+  $pipProcess = Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
                 -ArgumentList "install", "-r", "$SALT_DEPS", "-U" `
                 -WorkingDirectory "$PROJECT_DIR" `
-                -Wait
+                -Wait -PassThru
+  Write-Host "Pip process exited with code: $($pipProcess.ExitCode)"
   if ( Test-Path -Path "$SCRIPTS_DIR\distro.exe" ) {
       Write-Result "Success" -ForegroundColor Green
   } else {
+      Write-Host "distro.exe not found in $SCRIPTS_DIR" -ForegroundColor Red
       Write-Result "Failed" -ForegroundColor Red
       exit 1
   }
@@ -161,22 +163,28 @@ if ( ! (Test-Path -Path "$SCRIPTS_DIR\wmitest*") ) {
 $dlls = "pythoncom$($PY_MAJOR_VERSION)$($PY_MINOR_VERSION).dll",
         "pywintypes$($PY_MAJOR_VERSION)$($PY_MINOR_VERSION).dll"
 $dlls | ForEach-Object {
+    $sourcePath = "$SITE_PKGS_DIR\pywin32_system32\$_"
+    if ( -not ( Test-Path -Path "$sourcePath" ) ) {
+        Write-Host "Source DLL not found: $sourcePath" -ForegroundColor Yellow
+    }
     if ( -not ( Test-Path -Path "$SCRIPTS_DIR\$_" ) ) {
         Write-Host "Copying $_ to Scripts: " -NoNewline
-        Copy-Item "$SITE_PKGS_DIR\pywin32_system32\$_" "$SCRIPTS_DIR" -Force | Out-Null
+        Copy-Item "$sourcePath" "$SCRIPTS_DIR" -Force | Out-Null
         if ( Test-Path -Path "$SCRIPTS_DIR\$_") {
             Write-Result "Success" -ForegroundColor Green
         } else {
+            Write-Host "Failed to copy $_ to $SCRIPTS_DIR" -ForegroundColor Red
             Write-Result "Failed" -ForegroundColor Red
             exit 1
         }
     }
     if ( -not ( Test-Path -Path "$SITE_PKGS_DIR\win32\$_" ) ) {
-        Write-Host "Moving $_ to win32: " -NoNewline
-        Copy-Item "$SITE_PKGS_DIR\pywin32_system32\$_" "$SITE_PKGS_DIR\win32" -Force | Out-Null
+        Write-Host "Copying $_ to win32: " -NoNewline
+        Copy-Item "$sourcePath" "$SITE_PKGS_DIR\win32" -Force | Out-Null
         if ( Test-Path -Path "$SITE_PKGS_DIR\win32\$_" ) {
             Write-Result "Success" -ForegroundColor Green
         } else {
+            Write-Host "Failed to copy $_ to $SITE_PKGS_DIR\win32" -ForegroundColor Red
             Write-Result "Failed" -ForegroundColor Red
             exit 1
         }
