@@ -238,6 +238,7 @@ def test_ext_pillar_dunder_in_modules_in_pillar(temp_salt_minion):
     assert pillar.functions["pillar.get"]("ext") == "some ext value"
     assert pillar.functions["pillar.get"]("pillar") == "some pillar value"
 
+
 def test_pillar_opts_in_dunder_pillar(temp_salt_minion):
     """
     Test that pillar_opts=True correctly includes master config in __pillar__
@@ -261,7 +262,9 @@ def test_pillar_opts_in_dunder_pillar(temp_salt_minion):
 
     # The loader pack should also contain the master opts
     assert "master" in pillar.functions.pack["__pillar__"]
-    assert pillar.functions.pack["__pillar__"]["master"]["master_key"] == "master_secret"
+    assert (
+        pillar.functions.pack["__pillar__"]["master"]["master_key"] == "master_secret"
+    )
     assert pillar.functions["pillar.get"]("master:master_key") == "master_secret"
 
 
@@ -302,7 +305,11 @@ def test_decrypt_pillar_in_dunder_pillar(temp_salt_minion):
 
     with patch.object(pillar, "render_pillar", return_value=(encrypted_pil, [])):
         # Mock the decrypt_pillar method of the Pillar class
-        with patch.object(pillar, "decrypt_pillar", side_effect=lambda p: p.update(decrypted_pil) or []):
+        with patch.object(
+            pillar,
+            "decrypt_pillar",
+            side_effect=lambda p: p.update(decrypted_pil) or [],
+        ):
             compiled = pillar.compile_pillar()
             assert compiled["secret"] == "decrypted_value"
 
