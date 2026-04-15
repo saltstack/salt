@@ -205,6 +205,8 @@ def _prepare_provider(tmp_path, minion_opts, _prepare_remote_repository_pygit2):
     per_remote_defaults = {
         "base": "master",
         "disable_saltenv_mapping": False,
+        "fallback": "",
+        "depth": 0,
         "insecure_auth": False,
         "ref_types": ["branch", "tag", "sha"],
         "passphrase": "",

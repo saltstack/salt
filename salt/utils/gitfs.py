@@ -19,6 +19,7 @@ import shlex
 import shutil
 import stat
 import subprocess
+import threading
 import time
 import weakref
 from collections import OrderedDict
@@ -982,14 +983,28 @@ class GitProvider:
         """
         Place a lock file if (and only if) it does not already exist.
         """
-        if self.__class__._master_lock.acquire(timeout=60) is False:
-            # if gitfs works right we should never see this timeout error.
-            log.error("gitfs master lock timeout!")
-            raise TimeoutError("gitfs master lock timeout!")
-        try:
-            return self.__lock(lock_type, failhard)
-        finally:
-            self.__class__._master_lock.release()
+        while True:
+            if self.__class__._master_lock.acquire(timeout=60) is False:
+                # if gitfs works right we should never see this timeout error.
+                log.error("gitfs master lock timeout!")
+                raise TimeoutError("gitfs master lock timeout!")
+
+            recurse = False
+            try:
+                result = self.__lock(lock_type, failhard)
+                # If __lock returned a signal to recurse, we do it outside the lock acquisition
+                if isinstance(result, tuple) and result[0] == "RECURSE":
+                    recurse = True
+                else:
+                    return result
+            finally:
+                try:
+                    self.__class__._master_lock.release()
+                except (ValueError, threading.ThreadError):
+                    pass
+
+            if recurse:
+                continue
 
     def __lock(self, lock_type="update", failhard=False):
         """
@@ -1059,29 +1074,27 @@ class GitProvider:
                                 log.warning(msg)
                                 success, fail = self._clear_lock()
                                 if success:
-                                    return self.__lock(
-                                        lock_type="update", failhard=failhard
-                                    )
+                                    return ("RECURSE",)
                                 elif failhard:
                                     raise
-                                return
+                                return None
 
                     log.warning(msg)
                     if failhard:
                         raise
-                    return
+                    return None
                 elif pid and salt.utils.process.os_is_running(pid):
                     log.warning(
                         "Process %d has a %s %s lock (%s) on machine_id %s",
                         pid,
                         self.role,
                         lock_type,
-                        lock_file,
+                        self._get_lock_file(lock_type),
                         self.mach_id,
                     )
                     if failhard:
                         raise
-                    return
+                    return None
                 else:
                     if pid:
                         log.warning(
@@ -1090,15 +1103,15 @@ class GitProvider:
                             pid,
                             self.role,
                             lock_type,
-                            lock_file,
+                            self._get_lock_file(lock_type),
                             self.mach_id,
                         )
                     success, fail = self._clear_lock()
                     if success:
-                        return self.__lock(lock_type="update", failhard=failhard)
+                        return ("RECURSE",)
                     elif failhard:
                         raise
-                    return
+                    return None
             else:
                 msg = (
                     f"Unable to set {lock_type} lock for {self.id} "
@@ -1108,7 +1121,7 @@ class GitProvider:
                 raise GitLockError(exc.errno, msg)
 
         msg = f"Set {lock_type} lock for {self.role} remote '{self.id}' on machine_id '{self.mach_id}'"
-        log.debug(msg)
+        log.info(msg)
         return msg
 
     def lock(self):
@@ -2568,27 +2581,6 @@ class GitCLI(GitProvider):
         role="gitfs",
     ):
         self.provider = "gitcli"
-        self.role = role
-        # Ensure all required attributes are available before calling super().__init__
-        # as it may call verify_auth() via verify_provider()
-        self.ssl_verify = getattr(
-            self, "ssl_verify", opts.get(f"{self.role}_ssl_verify", True)
-        )
-        self.proxy = getattr(self, "proxy", opts.get(f"{self.role}_proxy", ""))
-        self.user = getattr(self, "user", opts.get(f"{self.role}_user", ""))
-        self.password = getattr(self, "password", opts.get(f"{self.role}_password", ""))
-        self.pubkey = getattr(self, "pubkey", opts.get(f"{self.role}_pubkey", ""))
-        self.privkey = getattr(self, "privkey", opts.get(f"{self.role}_privkey", ""))
-        self.base = getattr(self, "base", opts.get(f"{self.role}_base", "master"))
-        self.branch = getattr(self, "branch", self.base)
-        self.ref_types = getattr(self, "ref_types", ["branch", "tag", "sha"])
-        self.disable_saltenv_mapping = getattr(
-            self,
-            "disable_saltenv_mapping",
-            opts.get(f"{self.role}_disable_saltenv_mapping", False),
-        )
-        self.saltenv_revmap = getattr(self, "saltenv_revmap", {})
-
         super().__init__(
             opts,
             remote,
@@ -2610,13 +2602,19 @@ class GitCLI(GitProvider):
             )
             failhard(self.role)
 
-        # Handle gitfs_depth / git_pillar_depth etc.
-        self.depth = self.opts.get(f"{self.role}_depth", 1)
-        # Ensure it's an integer
-        try:
-            self.depth = int(self.depth)
-        except (ValueError, TypeError):
-            self.depth = 1
+        # Initialize attributes that might be missing if super().__init__ didn't set them
+        # (e.g. if they are not in PER_REMOTE_OVERRIDES for the given role)
+        if not hasattr(self, "saltenv_revmap"):
+            self.saltenv_revmap = {}
+
+        if not hasattr(self, "depth"):
+            try:
+                self.depth = int(self.opts.get(f"{self.role}_depth", 1))
+            except (ValueError, TypeError):
+                self.depth = 1
+
+        if self.role == "gitfs" and not hasattr(self, "branch"):
+            self.branch = getattr(self, "base", "master")
 
         try:
             self.new = self.init_remote()
@@ -2651,28 +2649,31 @@ class GitCLI(GitProvider):
             pass
         return None
 
-    def _run_git(self, args, **kwargs):
+    def _run_git(self, git_args, **kwargs):
         """
         Helper to run a git command in the cachedir
         """
         # -c core.quotepath=false ensures that non-ASCII filenames are not escaped
-        cmd = ["git", "-c", "core.quotepath=false"] + args
+        cmd = ["git", "-c", "core.quotepath=false"] + git_args
         env = os.environ.copy()
+        # Force all output to plain ascii english
+        env["LANGUAGE"] = "C"
+        env["LC_ALL"] = "C"
 
         # Handle Auth/SSL via env vars
-        if not self.ssl_verify:
+        ssl_verify = getattr(self, "ssl_verify", True)
+        if not ssl_verify:
             env["GIT_SSL_NO_VERIFY"] = "true"
 
-        if self.proxy:
-            env["http_proxy"] = self.proxy
-            env["https_proxy"] = self.proxy
+        proxy = getattr(self, "proxy", "")
+        if proxy:
+            env["http_proxy"] = proxy
+            env["https_proxy"] = proxy
 
         # SSH Auth
-        if self.privkey:
-            ssh_cmd = f"ssh -o StrictHostKeyChecking=no -i {self.privkey}"
-            if self.pubkey:
-                # Some ssh versions might use both if provided
-                pass
+        privkey = getattr(self, "privkey", "")
+        if privkey:
+            ssh_cmd = f"ssh -o StrictHostKeyChecking=no -i {privkey}"
             env["GIT_SSH_COMMAND"] = ssh_cmd
 
         log.debug("GitCLI running: %s in %s", " ".join(cmd), self._cachedir)
@@ -2699,7 +2700,6 @@ class GitCLI(GitProvider):
         if not os.listdir(self._cachedir):
             # Empty dir, need to clone or init
             log.debug("Initializing new GitCLI repository in %s", self._cachedir)
-            # We don't clone immediately here, we'll do it in _fetch
             self._run_git(["init", "--bare"])
             self._run_git(["remote", "add", "origin", self.url])
             new = True
@@ -2720,11 +2720,18 @@ class GitCLI(GitProvider):
         Fetch from the remote
         """
         fetch_args = ["fetch", "--prune", "--quiet", "origin"]
-        if self.depth > 0:
-            fetch_args.extend(["--depth", str(self.depth)])
+        depth = getattr(self, "depth", 1)
+        try:
+            depth = int(depth)
+        except (ValueError, TypeError):
+            depth = 1
+
+        if depth > 0:
+            fetch_args.extend(["--depth", str(depth)])
 
         # Map refspecs
-        fetch_args.extend(self.refspecs)
+        refspecs = getattr(self, "refspecs", [])
+        fetch_args.extend(refspecs)
 
         res = self._run_git(fetch_args)
         if res.returncode != 0:
@@ -2737,9 +2744,29 @@ class GitCLI(GitProvider):
             return False
         return True
 
+    def checkout(self, fetch_on_fail=True):
+        """
+        GitCLI is a 'bare' provider, it doesn't do checkouts to a worktree.
+        It always operates on the ODB.
+        Return the cache root to indicate success.
+        """
+        # We still want to ensure the ref exists
+        tgt_ref = self.get_checkout_target()
+        git_ref = f"origin/{tgt_ref}"
+        res = self._run_git(["rev-parse", "--verify", git_ref])
+        if res.returncode != 0:
+            res = self._run_git(["rev-parse", "--verify", tgt_ref])
+            if res.returncode != 0:
+                if fetch_on_fail:
+                    self.fetch()
+                    return self.checkout(fetch_on_fail=False)
+                return None
+        return self.check_root()
+
     def envs(self):
         """
-        Return a list of available environments (branches/tags)
+        Check the refs and return a list of the ones which can be used as salt
+        environments (branches/tags)
         """
         res = self._run_git(
             [
@@ -2752,59 +2779,13 @@ class GitCLI(GitProvider):
         if res.returncode != 0:
             return []
 
-        refs = res.stdout.decode().splitlines()
-        # refs will be like 'refs/remotes/origin/master' or 'refs/tags/v1.0'
-        # _get_envs_from_ref_paths expects them to be stripped of 'refs/'
-        # but keep the 'remotes/origin/' or 'tags/' part
-        processed_refs = []
-        for ref in refs:
-            if ref.startswith("refs/remotes/origin/"):
-                # Convert refs/remotes/origin/master -> remotes/origin/master
-                # Salt's _get_envs_from_ref_paths will split this and handle it
-                processed_refs.append(ref[5:])
-            elif ref.startswith("refs/tags/"):
-                processed_refs.append(ref[5:])
+        # Ensure we have the latest config for filtering
+        self.ref_types = getattr(self, "ref_types", ["branch", "tag", "sha"])
+        self.disable_saltenv_mapping = getattr(self, "disable_saltenv_mapping", False)
+        self.base = getattr(self, "base", "master")
 
-        return self._get_envs_from_ref_paths(processed_refs)
-
-    def _resolve_ref(self, tgt_env):
-        """
-        Helper to resolve a saltenv to a git ref
-        """
-        if tgt_env == "base":
-            ref = self.base
-        elif tgt_env in self.envs():
-            ref = self.ref(tgt_env)
-        else:
-            ref = None
-
-        if not ref:
-            # Check for fallback
-            fallback = self.opts.get(f"{self.role}_fallback")
-            if fallback:
-                log.debug(
-                    "Env '%s' not found for %s remote '%s', trying fallback '%s'",
-                    tgt_env,
-                    self.role,
-                    self.id,
-                    fallback,
-                )
-                ref = fallback
-            else:
-                return None
-
-        # Check for remote branch first
-        git_ref = f"origin/{ref}"
-        res = self._run_git(["rev-parse", "--verify", git_ref])
-        if res.returncode == 0:
-            return git_ref
-
-        # Check for local ref/tag
-        res = self._run_git(["rev-parse", "--verify", ref])
-        if res.returncode == 0:
-            return ref
-
-        return None
+        ref_paths = res.stdout.decode().splitlines()
+        return self._get_envs_from_ref_paths(ref_paths)
 
     def file_list(self, tgt_env):
         """
@@ -2973,34 +2954,54 @@ class GitCLI(GitProvider):
             ret.add(self.mountpoint(tgt_env))
         return ret
 
-    def checkout(self, fetch_on_fail=True):
+    def _resolve_ref(self, tgt_env):
         """
-        GitCLI is a 'bare' provider, it doesn't do checkouts to a worktree.
-        It always operates on the ODB.
-        Return the cache root to indicate success.
+        Helper to resolve a saltenv to a git ref
         """
-        # We still want to ensure the ref exists
-        tgt_ref = self.get_checkout_target()
-        git_ref = f"origin/{tgt_ref}"
-        res = self._run_git(["rev-parse", "--verify", git_ref])
-        if res.returncode != 0:
-            res = self._run_git(["rev-parse", "--verify", tgt_ref])
-            if res.returncode != 0:
-                if fetch_on_fail:
-                    self.fetch()
-                    return self.checkout(fetch_on_fail=False)
+        if tgt_env == "base":
+            ref = getattr(self, "base", "master")
+        elif tgt_env in self.envs():
+            ref = self.ref(tgt_env)
+        else:
+            ref = None
+
+        if not ref:
+            # Check for fallback
+            fallback = self.opts.get(f"{self.role}_fallback")
+            if fallback:
+                log.debug(
+                    "Env '%s' not found for %s remote '%s', trying fallback '%s'",
+                    tgt_env,
+                    self.role,
+                    self.id,
+                    fallback,
+                )
+                ref = fallback
+            else:
                 return None
-        return self.check_root()
+
+        # Check for remote branch first
+        git_ref = f"origin/{ref}"
+        res = self._run_git(["rev-parse", "--verify", git_ref])
+        if res.returncode == 0:
+            return git_ref
+
+        # Check for local ref/tag
+        res = self._run_git(["rev-parse", "--verify", ref])
+        if res.returncode == 0:
+            return ref
+
+        return None
 
     def verify_auth(self):
         """
         Check if we have the necessary credentials.
-        GitCLI doesn't use pygit2.Keypair, so we just check files.
         """
-        if self.privkey and not os.path.isfile(self.privkey):
+        privkey = getattr(self, "privkey", "")
+        if privkey and not os.path.isfile(privkey):
             log.error(
                 "SSH privkey %s for %s remote '%s' not found",
-                self.privkey,
+                privkey,
                 self.role,
                 self.id,
             )
@@ -3233,13 +3234,26 @@ class GitBase:
         for param in global_values:
             key = f"{self.role}_{param}"
             if key not in self.opts:
-                log.critical(
-                    "Key '%s' not present in global configuration. This is "
-                    "a bug, please report it.",
-                    key,
-                )
-                failhard(self.role)
-            per_remote_defaults[param] = enforce_types(key, self.opts[key])
+                # Provide defaults for newly added parameters if they are missing
+                # from global opts (e.g. in older configs or some tests)
+                if param == "depth":
+                    val = 1
+                elif param == "ref_types":
+                    val = ["branch", "tag", "sha"]
+                elif param == "disable_saltenv_mapping":
+                    val = False
+                elif param == "fallback":
+                    val = ""
+                else:
+                    log.critical(
+                        "Key '%s' not present in global configuration. This is "
+                        "a bug, please report it.",
+                        key,
+                    )
+                    failhard(self.role)
+            else:
+                val = self.opts[key]
+            per_remote_defaults[param] = enforce_types(key, val)
 
         self.remotes = []
         # In case a tuple is passed.

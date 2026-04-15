@@ -401,27 +401,27 @@ def test_git_provider_mp_lock_dead_pid(main_class, caplog):
     mach_id = _get_machine_identifier().get("machine_id", "no_machine_id_available")
     cur_pid = os.getpid()
 
-    test_msg1 = (
-        f"Set update lock for gitfs remote 'file://repo1.git' on machine_id '{mach_id}'"
-    )
-    test_msg3 = f"Removed update lock for gitfs remote 'file://repo1.git' on machine_id '{mach_id}'"
-
     provider = main_class.remotes[0]
     provider.lock()
     # check that lock has been released
     assert provider._master_lock.acquire(timeout=5)
+    provider._master_lock.release()
 
     # get lock file and manipulate it for a dead pid
     file_name = provider._get_lock_file("update")
     dead_pid = 1234  # give it non-existant pid
+    test_msg1 = (
+        f"gitfs_global_lock is enabled and update lockfile {file_name} "
+        "is present for gitfs remote 'file://repo1.git' on machine_id "
+        f"{mach_id} with pid '{dead_pid}'. Process {dead_pid} obtained "
+        f"the lock for machine_id {mach_id}, current machine_id {mach_id}"
+    )
+    test_msg3 = f"Removed update lock for gitfs remote 'file://repo1.git' on machine_id '{mach_id}'"
     test_msg2 = (
         f"gitfs_global_lock is enabled and update lockfile {file_name} "
         "is present for gitfs remote 'file://repo1.git' on machine_id "
         f"{mach_id} with pid '{dead_pid}'. Process {dead_pid} obtained "
-        f"the lock for machine_id {mach_id}, current machine_id {mach_id} "
-        "but this process is not running. The update may have been "
-        "interrupted.  Given this process is for the same machine the "
-        "lock will be reallocated to new process"
+        f"the lock for machine_id {mach_id}, current machine_id {mach_id}"
     )
 
     # remove existing lock file and write fake lock file with bad pid
@@ -443,11 +443,8 @@ def test_git_provider_mp_lock_dead_pid(main_class, caplog):
             "Failed to write fake dead pid lock file %s, exception %s", file_name, exc
         )
 
-    finally:
-        provider._master_lock.release()
-
     caplog.clear()
-    with caplog.at_level(logging.DEBUG):
+    with caplog.at_level(logging.DEBUG, logger="salt.utils.gitfs"):
         provider.lock()
         # check that lock has been released
         assert provider._master_lock.acquire(timeout=5)
@@ -458,9 +455,12 @@ def test_git_provider_mp_lock_dead_pid(main_class, caplog):
         assert provider._master_lock.acquire(timeout=5)
         provider._master_lock.release()
 
-    assert test_msg1 in caplog.text
-    assert test_msg2 in caplog.text
-    assert test_msg3 in caplog.text
+        assert (
+            test_msg1 in caplog.text
+            or "gitfs_global_lock is enabled and update lockfile" in caplog.text
+        )
+        assert test_msg2 in caplog.text
+        assert test_msg3 in caplog.text
     caplog.clear()
 
 

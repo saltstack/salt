@@ -65,6 +65,7 @@ PER_REMOTE_OVERRIDES = (
     "ref_types",
     "update_interval",
     "proxy",
+    "depth",
 )
 PER_REMOTE_ONLY = ("all_saltenvs", "name", "saltenv")
 
