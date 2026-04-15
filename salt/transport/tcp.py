@@ -413,14 +413,25 @@ class PublishClient(salt.transport.base.PublishClient):
                     async with self._read_in_progress:
                         try:
                             byts = await self._stream.read_bytes(4096, partial=True)
-                        except tornado.iostream.StreamClosedError:
-                            log.trace("Stream closed, reconnecting.")
+                        except (
+                            tornado.iostream.StreamClosedError,
+                            RuntimeError,
+                        ) as exc:
+                            if isinstance(
+                                exc, RuntimeError
+                            ) and "Event loop is closed" not in str(exc):
+                                raise
+                            log.trace(
+                                "Stream closed or loop closed, reconnecting: %s", exc
+                            )
                             stream = self._stream
                             self._stream = None
-                            stream.close()
+                            if stream:
+                                stream.close()
                             if self.disconnect_callback:
-                                self.disconnect_callback()
-                            await self.connect()
+                                await self.disconnect_callback()
+                            if not self._closing:
+                                await self.connect()
                             return
                         self.unpacker.feed(byts)
                         for msg in self.unpacker:
@@ -443,14 +454,20 @@ class PublishClient(salt.transport.base.PublishClient):
                 async with self._read_in_progress:
                     try:
                         byts = await self._stream.read_bytes(4096, partial=True)
-                    except tornado.iostream.StreamClosedError:
-                        log.trace("Stream closed, reconnecting.")
+                    except (tornado.iostream.StreamClosedError, RuntimeError) as exc:
+                        if isinstance(
+                            exc, RuntimeError
+                        ) and "Event loop is closed" not in str(exc):
+                            raise
+                        log.trace("Stream closed or loop closed, reconnecting: %s", exc)
                         stream = self._stream
                         self._stream = None
-                        stream.close()
+                        if stream:
+                            stream.close()
                         if self.disconnect_callback:
                             await self.disconnect_callback()
-                        await self.connect()
+                        if not self._closing:
+                            await self.connect()
                         log.debug("Re-connected - continue")
                         continue
                     self.unpacker.feed(byts)
@@ -1155,6 +1172,10 @@ class PubServer(tornado.tcpserver.TCPServer):
                 client.close()
                 self.remove_presence_callback(client)
                 self.clients.discard(client)
+                break
+            except RuntimeError as exc:
+                if "Event loop is closed" not in str(exc):
+                    raise
                 break
             except Exception as e:  # pylint: disable=broad-except
                 log.error(
