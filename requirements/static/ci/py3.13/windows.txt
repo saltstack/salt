@@ -325,7 +325,7 @@ pyopenssl==26.0.0
     #   etcd3-py
 pyspnego==0.11.1
     # via requests-ntlm
-pytest==8.3.3
+pytest==9.0.3
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
