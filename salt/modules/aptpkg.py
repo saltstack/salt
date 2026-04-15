@@ -646,6 +646,7 @@ def install(
     reinstall=False,
     downloadonly=False,
     ignore_epoch=False,
+    normalize=True,
     **kwargs,
 ):
     """
@@ -737,11 +738,20 @@ def install(
 
         .. versionadded:: 2018.3.0
 
+    normalize : True
+        Normalize the package name by removing the architecture. Set this to
+        ``False`` to preserve explicitly arch-qualified package names such as
+        ``name:amd64``.
+
     Multiple Package Installation Options:
 
     pkgs
         A list of packages to install from a software repository. Must be
         passed as a python list.
+
+        For multiarch packages, use the arch-qualified package name (for
+        example ``name:amd64``) when you need Salt to target that exact APT
+        package name.
 
         CLI Example:
 
@@ -828,7 +838,11 @@ def install(
 
     try:
         pkg_params, pkg_type = __salt__["pkg_resource.parse_targets"](
-            name, pkgs, sources, **kwargs
+            name,
+            pkgs,
+            sources,
+            normalize=normalize and kwargs.get("split_arch", True),
+            **kwargs,
         )
     except MinionError as exc:
         raise CommandExecutionError(exc)
@@ -1362,6 +1376,10 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     name
         The name of the package, e.g., 'tmux'
 
+        For multiarch packages, dpkg may record the held package name with an
+        architecture suffix such as ``:amd64``. In those cases, the
+        arch-qualified package name may need to be used.
+
         CLI Example:
 
         .. code-block:: bash
@@ -1370,6 +1388,10 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
 
     pkgs
         A list of packages to hold. Must be passed as a python list.
+
+        For multiarch packages, dpkg may record the held package name with an
+        architecture suffix such as ``:amd64``. In those cases, the
+        arch-qualified package name may need to be used.
 
         CLI Example:
 
@@ -1427,6 +1449,10 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
     name
         The name of the package, e.g., 'tmux'
 
+        For multiarch packages, dpkg may record the held package name with an
+        architecture suffix such as ``:amd64``. In those cases, the
+        arch-qualified package name may need to be used.
+
         CLI Example:
 
         .. code-block:: bash
@@ -1435,6 +1461,10 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
     pkgs
         A list of packages to unhold. Must be passed as a python list.
+
+        For multiarch packages, dpkg may record the held package name with an
+        architecture suffix such as ``:amd64``. In those cases, the
+        arch-qualified package name may need to be used.
 
         CLI Example:
 

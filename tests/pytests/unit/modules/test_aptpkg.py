@@ -649,6 +649,40 @@ def test_install(install_var):
                 assert expected_call in mock_call_apt.mock_calls
 
 
+def test_install_preserves_multiarch_pkg_names_when_split_arch_is_false():
+    """
+    Test aptpkg.install preserves explicit multiarch package names.
+    """
+    patch_kwargs = {
+        "__salt__": {
+            "pkg_resource.parse_targets": MagicMock(
+                return_value=({"libnvidia-cfg1-570-server:amd64": None}, "repository")
+            ),
+            "pkg_resource.sort_pkglist": MagicMock(),
+            "pkg_resource.stringify": MagicMock(),
+            "cmd.run_stdout": MagicMock(return_value=""),
+        }
+    }
+    mock_call_apt = MagicMock(return_value={"retcode": 0, "stdout": "", "stderr": ""})
+    mock_parse_targets = patch_kwargs["__salt__"]["pkg_resource.parse_targets"]
+
+    with patch.multiple(
+        aptpkg, list_pkgs=MagicMock(side_effect=[{}, {}]), **patch_kwargs
+    ):
+        with patch(
+            "salt.modules.aptpkg.get_selections", MagicMock(return_value={"hold": []})
+        ):
+            with patch("salt.modules.aptpkg._call_apt", mock_call_apt):
+                aptpkg.install(
+                    pkgs=["libnvidia-cfg1-570-server:amd64"],
+                    refresh=False,
+                    split_arch=False,
+                )
+
+    assert mock_parse_targets.call_args.kwargs["normalize"] is False
+    assert "libnvidia-cfg1-570-server:amd64" in mock_call_apt.mock_calls[0].args[0]
+
+
 def test_remove(uninstall_var):
     """
     Test - Remove packages.
