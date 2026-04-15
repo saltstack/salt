@@ -395,7 +395,7 @@ def gen_signature(priv_path, pub_path, sign_path, passphrase=None):
     """
 
     with salt.utils.files.fopen(pub_path) as fp_:
-        mpub_64 = fp_.read()
+        mpub_64 = clean_key(fp_.read())
 
     mpub_sig = sign_message(priv_path, mpub_64, passphrase)
     mpub_sig_64 = binascii.b2a_base64(mpub_sig)
