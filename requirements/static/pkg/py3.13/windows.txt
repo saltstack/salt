@@ -6,6 +6,8 @@ aiohttp==3.13.5
     # via -r requirements/base.txt
 aiosignal==1.4.0
     # via aiohttp
+annotated-doc==0.0.4
+    # via typer
 annotated-types==0.7.0
     # via pydantic
 apache-libcloud==3.9.0
@@ -131,6 +133,8 @@ pydantic==2.12.5
     # via -r requirements/base.txt
 pydantic-core==2.41.5
     # via pydantic
+pygments==2.20.0
+    # via rich
 pymssql==2.3.11
     # via -r requirements/base.txt
 pymysql==1.1.2
@@ -180,6 +184,10 @@ timelib==0.3.0
     #   -r requirements/static/pkg/windows.in
 tornado==6.5.5
     # via -r requirements/base.txt
+typer==0.24.1
+    # via typer-slim
+typer-slim==0.24.0
+    # via jaraco-text
 typing-extensions==4.15.0
     # via
     #   pydantic
