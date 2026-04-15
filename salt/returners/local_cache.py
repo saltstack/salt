@@ -282,9 +282,25 @@ def save_minions(jid, minions, syndic_id=None):
             except OSError:
                 pass
 
-        # When multiple Salt Syndic masters return, a race condition can occur when writing to this same file.
+        # Merge with any existing minion list (e.g. from prior batch
+        # iterations sharing the same JID, or syndic masters).
+        existing_minions = set()
+        if os.path.isfile(minions_path):
+            try:
+                with salt.utils.files.fopen(minions_path, "rb") as rfh:
+                    existing_data = salt.payload.load(rfh)
+                    if existing_data is not None:
+                        try:
+                            existing_minions.update(existing_data)
+                        except (TypeError, ValueError):
+                            pass
+            except (OSError, salt.exceptions.SaltDeserializationError):
+                pass
+
+        merged_minions = sorted(existing_minions.union(minions))
+
         with salt.utils.atomicfile.atomic_open(minions_path, "w+b") as wfh:
-            salt.payload.dump(minions, wfh)
+            salt.payload.dump(merged_minions, wfh)
     except OSError as exc:
         log.error(
             "Failed to write minion list %s to job cache file %s: %s",
