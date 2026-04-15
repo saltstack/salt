@@ -828,6 +828,7 @@ def test_installed_with_single_normalize():
         "pkg.install": yumpkg.install,
         "pkg.list_pkgs": list_pkgs,
         "pkg.normalize_name": yumpkg.normalize_name,
+        "pkg_resource.check_extra_requirements": MagicMock(return_value=True),
         "pkg_resource.version_clean": pkg_resource.version_clean,
         "pkg_resource.parse_targets": pkg_resource.parse_targets,
     }
@@ -859,7 +860,7 @@ def test_installed_with_single_normalize():
         )
         call_yum_mock.assert_called_once()
         assert (
-            "weird-name-1.2.3-1234.5.6.test7tst.x86_64-20220214-2.1"
+            "weird-name-1.2.3-1234.5.6.test7tst.x86_64.noarch-20220214-2.1"
             in call_yum_mock.mock_calls[0].args[0]
         )
         assert ret["result"]
@@ -873,11 +874,117 @@ def test_installed_with_single_normalize():
         )
         call_yum_mock.assert_called_once()
         assert (
-            "weird-name-1.2.3-1234.5.6.test7tst.x86_64"
+            "weird-name-1.2.3-1234.5.6.test7tst.x86_64.noarch"
             in call_yum_mock.mock_calls[0].args[0]
         )
         assert ret["result"]
         assert ret["changes"] == expected
+
+
+def test_installed_preserves_apt_multiarch_pkg_names_for_update_holds():
+    """
+    Test pkg.installed keeps explicit APT multiarch package names intact.
+    """
+    pkg_name = "zlib1g:amd64"
+    pkg_version = "1:1.3.dfsg-3.1ubuntu2.1"
+    install_mock = MagicMock(
+        return_value={pkg_name: {"old": "1:1.3.dfsg-3.1ubuntu2", "new": pkg_version}}
+    )
+    list_pkgs_mock = MagicMock(
+        side_effect=[
+            {pkg_name: ["1:1.3.dfsg-3.1ubuntu2"]},
+            {"zlib1g": [pkg_version]},
+            {"zlib1g": [pkg_version]},
+        ]
+    )
+
+    salt_dict = {
+        "pkg.install": install_mock,
+        "pkg.list_pkgs": list_pkgs_mock,
+        "pkg.normalize_name": lambda pkg: (
+            pkg.rsplit(":", 1)[0] if pkg.endswith(":amd64") else pkg
+        ),
+        "lowpkg.unpurge": MagicMock(return_value={}),
+        "pkg_resource.check_extra_requirements": MagicMock(return_value=True),
+        "pkg_resource.version_clean": pkg_resource.version_clean,
+    }
+
+    with patch.dict(pkg.__salt__, salt_dict), patch.dict(
+        pkg_resource.__salt__, salt_dict
+    ), patch.dict(
+        pkg.__grains__, {"os": "Ubuntu", "os_family": "Debian", "osarch": "amd64"}
+    ), patch.dict(
+        pkg_resource.__grains__, {"os": "Ubuntu", "os_family": "Debian"}
+    ):
+        ret = pkg.installed(
+            "test_install",
+            pkgs=[{pkg_name: pkg_version}],
+            skip_suggestions=True,
+            update_holds=True,
+        )
+
+    install_mock.assert_called_once_with(
+        name=None,
+        refresh=False,
+        version=None,
+        fromrepo=None,
+        skip_verify=False,
+        pkgs=[{pkg_name: pkg_version}],
+        sources=None,
+        reinstall=False,
+        normalize=True,
+        update_holds=True,
+        ignore_epoch=None,
+        split_arch=False,
+        allow_updates=False,
+        saltenv="base",
+    )
+    assert ret["result"]
+    assert ret["changes"] == {
+        pkg_name: {"old": "1:1.3.dfsg-3.1ubuntu2", "new": pkg_version},
+    }
+
+
+def test_verify_install_normalizes_debian_multiarch_names():
+    """
+    Test _verify_install matches Debian native-arch package names correctly.
+    """
+    desired = {"zlib1g:amd64": "1:1.3.dfsg-3.1ubuntu2.1"}
+    new_pkgs = {"zlib1g": ["1:1.3.dfsg-3.1ubuntu2.1"]}
+
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.normalize_name": lambda name: (
+                name.rsplit(":", 1)[0] if name.endswith(":amd64") else name
+            ),
+            "pkg_resource.version_clean": pkg_resource.version_clean,
+        },
+    ), patch.dict(pkg.__grains__, {"os": "Ubuntu", "os_family": "Debian"}):
+        ok, failed = pkg._verify_install(desired, new_pkgs)
+
+    assert ok == ["zlib1g:amd64"]
+    assert failed == []
+
+
+def test_verify_install_normalizes_yum_arch_names():
+    """
+    Test _verify_install matches YUM package names using normalized names.
+    """
+    desired = {"weird-name-1.2.3-1234.5.6.test7tst.x86_64.noarch": "20220214-2.1"}
+    new_pkgs = {"weird-name-1.2.3-1234.5.6.test7tst.x86_64": ["20220214-2.1"]}
+
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.normalize_name": yumpkg.normalize_name,
+            "pkg_resource.version_clean": pkg_resource.version_clean,
+        },
+    ), patch.dict(pkg.__grains__, {"os": "CentOS", "os_family": "RedHat"}):
+        ok, failed = pkg._verify_install(desired, new_pkgs)
+
+    assert ok == ["weird-name-1.2.3-1234.5.6.test7tst.x86_64.noarch"]
+    assert failed == []
 
 
 def test_removed_with_single_normalize():
