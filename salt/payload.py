@@ -12,6 +12,7 @@ import logging
 import salt.transport.frame
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.msgpack
+import salt.utils.safepillar
 import salt.utils.stringutils
 from salt.defaults import _Constant
 from salt.exceptions import SaltDeserializationError, SaltReqTimeoutError
@@ -152,8 +153,21 @@ def dumps(msg, use_bin_type=False):
             return tuple(obj)
         elif isinstance(obj, CaseInsensitiveDict):
             return dict(obj)
+        elif isinstance(obj, (salt.utils.safepillar.SafeDict, salt.utils.safepillar.SafeList)):
+            # Pillar may be wrapped for in-memory redaction; msgpack cannot encode
+            # Pydantic Secret* / Safe containers. Unwrap to plain dict/list/str for wire.
+            return salt.utils.safepillar.unwrap_pillar_tree(obj)
         elif isinstance(obj, collections.abc.MutableMapping):
             return dict(obj)
+        try:
+            from pydantic import SecretBytes, SecretStr
+        except ImportError:
+            pass
+        else:
+            if isinstance(obj, SecretStr):
+                return obj.get_secret_value()
+            if isinstance(obj, SecretBytes):
+                return obj.get_secret_value()
         # Nothing known exceptions found. Let msgpack raise its own.
         return obj
 
