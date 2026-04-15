@@ -173,18 +173,7 @@ class IPCServer:
                         header={"mid": header["mid"]},
                         raw_body=True,
                     )
-                    try:
-                        yield stream.write(pack)
-                    except (
-                        StreamClosedError,
-                        RuntimeError,
-                        TornadoTimeoutError,
-                    ) as exc:
-                        if isinstance(
-                            exc, RuntimeError
-                        ) and "Event loop is closed" not in str(exc):
-                            raise
-                        log.trace("IPCServer return_message failed: %s", exc)
+                    yield stream.write(pack)
 
                 return return_message
             else:
@@ -202,12 +191,6 @@ class IPCServer:
                         body,
                         write_callback(stream, framed_msg["head"]),
                     )
-            except (RuntimeError, TornadoTimeoutError) as exc:
-                if isinstance(exc, RuntimeError) and "Event loop is closed" not in str(
-                    exc
-                ):
-                    raise
-                break
             except _StreamClosedError:
                 log.trace("Client disconnected from IPC %s", self.socket_path)
                 break
@@ -353,13 +336,6 @@ class IPCClient:
                 yield self.stream.connect(sock_addr)
                 self._connecting_future.set_result(True)
                 break
-            except (RuntimeError, TornadoTimeoutError) as exc:
-                if isinstance(exc, RuntimeError) and "Event loop is closed" not in str(
-                    exc
-                ):
-                    raise
-                self._connecting_future.set_exception(exc)
-                break
             except Exception as e:  # pylint: disable=broad-except
                 if self.stream.closed():
                     self.stream = None
@@ -460,15 +436,10 @@ class IPCMessageClient(IPCClient):
         :param dict msg: The message to be sent
         :param int timeout: Timeout when sending message (Currently unimplemented)
         """
-        try:
-            if not self.connected():
-                await self.connect()
-            pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
-            await self.stream.write(pack)
-        except (StreamClosedError, RuntimeError) as exc:
-            if isinstance(exc, RuntimeError) and "Event loop is closed" not in str(exc):
-                raise
-            log.debug("IPCMessageClient.send failed: %s", exc)
+        if not self.connected():
+            await self.connect()
+        pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
+        await self.stream.write(pack)
 
 
 class IPCMessageServer(IPCServer):
@@ -566,10 +537,6 @@ class IPCMessagePublisher:
             yield stream.write(pack)
         except StreamClosedError:
             log.trace("Client disconnected from IPC %s", self.socket_path)
-            self.streams.discard(stream)
-        except RuntimeError as exc:
-            if "Event loop is closed" not in str(exc):
-                raise
             self.streams.discard(stream)
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Exception occurred while handling stream: %s", exc)
