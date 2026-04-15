@@ -4,7 +4,7 @@ aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.txt
     #   aiohttp
-aiohttp==3.13.3
+aiohttp==3.13.5
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.txt
     #   -r requirements/base.txt
@@ -115,7 +115,7 @@ croniter==6.0.0 ; sys_platform != 'win32'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.txt
     #   -r requirements/base.txt
-cryptography==46.0.5
+cryptography==46.0.7
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.txt
     #   -r requirements/base.txt
@@ -378,7 +378,7 @@ psutil==7.2.2 ; python_full_version >= '3.10'
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-pyasn1==0.6.2
+pyasn1==0.6.3
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.txt
     #   -r requirements/base.txt
@@ -531,7 +531,7 @@ referencing==0.36.2
     # via
     #   jsonschema
     #   jsonschema-specifications
-requests==2.31.0 ; python_full_version < '3.10'
+requests==2.32.5 ; python_full_version < '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.txt
     #   -r requirements/base.txt
@@ -545,7 +545,7 @@ requests==2.31.0 ; python_full_version < '3.10'
     #   responses
     #   vcert
     #   vultr
-requests==2.32.5 ; python_full_version >= '3.10'
+requests==2.33.1 ; python_full_version >= '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.txt
     #   -r requirements/base.txt

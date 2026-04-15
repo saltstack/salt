@@ -2,7 +2,7 @@
 #    uv pip compile requirements/base.txt requirements/zeromq.txt requirements/crypto.txt requirements/static/pkg/freebsd.in --universal --python-version=3.11 --constraint requirements/constraints.txt --no-emit-index-url -o=requirements/static/pkg/py3.11/freebsd.txt
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.13.3
+aiohttp==3.13.5
     # via -r requirements/base.txt
 aiosignal==1.4.0
     # via aiohttp
@@ -41,7 +41,7 @@ contextvars==2.4
     # via -r requirements/base.txt
 croniter==6.0.0 ; sys_platform != 'win32'
     # via -r requirements/base.txt
-cryptography==46.0.5
+cryptography==46.0.7
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
@@ -129,7 +129,7 @@ propcache==0.3.2
     #   yarl
 psutil==7.2.2
     # via -r requirements/base.txt
-pyasn1==0.6.2
+pyasn1==0.6.3
     # via -r requirements/base.txt
 pycparser==2.21
     # via
@@ -171,7 +171,7 @@ pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==25.1.2
     # via -r requirements/zeromq.txt
-requests==2.32.5
+requests==2.33.1
     # via
     #   -r requirements/base.txt
     #   apache-libcloud

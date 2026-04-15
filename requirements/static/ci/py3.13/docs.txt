@@ -4,7 +4,7 @@ aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   aiohttp
-aiohttp==3.13.3
+aiohttp==3.13.5
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
@@ -60,7 +60,7 @@ croniter==6.0.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
-cryptography==46.0.5
+cryptography==46.0.7
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
@@ -203,7 +203,7 @@ psutil==7.2.2
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
-pyasn1==0.6.2
+pyasn1==0.6.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
@@ -250,7 +250,7 @@ pyzmq==27.1.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/zeromq.txt
-requests==2.32.5
+requests==2.33.1
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt

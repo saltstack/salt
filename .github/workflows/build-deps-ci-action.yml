@@ -76,7 +76,7 @@ jobs:
         include: ${{ fromJSON(inputs.matrix)['linux'] }}
     steps:
       - name: Setup Python Version ${{ inputs.ci-python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: ${{ inputs.ci-python-version }}
 
@@ -86,7 +86,7 @@ jobs:
           t=$(shuf -i 1-30 -n 1); echo "Sleeping $t seconds"; sleep "$t"
 
       - name: Checkout Source Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Cache nox.linux.${{ matrix.arch }}.tar.* for session ${{ inputs.nox-session }}
         id: nox-dependencies-cache
@@ -97,7 +97,7 @@ jobs:
 
       - name: Download Onedir Tarball as an Artifact
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
           path: artifacts/
@@ -151,7 +151,7 @@ jobs:
           nox --force-color -e compress-dependencies -- linux ${{ matrix.arch }}
 
       - name: Upload Nox Requirements Tarball
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: nox-linux-${{ matrix.arch }}-${{ inputs.nox-session }}
           path: nox.linux.${{ matrix.arch }}.tar.*
@@ -175,7 +175,7 @@ jobs:
           t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(1, 15)))'); echo "Sleeping $t seconds"; sleep "$t"
 
       - name: Checkout Source Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Cache nox.macos.${{ matrix.arch }}.tar.* for session ${{ inputs.nox-session }}
         id: nox-dependencies-cache
@@ -186,7 +186,7 @@ jobs:
 
       - name: Download Onedir Tarball as an Artifact
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-macos-${{ matrix.arch }}.tar.xz
           path: artifacts/
@@ -201,7 +201,7 @@ jobs:
 
       - name: Set up Python ${{ inputs.ci-python-version }}
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "${{ inputs.ci-python-version }}"
 
@@ -238,7 +238,7 @@ jobs:
           nox --force-color -e compress-dependencies -- macos ${{ matrix.arch }}
 
       - name: Upload Nox Requirements Tarball
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: nox-macos-${{ matrix.arch }}-${{ inputs.nox-session }}
           path: nox.macos.${{ matrix.arch }}.tar.*
@@ -268,7 +268,7 @@ jobs:
           env
 
       - name: Checkout Source Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Cache nox.windows.${{ matrix.arch }}.tar.* for session ${{ inputs.nox-session }}
         id: nox-dependencies-cache
@@ -279,7 +279,7 @@ jobs:
 
       - name: Download Onedir Tarball as an Artifact
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.tar.xz
           path: artifacts/
@@ -294,7 +294,7 @@ jobs:
 
       - name: Set up Python ${{ inputs.ci-python-version }}
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "${{ inputs.ci-python-version }}"
 
@@ -333,7 +333,7 @@ jobs:
           nox --force-color -e compress-dependencies -- windows ${{ matrix.arch }}
 
       - name: Upload Nox Requirements Tarball
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: nox-windows-${{ matrix.arch }}-${{ inputs.nox-session }}
           path: nox.windows.${{ matrix.arch }}.tar.*

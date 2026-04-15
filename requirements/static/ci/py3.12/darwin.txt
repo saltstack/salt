@@ -4,7 +4,7 @@ aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/pkg/py3.12/darwin.txt
     #   aiohttp
-aiohttp==3.13.3
+aiohttp==3.13.5
     # via
     #   -c requirements/static/pkg/py3.12/darwin.txt
     #   -r requirements/base.txt
@@ -94,7 +94,7 @@ croniter==6.0.0
     # via
     #   -c requirements/static/pkg/py3.12/darwin.txt
     #   -r requirements/base.txt
-cryptography==46.0.5
+cryptography==46.0.7
     # via
     #   -c requirements/static/pkg/py3.12/darwin.txt
     #   -r requirements/base.txt
@@ -305,7 +305,7 @@ psutil==7.2.2
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-pyasn1==0.6.2
+pyasn1==0.6.3
     # via
     #   -c requirements/static/pkg/py3.12/darwin.txt
     #   -r requirements/base.txt
@@ -416,7 +416,7 @@ referencing==0.37.0
     # via
     #   jsonschema
     #   jsonschema-specifications
-requests==2.32.5
+requests==2.33.1
     # via
     #   -c requirements/static/pkg/py3.12/darwin.txt
     #   -r requirements/base.txt

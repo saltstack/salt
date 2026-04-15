@@ -82,11 +82,11 @@ jobs:
 
     steps:
       # Checkout here so we can easily use custom actions
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       # Checkout here for the build process
       - name: Checkout in build directory
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           path:
             pkgs/checkout/
@@ -103,7 +103,7 @@ jobs:
 
       - name: Download Onedir Tarball as an Artifact
         if:  inputs.source == 'onedir'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
           path: pkgs/checkout/artifacts/
@@ -118,13 +118,13 @@ jobs:
 
       - name: Download Release Patch
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: salt-${{ inputs.salt-version }}.patch
           path: pkgs/checkout/
 
       - name: Download MAN Pages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: man-pages-${{ inputs.salt-version }}
           path: pkgs/checkout/doc/man/
@@ -178,7 +178,7 @@ jobs:
           fi
 
       - name: Upload DEBs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact-name }}
           path: ${{ github.workspace }}/pkgs/*
@@ -203,7 +203,7 @@ jobs:
       RELENV_DATA: "${{ github.workspace }}/.relenv"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install rpmsign
         run: |
@@ -211,7 +211,7 @@ jobs:
 
       - name: Download Onedir Tarball as an Artifact
         if:  inputs.source == 'onedir'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
           path: artifacts/
@@ -226,12 +226,12 @@ jobs:
 
       - name: Download Release Patch
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: salt-${{ inputs.salt-version }}.patch
 
       - name: Download MAN Pages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: man-pages-${{ inputs.salt-version }}
           path: doc/man/
@@ -295,7 +295,7 @@ jobs:
           fi
 
       - name: Upload RPMs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact-name }}
           path: ~/rpmbuild/RPMS/${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}/*.rpm
@@ -339,8 +339,8 @@ jobs:
             echo "sign-pkgs=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: ${{ inputs.ci-python-version }}
 
@@ -357,13 +357,13 @@ jobs:
 
       - name: Download Onedir Tarball as an Artifact
         if:  inputs.source == 'onedir'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: salt-${{ inputs.salt-version }}-onedir-macos-${{ matrix.arch }}.tar.xz
           path: artifacts/
 
       - name: Download MAN Pages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: man-pages-${{ inputs.salt-version }}
           path: doc/man/
@@ -445,7 +445,7 @@ jobs:
           fi
 
       - name: Upload ${{ matrix.arch }} Package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact-name }}
           path: pkg/macos/salt-${{ inputs.salt-version }}-py3-*.pkg
@@ -496,8 +496,8 @@ jobs:
             echo "sign-pkgs=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: ${{ inputs.ci-python-version }}
 
@@ -514,13 +514,13 @@ jobs:
 
       - name: Download Onedir Tarball as an Artifact
         if:  inputs.source == 'onedir'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip
           path: artifacts/
 
       - name: Download MAN Pages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: man-pages-${{ inputs.salt-version }}
           path: doc/man/
@@ -533,7 +533,7 @@ jobs:
 
       - name: Code signing with Software Trust Manager
         if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
-        uses: digicert/ssm-code-signing@v1.1.1
+        uses: digicert/ssm-code-signing@fb61e357690ad6aaa11c372000c37fb74d35c000 # v1.1.1
 
       - name: Build Windows Packages
         run: |
@@ -562,7 +562,7 @@ jobs:
           fi
 
       - name: Upload ${{ matrix.arch }} NSIS Packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact-name-nsis }}
           path: pkg/windows/build/Salt-*.exe
@@ -570,7 +570,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload ${{ matrix.arch }} MSI Package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact-name-msi }}
           path: pkg/windows/build/Salt-*.msi
