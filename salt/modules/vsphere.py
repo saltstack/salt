@@ -445,7 +445,7 @@ def _gets_service_instance_via_proxy(fn):
 
                 # There are two cases:
                 #   1. service_instance was passed in as a positional parameter
-                #   2. service_instance was passed in as a named paramter
+                #   2. service_instance was passed in as a named parameter
                 if len(args) > idx:
                     # case 1: The call was made with enough positional
                     # parameters to include 'service_instance'

@@ -481,7 +481,7 @@ def test_tree(subtests, etcd_client, prefix, etcd_version):
             etcd_client.write_directory(f"{prefix}/2", None)
             assert etcd_client.tree(f"{prefix}/2") == {}
 
-    with subtests.test("we should be able to recieve the tree of a directory"):
+    with subtests.test("we should be able to receive the tree of a directory"):
         etcd_client.set(f"{prefix}/3/4", "three/four")
         expected = {
             "1": "one",
@@ -492,7 +492,7 @@ def test_tree(subtests, etcd_client, prefix, etcd_version):
             expected.pop("2")
         assert etcd_client.tree(prefix) == expected
 
-    with subtests.test("we should be able to recieve the tree of an outer directory"):
+    with subtests.test("we should be able to receive the tree of an outer directory"):
         etcd_client.set(f"{prefix}/5/6/7", "five/six/seven")
         expected = {
             "6": {"7": "five/six/seven"},

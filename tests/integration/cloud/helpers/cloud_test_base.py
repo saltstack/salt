@@ -79,7 +79,7 @@ class CloudTest(ShellCase):
             self.assertIn(
                 instance_name,
                 [i.strip(": ") for i in creation_ret],
-                "An error occured during instance creation:  |\n\t{}\n\t|".format(
+                "An error occurred during instance creation:  |\n\t{}\n\t|".format(
                     "\n\t".join(creation_ret)
                 ),
             )

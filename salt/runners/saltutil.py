@@ -791,10 +791,10 @@ def sync_serializers(saltenv="base", extmod_whitelist=None, extmod_blacklist=Non
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -822,10 +822,10 @@ def sync_executors(saltenv="base", extmod_whitelist=None, extmod_blacklist=None)
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -853,10 +853,10 @@ def sync_wrapper(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
         one environment, pass a comma-separated list.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 

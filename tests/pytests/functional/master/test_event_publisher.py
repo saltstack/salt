@@ -193,5 +193,5 @@ def test_publisher_mem(publisher, publish, listeners, stop_event):
         print(
             f"*** PEAK MEMORY: {max_mem:.2f} MB (increase: {max_mem - baseline:.2f} MB) ***\n"
         )
-        log.info("test_publisher_mem finished succesfully")
+        log.info("test_publisher_mem finished successfully")
         stop_event.clear()
