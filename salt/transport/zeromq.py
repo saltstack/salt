@@ -337,7 +337,7 @@ class PublishClient(salt.transport.base.PublishClient):
             try:
                 return await asyncio.wait_for(self._socket.recv(), timeout=timeout)
             except asyncio.exceptions.TimeoutError:
-                log.trace("PublishClient recieve timedout: %d", timeout)
+                log.trace("PublishClient receive timedout: %d", timeout)
         else:
             return await self._socket.recv()
 

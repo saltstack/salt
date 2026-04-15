@@ -1795,7 +1795,7 @@ class Minion(MinionBase):
                     break
                 await asyncio.sleep(0.3)
             else:
-                raise TimeoutError("Did not recieve return event")
+                raise TimeoutError("Did not receive return event")
             log.trace("Reply from main %s", request_id)
             return ret["ret"]
 

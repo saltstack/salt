@@ -327,7 +327,7 @@ class Minion(
             self.minion = salt.minion.MinionManager(self.config)
         except Exception:  # pylint: disable=broad-except
             log.error(
-                "An error occured while setting up the minion manager", exc_info=True
+                "An error occurred while setting up the minion manager", exc_info=True
             )
             self.shutdown(1)
 
