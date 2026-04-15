@@ -139,14 +139,14 @@ IMCAC - Immediate Custom Action - It's immediate
       <?endif ?>
     </Property>
 
-    <!-- Search registry for NSIS install  -->
-    <Property         Id="NSIS_UNINSTALLSTRING">
+    <!-- Search registry for NSIS install. Secure=yes: pass to deferred CA (del_NSIS) on elevated installs. -->
+    <Property Id="NSIS_UNINSTALLSTRING" Secure="yes">
       <RegistrySearch Root="HKLM" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Salt Minion" Name="UninstallString" Type="raw" Win64="no"  Id="n1" />
       <RegistrySearch Root="HKLM" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Salt Minion" Name="UninstallString" Type="raw" Win64="yes" Id="n2" />
     </Property>
 
-    <!-- Detect NSIS install -->
-    <SetProperty Id="nsis_install_found" Before="LaunchConditions" Value="1">NSIS_UNINSTALLSTRING >> "uninst.exe"</SetProperty>
+    <!-- Detect NSIS install: UninstallString must contain uninst.exe (see file header: >< = contains, >> = ends with). -->
+    <SetProperty Id="nsis_install_found" Before="LaunchConditions" Value="1"><![CDATA[NSIS_UNINSTALLSTRING><"uninst.exe"]]></SetProperty>
 
     <!--
     Workaround.
@@ -215,6 +215,8 @@ IMCAC - Immediate Custom Action - It's immediate
       <Custom Action="kill_python_exe"          Before="InstallValidate"          >(REMOVE ~= "ALL") or WIX_UPGRADE_DETECTED</Custom>
 
       <Custom Action="ReadConfig_IMCAC"         Before="CostInitialize"           >NOT Installed</Custom>
+      <!-- Deferred CA cannot read session properties; pass NSIS UninstallString as CustomActionData. -->
+      <Custom Action="Set_del_NSIS_DECAC"       Before="del_NSIS_DECAC"           >nsis_install_found</Custom>
       <Custom Action="del_NSIS_DECAC"           After="InstallInitialize"         >nsis_install_found</Custom>
 
       <!-- If CLEAN_INSTALL, on install or upgrade: delete config and cache -->
@@ -242,6 +244,7 @@ IMCAC - Immediate Custom Action - It's immediate
     <!-- Declare Immediate (*_IMCAC) and Deferred (*_DECAC) Custom Actions. -->
     <!-- These are the entry points into the DLL -->
     <CustomAction Id="ReadConfig_IMCAC"     BinaryKey="MinionConfigExt" DllEntry="ReadConfig_IMCAC"       Execute="firstSequence" />
+    <CustomAction Id="Set_del_NSIS_DECAC"   Property="del_NSIS_DECAC"   Value="[NSIS_UNINSTALLSTRING]" />
     <CustomAction Id="del_NSIS_DECAC"       BinaryKey="MinionConfigExt" DllEntry="del_NSIS_DECAC"         Execute="deferred" Return="check" Impersonate="no" />
     <CustomAction Id="MoveInsecureConfig_DECAC"  BinaryKey="MinionConfigExt" DllEntry="MoveInsecureConfig_DECAC" Execute="deferred" Return="check" Impersonate="no" />
     <CustomAction Id="MoveConfig_DECAC"     BinaryKey="MinionConfigExt" DllEntry="MoveConfig_DECAC"       Execute="deferred" Return="check" Impersonate="no" />

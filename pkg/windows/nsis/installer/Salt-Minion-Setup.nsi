@@ -107,6 +107,7 @@ Var TimeStamp
 Var cmdLineParams
 var logFileHandle
 Var msg
+Var msiEnumIdx
 
 # Followed this: https://nsis.sourceforge.io/StrRep
 !define LogMsg '!insertmacro LogMsg'
@@ -781,9 +782,10 @@ Function .onInit
     # Uninstall msi-installed salt
     # Source: https://nsis-dev.github.io/NSIS-Forums/html/t-303468.html
     !define upgradecode {FC6FB3A2-65DE-41A9-AD91-D10A402BD641}  # Salt upgrade code
-    StrCpy $0 0
+    StrCpy $msiEnumIdx 0
     ${LogMsg} "Looking for MSI installation"
     loop:
+    StrCpy $0 $msiEnumIdx
     System::Call 'MSI::MsiEnumRelatedProducts(t "${upgradecode}",i0,i r0,t.r1)i.r2'
     ${If} $2 = 0
         # Now $1 contains the product code
@@ -792,7 +794,7 @@ Function .onInit
           StrCpy $R0 $1
           Call UninstallMSI
         pop $R0
-        IntOp $0 $0 + 1
+        IntOp $msiEnumIdx $msiEnumIdx + 1
         goto loop
     ${Endif}
 
@@ -1718,16 +1720,38 @@ Function UninstallMSI
 
     msi_uninstall_exec:
         ${LogMsg} "Invoking msiexec uninstall for $R0"
-        ExecWait '"msiexec.exe" /x $R0 /qb /quiet /norestart' $0
-        ${LogMsg} "msiexec exit code: $0"
-        ${If} $0 == 3010
-        ${OrIf} $0 == 1641
+        # 32-bit NSIS on 64-bit Windows must use Sysnative\msiexec.exe so the 64-bit
+        # Windows Installer uninstalls 64-bit Salt MSIs; WOW64 msiexec can hang or misbehave.
+        ${If} ${FileExists} "$WINDIR\Sysnative\msiexec.exe"
+            StrCpy $R8 "$WINDIR\Sysnative\msiexec.exe"
+        ${Else}
+            StrCpy $R8 "msiexec.exe"
+        ${EndIf}
+        ${LogMsg} "msiexec path: $R8"
+        # Verbose Windows Installer log (same folder as Salt install.log).
+        StrCpy $R6 "$TEMP\SaltInstaller\$TimeStamp-msi-uninstall.log"
+        ${LogMsg} "MSI verbose log (/l*v): $R6"
+        # Wait for the real msiexec client to exit. Do not use MsiQueryProductStateW:
+        # the product unregisters at ProductUnregister (early in InstallFinalize) while
+        # file removal is still running, so NSIS would continue too soon.
+        DetailPrint "Removing MSI-based Salt (Windows Installer) — may take a few minutes..."
+        ${LogMsg} "ExecWait msiexec (uninstall; wait for process exit)"
+        ${If} ${Silent}
+            ${LogMsg} "msiexec flags: /qn /norestart (silent NSIS install)"
+            ExecWait '"$R8" /x $R0 /qn /norestart REBOOT=ReallySuppress /l*v "$R6"' $R7
+        ${Else}
+            ${LogMsg} "msiexec flags: /passive /norestart (GUI NSIS install)"
+            ExecWait '"$R8" /x $R0 /passive /norestart REBOOT=ReallySuppress /l*v "$R6"' $R7
+        ${EndIf}
+        ${LogMsg} "msiexec exit code: $R7"
+        ${If} $R7 == 3010
+        ${OrIf} $R7 == 1641
             ${LogMsg} "MSI uninstall reported reboot pending; continuing"
-        ${ElseIf} $0 != 0
-            ${LogMsg} "MSI uninstall failed: $0"
+        ${ElseIf} $R7 != 0
+            ${LogMsg} "MSI uninstall failed: $R7"
             ${IfNot} ${Silent}
                 MessageBox MB_OK|MB_ICONEXCLAMATION|MB_TOPMOST \
-                    "The MSI uninstall did not complete successfully (code $0).$\n$\n\
+                    "The MSI uninstall did not complete successfully (code $R7).$\n$\n\
                     The Salt install cannot continue." /SD IDOK
             ${EndIf}
             Abort
