@@ -1708,14 +1708,30 @@ FunctionEnd
 #------------------------------------------------------------------------------
 Function UninstallMSI
     ; $R0 === product code
+    ${LogMsg} "Entering UninstallMSI for product $R0"
     MessageBox MB_OKCANCEL|MB_ICONINFORMATION \
         "${PRODUCT_NAME} is already installed via MSI.$\n$\n\
         Click `OK` to remove the existing installation." \
-        /SD IDOK IDOK UninstallMSI
-    Abort
+        /SD IDOK IDOK msi_uninstall_exec IDCANCEL msi_uninstall_cancel
+    msi_uninstall_cancel:
+        Abort
 
-    UninstallMSI:
-        ExecWait '"msiexec.exe" /x $R0 /qb /quiet /norestart'
+    msi_uninstall_exec:
+        ${LogMsg} "Invoking msiexec uninstall for $R0"
+        ExecWait '"msiexec.exe" /x $R0 /qb /quiet /norestart' $0
+        ${LogMsg} "msiexec exit code: $0"
+        ${If} $0 == 3010
+        ${OrIf} $0 == 1641
+            ${LogMsg} "MSI uninstall reported reboot pending; continuing"
+        ${ElseIf} $0 != 0
+            ${LogMsg} "MSI uninstall failed: $0"
+            ${IfNot} ${Silent}
+                MessageBox MB_OK|MB_ICONEXCLAMATION|MB_TOPMOST \
+                    "The MSI uninstall did not complete successfully (code $0).$\n$\n\
+                    The Salt install cannot continue." /SD IDOK
+            ${EndIf}
+            Abort
+        ${EndIf}
 
 FunctionEnd
 
