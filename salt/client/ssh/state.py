@@ -5,6 +5,7 @@ Create ssh executor system
 import logging
 import os
 import shutil
+import copy
 import tarfile
 import tempfile
 from contextlib import closing
@@ -54,7 +55,13 @@ class SSHState(salt.state.State):
         self.states = salt.loader.states(
             self.opts, locals_, self.utils, self.serializers
         )
-        self.rend = salt.loader.render(self.opts, self.functions)
+        # Ensure the renderer uses the master-side cachedir for this minion
+        # so that Jinja imports can be resolved correctly.
+        rend_opts = copy.deepcopy(self.opts)
+        rend_opts["cachedir"] = os.path.join(
+            self.opts["__master_opts__"]["cachedir"], "salt-ssh", self.opts["id"]
+        )
+        self.rend = salt.loader.render(rend_opts, self.functions)
 
     def _gather_pillar(self):
         """

@@ -33,6 +33,7 @@ import logging
 import os
 import shlex
 import urllib.parse
+import copy
 from pathlib import Path
 
 import salt.client.ssh
@@ -862,9 +863,12 @@ class SSHCpClient(salt.fileclient.FSClient):
     """
 
     def __init__(self, opts, shell, tgt):  # pylint: disable=W0231
-        salt.fileclient.FSClient.__init__(self, opts)  # pylint: disable=W0233
+        self.opts = copy.deepcopy(opts)
         self.shell = shell
         self.tgt = tgt
+        self._original_cachedir = opts["cachedir"]
+        self.opts["cachedir"] = self.get_cachedir(master=True)
+        salt.fileclient.FSClient.__init__(self, self.opts)  # pylint: disable=W0233
         # Internally, we need to return master paths, but in the wrapper functions,
         # we usually want to return the effective path on the minion.
         # This client is used for a single execution, thus we can easily save
@@ -928,13 +932,13 @@ class SSHCpClient(salt.fileclient.FSClient):
         if master:
             prefix = ["salt-ssh", self.tgt]
         if cachedir is None:
-            cachedir = os.path.join(self.opts["cachedir"], *prefix)
+            cachedir = os.path.join(self._original_cachedir, *prefix)
         elif not os.path.isabs(cachedir):
-            cachedir = os.path.join(self.opts["cachedir"], *prefix, cachedir)
+            cachedir = os.path.join(self._original_cachedir, *prefix, cachedir)
         elif master:
             # The root cachedir on the master-side should not be overridden
             cachedir = os.path.join(
-                self.opts["cachedir"],
+                self._original_cachedir,
                 *prefix,
                 "absolute_root",
                 str(Path(*cachedir.split(os.sep)[1:])),

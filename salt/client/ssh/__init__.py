@@ -309,7 +309,7 @@ class SSH(MultiprocessingStateMixin):
             )
             self.opts["ssh_wipe"] = "True"
         self.returners = salt.loader.returners(self.opts, {})
-        self.fsclient = salt.fileclient.FSClient(self.opts)
+        self.fsclient = salt.fileclient.FSClient(copy.deepcopy(self.opts))
         self.thin = salt.utils.thin.gen_thin(
             self.opts["cachedir"],
             extra_mods=self.opts.get("thin_extra_mods"),

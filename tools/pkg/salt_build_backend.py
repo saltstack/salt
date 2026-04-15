@@ -1,3 +1,4 @@
+# pylint: disable=resource-leakage
 import os
 import sys
 
@@ -11,6 +12,7 @@ from setuptools import build_meta as _orig
 
 # PEP 517 hooks
 def prepare_metadata_for_build_wheel(metadata_directory, config_settings=None):
+    # pylint: disable=resource-leakage
     # This hook is used by 'pip install' and 'build' to get metadata without building a wheel
     # We need to make sure the metadata we return includes our dynamic fields
     # Setuptools doesn't automatically call get_dynamic_metadata for us in all versions

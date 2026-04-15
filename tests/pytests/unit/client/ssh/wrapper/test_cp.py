@@ -1118,7 +1118,7 @@ def test_is_cached_localfiles(client, cache_root):
     """
     tgt = "/this/file/was/cached/locally"
     res = client.is_cached(tgt)
-    assert res == str(Path(cache_root) / "localfiles" / tgt[1:])
+    assert res == str(Path(cache_root) / "salt-ssh" / TGT / "localfiles" / tgt[1:])
 
 
 @pytest.mark.parametrize("saltenv", _saltenvs())
