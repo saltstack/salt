@@ -38,7 +38,7 @@ runs:
         cache-prefix: ${{ inputs.cache-prefix }}|relenv|${{ inputs.salt-version }}
 
     - name: Download Source Tarball
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
       with:
         name: salt-${{ inputs.salt-version }}.tar.gz
 
@@ -73,7 +73,7 @@ runs:
         tools pkg generate-hashes artifacts/${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.*
 
     - name: Upload Onedir Tarball as an Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
         path: artifacts/${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz*
@@ -82,7 +82,7 @@ runs:
 
     - name: Upload Onedir Zipfile as an Artifact
       if: ${{ inputs.platform == 'windows' }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.zip
         path: artifacts/${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.zip*
