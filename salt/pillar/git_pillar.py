@@ -406,6 +406,9 @@ PER_REMOTE_OVERRIDES = (
     "refspecs",
     "fallback",
     "proxy",
+    "ref_types",
+    "disable_saltenv_mapping",
+    "depth",
 )
 PER_REMOTE_ONLY = ("name", "mountpoint", "all_saltenvs")
 GLOBAL_ONLY = ("branch",)

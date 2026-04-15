@@ -84,7 +84,7 @@ def test_run_git(gitcli):
         assert res.returncode == 0
         mock_run.assert_called()
         # Verify env has no SSL_NO_VERIFY by default
-        args, kwargs = mock_run.call_args
+        git_args, kwargs = mock_run.call_args
         assert "GIT_SSL_NO_VERIFY" not in kwargs["env"]
 
 
@@ -93,7 +93,7 @@ def test_run_git_no_ssl_verify(gitcli):
     with patch("subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(returncode=0)
         gitcli._run_git(["status"])
-        args, kwargs = mock_run.call_args
+        git_args, kwargs = mock_run.call_args
         assert kwargs["env"]["GIT_SSL_NO_VERIFY"] == "true"
 
 
@@ -111,9 +111,9 @@ def test_fetch(gitcli):
     with patch.object(gitcli, "_run_git") as mock_run:
         mock_run.return_value = MagicMock(returncode=0)
         assert gitcli._fetch() is True
-        args, _ = mock_run.call_args
-        assert "--depth" in args[0]
-        assert "1" in args[0]
+        git_args, _ = mock_run.call_args
+        assert "--depth" in git_args[0]
+        assert "1" in git_args[0]
 
 
 def test_envs(gitcli):
@@ -131,15 +131,15 @@ def test_envs(gitcli):
 def test_file_list(gitcli):
     with patch.object(gitcli, "_run_git") as mock_run:
 
-        def side_effect(args, **kwargs):
-            if "rev-parse" in args:
+        def side_effect(git_args, **kwargs):
+            if "rev-parse" in git_args:
                 return MagicMock(returncode=0)
-            if "ls-tree" in args:
+            if "ls-tree" in git_args:
                 return MagicMock(
                     returncode=0,
                     stdout=b"100644 blob sha1\tfile1.txt\n120000 blob sha2\tsymlink1\n",
                 )
-            if "show" in args:
+            if "show" in git_args:
                 return MagicMock(returncode=0, stdout=b"target_file")
             return MagicMock(returncode=1)
 
@@ -153,12 +153,12 @@ def test_file_list(gitcli):
 def test_find_file(gitcli):
     with patch.object(gitcli, "_run_git") as mock_run:
 
-        def side_effect(args, **kwargs):
-            if "rev-parse" in args:
+        def side_effect(git_args, **kwargs):
+            if "rev-parse" in git_args:
                 return MagicMock(returncode=0)
-            if "ls-tree" in args:
+            if "ls-tree" in git_args:
                 return MagicMock(returncode=0, stdout=b"100644 blob sha1\tfile1.txt\n")
-            if "show" in args:
+            if "show" in git_args:
                 return MagicMock(returncode=0, stdout=b"file content")
             return MagicMock(returncode=1)
 
