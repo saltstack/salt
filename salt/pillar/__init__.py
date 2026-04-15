@@ -1258,7 +1258,10 @@ class Pillar:
         if ext:
             if self.opts.get("ext_pillar_first", False):
                 self.opts["pillar"], errors = self.ext_pillar(self.pillar_override)
-                self.rend = salt.loader.render(self.opts, self.functions)
+                if hasattr(self.functions, "pack"):
+                    self.functions.pack["__pillar__"] = self.opts["pillar"]
+                if hasattr(self.rend, "_dict") and hasattr(self.rend._dict, "pack"):
+                    self.rend._dict.pack["__pillar__"] = self.opts["pillar"]
                 matches = self.top_matches(top, reload=True)
                 pillar, errors = self.render_pillar(matches, errors=errors)
                 pillar = merge(

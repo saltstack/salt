@@ -21,6 +21,7 @@ def match(tgt, delimiter=DEFAULT_TARGET_DELIM, opts=None, minion_id=None):
         log.error("Got insufficient arguments for pillar match statement from master")
         return False
 
+    pillar = {}
     if "pillar" in opts:
         pillar = opts["pillar"]
     elif "ext_pillar" in opts:

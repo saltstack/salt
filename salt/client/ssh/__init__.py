@@ -219,7 +219,7 @@ class SSH(MultiprocessingStateMixin):
             )
         else:
             self.event = None
-        self.opts = copy.deepcopy(opts)
+        self.opts = opts
         if self.opts["regen_thin"]:
             self.opts["ssh_wipe"] = True
         if not salt.utils.path.which("ssh"):
