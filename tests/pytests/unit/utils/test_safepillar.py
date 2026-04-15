@@ -72,11 +72,22 @@ def test_unwrap_blackout_whitelist_for_str_membership():
 
 
 def test_iter_pillar_secret_literals_order():
-    p = sp.wrap_pillar_tree({"short": "ab", "longer": "abcd"})
+    p = sp.wrap_pillar_tree(
+        {"secrets": {"short": "ab", "longer": "abcd"}}
+    )
     lit = sp.iter_pillar_secret_literals(p)
     assert "abcd" in lit
     assert "ab" in lit
     assert lit[0] == "abcd"  # longest first
+
+
+def test_iter_pillar_secret_literals_public_keys_excluded():
+    p = sp.wrap_pillar_tree(
+        {"target-path": "/tmp/pytest-of-root/x", "db_password": "hunter2"}
+    )
+    lit = sp.iter_pillar_secret_literals(p)
+    assert "hunter2" in lit
+    assert "/tmp/pytest-of-root/x" not in lit
 
 
 def test_redact_known_literals():

@@ -168,37 +168,92 @@ def unwrap_blackout_whitelist(whitelist: Any) -> list:
     return [unwrapped]
 
 
+def _pillar_key_marks_sensitive(key: str) -> bool:
+    """
+    True if a pillar dict key (any depth) indicates sensitive subtree/values.
+
+    All string leaves are wrapped with SecretStr for in-memory masking, but only
+    values under these keys should be treated as cross-field redaction literals;
+    otherwise public paths and identifiers (e.g. ``target-path``, beacon names)
+    corrupt state output when substring-replaced in comments and diffs.
+    """
+    lk = str(key).lower().replace("-", "_")
+    if lk in (
+        "password",
+        "passwords",
+        "passwd",
+        "pwd",
+        "pw",
+        "secret",
+        "secrets",
+        "token",
+        "tokens",
+        "credential",
+        "credentials",
+        "passphrase",
+        "private_key",
+        "api_key",
+        "apikey",
+        "access_key",
+        "secret_key",
+        "client_secret",
+        "signing_key",
+        "encryption_key",
+        "auth_token",
+    ):
+        return True
+    for suf in ("_password", "_secret", "_token", "_passwd", "_pwd"):
+        if lk.endswith(suf):
+            return True
+    for pref in ("password_", "secret_", "token_"):
+        if lk.startswith(pref):
+            return True
+    if lk.endswith("_key") or lk.endswith("_token"):
+        return True
+    return False
+
+
 def iter_pillar_secret_literals(pillar: Any) -> list[str]:
     """
-    Collect all secret string and bytes-as-utf8 literals from a (possibly wrapped) pillar.
+    Collect secret string and bytes-as-utf8 literals from a (possibly wrapped) pillar.
+
+    Only values under pillar keys that indicate credentials (see
+    :func:`_pillar_key_marks_sensitive`) are included. Other wrapped strings
+    (paths, IDs, public config) are excluded so return redaction does not damage
+    structured output.
     """
     found: list[str] = []
 
-    def walk(node):
+    def walk(node, parent_sensitive: bool = False):
         if node is None:
             return
         if isinstance(node, SecretStr):
-            found.append(node.get_secret_value())
+            if parent_sensitive:
+                found.append(node.get_secret_value())
             return
         if isinstance(node, SecretBytes):
-            try:
-                found.append(node.get_secret_value().decode("utf-8"))
-            except UnicodeDecodeError:
-                found.append(repr(node.get_secret_value()))
+            if parent_sensitive:
+                try:
+                    found.append(node.get_secret_value().decode("utf-8"))
+                except UnicodeDecodeError:
+                    found.append(repr(node.get_secret_value()))
             return
         if isinstance(node, (SafeDict, dict)):
             for k, v in node.items():
                 if k == "_errors":
                     continue
-                walk(v)
+                child_sensitive = parent_sensitive or _pillar_key_marks_sensitive(
+                    str(k)
+                )
+                walk(v, child_sensitive)
             return
         if isinstance(node, (SafeList, list, tuple)):
             for item in node:
-                walk(item)
+                walk(item, parent_sensitive)
             return
         if isinstance(node, set):
             for item in node:
-                walk(item)
+                walk(item, parent_sensitive)
 
     walk(pillar)
     # Longest first to avoid partial leaks when one secret is a substring of another

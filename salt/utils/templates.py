@@ -21,6 +21,7 @@ import salt.modules.match
 import salt.utils.data
 import salt.utils.dateutils
 import salt.utils.files
+import salt.utils.safepillar
 import salt.utils.hashutils
 import salt.utils.http
 import salt.utils.jinja
@@ -471,6 +472,20 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                     SLS_ENCODING,
                 )
                 decoded_context[key] = salt.utils.data.decode(value)
+
+        # Wrapped pillar (SafeDict / SecretStr) must not reach Jinja as masked
+        # strings or json/yaml filters break; unwrap for template rendering only.
+        if "pillar" in decoded_context:
+            decoded_context["pillar"] = salt.utils.safepillar.unwrap_pillar_tree(
+                decoded_context["pillar"]
+            )
+        opts_ctx = decoded_context.get("opts")
+        if isinstance(opts_ctx, dict) and "pillar" in opts_ctx:
+            patched_opts = dict(opts_ctx)
+            patched_opts["pillar"] = salt.utils.safepillar.unwrap_pillar_tree(
+                patched_opts["pillar"]
+            )
+            decoded_context["opts"] = patched_opts
 
         jinja_env.globals.update(decoded_context)
         try:
