@@ -153,7 +153,9 @@ def dumps(msg, use_bin_type=False):
             return tuple(obj)
         elif isinstance(obj, CaseInsensitiveDict):
             return dict(obj)
-        elif isinstance(obj, (salt.utils.safepillar.SafeDict, salt.utils.safepillar.SafeList)):
+        elif isinstance(
+            obj, (salt.utils.safepillar.SafeDict, salt.utils.safepillar.SafeList)
+        ):
             # Pillar may be wrapped for in-memory redaction; msgpack cannot encode
             # Pydantic Secret* / Safe containers. Unwrap to plain dict/list/str for wire.
             return salt.utils.safepillar.unwrap_pillar_tree(obj)
