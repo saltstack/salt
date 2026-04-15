@@ -834,10 +834,10 @@ def sync_serializers(
         synced. Set to ``False`` to prevent this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -1041,10 +1041,10 @@ def sync_executors(
         Set to ``False`` to prevent this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -1082,10 +1082,10 @@ def sync_wrapper(
         Set to ``False`` to prevent this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     .. note::
         This function will raise an error if executed on a traditional (i.e.
