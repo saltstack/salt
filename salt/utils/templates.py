@@ -21,12 +21,12 @@ import salt.modules.match
 import salt.utils.data
 import salt.utils.dateutils
 import salt.utils.files
-import salt.utils.safepillar
 import salt.utils.hashutils
 import salt.utils.http
 import salt.utils.jinja
 import salt.utils.network
 import salt.utils.platform
+import salt.utils.safepillar
 import salt.utils.stringutils
 import salt.utils.yamlencoding
 from salt import __path__ as saltpath

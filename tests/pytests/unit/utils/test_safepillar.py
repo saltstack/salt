@@ -72,9 +72,7 @@ def test_unwrap_blackout_whitelist_for_str_membership():
 
 
 def test_iter_pillar_secret_literals_order():
-    p = sp.wrap_pillar_tree(
-        {"secrets": {"short": "ab", "longer": "abcd"}}
-    )
+    p = sp.wrap_pillar_tree({"secrets": {"short": "ab", "longer": "abcd"}})
     lit = sp.iter_pillar_secret_literals(p)
     assert "abcd" in lit
     assert "ab" in lit
