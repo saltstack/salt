@@ -172,9 +172,10 @@ class SyncWrapper:
         io_loop.stop()
         try:
             io_loop.close(all_fds=True)
-        except KeyError:
+        except (KeyError, RuntimeError):
             pass
-        self.asyncio_loop.close()
+        if not self.asyncio_loop.is_running():
+            self.asyncio_loop.close()
 
     def __getattr__(self, key):
         if key in self._async_methods:

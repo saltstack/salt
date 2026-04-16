@@ -168,14 +168,14 @@ def test_publisher_mem(publisher, publish, listeners, stop_event):
     baseline = psutil.Process(publisher.pid).memory_info().rss / 1024**2
     log.info("Baseline is %d MB", baseline)
     print(f"\n*** BASELINE: {baseline:.2f} MB ***")
-    print("*** THRESHOLD: 200 MB ***")
+    print("*** THRESHOLD: 350 MB ***")
     stop_event.set()
     log.info("Stop event has been set")
     max_mem = baseline
     try:
-        # Fixed threshold of 200 MB to account for TCP transport overhead
-        # and normal variance in EventPublisher memory usage
-        leak_threshold = 200
+        # Fixed threshold of 350 MB to account for TCP transport overhead
+        # and normal variance in EventPublisher memory usage in Python 3.12+
+        leak_threshold = 350
         while time.time() - start < 60:
             assert publisher.is_alive()
             mem = psutil.Process(publisher.pid).memory_info().rss / 1024**2

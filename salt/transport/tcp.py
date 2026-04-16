@@ -1078,11 +1078,15 @@ class Subscriber:
         self._closing = False
         self._read_until_future = None
         self.id_ = None
+        self.task = None
 
     def close(self):
         if self._closing:
             return
         self._closing = True
+        if self.task is not None:
+            self.task.cancel()
+            self.task = None
         if not self.stream.closed():
             self.stream.close()
             if self._read_until_future is not None and self._read_until_future.done():
@@ -1205,7 +1209,7 @@ class PubServer(tornado.tcpserver.TCPServer):
                 return
         client = Subscriber(stream, address)
         self.clients.add(client)
-        self.io_loop.create_task(self._stream_read(client))
+        client.task = self.io_loop.create_task(self._stream_read(client))
 
     async def _validate_ssl_and_add_client(self, stream, address):
         """
@@ -1229,7 +1233,7 @@ class PubServer(tornado.tcpserver.TCPServer):
                 # Successfully got cert - add client
                 client = Subscriber(stream, address)
                 self.clients.add(client)
-                self.io_loop.create_task(self._stream_read(client))
+                client.task = self.io_loop.create_task(self._stream_read(client))
                 return
             except AttributeError as exc:
                 # Socket has no SSL - this shouldn't happen here but reject just in case
@@ -2068,12 +2072,13 @@ class RequestClient(salt.transport.base.RequestClient):
         if self.task is not None:
             self.task.cancel()
             # Wait for the task to finish via asyncio
-            group = asyncio.gather(self.task)
-            try:
-                self.task.get_loop().run_until_complete(group)
-            except RuntimeError:
-                # Ignore event loop was already running message
-                pass
+            if not self.task.get_loop().is_running():
+                group = asyncio.gather(self.task)
+                try:
+                    self.task.get_loop().run_until_complete(group)
+                except RuntimeError:
+                    # Ignore event loop was already running message
+                    pass
             self.task = None
 
     def __enter__(self):

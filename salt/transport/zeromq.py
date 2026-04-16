@@ -246,6 +246,13 @@ class PublishClient(salt.transport.base.PublishClient):
         self.callbacks = {}
         for callback, (running, task) in callbacks.items():
             running.clear()
+            if not task.done():
+                task.cancel()
+                if not self.io_loop.asyncio_loop.is_running():
+                    try:
+                        self.io_loop.asyncio_loop.run_until_complete(task)
+                    except (asyncio.CancelledError, RuntimeError):
+                        pass
         return
 
     # pylint: enable=W1701
@@ -379,6 +386,13 @@ class PublishClient(salt.transport.base.PublishClient):
             self.callbacks = {}
             for callback, (running, task) in callbacks.items():
                 running.clear()
+                if not task.done():
+                    task.cancel()
+                    if not self.io_loop.asyncio_loop.is_running():
+                        try:
+                            self.io_loop.asyncio_loop.run_until_complete(task)
+                        except (asyncio.CancelledError, RuntimeError):
+                            pass
             return
 
         running = asyncio.Event()
@@ -1316,38 +1330,17 @@ class RequestClient(salt.transport.base.RequestClient):
             # This hangs if closing the stream causes an import error
             self.context.term()
             self.context = None
-        # if getattr(self, "send_recv_task", None):
-        #    task = self.send_recv_task
-        #    if not task.done():
-        #        task.cancel()
 
-        #        # Suppress "Task was destroyed but it is pending!" warnings
-        #        # by ensuring the task knows its exception will be handled
-        #        task._log_destroy_pending = False
-
-        #        def _drain_cancelled(cancelled_task):
-        #            try:
-        #                cancelled_task.exception()
-        #            except asyncio.CancelledError:  # pragma: no cover
-        #                # Task was cancelled - log the expected messages
-        #                log.trace("Send socket closed while polling.")
-        #                log.trace("Send and receive coroutine ending %s", task_socket)
-        #            except (
-        #                Exception  # pylint: disable=broad-exception-caught
-        #            ):  # pragma: no cover
-        #                log.trace(
-        #                    "Exception while cancelling send/receive task.",
-        #                    exc_info=True,
-        #                )
-        #                log.trace("Send and receive coroutine ending %s", task_socket)
-
-        #        task.add_done_callback(_drain_cancelled)
-        #    else:
-        #        try:
-        #            task.result()
-        #        except Exception as exc:  # pylint: disable=broad-except
-        #            log.trace("Exception while retrieving send/receive task: %r", exc)
-        #    self.send_recv_task = None
+        if hasattr(self, "send_recv_task") and self.send_recv_task is not None:
+            task = self.send_recv_task
+            if not task.done():
+                task.cancel()
+                if not self.io_loop.asyncio_loop.is_running():
+                    try:
+                        self.io_loop.asyncio_loop.run_until_complete(task)
+                    except (asyncio.CancelledError, RuntimeError):
+                        pass
+            self.send_recv_task = None
 
     async def send(self, load, timeout=60):
         """
