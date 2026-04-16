@@ -592,11 +592,14 @@ def onedir_dependencies(
         include_dir = dest / "Include"
         pyconfig_h = include_dir / "pyconfig.h"
         if not pyconfig_h.exists():
-            ctx.info("pyconfig.h missing in relenv environment, attempting to find it from standard installation...")
-            # Try to find pyconfig.h from Program Files
+            ctx.info(
+                "pyconfig.h missing in relenv environment, attempting to find it..."
+            )
+            import sysconfig
+
             search_paths = [
+                pathlib.Path(sysconfig.get_path("include")) / "pyconfig.h",
                 pathlib.Path("C:/Program Files/Python313/include/pyconfig.h"),
-                pathlib.Path("C:/Program Files (x86)/Python313/include/pyconfig.h"),
             ]
             for path in search_paths:
                 if path.exists():
@@ -604,7 +607,9 @@ def onedir_dependencies(
                     shutil.copyfile(path, pyconfig_h)
                     break
             else:
-                ctx.warn("Could not find pyconfig.h in standard locations. Compilation of some dependencies may fail.")
+                ctx.warn(
+                    "Could not find pyconfig.h in standard locations. Compilation of some dependencies may fail."
+                )
 
     # Validate that we're using the relenv version we really want to
     if platform == "windows":

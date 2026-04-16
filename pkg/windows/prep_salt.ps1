@@ -95,7 +95,7 @@ Write-Host $("-" * 80)
 # Verify Environment
 #-------------------------------------------------------------------------------
 
-Write-Host "Verifying Python Build at $PYTHON_BIN: " -NoNewline
+Write-Host "Verifying Python Build at ${PYTHON_BIN}: " -NoNewline
 if ( Test-Path -Path "$PYTHON_BIN" ) {
     Write-Result "Success" -ForegroundColor Green
 } else {
@@ -104,7 +104,7 @@ if ( Test-Path -Path "$PYTHON_BIN" ) {
     exit 1
 }
 
-Write-Host "Verifying Salt Installation at $BUILD_DIR\salt-minion.exe: " -NoNewline
+Write-Host "Verifying Salt Installation at ${BUILD_DIR}\salt-minion.exe: " -NoNewline
 if ( Test-Path -Path "$BUILD_DIR\salt-minion.exe" ) {
     Write-Result "Success" -ForegroundColor Green
 } else {
