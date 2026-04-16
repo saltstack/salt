@@ -587,6 +587,25 @@ def onedir_dependencies(
     dest = pathlib.Path(package_name).resolve()
     relenv.create.create(dest, arch=arch, version=python_version)
 
+    if platform == "windows" and python_version.startswith("3.13"):
+        # Workaround for missing pyconfig.h in relenv Windows 3.13 builds
+        include_dir = dest / "Include"
+        pyconfig_h = include_dir / "pyconfig.h"
+        if not pyconfig_h.exists():
+            ctx.info("pyconfig.h missing in relenv environment, attempting to find it from standard installation...")
+            # Try to find pyconfig.h from Program Files
+            search_paths = [
+                pathlib.Path("C:/Program Files/Python313/include/pyconfig.h"),
+                pathlib.Path("C:/Program Files (x86)/Python313/include/pyconfig.h"),
+            ]
+            for path in search_paths:
+                if path.exists():
+                    ctx.info(f"Found pyconfig.h at {path}, copying to {pyconfig_h}")
+                    shutil.copyfile(path, pyconfig_h)
+                    break
+            else:
+                ctx.warn("Could not find pyconfig.h in standard locations. Compilation of some dependencies may fail.")
+
     # Validate that we're using the relenv version we really want to
     if platform == "windows":
         env_scripts_dir = dest / "Scripts"
