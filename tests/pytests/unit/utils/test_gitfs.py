@@ -68,19 +68,22 @@ def test_provider_case_insensitive_gitfs_provider(minion_opts, role_name, role_c
     key = f"{role_name}_provider"
     with patch.object(role_class, "verify_gitpython", MagicMock(return_value=True)):
         with patch.object(role_class, "verify_pygit2", MagicMock(return_value=False)):
-            args = [minion_opts, {}]
-            kwargs = {"init_remotes": False}
-            if role_name == "winrepo":
-                kwargs["cache_root"] = "/tmp/winrepo-dir"
-            with patch.dict(minion_opts, {key: provider}):
-                # Try to create an instance with uppercase letters in
-                # provider name. If it fails then a
-                # FileserverConfigError will be raised, so no assert is
-                # necessary.
+            with patch.object(
+                role_class, "verify_gitcli", MagicMock(return_value=False)
+            ):
+                args = [minion_opts, {}]
+                kwargs = {"init_remotes": False}
+                if role_name == "winrepo":
+                    kwargs["cache_root"] = "/tmp/winrepo-dir"
+                with patch.dict(minion_opts, {key: provider}):
+                    # Try to create an instance with uppercase letters in
+                    # provider name. If it fails then a
+                    # FileserverConfigError will be raised, so no assert is
+                    # necessary.
+                    role_class(*args, **kwargs)
+                # Now try to instantiate an instance with all lowercase
+                # letters. Again, no need for an assert here.
                 role_class(*args, **kwargs)
-            # Now try to instantiate an instance with all lowercase
-            # letters. Again, no need for an assert here.
-            role_class(*args, **kwargs)
 
 
 @pytest.mark.parametrize(
@@ -105,23 +108,23 @@ def test_valid_provider_gitfs_provider(minion_opts, role_name, role_class):
 
     key = f"{role_name}_provider"
     for provider in salt.utils.gitfs.GIT_PROVIDERS:
-        verify = "verify_gitpython"
-        mock1 = _get_mock(verify, provider)
-        with patch.object(role_class, verify, mock1):
-            verify = "verify_pygit2"
-            mock2 = _get_mock(verify, provider)
-            with patch.object(role_class, verify, mock2):
-                args = [minion_opts, {}]
-                kwargs = {"init_remotes": False}
-                if role_name == "winrepo":
-                    kwargs["cache_root"] = "/tmp/winrepo-dir"
-                with patch.dict(minion_opts, {key: provider}):
-                    role_class(*args, **kwargs)
-                with patch.dict(minion_opts, {key: "foo"}):
-                    # Set the provider name to a known invalid provider
-                    # and make sure it raises an exception.
-                    with pytest.raises(FileserverConfigError):
+        mock1 = _get_mock("verify_gitpython", provider)
+        mock2 = _get_mock("verify_pygit2", provider)
+        mock3 = _get_mock("verify_gitcli", provider)
+        with patch.object(role_class, "verify_gitpython", mock1):
+            with patch.object(role_class, "verify_pygit2", mock2):
+                with patch.object(role_class, "verify_gitcli", mock3):
+                    args = [minion_opts, {}]
+                    kwargs = {"init_remotes": False}
+                    if role_name == "winrepo":
+                        kwargs["cache_root"] = "/tmp/winrepo-dir"
+                    with patch.dict(minion_opts, {key: provider}):
                         role_class(*args, **kwargs)
+                    with patch.dict(minion_opts, {key: "foo"}):
+                        # Set the provider name to a known invalid provider
+                        # and make sure it raises an exception.
+                        with pytest.raises(FileserverConfigError):
+                            role_class(*args, **kwargs)
 
 
 @pytest.fixture
@@ -202,6 +205,8 @@ def _prepare_provider(tmp_path, minion_opts, _prepare_remote_repository_pygit2):
     per_remote_defaults = {
         "base": "master",
         "disable_saltenv_mapping": False,
+        "fallback": "",
+        "depth": 0,
         "insecure_auth": False,
         "ref_types": ["branch", "tag", "sha"],
         "passphrase": "",

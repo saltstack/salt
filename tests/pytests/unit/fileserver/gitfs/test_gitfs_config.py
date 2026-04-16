@@ -63,6 +63,7 @@ def configure_loader_modules(tmp_path):
         "gitfs_disable_saltenv_mapping": False,
         "gitfs_ref_types": ["branch", "tag", "sha"],
         "gitfs_update_interval": 60,
+        "gitfs_depth": 0,
         "__role": "master",
     }
     if salt.utils.platform.is_windows():
