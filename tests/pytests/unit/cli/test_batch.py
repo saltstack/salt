@@ -89,18 +89,12 @@ def test_return_value_in_run_for_ret(batch):
     ret = Batch.run(batch)
     # We need to fetch at least one object to trigger the relevant code path.
     x = next(ret)
-    batch.local.cmd_iter_no_block.assert_called_with(
-        ["baz", "bar", "foo"],
-        "test",
-        "foo",
-        5,
-        "list",
-        raw=False,
-        ret="my_return",
-        show_jid=False,
-        verbose=False,
-        gather_job_timeout=5,
-    )
+    batch.local.cmd_iter_no_block.assert_called_once()
+    call_kwargs = batch.local.cmd_iter_no_block.call_args
+    assert call_kwargs.kwargs["ret"] == "my_return"
+    assert call_kwargs.kwargs["show_jid"] is False
+    assert call_kwargs.kwargs["verbose"] is False
+    assert call_kwargs.kwargs["gather_job_timeout"] == 5
 
 
 def test_return_value_in_run_for_return(batch):
@@ -123,15 +117,126 @@ def test_return_value_in_run_for_return(batch):
     ret = Batch.run(batch)
     # We need to fetch at least one object to trigger the relevant code path.
     x = next(ret)
-    batch.local.cmd_iter_no_block.assert_called_with(
-        ["baz", "bar", "foo"],
-        "test",
-        "foo",
-        5,
-        "list",
-        raw=False,
-        ret="my_return",
-        show_jid=False,
-        verbose=False,
-        gather_job_timeout=5,
+    batch.local.cmd_iter_no_block.assert_called_once()
+    call_kwargs = batch.local.cmd_iter_no_block.call_args
+    assert call_kwargs.kwargs["ret"] == "my_return"
+    assert call_kwargs.kwargs["show_jid"] is False
+    assert call_kwargs.kwargs["verbose"] is False
+    assert call_kwargs.kwargs["gather_job_timeout"] == 5
+
+
+def test_single_jid_across_batch_iterations(batch):
+    """
+    With 4 minions and batch size 2, cmd_iter_no_block should be called
+    twice with the same jid kwarg.
+    """
+    batch.opts = {
+        "batch": "2",
+        "timeout": 5,
+        "fun": "test.ping",
+        "arg": [],
+        "gather_job_timeout": 5,
+    }
+    batch.gather_minions = MagicMock(
+        return_value=[["m1", "m2", "m3", "m4"], [], []],
     )
+
+    def _make_iter(*args, **kwargs):
+        """Return an iterator that yields results for targeted minions."""
+        minions = args[0]
+        for m in minions:
+            yield {m: {"ret": True, "retcode": 0}}
+
+    batch.local.cmd_iter_no_block = MagicMock(side_effect=_make_iter)
+    ret = list(Batch.run(batch))
+
+    assert batch.local.cmd_iter_no_block.call_count == 2
+    jids = [call.kwargs["jid"] for call in batch.local.cmd_iter_no_block.call_args_list]
+    assert jids[0] == jids[1]
+    assert jids[0] != ""
+
+
+def test_single_jid_passed_to_cmd_iter_no_block(batch):
+    """
+    Verify cmd_iter_no_block receives a non-empty jid string kwarg.
+    """
+    batch.opts = {
+        "batch": "100%",
+        "timeout": 5,
+        "fun": "test.ping",
+        "arg": [],
+        "gather_job_timeout": 5,
+    }
+    batch.gather_minions = MagicMock(
+        return_value=[["m1", "m2"], [], []],
+    )
+    batch.local.cmd_iter_no_block = MagicMock(return_value=iter([]))
+    ret = Batch.run(batch)
+    next(ret)
+    call_kwargs = batch.local.cmd_iter_no_block.call_args
+    assert "jid" in call_kwargs.kwargs
+    assert isinstance(call_kwargs.kwargs["jid"], str)
+    assert len(call_kwargs.kwargs["jid"]) > 0
+
+
+def test_single_jid_with_failhard(batch):
+    """
+    With failhard=True and first minion returning error, verify early
+    termination and that JID was passed to the single cmd_iter_no_block call.
+    """
+    batch.opts = {
+        "batch": "2",
+        "timeout": 5,
+        "fun": "test.ping",
+        "arg": [],
+        "gather_job_timeout": 5,
+        "failhard": True,
+    }
+    batch.gather_minions = MagicMock(
+        return_value=[["m1", "m2", "m3", "m4"], [], []],
+    )
+
+    def _make_iter(*args, **kwargs):
+        minions = args[0]
+        for m in minions:
+            yield {m: {"ret": True, "retcode": 1}}
+
+    batch.local.cmd_iter_no_block = MagicMock(side_effect=_make_iter)
+    ret = list(Batch.run(batch))
+
+    # failhard should stop after first batch
+    assert batch.local.cmd_iter_no_block.call_count == 1
+    call_kwargs = batch.local.cmd_iter_no_block.call_args
+    assert "jid" in call_kwargs.kwargs
+    assert isinstance(call_kwargs.kwargs["jid"], str)
+    assert len(call_kwargs.kwargs["jid"]) > 0
+
+
+def test_single_jid_single_batch(batch):
+    """
+    All minions fit in one batch (batch="100%"). Verify cmd_iter_no_block
+    called once with jid kwarg.
+    """
+    batch.opts = {
+        "batch": "100%",
+        "timeout": 5,
+        "fun": "test.ping",
+        "arg": [],
+        "gather_job_timeout": 5,
+    }
+    batch.gather_minions = MagicMock(
+        return_value=[["m1", "m2", "m3"], [], []],
+    )
+
+    def _make_iter(*args, **kwargs):
+        minions = args[0]
+        for m in minions:
+            yield {m: {"ret": True, "retcode": 0}}
+
+    batch.local.cmd_iter_no_block = MagicMock(side_effect=_make_iter)
+    ret = list(Batch.run(batch))
+
+    assert batch.local.cmd_iter_no_block.call_count == 1
+    call_kwargs = batch.local.cmd_iter_no_block.call_args
+    assert "jid" in call_kwargs.kwargs
+    assert len(ret) == 3

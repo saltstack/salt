@@ -975,6 +975,8 @@ class LocalClient:
             if not pub_data:
                 yield pub_data
             else:
+                # Filter out 'jid' to avoid conflict with the positional arg
+                iter_kwargs = {k: v for k, v in kwargs.items() if k != "jid"}
                 for fn_ret in self.get_iter_returns(
                     pub_data["jid"],
                     pub_data["minions"],
@@ -982,7 +984,7 @@ class LocalClient:
                     tgt=tgt,
                     tgt_type=tgt_type,
                     block=False,
-                    **kwargs,
+                    **iter_kwargs,
                 ):
                     if fn_ret and any([show_jid, verbose]):
                         for minion in fn_ret:

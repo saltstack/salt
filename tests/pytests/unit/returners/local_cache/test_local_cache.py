@@ -308,3 +308,120 @@ def test_get_load_minions_data_invalid_no_exception(tmp_cache_dir, caplog):
             "contains invalid minion data" in record.message
             for record in caplog.records
         )
+
+
+def test_save_minions_merges_on_same_jid(tmp_cache_dir):
+    """
+    Two calls to save_minions with disjoint minion lists on the same JID
+    should result in the union of all minions.
+    """
+    jid = "20240101120000000000"
+    opts = {"cachedir": str(tmp_cache_dir), "hash_type": "sha256"}
+
+    with patch.dict(local_cache.__opts__, opts):
+        local_cache.save_minions(jid, ["minion1", "minion2"])
+        local_cache.save_minions(jid, ["minion3", "minion4"])
+
+        jid_dir = salt.utils.jid.jid_dir(
+            jid, os.path.join(str(tmp_cache_dir), "jobs"), "sha256"
+        )
+        minions_path = os.path.join(jid_dir, ".minions.p")
+        with salt.utils.files.fopen(minions_path, "rb") as rfh:
+            result = salt.payload.load(rfh)
+
+    assert sorted(result) == ["minion1", "minion2", "minion3", "minion4"]
+
+
+def test_save_minions_no_duplicates_on_overlap(tmp_cache_dir):
+    """
+    Two calls with overlapping minions should produce no duplicates, sorted.
+    """
+    jid = "20240101120000000000"
+    opts = {"cachedir": str(tmp_cache_dir), "hash_type": "sha256"}
+
+    with patch.dict(local_cache.__opts__, opts):
+        local_cache.save_minions(jid, ["minion1", "minion2", "minion3"])
+        local_cache.save_minions(jid, ["minion2", "minion3", "minion4"])
+
+        jid_dir = salt.utils.jid.jid_dir(
+            jid, os.path.join(str(tmp_cache_dir), "jobs"), "sha256"
+        )
+        minions_path = os.path.join(jid_dir, ".minions.p")
+        with salt.utils.files.fopen(minions_path, "rb") as rfh:
+            result = salt.payload.load(rfh)
+
+    assert result == ["minion1", "minion2", "minion3", "minion4"]
+
+
+def test_save_minions_first_call_creates_file(tmp_cache_dir):
+    """
+    A single call to save_minions with no pre-existing file should create it
+    with the correct content.
+    """
+    jid = "20240101120000000000"
+    opts = {"cachedir": str(tmp_cache_dir), "hash_type": "sha256"}
+
+    with patch.dict(local_cache.__opts__, opts):
+        local_cache.save_minions(jid, ["minion1", "minion2"])
+
+        jid_dir = salt.utils.jid.jid_dir(
+            jid, os.path.join(str(tmp_cache_dir), "jobs"), "sha256"
+        )
+        minions_path = os.path.join(jid_dir, ".minions.p")
+        assert os.path.isfile(minions_path)
+        with salt.utils.files.fopen(minions_path, "rb") as rfh:
+            result = salt.payload.load(rfh)
+
+    assert sorted(result) == ["minion1", "minion2"]
+
+
+def test_save_minions_handles_corrupt_existing_file(tmp_cache_dir):
+    """
+    If the existing .minions.p file contains corrupt data, save_minions should
+    still write the new minions without crashing.
+    """
+    jid = "20240101120000000000"
+    opts = {"cachedir": str(tmp_cache_dir), "hash_type": "sha256"}
+
+    with patch.dict(local_cache.__opts__, opts):
+        jid_dir = salt.utils.jid.jid_dir(
+            jid, os.path.join(str(tmp_cache_dir), "jobs"), "sha256"
+        )
+        os.makedirs(jid_dir, exist_ok=True)
+
+        # Write corrupt data
+        minions_path = os.path.join(jid_dir, ".minions.p")
+        with salt.utils.files.fopen(minions_path, "wb") as fh:
+            fh.write(b"corrupt data that is not valid msgpack")
+
+        local_cache.save_minions(jid, ["minion1", "minion2"])
+
+        with salt.utils.files.fopen(minions_path, "rb") as rfh:
+            result = salt.payload.load(rfh)
+
+    assert sorted(result) == ["minion1", "minion2"]
+
+
+def test_get_load_returns_merged_minions(tmp_cache_dir):
+    """
+    save_load + save_minions with different minion sets on the same JID should
+    result in get_load returning the full union of minions.
+    """
+    jid = "20240101120000000000"
+    opts = {"cachedir": str(tmp_cache_dir), "hash_type": "sha256"}
+    clear_load = {
+        "fun": "test.ping",
+        "jid": jid,
+        "tgt": "",
+        "tgt_type": "list",
+        "user": "root",
+    }
+
+    with patch.dict(local_cache.__opts__, opts):
+        local_cache.save_load(jid, clear_load)
+        local_cache.save_minions(jid, ["minion1", "minion2"])
+        local_cache.save_minions(jid, ["minion3", "minion4"])
+
+        result = local_cache.get_load(jid)
+
+    assert result["Minions"] == ["minion1", "minion2", "minion3", "minion4"]

@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import salt.client
 import salt.exceptions
 import salt.output
+import salt.utils.jid
 import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
@@ -148,6 +149,7 @@ class Batch:
         # wait the specified time before decide a job is actually done
         bwait = self.opts.get("batch_wait", 0)
         wait = []
+        batch_jid = salt.utils.jid.gen_jid(self.opts)
 
         if self.options:
             show_jid = self.options.show_jid
@@ -209,6 +211,7 @@ class Batch:
                     show_jid=show_jid,
                     verbose=show_verbose,
                     gather_job_timeout=self.opts["gather_job_timeout"],
+                    jid=batch_jid,
                     **self.eauth,
                 )
                 # add it to our iterators and to the minion_tracker
