@@ -8,6 +8,14 @@ import pytest
 import yaml
 
 import salt.modules.junos as junos
+from tests.support.mock import MagicMock, patch
+
+# We check __virtual__ here to skip early if dependencies are missing.
+# We mock __opts__ to avoid the proxy check since that is tested separately.
+with patch("salt.modules.junos.__opts__", {"proxy": "test"}, create=True):
+    ret = junos.__virtual__()
+    if isinstance(ret, tuple) and ret[0] is False:
+        pytest.skip(ret[1], allow_module_level=True)
 from tests.support.mock import ANY, MagicMock, PropertyMock, call, mock_open, patch
 
 try:

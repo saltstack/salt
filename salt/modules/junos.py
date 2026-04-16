@@ -63,6 +63,36 @@ try:
 except ImportError:
     HAS_JUNOS = False
 
+    class ConnectClosedError(BaseException):
+        pass
+
+    class LockError(BaseException):
+        pass
+
+    class RpcTimeoutError(BaseException):
+        pass
+
+    class UnlockError(BaseException):
+        pass
+
+    class _Mock:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __getattr__(self, name):
+            return _Mock()
+
+        def __call__(self, *args, **kwargs):
+            return _Mock()
+
+    CfgTable = _Mock
+    FactoryLoader = _Mock
+    OpTable = _Mock
+    Config = _Mock
+    SCP = _Mock
+    SW = _Mock
+    Device = _Mock
+
 # Set up logging
 log = logging.getLogger(__name__)
 
