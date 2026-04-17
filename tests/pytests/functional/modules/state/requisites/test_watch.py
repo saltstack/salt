@@ -216,3 +216,36 @@ def test_issue_30820_requisite_in_match_by_name(state, state_tree):
         ret = state.sls("requisite")
         assert bar_state in ret
         assert ret[bar_state].comment == 'Command "echo bar" run'
+
+
+def test_watch_fires_when_normal_run_has_changes(state, state_tree):
+    """
+    The watcher's ``mod_watch`` must be invoked whenever a watched state
+    reports changes, even if the watcher's own normal run already produced
+    some unrelated changes of its own. Previously Salt skipped ``mod_watch``
+    in that case, which silently dropped the watched-state trigger (for
+    example, ``docker_container.running`` performing a network reconnect
+    inside its normal run would prevent the force-replacement that
+    ``mod_watch`` is supposed to perform when a watched config file has
+    changed).
+    """
+    sls_contents = """
+    trigger:
+      test.succeed_with_changes
+
+    watcher:
+      test.succeed_with_changes:
+        - watch:
+          - test: trigger
+    """
+    watcher = "test_|-watcher_|-watcher_|-succeed_with_changes"
+    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+        ret = state.sls("requisite")
+        # The normal run's own change must still be present.
+        assert "testing" in ret[watcher].changes
+        # And mod_watch must also have fired, appending its own change entry
+        # and comment to the result so the watched-state trigger is not lost.
+        assert "Requisites with changes" in ret[watcher].changes
+        assert ret[watcher].changes["Requisites with changes"] == ["test: trigger"]
+        assert "Watch statement fired." in ret[watcher].comment
+        assert ret[watcher].result is True
