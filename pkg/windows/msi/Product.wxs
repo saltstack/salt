@@ -213,6 +213,8 @@ IMCAC - Immediate Custom Action - It's immediate
       - This must run before InstallValidate to ensure that the installer does not see files in use
       -->
       <Custom Action="kill_python_exe"          Before="InstallValidate"          >(REMOVE ~= "ALL") or WIX_UPGRADE_DETECTED</Custom>
+      <!-- Strip __pycache__ / *.pyc under INSTALLDIR before new files (install/upgrade/repair); after kill_python_exe when that runs. -->
+      <Custom Action="clear_python_caches_IMCAC" After="kill_python_exe"          ><![CDATA[NOT (REMOVE = "ALL")]]></Custom>
 
       <Custom Action="ReadConfig_IMCAC"         Before="CostInitialize"           >NOT Installed</Custom>
       <!-- NSIS removal before InstallValidate (log / files-in-use) and before InstallFiles. -->
@@ -242,15 +244,16 @@ IMCAC - Immediate Custom Action - It's immediate
 
     <!-- Declare Immediate (*_IMCAC) and Deferred (*_DECAC) Custom Actions. -->
     <!-- These are the entry points into the DLL -->
-    <CustomAction Id="ReadConfig_IMCAC"     BinaryKey="MinionConfigExt" DllEntry="ReadConfig_IMCAC"       Execute="firstSequence" />
-    <CustomAction Id="remove_NSIS_IMCAC"   BinaryKey="MinionConfigExt" DllEntry="remove_NSIS_IMCAC"     Execute="immediate" Return="check" Impersonate="no" />
-    <CustomAction Id="MoveInsecureConfig_DECAC"  BinaryKey="MinionConfigExt" DllEntry="MoveInsecureConfig_DECAC" Execute="deferred" Return="check" Impersonate="no" />
-    <CustomAction Id="MoveConfig_DECAC"     BinaryKey="MinionConfigExt" DllEntry="MoveConfig_DECAC"       Execute="deferred" Return="check" Impersonate="no" />
-    <CustomAction Id="WriteConfig_DECAC"    BinaryKey="MinionConfigExt" DllEntry="WriteConfig_DECAC"      Execute="deferred" Return="check" Impersonate="no" />
-    <CustomAction Id="DeleteConfig_DECAC"   BinaryKey="MinionConfigExt" DllEntry="DeleteConfig_DECAC"     Execute="deferred" Return="check" Impersonate="no" />
-    <CustomAction Id="DeleteConfig2_DECAC"  BinaryKey="MinionConfigExt" DllEntry="DeleteConfig_DECAC"     Execute="deferred" Return="check" Impersonate="no" />
-    <CustomAction Id="BackupConfig_DECAC"   BinaryKey="MinionConfigExt" DllEntry="BackupConfig_DECAC"     Execute="deferred" Return="check" Impersonate="no" />
-    <CustomAction Id="kill_python_exe"      BinaryKey="MinionConfigExt" DllEntry="kill_python_exe"        Execute="immediate" Return="ignore" />
+    <CustomAction Id="ReadConfig_IMCAC"          BinaryKey="MinionConfigExt" DllEntry="ReadConfig_IMCAC"          Execute="firstSequence" />
+    <CustomAction Id="remove_NSIS_IMCAC"         BinaryKey="MinionConfigExt" DllEntry="remove_NSIS_IMCAC"         Execute="immediate" Return="check" Impersonate="no" />
+    <CustomAction Id="MoveInsecureConfig_DECAC"  BinaryKey="MinionConfigExt" DllEntry="MoveInsecureConfig_DECAC"  Execute="deferred" Return="check" Impersonate="no" />
+    <CustomAction Id="MoveConfig_DECAC"          BinaryKey="MinionConfigExt" DllEntry="MoveConfig_DECAC"          Execute="deferred" Return="check" Impersonate="no" />
+    <CustomAction Id="WriteConfig_DECAC"         BinaryKey="MinionConfigExt" DllEntry="WriteConfig_DECAC"         Execute="deferred" Return="check" Impersonate="no" />
+    <CustomAction Id="DeleteConfig_DECAC"        BinaryKey="MinionConfigExt" DllEntry="DeleteConfig_DECAC"        Execute="deferred" Return="check" Impersonate="no" />
+    <CustomAction Id="DeleteConfig2_DECAC"       BinaryKey="MinionConfigExt" DllEntry="DeleteConfig_DECAC"        Execute="deferred" Return="check" Impersonate="no" />
+    <CustomAction Id="BackupConfig_DECAC"        BinaryKey="MinionConfigExt" DllEntry="BackupConfig_DECAC"        Execute="deferred" Return="check" Impersonate="no" />
+    <CustomAction Id="kill_python_exe"           BinaryKey="MinionConfigExt" DllEntry="kill_python_exe"           Execute="immediate" Return="ignore" />
+    <CustomAction Id="clear_python_caches_IMCAC" BinaryKey="MinionConfigExt" DllEntry="clear_python_caches_IMCAC" Execute="immediate" Return="ignore" Impersonate="no" />
     <!-- Custom Action Data Helper for deferred custom actions  -->
     <!-- master and id must be named like in YAML configuration -->
     <!-- Send all this stuff down to the sandbox -->

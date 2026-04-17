@@ -728,6 +728,32 @@ namespace MinionConfigurationExtension {
             return ActionResult.Success;
         }
 
+        [CustomAction]
+        public static ActionResult clear_python_caches_IMCAC(Session session) {
+            /*
+             * Remove __pycache__ trees, stray *.pyc, and empty dirs left under [INSTALLDIR]
+             * before InstallFiles (upgrade/fresh/repair). Sequenced after kill_python_exe.
+             * Does not run on REMOVE=ALL (uninstall uses DeleteConfig_DECAC).
+             */
+            session.Log("...BEGIN clear_python_caches_IMCAC");
+            try {
+                string installDir = "";
+                try {
+                    installDir = cutil.get_property_IMCAC(session, "INSTALLDIR");
+                } catch (Exception ex) {
+                    session.Log("...clear_python_caches_IMCAC: INSTALLDIR: " + ex.Message);
+                }
+                if (installDir == null) installDir = "";
+                installDir = installDir.Trim();
+                if (installDir.Length > 0)
+                    cutil.clear_python_bytecode_caches_under_dir(session, installDir);
+            } catch (Exception ex) {
+                session.Log("...clear_python_caches_IMCAC: " + ex.Message);
+            }
+            session.Log("...END clear_python_caches_IMCAC");
+            return ActionResult.Success;
+        }
+
 
         [CustomAction]
         public static ActionResult WriteConfig_DECAC(Session session) {
@@ -859,6 +885,8 @@ namespace MinionConfigurationExtension {
             string ROOTDIR_old   = @"C:\salt";
             string ROOTDIR_new   =  Path.Combine(ProgramData, @"Salt Project\Salt");
             // The registry subkey deletes itself
+
+            cutil.clear_python_bytecode_caches_under_dir(session, INSTALLDIR);
 
             if (CLEAN_INSTALL.Length > 0) {
                 session.Log("...CLEAN_INSTALL -- remove both old and new root_dirs");

@@ -92,6 +92,25 @@ VIAddVersionKey "ProductVersion" "${PRODUCT_VERSION}"
     Pop  "${ResultVar}"
 !macroend
 
+# 32-bit NSIS: ExpandEnvStrings resolves %PROGRAMFILES% to "Program Files (x86)".
+# For 64-bit Salt builds, normalize registry-derived paths under WOW64 to native
+# Program Files.
+!macro NormalizeWow64ProgramFilesPath_ pathvar
+    !if "${CPUARCH}" == "AMD64"
+    ${If} ${RunningX64}
+        ${StrContains} $R8 "Program Files (x86)" "$${pathvar}"
+        ${StrContains} $R7 "Salt Project" "$${pathvar}"
+        ${IfNot} $R8 == ""
+            ${IfNot} $R7 == ""
+                ${StrRep} $${pathvar} $${pathvar} "Program Files (x86)" "Program Files"
+                ${LogMsg} "Normalized $${pathvar} from WOW64 Program Files: $${pathvar}"
+            ${EndIf}
+        ${EndIf}
+    ${EndIf}
+    !endif
+!macroend
+!define NormalizeWow64ProgramFilesPath "!insertmacro NormalizeWow64ProgramFilesPath_"
+
 # Part of the Explode function for Strings
 !define Explode "!insertmacro Explode"
 !macro Explode Length Separator String
@@ -108,6 +127,7 @@ Var cmdLineParams
 var logFileHandle
 Var msg
 Var msiEnumIdx
+Var msiInstDirBeforeMsiUninstall
 
 # Followed this: https://nsis.sourceforge.io/StrRep
 !define LogMsg '!insertmacro LogMsg'
@@ -1722,6 +1742,21 @@ Function Explode
 FunctionEnd
 
 
+# Remove __pycache__ dirs and stray *.pyc under $msiInstDirBeforeMsiUninstall
+# (post-MSI-uninstall hygiene).
+Function SweepPythonBytecodeCachesInDir
+    ${LogMsg} "SweepPythonBytecodeCachesInDir: root=$msiInstDirBeforeMsiUninstall"
+    ExecWait `cmd /c FOR /D /R "$msiInstDirBeforeMsiUninstall" %%G IN (__pycache__) DO @IF EXIST "%%G" RD /S /Q "%%G"` $0
+    ${LogMsg} "cmd FOR __pycache__ exit=$0"
+    ExecWait `cmd /c FOR /R "$msiInstDirBeforeMsiUninstall" %%F IN (*.pyc) DO @IF EXIST "%%F" DEL /F /Q "%%F"` $0
+    ${LogMsg} "cmd FOR *.pyc exit=$0"
+    # Prune directories left empty after *.pyc removal (deepest first); mirrors MSI
+    # CustomAction01Util.
+    ExecWait `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$$r = '$msiInstDirBeforeMsiUninstall'; if (Test-Path -LiteralPath $$r) { Get-ChildItem -LiteralPath $$r -Directory -Recurse -Force -ErrorAction SilentlyContinue | Sort-Object { $$_.FullName.Length } -Descending | ForEach-Object { if (-not (Get-ChildItem -LiteralPath $$_.FullName -Force -ErrorAction SilentlyContinue | Select-Object -First 1)) { Remove-Item -LiteralPath $$_.FullName -Force -ErrorAction SilentlyContinue } } }"` $0
+    ${LogMsg} "powershell empty-dir prune exit=$0"
+FunctionEnd
+
+
 #------------------------------------------------------------------------------
 # UninstallMSI Function
 # - Uninstalls MSI by product code
@@ -1744,6 +1779,26 @@ Function UninstallMSI
         Abort
 
     msi_uninstall_exec:
+        # Capture install_dir before msiexec removes registry (defaults if absent).
+        StrCpy $msiInstDirBeforeMsiUninstall ""
+        ${If} ${RunningX64}
+            SetRegView 64
+        ${EndIf}
+        ReadRegStr $msiInstDirBeforeMsiUninstall HKLM "SOFTWARE\Salt Project\Salt" "install_dir"
+        ${If} ${RunningX64}
+            SetRegView 32
+        ${EndIf}
+        StrCmp $msiInstDirBeforeMsiUninstall "" 0 msi_sweep_have_reg
+        ${If} ${RunningX64}
+            StrCpy $msiInstDirBeforeMsiUninstall "$ProgramFiles64\Salt Project\Salt"
+        ${Else}
+            StrCpy $msiInstDirBeforeMsiUninstall "$ProgramFiles\Salt Project\Salt"
+        ${EndIf}
+        msi_sweep_have_reg:
+        ExpandEnvStrings $msiInstDirBeforeMsiUninstall $msiInstDirBeforeMsiUninstall
+        ${NormalizeWow64ProgramFilesPath} msiInstDirBeforeMsiUninstall
+        ${LogMsg} "MSI install dir for post-uninstall bytecode sweep: $msiInstDirBeforeMsiUninstall"
+
         ${LogMsg} "Invoking msiexec uninstall for $R0"
         # 32-bit NSIS on 64-bit Windows must use Sysnative\msiexec.exe so the 64-bit
         # Windows Installer uninstalls 64-bit Salt MSIs; WOW64 msiexec can hang or misbehave.
@@ -1781,6 +1836,8 @@ Function UninstallMSI
             ${EndIf}
             Abort
         ${EndIf}
+
+        Call SweepPythonBytecodeCachesInDir
 
 FunctionEnd
 
@@ -1881,6 +1938,7 @@ Function getExistingInstallation
         ${EndIf}
 
     finished:
+        ${NormalizeWow64ProgramFilesPath} INSTDIR
         ${LogMsg} "Finished detecting installation type"
         SetRegView 32  # View the 32 bit portion of the registry
 
