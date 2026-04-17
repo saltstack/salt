@@ -20,6 +20,26 @@ def salt_mm_master_1(request, salt_factories):
         "transport": request.config.getoption("--transport"),
     }
     config_overrides = {
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "test.ping",
+                    "test.echo",
+                    "test.fib",
+                    "grains.items",
+                    "sys.doc",
+                    "pillar.items",
+                    "runner.test.arg",
+                    "auth",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],
+            },
+        },
         "interface": "0.0.0.0",
         "master_sign_pubkey": True,
         "fips_mode": FIPS_TESTRUN,
@@ -59,6 +79,26 @@ def salt_mm_master_2(salt_factories, salt_mm_master_1):
         "transport": salt_mm_master_1.config["transport"],
     }
     config_overrides = {
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "test.ping",
+                    "test.echo",
+                    "test.fib",
+                    "grains.items",
+                    "sys.doc",
+                    "pillar.items",
+                    "runner.test.arg",
+                    "auth",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],
+            },
+        },
         "interface": "0.0.0.0",
         "master_sign_pubkey": True,
         "fips_mode": FIPS_TESTRUN,
@@ -104,6 +144,26 @@ def salt_mm_minion_1(salt_mm_master_1, salt_mm_master_2, master_alive_interval):
     mm_master_1_port = salt_mm_master_1.config["ret_port"]
     mm_master_2_port = salt_mm_master_2.config["ret_port"]
     config_overrides = {
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "test.ping",
+                    "test.echo",
+                    "test.fib",
+                    "grains.items",
+                    "sys.doc",
+                    "pillar.items",
+                    "runner.test.arg",
+                    "auth",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],
+            },
+        },
         "master": [
             f"master1.local:{mm_master_1_port}",
             f"master2.local:{mm_master_2_port}",

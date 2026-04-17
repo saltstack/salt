@@ -79,6 +79,7 @@ def master_config(master_opts, transport, root_dir):
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
         root_dir=str(root_dir),
+        worker_pools_enabled=False,
     )
     priv, pub = salt.crypt.gen_keys(4096)
     path = pathlib.Path(master_opts["pki_dir"], "master")
@@ -138,7 +139,7 @@ def master_secrets():
 
 
 async def _connect_and_publish(
-    io_loop, channel_minion_id, channel, server, received, timeout=60
+    io_loop, channel_minion_id, channel, server, received, timeout=5
 ):
     await channel.connect()
 
@@ -147,6 +148,7 @@ async def _connect_and_publish(
         io_loop.stop()
 
     channel.on_recv(cb)
+    await asyncio.sleep(1)  # Wait for SUB socket to connect
     io_loop.spawn_callback(
         server.publish, {"tgt_type": "glob", "tgt": [channel_minion_id], "WTF": "SON"}
     )
@@ -198,11 +200,15 @@ def test_pub_server_channel(
 
     if master_config["transport"] == "zeromq":
         p = Path(str(master_config["sock_dir"])) / "workers.ipc"
+        print(f"Checking for {p}")
+        print(f"Directory contents: {os.listdir(master_config['sock_dir'])}")
         start = time.time()
         while not p.exists():
             time.sleep(0.3)
             if time.time() - start > 20:
-                raise Exception("IPC socket not created")
+                raise Exception(
+                    f"IPC socket not created. Dir contents: {os.listdir(master_config['sock_dir'])}"
+                )
         mode = os.lstat(p).st_mode
         assert bool(os.lstat(p).st_mode & stat.S_IRUSR)
         assert not bool(os.lstat(p).st_mode & stat.S_IRGRP)

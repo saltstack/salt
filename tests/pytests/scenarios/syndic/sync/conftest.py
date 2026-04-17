@@ -13,6 +13,26 @@ def master(request, salt_factories):
         "transport": request.config.getoption("--transport"),
     }
     config_overrides = {
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "test.ping",
+                    "test.echo",
+                    "test.fib",
+                    "grains.items",
+                    "sys.doc",
+                    "pillar.items",
+                    "runner.test.arg",
+                    "auth",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],
+            },
+        },
         "interface": "127.0.0.1",
         "auto_accept": True,
         "order_masters": True,
@@ -86,6 +106,26 @@ def minion(syndic, salt_factories):
     port = syndic.master.config["ret_port"]
     addr = syndic.master.config["interface"]
     config_overrides = {
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "test.ping",
+                    "test.echo",
+                    "test.fib",
+                    "grains.items",
+                    "sys.doc",
+                    "pillar.items",
+                    "runner.test.arg",
+                    "auth",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],
+            },
+        },
         "master": f"{addr}:{port}",
         "fips_mode": FIPS_TESTRUN,
         "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",

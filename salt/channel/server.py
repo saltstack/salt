@@ -12,6 +12,7 @@ import logging
 import os
 import pathlib
 import time
+import zlib
 
 import tornado.ioloop
 
@@ -19,6 +20,7 @@ import salt.cache
 import salt.crypt
 import salt.master
 import salt.payload
+import salt.transport
 import salt.transport.frame
 import salt.utils.channel
 import salt.utils.event
@@ -62,7 +64,27 @@ class ReqServerChannel:
     def factory(cls, opts, **kwargs):
         if "master_uri" not in opts and "master_uri" in kwargs:
             opts["master_uri"] = kwargs["master_uri"]
-        transport = salt.transport.request_server(opts, **kwargs)
+
+        # Handle worker pool routing if enabled.
+        # PoolRoutingChannel is now the default implementation when
+        # worker_pools_enabled=True. We only wrap if we are NOT already a
+        # pool-specific server (to avoid recursion).
+        if opts.get("worker_pools_enabled", True) and not opts.get("pool_name"):
+            from salt.config.worker_pools import get_worker_pools_config
+
+            worker_pools = get_worker_pools_config(opts)
+            if worker_pools:
+                # Wrap the standard transport in the routing channel
+                external_opts = opts.copy()
+                external_opts["worker_pools_enabled"] = False
+                import salt.transport.base
+
+                transport = salt.transport.base.request_server(external_opts, **kwargs)
+                return PoolRoutingChannel(opts, transport, worker_pools)
+
+        import salt.transport.base
+
+        transport = salt.transport.base.request_server(opts, **kwargs)
         return cls(opts, transport)
 
     @classmethod
@@ -115,15 +137,19 @@ class ReqServerChannel:
         )
         return self.sessions[minion][1]
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, *args, **kwargs):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be bind and listen (or the equivalent for your network library)
         """
-        if hasattr(self.transport, "pre_fork"):
-            self.transport.pre_fork(process_manager)
+        import salt.master
 
-    def post_fork(self, payload_handler, io_loop):
+        if "secrets" not in kwargs:
+            kwargs["secrets"] = salt.master.SMaster.secrets
+        if hasattr(self.transport, "pre_fork"):
+            self.transport.pre_fork(process_manager, *args, **kwargs)
+
+    def post_fork(self, payload_handler, io_loop, **kwargs):
         """
         Do anything you need post-fork. This should handle all incoming payloads
         and call payload_handler. You will also be passed io_loop, for all of your
@@ -155,9 +181,10 @@ class ReqServerChannel:
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.payload_handler = payload_handler
         if hasattr(self.transport, "post_fork"):
-            self.transport.post_fork(self.handle_message, io_loop)
+            self.transport.post_fork(self.handle_message, io_loop, **kwargs)
 
     async def handle_message(self, payload):
+        nonce = None
         if (
             not isinstance(payload, dict)
             or "enc" not in payload
@@ -255,7 +282,7 @@ class ReqServerChannel:
                     return "bad load"
                 if not self.validate_token(payload, required=True):
                     return "bad load"
-            # The token won't always be present in the payload for v2 and
+            # The token won't always be present in the payload for and
             # below, but if it is we always wanto validate it.
             elif not self.validate_token(payload, required=False):
                 return "bad load"
@@ -628,6 +655,7 @@ class ReqServerChannel:
 
         elif not key:
             # The key has not been accepted, this is a new minion
+            key_act = None
             if auto_reject:
                 log.info(
                     "New public key for %s rejected via autoreject_file", load["id"]
@@ -978,6 +1006,399 @@ class ReqServerChannel:
             self.event.destroy()
 
 
+class PoolRoutingChannel:
+    """
+    Production channel wrapper that routes requests to worker pools using
+    transport-native RequestServer IPC.
+
+    This is the primary implementation that replaced the older PoolDispatcherChannel
+
+
+    Architecture:
+        External Transport → PoolRoutingChannel → RequestClient (IPC) →
+        Pool RequestServer (IPC) → MWorkers
+
+    Key advantages:
+    - No multiprocessing.Queue overhead
+    - Uses transport-native IPC (ZeroMQ/TCP/WebSocket)
+    - Clean separation of concerns
+    - Works across all transports without transport modifications
+    """
+
+    def __init__(self, opts, transport, worker_pools):
+        """
+        Initialize the pool routing channel.
+
+        Args:
+            opts: Master configuration options
+            transport: The external transport instance (port 4506)
+            worker_pools: Dict of pool configurations {pool_name: config}
+        """
+        self.opts = opts
+        self.transport = transport
+        self.worker_pools = worker_pools
+        self.pool_clients = {}  # pool_name -> RequestClient
+        self.pool_servers = {}  # pool_name -> RequestServer
+        self.io_loop = None
+        self.event = None
+        self.router = None
+        self.crypticle = None
+        self.master_key = None
+
+        # Build routing table for command-based routing
+        self._build_routing_table()
+
+        log.info(
+            "PoolRoutingChannel initialized with pools: %s",
+            list(worker_pools.keys()),
+        )
+
+    def _build_routing_table(self):
+        """Build command-to-pool routing table from configuration."""
+        self.command_to_pool = {}
+        self.default_pool = None
+
+        for pool_name, config in self.worker_pools.items():
+            for cmd in config.get("commands", []):
+                if cmd == "*":
+                    self.default_pool = pool_name
+                else:
+                    self.command_to_pool[cmd] = pool_name
+
+        if not self.default_pool and self.worker_pools:
+            # Use first pool as default if no catchall defined
+            self.default_pool = list(self.worker_pools.keys())[0]
+
+    def pre_fork(self, process_manager, *args, **kwargs):
+        """
+        Pre-fork setup: Initialize external transport and create RequestServer
+        for each worker pool on IPC.
+        """
+        import salt.master
+        import salt.transport.base
+        from salt.utils.channel import create_server_transport
+
+        # Pass secrets if not present (critical for decryption in routing)
+        if "secrets" not in kwargs:
+            kwargs["secrets"] = salt.master.SMaster.secrets
+
+        # Setup external transport (this binds the actual network ports 4505/4506)
+        if hasattr(self.transport, "pre_fork"):
+            self.transport.pre_fork(process_manager, *args, **kwargs)
+
+        # Create a RequestServer for each pool on IPC
+        for pool_name, config in self.worker_pools.items():
+            # Create pool-specific opts for IPC
+            pool_opts = self.opts.copy()
+            pool_opts["pool_name"] = pool_name
+            # Disable worker pools for internal routing to avoid circular dependency
+            pool_opts["worker_pools_enabled"] = False
+
+            # Configure IPC for this pool
+            if pool_opts.get("ipc_mode") == "tcp":
+                # TCP IPC mode: use unique port per pool
+                base_port = pool_opts.get("tcp_master_workers", 4515)
+                port_offset = zlib.adler32(pool_name.encode()) % 1000
+                pool_opts["ret_port"] = base_port + port_offset
+                log.info(
+                    "Pool '%s' RequestServer using TCP IPC on port %d",
+                    pool_name,
+                    pool_opts["ret_port"],
+                )
+            else:
+                # Standard IPC mode: use unique socket per pool
+                sock_dir = pool_opts.get("sock_dir", "/tmp/salt")
+                os.makedirs(sock_dir, exist_ok=True)
+                pool_opts["workers_ipc_name"] = f"workers-{pool_name}.ipc"
+                log.debug(
+                    "Pool '%s' RequestServer using IPC socket: %s",
+                    pool_name,
+                    pool_opts["workers_ipc_name"],
+                )
+
+            # Create RequestServer for this pool using transport factory
+            try:
+                pool_transport = create_server_transport(pool_opts)
+                # We wrap it in a minimal ReqServerChannel for compatibility
+                pool_server = ReqServerChannel(pool_opts, pool_transport)
+                pool_server.pre_fork(process_manager, *args, **kwargs)
+                self.pool_servers[pool_name] = pool_server
+                log.info("Created RequestServer for pool '%s'", pool_name)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error(
+                    "Failed to create RequestServer for pool '%s': %s", pool_name, exc
+                )
+                raise
+
+        log.info(
+            "PoolRoutingChannel pre_fork complete for %d pools", len(self.worker_pools)
+        )
+
+    def post_fork(self, payload_handler, io_loop, **kwargs):
+        """
+        Post-fork setup in the routing process.
+
+        This is where we:
+        1. Set up the master infrastructure (crypticle, events, keys)
+        2. Create RequestClient connections to each pool's RequestServer
+        3. Connect the external transport to our routing handler
+        """
+        pool_name = kwargs.get("pool_name")
+        if pool_name:
+            # We are in an MWorker process for a specific pool.
+            # Delegate to the pool's RequestServer.
+            if pool_name in self.pool_servers:
+                pool_server = self.pool_servers[pool_name]
+                return pool_server.post_fork(payload_handler, io_loop, **kwargs)
+            else:
+                log.error("Pool '%s' not found in pool_servers", pool_name)
+                return
+
+        import salt.master
+        from salt.utils.channel import create_request_client
+
+        self.io_loop = io_loop
+
+        # Setup master infrastructure (same as ReqServerChannel)
+        if (
+            self.opts.get("pub_server_niceness")
+            and not salt.utils.platform.is_windows()
+        ):
+            log.debug(
+                "setting Publish daemon niceness to %i",
+                self.opts["pub_server_niceness"],
+            )
+            os.nice(self.opts["pub_server_niceness"])
+
+        # Create event manager for the routing process
+        self.event = salt.utils.event.get_master_event(
+            self.opts, self.opts["sock_dir"], listen=False, io_loop=io_loop
+        )
+
+        # Set up crypticle for payload decryption during routing
+        self.crypticle = _get_crypticle(
+            self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
+        )
+
+        self.master_key = salt.crypt.MasterKeys(self.opts)
+
+        # Create RequestClient for each pool (connects to pool's IPC RequestServer)
+        for pool_name in self.worker_pools.keys():
+            # Create pool-specific opts matching the pool's RequestServer
+            pool_opts = self.opts.copy()
+            pool_opts["pool_name"] = pool_name
+            # Disable worker pools for internal routing to avoid circular dependency
+            pool_opts["worker_pools_enabled"] = False
+
+            if pool_opts.get("ipc_mode") == "tcp":
+                # TCP IPC: connect to pool's port
+                base_port = pool_opts.get("tcp_master_workers", 4515)
+                port_offset = zlib.adler32(pool_name.encode()) % 1000
+                pool_opts["ret_port"] = base_port + port_offset
+                pool_opts["master_uri"] = f"tcp://127.0.0.1:{pool_opts['ret_port']}"
+                log.debug(
+                    "Pool '%s' client connecting to TCP port %d",
+                    pool_name,
+                    pool_opts["ret_port"],
+                )
+            else:
+                # IPC socket: connect to pool's socket
+                pool_opts["workers_ipc_name"] = f"workers-{pool_name}.ipc"
+                ipc_path = os.path.join(
+                    self.opts["sock_dir"], pool_opts["workers_ipc_name"]
+                )
+                pool_opts["master_uri"] = f"ipc://{ipc_path}"
+                log.debug(
+                    "Pool '%s' client connecting to IPC socket: %s",
+                    pool_name,
+                    pool_opts["workers_ipc_name"],
+                )
+
+            try:
+                # Use our dedicated request client factory for routing
+                client = create_request_client(pool_opts, io_loop)
+                self.pool_clients[pool_name] = client
+                log.info("Created RequestClient for pool '%s'", pool_name)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error(
+                    "Failed to create RequestClient for pool '%s': %s", pool_name, exc
+                )
+                raise
+
+        # Connect external transport to our routing handler
+        if hasattr(self.transport, "post_fork"):
+            self.transport.post_fork(self.handle_and_route_message, io_loop, **kwargs)
+
+        log.info(
+            "PoolRoutingChannel post_fork complete with %d pool clients",
+            len(self.pool_clients),
+        )
+
+    async def handle_and_route_message(self, payload):
+        """
+        Main routing handler: decrypt if needed, determine target pool,
+        forward via RequestClient to the appropriate pool's RequestServer.
+
+        This is the core of the routing design.
+        """
+        if not isinstance(payload, dict):
+            log.warning("bad load received on socket")
+            return "bad load"
+        try:
+            version = int(payload.get("version", 0))
+        except ValueError:
+            version = 0
+
+        # Enforce minimum authentication protocol version to prevent downgrade attacks
+        minimum_version = self.opts.get("minimum_auth_version", 0)
+        if minimum_version > 0 and version < minimum_version:
+            load = payload.get("load")
+            if isinstance(load, dict):
+                minion_id = load.get("id", "unknown minion")
+            else:
+                minion_id = "unknown minion"
+            log.warning(
+                "Rejected authentication attempt from minion '%s' using "
+                "protocol version %d (minimum required: %d)",
+                minion_id,
+                version,
+                minimum_version,
+            )
+            return "bad load"
+
+        try:
+            # Simple command-based routing from our routing table
+            load = payload.get("load", {})
+            if isinstance(load, dict):
+                cmd = load.get("cmd", "unknown")
+            else:
+                # This is likely an encrypted payload. We need to decrypt
+                # to determine the command for routing.
+                try:
+                    # Determine which key to use based on the 'enc' field
+                    enc = payload.get("enc", "aes")
+                    if enc == "aes":
+                        import salt.master
+
+                        key = (
+                            salt.master.SMaster.secrets.get("aes", {})
+                            .get("secret", {})
+                            .value
+                        )
+                        if key:
+                            import salt.crypt
+
+                            crypticle = salt.crypt.Crypticle(self.opts, key)
+                            decrypted = crypticle.loads(load)
+                            if isinstance(decrypted, dict) and "cmd" in decrypted:
+                                cmd = decrypted.get("cmd", "unknown")
+                            elif isinstance(decrypted, dict) and "load" in decrypted:
+                                cmd = decrypted["load"].get("cmd", "unknown")
+                            else:
+                                cmd = "unknown"
+                        else:
+                            cmd = "unknown"
+                    elif enc == "pub":
+                        # RSA encryption
+                        import salt.crypt
+
+                        mkey = salt.crypt.MasterKeys(self.opts)
+                        decrypted = mkey.priv_decrypt(load)
+                        if isinstance(decrypted, bytes):
+                            import salt.payload
+
+                            decrypted = salt.payload.loads(decrypted)
+                        if isinstance(decrypted, dict) and "cmd" in decrypted:
+                            cmd = decrypted.get("cmd", "unknown")
+                        elif isinstance(decrypted, dict) and "load" in decrypted:
+                            cmd = decrypted["load"].get("cmd", "unknown")
+                        else:
+                            cmd = "unknown"
+                    else:
+                        cmd = "unknown"
+                except Exception:  # pylint: disable=broad-except
+                    cmd = "unknown"
+
+            pool_name = self.command_to_pool.get(cmd, self.default_pool)
+
+            if not pool_name and self.worker_pools:
+                pool_name = self.default_pool or list(self.worker_pools.keys())[0]
+
+            log.debug(
+                "Routing: cmd=%s -> pool='%s' (pools: %s)",
+                cmd,
+                pool_name,
+                list(self.worker_pools.keys()),
+            )
+
+            if pool_name not in self.pool_clients:
+                log.error(
+                    "No client available for pool '%s'. Available: %s",
+                    pool_name,
+                    list(self.pool_clients.keys()),
+                )
+                return {"error": f"No client for pool {pool_name}"}
+
+            # Forward to the appropriate pool's RequestServer via IPC
+            client = self.pool_clients[pool_name]
+            reply = await client.send(payload)
+
+            return reply
+
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error(
+                "Error in pool routing: %s",
+                exc,
+                exc_info=True,
+            )
+            return {"error": "Internal routing error", "success": False}
+
+    # Alias for compatibility with older tests and code that expect handle_message
+    handle_message = handle_and_route_message
+
+    def close(self):
+        """
+        Close all resources: pool clients, pool servers, event manager, and external transport.
+        """
+        log.info("Closing PoolRoutingChannel")
+
+        # Close all pool clients (RequestClients to pool RequestServers)
+        for pool_name, client in self.pool_clients.items():
+            try:
+                if hasattr(client, "close"):
+                    client.close()
+                elif hasattr(client, "destroy"):
+                    client.destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error closing client for pool '%s': %s", pool_name, exc)
+        self.pool_clients.clear()
+
+        # Close all pool servers
+        for pool_name, server in self.pool_servers.items():
+            try:
+                if hasattr(server, "close"):
+                    server.close()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error closing server for pool '%s': %s", pool_name, exc)
+        self.pool_servers.clear()
+
+        # Close event manager
+        if self.event is not None:
+            try:
+                self.event.close()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error closing event manager: %s", exc)
+
+        # Close external transport
+        if hasattr(self.transport, "close"):
+            try:
+                self.transport.close()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error closing external transport: %s", exc)
+
+        log.info("PoolRoutingChannel closed")
+
+
 class PubServerChannel:
     """
     Factory class to create subscription channels to the master's Publisher
@@ -1041,7 +1462,7 @@ class PubServerChannel:
             self.aes_funcs.destroy()
             self.aes_funcs = None
 
-    def pre_fork(self, process_manager, kwargs=None):
+    def pre_fork(self, process_manager, *args, **kwargs):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
@@ -1050,21 +1471,38 @@ class PubServerChannel:
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         """
         if hasattr(self.transport, "publish_daemon"):
-            process_manager.add_process(self._publish_daemon, kwargs=kwargs)
+            # Extract kwargs for the process.
+            # We check for a named 'kwargs' key first (from salt/master.py),
+            # then fallback to the entire kwargs dict.
+            proc_kwargs = kwargs.pop("kwargs", kwargs).copy()
+            if "secrets" not in proc_kwargs:
+                import salt.master
+
+                proc_kwargs["secrets"] = salt.master.SMaster.secrets
+            if "started" not in proc_kwargs:
+                proc_kwargs["started"] = self.transport.started
+            process_manager.add_process(self._publish_daemon, kwargs=proc_kwargs)
 
     def _publish_daemon(self, **kwargs):
+        import salt.master
+
         if self.opts["pub_server_niceness"] and not salt.utils.platform.is_windows():
             log.debug(
                 "setting Publish daemon niceness to %i",
                 self.opts["pub_server_niceness"],
             )
             os.nice(self.opts["pub_server_niceness"])
-        secrets = kwargs.get("secrets", None)
+        secrets = kwargs.pop("secrets", None)
+        started = kwargs.pop("started", None)
         if secrets is not None:
             salt.master.SMaster.secrets = secrets
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.transport.publish_daemon(
-            self.publish_payload, self.presence_callback, self.remove_presence_callback
+            self.publish_payload,
+            self.presence_callback,
+            self.remove_presence_callback,
+            secrets=secrets,
+            started=started,
         )
 
     def presence_callback(self, subscriber, msg):
@@ -1246,7 +1684,7 @@ class MasterPubServerChannel:
     def close(self):
         self.transport.close()
 
-    def pre_fork(self, process_manager, kwargs=None):
+    def pre_fork(self, process_manager, *args, **kwargs):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
@@ -1255,11 +1693,14 @@ class MasterPubServerChannel:
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         """
         if hasattr(self.transport, "publish_daemon"):
+            proc_kwargs = kwargs.pop("kwargs", kwargs)
             process_manager.add_process(
-                self._publish_daemon, kwargs=kwargs, name="EventPublisher"
+                self._publish_daemon, kwargs=proc_kwargs, name="EventPublisher"
             )
 
     def _publish_daemon(self, **kwargs):
+        import salt.master
+
         if (
             self.opts["event_publisher_niceness"]
             and not salt.utils.platform.is_windows()
@@ -1269,6 +1710,11 @@ class MasterPubServerChannel:
                 self.opts["event_publisher_niceness"],
             )
             os.nice(self.opts["event_publisher_niceness"])
+
+        secrets = kwargs.get("secrets", None)
+        if secrets is not None:
+            salt.master.SMaster.secrets = secrets
+
         self.io_loop = tornado.ioloop.IOLoop.current()
         tcp_master_pool_port = self.opts["cluster_pool_port"]
         self.pushers = []

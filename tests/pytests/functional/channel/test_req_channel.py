@@ -114,11 +114,17 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         raise tornado.gen.Return((payload, {"fun": "send"}))
 
 
+@pytest.fixture(scope="module")
+def master_config(master_config):
+    master_config["worker_pools_enabled"] = False
+    return master_config
+
+
 @pytest.fixture
 def req_server_channel(salt_master, req_channel_crypt):
-    req_server_channel_process = ReqServerChannelProcess(
-        salt_master.config.copy(), req_channel_crypt
-    )
+    config = salt_master.config.copy()
+    config["worker_pools_enabled"] = False
+    req_server_channel_process = ReqServerChannelProcess(config, req_channel_crypt)
     try:
         with req_server_channel_process:
             yield
@@ -155,6 +161,7 @@ def req_server_opts(tmp_path):
         "__role": "master",
         "master_sign_key_name": "master_sign",
         "permissive_pki_access": True,
+        "worker_pools_enabled": False,
     }
 
 

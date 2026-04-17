@@ -53,6 +53,27 @@ def master_opts(tmp_path):
     opts["publish_signing_algorithm"] = (
         "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
     )
+
+    # Use optimized worker pools for tests to demonstrate the feature
+    # This separates fast operations from slow ones for better performance
+    opts["worker_pools_enabled"] = True
+    opts["worker_pools"] = {
+        "fast": {
+            "worker_count": 2,
+            "commands": [
+                "ping",
+                "get_token",
+                "mk_token",
+                "verify_minion",
+                "_master_opts",
+            ],
+        },
+        "general": {
+            "worker_count": 3,
+            "commands": ["*"],  # Catchall for everything else
+        },
+    }
+
     return opts
 
 

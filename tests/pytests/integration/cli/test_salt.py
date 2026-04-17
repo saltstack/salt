@@ -44,6 +44,11 @@ def salt_minion_2(salt_master):
     with factory.started(start_timeout=120):
         yield factory
 
+    # Clean up the key so it doesn't affect subsequent tests like test_salt_key.py
+    key_file = os.path.join(salt_master.config["pki_dir"], "minions", "minion-2")
+    if os.path.exists(key_file):
+        os.remove(key_file)
+
 
 def test_context_retcode_salt(salt_cli, salt_minion):
     """
