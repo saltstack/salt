@@ -79,6 +79,7 @@ class ThinTestContext:
 
         code_dir = pathlib.Path(RUNTIME_VARS.CODE_DIR).resolve()
         self.exp_ret = {
+            "annotated_types": str(code_dir / "annotated_types"),
             "distro": str(code_dir / "distro.py"),
             "jinja2": str(code_dir / "jinja2"),
             "yaml": str(code_dir / "yaml"),
@@ -88,11 +89,15 @@ class ThinTestContext:
             "singledispatch": str(code_dir / "singledispatch.py"),
             "looseversion": str(code_dir / "looseversion.py"),
             "packaging": str(code_dir / "packaging"),
+            "pydantic": str(code_dir / "pydantic"),
+            "pydantic_core": str(code_dir / "pydantic_core"),
             "backports": str(code_dir / "backports"),
             "requests": str(code_dir / "requests"),
             "idna": str(code_dir / "idna"),
             "urllib3": str(code_dir / "urllib3"),
             "charset_normalizer": str(code_dir / "charset_normalizer"),
+            "typing_extensions": str(code_dir / "typing_extensions"),
+            "typing_inspection": str(code_dir / "typing_inspection"),
         }
         self.exc_libs = ["jinja2", "yaml"]
 
@@ -480,6 +485,26 @@ def test_get_ext_namespaces_failure(thin_ctx):
     "salt.utils.thin.looseversion",
     type("looseversion", (), {"__file__": "/site-packages/looseversion"}),
 )
+@patch(
+    "salt.utils.thin.typing_inspection",
+    type("typing_inspection", (), {"__file__": "/site-packages/typing_inspection"}),
+)
+@patch(
+    "salt.utils.thin.typing_extensions",
+    type("typing_extensions", (), {"__file__": "/site-packages/typing_extensions"}),
+)
+@patch(
+    "salt.utils.thin.pydantic_core",
+    type("pydantic_core", (), {"__file__": "/site-packages/pydantic_core"}),
+)
+@patch(
+    "salt.utils.thin.pydantic",
+    type("pydantic", (), {"__file__": "/site-packages/pydantic"}),
+)
+@patch(
+    "salt.utils.thin.annotated_types",
+    type("annotated_types", (), {"__file__": "/site-packages/annotated_types"}),
+)
 @patch_if(
     salt.utils.thin.has_immutables,
     "salt.utils.thin.immutables",
@@ -492,6 +517,7 @@ def test_get_tops(thin_ctx):
     :return:
     """
     base_tops = [
+        "annotated_types",
         "distro",
         "salt",
         "jinja2",
@@ -508,10 +534,14 @@ def test_get_tops(thin_ctx):
         "contextvars",
         "looseversion",
         "packaging",
+        "pydantic",
+        "pydantic_core",
         "idna",
         "requests",
         "urllib3",
         "charset_normalizer",
+        "typing_extensions",
+        "typing_inspection",
     ]
     if sys.version_info < (3, 13):
         base_tops.append("backports")
@@ -592,6 +622,26 @@ def test_get_tops(thin_ctx):
     "salt.utils.thin.looseversion",
     type("looseversion", (), {"__file__": "/site-packages/looseversion"}),
 )
+@patch(
+    "salt.utils.thin.typing_inspection",
+    type("typing_inspection", (), {"__file__": "/site-packages/typing_inspection"}),
+)
+@patch(
+    "salt.utils.thin.typing_extensions",
+    type("typing_extensions", (), {"__file__": "/site-packages/typing_extensions"}),
+)
+@patch(
+    "salt.utils.thin.pydantic_core",
+    type("pydantic_core", (), {"__file__": "/site-packages/pydantic_core"}),
+)
+@patch(
+    "salt.utils.thin.pydantic",
+    type("pydantic", (), {"__file__": "/site-packages/pydantic"}),
+)
+@patch(
+    "salt.utils.thin.annotated_types",
+    type("annotated_types", (), {"__file__": "/site-packages/annotated_types"}),
+)
 @patch_if(
     salt.utils.thin.has_immutables,
     "salt.utils.thin.immutables",
@@ -604,6 +654,7 @@ def test_get_tops_extra_mods(thin_ctx):
     :return:
     """
     base_tops = [
+        "annotated_types",
         "distro",
         "salt",
         "jinja2",
@@ -620,10 +671,14 @@ def test_get_tops_extra_mods(thin_ctx):
         "contextvars",
         "looseversion",
         "packaging",
+        "pydantic",
+        "pydantic_core",
         "idna",
         "requests",
         "urllib3",
         "charset_normalizer",
+        "typing_extensions",
+        "typing_inspection",
         "foo",
         "bar.py",
     ]
@@ -714,6 +769,26 @@ def test_get_tops_extra_mods(thin_ctx):
     "salt.utils.thin.looseversion",
     type("looseversion", (), {"__file__": "/site-packages/looseversion"}),
 )
+@patch(
+    "salt.utils.thin.typing_inspection",
+    type("typing_inspection", (), {"__file__": "/site-packages/typing_inspection"}),
+)
+@patch(
+    "salt.utils.thin.typing_extensions",
+    type("typing_extensions", (), {"__file__": "/site-packages/typing_extensions"}),
+)
+@patch(
+    "salt.utils.thin.pydantic_core",
+    type("pydantic_core", (), {"__file__": "/site-packages/pydantic_core"}),
+)
+@patch(
+    "salt.utils.thin.pydantic",
+    type("pydantic", (), {"__file__": "/site-packages/pydantic"}),
+)
+@patch(
+    "salt.utils.thin.annotated_types",
+    type("annotated_types", (), {"__file__": "/site-packages/annotated_types"}),
+)
 @patch_if(
     salt.utils.thin.has_immutables,
     "salt.utils.thin.immutables",
@@ -726,6 +801,7 @@ def test_get_tops_so_mods(thin_ctx):
     :return:
     """
     base_tops = [
+        "annotated_types",
         "distro",
         "salt",
         "jinja2",
@@ -742,10 +818,14 @@ def test_get_tops_so_mods(thin_ctx):
         "contextvars",
         "looseversion",
         "packaging",
+        "pydantic",
+        "pydantic_core",
         "idna",
         "requests",
         "urllib3",
         "charset_normalizer",
+        "typing_extensions",
+        "typing_inspection",
         "foo.so",
         "bar.so",
     ]
@@ -1185,32 +1265,37 @@ def test_get_tops_python(thin_ctx):
     """
     test get_tops_python
     """
+    communicate_rows = [
+        (bts("jinja2/__init__.py"), bts("")),
+        (bts("yaml/__init__.py"), bts("")),
+        (bts("tornado/__init__.py"), bts("")),
+        (bts("msgpack/__init__.py"), bts("")),
+        (bts("requests/__init__.py"), bts("")),
+        (bts("idna/__init__.py"), bts("")),
+        (bts("urllib3/__init__.py"), bts("")),
+        (bts("charset_normalizer/__init__.py"), bts("")),
+        (bts("certifi/__init__.py"), bts("")),
+        (bts("singledispatch.py"), bts("")),
+        (bts(""), bts("")),  # concurrent
+        (bts(""), bts("")),  # singledispatch_helpers
+        (bts(""), bts("")),  # ssl_match_hostname
+        (bts(""), bts("")),  # markupsafe
+        (bts(""), bts("")),  # backports_abc
+        (bts("looseversion.py"), bts("")),
+        (bts("packaging/__init__.py"), bts("")),
+        (bts("annotated_types/__init__.py"), bts("")),
+        (bts("pydantic/__init__.py"), bts("")),
+        (bts("pydantic_core/__init__.py"), bts("")),
+        (bts("typing_extensions/__init__.py"), bts("")),
+        (bts("typing_inspection/__init__.py"), bts("")),
+    ]
+    if sys.version_info < (3, 13):
+        communicate_rows.append((bts("backports/__init__.py"), bts("")))
+    communicate_rows.append((bts("distro.py"), bts("")))
+
     patch_proc = patch(
         "salt.utils.thin.subprocess.Popen",
-        _popen(
-            None,
-            side_effect=[
-                (bts("jinja2/__init__.py"), bts("")),
-                (bts("yaml/__init__.py"), bts("")),
-                (bts("tornado/__init__.py"), bts("")),
-                (bts("msgpack/__init__.py"), bts("")),
-                (bts("requests/__init__.py"), bts("")),
-                (bts("idna/__init__.py"), bts("")),
-                (bts("urllib3/__init__.py"), bts("")),
-                (bts("charset_normalizer/__init__.py"), bts("")),
-                (bts("certifi/__init__.py"), bts("")),
-                (bts("singledispatch.py"), bts("")),
-                (bts(""), bts("")),  # concurrent
-                (bts(""), bts("")),  # singledispatch_helpers
-                (bts(""), bts("")),  # ssl_match_hostname
-                (bts(""), bts("")),  # markupsafe
-                (bts(""), bts("")),  # backports_abc
-                (bts("looseversion.py"), bts("")),
-                (bts("packaging/__init__.py"), bts("")),
-                (bts("backports/__init__.py"), bts("")),  # backports
-                (bts("distro.py"), bts("")),
-            ],
-        ),
+        _popen(None, side_effect=communicate_rows),
     )
 
     patch_os = patch("os.path.exists", return_value=True)
@@ -1218,6 +1303,8 @@ def test_get_tops_python(thin_ctx):
     with patch_proc, patch_os, patch_which:
         with TstSuiteLoggingHandler() as log_handler:
             exp_ret = copy.deepcopy(thin_ctx.exp_ret)
+            if sys.version_info >= (3, 13):
+                exp_ret.pop("backports", None)
             ret = thin.get_tops_python("python3.7", ext_py_ver=[3, 7])
             if salt.utils.platform.is_windows():
                 for key, value in ret.items():
@@ -1235,35 +1322,42 @@ def test_get_tops_python_exclude(thin_ctx):
     """
     test get_tops_python when excluding modules
     """
+    communicate_rows = [
+        # jinja2 and yaml excluded
+        (bts("tornado/__init__.py"), bts("")),
+        (bts("msgpack/__init__.py"), bts("")),
+        (bts("requests/__init__.py"), bts("")),
+        (bts("idna/__init__.py"), bts("")),
+        (bts("urllib3/__init__.py"), bts("")),
+        (bts("charset_normalizer/__init__.py"), bts("")),
+        (bts("certifi/__init__.py"), bts("")),
+        (bts("singledispatch.py"), bts("")),
+        (bts(""), bts("")),  # concurrent
+        (bts(""), bts("")),  # singledispatch_helpers
+        (bts(""), bts("")),  # ssl_match_hostname
+        (bts(""), bts("")),  # markupsafe
+        (bts(""), bts("")),  # backports_abc
+        (bts("looseversion.py"), bts("")),
+        (bts("packaging/__init__.py"), bts("")),
+        (bts("annotated_types/__init__.py"), bts("")),
+        (bts("pydantic/__init__.py"), bts("")),
+        (bts("pydantic_core/__init__.py"), bts("")),
+        (bts("typing_extensions/__init__.py"), bts("")),
+        (bts("typing_inspection/__init__.py"), bts("")),
+    ]
+    if sys.version_info < (3, 13):
+        communicate_rows.append((bts("backports/__init__.py"), bts("")))
+    communicate_rows.append((bts("distro.py"), bts("")))
+
     patch_proc = patch(
         "salt.utils.thin.subprocess.Popen",
-        _popen(
-            None,
-            side_effect=[
-                # jinja2 and yaml excluded
-                (bts("tornado/__init__.py"), bts("")),
-                (bts("msgpack/__init__.py"), bts("")),
-                (bts("requests/__init__.py"), bts("")),
-                (bts("idna/__init__.py"), bts("")),
-                (bts("urllib3/__init__.py"), bts("")),
-                (bts("charset_normalizer/__init__.py"), bts("")),
-                (bts("certifi/__init__.py"), bts("")),
-                (bts("singledispatch.py"), bts("")),
-                (bts(""), bts("")),  # concurrent
-                (bts(""), bts("")),  # singledispatch_helpers
-                (bts(""), bts("")),  # ssl_match_hostname
-                (bts(""), bts("")),  # markupsafe
-                (bts(""), bts("")),  # backports_abc
-                (bts("looseversion.py"), bts("")),
-                (bts("packaging/__init__.py"), bts("")),
-                (bts("backports/__init__.py"), bts("")),  # backports
-                (bts("distro.py"), bts("")),
-            ],
-        ),
+        _popen(None, side_effect=communicate_rows),
     )
     exp_ret = copy.deepcopy(thin_ctx.exp_ret)
     for lib in thin_ctx.exc_libs:
         exp_ret.pop(lib)
+    if sys.version_info >= (3, 13):
+        exp_ret.pop("backports", None)
 
     patch_os = patch("os.path.exists", return_value=True)
     patch_which = patch("salt.utils.path.which", return_value=True)
@@ -1285,32 +1379,37 @@ def test_pack_alternatives_exclude(thin_ctx):
     manually set dependencies and auto
     detecting other modules.
     """
+    communicate_rows = [
+        # jinja2 excluded, using fake_libs paths for some modules
+        (bts(thin_ctx.fake_libs["yaml"]), bts("")),
+        (bts(thin_ctx.fake_libs["tornado"]), bts("")),
+        (bts(thin_ctx.fake_libs["msgpack"]), bts("")),
+        (bts("requests/__init__.py"), bts("")),
+        (bts("idna/__init__.py"), bts("")),
+        (bts("urllib3/__init__.py"), bts("")),
+        (bts("charset_normalizer/__init__.py"), bts("")),
+        (bts("certifi/__init__.py"), bts("")),
+        (bts("singledispatch.py"), bts("")),
+        (bts(""), bts("")),  # concurrent
+        (bts(""), bts("")),  # singledispatch_helpers
+        (bts(""), bts("")),  # ssl_match_hostname
+        (bts(""), bts("")),  # markupsafe
+        (bts(""), bts("")),  # backports_abc
+        (bts("looseversion.py"), bts("")),
+        (bts("packaging/__init__.py"), bts("")),
+        (bts("annotated_types/__init__.py"), bts("")),
+        (bts("pydantic/__init__.py"), bts("")),
+        (bts("pydantic_core/__init__.py"), bts("")),
+        (bts("typing_extensions/__init__.py"), bts("")),
+        (bts("typing_inspection/__init__.py"), bts("")),
+    ]
+    if sys.version_info < (3, 13):
+        communicate_rows.append((bts("backports/__init__.py"), bts("")))
+    communicate_rows.append((bts(thin_ctx.fake_libs["distro"]), bts("")))
+
     patch_proc = patch(
         "salt.utils.thin.subprocess.Popen",
-        _popen(
-            None,
-            side_effect=[
-                # jinja2 excluded, using fake_libs paths for some modules
-                (bts(thin_ctx.fake_libs["yaml"]), bts("")),
-                (bts(thin_ctx.fake_libs["tornado"]), bts("")),
-                (bts(thin_ctx.fake_libs["msgpack"]), bts("")),
-                (bts("requests/__init__.py"), bts("")),
-                (bts("idna/__init__.py"), bts("")),
-                (bts("urllib3/__init__.py"), bts("")),
-                (bts("charset_normalizer/__init__.py"), bts("")),
-                (bts("certifi/__init__.py"), bts("")),
-                (bts("singledispatch.py"), bts("")),
-                (bts(""), bts("")),  # concurrent
-                (bts(""), bts("")),  # singledispatch_helpers
-                (bts(""), bts("")),  # ssl_match_hostname
-                (bts(""), bts("")),  # markupsafe
-                (bts(""), bts("")),  # backports_abc
-                (bts("looseversion.py"), bts("")),
-                (bts("packaging/__init__.py"), bts("")),
-                (bts("backports/__init__.py"), bts("")),  # backports
-                (bts(thin_ctx.fake_libs["distro"]), bts("")),
-            ],
-        ),
+        _popen(None, side_effect=communicate_rows),
     )
 
     patch_os = patch("os.path.exists", return_value=True)

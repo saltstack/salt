@@ -534,7 +534,12 @@ def item(*args, default=None, delimiter=None, pillarenv=None, saltenv=None):
 
 def raw(key=None):
     """
-    Return the raw pillar data that is currently loaded into the minion.
+    Return the pillar data that is currently loaded into the minion.
+
+    String leaves are unwrapped to plain ``str`` / ``bytes`` (same as
+    :py:func:`items` / :py:func:`get`) so CLI and JSON consumers see usable
+    values. In-memory :ref:`pillar-in-memory` (``__pillar__``) may still use
+    :mod:`salt.utils.safepillar` wrappers for redaction.
 
     Contrast with :py:func:`items` which calls the master to fetch the most
     up-to-date Pillar.
@@ -555,7 +560,7 @@ def raw(key=None):
     else:
         ret = dict(__pillar__)
 
-    return ret
+    return salt.utils.safepillar.unwrap_pillar_tree(ret)
 
 
 def ext(external, pillar=None):

@@ -8,8 +8,51 @@ import logging
 
 import salt.utils.data
 import salt.utils.stringutils
+import salt.utils.safepillar
 
 log = logging.getLogger(__name__)
+
+
+def _json_default_for_pillar_types(obj):
+    """
+    Convert Pydantic / safepillar pillar wire types to JSON-serializable values.
+    """
+    if isinstance(
+        obj,
+        (
+            dict,
+            list,
+            tuple,
+            set,
+            salt.utils.safepillar.SafeDict,
+            salt.utils.safepillar.SafeList,
+        ),
+    ):
+        return salt.utils.safepillar.unwrap_pillar_tree(obj)
+    try:
+        from pydantic import SecretBytes, SecretStr
+    except ImportError:
+        pass
+    else:
+        if isinstance(obj, SecretStr):
+            return obj.get_secret_value()
+        if isinstance(obj, SecretBytes):
+            return obj.get_secret_value()
+    raise TypeError(
+        f"Object of type {type(obj).__name__!r} is not JSON serializable"
+    )
+
+
+def _make_json_default(user_default):
+    def _default(obj):
+        try:
+            return _json_default_for_pillar_types(obj)
+        except TypeError:
+            if user_default is not None:
+                return user_default(obj)
+            raise
+
+    return _default
 
 
 # One to one mappings
@@ -110,6 +153,8 @@ def dump(obj, fp, **kwargs):
     json_module = kwargs.pop("_json_module", json)
     if "ensure_ascii" not in kwargs:
         kwargs["ensure_ascii"] = False
+    user_default = kwargs.pop("default", None)
+    kwargs["default"] = _make_json_default(user_default)
     return json_module.dump(obj, fp, **kwargs)
 
 
@@ -131,4 +176,6 @@ def dumps(obj, **kwargs):
     json_module = kwargs.pop("_json_module", json)
     if "ensure_ascii" not in kwargs:
         kwargs["ensure_ascii"] = False
+    user_default = kwargs.pop("default", None)
+    kwargs["default"] = _make_json_default(user_default)
     return json_module.dumps(obj, **kwargs)

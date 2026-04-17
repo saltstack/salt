@@ -257,10 +257,11 @@ def _add_dependency(container, obj, namespace=None):
     :param namespace: Optional tuple of parent namespaces for namespace packages
     :return:
     """
-    if os.path.basename(obj.__file__).split(".")[0] == "__init__":
-        container.append((os.path.dirname(obj.__file__), namespace))
+    mod_file = os.path.abspath(obj.__file__.replace(".pyc", ".py"))
+    if os.path.basename(mod_file).split(".")[0] == "__init__":
+        container.append((os.path.dirname(mod_file), namespace))
     else:
-        container.append((obj.__file__.replace(".pyc", ".py"), None))
+        container.append((mod_file, None))
 
 
 def gte():
