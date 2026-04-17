@@ -733,7 +733,9 @@ namespace MinionConfigurationExtension {
             /*
              * Remove __pycache__ trees, stray *.pyc, and empty dirs left under [INSTALLDIR]
              * before InstallFiles (upgrade/fresh/repair). Sequenced after kill_python_exe.
-             * Does not run on REMOVE=ALL (uninstall uses DeleteConfig_DECAC).
+             * Does not run on REMOVE=ALL. Full uninstall and DeleteConfig2 (CLEAN_INSTALL)
+             * still clear bytecode via clear_python_bytecode_caches_under_dir at the start
+             * of DeleteConfig_DECAC (same helper; see Product.wxs / Product-README).
              */
             session.Log("...BEGIN clear_python_caches_IMCAC");
             try {
@@ -870,8 +872,9 @@ namespace MinionConfigurationExtension {
 
         [CustomAction]
         public static ActionResult DeleteConfig_DECAC(Session session) {
-            // This removes not only config, but ROOTDIR or subfolders of ROOTDIR, depending on properties CLEAN_INSTALL and REMOVE_CONFIG
-            // Called on install, upgrade and uninstall
+            // Deferred cleanup: WiX schedules this entry as DeleteConfig_DECAC (REMOVE~=ALL)
+            // and as DeleteConfig2_DECAC (CLEAN_INSTALL / upgrade path). Clears Python
+            // bytecode under INSTALLDIR first, then Scripts/bin and ROOTDIR per CLEAN_INSTALL / REMOVE_CONFIG.
             session.Log("...BEGIN DeleteConfig_DECAC");
 
             // Determine wether to delete everything and DIRS

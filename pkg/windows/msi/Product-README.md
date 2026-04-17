@@ -52,14 +52,18 @@ Order and conditions follow [Product.wxs](Product.wxs) `InstallExecuteSequence`
 6. **`DeleteConfig2_*`** — `CLEAN_INSTALL and ((NOT Installed) or
    WIX_UPGRADE_DETECTED)`: CADH before deferred `DeleteConfig2_DECAC`; deferred
    after `InstallInitialize`. Clears config/cache before laydown when user
-   requests clean install / upgrade clean.
+   requests clean install / upgrade clean. Uses the same C# **`DeleteConfig_DECAC`**
+   entry as item 10 (shared `DllEntry` in Product.wxs).
 7. **`MoveInsecureConfig_*`**, **`BackupConfig_DECAC`**, **`MoveConfig_DECAC`**
    — various `NOT Installed` paths before `CreateFolders` as in Product.wxs.
 8. **`WriteConfig_*`** — `NOT Installed`; CADH before `WriteConfig_DECAC`;
    deferred after `WriteIniValues`.
 9. **`StartServices`** — `START_MINION`; sequence 5900.
 10. **`DeleteConfig_*`** — `REMOVE ~= "ALL"`: CADH before `DeleteConfig_DECAC`;
-    deferred after `RemoveFolders`. Full uninstall cleanup.
+    deferred after `RemoveFolders`. Full uninstall cleanup. C# **`DeleteConfig_DECAC`**
+    (also used by **`DeleteConfig2_DECAC`**, item 6) calls **`clear_python_bytecode_caches_under_dir`**
+    on **`[INSTALLDIR]`** first, then removes **`Scripts`** / **`bin`** and config
+    trees per **`CLEAN_INSTALL`** / **`REMOVE_CONFIG`**.
 
 **`VC143` feature** — Hidden merge of **Microsoft VC++ 2022** CRT
 (`MSM_VC143_CRT` `.msm`); skipped when `VCREDIST_INSTALLED` registry probe says
@@ -245,12 +249,10 @@ logging while waiting. `NSIS_UNINSTALLSTRING` comes from WiX ARP
 not on `REMOVE="ALL"`): walks **`[INSTALLDIR]`** and removes every
 **`__pycache__`** directory (deepest-first), then stray **`*.pyc`**, then prunes
 empty directories (deepest-first), so runtime bytecode not tracked by the MSI
-does not survive upgrades. The same sweep runs at the start of deferred
-**`DeleteConfig_DECAC`** (uninstall and `DeleteConfig2` / `CLEAN_INSTALL` path).
-The NSIS installer runs an equivalent sweep (**`cmd`** for caches, then
-PowerShell to prune empty dirs) under the captured MSI install dir after
-**`UninstallMSI`** succeeds, so MSI→NSIS upgrades are not stuck with old caches
-from pre-fix MSIs.
+does not survive upgrades. The same **`clear_python_bytecode_caches_under_dir`**
+logic also runs at the **start** of deferred **`DeleteConfig_DECAC`** (full
+uninstall, `REMOVE ~= "ALL"`) and whenever **`DeleteConfig2_DECAC`** invokes that
+same C# method (`CLEAN_INSTALL` / upgrade path; see items 6 and 10 above).
 
 Notes on ReadConfig_IMCAC
 

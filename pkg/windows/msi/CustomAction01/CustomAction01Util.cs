@@ -43,6 +43,8 @@ namespace MinionConfigurationExtension {
         /// Remove runtime Python bytecode under a managed install root: all
         /// __pycache__ directories (deepest first), then stray .pyc files, then prune
         /// directories that became empty. Safe if the tree is missing or partial.
+        /// Used from MSI clear_python_caches_IMCAC and from DeleteConfig_DECAC (uninstall
+        /// and DeleteConfig2 / CLEAN_INSTALL).
         /// </summary>
         public static void clear_python_bytecode_caches_under_dir(Session session, string installRoot) {
             if (installRoot == null) installRoot = "";

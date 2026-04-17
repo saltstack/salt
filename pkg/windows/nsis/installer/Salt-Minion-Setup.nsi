@@ -127,7 +127,6 @@ Var cmdLineParams
 var logFileHandle
 Var msg
 Var msiEnumIdx
-Var msiInstDirBeforeMsiUninstall
 
 # Followed this: https://nsis.sourceforge.io/StrRep
 !define LogMsg '!insertmacro LogMsg'
@@ -728,6 +727,16 @@ Section "Install" Install01
         Call BackupExistingConfig
     ${EndIf}
 
+    # Python bytecode hygiene under $INSTDIR before payload copy (same steps as
+    # MSI clear_python_caches_IMCAC / CustomAction01Util). Runs whenever this path
+    # already exists (upgrade/reinstall/leftover tree); skipped on first install
+    # to a new folder because SetOutPath will create it next.
+    # IfFileExists: jump target 0 means "fall through" when the path exists; if it
+    # does not exist, skip clear_python_caches.
+    IfFileExists "$INSTDIR" 0 continue_install_laydown
+        Call clear_python_caches
+    continue_install_laydown:
+
     # Install files to the Installation Directory
     ${LogMsg} "Setting outpath to $INSTDIR"
     SetOutPath "$INSTDIR\"
@@ -799,7 +808,9 @@ Function .onInit
         SetAutoClose true
     ${EndIf}
 
-    # Uninstall msi-installed salt
+    # Uninstall MSI-installed Salt (same UpgradeCode as WiX Product). Only runs
+    # msiexec /x here; Python bytecode under $INSTDIR is cleared later in the
+    # Install section (clear_python_caches) before files are copied.
     # Source: https://nsis-dev.github.io/NSIS-Forums/html/t-303468.html
     !define upgradecode {FC6FB3A2-65DE-41A9-AD91-D10A402BD641}  # Salt upgrade code
     StrCpy $msiEnumIdx 0
@@ -1198,26 +1209,12 @@ Function un.onInit
 
     SetAutoClose true
 
-    # MSI invokes: $INSTDIR\uninst.exe /S (installed uninstaller, no copy; _?= not needed). Skip Yes/No. IfSilent alone can miss /S in some contexts.
-    ${GetParameters} $R9
-    ClearErrors
-    ${GetOptions} $R9 "/S" $R8
-    ${IfNot} ${Errors}
-        ${LogMsg} "Silent uninstall (/S on command line); skipping remove confirmation"
-        Goto continue_remove
-    ${EndIf}
-    IfSilent silent_skip interactive_confirm
-    silent_skip:
-        ${LogMsg} "Silent uninstall (IfSilent); skipping remove confirmation"
-        Goto continue_remove
-
-    interactive_confirm:
-        StrCpy $msg "Are you sure you want to completely remove $(^Name) and all \
-            of its components?"
-        ${LogMsg} $msg
-        MessageBox MB_USERICON|MB_YESNO|MB_DEFBUTTON1 $msg /SD IDYES IDYES continue_remove
-        ${LogMsg} "Aborting"
-        Abort
+    StrCpy $msg "Are you sure you want to completely remove $(^Name) and all \
+        of its components?"
+    ${LogMsg} $msg
+    MessageBox MB_USERICON|MB_YESNO|MB_DEFBUTTON1 $msg /SD IDYES IDYES continue_remove
+    ${LogMsg} "Aborting"
+    Abort
 
     continue_remove:
 
@@ -1289,10 +1286,6 @@ Function ${un}uninstallSalt
             ${LogMsg} "Stop returned error $0 (service may not have been running) — continuing"
         ${EndIf}
 
-        # Give SCM time to leave STOP_PENDING before delete (avoids RemoveService failing while stopped-but-not-gone).
-        ${LogMsg} "Waiting 2s after stop before removing service registration"
-        Sleep 2000
-
         # Remove the service registration.  SimpleSC::RemoveService does not
         # stop the service first (v1.30+), so StopService must precede this.
         ${LogMsg} "Removing salt-minion service"
@@ -1301,11 +1294,7 @@ Function ${un}uninstallSalt
         ${If} $0 == 0
             ${LogMsg} "Success"
         ${Else}
-            ${LogMsg} "Remove returned error $0 — trying sc delete fallback"
-            nsExec::ExecToStack 'cmd /c sc delete salt-minion'
-            Pop $0
-            Pop $1
-            ${LogMsg} "sc delete salt-minion: nsExec exit=$0 lastline=$1"
+            ${LogMsg} "Remove returned error $0 — continuing cleanup"
         ${EndIf}
 
         # Belt-and-suspenders: taskkill is a no-op if the processes are
@@ -1742,24 +1731,36 @@ Function Explode
 FunctionEnd
 
 
-# Remove __pycache__ dirs and stray *.pyc under $msiInstDirBeforeMsiUninstall
-# (post-MSI-uninstall hygiene).
-Function SweepPythonBytecodeCachesInDir
-    ${LogMsg} "SweepPythonBytecodeCachesInDir: root=$msiInstDirBeforeMsiUninstall"
-    ExecWait `cmd /c FOR /D /R "$msiInstDirBeforeMsiUninstall" %%G IN (__pycache__) DO @IF EXIST "%%G" RD /S /Q "%%G"` $0
+# Clear __pycache__, stray *.pyc, and empty dirs under $INSTDIR (global install dir).
+# Logic matches MSI CustomAction01Util.clear_python_bytecode_caches_under_dir /
+# clear_python_caches_IMCAC; not related to WiX property CLEAN_INSTALL.
+# Caller must ensure $INSTDIR is final (e.g. after getExistingInstallation / UI).
+Function clear_python_caches
+    ${LogMsg} "clear_python_caches: root=$INSTDIR"
+    # cmd /c is not a .bat file: FOR uses %G / %F (%% is only in .cmd/.bat). NSIS: use $%
+    # so the child receives a single percent (see NSIS reference for $%).
+    nsExec::Exec `cmd /c FOR /D /R "$INSTDIR" %G IN (__pycache__) DO @IF EXIST "%G" RD /S /Q "%G"`
+    Pop $0
     ${LogMsg} "cmd FOR __pycache__ exit=$0"
-    ExecWait `cmd /c FOR /R "$msiInstDirBeforeMsiUninstall" %%F IN (*.pyc) DO @IF EXIST "%%F" DEL /F /Q "%%F"` $0
+
+    # Remove any remaining .pyc files
+    nsExec::Exec `cmd /c FOR /R "$INSTDIR" %F IN (*.pyc) DO @IF EXIST "%F" DEL /F /Q "%F"`
+    Pop $0
     ${LogMsg} "cmd FOR *.pyc exit=$0"
+
     # Prune directories left empty after *.pyc removal (deepest first); mirrors MSI
     # CustomAction01Util.
-    ExecWait `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$$r = '$msiInstDirBeforeMsiUninstall'; if (Test-Path -LiteralPath $$r) { Get-ChildItem -LiteralPath $$r -Directory -Recurse -Force -ErrorAction SilentlyContinue | Sort-Object { $$_.FullName.Length } -Descending | ForEach-Object { if (-not (Get-ChildItem -LiteralPath $$_.FullName -Force -ErrorAction SilentlyContinue | Select-Object -First 1)) { Remove-Item -LiteralPath $$_.FullName -Force -ErrorAction SilentlyContinue } } }"` $0
+    nsExec::Exec `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$$r = '$INSTDIR'; if (Test-Path -LiteralPath $$r) { Get-ChildItem -LiteralPath $$r -Directory -Recurse -Force -ErrorAction SilentlyContinue | Sort-Object { $$_.FullName.Length } -Descending | ForEach-Object { if (-not (Get-ChildItem -LiteralPath $$_.FullName -Force -ErrorAction SilentlyContinue | Select-Object -First 1)) { Remove-Item -LiteralPath $$_.FullName -Force -ErrorAction SilentlyContinue } } }"`
+    Pop $0
     ${LogMsg} "powershell empty-dir prune exit=$0"
 FunctionEnd
 
 
 #------------------------------------------------------------------------------
 # UninstallMSI Function
-# - Uninstalls MSI by product code
+# - Uninstalls MSI by product code ($R0). Prompts unless silent (/SD IDOK).
+# - Cancel: no IDCANCEL label; execution falls through to Abort below.
+# - OK: jumps to msi_uninstall_exec (skips Abort).
 #
 # Usage:
 #   Push product code
@@ -1774,31 +1775,10 @@ Function UninstallMSI
     MessageBox MB_OKCANCEL|MB_ICONINFORMATION \
         "${PRODUCT_NAME} is already installed via MSI.$\n$\n\
         Click `OK` to remove the existing installation." \
-        /SD IDOK IDOK msi_uninstall_exec IDCANCEL msi_uninstall_cancel
-    msi_uninstall_cancel:
+        /SD IDOK IDOK msi_uninstall_exec
         Abort
 
     msi_uninstall_exec:
-        # Capture install_dir before msiexec removes registry (defaults if absent).
-        StrCpy $msiInstDirBeforeMsiUninstall ""
-        ${If} ${RunningX64}
-            SetRegView 64
-        ${EndIf}
-        ReadRegStr $msiInstDirBeforeMsiUninstall HKLM "SOFTWARE\Salt Project\Salt" "install_dir"
-        ${If} ${RunningX64}
-            SetRegView 32
-        ${EndIf}
-        StrCmp $msiInstDirBeforeMsiUninstall "" 0 msi_sweep_have_reg
-        ${If} ${RunningX64}
-            StrCpy $msiInstDirBeforeMsiUninstall "$ProgramFiles64\Salt Project\Salt"
-        ${Else}
-            StrCpy $msiInstDirBeforeMsiUninstall "$ProgramFiles\Salt Project\Salt"
-        ${EndIf}
-        msi_sweep_have_reg:
-        ExpandEnvStrings $msiInstDirBeforeMsiUninstall $msiInstDirBeforeMsiUninstall
-        ${NormalizeWow64ProgramFilesPath} msiInstDirBeforeMsiUninstall
-        ${LogMsg} "MSI install dir for post-uninstall bytecode sweep: $msiInstDirBeforeMsiUninstall"
-
         ${LogMsg} "Invoking msiexec uninstall for $R0"
         # 32-bit NSIS on 64-bit Windows must use Sysnative\msiexec.exe so the 64-bit
         # Windows Installer uninstalls 64-bit Salt MSIs; WOW64 msiexec can hang or misbehave.
@@ -1836,8 +1816,6 @@ Function UninstallMSI
             ${EndIf}
             Abort
         ${EndIf}
-
-        Call SweepPythonBytecodeCachesInDir
 
 FunctionEnd
 
