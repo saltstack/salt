@@ -1,6 +1,5 @@
 using Microsoft.Deployment.WindowsInstaller;
 using Microsoft.Tools.WindowsInstallerXml;
-using Microsoft.Win32;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -481,22 +480,9 @@ namespace MinionConfigurationExtension {
             return false;
         }
 
-        // Align del_NSIS_DECAC with Salt-Minion-Setup.nsi uninstallSalt (INSTDIR layout).
-        private static string del_NSIS_NormalizeInstDir(Session session, string path) {
-            if (string.IsNullOrEmpty(path)) return path;
-            string p = path.TrimEnd('\\', '/');
-            string leaf = Path.GetFileName(p);
-            if (string.Compare(leaf, "Scripts", StringComparison.OrdinalIgnoreCase) == 0) {
-                string parent = Path.GetDirectoryName(p);
-                session.Log("...normalized ...\\Scripts -> " + parent);
-                return parent;
-            }
-            return p;
-        }
-
-        // NSIS UninstallString / WiX NSIS_UNINSTALLSTRING: "C:\...\uninst.exe" or C:\...\uninst.exe /S
+        // CustomActionData / NSIS UninstallString: "C:\...\uninst.exe" or C:\...\uninst.exe /S
         // Do not split unquoted paths on the first space (breaks "C:\Program Files\...\uninst.exe").
-        private static string del_NSIS_ParentDirFromUninstallString(Session session, string raw) {
+        private static string remove_NSIS_ParseUninstExePath(Session session, string raw) {
             if (string.IsNullOrEmpty(raw)) return "";
             string s = raw.Trim();
             string exePath = "";
@@ -512,103 +498,84 @@ namespace MinionConfigurationExtension {
                     exePath = sp > 0 ? s.Substring(0, sp) : s;
                 }
             }
-            exePath = exePath.Trim();
-            if (exePath.Length == 0) return "";
-            try {
-                string dir = Path.GetDirectoryName(exePath);
-                if (!string.IsNullOrEmpty(dir))
-                    session.Log("...parsed uninstall exe path -> parent dir: " + dir);
-                return dir ?? "";
-            } catch (Exception ex) {
-                session.Log("...del_NSIS_ParentDirFromUninstallString: " + ex.Message);
-                return "";
-            }
+            exePath = (exePath ?? "").Trim();
+            if (exePath.Length > 0)
+                session.Log("...remove_NSIS_ParseUninstExePath -> " + exePath);
+            return exePath;
         }
 
-        // Deferred CAs only receive MSI properties via CustomActionData (Set_del_NSIS_DECAC in Product.wxs).
-        private static string del_NSIS_GetUninstallStringLine(Session session) {
+        // NSIS temp uninstall child: short name like Un_xxxxx.exe (not uninst.exe). Tie to this install via CommandLine/ExecutablePath.
+        private static bool remove_NSIS_IsNsisTempUninstallerProcess(string name, string commandLine, string executablePath, string instRoot) {
+            if (string.IsNullOrEmpty(name)) return false;
+            string fn = name.Trim();
+            if (fn.IndexOf("uninst.exe", StringComparison.OrdinalIgnoreCase) >= 0) return false;
+            if (!fn.StartsWith("Un", StringComparison.OrdinalIgnoreCase)) return false;
+            string cl = commandLine ?? "";
+            string ep = executablePath ?? "";
+            if (cl.IndexOf(instRoot, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            if (ep.IndexOf(instRoot, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            if (cl.IndexOf("Salt Project", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            if (cl.IndexOf("NSIS", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            return false;
+        }
+
+        private static int remove_NSIS_CountNsisTempUninstallerChildren(Session session, string instRoot) {
+            int n = 0;
             try {
-                string cad = session["CustomActionData"];
-                if (!string.IsNullOrEmpty(cad)) {
-                    session.Log("...NSIS uninstall path from CustomActionData");
-                    return cad;
+                string wmi = "SELECT ProcessId, Name, ExecutablePath, CommandLine FROM Win32_Process WHERE Name LIKE 'Un%' OR Name LIKE 'un%'";
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(wmi)) {
+                    foreach (ManagementObject o in searcher.Get()) {
+                        try {
+                            if (o["ProcessId"] == null) continue;
+                            int pid = int.Parse(o["ProcessId"].ToString());
+                            if (pid == Process.GetCurrentProcess().Id) continue;
+                            string nm = o["Name"] != null ? o["Name"].ToString() : "";
+                            string cl = o["CommandLine"] != null ? o["CommandLine"].ToString() : "";
+                            string ep = o["ExecutablePath"] != null ? o["ExecutablePath"].ToString() : "";
+                            if (!remove_NSIS_IsNsisTempUninstallerProcess(nm, cl, ep, instRoot)) continue;
+                            n++;
+                        } catch (Exception ex) {
+                            session.Log("...remove_NSIS_CountNsisTempUninstallerChildren row: " + ex.Message);
+                        }
+                    }
                 }
             } catch (Exception ex) {
-                session.Log("...CustomActionData read: " + ex.Message);
+                session.Log("...remove_NSIS_CountNsisTempUninstallerChildren: " + ex.Message);
             }
-            try {
-                return session["NSIS_UNINSTALLSTRING"] ?? "";
-            } catch (Exception ex) {
-                session.Log("...NSIS_UNINSTALLSTRING (immediate-only): " + ex.Message);
-                return "";
-            }
+            return n;
         }
 
-        private static string del_NSIS_ResolveInstDir(Session session, RegistryKey SOFTWAREreg) {
-            try {
-                string fromProp = del_NSIS_ParentDirFromUninstallString(session, del_NSIS_GetUninstallStringLine(session));
-                if (fromProp.Length > 0) {
-                    session.Log("...resolved INSTDIR from NSIS uninstall string (CustomActionData / property)");
-                    return del_NSIS_NormalizeInstDir(session, fromProp);
+        // After uninst.exe stub exits, wait until NSIS removes ssm.exe (Salt-Minion-Setup.nsi deletes it before uninst.exe).
+        // INSTDIR folder often remains; ssm.exe is a reliable completion marker. WMI Un* count is for logging only.
+        private static bool remove_NSIS_WaitForNsisUninstallComplete(Session session, string instRoot, int maxWaitSeconds) {
+            if (string.IsNullOrEmpty(instRoot)) return false;
+            string ssmPath = Path.Combine(instRoot, "ssm.exe");
+            int intervalMs = 2000;
+            int maxMs = maxWaitSeconds * 1000;
+            int elapsed = 0;
+            int lastLogChild = -1;
+            while (elapsed < maxMs) {
+                bool ssmGone = false;
+                try {
+                    ssmGone = !File.Exists(ssmPath);
+                } catch (Exception ex) {
+                    session.Log("...remove_NSIS_WaitForNsisUninstallComplete: " + ex.Message);
+                    return false;
                 }
-            } catch (Exception ex) {
-                session.Log("...NSIS uninstall string resolve: " + ex.Message);
-            }
-
-            string install_dir = "";
-            string bin_dir = "";
-            if (SOFTWAREreg != null) {
-                object oi = SOFTWAREreg.GetValue("install_dir");
-                if (oi != null) install_dir = oi.ToString().Trim();
-                object ob = SOFTWAREreg.GetValue("bin_dir");
-                if (ob != null) bin_dir = ob.ToString().Trim();
-            }
-            if (install_dir.Length > 0) {
-                string expanded = Environment.ExpandEnvironmentVariables(install_dir);
-                session.Log("...from REGISTRY install_dir (expanded) = " + expanded);
-                return del_NSIS_NormalizeInstDir(session, expanded);
-            }
-            if (bin_dir.Length > 0) {
-                string expandedBin = Environment.ExpandEnvironmentVariables(bin_dir);
-                session.Log("...from REGISTRY bin_dir (legacy) = " + expandedBin);
-                string trimmed = expandedBin.TrimEnd('\\', '/');
-                string leaf = Path.GetFileName(trimmed);
-                if (string.Compare(leaf, "bin", StringComparison.OrdinalIgnoreCase) == 0
-                    || string.Compare(leaf, "Scripts", StringComparison.OrdinalIgnoreCase) == 0)
-                    return del_NSIS_NormalizeInstDir(session, Path.GetDirectoryName(trimmed));
-                return del_NSIS_NormalizeInstDir(session, trimmed);
-            }
-            session.Log("...no install_dir/bin_dir in registry; default instDir C:\\salt");
-            return @"C:\salt";
-        }
-
-        private static void del_NSIS_DeleteFileGlob(Session session, string dir, string pattern) {
-            if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) return;
-            try {
-                foreach (FileInfo fi in new DirectoryInfo(dir).GetFiles(pattern)) {
-                    session.Log("...deleting file: " + fi.FullName);
-                    fi.Delete();
+                int nChild = remove_NSIS_CountNsisTempUninstallerChildren(session, instRoot);
+                if (ssmGone) {
+                    session.Log("...remove_NSIS_WaitForNsisUninstallComplete: ssm.exe gone after " + (elapsed / 1000) + "s (nsisUnChildCount=" + nChild + ")");
+                    return true;
                 }
-            } catch (Exception ex) {
-                session.Log("...del_NSIS_DeleteFileGlob " + pattern + ": " + ex.Message);
+                if (elapsed == 0 || elapsed % 30000 == 0 || nChild != lastLogChild) {
+                    session.Log("...remove_NSIS_WaitForNsisUninstallComplete: elapsed=" + (elapsed / 1000) + "s ssmGone=" + ssmGone + " nsisUnChildCount=" + nChild);
+                    lastLogChild = nChild;
+                }
+                System.Threading.Thread.Sleep(intervalMs);
+                elapsed += intervalMs;
             }
-        }
-
-        // Same order as NSIS uninstallSalt: DLLs, Include, Lib, libs, Scripts, bin, configs
-        private static readonly string[] del_NSIS_RelenvInstSubdirs = new string[] {
-            "DLLs", "Include", "Lib", "libs", "Scripts", "bin", "configs"
-        };
-
-        private static void del_NSIS_RemoveInstPayload(Session session, string instDir) {
-            if (string.IsNullOrEmpty(instDir)) return;
-            session.Log("...del_NSIS_RemoveInstPayload instDir = " + instDir);
-            del_NSIS_DeleteFileGlob(session, instDir, "multi-minion*");
-            del_NSIS_DeleteFileGlob(session, instDir, "salt*");
-            cutil.del_file(session, Path.Combine(instDir, "ssm.exe"));
-            cutil.del_file(session, Path.Combine(instDir, "vcredist.exe"));
-            foreach (string sub in del_NSIS_RelenvInstSubdirs) {
-                cutil.del_dir(session, instDir, sub);
-            }
+            session.Log("...remove_NSIS_WaitForNsisUninstallComplete: timeout after " + maxWaitSeconds + "s");
+            return false;
         }
 
         [CustomAction]
@@ -694,54 +661,70 @@ namespace MinionConfigurationExtension {
         }
 
         [CustomAction]
-        public static ActionResult del_NSIS_DECAC(Session session) {
-            // Leaves the Config
+        public static ActionResult remove_NSIS_IMCAC(Session session) {
             /*
-             * If NSIS is installed:
-             *   remove salt-minion service,
-             *   remove registry,
-             *   remove INSTDIR payload to match Salt-Minion-Setup.nsi uninstallSalt
-             *   (install_dir from registry; Scripts + legacy bin; relenv dirs).
-             *   Leaves config under root_dir (same as NSIS).
+             * NSIS->MSI: remove_NSIS_IMCAC — immediate C# CA (Execute=immediate; _IMCAC, not deferred _DECAC/CADH).
+             * Run NSIS silent uninstall before InstallValidate (sequenced in Product.wxs).
+             * WiX sets NSIS_UNINSTALLSTRING from ARP UninstallString (Win64=yes finds native 64-bit key).
+             * Immediate CA can read that property; deferred CAs would run at InstallFinalize (too late).
              *
-             *   The msi cannot use uninst.exe because the service would no longer start.
-            */
-            session.Log("...BEGIN del_NSIS_DECAC");
-            RegistryKey HKLM = Registry.LocalMachine;
+             * Launch the real uninst.exe with /S only (no temp copy; NSIS infers INSTDIR from the exe path). The stub often exits while a temp
+             * child (Un*.exe) continues; poll until ssm.exe under INSTDIR is gone (NSIS deletes it; folder may remain). WMI counts matching Un*
+             * processes for logging and stall visibility (bounded wait, 600s).
+             * NSIS uninstallSalt removes the salt-minion service; the MSI install then registers the service again.
+             */
+            session.Log("...BEGIN remove_NSIS_IMCAC");
+            try {
+                string rawLine = "";
+                try {
+                    rawLine = session["CustomActionData"];
+                } catch (Exception) { }
+                if (string.IsNullOrEmpty(rawLine)) {
+                    try {
+                        rawLine = session["NSIS_UNINSTALLSTRING"] ?? "";
+                    } catch (Exception ex) {
+                        session.Log("...remove_NSIS_IMCAC: NSIS_UNINSTALLSTRING: " + ex.Message);
+                    }
+                }
+                string sourceUninst = remove_NSIS_ParseUninstExePath(session, rawLine);
+                if (sourceUninst.Length == 0 || !File.Exists(sourceUninst)) {
+                    session.Log("...remove_NSIS_IMCAC: missing or absent NSIS uninstaller: " + sourceUninst);
+                    return ActionResult.Failure;
+                }
+                string instRoot = Path.GetDirectoryName(sourceUninst);
+                if (string.IsNullOrEmpty(instRoot)) {
+                    session.Log("...remove_NSIS_IMCAC: could not derive INSTDIR from " + sourceUninst);
+                    return ActionResult.Failure;
+                }
+                instRoot = instRoot.TrimEnd('\\', '/');
+                session.Log("...remove_NSIS_IMCAC: NSIS INSTDIR = " + instRoot);
 
-            string ARPstring = @"Microsoft\Windows\CurrentVersion\Uninstall\Salt Minion";
-            RegistryKey ARPreg = cutil.get_registry_SOFTWARE_key(session, ARPstring);
-            string uninstexe = "";
-            if (ARPreg != null) uninstexe = ARPreg.GetValue("UninstallString").ToString();
-            session.Log("from REGISTRY uninstexe = " + uninstexe);
-
-            string SOFTWAREstring = @"Salt Project\Salt";
-            RegistryKey SOFTWAREreg = cutil.get_registry_SOFTWARE_key(session, SOFTWAREstring);
-            string instDir = del_NSIS_ResolveInstDir(session, SOFTWAREreg);
-            session.Log("...resolved NSIS install root (INSTDIR) = " + instDir);
-
-            session.Log("Going to stop service salt-minion ...");
-            cutil.shellout(session, "sc stop salt-minion");
-
-            session.Log("Going to delete service salt-minion ...");
-            cutil.shellout(session, "sc delete salt-minion");
-
-            session.Log("Going to kill ...");
-            kill_python_exe(session);
-
-            session.Log("Going to delete ARP registry entry ...");
-            cutil.del_registry_SOFTWARE_key(session, ARPstring);
-
-            session.Log("Going to delete SOFTWARE registry entry ...");
-            cutil.del_registry_SOFTWARE_key(session, SOFTWAREstring);
-
-            session.Log("Going to delete uninst.exe ...");
-            cutil.del_file(session, uninstexe);
-
-            // Mirror NSIS uninstallSalt under INSTDIR (relenv: Scripts; legacy: bin).
-            del_NSIS_RemoveInstPayload(session, instDir);
-
-            session.Log("...END del_NSIS_DECAC");
+                ProcessStartInfo psi = new ProcessStartInfo();
+                psi.FileName = sourceUninst;
+                psi.Arguments = "/S";
+                psi.UseShellExecute = false;
+                psi.WindowStyle = ProcessWindowStyle.Hidden;
+                session.Log("...remove_NSIS_IMCAC: Process.Start FileName=" + sourceUninst + " Arguments=/S");
+                using (Process p = Process.Start(psi)) {
+                    if (p == null) {
+                        session.Log("...remove_NSIS_IMCAC: Process.Start returned null");
+                        return ActionResult.Failure;
+                    }
+                    p.WaitForExit();
+                    int code = p.ExitCode;
+                    session.Log("...remove_NSIS_IMCAC: uninst.exe stub exit code = " + code);
+                    if (code != 0)
+                        return ActionResult.Failure;
+                }
+                if (!remove_NSIS_WaitForNsisUninstallComplete(session, instRoot, 600)) {
+                    session.Log("...remove_NSIS_IMCAC: uninstall did not complete within timeout (ssm.exe still present)");
+                    return ActionResult.Failure;
+                }
+            } catch (Exception ex) {
+                session.Log("...remove_NSIS_IMCAC: " + ex.Message);
+                return ActionResult.Failure;
+            }
+            session.Log("...END remove_NSIS_IMCAC");
             return ActionResult.Success;
         }
 

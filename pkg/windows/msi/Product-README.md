@@ -58,6 +58,7 @@ Logic value and checkboxes:
 
 msi properties, use in custom actions:
 -  DECAC = "Deferred cusmtom action in C#"
+-  IMCAC = "Immediate custom action in C#" — reads MSI properties via `session["..."]` (not `CustomActionData`). In this project the `_DECAC` suffix is for deferred CAs that use a CADH; immediate DLL exports use `_IMCAC` even when WiX `Execute` is `immediate` or `firstSequence`.
 -  CADH  = "Custom action data helper"
 -  The CADH helper must mention each msi property or the DECAC function will crash:
 -  A DECAC that tries to use a msi property not listed in its CADH crashes.
@@ -130,7 +131,9 @@ http://www.installsite.org/pages/en/isnews/200108/
 
 You get error LGHT0204 when  After or Before are wrong. Example:
 
-    del_NSIS_DECAC is a in-script custom action.  It must be sequenced between InstallInitialize and InstallFinalize in the InstallExecuteSequence
+    remove_NSIS_IMCAC is an immediate C# in-script custom action. In Product.wxs it is sequenced `Before="InstallValidate"` in `InstallExecuteSequence` with `Execute="immediate"`.
+
+When an NSIS-based Salt Minion is present, `remove_NSIS_IMCAC` runs the installed **`uninst.exe`** with **`/S`** only (no temp copy; NSIS infers install dir from the uninstaller path). After the stub exits, it polls until **`ssm.exe`** under that install dir is gone (NSIS removes it; the directory may remain; up to 600s). WMI reports matching **NSIS `Un*.exe`** children for logging while waiting. `NSIS_UNINSTALLSTRING` comes from WiX ARP `UninstallString`.
 
 Notes on ReadConfig_IMCAC
 

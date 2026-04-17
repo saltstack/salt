@@ -1171,16 +1171,33 @@ FunctionEnd
 
 Function un.onInit
 
+    # First log line opens $TEMP\SaltInstaller\<ts>-uninstall.log (SYSTEM temp when run from MSI).
+    ${LogMsg} "===== uninstaller un.onInit begin ====="
+
     Call un.parseUninstallerCommandLineSwitches
 
     SetAutoClose true
 
-    StrCpy $msg "Are you sure you want to completely remove $(^Name) and all \
-        of its components?"
-    ${LogMsg} $msg
-    MessageBox MB_USERICON|MB_YESNO|MB_DEFBUTTON1 $msg /SD IDYES IDYES continue_remove
-    ${LogMsg} "Aborting"
-    Abort
+    # MSI invokes: $INSTDIR\uninst.exe /S (installed uninstaller, no copy; _?= not needed). Skip Yes/No. IfSilent alone can miss /S in some contexts.
+    ${GetParameters} $R9
+    ClearErrors
+    ${GetOptions} $R9 "/S" $R8
+    ${IfNot} ${Errors}
+        ${LogMsg} "Silent uninstall (/S on command line); skipping remove confirmation"
+        Goto continue_remove
+    ${EndIf}
+    IfSilent silent_skip interactive_confirm
+    silent_skip:
+        ${LogMsg} "Silent uninstall (IfSilent); skipping remove confirmation"
+        Goto continue_remove
+
+    interactive_confirm:
+        StrCpy $msg "Are you sure you want to completely remove $(^Name) and all \
+            of its components?"
+        ${LogMsg} $msg
+        MessageBox MB_USERICON|MB_YESNO|MB_DEFBUTTON1 $msg /SD IDYES IDYES continue_remove
+        ${LogMsg} "Aborting"
+        Abort
 
     continue_remove:
 
@@ -1252,6 +1269,10 @@ Function ${un}uninstallSalt
             ${LogMsg} "Stop returned error $0 (service may not have been running) — continuing"
         ${EndIf}
 
+        # Give SCM time to leave STOP_PENDING before delete (avoids RemoveService failing while stopped-but-not-gone).
+        ${LogMsg} "Waiting 2s after stop before removing service registration"
+        Sleep 2000
+
         # Remove the service registration.  SimpleSC::RemoveService does not
         # stop the service first (v1.30+), so StopService must precede this.
         ${LogMsg} "Removing salt-minion service"
@@ -1260,7 +1281,11 @@ Function ${un}uninstallSalt
         ${If} $0 == 0
             ${LogMsg} "Success"
         ${Else}
-            ${LogMsg} "Remove returned error $0 — continuing cleanup"
+            ${LogMsg} "Remove returned error $0 — trying sc delete fallback"
+            nsExec::ExecToStack 'cmd /c sc delete salt-minion'
+            Pop $0
+            Pop $1
+            ${LogMsg} "sc delete salt-minion: nsExec exit=$0 lastline=$1"
         ${EndIf}
 
         # Belt-and-suspenders: taskkill is a no-op if the processes are
