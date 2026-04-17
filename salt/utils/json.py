@@ -7,8 +7,8 @@ import json
 import logging
 
 import salt.utils.data
-import salt.utils.stringutils
 import salt.utils.safepillar
+import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 
@@ -38,9 +38,7 @@ def _json_default_for_pillar_types(obj):
             return obj.get_secret_value()
         if isinstance(obj, SecretBytes):
             return obj.get_secret_value()
-    raise TypeError(
-        f"Object of type {type(obj).__name__!r} is not JSON serializable"
-    )
+    raise TypeError(f"Object of type {type(obj).__name__!r} is not JSON serializable")
 
 
 def _make_json_default(user_default):
