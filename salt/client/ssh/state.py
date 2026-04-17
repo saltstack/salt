@@ -18,6 +18,7 @@ import salt.state
 import salt.utils.files
 import salt.utils.json
 import salt.utils.path
+import salt.utils.safepillar
 import salt.utils.stringutils
 import salt.utils.thin
 import salt.utils.url
@@ -216,6 +217,11 @@ def prep_trans_tar(
         [salt.utils.url.create("_output")],
         [salt.utils.url.create("_utils")],
     ]
+    chunks = salt.utils.safepillar.unwrap_pillar_tree(chunks)
+    if pillar is not None:
+        pillar = salt.utils.safepillar.unwrap_pillar_tree(pillar)
+    if roster_grains is not None:
+        roster_grains = salt.utils.safepillar.unwrap_pillar_tree(roster_grains)
     with salt.utils.files.fopen(lowfn, "w+") as fp_:
         salt.utils.json.dump(chunks, fp_)
     if pillar:

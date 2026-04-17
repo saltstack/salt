@@ -48,6 +48,7 @@ import salt.utils.jid
 import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.safepillar
 import salt.utils.url
 import salt.utils.verify
 
@@ -636,6 +637,7 @@ class Compiler:
         "Compile" the high data as it is retrieved from the CLI or YAML into
         the individual state executor structures
         """
+        high = salt.utils.safepillar.unwrap_pillar_tree(high)
         self.dependency_dag = DependencyGraph()
         chunks = []
         for name, body in high.items():
@@ -1588,6 +1590,7 @@ class State:
 
         return a tuple of the LowChunk structures and a list of errors
         """
+        high = salt.utils.safepillar.unwrap_pillar_tree(high)
         self.dependency_dag = DependencyGraph()
         chunks = []
         disabled = {}

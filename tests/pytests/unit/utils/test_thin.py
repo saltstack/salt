@@ -510,6 +510,7 @@ def test_get_ext_namespaces_failure(thin_ctx):
     "salt.utils.thin.immutables",
     type("immutables", (), {"__file__": "/site-packages/immutables"}),
 )
+@patch("salt.utils.thin.importlib.util.find_spec", return_value=None)
 @patch("salt.utils.thin.log", MagicMock())
 def test_get_tops(thin_ctx):
     """
@@ -647,6 +648,7 @@ def test_get_tops(thin_ctx):
     "salt.utils.thin.immutables",
     type("immutables", (), {"__file__": "/site-packages/immutables"}),
 )
+@patch("salt.utils.thin.importlib.util.find_spec", return_value=None)
 @patch("salt.utils.thin.log", MagicMock())
 def test_get_tops_extra_mods(thin_ctx):
     """
@@ -794,6 +796,7 @@ def test_get_tops_extra_mods(thin_ctx):
     "salt.utils.thin.immutables",
     type("immutables", (), {"__file__": "/site-packages/immutables"}),
 )
+@patch("salt.utils.thin.importlib.util.find_spec", return_value=None)
 @patch("salt.utils.thin.log", MagicMock())
 def test_get_tops_so_mods(thin_ctx):
     """
@@ -1614,3 +1617,24 @@ def test_thin_dir(thin_ctx):
                 check=False,
             )
         assert ret.returncode == 0, ret
+
+
+def test_append_pydantic_core_native_top_adds_split_extension_directory():
+    """
+    Some wheels place ``_pydantic_core*.so`` outside the ``pydantic_core`` package dir.
+    """
+    tops = [(os.path.normpath("/fake/pydantic_core"), None)]
+    fake_spec = types.SimpleNamespace(
+        origin=os.path.normpath(
+            "/opt/extra-libs/_pydantic_core.cpython-311-x86_64-linux-gnu.so"
+        )
+    )
+    fake_pkg = types.SimpleNamespace(
+        __file__=os.path.normpath("/fake/pydantic_core/__init__.py")
+    )
+    with patch("salt.utils.thin.pydantic_core", fake_pkg):
+        with patch("salt.utils.thin.importlib.util.find_spec", return_value=fake_spec):
+            with patch("salt.utils.thin.os.path.isdir", return_value=True):
+                thin._append_pydantic_core_native_top(tops)
+    assert tops[0][0] == os.path.normpath("/fake/pydantic_core")
+    assert tops[1] == (os.path.normpath("/opt/extra-libs"), None)

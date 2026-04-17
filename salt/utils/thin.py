@@ -264,6 +264,33 @@ def _add_dependency(container, obj, namespace=None):
         container.append((mod_file, None))
 
 
+def _append_pydantic_core_native_top(tops):
+    """
+    If ``pydantic_core._pydantic_core`` lives outside the package tree, pack that
+    directory too so salt-ssh thin includes the C extension (see pydantic
+    wheel layouts).
+    """
+    try:
+        pkg_root = os.path.abspath(os.path.dirname(pydantic_core.__file__))
+        spec = importlib.util.find_spec("pydantic_core._pydantic_core")
+        origin = getattr(spec, "origin", None) if spec else None
+        if not origin or origin == "built-in":
+            return
+        native_path = os.path.abspath(origin)
+        if native_path.endswith((".py", ".pyc")):
+            return
+        native_dir = os.path.dirname(native_path)
+        if native_dir == pkg_root or not os.path.isdir(native_dir):
+            return
+        existing = {os.path.normpath(p[0]) for p in tops if p and p[0]}
+        nd = os.path.normpath(native_dir)
+        if nd not in existing:
+            log.debug("Adding pydantic_core native extension dir to thin tops: %s", nd)
+            tops.append((native_dir, None))
+    except Exception:  # pylint: disable=broad-except
+        log.debug("Could not append pydantic_core native top", exc_info=True)
+
+
 def gte():
     """
     This function is called externally from the alternative
@@ -514,6 +541,8 @@ def get_tops(extra_mods="", so_mods=""):
             tops.append((__import__(mod).__file__, None))
         except ImportError:
             log.error('Unable to import so-module "%s"', mod, exc_info=True)
+
+    _append_pydantic_core_native_top(tops)
 
     return tops
 

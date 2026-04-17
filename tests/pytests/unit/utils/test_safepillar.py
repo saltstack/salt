@@ -9,6 +9,7 @@ from pydantic import (  # pylint: disable=3rd-party-module-not-gated
 )
 
 import salt.utils.safepillar as sp
+import salt.utils.versions
 
 
 def test_safe_dict_wraps_string_and_nested_dict():
@@ -124,3 +125,18 @@ def test_safe_dict_bytes():
 def test_wrap_pillar_tree_yamlish(container):
     w = sp.wrap_pillar_tree(container)
     assert isinstance(w, sp.SafeDict)
+
+
+@pytest.mark.skipif(
+    not salt.utils.versions.reqs.msgpack,
+    reason="msgpack not installed",
+)
+def test_msgpack_serialize_unwraps_safepillar_types():
+    from salt.serializers import msgpack as msgpack_ser
+
+    wrapped = sp.wrap_pillar_tree({"k": "secret"})
+    packed = msgpack_ser.serialize(wrapped)
+    assert msgpack_ser.deserialize(packed) == {"k": "secret"}
+
+    packed2 = msgpack_ser.serialize({"x": SecretStr("y")})
+    assert msgpack_ser.deserialize(packed2) == {"x": "y"}

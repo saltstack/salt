@@ -5,6 +5,7 @@ This is the default pillar matcher function.
 import logging
 
 import salt.utils.data
+import salt.utils.safepillar
 from salt.defaults import DEFAULT_TARGET_DELIM
 
 log = logging.getLogger(__name__)
@@ -32,4 +33,5 @@ def match(tgt, delimiter=DEFAULT_TARGET_DELIM, opts=None, minion_id=None):
     else:
         pillar = {}
 
+    pillar = salt.utils.safepillar.unwrap_pillar_tree(pillar)
     return salt.utils.data.subdict_match(pillar, tgt, delimiter=delimiter)
