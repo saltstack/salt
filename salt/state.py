@@ -3051,12 +3051,38 @@ class State:
                 )
         elif status == "change" and not low.get("__prereq__"):
             ret = self.call(low, chunks, running)
-            if not ret["changes"] and not ret.get("skip_watch", False):
+            if not ret.get("skip_watch", False):
                 low = low.copy()
                 low["sfun"] = low["fun"]
                 low["fun"] = "mod_watch"
                 low["__reqs__"] = reqs
-                ret = self.call(low, chunks, running)
+                if not ret["changes"]:
+                    # Normal run reported no changes: replace its result
+                    # with the mod_watch result (preserves existing behavior
+                    # and keeps the single-result output).
+                    ret = self.call(low, chunks, running)
+                else:
+                    # Normal run reported changes of its own. Historically
+                    # mod_watch was skipped in this case, which silently
+                    # dropped the watched-state trigger whenever the normal
+                    # run happened to produce any unrelated changes (e.g.
+                    # docker_container.running performing a network
+                    # reconnection while a watched config file had changed).
+                    # Invoke mod_watch anyway and merge its result into the
+                    # normal run's result so neither set of changes is lost.
+                    mod_ret = self.call(low, chunks, running)
+                    for change_key, change_val in mod_ret.get("changes", {}).items():
+                        ret["changes"][change_key] = change_val
+                    mod_comment = mod_ret.get("comment", "")
+                    if mod_comment:
+                        existing_comment = ret.get("comment", "")
+                        if existing_comment:
+                            ret["comment"] = existing_comment + "\n" + mod_comment
+                        else:
+                            ret["comment"] = mod_comment
+                    ret["result"] = bool(ret.get("result")) and bool(
+                        mod_ret.get("result", True)
+                    )
             running[tag] = ret
         elif status == "pre":
             self._assign_not_run_result_dict(
