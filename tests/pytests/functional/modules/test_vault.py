@@ -3,6 +3,7 @@ import logging
 import time
 
 import pytest
+from saltfactories.utils import random_string
 
 import salt.utils.path
 from tests.support.runtests import RUNTIME_VARS
@@ -53,7 +54,7 @@ def vault_container_version(request, salt_factories, vault_port, shell):
     }
 
     factory = salt_factories.get_container(
-        "vault",
+        random_string("vault-"),
         f"ghcr.io/saltstack/salt-ci-containers/vault:{vault_version}",
         check_ports=[vault_port],
         container_run_kwargs={
