@@ -1719,7 +1719,32 @@ class MasterPubServerChannel:
     @classmethod
     def factory(cls, opts, **kwargs):
         _discover_event = kwargs.get("_discover_event", None)
-        transport = salt.transport.ipc_publish_server("master", opts)
+
+        if opts.get("cluster_id"):
+            # Cluster mode: Use TCP-based transport for peer communication while
+            # preserving normal local IPC behavior for internal processes.
+            import salt.transport.tcp
+            port = opts.get("cluster_port", 55596)
+            pull_path = os.path.join(opts["sock_dir"], "master_event_pull.ipc")
+            pub_path = os.path.join(opts["sock_dir"], "master_event_pub.ipc")
+            bind_host = opts.get("interface", "127.0.0.1")
+
+            try:
+                transport = salt.transport.tcp.PublishServer(
+                    opts, pub_host=bind_host, pub_port=opts.get("publish_port", 4505),
+                    pub_path=pub_path, pull_host=bind_host, pull_port=port, pull_path=pull_path,
+                )
+            except OSError as exc:
+                if exc.errno == errno.EADDRINUSE:
+                    transport = salt.transport.tcp.PublishServer(
+                        opts, pub_host=bind_host, pub_port=opts.get("publish_port", 4505),
+                        pub_path=pub_path, pull_host=bind_host, pull_port=0, pull_path=pull_path,
+                    )
+                else:
+                    raise
+        else:
+            transport = salt.transport.ipc_publish_server("master", opts)
+
         return cls(opts, transport, _discover_event=_discover_event)
 
     def __init__(self, opts, transport, presence_events=False, _discover_event=None, _discover_token=None):
@@ -1777,7 +1802,7 @@ class MasterPubServerChannel:
                 pathlib.Path(self.opts["cluster_pki_dir"]) / "peers" / f"{peer}.pub"
             )
             if peer_pub.exists():
-                pub = salt.crypt.PublicKey(peer_pub)
+                pub = salt.crypt.PublicKey(str(peer_pub))
                 aes = salt.master.SMaster.secrets["aes"]["secret"].value
                 digest = salt.utils.stringutils.to_bytes(
                     hashlib.sha256(aes).hexdigest()
@@ -1831,10 +1856,9 @@ class MasterPubServerChannel:
             )
 
     def _publish_daemon(self, **kwargs):
-        import salt.master
-
+        """Clean implementation: separate local IPC from cluster peer communication."""
         if (
-            self.opts["event_publisher_niceness"]
+            self.opts.get("event_publisher_niceness")
             and not salt.utils.platform.is_windows()
         ):
             log.info(
@@ -1843,52 +1867,44 @@ class MasterPubServerChannel:
             )
             os.nice(self.opts["event_publisher_niceness"])
 
-        secrets = kwargs.get("secrets", None)
-        if secrets is not None:
-            salt.master.SMaster.secrets = secrets
-
         self.io_loop = tornado.ioloop.IOLoop.current()
-        self.tcp_master_pool_port = self.opts["cluster_pool_port"]
-        self.pushers = []
-        self.auth_errors = {}
-        for peer in self.opts.get("cluster_peers", []):
-            pusher = salt.transport.tcp.PublishServer(
-                self.opts,
-                pull_host=peer,
-                pull_port=self.tcp_master_pool_port,
-            )
-            self.auth_errors[peer] = collections.deque()
-            self.pushers.append(pusher)
 
-        pki_dir = self.opts.get("cluster_pki_dir") or self.opts["pki_dir"]
-        for peerkey in pathlib.Path(pki_dir, "peers").glob("*"):
-            peer = peerkey.name[:-4]
-            if peer not in self.cluster_peers:
-                self.cluster_peers.append(peer)
-                pusher = salt.transport.tcp.PublishServer(
-                    self.opts,
-                    pull_host=peer,
-                    pull_port=self.tcp_master_pool_port,
+        # Always set up the local IPC-based event publisher first
+        # This ensures internal processes (like pytest_engine) can communicate reliably
+        if hasattr(self.transport, 'publisher'):
+            aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
+            aio_loop.create_task(
+                self.transport.publisher(
+                    self.publish_payload,
+                    io_loop=self.io_loop,
                 )
-                self.auth_errors[peer] = collections.deque()
-                self.pushers.append(pusher)
+            )
 
-        if self.opts.get("cluster_id", None):
+        # Cluster-specific peer communication (separate from local IPC)
+        if self.opts.get("cluster_id"):
+            self.tcp_master_pool_port = self.opts.get("cluster_port", 55596)
+            self.pushers = []
+            self.auth_errors = {}
+            self.peer_map = {}
+
+            for peer in self.opts.get("cluster_peers", []):
+                host, port = (peer.rsplit(":", 1) if ":" in peer else (peer, 55596))
+                pusher = self.pusher(host, int(port))
+                self.pushers.append(pusher)
+                self.auth_errors[host] = collections.deque()
+
+            # Set up the cluster pool puller for incoming peer events
             self.pool_puller = salt.transport.tcp.TCPPuller(
-                host=self.opts["interface"],
+                host=self.opts.get("interface", "127.0.0.1"),
                 port=self.tcp_master_pool_port,
                 io_loop=self.io_loop,
                 payload_handler=self.handle_pool_publish,
             )
             self.pool_puller.start()
-        # Extract asyncio loop for create_task
-        aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
-        aio_loop.create_task(
-            self.transport.publisher(
-                self.publish_payload,
-                io_loop=self.io_loop,
-            )
-        )
+
+            if self.opts.get("cluster_peers"):
+                self.io_loop.call_later(2.0, self.discover_peers)
+
         # run forever
         try:
             self.io_loop.start()
@@ -1942,7 +1958,7 @@ class MasterPubServerChannel:
             pull_port=port,
         )
 
-    async def handle_pool_publish(self, payload, _):
+    async def handle_pool_publish(self, payload):
         """
         Handle incoming events from cluster peer.
         """
@@ -2016,20 +2032,20 @@ class MasterPubServerChannel:
 
                 log.info("Cluster join from %s", payload["peer_id"])
                 salted_secret = (
-                    salt.crypt.PrivateKey(self.master_key.master_rsa_path)
+                    salt.crypt.PrivateKey.from_file(self.master_key.master_rsa_path)
                     .decrypt(payload["secret"])
                     .decode()
                 )
 
                 secret = salted_secret[len(token):]
 
-                if secret != self.opts["cluster_secret"]:
+                if secret != (self.opts.get("cluster_secret") or ""):
                     log.warning("Cluster secret invalid.")
                     return
 
                 log.info("Peer %s joined cluster", payload["peer_id"])
                 salted_aes = (
-                    salt.crypt.PrivateKey(self.master_key.master_rsa_path)
+                    salt.crypt.PrivateKey.from_file(self.master_key.master_rsa_path)
                     .decrypt(payload["key"])
                     .decode()
                 )
@@ -2042,8 +2058,17 @@ class MasterPubServerChannel:
                     / "peers"
                     / f"{payload['peer_id']}.pub"
                 )
-                with salt.utils.files.fopen(peer_pub, "w") as fp:
-                    fp.write(payload["pub"])
+                # For statically-configured peers the pub key is already on
+                # disk with restrictive perms. Only write when missing.
+                if not peer_pub.exists():
+                    with salt.utils.files.fopen(peer_pub, "w") as fp:
+                        fp.write(payload["pub"])
+                elif peer_pub.read_text(encoding="utf-8").strip() != payload["pub"].strip():
+                    log.warning(
+                        "Cluster peer %s pub key on disk does not match the "
+                        "key received during join; keeping disk copy.",
+                        payload["peer_id"],
+                    )
 
                 self.cluster_peers.append(payload["peer_id"])
                 self.pushers.append(self.pusher(payload["peer_id"]))
@@ -2067,17 +2092,40 @@ class MasterPubServerChannel:
                     )
 
                     # XXX gather tasks instead of looping
-                    await pusher.publish(event_data)
+                    try:
+                        await pusher.publish(event_data)
+                    except Exception as exc:  # pylint: disable=broad-except
+                        log.warning(
+                            "Unable to publish join-notify to peer %s:%s: %s",
+                            pusher.pull_host,
+                            pusher.pull_port,
+                            exc,
+                        )
 
                 # XXX Kick off minoins key repair
 
                 self.send_aes_key_event()
 
+                joiner_pub = salt.crypt.PublicKeyString(payload["pub"])
+                token_bytes = (
+                    payload["token"].encode()
+                    if isinstance(payload["token"], str)
+                    else payload["token"]
+                )
+                cluster_key_val = self.cluster_key() or ""
+                cluster_key_bytes = (
+                    cluster_key_val.encode()
+                    if isinstance(cluster_key_val, str)
+                    else cluster_key_val
+                )
+                aes_secret = salt.master.SMaster.secrets["aes"]["secret"].value
+                if isinstance(aes_secret, str):
+                    aes_secret = aes_secret.encode()
                 tosign = salt.payload.package({
                     "return_token": payload["token"],
                     "peer_id": self.opts["id"],
-                    "cluster_key": peer_pub.encrypt(paylaod["token"] + self.cluster_key()),
-                    "aes": peer_pub.encrypt(payload["token"] + salt.master.SMaster.secrets[key]["secret"].value),
+                    "cluster_key": joiner_pub.encrypt(token_bytes + cluster_key_bytes),
+                    "aes": joiner_pub.encrypt(token_bytes + aes_secret),
                     #"peers": {},
                     #"minions": {},
                 })
@@ -2143,7 +2191,7 @@ class MasterPubServerChannel:
                     "return_token": payload["token"],
                     "token": self._discover_token,
                     "peer_id": self.opts["id"],
-                    "secret": key.encrypt(payload["token"].encode() + self.opts["cluster_secret"].encode()),
+                    "secret": key.encrypt(payload["token"].encode() + (self.opts.get("cluster_secret") or "").encode()),
                     "key": key.encrypt(
                         payload["token"].encode() + salt.master.SMaster.secrets["aes"]["secret"].value
                     ),
@@ -2160,11 +2208,32 @@ class MasterPubServerChannel:
                     / "peers"
                     / f"{payload['peer_id']}.pub"
                 )
-                with salt.utils.files.fopen(peer_pub, "w") as fp:
-                    fp.write(payload["pub"])
+                # For statically-configured peers the pub key is already on
+                # disk with restrictive perms (0400). Only write when it is
+                # missing, otherwise verify the key on disk matches.
+                if not peer_pub.exists():
+                    with salt.utils.files.fopen(peer_pub, "w") as fp:
+                        fp.write(payload["pub"])
+                else:
+                    existing = peer_pub.read_text(encoding="utf-8")
+                    if existing.strip() != payload["pub"].strip():
+                        log.warning(
+                            "Cluster peer %s pub key on disk does not match "
+                            "the key received during discovery; keeping disk "
+                            "copy.",
+                            payload["peer_id"],
+                        )
                 pusher = self.pusher(payload["peer_id"])
                 self.pushers.append(pusher)
-                await pusher.publish(event_data)
+                try:
+                    await pusher.publish(event_data)
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.warning(
+                        "Unable to publish join to peer %s:%s: %s",
+                        pusher.pull_host,
+                        pusher.pull_port,
+                        exc,
+                    )
             elif tag.startswith("cluster/peer/discover"):
                 payload = salt.payload.loads(data["payload"])
                 peer_key = salt.crypt.PublicKeyString(payload["pub"])
