@@ -13,7 +13,6 @@ import logging
 import os
 import pathlib
 import random
-import shutil
 import string
 import time
 import zlib

@@ -8,6 +8,7 @@ import asyncio
 import base64
 import binascii
 import copy
+import getpass
 import hashlib
 import hmac
 import logging
@@ -436,19 +437,25 @@ class PublicKey(BaseKey):
 
 
 class PrivateKeyString(PrivateKey):
+    # pylint: disable=super-init-not-called
     def __init__(self, data, password=None):
         self.key = serialization.load_pem_private_key(
             data.encode(),
             password=password,
         )
 
+    # pylint: enable=super-init-not-called
+
 
 class PublicKeyString(PublicKey):
+    # pylint: disable=super-init-not-called
     def __init__(self, data):
         try:
             self.key = serialization.load_pem_public_key(data.encode())
         except ValueError:
             raise InvalidKeyError("Invalid key")
+
+    # pylint: enable=super-init-not-called
 
 
 @salt.utils.decorators.memoize
