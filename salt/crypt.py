@@ -405,12 +405,28 @@ class PrivateKeyString(PrivateKey):
 
 class PublicKey(BaseKey):
 
-    def __init__(self, path):
-        with salt.utils.files.fopen(path, "rb") as fp:
-            try:
-                self.key = serialization.load_pem_public_key(fp.read())
-            except ValueError as exc:
-                raise InvalidKeyError("Invalid key")
+    def __init__(self, key_bytes):
+        # Backwards-compatible: historically this accepted a filesystem path.
+        # Now accept PEM bytes/str directly (what BaseKey.from_file/from_str
+        # pass in) while still supporting a path for legacy callers.
+        if isinstance(key_bytes, (bytes, bytearray)):
+            pem_bytes = bytes(key_bytes)
+        elif isinstance(key_bytes, str):
+            s = key_bytes
+            # Heuristic: PEM data contains a BEGIN marker; anything else is a
+            # path on disk.
+            if "-----BEGIN" in s:
+                pem_bytes = s.encode()
+            else:
+                with salt.utils.files.fopen(s, "rb") as fp:
+                    pem_bytes = fp.read()
+        else:
+            with salt.utils.files.fopen(key_bytes, "rb") as fp:
+                pem_bytes = fp.read()
+        try:
+            self.key = serialization.load_pem_public_key(pem_bytes)
+        except ValueError:
+            raise InvalidKeyError("Invalid key")
 
     def encrypt(self, data, algorithm=OAEP_SHA1):
         _padding = self.parse_padding_for_encryption(algorithm)
@@ -565,6 +581,17 @@ class MasterKeys(dict):
 
         if autocreate:
             self._setup_keys()
+
+    @property
+    def master_pub_path(self):
+        # Canonical on-disk location of this master's public key. The symlink
+        # is created by _setup_keys when the localfs_key driver is in use.
+        return os.path.join(self.opts["pki_dir"], "master.pub")
+
+    @property
+    def master_rsa_path(self):
+        # Canonical on-disk location of this master's private key.
+        return os.path.join(self.opts["pki_dir"], "master.pem")
 
     # We need __setstate__ and __getstate__ to avoid pickling errors since
     # some of the member variables correspond to Cython objects which are

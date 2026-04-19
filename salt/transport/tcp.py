@@ -1872,9 +1872,9 @@ class _TCPPubServerPublisher:
 
             if self.stream is None:
                 # with salt.utils.asynchronous.current_ioloop(self.io_loop):
-                self.stream = tornado.iostream.IOStream(
-                    socket.socket(sock_type, socket.SOCK_STREAM)
-                )
+                sock = socket.socket(sock_type, socket.SOCK_STREAM)
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                self.stream = tornado.iostream.IOStream(sock)
             try:
                 await self.stream.connect(sock_addr)
                 self._connecting_future.set_result(True)
