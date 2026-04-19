@@ -393,41 +393,6 @@ class PublicKey(BaseKey):
         except cryptography.exceptions.UnsupportedAlgorithm:
             raise InvalidKeyError("Unsupported key algorithm")
 
-
-class PrivateKeyString(PrivateKey):
-
-    def __init__(self, data, password=None):
-        self.key = serialization.load_pem_private_key(
-            data.encode(),
-            password=password,
-        )
-
-
-class PublicKey(BaseKey):
-
-    def __init__(self, key_bytes):
-        # Backwards-compatible: historically this accepted a filesystem path.
-        # Now accept PEM bytes/str directly (what BaseKey.from_file/from_str
-        # pass in) while still supporting a path for legacy callers.
-        if isinstance(key_bytes, (bytes, bytearray)):
-            pem_bytes = bytes(key_bytes)
-        elif isinstance(key_bytes, str):
-            s = key_bytes
-            # Heuristic: PEM data contains a BEGIN marker; anything else is a
-            # path on disk.
-            if "-----BEGIN" in s:
-                pem_bytes = s.encode()
-            else:
-                with salt.utils.files.fopen(s, "rb") as fp:
-                    pem_bytes = fp.read()
-        else:
-            with salt.utils.files.fopen(key_bytes, "rb") as fp:
-                pem_bytes = fp.read()
-        try:
-            self.key = serialization.load_pem_public_key(pem_bytes)
-        except ValueError:
-            raise InvalidKeyError("Invalid key")
-
     def encrypt(self, data, algorithm=OAEP_SHA1):
         _padding = self.parse_padding_for_encryption(algorithm)
         _hash = self.parse_hash(algorithm)
@@ -470,11 +435,19 @@ class PublicKey(BaseKey):
         return verifier.verify(data)
 
 
+class PrivateKeyString(PrivateKey):
+    def __init__(self, data, password=None):
+        self.key = serialization.load_pem_private_key(
+            data.encode(),
+            password=password,
+        )
+
+
 class PublicKeyString(PublicKey):
     def __init__(self, data):
         try:
             self.key = serialization.load_pem_public_key(data.encode())
-        except ValueError as exc:
+        except ValueError:
             raise InvalidKeyError("Invalid key")
 
 

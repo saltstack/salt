@@ -7,6 +7,7 @@ This includes server side transport, for the ReqServer and the Publisher
 import asyncio
 import binascii
 import collections
+import errno
 import hashlib
 import logging
 import os
@@ -1724,6 +1725,7 @@ class MasterPubServerChannel:
             # Cluster mode: Use TCP-based transport for peer communication while
             # preserving normal local IPC behavior for internal processes.
             import salt.transport.tcp
+
             port = opts.get("cluster_port", 55596)
             pull_path = os.path.join(opts["sock_dir"], "master_event_pull.ipc")
             pub_path = os.path.join(opts["sock_dir"], "master_event_pub.ipc")
@@ -1731,14 +1733,24 @@ class MasterPubServerChannel:
 
             try:
                 transport = salt.transport.tcp.PublishServer(
-                    opts, pub_host=bind_host, pub_port=opts.get("publish_port", 4505),
-                    pub_path=pub_path, pull_host=bind_host, pull_port=port, pull_path=pull_path,
+                    opts,
+                    pub_host=bind_host,
+                    pub_port=opts.get("publish_port", 4505),
+                    pub_path=pub_path,
+                    pull_host=bind_host,
+                    pull_port=port,
+                    pull_path=pull_path,
                 )
             except OSError as exc:
                 if exc.errno == errno.EADDRINUSE:
                     transport = salt.transport.tcp.PublishServer(
-                        opts, pub_host=bind_host, pub_port=opts.get("publish_port", 4505),
-                        pub_path=pub_path, pull_host=bind_host, pull_port=0, pull_path=pull_path,
+                        opts,
+                        pub_host=bind_host,
+                        pub_port=opts.get("publish_port", 4505),
+                        pub_path=pub_path,
+                        pull_host=bind_host,
+                        pull_port=0,
+                        pull_path=pull_path,
                     )
                 else:
                     raise
@@ -1747,7 +1759,14 @@ class MasterPubServerChannel:
 
         return cls(opts, transport, _discover_event=_discover_event)
 
-    def __init__(self, opts, transport, presence_events=False, _discover_event=None, _discover_token=None):
+    def __init__(
+        self,
+        opts,
+        transport,
+        presence_events=False,
+        _discover_event=None,
+        _discover_token=None,
+    ):
         self.opts = opts
         self.transport = transport
         self.io_loop = tornado.ioloop.IOLoop.current()
@@ -1759,7 +1778,7 @@ class MasterPubServerChannel:
         self._discover_candidates = {}
 
     def gen_token(self):
-        return ''.join(random.choices(string.ascii_letters + string.digits, k=32))
+        return "".join(random.choices(string.ascii_letters + string.digits, k=32))
 
     def discover_peers(self):
         path = self.master_key.master_pub_path
@@ -1770,11 +1789,13 @@ class MasterPubServerChannel:
 
         for peer in self.cluster_peers:
             log.error("Discover cluster from %s", peer)
-            tosign = salt.payload.package({
-                "peer_id": self.opts["id"],
-                "pub": pub,
-                "token": self._discover_token,
-            })
+            tosign = salt.payload.package(
+                {
+                    "peer_id": self.opts["id"],
+                    "pub": pub,
+                    "token": self._discover_token,
+                }
+            )
             key = salt.crypt.PrivateKeyString(self.private_key())
             sig = key.sign(tosign)
             data = {
@@ -1802,7 +1823,7 @@ class MasterPubServerChannel:
                 pathlib.Path(self.opts["cluster_pki_dir"]) / "peers" / f"{peer}.pub"
             )
             if peer_pub.exists():
-                pub = salt.crypt.PublicKey(str(peer_pub))
+                pub = salt.crypt.PublicKey.from_file(peer_pub)
                 aes = salt.master.SMaster.secrets["aes"]["secret"].value
                 digest = salt.utils.stringutils.to_bytes(
                     hashlib.sha256(aes).hexdigest()
@@ -1871,7 +1892,7 @@ class MasterPubServerChannel:
 
         # Always set up the local IPC-based event publisher first
         # This ensures internal processes (like pytest_engine) can communicate reliably
-        if hasattr(self.transport, 'publisher'):
+        if hasattr(self.transport, "publisher"):
             aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
             aio_loop.create_task(
                 self.transport.publisher(
@@ -1888,7 +1909,7 @@ class MasterPubServerChannel:
             self.peer_map = {}
 
             for peer in self.opts.get("cluster_peers", []):
-                host, port = (peer.rsplit(":", 1) if ":" in peer else (peer, 55596))
+                host, port = peer.rsplit(":", 1) if ":" in peer else (peer, 55596)
                 pusher = self.pusher(host, int(port))
                 self.pushers.append(pusher)
                 self.auth_errors[host] = collections.deque()
@@ -2037,7 +2058,7 @@ class MasterPubServerChannel:
                     .decode()
                 )
 
-                secret = salted_secret[len(token):]
+                secret = salted_secret[len(token) :]
 
                 if secret != (self.opts.get("cluster_secret") or ""):
                     log.warning("Cluster secret invalid.")
@@ -2050,7 +2071,7 @@ class MasterPubServerChannel:
                     .decode()
                 )
 
-                aes_key = salted_aes[len(token):]
+                aes_key = salted_aes[len(token) :]
 
                 # XXX needs safe join
                 peer_pub = (
@@ -2063,7 +2084,10 @@ class MasterPubServerChannel:
                 if not peer_pub.exists():
                     with salt.utils.files.fopen(peer_pub, "w") as fp:
                         fp.write(payload["pub"])
-                elif peer_pub.read_text(encoding="utf-8").strip() != payload["pub"].strip():
+                elif (
+                    peer_pub.read_text(encoding="utf-8").strip()
+                    != payload["pub"].strip()
+                ):
                     log.warning(
                         "Cluster peer %s pub key on disk does not match the "
                         "key received during join; keeping disk copy.",
@@ -2083,12 +2107,14 @@ class MasterPubServerChannel:
                     )
                     event_data = salt.utils.event.SaltEvent.pack(
                         salt.utils.event.tagify("join-notify", "peer", "cluster"),
-                        crypticle.dumps({
-                            "peer_id": self.opts["id"],
-                            "join_peer_id": payload["peer_id"],
-                            "pub": payload["pub"],
-                            "aes": aes_key,
-                        }),
+                        crypticle.dumps(
+                            {
+                                "peer_id": self.opts["id"],
+                                "join_peer_id": payload["peer_id"],
+                                "pub": payload["pub"],
+                                "aes": aes_key,
+                            }
+                        ),
                     )
 
                     # XXX gather tasks instead of looping
@@ -2121,14 +2147,18 @@ class MasterPubServerChannel:
                 aes_secret = salt.master.SMaster.secrets["aes"]["secret"].value
                 if isinstance(aes_secret, str):
                     aes_secret = aes_secret.encode()
-                tosign = salt.payload.package({
-                    "return_token": payload["token"],
-                    "peer_id": self.opts["id"],
-                    "cluster_key": joiner_pub.encrypt(token_bytes + cluster_key_bytes),
-                    "aes": joiner_pub.encrypt(token_bytes + aes_secret),
-                    #"peers": {},
-                    #"minions": {},
-                })
+                tosign = salt.payload.package(
+                    {
+                        "return_token": payload["token"],
+                        "peer_id": self.opts["id"],
+                        "cluster_key": joiner_pub.encrypt(
+                            token_bytes + cluster_key_bytes
+                        ),
+                        "aes": joiner_pub.encrypt(token_bytes + aes_secret),
+                        # "peers": {},
+                        # "minions": {},
+                    }
+                )
                 sig = salt.crypt.PrivateKeyString(self.private_key()).sign(tosign)
                 # for key in (
                 #     pathlib.Path(self.opts["cluster_pki_dir"]) / "peers"
@@ -2157,7 +2187,7 @@ class MasterPubServerChannel:
                     {
                         "sig": sig,
                         "payload": tosign,
-                    }
+                    },
                 )
                 await self.pusher(payload["peer_id"]).publish(event_data)
             elif tag.startswith("cluster/peer/discover-reply"):
@@ -2178,7 +2208,7 @@ class MasterPubServerChannel:
                     return
 
                 # XXX First token created in different process
-                #if payload.get("return_token", None) != self._discover_token:
+                # if payload.get("return_token", None) != self._discover_token:
                 #    log.warning("Invalid token in discover reply %s != %s",
                 #        payload.get("return_token", None), self._discover_token
                 #    )
@@ -2187,16 +2217,22 @@ class MasterPubServerChannel:
                 log.info("Cluster discover reply from %s", payload["peer_id"])
                 key = salt.crypt.PublicKeyString(payload["pub"])
                 self._discover_token = self.gen_token()
-                tosign = salt.payload.package({
-                    "return_token": payload["token"],
-                    "token": self._discover_token,
-                    "peer_id": self.opts["id"],
-                    "secret": key.encrypt(payload["token"].encode() + (self.opts.get("cluster_secret") or "").encode()),
-                    "key": key.encrypt(
-                        payload["token"].encode() + salt.master.SMaster.secrets["aes"]["secret"].value
-                    ),
-                    "pub": self.public_key(),
-                })
+                tosign = salt.payload.package(
+                    {
+                        "return_token": payload["token"],
+                        "token": self._discover_token,
+                        "peer_id": self.opts["id"],
+                        "secret": key.encrypt(
+                            payload["token"].encode()
+                            + (self.opts.get("cluster_secret") or "").encode()
+                        ),
+                        "key": key.encrypt(
+                            payload["token"].encode()
+                            + salt.master.SMaster.secrets["aes"]["secret"].value
+                        ),
+                        "pub": self.public_key(),
+                    }
+                )
                 sig = salt.crypt.PrivateKeyString(self.private_key()).sign(tosign)
                 self.cluster_peers.append(payload["peer_id"])
                 event_data = salt.utils.event.SaltEvent.pack(
@@ -2245,19 +2281,23 @@ class MasterPubServerChannel:
                 # Store this peer as a candidate.
                 # XXX Add timestamp so we can clean up old candidates
                 self._discover_candidates[payload["peer_id"]] = (payload["pub"], token)
-                tosign = salt.payload.package({
-                    "return_token": payload["token"],
-                    "token": token,
-                    "peer_id": self.opts["id"],
-                    "pub": self.public_key(),
-                    "cluster_pub": self.cluster_public_key(),
-                })
+                tosign = salt.payload.package(
+                    {
+                        "return_token": payload["token"],
+                        "token": token,
+                        "peer_id": self.opts["id"],
+                        "pub": self.public_key(),
+                        "cluster_pub": self.cluster_public_key(),
+                    }
+                )
                 key = salt.crypt.PrivateKeyString(self.cluster_key())
                 sig = key.sign(tosign)
-                _ = salt.payload.package({
+                _ = salt.payload.package(
+                    {
                         "sig": sig,
                         "payload": tosign,
-                })
+                    }
+                )
                 event_data = salt.utils.event.SaltEvent.pack(
                     salt.utils.event.tagify("discover-reply", "peer", "cluster"),
                     {"sig": sig, "payload": tosign},
