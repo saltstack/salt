@@ -253,6 +253,11 @@ class PublishClient(salt.transport.base.PublishClient):
         self.backoff = opts.get("tcp_reconnect_backoff", 1)
         self.resolver = kwargs.get("resolver")
         self._read_in_progress = asyncio.Lock()
+        # Persistent read task. Kept across recv() calls so a timed-out
+        # recv does not have to cancel an in-flight tornado.IOStream
+        # read_bytes -- cancelling leaves IOStream._read_future set and
+        # subsequent reads fail with "Already reading".
+        self._read_task = None
         self.poller = None
 
         self.host = kwargs.get("host", None)
@@ -280,6 +285,9 @@ class PublishClient(salt.transport.base.PublishClient):
         if self.on_recv_task:
             self.on_recv_task.cancel()
             self.on_recv_task = None
+        if self._read_task is not None and not self._read_task.done():
+            self._read_task.cancel()
+        self._read_task = None
         if self._stream is not None:
             self._stream.close()
         self._stream = None
@@ -397,68 +405,135 @@ class PublishClient(salt.transport.base.PublishClient):
     async def send(self, msg):
         await self._stream.write(msg)
 
-    async def recv(self, timeout=None):
-        while self._stream is None:
-            await self.connect()
-            await asyncio.sleep(0.001)
-        if timeout == 0:
-            for msg in self.unpacker:
-                return msg[b"body"]
+    async def _read_into_unpacker(self):
+        """
+        Read one chunk of bytes from the stream and feed the unpacker.
 
+        Returns True on success, False if the stream was closed.
+
+        IMPORTANT: callers MUST NOT cancel this coroutine externally.
+        Tornado's IOStream does not reset ``_read_future`` when
+        ``read_bytes`` is cancelled from the outside; the next
+        ``read_bytes`` call then raises ``AssertionError: Already
+        reading``. ``recv()`` uses ``asyncio.wait`` (which never cancels)
+        to implement timeouts on top of this helper.
+        """
+        try:
+            byts = await self._stream.read_bytes(4096, partial=True)
+        except tornado.iostream.StreamClosedError:
+            log.trace("Stream closed, reconnecting.")
+            stream = self._stream
+            self._stream = None
+            stream.close()
+            if self.disconnect_callback:
+                await self.disconnect_callback()
+            return False
+        self.unpacker.feed(byts)
+        return True
+
+    def _ensure_read_task(self):
+        """
+        Return the in-flight read task, starting a new one if needed.
+        """
+        if self._read_task is None or self._read_task.done():
+            if self._stream is None:
+                self._read_task = None
+            else:
+                self._read_task = asyncio.ensure_future(self._read_into_unpacker())
+        return self._read_task
+
+    async def recv(self, timeout=None):
+        # Fast path: any message already buffered from a previous read.
+        for msg in self.unpacker:
+            return msg[b"body"]
+
+        if timeout == 0:
+            # Non-blocking mode: peek at the socket and, if readable,
+            # do at most one read; never wait.
+            if self._stream is None:
+                return None
             with selectors.DefaultSelector() as sel:
                 sel.register(self._stream.socket, selectors.EVENT_READ)
                 ready = sel.select(timeout=0)
                 events = [key.fileobj for key, _ in ready]
                 sel.unregister(self._stream.socket)
-
-            if events:
-                while not self._closing:
-                    async with self._read_in_progress:
-                        try:
-                            byts = await self._stream.read_bytes(4096, partial=True)
-                        except tornado.iostream.StreamClosedError:
-                            log.trace("Stream closed, reconnecting.")
-                            stream = self._stream
-                            self._stream = None
-                            stream.close()
-                            if self.disconnect_callback:
-                                self.disconnect_callback()
-                            await self.connect()
-                            return
-                        self.unpacker.feed(byts)
-                        for msg in self.unpacker:
-                            return msg[b"body"]
-        elif timeout:
+            if not events:
+                return None
+            task = self._ensure_read_task()
+            if task is None:
+                return None
+            # Wait briefly; if nothing comes back, return None rather than
+            # cancelling the read (cancellation corrupts IOStream state).
+            done, _ = await asyncio.wait({task}, timeout=0.1)
+            if not done:
+                return None
             try:
-                return await asyncio.wait_for(self.recv(), timeout=timeout)
-            except (
-                TimeoutError,
-                asyncio.exceptions.TimeoutError,
-                asyncio.exceptions.CancelledError,
-            ):
-                self.close()
-                await self.connect()
-                return
-        else:
+                got = task.result()
+            except asyncio.CancelledError:
+                return None
+            finally:
+                if self._read_task is task:
+                    self._read_task = None
+            if not got:
+                return None
             for msg in self.unpacker:
                 return msg[b"body"]
-            while not self._closing:
-                async with self._read_in_progress:
-                    try:
-                        byts = await self._stream.read_bytes(4096, partial=True)
-                    except tornado.iostream.StreamClosedError:
-                        log.trace("Stream closed, reconnecting.")
-                        stream = self._stream
-                        self._stream = None
-                        stream.close()
-                        if self.disconnect_callback:
-                            await self.disconnect_callback()
-                        await self.connect()
-                        log.debug("Re-connected - continue")
-                        continue
-                    self.unpacker.feed(byts)
-                    for msg in self.unpacker:
-                        return msg[b"body"]
+            return None
+
+        deadline = None
+        if timeout is not None:
+            deadline = time.monotonic() + timeout
+
+        while not self._closing:
+            while self._stream is None and not self._closing:
+                await self.connect()
+                if self._stream is None:
+                    if deadline is not None and time.monotonic() >= deadline:
+                        return None
+                    await asyncio.sleep(0.001)
+
+            # Drain anything a concurrent call may have buffered.
+            for msg in self.unpacker:
+                return msg[b"body"]
+
+            task = self._ensure_read_task()
+            if task is None:
+                continue
+
+            if deadline is None:
+                # No timeout: wait for the read to complete (shield so an
+                # external cancel of recv does not cancel the read task
+                # and corrupt the IOStream).
+                await asyncio.shield(task)
+            else:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return None
+                # asyncio.wait does NOT cancel the task on timeout.
+                done, _ = await asyncio.wait({task}, timeout=remaining)
+                if not done:
+                    return None
+
+            try:
+                got = task.result()
+            except asyncio.CancelledError:
+                return None
+            finally:
+                if self._read_task is task:
+                    self._read_task = None
+
+            if not got:
+                # Stream was closed. Reconnect and try again within the
+                # deadline; if we are out of time, give up.
+                if deadline is not None and time.monotonic() >= deadline:
+                    return None
+                await self.connect()
+                continue
+
+            for msg in self.unpacker:
+                return msg[b"body"]
+            # Partial frame received: loop to read more, respecting the
+            # deadline.
 
     async def on_recv_handler(self, callback):
         while not self._stream:
