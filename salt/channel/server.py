@@ -25,6 +25,7 @@ import salt.master
 import salt.payload
 import salt.transport
 import salt.transport.frame
+import salt.transport.tcp
 import salt.utils.channel
 import salt.utils.event
 import salt.utils.minions
@@ -1723,8 +1724,6 @@ class MasterPubServerChannel:
         if opts.get("cluster_id"):
             # Cluster mode: Use TCP-based transport for peer communication while
             # preserving normal local IPC behavior for internal processes.
-            import salt.transport.tcp
-
             port = opts.get("cluster_port", 55596)
             pull_path = os.path.join(opts["sock_dir"], "master_event_pull.ipc")
             pub_path = os.path.join(opts["sock_dir"], "master_event_pub.ipc")

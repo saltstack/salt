@@ -540,17 +540,10 @@ class MasterKeys(dict):
                     "peers",
                     f"{self.opts['id']}.pub",
                 )
-            if not self.opts["cluster_peers"]:
-                if self.opts["cluster_pki_dir"] != self.opts["pki_dir"]:
-                    self.check_master_shared_pub()
-                key_pass = salt.utils.sdb.sdb_get(
-                    self.opts["cluster_key_pass"], self.opts
-                )
-                self.cluster_key = self.__get_keys(
-                    name="cluster",
-                    passphrase=key_pass,
-                    pki_dir=self.opts["cluster_pki_dir"],
-                )
+            # Note: cluster_key setup is handled in _setup_keys() after
+            # master keys are initialized. Calling it here would fail because
+            # the master key has not been generated yet when autocreate=True,
+            # and because self.__get_keys does not exist.
         self.pub_signature = None
 
         # set names for the signing key-pairs
@@ -763,13 +756,13 @@ class MasterKeys(dict):
             master_pub = self.cache.fetch("master_keys", "master.pub")
 
         if shared_pub:
-            if shared_pub != master_pub:
+            if master_pub and shared_pub != master_pub:
                 message = (
                     f"Shared key does not match, remove it to continue: {shared_path}"
                 )
                 log.error(message)
                 raise MasterExit(message)
-        else:
+        elif master_pub:
             # permissions
             log.debug("Writing shared key %s", shared_path)
             self.cache.store("master_keys", f"peers/{self.master_id}.pub", master_pub)
