@@ -2,7 +2,8 @@
 Tests for resource-aware targeting in salt.utils.minions.
 
 Covers:
-- _build_resource_index(): constructs the flat three-way index
+- _build_resource_index(): constructs the flat three-way index (``by_id`` uses
+  composite ``type:id`` keys — :func:`salt.utils.minions.resource_index_srn_key`)
 - _get_resource_index(): in-process caching with TTL
 - _update_resource_index(): atomic update of index + cache
 - CkMinions._augment_with_resources(): adds resource IDs to wildcard results
@@ -17,9 +18,12 @@ from salt.utils.minions import (
     _MERGE_RESOURCE_FUNS,
     _RESOURCE_INDEX_BANK,
     _RESOURCE_INDEX_KEY,
+    RESOURCE_INDEX_SCHEMA_VERSION,
     _build_resource_index,
+    _coerce_resource_index_schema,
     _get_resource_index,
     _update_resource_index,
+    resource_index_srn_key,
 )
 from tests.support.mock import MagicMock, patch
 
@@ -40,10 +44,20 @@ FLAT_INDEX = _build_resource_index(MINION_RESOURCES)
 @pytest.fixture(autouse=True)
 def reset_resource_index():
     """Reset the module-level index before each test."""
-    salt.utils.minions._resource_index = {"by_id": {}, "by_type": {}, "by_minion": {}}
+    salt.utils.minions._resource_index = {
+        "schema_version": RESOURCE_INDEX_SCHEMA_VERSION,
+        "by_id": {},
+        "by_type": {},
+        "by_minion": {},
+    }
     salt.utils.minions._resource_index_ts = 0.0
     yield
-    salt.utils.minions._resource_index = {"by_id": {}, "by_type": {}, "by_minion": {}}
+    salt.utils.minions._resource_index = {
+        "schema_version": RESOURCE_INDEX_SCHEMA_VERSION,
+        "by_id": {},
+        "by_type": {},
+        "by_minion": {},
+    }
     salt.utils.minions._resource_index_ts = 0.0
 
 
@@ -92,8 +106,8 @@ def ck_with_resources(master_opts):
 
 def test_build_resource_index_by_id():
     index = _build_resource_index(MINION_RESOURCES)
-    assert index["by_id"]["dummy-01"] == {"minion": "minion", "type": "dummy"}
-    assert index["by_id"]["node1"] == {"minion": "minion", "type": "ssh"}
+    assert index["by_id"]["dummy:dummy-01"] == {"minion": "minion", "type": "dummy"}
+    assert index["by_id"]["ssh:node1"] == {"minion": "minion", "type": "ssh"}
 
 
 def test_build_resource_index_by_type():
@@ -109,7 +123,10 @@ def test_build_resource_index_by_minion():
 
 def test_build_resource_index_empty():
     index = _build_resource_index({})
-    assert index == {"by_id": {}, "by_type": {}, "by_minion": {}}
+    assert index["schema_version"] == RESOURCE_INDEX_SCHEMA_VERSION
+    assert index["by_id"] == {}
+    assert index["by_type"] == {}
+    assert index["by_minion"] == {}
 
 
 # ---------------------------------------------------------------------------
@@ -120,7 +137,7 @@ def test_build_resource_index_empty():
 def test_get_resource_index_loads_from_cache(mock_cache):
     index = _get_resource_index(mock_cache)
     mock_cache.fetch.assert_called_once_with(_RESOURCE_INDEX_BANK, _RESOURCE_INDEX_KEY)
-    assert index["by_id"]["dummy-01"]["type"] == "dummy"
+    assert index["by_id"]["dummy:dummy-01"]["type"] == "dummy"
 
 
 def test_get_resource_index_caches_in_process(mock_cache):
@@ -142,7 +159,10 @@ def test_get_resource_index_cache_error_returns_empty():
     bad_cache = MagicMock()
     bad_cache.fetch.side_effect = Exception("cache unavailable")
     index = _get_resource_index(bad_cache)
-    assert index == {"by_id": {}, "by_type": {}, "by_minion": {}}
+    assert index["schema_version"] == RESOURCE_INDEX_SCHEMA_VERSION
+    assert index["by_id"] == {}
+    assert index["by_type"] == {}
+    assert index["by_minion"] == {}
 
 
 # ---------------------------------------------------------------------------
@@ -153,7 +173,7 @@ def test_get_resource_index_cache_error_returns_empty():
 def test_update_resource_index_adds_minion(mock_cache):
     new_resources = {"dummy": ["dummy-99"]}
     _update_resource_index(mock_cache, "minion-b", new_resources)
-    assert "dummy-99" in salt.utils.minions._resource_index["by_id"]
+    assert "dummy:dummy-99" in salt.utils.minions._resource_index["by_id"]
     assert "minion-b" in salt.utils.minions._resource_index["by_minion"]
 
 
@@ -161,7 +181,7 @@ def test_update_resource_index_removes_minion(mock_cache):
     salt.utils.minions._resource_index = _build_resource_index(MINION_RESOURCES)
     _update_resource_index(mock_cache, "minion", {})
     assert "minion" not in salt.utils.minions._resource_index["by_minion"]
-    assert "dummy-01" not in salt.utils.minions._resource_index["by_id"]
+    assert "dummy:dummy-01" not in salt.utils.minions._resource_index["by_id"]
     assert "dummy" not in salt.utils.minions._resource_index["by_type"]
 
 
@@ -185,11 +205,11 @@ def test_update_resource_index_surgical_preserves_other_minions(mock_cache):
     # Update only minion-a, removing dummy-01
     _update_resource_index(mock_cache, "minion-a", {"dummy": ["dummy-02"]})
     index = salt.utils.minions._resource_index
-    assert "dummy-01" not in index["by_id"]
-    assert "dummy-02" in index["by_id"]
+    assert "dummy:dummy-01" not in index["by_id"]
+    assert "dummy:dummy-02" in index["by_id"]
     # minion-b must be untouched
-    assert "node1" in index["by_id"]
-    assert index["by_id"]["node1"]["minion"] == "minion-b"
+    assert "ssh:node1" in index["by_id"]
+    assert index["by_id"]["ssh:node1"]["minion"] == "minion-b"
     assert "minion-b" in index["by_minion"]
 
 
@@ -440,3 +460,78 @@ def test_check_minions_merge_fun_compound_not_affected(ck_with_resources):
             "G@os:Debian", tgt_type="compound", fun="test.ping"
         )
     assert "dummy-01" not in result["minions"]
+
+
+# ---------------------------------------------------------------------------
+# Composite (type, id) — same bare id under multiple resource types
+# ---------------------------------------------------------------------------
+
+
+SHARED_ID = "shared-01"
+DUPLICATE_BARE_ID_RESOURCES = {
+    "minion-a": {
+        "dummy": [SHARED_ID],
+        "ssh": [SHARED_ID],
+    },
+}
+
+
+def test_resource_index_srn_key():
+    assert resource_index_srn_key("dummy", "x") == "dummy:x"
+
+
+def test_build_resource_index_duplicate_bare_id_two_types():
+    """by_id must keep one entry per (type, id), not collapse on bare id."""
+    index = _build_resource_index(DUPLICATE_BARE_ID_RESOURCES)
+    assert index["by_id"][resource_index_srn_key("dummy", SHARED_ID)] == {
+        "minion": "minion-a",
+        "type": "dummy",
+    }
+    assert index["by_id"][resource_index_srn_key("ssh", SHARED_ID)] == {
+        "minion": "minion-a",
+        "type": "ssh",
+    }
+    assert set(index["by_type"]["dummy"]) == {SHARED_ID}
+    assert set(index["by_type"]["ssh"]) == {SHARED_ID}
+
+
+def test_check_resource_minions_full_srn_per_type_with_duplicate_bare_id(master_opts):
+    index = _build_resource_index(DUPLICATE_BARE_ID_RESOURCES)
+    ck = salt.utils.minions.CkMinions(master_opts)
+    ck.cache = MagicMock()
+    ck.cache.fetch.return_value = index
+    ck.cache.store.return_value = None
+
+    assert ck._check_resource_minions(f"dummy:{SHARED_ID}", greedy=True) == {
+        "minions": [SHARED_ID],
+        "missing": [],
+    }
+    assert ck._check_resource_minions(f"ssh:{SHARED_ID}", greedy=True) == {
+        "minions": [SHARED_ID],
+        "missing": [],
+    }
+
+
+def test_update_resource_index_removes_only_one_type_for_shared_bare_id(mock_cache):
+    salt.utils.minions._resource_index = _build_resource_index(
+        DUPLICATE_BARE_ID_RESOURCES
+    )
+    _update_resource_index(mock_cache, "minion-a", {"dummy": [SHARED_ID]})
+    idx = salt.utils.minions._resource_index
+    assert resource_index_srn_key("dummy", SHARED_ID) in idx["by_id"]
+    assert resource_index_srn_key("ssh", SHARED_ID) not in idx["by_id"]
+    assert "ssh" not in idx["by_type"]
+
+
+def test_coerce_resource_index_schema_legacy_rebuilds_by_id():
+    legacy = {
+        "by_minion": {
+            "m1": {"ssh": ["n1"], "dummy": ["n1"]},
+        },
+        "by_type": {"ssh": ["n1"], "dummy": ["n1"]},
+        "by_id": {"n1": {"minion": "m1", "type": "ssh"}},
+    }
+    coerced = _coerce_resource_index_schema(legacy)
+    assert coerced["schema_version"] == 2
+    assert coerced["by_id"]["ssh:n1"]["type"] == "ssh"
+    assert coerced["by_id"]["dummy:n1"]["type"] == "dummy"
