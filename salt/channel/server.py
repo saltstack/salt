@@ -62,6 +62,28 @@ class ReqServerChannel:
 
     @classmethod
     def factory(cls, opts, **kwargs):
+        """
+        Return the appropriate server channel for the configured transport.
+
+        Two mutually exclusive code paths exist, selected here at startup:
+
+        1. **Pooled** (``worker_pools_enabled=True``, the default):
+           Returns a :class:`PoolRoutingChannel` that sits in front of the
+           external transport.  Incoming requests are routed to per-pool IPC
+           RequestServers and dispatched to MWorkers.  ``_auth`` travels
+           through a worker pool just like any other command — it is NOT
+           intercepted at the channel layer in this path.
+
+        2. **Non-pooled** (``worker_pools_enabled=False``, legacy):
+           Returns a plain :class:`ReqServerChannel` whose
+           :meth:`handle_message` intercepts ``_auth`` inline (before the
+           payload ever reaches a worker) and handles it directly via
+           :meth:`_auth`.  All other commands are forwarded to the single
+           worker pool via ``payload_handler``.
+
+        Because these paths are mutually exclusive, ``_auth`` is always
+        executed exactly once regardless of which path is active.
+        """
         if "master_uri" not in opts and "master_uri" in kwargs:
             opts["master_uri"] = kwargs["master_uri"]
 
@@ -184,6 +206,27 @@ class ReqServerChannel:
             self.transport.post_fork(self.handle_message, io_loop, **kwargs)
 
     async def handle_message(self, payload):
+        """
+        Handle an incoming request payload (non-pooled / legacy path only).
+
+        This method is only active when ``worker_pools_enabled=False``.  In
+        that configuration this channel owns the external transport socket and
+        processes every request inline.
+
+        ``_auth`` handling
+        ------------------
+        When the payload command is ``_auth`` this method calls
+        :meth:`_auth` directly and returns the result without forwarding the
+        payload to any worker.  This is the **only** place ``_auth`` executes
+        in the non-pooled path.
+
+        All other commands are forwarded to a worker via ``payload_handler``
+        (i.e. :meth:`~salt.master.MWorker._handle_payload`).
+
+        See :meth:`factory` for the full description of the two mutually
+        exclusive request paths and why ``_auth`` is always executed exactly
+        once.
+        """
         nonce = None
         if (
             not isinstance(payload, dict)
@@ -1008,17 +1051,38 @@ class ReqServerChannel:
 
 class PoolRoutingChannel:
     """
-    Production channel wrapper that routes requests to worker pools using
-    transport-native RequestServer IPC.
+    Request channel that routes incoming messages to per-pool worker processes
+    using transport-native IPC (the pooled path).
 
-    This is the primary implementation that replaced the older PoolDispatcherChannel
+    This class is returned by :meth:`ReqServerChannel.factory` when
+    ``worker_pools_enabled=True`` (the default).  It is mutually exclusive
+    with the plain :class:`ReqServerChannel` — only one of the two is ever
+    active for a given master process.
 
+    Architecture::
 
-    Architecture:
         External Transport → PoolRoutingChannel → RequestClient (IPC) →
         Pool RequestServer (IPC) → MWorkers
 
-    Key advantages:
+    ``_auth`` handling
+    ------------------
+    In this path ``_auth`` is treated as a regular command.  It is looked up
+    in the routing table built from ``worker_pools`` config and forwarded to
+    whichever pool is mapped to it (or the catchall/default pool if no
+    explicit mapping exists).  It is then handled inside the worker by
+    :meth:`~salt.master.MWorker._handle_clear` →
+    :meth:`~salt.master.ClearFuncs._auth`.
+
+    There is **no** inline ``_auth`` interception here.  Combined with the
+    fact that the plain :class:`ReqServerChannel` (which does intercept
+    ``_auth`` inline) is never in the call chain when this class is active,
+    ``_auth`` executes exactly once per request regardless of which path is
+    chosen at startup.
+
+    See :meth:`ReqServerChannel.factory` for the authoritative description of
+    the two mutually exclusive paths.
+
+    Key advantages over the legacy single-pool design:
     - No multiprocessing.Queue overhead
     - Uses transport-native IPC (ZeroMQ/TCP/WebSocket)
     - Clean separation of concerns
@@ -1236,10 +1300,19 @@ class PoolRoutingChannel:
 
     async def handle_and_route_message(self, payload):
         """
-        Main routing handler: decrypt if needed, determine target pool,
-        forward via RequestClient to the appropriate pool's RequestServer.
+        Route an incoming request to the appropriate worker pool (pooled path).
 
-        This is the core of the routing design.
+        Determines the target pool by inspecting the ``cmd`` field of the
+        payload load (decrypting first if the load is encrypted), looks it up
+        in the routing table, then forwards the raw payload to that pool's
+        IPC RequestServer via a RequestClient.
+
+        ``_auth`` is handled here like any other command — it is routed to
+        whatever pool its command is mapped to and executed inside a worker.
+        This method does **not** intercept or short-circuit ``_auth``.
+
+        See :class:`PoolRoutingChannel` and :meth:`ReqServerChannel.factory`
+        for the full explanation of the two mutually exclusive request paths.
         """
         if not isinstance(payload, dict):
             log.warning("bad load received on socket")
