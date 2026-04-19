@@ -15,56 +15,6 @@ DEFAULT_WORKER_POOLS = {
     },
 }
 
-# Optional: Performance-optimized pools for users who want better out-of-box performance
-# Users can enable this via worker_pools_optimized: True
-OPTIMIZED_WORKER_POOLS = {
-    "lightweight": {
-        "worker_count": 2,
-        "commands": [
-            "ping",
-            "get_token",
-            "mk_token",
-            "verify_minion",
-            "_master_opts",
-            "_master_tops",
-            "_file_hash",
-            "_file_hash_and_stat",
-        ],
-    },
-    "medium": {
-        "worker_count": 2,
-        "commands": [
-            "_mine_get",
-            "_mine",
-            "_mine_delete",
-            "_mine_flush",
-            "_file_find",
-            "_file_list",
-            "_file_list_emptydirs",
-            "_dir_list",
-            "_symlink_list",
-            "pub_ret",
-            "minion_pub",
-            "minion_publish",
-            "wheel",
-            "runner",
-        ],
-    },
-    "heavy": {
-        "worker_count": 1,
-        "commands": [
-            "publish",
-            "_pillar",
-            "_return",
-            "_syndic_return",
-            "_file_recv",
-            "_serve_file",
-            "minion_runner",
-            "revoke_auth",
-        ],
-    },
-}
-
 
 def validate_worker_pools_config(opts):
     """
@@ -215,8 +165,7 @@ def get_worker_pools_config(opts):
     """
     Get the effective worker pools configuration.
 
-    Handles backward compatibility with worker_threads and applies
-    worker_pools_optimized if requested.
+    Handles backward compatibility with worker_threads.
 
     Args:
         opts: Master configuration dictionary
@@ -227,10 +176,6 @@ def get_worker_pools_config(opts):
     # If pools explicitly disabled, return None (legacy mode)
     if not opts.get("worker_pools_enabled", True):
         return None
-
-    # Check if user wants optimized pools
-    if opts.get("worker_pools_optimized", False):
-        return opts.get("worker_pools", OPTIMIZED_WORKER_POOLS)
 
     # Check if worker_pools is explicitly configured AND not empty
     if "worker_pools" in opts and opts["worker_pools"]:

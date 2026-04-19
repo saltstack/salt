@@ -6,7 +6,6 @@ import pytest
 
 from salt.config.worker_pools import (
     DEFAULT_WORKER_POOLS,
-    OPTIMIZED_WORKER_POOLS,
     get_worker_pools_config,
     validate_worker_pools_config,
 )
@@ -21,13 +20,6 @@ class TestWorkerPoolsConfig:
         assert "default" in DEFAULT_WORKER_POOLS
         assert DEFAULT_WORKER_POOLS["default"]["worker_count"] == 5
         assert DEFAULT_WORKER_POOLS["default"]["commands"] == ["*"]
-
-    def test_optimized_worker_pools_structure(self):
-        """Test that OPTIMIZED_WORKER_POOLS has correct structure"""
-        assert isinstance(OPTIMIZED_WORKER_POOLS, dict)
-        assert "lightweight" in OPTIMIZED_WORKER_POOLS
-        assert "medium" in OPTIMIZED_WORKER_POOLS
-        assert "heavy" in OPTIMIZED_WORKER_POOLS
 
     def test_get_worker_pools_config_default(self):
         """Test get_worker_pools_config with default config"""
@@ -56,12 +48,6 @@ class TestWorkerPoolsConfig:
         opts = {"worker_pools_enabled": True, "worker_pools": custom_pools}
         result = get_worker_pools_config(opts)
         assert result == custom_pools
-
-    def test_get_worker_pools_config_optimized(self):
-        """Test get_worker_pools_config with optimized flag"""
-        opts = {"worker_pools_enabled": True, "worker_pools_optimized": True}
-        result = get_worker_pools_config(opts)
-        assert result == OPTIMIZED_WORKER_POOLS
 
     def test_validate_worker_pools_config_valid_default(self):
         """Test validation with valid default config"""
