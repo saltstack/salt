@@ -167,15 +167,16 @@ def test_publisher_mem(publisher, publish, listeners, stop_event):
     # Memory consumption before any publishing happens
     baseline = psutil.Process(publisher.pid).memory_info().rss / 1024**2
     log.info("Baseline is %d MB", baseline)
+    # After the loader tests run we have a baseline of almost 300MB, so
+    # assert that publishing does not increase RSS beyond 50% of baseline
+    # rather than using a fixed absolute threshold.
+    leak_threshold = baseline + (baseline * 0.5)
     print(f"\n*** BASELINE: {baseline:.2f} MB ***")
-    print("*** THRESHOLD: 150 MB ***")
+    print(f"*** THRESHOLD: {leak_threshold:.2f} MB ***")
     stop_event.set()
     log.info("Stop event has been set")
     max_mem = baseline
     try:
-        # Fixed threshold of 150 MB to account for TCP transport overhead
-        # and normal variance in EventPublisher memory usage
-        leak_threshold = 150
         while time.time() - start < 60:
             assert publisher.is_alive()
             mem = psutil.Process(publisher.pid).memory_info().rss / 1024**2
