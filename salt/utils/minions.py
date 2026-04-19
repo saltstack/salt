@@ -210,6 +210,70 @@ _RESOURCE_INDEX_BANK = "resource_index"
 _RESOURCE_INDEX_KEY = "index"
 _RESOURCE_INDEX_TTL = 5.0  # seconds
 
+# Persisted resource index schema: v2 uses composite SRN keys in ``by_id``
+# (``"<type>:<id>"``) so the same bare ``id`` may exist under multiple types.
+RESOURCE_INDEX_SCHEMA_VERSION = 2
+
+
+def resource_index_srn_key(resource_type, resource_id):
+    """
+    Canonical cache / ``by_id`` key for a Salt resource (SRN without ``T@``).
+
+    :param str resource_type: Resource type (e.g. ``"ssh"``).
+    :param str resource_id: Bare resource id (e.g. ``"web-01"``).
+    :rtype: str
+    """
+    return f"{resource_type}:{resource_id}"
+
+
+def _empty_resource_index():
+    return {
+        "schema_version": RESOURCE_INDEX_SCHEMA_VERSION,
+        "by_id": {},
+        "by_type": {},
+        "by_minion": {},
+    }
+
+
+def _coerce_resource_index_schema(index):
+    """
+    Normalize a loaded index dict to :data:`RESOURCE_INDEX_SCHEMA_VERSION`.
+
+    Older indexes used bare resource ids as ``by_id`` keys, which cannot
+    represent the same id under multiple types.  Those are rebuilt from
+    ``by_minion``, which remains authoritative.
+    """
+    if not isinstance(index, dict):
+        return _empty_resource_index()
+    if index.get("schema_version") == RESOURCE_INDEX_SCHEMA_VERSION:
+        return {
+            "schema_version": RESOURCE_INDEX_SCHEMA_VERSION,
+            "by_id": dict(index.get("by_id") or {}),
+            "by_type": dict(index.get("by_type") or {}),
+            "by_minion": dict(index.get("by_minion") or {}),
+        }
+    by_minion = dict(index.get("by_minion") or {})
+    by_type = dict(index.get("by_type") or {})
+    by_id = {}
+    for minion_id, resources in by_minion.items():
+        if not isinstance(resources, dict):
+            continue
+        for rtype, rids in resources.items():
+            if not isinstance(rids, list):
+                continue
+            for rid in rids:
+                by_id[resource_index_srn_key(rtype, rid)] = {
+                    "minion": minion_id,
+                    "type": rtype,
+                }
+    return {
+        "schema_version": RESOURCE_INDEX_SCHEMA_VERSION,
+        "by_id": by_id,
+        "by_type": by_type,
+        "by_minion": by_minion,
+    }
+
+
 # Functions where resources run inline and their results are merged into the
 # managing minion's own response.  The operator sees ONE combined block + ONE
 # Summary section instead of separate blocks per resource.
@@ -224,7 +288,7 @@ _MERGE_RESOURCE_FUNS = frozenset(
 )
 
 _resource_index_lock = threading.Lock()
-_resource_index: dict = {"by_id": {}, "by_type": {}, "by_minion": {}}
+_resource_index: dict = _empty_resource_index()
 _resource_index_ts: float = 0.0
 
 
@@ -236,10 +300,14 @@ def _build_resource_index(by_minion):
     Returns::
 
         {
-            "by_id":     {rid: {"minion": minion_id, "type": rtype}, ...},
+            "schema_version": RESOURCE_INDEX_SCHEMA_VERSION,
+            "by_id":     {"<type>:<id>": {"minion": minion_id, "type": rtype}, ...},
             "by_type":   {rtype: [rid, ...], ...},
             "by_minion": {minion_id: {rtype: [rid, ...]}, ...},
         }
+
+    ``by_id`` keys are SRNs (``type:id``) so the same bare ``id`` may appear
+    under multiple resource types without collision.
     """
     by_id = {}
     by_type = {}
@@ -248,10 +316,18 @@ def _build_resource_index(by_minion):
             if rtype not in by_type:
                 by_type[rtype] = []
             for rid in rids:
-                by_id[rid] = {"minion": minion_id, "type": rtype}
+                by_id[resource_index_srn_key(rtype, rid)] = {
+                    "minion": minion_id,
+                    "type": rtype,
+                }
                 if rid not in by_type[rtype]:
                     by_type[rtype].append(rid)
-    return {"by_id": by_id, "by_type": by_type, "by_minion": dict(by_minion)}
+    return {
+        "schema_version": RESOURCE_INDEX_SCHEMA_VERSION,
+        "by_id": by_id,
+        "by_type": by_type,
+        "by_minion": dict(by_minion),
+    }
 
 
 def _get_resource_index(cache):
@@ -267,11 +343,15 @@ def _get_resource_index(cache):
         if now - _resource_index_ts < _RESOURCE_INDEX_TTL:
             return _resource_index
         try:
-            loaded = cache.fetch(_RESOURCE_INDEX_BANK, _RESOURCE_INDEX_KEY) or {}
+            loaded = cache.fetch(_RESOURCE_INDEX_BANK, _RESOURCE_INDEX_KEY)
+            if loaded is None:
+                loaded = {}
         except Exception:  # pylint: disable=broad-except
             log.error("Failed to load resource index from cache", exc_info=True)
             loaded = {}
-        _resource_index = loaded or {"by_id": {}, "by_type": {}, "by_minion": {}}
+        if not isinstance(loaded, dict):
+            loaded = {}
+        _resource_index = _coerce_resource_index_schema(loaded)
         _resource_index_ts = now
     return _resource_index
 
@@ -291,6 +371,7 @@ def _update_resource_index(cache, minion_id, resources):
     """
     global _resource_index, _resource_index_ts  # pylint: disable=global-statement
     with _resource_index_lock:
+        _resource_index = _coerce_resource_index_schema(_resource_index)
         by_id = _resource_index.get("by_id", {})
         by_type = _resource_index.get("by_type", {})
         by_minion = _resource_index.get("by_minion", {})
@@ -300,7 +381,7 @@ def _update_resource_index(cache, minion_id, resources):
         for rtype, rids in old.items():
             old_set = set(rids)
             for rid in rids:
-                by_id.pop(rid, None)
+                by_id.pop(resource_index_srn_key(rtype, rid), None)
             if rtype in by_type:
                 by_type[rtype] = [r for r in by_type[rtype] if r not in old_set]
                 if not by_type[rtype]:
@@ -313,12 +394,20 @@ def _update_resource_index(cache, minion_id, resources):
                 existing = by_type.setdefault(rtype, [])
                 existing_set = set(existing)
                 for rid in rids:
-                    by_id[rid] = {"minion": minion_id, "type": rtype}
+                    by_id[resource_index_srn_key(rtype, rid)] = {
+                        "minion": minion_id,
+                        "type": rtype,
+                    }
                     if rid not in existing_set:
                         existing.append(rid)
                         existing_set.add(rid)
 
-        _resource_index = {"by_id": by_id, "by_type": by_type, "by_minion": by_minion}
+        _resource_index = {
+            "schema_version": RESOURCE_INDEX_SCHEMA_VERSION,
+            "by_id": by_id,
+            "by_type": by_type,
+            "by_minion": by_minion,
+        }
         try:
             cache.store(_RESOURCE_INDEX_BANK, _RESOURCE_INDEX_KEY, _resource_index)
         except Exception:  # pylint: disable=broad-except
@@ -874,8 +963,10 @@ class CkMinions:
         minions receive it via broadcast and filter locally with
         ``resource_match.match()``.
 
-        Lookups are O(1) dict access against the in-process resource index
-        (refreshed from a single flat cache file at most once per TTL).
+        Full-SRN lookups use O(1) dict access on ``by_id`` keys shaped as
+        ``type:id`` (see :func:`resource_index_srn_key`).  The in-process index
+        is refreshed from a single flat cache file at most once per TTL;
+        legacy caches without ``schema_version`` are coerced on load.
         """
         if ":" in expr:
             resource_type, resource_id = expr.split(":", 1)
@@ -890,8 +981,9 @@ class CkMinions:
         index = _get_resource_index(self.cache)
 
         if resource_id is not None:
-            # Full SRN: O(1) lookup by resource ID.
-            if resource_id in index["by_id"]:
+            # Full SRN: O(1) lookup by composite ``type:id`` in ``by_id``.
+            srn_key = resource_index_srn_key(resource_type, resource_id)
+            if srn_key in index["by_id"]:
                 return {"minions": [resource_id], "missing": []}
             log.debug(
                 "T@%s not in resource index; using resource ID from expression",
