@@ -234,8 +234,12 @@ class Batch:
                 # add it to our iterators and to the minion_tracker
                 iters.append(new_iter)
                 minion_tracker[new_iter] = {}
-                # every iterator added is 'active' and has its set of minions
-                minion_tracker[new_iter]["minions"] = next_
+                # Store a copy of the sub-batch's minion list.  next_ is
+                # passed into cmd_iter_no_block as the target list; a
+                # streaming consumer of that list would be disrupted by
+                # the .remove() calls that prune the tracker as returns
+                # arrive.
+                minion_tracker[new_iter]["minions"] = list(next_)
                 minion_tracker[new_iter]["active"] = True
 
             else:

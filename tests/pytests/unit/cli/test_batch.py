@@ -156,6 +156,15 @@ def test_single_jid_across_batch_iterations(batch):
     jids = [call.kwargs["jid"] for call in batch.local.cmd_iter_no_block.call_args_list]
     assert jids[0] == jids[1]
     assert jids[0] != ""
+    # Every minion should yield a real return (ret=True), not a
+    # placeholder ({}) from the "didn't respond" branch.  If the
+    # sub-batch target list were aliased with the tracker, a return
+    # arriving here would prune the list mid-iteration and cause the
+    # generator to StopIteration early, leaving later minions stuck in
+    # the placeholder path.
+    assert len(ret) == 4
+    assert sorted(next(iter(d.keys())) for d, _rc in ret) == ["m1", "m2", "m3", "m4"]
+    assert all(next(iter(d.values())) is True for d, _rc in ret)
 
 
 def test_single_jid_passed_to_cmd_iter_no_block(batch):
@@ -212,6 +221,13 @@ def test_single_jid_with_failhard(batch):
     assert "jid" in call_kwargs.kwargs
     assert isinstance(call_kwargs.kwargs["jid"], str)
     assert len(call_kwargs.kwargs["jid"]) > 0
+    # Only the first processed minion should yield; failhard halts the
+    # run before the second sub-batch minion's entry in parts.items()
+    # is reached.
+    assert len(ret) == 1
+    data, retcode = ret[0]
+    assert next(iter(data.values())) is True
+    assert retcode == 1
 
 
 def test_single_jid_single_batch(batch):
@@ -242,6 +258,8 @@ def test_single_jid_single_batch(batch):
     call_kwargs = batch.local.cmd_iter_no_block.call_args
     assert "jid" in call_kwargs.kwargs
     assert len(ret) == 3
+    assert sorted(next(iter(d.keys())) for d, _rc in ret) == ["m1", "m2", "m3"]
+    assert all(next(iter(d.values())) is True for d, _rc in ret)
 
 
 def test_get_bnum_100_percentage_exact(batch):
@@ -416,10 +434,7 @@ def test_run_raw_mode_yield_shape(batch):
     batch.gather_minions = MagicMock(return_value=[["m1", "m2"], [], []])
 
     def _make_iter(*args, **kwargs):
-        # Snapshot the minion list: Batch.run aliases next_ into
-        # minion_tracker and calls .remove() on it as returns arrive,
-        # which would mutate args[0] out from under this generator.
-        for m in list(args[0]):
+        for m in args[0]:
             yield {"data": {"id": m, "return": True, "retcode": 0}}
 
     batch.local.cmd_iter_no_block = MagicMock(side_effect=_make_iter)
@@ -546,9 +561,7 @@ def test_run_batch_wait_delays_next_dispatch(batch):
     )
 
     def _make_iter(*args, **kwargs):
-        # Snapshot the minion list — Batch.run aliases it with the
-        # tracker and mutates it as returns arrive.
-        for m in list(args[0]):
+        for m in args[0]:
             yield {m: {"ret": True, "retcode": 0}}
 
     batch.local.cmd_iter_no_block = MagicMock(side_effect=_make_iter)
