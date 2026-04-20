@@ -90,10 +90,14 @@ def status(context=None):
             return context[contextkey]
     elif context is not None:
         raise SaltInvocationError("context must be a dictionary if passed")
+    # Use stdout=/stderr=PIPE rather than capture_output so this module
+    # works on the python 3.6 interpreters that salt-ssh still has to
+    # tolerate on older distros (#68778). capture_output is 3.7+.
     proc = subprocess.run(
         ["systemctl", "status"],
         check=False,
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
     ret = (
         b"Failed to get D-Bus connection: No such file or directory" not in proc.stderr
@@ -175,7 +179,8 @@ def _pid_to_service_systemctl(pid):
             systemd_cmd,
             check=True,
             text=True,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
         status_json = salt.utils.json.find_json(systemd_output.stdout)
     except (ValueError, subprocess.CalledProcessError):
