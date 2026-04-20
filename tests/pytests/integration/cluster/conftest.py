@@ -160,6 +160,65 @@ def cluster_master_3(salt_factories, cluster_master_1):
 
 
 @pytest.fixture
+def cluster_master_4(
+    salt_factories, cluster_master_1, cluster_master_2, cluster_master_3
+):
+    """
+    A 4th master that joins an existing 3-master cluster at runtime.
+
+    Masters 1-3 are started with ``cluster_peers`` pointing only at each
+    other; they do not know about 127.0.0.4 up front. When this master
+    starts it runs ``discover_peers`` against the three known peers,
+    they reply, and the join protocol adds 127.0.0.4 to every peer's
+    ``cluster_peers`` list dynamically.
+    """
+    if salt.utils.platform.is_darwin() or salt.utils.platform.is_freebsd():
+        subprocess.check_output(["ifconfig", "lo0", "alias", "127.0.0.4", "up"])
+
+    config_defaults = {
+        "open_mode": True,
+        "transport": cluster_master_1.config["transport"],
+    }
+    config_overrides = {
+        "interface": "127.0.0.4",
+        "cluster_id": "master_cluster",
+        "cluster_peers": [
+            "127.0.0.1",
+            "127.0.0.2",
+            "127.0.0.3",
+        ],
+        "cluster_pki_dir": cluster_master_1.config["cluster_pki_dir"],
+        "cache_dir": cluster_master_1.config["cache_dir"],
+        "log_granular_levels": {
+            "salt": "info",
+            "salt.transport": "debug",
+            "salt.channel": "debug",
+            "salt.utils.event": "debug",
+        },
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
+    }
+
+    # Use the same ports across the cluster; masters bind to different
+    # interfaces so there is no collision.
+    for key in (
+        "ret_port",
+        "publish_port",
+    ):
+        config_overrides[key] = cluster_master_1.config[key]
+    factory = salt_factories.salt_master_daemon(
+        "127.0.0.4",
+        defaults=config_defaults,
+        overrides=config_overrides,
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+    )
+    with factory.started(start_timeout=120):
+        yield factory
+
+
+@pytest.fixture
 def cluster_minion_1(cluster_master_1):
     config_defaults = {
         "transport": cluster_master_1.config["transport"],

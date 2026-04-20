@@ -6,6 +6,7 @@ from tests.pytests.integration.cluster.conftest import (
     cluster_master_1,
     cluster_master_2,
     cluster_master_3,
+    cluster_master_4,
     cluster_minion_1,
     cluster_pki_path,
     cluster_shared_path,
