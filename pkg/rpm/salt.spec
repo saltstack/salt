@@ -624,17 +624,14 @@ if [ ! -e "/var/log/salt/cloud" ]; then
   chmod 640 /var/log/salt/cloud
 fi
 if [ $1 -gt 1 ] ; then
-    # Reset permissions to match previous installs - performing upgrade.
-    # %pre tries to capture the owner into %{_MS_CUR_USER} via
+    # Preserve the existing owner across upgrades. %pre tries to capture
+    # the owner into %{_MS_CUR_USER} via
     # `%global _MS_CUR_USER %{_MS_LCUR_USER}`, but RPM macros do not
     # interpolate shell variables: the rewrite produces the literal
     # string "%{_MS_LCUR_USER}" and chown fails with "invalid user"
-    # (salt#68646). Re-read the owner in shell here.
-    _MS_CUR_USER=$(ls -dl /etc/salt/cloud.deploy.d 2>/dev/null | cut -d ' ' -f 3)
-    _MS_CUR_GROUP=$(ls -dl /etc/salt/cloud.deploy.d 2>/dev/null | cut -d ' ' -f 4)
-    : "${_MS_CUR_USER:=%{_SALT_USER}}"
-    : "${_MS_CUR_GROUP:=%{_SALT_GROUP}}"
-    chown -R "$_MS_CUR_USER:$_MS_CUR_GROUP" /etc/salt/cloud.deploy.d /var/log/salt/cloud /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy
+    # (salt#68646). Use chown --reference so the reset matches whatever
+    # the dir already shows, without shell-parsing ls.
+    chown --reference=/etc/salt/cloud.deploy.d -R /etc/salt/cloud.deploy.d /var/log/salt/cloud /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy
 else
     chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/cloud.deploy.d /var/log/salt/cloud /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy
 fi
@@ -651,12 +648,9 @@ if [ ! -e "/var/log/salt/key" ]; then
 fi
 if [ $1 -gt 1 ] ; then
     # See the %posttrans cloud comment above for why the current user
-    # and group are computed here rather than pulled from %{_MS_CUR_USER}.
-    _MS_CUR_USER=$(ls -dl /run/salt/master 2>/dev/null | cut -d ' ' -f 3)
-    _MS_CUR_GROUP=$(ls -dl /run/salt/master 2>/dev/null | cut -d ' ' -f 4)
-    : "${_MS_CUR_USER:=%{_SALT_USER}}"
-    : "${_MS_CUR_GROUP:=%{_SALT_GROUP}}"
-    chown -R "$_MS_CUR_USER:$_MS_CUR_GROUP" /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
+    # and group are pulled via chown --reference rather than from the
+    # %{_MS_CUR_USER} macro.
+    chown --reference=/run/salt/master -R /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
 else
     chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
 fi
@@ -668,11 +662,7 @@ if [ ! -e "/var/log/salt/syndic" ]; then
   chmod 640 /var/log/salt/syndic
 fi
 if [ $1 -gt 1 ] ; then
-    _MS_CUR_USER=$(ls -dl /run/salt/master 2>/dev/null | cut -d ' ' -f 3)
-    _MS_CUR_GROUP=$(ls -dl /run/salt/master 2>/dev/null | cut -d ' ' -f 4)
-    : "${_MS_CUR_USER:=%{_SALT_USER}}"
-    : "${_MS_CUR_GROUP:=%{_SALT_GROUP}}"
-    chown -R "$_MS_CUR_USER:$_MS_CUR_GROUP" /var/log/salt/syndic
+    chown --reference=/run/salt/master -R /var/log/salt/syndic
 else
     chown -R %{_SALT_USER}:%{_SALT_GROUP} /var/log/salt/syndic
 fi
@@ -684,11 +674,7 @@ if [ ! -e "/var/log/salt/api" ]; then
   chmod 640 /var/log/salt/api
 fi
 if [ $1 -gt 1 ] ; then
-    _MS_CUR_USER=$(ls -dl /run/salt/master 2>/dev/null | cut -d ' ' -f 3)
-    _MS_CUR_GROUP=$(ls -dl /run/salt/master 2>/dev/null | cut -d ' ' -f 4)
-    : "${_MS_CUR_USER:=%{_SALT_USER}}"
-    : "${_MS_CUR_GROUP:=%{_SALT_GROUP}}"
-    chown -R "$_MS_CUR_USER:$_MS_CUR_GROUP" /var/log/salt/api
+    chown --reference=/run/salt/master -R /var/log/salt/api
 else
     chown -R %{_SALT_USER}:%{_SALT_GROUP} /var/log/salt/api
 fi
@@ -703,11 +689,7 @@ if [ ! -e "/var/log/salt/key" ]; then
   chmod 640 /var/log/salt/key
 fi
 if [ $1 -gt 1 ] ; then
-    _MN_CUR_USER=$(ls -dl /run/salt/minion 2>/dev/null | cut -d ' ' -f 3)
-    _MN_CUR_GROUP=$(ls -dl /run/salt/minion 2>/dev/null | cut -d ' ' -f 4)
-    : "${_MN_CUR_USER:=%{_SALT_USER}}"
-    : "${_MN_CUR_GROUP:=%{_SALT_GROUP}}"
-    chown -R "$_MN_CUR_USER:$_MN_CUR_GROUP" /etc/salt/pki/minion /etc/salt/minion.d /var/log/salt/minion /var/cache/salt/minion /var/run/salt/minion
+    chown --reference=/run/salt/minion -R /etc/salt/pki/minion /etc/salt/minion.d /var/log/salt/minion /var/cache/salt/minion /var/run/salt/minion
 fi
 
 
