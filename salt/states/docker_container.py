@@ -2005,7 +2005,7 @@ def running(
         if not exists:
             comments.append(f"Created container '{name}'")
         else:
-            if not _replace(name, temp_container):
+            if not _replace(name, temp_container_name):
                 ret["result"] = False
                 return _format_comments(ret, comments)
         ret["changes"].setdefault("container_id", {})["added"] = temp_container["Id"]
