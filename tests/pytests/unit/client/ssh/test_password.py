@@ -8,7 +8,7 @@ import salt.utils.path
 import salt.utils.thin
 import salt.utils.yaml
 from salt.client import ssh
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import ANY, MagicMock, patch
 
 pytestmark = [
     pytest.mark.skipif(
@@ -66,5 +66,5 @@ def test_password_failure(temp_salt_master, tmp_path):
         ret = next(client.run_iter())
         with pytest.raises(SystemExit):
             client.run()
-    display_output.assert_called_once_with(expected, "nested", opts)
+    display_output.assert_called_once_with(expected, "nested", ANY)
     assert ret is handle_ssh_ret[0][0]

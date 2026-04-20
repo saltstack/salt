@@ -39,6 +39,7 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
     """
     Test a downgrade of Salt Minion.
     """
+    original_py_version = None
     is_restart_fixed = packaging.version.parse(
         install_salt.prev_version
     ) < packaging.version.parse("3006.9")
@@ -84,9 +85,11 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
     if not platform.is_windows():
         assert old_minion_pids
 
-    if platform.is_windows():
-        salt_master.terminate()
-        salt_minion.terminate()
+    # Always terminate the master and minion before downgrade/upgrade
+    # to ensure they are restarted with the new version.
+    # This is especially important for non-systemd environments.
+    salt_master.terminate()
+    salt_minion.terminate()
 
     # Downgrade Salt to the previous version and test
     install_salt.install(downgrade=True)
@@ -98,6 +101,11 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
     # trying restart for Debian/Ubuntu to see the outcome
     if install_salt.distro_id in ("ubuntu", "debian"):
         install_salt.restart_services()
+    else:
+        # For other distros (like Rocky), we need to manually start them
+        # since we terminated them above.
+        salt_master.start()
+        salt_minion.start()
 
     time.sleep(30)  # give it some time
 

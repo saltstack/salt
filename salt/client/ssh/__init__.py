@@ -9,6 +9,7 @@ import getpass
 import hashlib
 import logging
 import multiprocessing
+import multiprocessing.pool
 import os
 import pathlib
 import queue
@@ -390,7 +391,11 @@ class SSH(MultiprocessingStateMixin):
                             roster_host = roster_data[host_id]
                         if hostname in [host_id, roster_host]:
                             if hostname != self.opts["tgt"]:
-                                self.opts["tgt"] = hostname
+                                user = self.parse_tgt["user"]
+                                if user:
+                                    self.opts["tgt"] = f"{user}@{hostname}"
+                                else:
+                                    self.opts["tgt"] = hostname
                             self.__parsed_rosters[self.ROSTER_UPDATE_FLAG] = False
                             return
 
@@ -522,7 +527,7 @@ class SSH(MultiprocessingStateMixin):
                 thin=self.thin,
                 **target,
             )
-            stdout, stderr, retcode = single.cmd_block()
+            stdout, stderr, retcode = single.run()
             try:
                 retcode = int(retcode)
             except (TypeError, ValueError):
@@ -566,160 +571,177 @@ class SSH(MultiprocessingStateMixin):
             return {host: stderr}, retcode
         return {host: stdout}, retcode
 
-    def handle_routine(self, que, opts, host, target, mine=False):
-        """
-        Run the routine in a "Thread", put a dict on the queue
-        """
-        opts = copy.deepcopy(opts)
-        single = Single(
-            opts,
-            opts["argv"],
-            host,
-            mods=self.mods,
-            fsclient=self.fsclient,
-            thin=self.thin,
-            mine=mine,
-            **target,
-        )
-        ret = {"id": single.id}
-        stdout = stderr = ""
-        retcode = salt.defaults.exitcodes.EX_OK
-        try:
-            stdout, stderr, retcode = single.run()
-            try:
-                retcode = int(retcode)
-            except (TypeError, ValueError):
-                log.warning("Got an invalid retcode for host '%s': '%s'", host, retcode)
-                retcode = 1
-            ret["ret"] = salt.client.ssh.wrapper.parse_ret(stdout, stderr, retcode)
-        except (
-            salt.client.ssh.wrapper.SSHPermissionDeniedError,
-            salt.client.ssh.wrapper.SSHCommandExecutionError,
-        ) as err:
-            ret["ret"] = err.to_ret()
-            # All caught errors always indicate the retcode is/should be > 0
-            retcode = max(retcode, err.retcode, 1)
-        except salt.client.ssh.wrapper.SSHException as err:
-            ret["ret"] = err.to_ret()
-            if not self.opts.get("raw_shell"):
-                # We only expect valid JSON output from Salt
-                retcode = max(retcode, err.retcode, 1)
-            else:
-                ret["ret"].pop("_error", None)
-        except Exception as err:  # pylint: disable=broad-except
-            log.error(
-                "Error while parsing the command output: %s",
-                err,
-                exc_info_on_loglevel=logging.DEBUG,
-            )
-            ret["ret"] = {
-                "_error": f"Internal error while parsing the command output: {err}",
-                "stdout": stdout,
-                "stderr": stderr,
-                "retcode": retcode,
-                "data": None,
-            }
-            retcode = max(retcode, 1)
-        que.put((ret, retcode))
-
-    def handle_ssh(self, mine=False):
+    def handle_ssh(self, mine=False, jid=None):
         """
         Spin up the needed threads or processes and execute the subsequent
         routines
         """
-        que = multiprocessing.Queue()
-        running = {}
-        target_iter = iter(self.targets)
-        returned = set()
-        rets = set()
-        init = False
-        while True:
-            if not self.targets:
-                log.error("No matching targets found in roster.")
-                break
-            if len(running) < self.opts.get("ssh_max_procs", 25) and not init:
-                try:
-                    host = next(target_iter)
-                except StopIteration:
-                    init = True
-                    continue
-                for default in self.defaults:
-                    if default not in self.targets[host]:
-                        self.targets[host][default] = self.defaults[default]
-                if "host" not in self.targets[host]:
-                    self.targets[host]["host"] = host
-                if self.targets[host].get("winrm") and not HAS_WINSHELL:
-                    returned.add(host)
-                    rets.add(host)
-                    log_msg = (
-                        "Please contact sales@saltstack.com for access to the"
-                        " enterprise saltwinshell module."
-                    )
-                    log.debug(log_msg)
-                    no_ret = {
-                        "fun_args": [],
-                        "jid": None,
-                        "return": log_msg,
-                        "retcode": 1,
-                        "fun": "",
-                        "id": host,
-                    }
-                    yield {host: no_ret}, 1
-                    continue
-                args = (
-                    que,
-                    self.opts,
-                    host,
-                    self.targets[host],
-                    mine,
+        pool = multiprocessing.pool.ThreadPool(
+            processes=self.opts.get("ssh_max_procs", 25)
+        )
+        results = []
+
+        for host in self.targets:
+            for default in self.defaults:
+                if default not in self.targets[host]:
+                    self.targets[host][default] = self.defaults[default]
+            if "host" not in self.targets[host]:
+                self.targets[host]["host"] = host
+
+            if self.targets[host].get("winrm") and not HAS_WINSHELL:
+                log_msg = "Please contact sales@saltstack.com for access to the enterprise saltwinshell module."
+                no_ret = {
+                    "fun_args": [],
+                    "jid": None,
+                    "return": log_msg,
+                    "retcode": 1,
+                    "fun": "",
+                    "id": host,
+                }
+                results.append(
+                    pool.apply_async(lambda h, r: (h, r), args=({host: no_ret}, 1))
                 )
-                routine = Process(target=self.handle_routine, args=args)
-                routine.start()
-                running[host] = {"thread": routine}
                 continue
-            ret = {}
+
+            results.append(
+                pool.apply_async(
+                    self._handle_routine_thread,
+                    args=(self.opts, host, self.targets[host], mine, jid),
+                )
+            )
+
+        pool.close()
+
+        while results:
+            for r in list(results):
+                if r.ready():
+                    ret, retcode = r.get()
+                    yield ret, retcode
+                    results.remove(r)
+            if results:
+                time.sleep(0.1)
+
+        pool.join()
+
+    def _handle_routine_thread(self, opts, host, target, mine=False, jid=None):
+        """
+        Helper for ThreadPool execution
+        """
+        # Register the job in the master's proc directory
+        proc_file = None
+        if jid:
+            proc_dir = os.path.join(opts["cachedir"], "proc")
+            if not os.path.isdir(proc_dir):
+                try:
+                    os.makedirs(proc_dir)
+                except OSError:
+                    pass
+            if os.path.isdir(proc_dir):
+                proc_file = os.path.join(proc_dir, jid)
+                job_load = {
+                    "jid": jid,
+                    "tgt": host,
+                    "tgt_type": "glob",
+                    "id": host,
+                    "fun": opts["argv"][0] if opts.get("argv") else "",
+                    "arg": opts["argv"][1:] if opts.get("argv") else [],
+                    "pid": os.getpid(),
+                    "user": opts.get("user", "root"),
+                    "_stamp": salt.utils.jid.jid_to_time(jid),
+                }
+                try:
+                    with salt.utils.files.fopen(proc_file, "w+b") as fp_:
+                        fp_.write(salt.payload.dumps(job_load))
+                except OSError:
+                    proc_file = None
+        try:
+            single = Single(
+                opts,
+                opts["argv"],
+                host,
+                mods=self.mods,
+                fsclient=self.fsclient,
+                thin=self.thin,
+                mine=mine,
+                **target,
+            )
+            stdout = stderr = ""
             retcode = salt.defaults.exitcodes.EX_OK
             try:
-                ret, retcode = que.get(False)
-                if "id" in ret:
-                    returned.add(ret["id"])
-                    yield {ret["id"]: ret["ret"]}, retcode
-            except queue.Empty:
-                pass
-            for host in running:
-                if not running[host]["thread"].is_alive():
-                    if host not in returned:
-                        # Try to get any returns that came through since we
-                        # last checked
+                stdout, stderr, retcode = single.run()
+                try:
+                    retcode = int(retcode)
+                except (TypeError, ValueError):
+                    log.warning(
+                        "Got an invalid retcode for host '%s': '%s'", host, retcode
+                    )
+                    retcode = 1
+                ret = {
+                    single.id: salt.client.ssh.wrapper.parse_ret(
+                        stdout, stderr, retcode
+                    )
+                }
+                if isinstance(ret[single.id], dict):
+                    inner_retcode = ret[single.id].get("retcode")
+                    if inner_retcode is not None:
                         try:
-                            while True:
-                                ret, retcode = que.get(False)
-                                if "id" in ret:
-                                    returned.add(ret["id"])
-                                    yield {ret["id"]: ret["ret"]}, retcode
-                        except queue.Empty:
-                            pass
-
-                        if host not in returned:
-                            error = (
-                                "Target '{}' did not return any data, "
-                                "probably due to an error.".format(host)
+                            retcode = int(inner_retcode)
+                        except (TypeError, ValueError):
+                            log.warning(
+                                "Got an invalid retcode for host '%s': '%s'",
+                                single.id,
+                                inner_retcode,
                             )
-                            ret = {"id": host, "ret": error}
-                            log.error(error)
-                            yield {ret["id"]: ret["ret"]}, 1
-                    running[host]["thread"].join()
-                    rets.add(host)
-            for host in rets:
-                if host in running:
-                    running.pop(host)
-            if len(rets) >= len(self.targets):
-                break
-            # Sleep when limit or all threads started
-            if len(running) >= self.opts.get("ssh_max_procs", 25) or len(
-                self.targets
-            ) >= len(running):
-                time.sleep(0.1)
+                            retcode = 1
+                    else:
+                        log.warning(
+                            "Got an invalid retcode for host '%s': '%s'",
+                            single.id,
+                            inner_retcode,
+                        )
+                        retcode = 1
+                    if retcode == 0 and "_error" in ret[single.id]:
+                        retcode = 1
+                elif retcode == 0:
+                    # If it's not a dict, we can't check for _error, but we should
+                    # at least ensure we didn't get an empty or invalid return
+                    if not ret[single.id]:
+                        retcode = 1
+            except (
+                salt.client.ssh.wrapper.SSHPermissionDeniedError,
+                salt.client.ssh.wrapper.SSHCommandExecutionError,
+            ) as err:
+                ret = {single.id: err.to_ret()}
+                retcode = max(retcode, err.retcode, 1)
+            except salt.client.ssh.wrapper.SSHException as err:
+                ret = {single.id: err.to_ret()}
+                if not self.opts.get("raw_shell"):
+                    retcode = max(retcode, err.retcode, 1)
+                else:
+                    ret[single.id].pop("_error", None)
+            except Exception as err:  # pylint: disable=broad-except
+                log.error(
+                    "Error while parsing the command output: %s",
+                    err,
+                    exc_info_on_loglevel=logging.DEBUG,
+                )
+                ret = {
+                    single.id: {
+                        "_error": f"Internal error while parsing the command output: {err}",
+                        "stdout": stdout,
+                        "stderr": stderr,
+                        "retcode": retcode,
+                        "data": None,
+                    }
+                }
+                retcode = max(retcode, 1)
+        finally:
+            if proc_file and os.path.exists(proc_file):
+                try:
+                    os.remove(proc_file)
+                except OSError:
+                    pass
+        return ret, retcode
 
     def run_iter(self, mine=False, jid=None):
         """
@@ -762,7 +784,7 @@ class SSH(MultiprocessingStateMixin):
                 jid, job_load
             )
 
-        for ret, retcode in self.handle_ssh(mine=mine):
+        for ret, retcode in self.handle_ssh(mine=mine, jid=jid):
             host = next(iter(ret))
             self.cache_job(jid, host, ret[host], fun)
             if self.event:
@@ -804,6 +826,14 @@ class SSH(MultiprocessingStateMixin):
         """
         Execute the overall routine, print results via outputters
         """
+        # Recursion protection for nested salt-ssh calls (e.g. mine.get)
+        if "salt_ssh_recursion_depth" not in self.opts:
+            self.opts["salt_ssh_recursion_depth"] = 0
+        self.opts["salt_ssh_recursion_depth"] += 1
+        if self.opts["salt_ssh_recursion_depth"] > 10:
+            log.error("salt-ssh recursion depth limit exceeded (10)")
+            return {"error": "salt-ssh recursion depth limit exceeded"}
+
         if self.opts.get("list_hosts"):
             self._get_roster()
             ret = {}
@@ -859,6 +889,17 @@ class SSH(MultiprocessingStateMixin):
                 exc_info=True,
             )
 
+        # Save the job information to the master's proc directory
+        # so that state.running can find it.
+        proc_dir = os.path.join(self.opts["cachedir"], "proc")
+        if not os.path.isdir(proc_dir):
+            os.makedirs(proc_dir)
+        proc_file = os.path.join(proc_dir, jid)
+        with salt.utils.files.fopen(proc_file, "w+b") as fp_:
+            # Add PID to job_load
+            job_load["pid"] = os.getpid()
+            fp_.write(salt.payload.dumps(job_load))
+
         if self.opts.get("verbose"):
             msg = f"Executing job with jid {jid}"
             print(msg)
@@ -867,77 +908,87 @@ class SSH(MultiprocessingStateMixin):
         sret = {}
         outputter = self.opts.get("output", "nested")
         final_exit = salt.defaults.exitcodes.EX_OK
-        for ret, retcode in self.handle_ssh():
-            host = next(iter(ret))
-            if not isinstance(retcode, int):
-                log.warning("Host '%s' returned an invalid retcode: %s", host, retcode)
-                retcode = 1
-            final_exit = max(final_exit, retcode)
-
-            self.cache_job(jid, host, ret[host], fun)
-            ret, deploy_retcode = self.key_deploy(host, ret)
-            if deploy_retcode is not None:
-                try:
-                    retcode = int(deploy_retcode)
-                except (TypeError, ValueError):
+        try:
+            for ret, retcode in self.handle_ssh(jid=jid):
+                host = next(iter(ret))
+                if not isinstance(retcode, int):
                     log.warning(
-                        "Got an invalid deploy retcode for host '%s': '%s'",
-                        host,
-                        retcode,
+                        "Host '%s' returned an invalid retcode: %s", host, retcode
                     )
                     retcode = 1
-            final_exit = max(final_exit, retcode)
+                final_exit = max(final_exit, retcode)
 
-            if isinstance(ret[host], dict) and (
-                ret[host].get("stderr") or ""
-            ).startswith("ssh:"):
-                ret[host] = ret[host]["stderr"]
+                self.cache_job(jid, host, ret[host], fun)
+                ret, deploy_retcode = self.key_deploy(host, ret)
+                if deploy_retcode is not None:
+                    try:
+                        retcode = int(deploy_retcode)
+                    except (TypeError, ValueError):
+                        log.warning(
+                            "Got an invalid deploy retcode for host '%s': '%s'",
+                            host,
+                            retcode,
+                        )
+                        retcode = 1
+                final_exit = max(final_exit, retcode)
 
-            if not isinstance(ret[host], dict):
-                p_data = {host: ret[host]}
-            elif "return" not in ret[host]:
-                if ret[host].get("_error") == "Permission denied":
-                    p_data = {host: ret[host]["stderr"]}
-                else:
-                    p_data = ret
-            else:
-                outputter = ret[host].get("out", self.opts.get("output", "nested"))
-                p_data = {host: ret[host].get("return", {})}
-            if self.opts.get("static"):
-                sret.update(p_data)
-            else:
-                salt.output.display_output(p_data, outputter, self.opts)
-            if self.event:
-                id_, data = next(iter(ret.items()))
-                if not isinstance(data, dict):
-                    data = {"return": data}
-                if "id" not in data:
-                    data["id"] = id_
-                if "fun" not in data:
-                    data["fun"] = fun
-                if "fun_args" not in data:
-                    data["fun_args"] = args
-                if "retcode" not in data:
-                    data["retcode"] = retcode
-                if "success" not in data:
-                    data["success"] = data["retcode"] == salt.defaults.exitcodes.EX_OK
-                if "return" not in data:
-                    if data["success"]:
-                        data["return"] = data.get("stdout")
+                if isinstance(ret[host], dict) and (
+                    ret[host].get("stderr") or ""
+                ).startswith("ssh:"):
+                    ret[host] = ret[host]["stderr"]
+
+                if not isinstance(ret[host], dict):
+                    p_data = {host: ret[host]}
+                elif "return" not in ret[host]:
+                    if ret[host].get("_error") == "Permission denied":
+                        p_data = {host: ret[host]["stderr"]}
                     else:
-                        data["return"] = data.get("stderr", data.get("stdout"))
-                data["jid"] = (
-                    jid  # make the jid in the payload the same as the jid in the tag
-                )
-                self.event.fire_event(
-                    data, salt.utils.event.tagify([jid, "ret", host], "job")
-                )
+                        p_data = ret
+                else:
+                    outputter = ret[host].get("out", self.opts.get("output", "nested"))
+                    p_data = {host: ret[host].get("return", {})}
+
+                sret.update(p_data)
+                if not self.opts.get("static"):
+                    salt.output.display_output(p_data, outputter, self.opts)
+                if self.event:
+                    id_, data = next(iter(ret.items()))
+                    if not isinstance(data, dict):
+                        data = {"return": data}
+                    if "id" not in data:
+                        data["id"] = id_
+                    if "fun" not in data:
+                        data["fun"] = fun
+                    if "fun_args" not in data:
+                        data["fun_args"] = args
+                    if "retcode" not in data:
+                        data["retcode"] = retcode
+                    if "success" not in data:
+                        data["success"] = (
+                            data["retcode"] == salt.defaults.exitcodes.EX_OK
+                        )
+                    if "return" not in data:
+                        if data["success"]:
+                            data["return"] = data.get("stdout")
+                        else:
+                            data["return"] = data.get("stderr", data.get("stdout"))
+                    data["jid"] = (
+                        jid  # make the jid in the payload the same as the jid in the tag
+                    )
+                    self.event.fire_event(
+                        data, salt.utils.event.tagify([jid, "ret", host], "job")
+                    )
+        finally:
+            if os.path.exists(proc_file):
+                os.remove(proc_file)
         if self.event is not None:
             self.event.destroy()
         if self.opts.get("static"):
             salt.output.display_output(sret, outputter, self.opts)
+
         if final_exit:
-            sys.exit(salt.defaults.exitcodes.EX_AGGREGATE)
+            sys.exit(final_exit)
+        return sret
 
 
 class Single:
@@ -1324,7 +1375,6 @@ class Single:
             minion_opts=self.minion_opts,
             **self.target,
         )
-        wrapper.fsclient.opts["cachedir"] = opts["cachedir"]
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs
 
@@ -1364,6 +1414,7 @@ class Single:
                 self.args = mine_args
                 self.kwargs = {}
 
+        retcode = salt.defaults.exitcodes.EX_OK
         try:
             if self.mine:
                 result = wrapper[mine_fun](*self.args, **self.kwargs)

@@ -585,8 +585,9 @@ class Pillar:
 
         self.opts["minion_id"] = minion_id
         self.matchers = salt.loader.matchers(self.opts)
+        rend_opts = copy.deepcopy(self.opts)
         self.rend = salt.loader.render(
-            self.opts, self.functions, self.client, file_client=self.client
+            rend_opts, self.functions, self.client, file_client=self.client
         )
         ext_pillar_opts = copy.deepcopy(self.opts)
         # Keep the incoming opts ID intact, ie, the master id
@@ -597,6 +598,14 @@ class Pillar:
             self.merge_strategy = opts["pillar_source_merging_strategy"]
 
         self.ext_pillars = salt.loader.pillars(ext_pillar_opts, self.functions)
+        if opts.get("extension_modules"):
+            for loader in (self.ext_pillars, self.matchers):
+                if hasattr(loader, "_refresh_file_mapping"):
+                    loader._refresh_file_mapping()
+                elif hasattr(loader, "_dict") and hasattr(
+                    loader._dict, "_refresh_file_mapping"
+                ):
+                    loader._dict._refresh_file_mapping()
         self.ignored_pillars = {}
         self.pillar_override = pillar_override or {}
         if not isinstance(self.pillar_override, dict):
@@ -1250,7 +1259,10 @@ class Pillar:
         if ext:
             if self.opts.get("ext_pillar_first", False):
                 self.opts["pillar"], errors = self.ext_pillar(self.pillar_override)
-                self.rend = salt.loader.render(self.opts, self.functions)
+                if hasattr(self.functions, "pack"):
+                    self.functions.pack["__pillar__"] = self.opts["pillar"]
+                if hasattr(self.rend, "_dict") and hasattr(self.rend._dict, "pack"):
+                    self.rend._dict.pack["__pillar__"] = self.opts["pillar"]
                 matches = self.top_matches(top, reload=True)
                 pillar, errors = self.render_pillar(matches, errors=errors)
                 pillar = merge(
@@ -1264,6 +1276,10 @@ class Pillar:
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches)
                 pillar, errors = self.ext_pillar(pillar, errors=errors)
+            if hasattr(self.functions, "pack"):
+                self.functions.pack["__pillar__"] = pillar
+            if hasattr(self.rend, "_dict") and hasattr(self.rend._dict, "pack"):
+                self.rend._dict.pack["__pillar__"] = pillar
         else:
             matches = self.top_matches(top)
             pillar, errors = self.render_pillar(matches)

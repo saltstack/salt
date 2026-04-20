@@ -44,12 +44,20 @@ class MineTest(ModuleCase, ShellCase):
         assert self.run_function("mine.update", minion_tgt="minion")
         assert self.run_function("mine.update", minion_tgt="sub_minion")
 
+        # mine.update fires an event and sleeps 0.5s, but the master may need
+        # additional time to process and store the mine data.  Poll until the
+        # data is available so that tests don't race against propagation.
         # sub_minion should be able to view test.arg data
-        sub_min_ret = self.run_call(
-            f"mine.get {self.tgt} test.arg",
-            config_dir=RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR,
-        )
-        assert "            - isn't" in sub_min_ret
+        for _ in range(30):
+            sub_min_ret = self.run_call(
+                f"mine.get {self.tgt} test.arg",
+                config_dir=RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR,
+            )
+            if "            - isn't" in sub_min_ret:
+                break
+            time.sleep(1)
+        else:
+            self.fail("sub_minion was unable to view test.arg data after 30 seconds")
 
         # minion should not be able to view test.arg data
         min_ret = self.run_call(f"mine.get {self.tgt} test.arg")

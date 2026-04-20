@@ -17,6 +17,7 @@ RequestExecutionLevel admin
 
 # Import Libraries
 !include "FileFunc.nsh"
+!include "helper_StrContains.nsh"
 !include "LogicLib.nsh"
 !include "MoveFileFolder.nsh"
 !include "MUI2.nsh"
@@ -104,7 +105,7 @@ VIAddVersionKey "ProductVersion" "${PRODUCT_VERSION}"
 Var LogFile
 Var TimeStamp
 Var cmdLineParams
-Var logFileHandle
+var logFileHandle
 Var msg
 
 # Followed this: https://nsis.sourceforge.io/StrRep
@@ -218,6 +219,7 @@ Var ConfigWriteMaster
 Var RegInstDir
 Var RegRootDir
 Var RootDir
+Var SSMBin
 Var SysDrive
 Var ExistingInstallation
 Var CustomLocation
@@ -679,7 +681,9 @@ Section "Install" Install01
         ${If} $0 == 0
             ${LogMsg} "Success"
         ${Else}
-            ${LogMsg} "Failed$\r$\nExitCode: $0$\r$\nStdOut: $1"
+            ${LogMsg} "Failed"
+            ${LogMsg} "ExitCode: $0"
+            ${LogMsg} "StdOut: $1"
         ${EndIf}
         # Move the C:\salt directory to the new location
         StrCpy $switch_overwrite 0
@@ -727,7 +731,9 @@ Section "Install" Install01
     ${If} $0 == 0
         ${LogMsg} "Success"
     ${Else}
-        ${LogMsg} "Failed$\r$\nExitCode: $0$\r$\nStdOut: $1"
+        ${LogMsg} "Failed"
+        ${LogMsg} "ExitCode: $0"
+        ${LogMsg} "StdOut: $1"
     ${EndIf}
 
 SectionEnd
@@ -851,6 +857,8 @@ Function .onInit
         Abort
 
     uninst:
+
+        # Maybe try running the uninstaller first
 
         # Get current Silent status
        ${LogMsg} "Getting current silent setting"
@@ -1039,7 +1047,9 @@ Section -Post
         ${If} $0 == 0
             ${LogMsg} "Success"
         ${Else}
-            ${LogMsg} "Failed$\r$\nExitCode: $0$\r$\nStdOut: $1"
+            ${LogMsg} "Failed"
+            ${LogMsg} "ExitCode: $0"
+            ${LogMsg} "StdOut: $1"
         ${EndIf}
         ${LogMsg} "Setting service autostart"
         nsExec::ExecToStack "$INSTDIR\ssm.exe set salt-minion Start SERVICE_AUTO_START"
@@ -1048,7 +1058,9 @@ Section -Post
         ${If} $0 == 0
             ${LogMsg} "Success"
         ${Else}
-            ${LogMsg} "Failed$\r$\nExitCode: $0$\r$\nStdOut: $1"
+            ${LogMsg} "Failed"
+            ${LogMsg} "ExitCode: $0"
+            ${LogMsg} "StdOut: $1"
         ${EndIf}
         ${LogMsg} "Setting service console stop method"
         nsExec::ExecToStack "$INSTDIR\ssm.exe set salt-minion AppStopMethodConsole 24000"
@@ -1057,7 +1069,9 @@ Section -Post
         ${If} $0 == 0
             ${LogMsg} "Success"
         ${Else}
-            ${LogMsg} "Failed$\r$\nExitCode: $0$\r$\nStdOut: $1"
+            ${LogMsg} "Failed"
+            ${LogMsg} "ExitCode: $0"
+            ${LogMsg} "StdOut: $1"
         ${EndIf}
         ${LogMsg} "Setting service windows stop method"
         nsExec::ExecToStack "$INSTDIR\ssm.exe set salt-minion AppStopMethodWindow 2000"
@@ -1066,7 +1080,9 @@ Section -Post
         ${If} $0 == 0
             ${LogMsg} "Success"
         ${Else}
-            ${LogMsg} "Failed$\r$\nExitCode: $0$\r$\nStdOut: $1"
+            ${LogMsg} "Failed"
+            ${LogMsg} "ExitCode: $0"
+            ${LogMsg} "StdOut: $1"
         ${EndIf}
         ${LogMsg} "Setting service app restart delay"
         nsExec::ExecToStack "$INSTDIR\ssm.exe set salt-minion AppRestartDelay 60000"
@@ -1075,7 +1091,9 @@ Section -Post
         ${If} $0 == 0
             ${LogMsg} "Success"
         ${Else}
-            ${LogMsg} "Failed$\r$\nExitCode: $0$\r$\nStdOut: $1"
+            ${LogMsg} "Failed"
+            ${LogMsg} "ExitCode: $0"
+            ${LogMsg} "StdOut: $1"
         ${EndIf}
     ${EndIf}
 
@@ -1113,7 +1131,10 @@ Section -Post
     ${Else}
         # See this table for Error Codes:
         # https://github.com/GsNSIS/EnVar#error-codes
-        ${LogMsg} "Failed. Error Code: $0"
+        ${LogMsg} "Failed"
+        ${LogMsg} "Error Code: $0"
+        ${LogMsg} "Lookup error codes here:"
+        ${LogMsg} "https://github.com/GsNSIS/EnVar#error-codes"
     ${EndIf}
 
 SectionEnd
@@ -1130,7 +1151,9 @@ Function .onInstSuccess
         ${If} $0 == 0
             ${LogMsg} "Success"
         ${Else}
-            ${LogMsg} "Failed$\r$\nExitCode: $0$\r$\nStdOut: $1"
+            ${LogMsg} "Failed"
+            ${LogMsg} "ExitCode: $0"
+            ${LogMsg} "StdOut: $1"
         ${EndIf}
     ${EndIf}
 
@@ -1143,7 +1166,9 @@ Function .onInstSuccess
         ${If} $0 == 0
             ${LogMsg} "Success"
         ${Else}
-            ${LogMsg} "Failed$\r$\nExitCode: $0$\r$\nStdOut: $1"
+            ${LogMsg} "Failed"
+            ${LogMsg} "ExitCode: $0"
+            ${LogMsg} "StdOut: $1"
         ${EndIf}
     ${EndIf}
 
@@ -1188,7 +1213,10 @@ Section Uninstall
     ${Else}
         # See this table for Error Codes:
         # https://github.com/GsNSIS/EnVar#error-codes
-        ${LogMsg} "Failed. Error Code: $0"
+        ${LogMsg} "Failed"
+        ${LogMsg} "Error Code: $0"
+        ${LogMsg} "Lookup error codes here:"
+        ${LogMsg} "https://github.com/GsNSIS/EnVar#error-codes"
     ${EndIf}
 
 SectionEnd
@@ -1217,36 +1245,81 @@ Function ${un}uninstallSalt
     ${LogMsg} "INSTDIR: $INSTDIR"
 
     # Only attempt to remove the services if ssm.exe is present"
-    ${If} ${FileExists} "$INSTDIR\ssm.exe"
 
-        ${LogMsg} "ssm.exe found"
+    # 3006(Relenv)/3007 Salt Installations
+    ${LogMsg} "Looking for ssm.exe for 3006+: $INSTDIR\ssm.exe"
+    IfFileExists "$INSTDIR\ssm.exe" 0 v3004
+        StrCpy $SSMBin "$INSTDIR\ssm.exe"
+        goto foundSSM
 
-        # Stop and Remove salt-minion service
-        ${LogMsg} "Stopping salt-minion service"
-        nsExec::ExecToStack "$INSTDIR\ssm.exe stop salt-minion"
-        pop $0  # ExitCode
-        pop $1  # StdOut
-        ${If} $0 == 0
-            ${LogMsg} "Success"
-        ${Else}
-            ${LogMsg} "Failed$\r$\nExitCode: $0$\r$\nStdOut: $1"
-        ${EndIf}
+    v3004:
+    # 3004/3005(Tiamat) Salt Installations
+    ${LogMsg} "Looking for ssm.exe for 3004+: $INSTDIR\bin\ssm.exe"
+    IfFileExists "$INSTDIR\bin\ssm.exe" 0 v2018
+        StrCpy $SSMBin "$INSTDIR\bin\ssm.exe"
+        goto foundSSM
 
-        ${LogMsg} "Removing salt-minion service"
-        nsExec::ExecToStack "$INSTDIR\ssm.exe remove salt-minion confirm"
-        pop $0  # ExitCode
-        pop $1  # StdOut
-        ${If} $0 == 0
-            ${LogMsg} "Success"
-        ${Else}
-            ${LogMsg} "Failed$\r$\nExitCode: $0$\r$\nStdOut: $1"
-            Abort
-        ${EndIf}
+    v2018:
+    # 2018.3/2019.2/3000/3001/3002/3003 and below Salt Installations
+    ${LogMsg} "Looking for ssm.exe for 2018.3+: C:\salt\bin\ssm.exe"
+    IfFileExists "C:\salt\bin\ssm.exe" 0 v2016
+        StrCpy $SSMBin "C:\salt\bin\ssm.exe"
+        goto foundSSM
 
+    v2016:
+    # 2016.11/2017.7 Salt Installations used nssm.exe
+    ${LogMsg} "Looking for ssm.exe for 2016.11+: C:\salt\nssm.exe"
+    IfFileExists "C:\salt\nssm.exe" 0 v2016
+        StrCpy $SSMBin "C:\salt\nssm.exe"
+        goto foundSSM
+
+    ${LogMsg} "ssm.exe/nssm.exe not found"
+    goto doneSSM
+
+    foundSSM:
+
+    ${LogMsg} "ssm.exe found: $SSMBin"
+
+    # Detect if the salt-minion service is installed
+    ${LogMsg} "Detecting salt-minion service"
+    nsExec::ExecToStack "$SSMBin Status salt-minion"
+    pop $0  # ExitCode
+    pop $1  # StdOut
+    ${If} $0 == 0
+        ${LogMsg} "Service found"
     ${Else}
+        # If the service is already gone, skip the SSM commands
+        ${StrContains} $2 $1 "service does not exist"
+        StrCmp $2 "" doneSSM
+        ${LogMsg} "Failed"
+        ${LogMsg} "ExitCode: $0"
+        ${LogMsg} "StdOut: $1"
+    ${EndIf}
 
-        ${LogMsg} "ssm.exe not found"
+    # Stop and Remove salt-minion service
+    ${LogMsg} "Stopping salt-minion service"
+    nsExec::ExecToStack "$SSMBin stop salt-minion"
+    pop $0  # ExitCode
+    pop $1  # StdOut
+    ${If} $0 == 0
+        ${LogMsg} "Success"
+    ${Else}
+        ${LogMsg} "Failed"
+        ${LogMsg} "ExitCode: $0"
+        ${LogMsg} "StdOut: $1"
+    ${EndIf}
 
+    ${LogMsg} "Removing salt-minion service"
+    nsExec::ExecToStack "$SSMBin remove salt-minion confirm"
+    pop $0  # ExitCode
+    pop $1  # StdOut
+    ${If} $0 == 0
+        ${LogMsg} "Success"
+    ${Else}
+        ${LogMsg} "Failed"
+        ${LogMsg} "ExitCode: $0"
+        ${LogMsg} "StdOut: $1"
+        Abort
     ${EndIf}
 
     # Give the minion enough time to finish its internal stop_async (graceful shutdown).
@@ -1262,7 +1335,6 @@ Function ${un}uninstallSalt
 
     # Perform multiple passes to ensure stubborn or child processes are caught
     # Pass 1: Aggressive taskkill
-    # Note: These are not hard errors, so we don't check for errors
     ${LogMsg} "Killing remaining processes (Pass 1 of 3)"
     nsExec::ExecToStack 'taskkill /F /IM ssm.exe /T'
     nsExec::ExecToStack 'taskkill /F /IM salt-minion.exe /T'
@@ -1295,6 +1367,12 @@ Function ${un}uninstallSalt
     ClearErrors
     ${LogMsg} "Deleting files: $INSTDIR\multi-minion*"
     Delete "$INSTDIR\multi-minion*"
+    IfErrors 0 saltFiles
+    ${LogMsg} "FAILED"
+
+    saltFiles:
+    ClearErrors
+    ${LogMsg} "Deleting files: $INSTDIR\salt*"
     Delete "$INSTDIR\salt*"
     ${If} ${Errors}
         ${LogMsg} "FAILED to delete critical Salt binaries in $INSTDIR. Files might be locked."
@@ -1316,12 +1394,36 @@ Function ${un}uninstallSalt
     ClearErrors
     ${LogMsg} "Deleting file: $INSTDIR\uninst.exe"
     Delete "$INSTDIR\uninst.exe"
+    IfErrors 0 vcredistBin
+    ${LogMsg} "FAILED"
+
+    vcredistBin:
+    ClearErrors
+    ${LogMsg} "Deleting file: $INSTDIR\vcredist.exe"
     Delete "$INSTDIR\vcredist.exe"
+    IfErrors 0 removeDirs
+    ${LogMsg} "FAILED"
+
+    removeDirs:
     ${LogMsg} "Deleting directories"
+
+    ClearErrors
+    ${LogMsg} "Deleting directory: $INSTDIR\DLLS"
     RMDir /r "$INSTDIR\DLLs"
+    IfErrors 0 removeInclude
+    ${LogMsg} "FAILED"
+
+    removeInclude:
+    ClearErrors
+    ${LogMsg} "Deleting directory: $INSTDIR\Include"
     RMDir /r "$INSTDIR\Include"
+    IfErrors 0 removeLib
+    ${LogMsg} "FAILED"
+
+    removeLib:
+    ClearErrors
+    ${LogMsg} "Deleting directory: $INSTDIR\Lib"
     RMDir /r "$INSTDIR\Lib"
-    RMDir /r "$INSTDIR\libs"
     ${If} ${Errors}
         ${LogMsg} "FAILED to delete $INSTDIR\Lib. Files might be locked."
         MessageBox MB_OK|MB_ICONEXCLAMATION "FAILED to delete critical Salt libraries in $INSTDIR\Lib. Files might be locked. Please ensure all Salt processes are stopped and try again." /SD IDOK IDOK
@@ -1515,12 +1617,6 @@ Function un.onUninstSuccess
     StrCpy $msg "$(^Name) was successfully removed from your computer."
     ${LogMsg} $msg
     MessageBox MB_OK|MB_USERICON $msg /SD IDOK
-
-    # I don't know of another way to fix this. The installer hangs intermittently
-    # This will force kill the installer process. This must be the last thing that
-    # is run.
-    StrCpy $1 "wmic Path win32_process where $\"name like '$EXEFILE'$\" Call Terminate"
-    nsExec::Exec $1
 
 FunctionEnd
 

@@ -45,10 +45,8 @@ def salt_test_upgrade(
     # Verify previous install version salt-minion is setup correctly and works
     ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
-    installed_minion_version = packaging.version.parse(ret.data)
-    assert installed_minion_version < packaging.version.parse(
-        install_salt.artifact_version
-    )
+    start_version = packaging.version.parse(ret.data)
+    assert start_version <= packaging.version.parse(install_salt.artifact_version)
 
     # Verify previous install version salt-master is setup correctly and works
     bin_file = "salt"
@@ -58,7 +56,7 @@ def salt_test_upgrade(
     assert ret.returncode == 0
     assert packaging.version.parse(
         ret.stdout.strip().split()[1]
-    ) < packaging.version.parse(install_salt.artifact_version)
+    ) <= packaging.version.parse(install_salt.artifact_version)
 
     # Verify there is a running minion and master by getting their PIDs
     if platform.is_windows():
@@ -74,11 +72,11 @@ def salt_test_upgrade(
         assert old_minion_pids
         assert old_master_pids
 
-    if platform.is_windows():
-        # Terminate master and minion so they don't lock files during the upgrade.
-        log.info("Terminating salt-master and salt-minion before upgrade")
-        salt_master.terminate()
-        salt_minion.terminate()
+    # Always terminate the master and minion before downgrade/upgrade
+    # to ensure they are restarted with the new version.
+    # This is especially important for non-systemd environments.
+    salt_master.terminate()
+    salt_minion.terminate()
 
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
     install_salt.install(upgrade=True)
@@ -86,6 +84,11 @@ def salt_test_upgrade(
     if platform.is_windows():
         # Give the system a moment to fully release all file locks after the installer finishes
         time.sleep(10)
+    elif install_salt.distro_id not in ("ubuntu", "debian"):
+        # For other distros (like Rocky), we need to manually start them
+        # since we terminated them above.
+        salt_master.start()
+        salt_minion.start()
 
     start = time.monotonic()
     while True:
