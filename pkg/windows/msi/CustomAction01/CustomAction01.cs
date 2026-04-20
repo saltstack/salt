@@ -1,6 +1,5 @@
 using Microsoft.Deployment.WindowsInstaller;
 using Microsoft.Tools.WindowsInstallerXml;
-using Microsoft.Win32;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -459,6 +458,126 @@ namespace MinionConfigurationExtension {
         }
 
 
+        // Process image names kill_python_exe may terminate (interactive shells, not only service).
+        private static readonly string[] kill_python_exe_allowlist = new string[] {
+            "salt-minion.exe", "salt-call.exe", "salt-cp.exe", "ssm.exe"
+        };
+
+        private static bool kill_python_exe_ProcessNameMatchesAllowlist(string wmiName, string executablePath) {
+            if (!string.IsNullOrEmpty(wmiName)) {
+                foreach (string exe in kill_python_exe_allowlist) {
+                    if (string.Compare(wmiName, exe, StringComparison.OrdinalIgnoreCase) == 0)
+                        return true;
+                }
+            }
+            if (!string.IsNullOrEmpty(executablePath)) {
+                string fn = Path.GetFileName(executablePath);
+                foreach (string exe in kill_python_exe_allowlist) {
+                    if (string.Compare(fn, exe, StringComparison.OrdinalIgnoreCase) == 0)
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        // CustomActionData / NSIS UninstallString: "C:\...\uninst.exe" or C:\...\uninst.exe /S
+        // Do not split unquoted paths on the first space (breaks "C:\Program Files\...\uninst.exe").
+        private static string remove_NSIS_ParseUninstExePath(Session session, string raw) {
+            if (string.IsNullOrEmpty(raw)) return "";
+            string s = raw.Trim();
+            string exePath = "";
+            if (s.Length > 0 && s[0] == '"') {
+                int end = s.IndexOf('"', 1);
+                if (end > 1) exePath = s.Substring(1, end - 1);
+            } else {
+                int u = s.IndexOf("uninst.exe", StringComparison.OrdinalIgnoreCase);
+                if (u >= 0)
+                    exePath = s.Substring(0, u + "uninst.exe".Length);
+                else {
+                    int sp = s.IndexOf(' ');
+                    exePath = sp > 0 ? s.Substring(0, sp) : s;
+                }
+            }
+            exePath = (exePath ?? "").Trim();
+            if (exePath.Length > 0)
+                session.Log("...remove_NSIS_ParseUninstExePath -> " + exePath);
+            return exePath;
+        }
+
+        // NSIS temp uninstall child: short name like Un_xxxxx.exe (not uninst.exe). Tie to this install via CommandLine/ExecutablePath.
+        private static bool remove_NSIS_IsNsisTempUninstallerProcess(string name, string commandLine, string executablePath, string instRoot) {
+            if (string.IsNullOrEmpty(name)) return false;
+            string fn = name.Trim();
+            if (fn.IndexOf("uninst.exe", StringComparison.OrdinalIgnoreCase) >= 0) return false;
+            if (!fn.StartsWith("Un", StringComparison.OrdinalIgnoreCase)) return false;
+            string cl = commandLine ?? "";
+            string ep = executablePath ?? "";
+            if (cl.IndexOf(instRoot, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            if (ep.IndexOf(instRoot, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            if (cl.IndexOf("Salt Project", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            if (cl.IndexOf("NSIS", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            return false;
+        }
+
+        private static int remove_NSIS_CountNsisTempUninstallerChildren(Session session, string instRoot) {
+            int n = 0;
+            try {
+                string wmi = "SELECT ProcessId, Name, ExecutablePath, CommandLine FROM Win32_Process WHERE Name LIKE 'Un%' OR Name LIKE 'un%'";
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(wmi)) {
+                    foreach (ManagementObject o in searcher.Get()) {
+                        try {
+                            if (o["ProcessId"] == null) continue;
+                            int pid = int.Parse(o["ProcessId"].ToString());
+                            if (pid == Process.GetCurrentProcess().Id) continue;
+                            string nm = o["Name"] != null ? o["Name"].ToString() : "";
+                            string cl = o["CommandLine"] != null ? o["CommandLine"].ToString() : "";
+                            string ep = o["ExecutablePath"] != null ? o["ExecutablePath"].ToString() : "";
+                            if (!remove_NSIS_IsNsisTempUninstallerProcess(nm, cl, ep, instRoot)) continue;
+                            n++;
+                        } catch (Exception ex) {
+                            session.Log("...remove_NSIS_CountNsisTempUninstallerChildren row: " + ex.Message);
+                        }
+                    }
+                }
+            } catch (Exception ex) {
+                session.Log("...remove_NSIS_CountNsisTempUninstallerChildren: " + ex.Message);
+            }
+            return n;
+        }
+
+        // After uninst.exe stub exits, wait until NSIS removes ssm.exe (Salt-Minion-Setup.nsi deletes it before uninst.exe).
+        // INSTDIR folder often remains; ssm.exe is a reliable completion marker. WMI Un* count is for logging only.
+        private static bool remove_NSIS_WaitForNsisUninstallComplete(Session session, string instRoot, int maxWaitSeconds) {
+            if (string.IsNullOrEmpty(instRoot)) return false;
+            string ssmPath = Path.Combine(instRoot, "ssm.exe");
+            int intervalMs = 2000;
+            int maxMs = maxWaitSeconds * 1000;
+            int elapsed = 0;
+            int lastLogChild = -1;
+            while (elapsed < maxMs) {
+                bool ssmGone = false;
+                try {
+                    ssmGone = !File.Exists(ssmPath);
+                } catch (Exception ex) {
+                    session.Log("...remove_NSIS_WaitForNsisUninstallComplete: " + ex.Message);
+                    return false;
+                }
+                int nChild = remove_NSIS_CountNsisTempUninstallerChildren(session, instRoot);
+                if (ssmGone) {
+                    session.Log("...remove_NSIS_WaitForNsisUninstallComplete: ssm.exe gone after " + (elapsed / 1000) + "s (nsisUnChildCount=" + nChild + ")");
+                    return true;
+                }
+                if (elapsed == 0 || elapsed % 30000 == 0 || nChild != lastLogChild) {
+                    session.Log("...remove_NSIS_WaitForNsisUninstallComplete: elapsed=" + (elapsed / 1000) + "s ssmGone=" + ssmGone + " nsisUnChildCount=" + nChild);
+                    lastLogChild = nChild;
+                }
+                System.Threading.Thread.Sleep(intervalMs);
+                elapsed += intervalMs;
+            }
+            session.Log("...remove_NSIS_WaitForNsisUninstallComplete: timeout after " + maxWaitSeconds + "s");
+            return false;
+        }
+
         [CustomAction]
         public static ActionResult kill_python_exe(Session session) {
             // because a running process can prevent removal of files
@@ -476,47 +595,61 @@ namespace MinionConfigurationExtension {
             session.Log("...Waiting 6 seconds for graceful shutdown...");
             System.Threading.Thread.Sleep(6000);
 
-            // This is an immediate custom action, access properties directly
-            string installDir = "";
             try {
-                installDir = cutil.get_property_IMCAC(session, "INSTALLDIR");
+                string installDir = cutil.get_property_IMCAC(session, "INSTALLDIR");
+                session.Log("...INSTALLDIR (informational): " + installDir);
             } catch (Exception) {
-                session.Log("...INSTALLDIR not found. Falling back to default WMI search.");
+                session.Log("...INSTALLDIR not available for logging (non-fatal).");
             }
-            string wmi_query = "SELECT ProcessID, ExecutablePath, CommandLine FROM Win32_Process WHERE (CommandLine LIKE '%salt-minion%' OR CommandLine LIKE '%salt-call%' OR CommandLine LIKE '%ssm.exe%') AND NOT CommandLine LIKE '%msiexec%'";
-            if (!string.IsNullOrEmpty(installDir)) {
-                session.Log("...Targeting processes in: " + installDir);
-                // Broaden the query to include anything running from the installation directory OR explicitly named ssm
-                wmi_query = "SELECT ProcessID, ExecutablePath, CommandLine FROM Win32_Process WHERE (ExecutablePath LIKE '" + installDir.Replace("\\", "\\\\") + "%' OR CommandLine LIKE '%salt-minion%' OR CommandLine LIKE '%salt-call%' OR CommandLine LIKE '%ssm.exe%' OR ExecutablePath LIKE '%ssm.exe') AND NOT CommandLine LIKE '%msiexec%'";
-            }
+
+            // Match only explicit Salt worker images by Win32_Process.Name. Do not use
+            // CommandLine LIKE '%salt-minion%' — it false-positives on Salt-Minion-Setup.exe
+            // (case-insensitive substring) and can kill the NSIS parent while msiexec uninstall runs.
+            session.Log("...Allowlisted images: salt-minion.exe, salt-call.exe, salt-cp.exe, ssm.exe");
 
             // Perform multiple passes to ensure stubborn or child processes are caught
             for (int attempt = 1; attempt <= 3; attempt++) {
                 session.Log("...Kill attempt " + attempt + " of 3");
-                using (var wmi_searcher = new ManagementObjectSearcher(wmi_query)) {
-                    int killedCount = 0;
-                    foreach (ManagementObject wmi_obj in wmi_searcher.Get()) {
-                        try {
-                            if (wmi_obj["ProcessID"] == null) continue;
-                            String ProcessID = wmi_obj["ProcessID"].ToString();
-                            Int32 pid = Int32.Parse(ProcessID);
+                int killedCount = 0;
+                foreach (string imageExe in kill_python_exe_allowlist) {
+                    string safeImage = imageExe.Replace("'", "''");
+                    string wmi_query = "SELECT ProcessID, ExecutablePath, CommandLine, Name FROM Win32_Process WHERE Name = '" + safeImage + "'";
+                    using (var wmi_searcher = new ManagementObjectSearcher(wmi_query)) {
+                        foreach (ManagementObject wmi_obj in wmi_searcher.Get()) {
+                            try {
+                                if (wmi_obj["ProcessID"] == null) continue;
+                                String ProcessID = wmi_obj["ProcessID"].ToString();
+                                Int32 pid = Int32.Parse(ProcessID);
 
-                            // Don't kill ourselves or the installer
-                            if (pid == Process.GetCurrentProcess().Id) continue;
+                                // Don't kill ourselves or the installer
+                                if (pid == Process.GetCurrentProcess().Id) continue;
 
-                            String ExecutablePath = wmi_obj["ExecutablePath"] != null ? wmi_obj["ExecutablePath"].ToString() : "Unknown";
-                            session.Log("...killing process: PID=" + ProcessID + " Path=" + ExecutablePath);
-                            Process proc = Process.GetProcessById(pid);
-                            proc.Kill();
-                            killedCount++;
-                        } catch (Exception exc) {
-                            session.Log("...failed to kill process: " + exc.Message);
+                                string commandLine = wmi_obj["CommandLine"] != null ? wmi_obj["CommandLine"].ToString() : "";
+                                if (commandLine.IndexOf("msiexec", StringComparison.OrdinalIgnoreCase) >= 0) {
+                                    session.Log("...skipping PID=" + ProcessID + " (msiexec in command line)");
+                                    continue;
+                                }
+
+                                string wmiName = wmi_obj["Name"] != null ? wmi_obj["Name"].ToString() : "";
+                                string executablePath = wmi_obj["ExecutablePath"] != null ? wmi_obj["ExecutablePath"].ToString() : "";
+                                if (!kill_python_exe_ProcessNameMatchesAllowlist(wmiName, executablePath)) {
+                                    session.Log("...skipping PID=" + ProcessID + " (not allowlisted image)");
+                                    continue;
+                                }
+
+                                session.Log("...killing process: PID=" + ProcessID + " Name=" + wmiName + " Path=" + (executablePath.Length > 0 ? executablePath : "Unknown"));
+                                Process proc = Process.GetProcessById(pid);
+                                proc.Kill();
+                                killedCount++;
+                            } catch (Exception exc) {
+                                session.Log("...failed to kill process: " + exc.Message);
+                            }
                         }
                     }
-                    if (killedCount == 0) {
-                        session.Log("...No matching processes found to kill.");
-                        break;
-                    }
+                }
+                if (killedCount == 0) {
+                    session.Log("...No matching processes found to kill.");
+                    break;
                 }
                 if (attempt < 3) {
                     session.Log("...Waiting 2 seconds before next kill attempt...");
@@ -528,63 +661,98 @@ namespace MinionConfigurationExtension {
         }
 
         [CustomAction]
-        public static ActionResult del_NSIS_DECAC(Session session) {
-            // Leaves the Config
+        public static ActionResult remove_NSIS_IMCAC(Session session) {
             /*
-             * If NSIS is installed:
-             *   remove salt-minion service,
-             *   remove registry
-             *   remove files, except /salt/conf and /salt/var
+             * NSIS->MSI: remove_NSIS_IMCAC — immediate C# CA (Execute=immediate; _IMCAC, not deferred _DECAC/CADH).
+             * Run NSIS silent uninstall before InstallValidate (sequenced in Product.wxs).
+             * WiX sets NSIS_UNINSTALLSTRING from ARP UninstallString (Win64=yes finds native 64-bit key).
+             * Immediate CA can read that property; deferred CAs would run at InstallFinalize (too late).
              *
-             *   The msi cannot use uninst.exe because the service would no longer start.
-            */
-            session.Log("...BEGIN del_NSIS_DECAC");
-            RegistryKey HKLM = Registry.LocalMachine;
+             * Launch the real uninst.exe with /S only (no temp copy; NSIS infers INSTDIR from the exe path). The stub often exits while a temp
+             * child (Un*.exe) continues; poll until ssm.exe under INSTDIR is gone (NSIS deletes it; folder may remain). WMI counts matching Un*
+             * processes for logging and stall visibility (bounded wait, 600s).
+             * NSIS uninstallSalt removes the salt-minion service; the MSI install then registers the service again.
+             */
+            session.Log("...BEGIN remove_NSIS_IMCAC");
+            try {
+                string rawLine = "";
+                try {
+                    rawLine = session["CustomActionData"];
+                } catch (Exception) { }
+                if (string.IsNullOrEmpty(rawLine)) {
+                    try {
+                        rawLine = session["NSIS_UNINSTALLSTRING"] ?? "";
+                    } catch (Exception ex) {
+                        session.Log("...remove_NSIS_IMCAC: NSIS_UNINSTALLSTRING: " + ex.Message);
+                    }
+                }
+                string sourceUninst = remove_NSIS_ParseUninstExePath(session, rawLine);
+                if (sourceUninst.Length == 0 || !File.Exists(sourceUninst)) {
+                    session.Log("...remove_NSIS_IMCAC: missing or absent NSIS uninstaller: " + sourceUninst);
+                    return ActionResult.Failure;
+                }
+                string instRoot = Path.GetDirectoryName(sourceUninst);
+                if (string.IsNullOrEmpty(instRoot)) {
+                    session.Log("...remove_NSIS_IMCAC: could not derive INSTDIR from " + sourceUninst);
+                    return ActionResult.Failure;
+                }
+                instRoot = instRoot.TrimEnd('\\', '/');
+                session.Log("...remove_NSIS_IMCAC: NSIS INSTDIR = " + instRoot);
 
-            string ARPstring = @"Microsoft\Windows\CurrentVersion\Uninstall\Salt Minion";
-            RegistryKey ARPreg = cutil.get_registry_SOFTWARE_key(session, ARPstring);
-            string uninstexe = "";
-            if (ARPreg != null) uninstexe = ARPreg.GetValue("UninstallString").ToString();
-            session.Log("from REGISTRY uninstexe = " + uninstexe);
-
-            string SOFTWAREstring = @"Salt Project\Salt";
-            RegistryKey SOFTWAREreg = cutil.get_registry_SOFTWARE_key(session, SOFTWAREstring);
-            var bin_dir = "";
-            if (SOFTWAREreg != null) bin_dir = SOFTWAREreg.GetValue("bin_dir").ToString();
-            session.Log("from REGISTRY bin_dir = " + bin_dir);
-            if (bin_dir == "") bin_dir = @"C:\salt\bin";
-            session.Log("bin_dir = " + bin_dir);
-
-            session.Log("Going to stop service salt-minion ...");
-            cutil.shellout(session, "sc stop salt-minion");
-
-            session.Log("Going to delete service salt-minion ...");
-            cutil.shellout(session, "sc delete salt-minion");
-
-            session.Log("Going to kill ...");
-            kill_python_exe(session);
-
-            session.Log("Going to delete ARP registry entry ...");
-            cutil.del_registry_SOFTWARE_key(session, ARPstring);
-
-            session.Log("Going to delete SOFTWARE registry entry ...");
-            cutil.del_registry_SOFTWARE_key(session, SOFTWAREstring);
-
-            session.Log("Going to delete uninst.exe ...");
-            cutil.del_file(session, uninstexe);
-
-            // This deletes any file that starts with "salt" from the install_dir
-            var bindirparent = Path.GetDirectoryName(bin_dir);
-            session.Log(@"Going to delete bindir\..\salt\*.*    ...   " + bindirparent);
-            if (Directory.Exists(bindirparent)){
-                try { foreach (FileInfo fi in new DirectoryInfo(bindirparent).GetFiles("salt*.*")) { fi.Delete(); } } catch (Exception) {; }
+                ProcessStartInfo psi = new ProcessStartInfo();
+                psi.FileName = sourceUninst;
+                psi.Arguments = "/S";
+                psi.UseShellExecute = false;
+                psi.WindowStyle = ProcessWindowStyle.Hidden;
+                session.Log("...remove_NSIS_IMCAC: Process.Start FileName=" + sourceUninst + " Arguments=/S");
+                using (Process p = Process.Start(psi)) {
+                    if (p == null) {
+                        session.Log("...remove_NSIS_IMCAC: Process.Start returned null");
+                        return ActionResult.Failure;
+                    }
+                    p.WaitForExit();
+                    int code = p.ExitCode;
+                    session.Log("...remove_NSIS_IMCAC: uninst.exe stub exit code = " + code);
+                    if (code != 0)
+                        return ActionResult.Failure;
+                }
+                if (!remove_NSIS_WaitForNsisUninstallComplete(session, instRoot, 600)) {
+                    session.Log("...remove_NSIS_IMCAC: uninstall did not complete within timeout (ssm.exe still present)");
+                    return ActionResult.Failure;
+                }
+            } catch (Exception ex) {
+                session.Log("...remove_NSIS_IMCAC: " + ex.Message);
+                return ActionResult.Failure;
             }
+            session.Log("...END remove_NSIS_IMCAC");
+            return ActionResult.Success;
+        }
 
-            // This deletes the bin directory
-            session.Log("Going to delete bindir ... " + bin_dir);
-            cutil.del_dir(session, bin_dir);
-
-            session.Log("...END del_NSIS_DECAC");
+        [CustomAction]
+        public static ActionResult clear_python_caches_IMCAC(Session session) {
+            /*
+             * Remove __pycache__ trees, stray *.pyc, and empty dirs left under [INSTALLDIR]
+             * before InstallFiles (upgrade/fresh/repair). Sequenced after kill_python_exe.
+             * Does not run on REMOVE=ALL. Full uninstall and DeleteConfig2 (CLEAN_INSTALL)
+             * still clear bytecode via clear_python_bytecode_caches_under_dir at the start
+             * of DeleteConfig_DECAC (same helper; see Product.wxs / Product-README).
+             */
+            session.Log("...BEGIN clear_python_caches_IMCAC");
+            try {
+                string installDir = "";
+                try {
+                    installDir = cutil.get_property_IMCAC(session, "INSTALLDIR");
+                } catch (Exception ex) {
+                    session.Log("...clear_python_caches_IMCAC: INSTALLDIR: " + ex.Message);
+                }
+                if (installDir == null) installDir = "";
+                installDir = installDir.Trim();
+                if (installDir.Length > 0)
+                    cutil.clear_python_bytecode_caches_under_dir(session, installDir);
+            } catch (Exception ex) {
+                session.Log("...clear_python_caches_IMCAC: " + ex.Message);
+            }
+            session.Log("...END clear_python_caches_IMCAC");
             return ActionResult.Success;
         }
 
@@ -704,14 +872,16 @@ namespace MinionConfigurationExtension {
 
         [CustomAction]
         public static ActionResult DeleteConfig_DECAC(Session session) {
-            // This removes not only config, but ROOTDIR or subfolders of ROOTDIR, depending on properties CLEAN_INSTALL and REMOVE_CONFIG
-            // Called on install, upgrade and uninstall
+            // Deferred cleanup: WiX schedules this entry as DeleteConfig_DECAC (REMOVE~=ALL)
+            // and as DeleteConfig2_DECAC (CLEAN_INSTALL / upgrade path). Clears Python
+            // bytecode under INSTALLDIR first, then Scripts/bin and ROOTDIR per CLEAN_INSTALL / REMOVE_CONFIG.
             session.Log("...BEGIN DeleteConfig_DECAC");
 
             // Determine wether to delete everything and DIRS
             string CLEAN_INSTALL = cutil.get_property_DECAC(session, "CLEAN_INSTALL");
             string REMOVE_CONFIG = cutil.get_property_DECAC(session, "REMOVE_CONFIG");
             string INSTALLDIR    = cutil.get_property_DECAC(session, "INSTALLDIR");
+            string scriptsdir    = Path.Combine(INSTALLDIR, "Scripts");
             string bindir        = Path.Combine(INSTALLDIR, "bin");
             string ROOTDIR       = cutil.get_property_DECAC(session, "ROOTDIR");
             string ProgramData   = System.Environment.GetEnvironmentVariable("ProgramData");
@@ -719,13 +889,17 @@ namespace MinionConfigurationExtension {
             string ROOTDIR_new   =  Path.Combine(ProgramData, @"Salt Project\Salt");
             // The registry subkey deletes itself
 
+            cutil.clear_python_bytecode_caches_under_dir(session, INSTALLDIR);
+
             if (CLEAN_INSTALL.Length > 0) {
                 session.Log("...CLEAN_INSTALL -- remove both old and new root_dirs");
                 cutil.del_dir(session, ROOTDIR_old);
                 cutil.del_dir(session, ROOTDIR_new);
             }
 
-            session.Log("...deleting bindir (msi only deletes what it installed, not *.pyc)  = " + bindir);
+            session.Log("...deleting Scripts dir (relenv layout) = " + scriptsdir);
+            cutil.del_dir(session, scriptsdir);
+            session.Log("...deleting bin dir (legacy layout) = " + bindir);
             cutil.del_dir(session, bindir);
 
             if (REMOVE_CONFIG.Length > 0) {

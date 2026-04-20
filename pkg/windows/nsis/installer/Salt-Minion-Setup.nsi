@@ -92,6 +92,25 @@ VIAddVersionKey "ProductVersion" "${PRODUCT_VERSION}"
     Pop  "${ResultVar}"
 !macroend
 
+# 32-bit NSIS: ExpandEnvStrings resolves %PROGRAMFILES% to "Program Files (x86)".
+# For 64-bit Salt builds, normalize registry-derived paths under WOW64 to native
+# Program Files.
+!macro NormalizeWow64ProgramFilesPath_ pathvar
+    !if "${CPUARCH}" == "AMD64"
+    ${If} ${RunningX64}
+        ${StrContains} $R8 "Program Files (x86)" "$${pathvar}"
+        ${StrContains} $R7 "Salt Project" "$${pathvar}"
+        ${IfNot} $R8 == ""
+            ${IfNot} $R7 == ""
+                ${StrRep} $${pathvar} $${pathvar} "Program Files (x86)" "Program Files"
+                ${LogMsg} "Normalized $${pathvar} from WOW64 Program Files: $${pathvar}"
+            ${EndIf}
+        ${EndIf}
+    ${EndIf}
+    !endif
+!macroend
+!define NormalizeWow64ProgramFilesPath "!insertmacro NormalizeWow64ProgramFilesPath_"
+
 # Part of the Explode function for Strings
 !define Explode "!insertmacro Explode"
 !macro Explode Length Separator String
@@ -107,6 +126,7 @@ Var TimeStamp
 Var cmdLineParams
 var logFileHandle
 Var msg
+Var msiEnumIdx
 
 # Followed this: https://nsis.sourceforge.io/StrRep
 !define LogMsg '!insertmacro LogMsg'
@@ -707,6 +727,16 @@ Section "Install" Install01
         Call BackupExistingConfig
     ${EndIf}
 
+    # Python bytecode hygiene under $INSTDIR before payload copy (same steps as
+    # MSI clear_python_caches_IMCAC / CustomAction01Util). Runs whenever this path
+    # already exists (upgrade/reinstall/leftover tree); skipped on first install
+    # to a new folder because SetOutPath will create it next.
+    # IfFileExists: jump target 0 means "fall through" when the path exists; if it
+    # does not exist, skip clear_python_caches.
+    IfFileExists "$INSTDIR" 0 continue_install_laydown
+        Call clear_python_caches
+    continue_install_laydown:
+
     # Install files to the Installation Directory
     ${LogMsg} "Setting outpath to $INSTDIR"
     SetOutPath "$INSTDIR\"
@@ -778,12 +808,15 @@ Function .onInit
         SetAutoClose true
     ${EndIf}
 
-    # Uninstall msi-installed salt
+    # Uninstall MSI-installed Salt (same UpgradeCode as WiX Product). Only runs
+    # msiexec /x here; Python bytecode under $INSTDIR is cleared later in the
+    # Install section (clear_python_caches) before files are copied.
     # Source: https://nsis-dev.github.io/NSIS-Forums/html/t-303468.html
     !define upgradecode {FC6FB3A2-65DE-41A9-AD91-D10A402BD641}  # Salt upgrade code
-    StrCpy $0 0
+    StrCpy $msiEnumIdx 0
     ${LogMsg} "Looking for MSI installation"
     loop:
+    StrCpy $0 $msiEnumIdx
     System::Call 'MSI::MsiEnumRelatedProducts(t "${upgradecode}",i0,i r0,t.r1)i.r2'
     ${If} $2 = 0
         # Now $1 contains the product code
@@ -792,7 +825,7 @@ Function .onInit
           StrCpy $R0 $1
           Call UninstallMSI
         pop $R0
-        IntOp $0 $0 + 1
+        IntOp $msiEnumIdx $msiEnumIdx + 1
         goto loop
     ${Endif}
 
@@ -1168,6 +1201,9 @@ FunctionEnd
 
 
 Function un.onInit
+
+    # First log line opens $TEMP\SaltInstaller\<ts>-uninstall.log (SYSTEM temp when run from MSI).
+    ${LogMsg} "===== uninstaller un.onInit begin ====="
 
     Call un.parseUninstallerCommandLineSwitches
 
@@ -1695,9 +1731,36 @@ Function Explode
 FunctionEnd
 
 
+# Clear __pycache__, stray *.pyc, and empty dirs under $INSTDIR (global install dir).
+# Logic matches MSI CustomAction01Util.clear_python_bytecode_caches_under_dir /
+# clear_python_caches_IMCAC; not related to WiX property CLEAN_INSTALL.
+# Caller must ensure $INSTDIR is final (e.g. after getExistingInstallation / UI).
+Function clear_python_caches
+    ${LogMsg} "clear_python_caches: root=$INSTDIR"
+    # cmd /c is not a .bat file: FOR uses %G / %F (%% is only in .cmd/.bat). NSIS: use $%
+    # so the child receives a single percent (see NSIS reference for $%).
+    nsExec::Exec `cmd /c FOR /D /R "$INSTDIR" %G IN (__pycache__) DO @IF EXIST "%G" RD /S /Q "%G"`
+    Pop $0
+    ${LogMsg} "cmd FOR __pycache__ exit=$0"
+
+    # Remove any remaining .pyc files
+    nsExec::Exec `cmd /c FOR /R "$INSTDIR" %F IN (*.pyc) DO @IF EXIST "%F" DEL /F /Q "%F"`
+    Pop $0
+    ${LogMsg} "cmd FOR *.pyc exit=$0"
+
+    # Prune directories left empty after *.pyc removal (deepest first); mirrors MSI
+    # CustomAction01Util.
+    nsExec::Exec `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$$r = '$INSTDIR'; if (Test-Path -LiteralPath $$r) { Get-ChildItem -LiteralPath $$r -Directory -Recurse -Force -ErrorAction SilentlyContinue | Sort-Object { $$_.FullName.Length } -Descending | ForEach-Object { if (-not (Get-ChildItem -LiteralPath $$_.FullName -Force -ErrorAction SilentlyContinue | Select-Object -First 1)) { Remove-Item -LiteralPath $$_.FullName -Force -ErrorAction SilentlyContinue } } }"`
+    Pop $0
+    ${LogMsg} "powershell empty-dir prune exit=$0"
+FunctionEnd
+
+
 #------------------------------------------------------------------------------
 # UninstallMSI Function
-# - Uninstalls MSI by product code
+# - Uninstalls MSI by product code ($R0). Prompts unless silent (/SD IDOK).
+# - Cancel: no IDCANCEL label; execution falls through to Abort below.
+# - OK: jumps to msi_uninstall_exec (skips Abort).
 #
 # Usage:
 #   Push product code
@@ -1708,14 +1771,51 @@ FunctionEnd
 #------------------------------------------------------------------------------
 Function UninstallMSI
     ; $R0 === product code
+    ${LogMsg} "Entering UninstallMSI for product $R0"
     MessageBox MB_OKCANCEL|MB_ICONINFORMATION \
         "${PRODUCT_NAME} is already installed via MSI.$\n$\n\
         Click `OK` to remove the existing installation." \
-        /SD IDOK IDOK UninstallMSI
-    Abort
+        /SD IDOK IDOK msi_uninstall_exec
+        Abort
 
-    UninstallMSI:
-        ExecWait '"msiexec.exe" /x $R0 /qb /quiet /norestart'
+    msi_uninstall_exec:
+        ${LogMsg} "Invoking msiexec uninstall for $R0"
+        # 32-bit NSIS on 64-bit Windows must use Sysnative\msiexec.exe so the 64-bit
+        # Windows Installer uninstalls 64-bit Salt MSIs; WOW64 msiexec can hang or misbehave.
+        ${If} ${FileExists} "$WINDIR\Sysnative\msiexec.exe"
+            StrCpy $R8 "$WINDIR\Sysnative\msiexec.exe"
+        ${Else}
+            StrCpy $R8 "msiexec.exe"
+        ${EndIf}
+        ${LogMsg} "msiexec path: $R8"
+        # Verbose Windows Installer log (same folder as Salt install.log).
+        StrCpy $R6 "$TEMP\SaltInstaller\$TimeStamp-msi-uninstall.log"
+        ${LogMsg} "MSI verbose log (/l*v): $R6"
+        # Wait for the real msiexec client to exit. Do not use MsiQueryProductStateW:
+        # the product unregisters at ProductUnregister (early in InstallFinalize) while
+        # file removal is still running, so NSIS would continue too soon.
+        DetailPrint "Removing MSI-based Salt (Windows Installer) — may take a few minutes..."
+        ${LogMsg} "ExecWait msiexec (uninstall; wait for process exit)"
+        ${If} ${Silent}
+            ${LogMsg} "msiexec flags: /qn /norestart (silent NSIS install)"
+            ExecWait '"$R8" /x $R0 /qn /norestart REBOOT=ReallySuppress /l*v "$R6"' $R7
+        ${Else}
+            ${LogMsg} "msiexec flags: /passive /norestart (GUI NSIS install)"
+            ExecWait '"$R8" /x $R0 /passive /norestart REBOOT=ReallySuppress /l*v "$R6"' $R7
+        ${EndIf}
+        ${LogMsg} "msiexec exit code: $R7"
+        ${If} $R7 == 3010
+        ${OrIf} $R7 == 1641
+            ${LogMsg} "MSI uninstall reported reboot pending; continuing"
+        ${ElseIf} $R7 != 0
+            ${LogMsg} "MSI uninstall failed: $R7"
+            ${IfNot} ${Silent}
+                MessageBox MB_OK|MB_ICONEXCLAMATION|MB_TOPMOST \
+                    "The MSI uninstall did not complete successfully (code $R7).$\n$\n\
+                    The Salt install cannot continue." /SD IDOK
+            ${EndIf}
+            Abort
+        ${EndIf}
 
 FunctionEnd
 
@@ -1816,6 +1916,7 @@ Function getExistingInstallation
         ${EndIf}
 
     finished:
+        ${NormalizeWow64ProgramFilesPath} INSTDIR
         ${LogMsg} "Finished detecting installation type"
         SetRegView 32  # View the 32 bit portion of the registry
 
