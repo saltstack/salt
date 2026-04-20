@@ -3,6 +3,7 @@ Helper functions for transport components to handle message framing
 """
 
 import salt.utils.msgpack
+import salt.utils.safepillar
 
 
 def frame_msg(body, header=None, raw_body=False):  # pylint: disable=unused-argument
@@ -14,7 +15,7 @@ def frame_msg(body, header=None, raw_body=False):  # pylint: disable=unused-argu
         header = {}
 
     framed_msg["head"] = header
-    framed_msg["body"] = body
+    framed_msg["body"] = salt.utils.safepillar.unwrap_pillar_tree(body)
     return salt.utils.msgpack.dumps(framed_msg)
 
 
@@ -30,7 +31,7 @@ def frame_msg_ipc(body, header=None, raw_body=False):  # pylint: disable=unused-
         header = {}
 
     framed_msg["head"] = header
-    framed_msg["body"] = body
+    framed_msg["body"] = salt.utils.safepillar.unwrap_pillar_tree(body)
     return salt.utils.msgpack.dumps(framed_msg, use_bin_type=True)
 
 

@@ -3,10 +3,6 @@ Tests for salt.utils.safepillar (SafeDict, SafeList, SecretStr wrapping, redacti
 """
 
 import pytest
-from pydantic import (  # pylint: disable=3rd-party-module-not-gated
-    SecretBytes,
-    SecretStr,
-)
 
 import salt.utils.safepillar as sp
 import salt.utils.versions
@@ -15,24 +11,24 @@ import salt.utils.versions
 def test_safe_dict_wraps_string_and_nested_dict():
     d = sp.SafeDict()
     d["k"] = "secret"
-    assert isinstance(d["k"], SecretStr)
+    assert isinstance(d["k"], sp.SecretStr)
     assert d["k"].get_secret_value() == "secret"
     d["n"] = {"a": "x"}
     assert isinstance(d["n"], sp.SafeDict)
-    assert isinstance(d["n"]["a"], SecretStr)
+    assert isinstance(d["n"]["a"], sp.SecretStr)
 
 
 def test_safe_dict_skips_errors_key():
     d = sp.SafeDict()
     d["_errors"] = ["plain error"]
     assert d["_errors"] == ["plain error"]
-    assert not isinstance(d["_errors"][0], SecretStr)
+    assert not isinstance(d["_errors"][0], sp.SecretStr)
 
 
 def test_safe_list_append_and_extend():
     lst = sp.SafeList()
     lst.append("a")
-    assert isinstance(lst[0], SecretStr)
+    assert isinstance(lst[0], sp.SecretStr)
     lst.extend(["b", "c"])
     assert lst[1].get_secret_value() == "b"
     lst += ["d"]
@@ -111,7 +107,7 @@ def test_apply_no_log_mask():
 def test_safe_dict_bytes():
     d = sp.SafeDict()
     d["b"] = b"bin"
-    assert isinstance(d["b"], SecretBytes)
+    assert isinstance(d["b"], sp.SecretBytes)
     assert d["b"].get_secret_value() == b"bin"
 
 
@@ -138,5 +134,5 @@ def test_msgpack_serialize_unwraps_safepillar_types():
     packed = msgpack_ser.serialize(wrapped)
     assert msgpack_ser.deserialize(packed) == {"k": "secret"}
 
-    packed2 = msgpack_ser.serialize({"x": SecretStr("y")})
+    packed2 = msgpack_ser.serialize({"x": sp.SecretStr("y")})
     assert msgpack_ser.deserialize(packed2) == {"x": "y"}

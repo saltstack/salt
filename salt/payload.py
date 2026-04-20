@@ -161,15 +161,10 @@ def dumps(msg, use_bin_type=False):
             return salt.utils.safepillar.unwrap_pillar_tree(obj)
         elif isinstance(obj, collections.abc.MutableMapping):
             return dict(obj)
-        try:
-            from pydantic import SecretBytes, SecretStr
-        except ImportError:
-            pass
-        else:
-            if isinstance(obj, SecretStr):
-                return obj.get_secret_value()
-            if isinstance(obj, SecretBytes):
-                return obj.get_secret_value()
+        elif isinstance(
+            obj, (salt.utils.safepillar.SecretStr, salt.utils.safepillar.SecretBytes)
+        ):
+            return obj.get_secret_value()
         # Nothing known exceptions found. Let msgpack raise its own.
         return obj
 

@@ -12,6 +12,9 @@ from typing import Any
 
 from pydantic import SecretBytes, SecretStr
 
+# ``SecretStr`` / ``SecretBytes`` are imported here only; other code should use
+# these names from this module for ``isinstance`` checks (single import surface).
+
 log = logging.getLogger(__name__)
 
 REDACT_PLACEHOLDER = "**********"

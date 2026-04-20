@@ -293,6 +293,20 @@ if ( $PKG ) {
         }
     }
 }
+
+#-------------------------------------------------------------------------------
+# Verify pydantic (salt.utils.safepillar imports SecretStr/SecretBytes at module load)
+#-------------------------------------------------------------------------------
+Write-Host "Verifying pydantic Secret types in onedir: " -NoNewline
+$pydOneLiner = 'from pydantic import SecretBytes, SecretStr; assert SecretStr("x").get_secret_value()=="x"; assert SecretBytes(b"y").get_secret_value()==b"y"'
+$pydanticOut = & $PYTHON_BIN -c $pydOneLiner 2>&1
+if ( -not $? ) {
+    Write-Result "Failed" -ForegroundColor Red
+    Write-Host $pydanticOut
+    exit 1
+}
+Write-Result "Success" -ForegroundColor Green
+
 #-------------------------------------------------------------------------------
 # Finished
 #-------------------------------------------------------------------------------

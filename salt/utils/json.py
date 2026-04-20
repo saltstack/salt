@@ -29,15 +29,11 @@ def _json_default_for_pillar_types(obj):
         ),
     ):
         return salt.utils.safepillar.unwrap_pillar_tree(obj)
-    try:
-        from pydantic import SecretBytes, SecretStr
-    except ImportError:
-        pass
-    else:
-        if isinstance(obj, SecretStr):
-            return obj.get_secret_value()
-        if isinstance(obj, SecretBytes):
-            return obj.get_secret_value()
+    if isinstance(
+        obj,
+        (salt.utils.safepillar.SecretStr, salt.utils.safepillar.SecretBytes),
+    ):
+        return obj.get_secret_value()
     raise TypeError(f"Object of type {type(obj).__name__!r} is not JSON serializable")
 
 
