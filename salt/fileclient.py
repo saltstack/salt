@@ -656,7 +656,14 @@ class Client:
                 ftp_port = url_data.port
                 if not ftp_port:
                     ftp_port = 21
-                ftp.connect(url_data.hostname, ftp_port)
+                # Pass an explicit timeout so an unreachable address family
+                # (e.g. an AAAA record with no working IPv6 route) does not
+                # cause the blocking connect() to hang indefinitely --
+                # ``socket.create_connection`` with no timeout will wait for
+                # kernel TCP SYN retransmits to exhaust before falling
+                # through to the next getaddrinfo result.
+                ftp_timeout = self.opts.get("fileserver_ftp_timeout", 30)
+                ftp.connect(url_data.hostname, ftp_port, timeout=ftp_timeout)
                 ftp.login(url_data.username, url_data.password)
                 remote_file_path = url_data.path.lstrip("/")
                 with salt.utils.files.fopen(dest, "wb") as fp_:
