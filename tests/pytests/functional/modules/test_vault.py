@@ -3,6 +3,7 @@ import logging
 import time
 
 import pytest
+from saltfactories.daemons.container import Container
 
 import salt.utils.path
 from tests.support.runtests import RUNTIME_VARS
@@ -15,6 +16,35 @@ pytestmark = [
 VAULT_BINARY = salt.utils.path.which("vault")
 
 log = logging.getLogger(__name__)
+
+# Workaround for https://github.com/saltstack/pytest-salt-factories/issues/198
+# Container.terminate() does not wait for Docker to fully release the container
+# name, causing 409 "name already in use" errors when parameterized fixtures
+# recreate a container immediately after termination.
+_original_terminate = Container.terminate
+
+
+def _terminate_and_wait(self):
+    """
+    Call the original terminate and then poll Docker until the container
+    name is fully released.  This prevents 409 "name already in use"
+    errors when a new container is created immediately after termination.
+    """
+    if self._terminate_result is not None:
+        return self._terminate_result
+    name = self.name
+    client = self.docker_client
+    result = _original_terminate(self)
+    for _ in range(30):
+        try:
+            client.containers.get(name)
+            time.sleep(1)
+        except Exception:  # pylint: disable=broad-except
+            break
+    return result
+
+
+Container.terminate = _terminate_and_wait  # pylint: disable=E9502
 
 
 @pytest.fixture(scope="module")
@@ -61,6 +91,7 @@ def vault_container_version(request, salt_factories, vault_port, shell):
             "environment": {
                 "VAULT_DEV_ROOT_TOKEN_ID": "testsecret",
                 "VAULT_LOCAL_CONFIG": json.dumps(config),
+                "SKIP_SETCAP": "1",
             },
             "cap_add": ["IPC_LOCK"],
         },
