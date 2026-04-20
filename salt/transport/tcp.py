@@ -13,7 +13,6 @@ import logging
 import multiprocessing
 import os
 import queue
-import selectors
 import socket
 import ssl
 import threading
