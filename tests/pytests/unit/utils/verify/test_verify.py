@@ -211,50 +211,81 @@ def test_max_open_files(caplog):
                 "raising this value."
             )
 
-        if sys.platform.startswith("win"):
-            # Check the Windows API for more detail on this
-            # http://msdn.microsoft.com/en-us/library/xt874334(v=vs.71).aspx
-            # and the python binding http://timgolden.me.uk/pywin32-docs/win32file.html
-            mof_s = mof_h = win32file._getmaxstdio()
-        else:
-            mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
-        tempdir = tempfile.mkdtemp(prefix="fake-keys")
-        keys_dir = pathlib.Path(tempdir, "minions")
-        keys_dir.mkdir()
-
+        mof_s = 10000
+        mof_h = 100000
         mof_test = 256
 
+        # We must patch the functions that check_max_open_files calls
+        # to avoid actually lowering the limits of the test process.
         if sys.platform.startswith("win"):
-            win32file._setmaxstdio(mof_test)
+            patch_get = patch("win32file._getmaxstdio", return_value=mof_s)
+            patch_set = patch("win32file._setmaxstdio")
         else:
-            resource.setrlimit(resource.RLIMIT_NOFILE, (mof_test, mof_h))
+            patch_get = patch("resource.getrlimit", return_value=(mof_s, mof_h))
+            patch_set = patch("resource.setrlimit")
 
-        try:
-            prev = 0
-            for newmax, level in (
-                (24, None),
-                (66, "INFO"),
-                (127, "WARNING"),
-                (196, "CRITICAL"),
-            ):
+        with patch_get, patch_set:
+            tempdir = tempfile.mkdtemp(prefix="fake-keys")
+            keys_dir = pathlib.Path(tempdir, "minions")
+            keys_dir.mkdir()
 
-                for n in range(prev, newmax):
-                    kpath = pathlib.Path(keys_dir, str(n))
-                    with salt.utils.files.fopen(kpath, "w") as fp_:
-                        fp_.write(str(n))
+            try:
+                # We need to manually override the values check_max_open_files uses
+                # because it will call getrlimit/setmaxstdio internally.
+                # Since we patched those above, it will use our mof_s (10000).
+                # But the test expects to trigger warnings based on 256.
+                # So we patch the internal mof_s inside the test's view.
+                with patch("salt.utils.verify.resource.getrlimit", return_value=(mof_test, mof_h)) if not sys.platform.startswith("win") else patch("salt.utils.verify.win32file._getmaxstdio", return_value=mof_test):
 
-                opts = {"max_open_files": newmax, "pki_dir": tempdir}
+                    prev = 0
+                    for newmax, level in (
+                        (24, None),
+                        (66, "INFO"),
+                        (127, "WARNING"),
+                        (196, "CRITICAL"),
+                    ):
 
-                salt.utils.verify.check_max_open_files(opts)
+                        for n in range(prev, newmax):
+                            kpath = pathlib.Path(keys_dir, str(n))
+                            with salt.utils.files.fopen(kpath, "w") as fp_:
+                                fp_.write(str(n))
 
-                if level is None:
-                    # No log message is triggered, only the DEBUG one which
-                    # tells us how many minion keys were accepted.
-                    assert [logmsg_dbg.format(newmax)] == caplog.messages
-                else:
+                        opts = {"max_open_files": newmax, "pki_dir": tempdir}
+
+                        salt.utils.verify.check_max_open_files(opts)
+
+                        if level is None:
+                            # No log message is triggered, only the DEBUG one which
+                            # tells us how many minion keys were accepted.
+                            assert [logmsg_dbg.format(newmax)] == caplog.messages
+                        else:
+                            assert logmsg_dbg.format(newmax) in caplog.messages
+                            assert (
+                                logmsg_chk.format(
+                                    newmax,
+                                    mof_test,
+                                    (
+                                        mof_test - newmax
+                                        if sys.platform.startswith("win")
+                                        else mof_h - newmax
+                                    ),
+                                )
+                                in caplog.messages
+                            )
+                        prev = newmax
+
+                    newmax = mof_test
+                    for n in range(prev, newmax):
+                        kpath = pathlib.Path(keys_dir, str(n))
+                        with salt.utils.files.fopen(kpath, "w") as fp_:
+                            fp_.write(str(n))
+
+                    opts = {"max_open_files": newmax, "pki_dir": tempdir}
+
+                    salt.utils.verify.check_max_open_files(opts)
                     assert logmsg_dbg.format(newmax) in caplog.messages
                     assert (
-                        logmsg_chk.format(
+                        logmsg_crash.format(
                             newmax,
                             mof_test,
                             (
@@ -265,37 +296,11 @@ def test_max_open_files(caplog):
                         )
                         in caplog.messages
                     )
-                prev = newmax
-
-            newmax = mof_test
-            for n in range(prev, newmax):
-                kpath = pathlib.Path(keys_dir, str(n))
-                with salt.utils.files.fopen(kpath, "w") as fp_:
-                    fp_.write(str(n))
-
-            opts = {"max_open_files": newmax, "pki_dir": tempdir}
-
-            salt.utils.verify.check_max_open_files(opts)
-            assert logmsg_dbg.format(newmax) in caplog.messages
-            assert (
-                logmsg_crash.format(
-                    newmax,
-                    mof_test,
-                    (
-                        mof_test - newmax
-                        if sys.platform.startswith("win")
-                        else mof_h - newmax
-                    ),
-                )
-                in caplog.messages
-            )
-        except OSError as err:
-            if err.errno == 24:
-                # Too many open files
-                pytest.skip("We've hit the max open files setting")
-            raise
-        finally:
-            if sys.platform.startswith("win"):
-                win32file._setmaxstdio(mof_h)
-            else:
-                resource.setrlimit(resource.RLIMIT_NOFILE, (mof_s, mof_h))
+            finally:
+                # Cleanup keys
+                for n in range(mof_test):
+                    kpath = pathlib.Path(keys_dir, str(n))
+                    if kpath.exists():
+                        kpath.unlink()
+                keys_dir.rmdir()
+                os.rmdir(tempdir)
