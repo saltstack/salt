@@ -340,6 +340,10 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             self.handle_key_cache()
             self.handle_presence(old_present)
             self.handle_key_rotate(now)
+            # TODO: async batch — safety net for stalled/orphaned batch
+            # jobs.  Detects batches where last_progress is stale and
+            # fires recovery events for the BatchManager to pick up.
+            # self.handle_batch_jobs()
             salt.utils.verify.check_max_open_files(self.opts)
             last = now
             now = int(time.time())
@@ -468,6 +472,143 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             self.event.fire_event(data, tagify("present", "presence"))
             old_present.clear()
             old_present.update(present)
+
+    def handle_batch_jobs(self):
+        """
+        Safety net for stalled or orphaned async batch jobs.
+
+        Reads the active batch index (``batch_active.p``) and checks
+        each active batch for staleness.  A batch is stale if
+        ``last_progress`` exceeds ``timeout + gather_job_timeout + buffer``.
+
+        For stale batches, fires a ``salt/batch/<jid>/recover`` event
+        so the BatchManager can re-adopt and advance them.  If the
+        BatchManager itself is down, this method can directly call
+        ``progress_batch()`` as a last resort.
+
+        Also cleans up index entries for batches that are already
+        ``halted`` (completed or stopped).
+        """
+
+
+class BatchManager(salt.utils.process.SignalHandlingProcess):
+    """
+    Dedicated process for driving async batch jobs.
+
+    Started by the master's ``ProcessManager`` alongside ``Maintenance``,
+    the Reactor engine, ``ReqServer``, etc.  Sits idle on the event bus
+    when no async batches are active.
+
+    Listens for:
+    - ``salt/job/<jid>/ret/<minion>`` — minion returns for active batches
+    - ``salt/batch/<jid>/new`` — new async batch registration from CLI
+    - ``salt/batch/<jid>/stop`` — manual batch stop request
+    - ``salt/batch/<jid>/recover`` — recovery request from Maintenance
+
+    On each relevant event, reads the ``BatchState`` from ``.batch.p``,
+    calls ``progress_batch()`` to advance the state machine, publishes
+    the next sub-batch if needed, and writes the updated state back.
+
+    Maintains an in-memory set of active batch JIDs for fast filtering
+    of non-batch return events (dict lookup, no disk I/O).
+    """
+
+    def __init__(self, opts, **kwargs):
+        """
+        :param dict opts: The salt master options.
+        """
+        super().__init__(**kwargs)
+        self.opts = opts
+
+    def _post_fork_init(self):
+        """
+        Initialize resources that must be created after forking.
+
+        Sets up:
+        - ``self.local`` — ``LocalClient`` for publishing sub-batches.
+        - ``self.event`` — master event bus handle (``listen=True``).
+        - ``self.active_batches`` — in-memory set of active batch JIDs,
+          populated from ``batch_active.p`` on startup.
+        - ``self.output`` — ``EventOutput`` adapter for firing batch
+          lifecycle events.
+        """
+
+    def run(self):
+        """
+        Main event loop.
+
+        Blocks on ``self.event.get_event(wait=5)`` to receive events
+        with a 5-second timeout.  The timeout ensures periodic
+        housekeeping (timeout checks, ``batch_wait`` expiry) even when
+        no events arrive.
+
+        Loop:
+        1. ``get_event(wait=5)``
+        2. If event received, call ``_handle_event(event)``
+        3. Call ``_check_timeouts()`` on each iteration
+        """
+
+    def _handle_event(self, event):
+        """
+        Dispatch an event to the appropriate handler.
+
+        - ``salt/job/<jid>/ret/<minion>`` where ``<jid>`` is in
+          ``self.active_batches`` → ``_handle_batch_return()``
+        - ``salt/batch/<jid>/new`` → add to ``self.active_batches``
+        - ``salt/batch/<jid>/stop`` → halt the batch
+        - ``salt/batch/<jid>/recover`` → re-adopt a stale batch
+
+        All other events are ignored.
+
+        :param dict event: Event dict with ``tag`` and ``data`` keys.
+        """
+
+    def _handle_batch_return(self, jid, minion_id, data):
+        """
+        Process a minion return for an active batch job.
+
+        1. Read ``BatchState`` from ``.batch.p``.
+        2. Call ``progress_batch(state, {minion_id: data})``.
+        3. If ``action.publish`` is non-empty, publish the next sub-batch
+           via ``self.local`` and call ``save_minions()``.
+        4. Write updated ``BatchState`` to ``.batch.p``.
+        5. Call output adapter methods for reporting.
+        6. If ``action.halted``, remove JID from ``self.active_batches``
+           and update the active index.
+
+        :param str jid: The batch JID.
+        :param str minion_id: The minion that returned.
+        :param dict data: The return payload.
+        """
+
+    def _check_timeouts(self):
+        """
+        Periodic housekeeping for all active batches.
+
+        For each JID in ``self.active_batches``:
+        1. Read ``BatchState`` from ``.batch.p``.
+        2. Call ``progress_batch(state, {})`` with empty returns to
+           trigger timeout logic.
+        3. If ``action.publish`` is non-empty (timed-out minions freed
+           up slots), publish next sub-batch.
+        4. If ``action.halted``, clean up.
+        5. Also handles ``batch_wait`` expiry — if the wait window has
+           passed, ``progress_batch()`` will return minions to publish.
+
+        Called on every iteration of the main loop (every <=5 seconds).
+        """
+
+    def _load_active_index(self):
+        """
+        Load the set of active batch JIDs from ``batch_active.p``.
+
+        Called on startup to rebuild in-memory state after a process
+        restart.  Falls back to scanning the job cache for ``.batch.p``
+        files if the index file is missing or corrupt.
+
+        :returns: Set of active batch JID strings.
+        :rtype: set
+        """
 
 
 class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
@@ -858,6 +999,16 @@ class Master(SMaster):
                 },
                 name="Maintenance",
             )
+
+            # TODO: async batch — start BatchManager process to drive
+            # async batch jobs.  Sits idle on the event bus when no
+            # batches are active.
+            # log.info("Creating master batch manager process")
+            # self.process_manager.add_process(
+            #     BatchManager,
+            #     args=(self.opts,),
+            #     name="BatchManager",
+            # )
 
             if self.opts.get("event_return"):
                 log.info("Creating master event return process")

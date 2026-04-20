@@ -259,6 +259,25 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             eauth.update(res)
             eauth["eauth"] = self.options.eauth
 
+        # TODO: async batch — when --async and --batch are both set,
+        # create the initial BatchState, publish the first sub-batch,
+        # fire salt/batch/<jid>/new to notify the BatchManager, print
+        # the JID, and exit.  The BatchManager process drives the rest.
+        #
+        # if self.config["async"] and self.options.batch:
+        #     batch_jid = salt.utils.jid.gen_jid(self.config)
+        #     batch = salt.cli.batch.Batch(self.config, eauth=eauth, quiet=True)
+        #     minions, _, _ = batch.gather_minions()
+        #     state = salt.utils.batch_state.create_batch_state(
+        #         self.config, minions, batch_jid, driver="master",
+        #     )
+        #     salt.utils.batch_state.write_batch_state(batch_jid, state, self.config)
+        #     # publish first sub-batch, update state, notify BatchManager
+        #     salt.utils.stringutils.print_cli(
+        #         f"Executed batch command with job ID: {batch_jid}"
+        #     )
+        #     return
+
         if self.options.static:
 
             if not self.options.batch:

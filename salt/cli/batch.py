@@ -130,6 +130,23 @@ class Batch:
         """
         Execute the batch run
         """
+        # TODO: async batch — refactor this method to use progress_batch()
+        # and an output adapter.  The sync CLI driver would:
+        #
+        # 1. Create BatchState via create_batch_state(opts, minions, jid, driver="cli")
+        # 2. Write .batch.p to JID dir via write_batch_state()
+        # 3. Main loop:
+        #    a. Poll for returns (cmd_iter_no_block, same as today)
+        #    b. action = progress_batch(state, new_returns)
+        #    c. If action.publish: publish next sub-batch via LocalClient
+        #    d. adapter.on_minion_return() for each finished minion
+        #    e. adapter.on_minion_timeout() for each timed-out minion
+        #    f. If action.halted: break
+        #    g. write_batch_state() to persist updated state
+        # 4. adapter.on_batch_done(state)
+        #
+        # For now, the existing implementation below is unchanged.
+
         self.minions, self.ping_gen, self.down_minions = self.gather_minions()
         args = [
             [],
