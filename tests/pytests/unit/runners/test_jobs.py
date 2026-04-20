@@ -70,3 +70,33 @@ def test_list_jobs_with_search_target():
         assert jobs.list_jobs(search_target="node-1-2.com") == returns["node-1-2.com"]
 
         assert jobs.list_jobs(search_target="non-existant") == returns["non-existant"]
+
+
+def test_list_jobs_search_target_non_iterable_target():
+    """
+    test jobs.list_jobs with search_target when Target is not iterable
+    """
+    mock_jobs_cache = {
+        "20160524035503086853": {
+            "Arguments": [],
+            "Function": "test.ping",
+            "StartTime": "2016, May 24 03:55:03.086853",
+            "Target": 12345,
+            "Target-type": "glob",
+            "User": "root",
+        },
+    }
+
+    def return_mock_jobs():
+        return mock_jobs_cache
+
+    class MockMasterMinion:
+
+        returners = {"local_cache.get_jids": return_mock_jobs}
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+    with patch.object(salt.minion, "MasterMinion", MockMasterMinion):
+        with patch.object(jobs.fnmatch, "fnmatch", return_value=True):
+            assert jobs.list_jobs(search_target="node-*") == mock_jobs_cache
