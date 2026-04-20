@@ -1812,9 +1812,7 @@ class MasterPubServerChannel:
                     log.error("Unable to send aes key event")
 
     def send_aes_key_event(self):
-        import traceback
-
-        log.warning("SEND AES KEY EVENT %s", "".join(traceback.format_stack()[-4:-1]))
+        log.debug("Sending AES key event")
         data = {"peer_id": self.opts["id"], "peers": {}}
         for peer in self.cluster_peers:
             peer_pub = (
@@ -1899,10 +1897,14 @@ class MasterPubServerChannel:
                 )
             )
 
+        # Initialize cluster peer state unconditionally so that non-cluster
+        # masters also have an empty ``pushers`` list -- publish_payload
+        # iterates ``self.pushers`` on every event.
+        self.pushers = []
+
         # Cluster-specific peer communication (separate from local IPC)
         if self.opts.get("cluster_id"):
             self.tcp_master_pool_port = self.opts.get("cluster_port", 55596)
-            self.pushers = []
             self.auth_errors = {}
             self.peer_map = {}
 
