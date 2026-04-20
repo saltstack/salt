@@ -1,7 +1,6 @@
 """
 States for managing Hashicorp Vault.
-Currently handles policies.
-Configuration instructions are documented in the :ref:`execution module docs <vault-setup>`.
+Currently handles policies. Configuration instructions are documented in the execution module docs.
 
 :maintainer:    SaltStack
 :maturity:      new
@@ -14,15 +13,7 @@ Configuration instructions are documented in the :ref:`execution module docs <va
 import difflib
 import logging
 
-from salt.exceptions import CommandExecutionError
-
 log = logging.getLogger(__name__)
-
-__deprecated__ = (
-    3009,
-    "vault",
-    "https://github.com/salt-extensions/saltext-vault",
-)
 
 
 def policy_present(name, rules):
@@ -50,88 +41,85 @@ def policy_present(name, rules):
                 }
 
     """
-    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-
+    url = f"v1/sys/policy/{name}"
+    response = __utils__["vault.make_request"]("GET", url)
     try:
-        existing_rules = __salt__["vault.policy_fetch"](name)
-    except CommandExecutionError as err:
-        ret["result"] = False
-        ret["comment"] = f"Failed to read policy: {err}"
-        return ret
+        if response.status_code == 200:
+            return _handle_existing_policy(name, rules, response.json()["rules"])
+        elif response.status_code == 404:
+            return _create_new_policy(name, rules)
+        else:
+            response.raise_for_status()
+    except Exception as e:  # pylint: disable=broad-except
+        return {
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": f"Failed to get policy: {e}",
+        }
 
-    if existing_rules == rules:
+
+def _create_new_policy(name, rules):
+    if __opts__["test"]:
+        return {
+            "name": name,
+            "changes": {name: {"old": "", "new": rules}},
+            "result": None,
+            "comment": "Policy would be created",
+        }
+
+    payload = {"rules": rules}
+    url = f"v1/sys/policy/{name}"
+    response = __utils__["vault.make_request"]("PUT", url, json=payload)
+    if response.status_code not in [200, 204]:
+        return {
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": f"Failed to create policy: {response.reason}",
+        }
+
+    return {
+        "name": name,
+        "result": True,
+        "changes": {name: {"old": None, "new": rules}},
+        "comment": "Policy was created",
+    }
+
+
+def _handle_existing_policy(name, new_rules, existing_rules):
+    ret = {"name": name}
+    if new_rules == existing_rules:
+        ret["result"] = True
+        ret["changes"] = {}
         ret["comment"] = "Policy exists, and has the correct content"
         return ret
 
-    diff = "".join(
+    change = "".join(
         difflib.unified_diff(
-            (existing_rules or "").splitlines(True), rules.splitlines(True)
+            existing_rules.splitlines(True), new_rules.splitlines(True)
         )
     )
-
-    ret["changes"] = {name: diff}
-
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Policy would be " + (
-            "created" if existing_rules is None else "updated"
-        )
+        ret["changes"] = {name: {"change": change}}
+        ret["comment"] = "Policy would be changed"
         return ret
 
-    try:
-        __salt__["vault.policy_write"](name, rules)
-        ret["comment"] = "Policy has been " + (
-            "created" if existing_rules is None else "updated"
-        )
-        return ret
-    except CommandExecutionError as err:
+    payload = {"rules": new_rules}
+
+    url = f"v1/sys/policy/{name}"
+    response = __utils__["vault.make_request"]("PUT", url, json=payload)
+    if response.status_code not in [200, 204]:
         return {
             "name": name,
             "changes": {},
             "result": False,
-            "comment": f"Failed to write policy: {err}",
+            "comment": f"Failed to change policy: {response.reason}",
         }
 
+    ret["result"] = True
+    ret["changes"] = {name: {"change": change}}
+    ret["comment"] = "Policy was updated"
 
-def policy_absent(name):
-    """
-    Ensure a Vault policy with the given name and rules is absent.
-
-    name
-        The name of the policy
-    """
-    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-
-    try:
-        existing_rules = __salt__["vault.policy_fetch"](name)
-    except CommandExecutionError as err:
-        ret["result"] = False
-        ret["comment"] = f"Failed to read policy: {err}"
-        return ret
-
-    if existing_rules is None:
-        ret["comment"] = "Policy is already absent"
-        return ret
-
-    ret["changes"] = {"deleted": name}
-
-    if __opts__["test"]:
-        ret["result"] = None
-        ret["comment"] = "Policy would be deleted"
-        return ret
-
-    try:
-        if not __salt__["vault.policy_delete"](name):
-            raise CommandExecutionError(
-                "Policy was initially reported as existent, but seemed to be "
-                "absent while deleting."
-            )
-        ret["comment"] = "Policy has been deleted"
-        return ret
-    except CommandExecutionError as err:
-        return {
-            "name": name,
-            "changes": {},
-            "result": False,
-            "comment": f"Failed to delete policy: {err}",
-        }
+    return ret

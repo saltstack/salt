@@ -68,13 +68,13 @@ def test_make_request_get_authd(vault, vault_container_version):
     Test that authenticated GET requests are possible
     """
     endpoint = "secret/utils/read"
-    if vault_container_version in ["1.3.1", "latest"]:
+    if vault_container_version == "1.3.1":
         endpoint = "secret/data/utils/read"
 
     res = vault.make_request("GET", f"/v1/{endpoint}")
     assert res.status_code == 200
     data = res.json()["data"]
-    if vault_container_version in ["1.3.1", "latest"]:
+    if vault_container_version == "1.3.1":
         data = data["data"]
     assert "success" in data
     assert data["success"] == "yup"
@@ -87,7 +87,7 @@ def test_make_request_post_json(vault, vault_container_version):
     data = {"success": "yup"}
     endpoint = "secret/utils/write"
 
-    if vault_container_version in ["1.3.1", "latest"]:
+    if vault_container_version == "1.3.1":
         data = {"data": data}
         endpoint = "secret/data/utils/write"
     res = vault.make_request("POST", f"/v1/{endpoint}", json=data)
@@ -102,7 +102,7 @@ def test_make_request_post_data(vault, vault_container_version):
     data = '{"success": "yup_data"}'
     endpoint = "secret/utils/write"
 
-    if vault_container_version in ["1.3.1", "latest"]:
+    if vault_container_version == "1.3.1":
         data = '{"data": {"success": "yup_data"}}'
         endpoint = "secret/data/utils/write"
     res = vault.make_request("POST", f"/v1/{endpoint}", data=data)
@@ -115,7 +115,7 @@ def test_make_request_delete(vault, vault_container_version):
     Test that DELETE requests are possible
     """
     endpoint = "secret/utils/deleteme"
-    if vault_container_version in ["1.3.1", "latest"]:
+    if vault_container_version == "1.3.1":
         endpoint = "secret/data/utils/deleteme"
 
     res = vault.make_request("DELETE", f"/v1/{endpoint}")
@@ -128,7 +128,7 @@ def test_make_request_list(vault, vault_container_version):
     Test that LIST requests are possible
     """
     endpoint = "secret/utils"
-    if vault_container_version in ["1.3.1", "latest"]:
+    if vault_container_version == "1.3.1":
         endpoint = "secret/metadata/utils"
 
     res = vault.make_request("LIST", f"/v1/{endpoint}")
@@ -141,7 +141,7 @@ def test_make_request_token_override(vault, vault_container_version):
     Test that overriding the token in use is possible
     """
     endpoint = "secret/utils/read"
-    if vault_container_version in ["1.3.1", "latest"]:
+    if vault_container_version == "1.3.1":
         endpoint = "secret/data/utils/read"
 
     res = vault.make_request("GET", f"/v1/{endpoint}", token="invalid")
@@ -153,7 +153,7 @@ def test_make_request_url_override(vault, vault_container_version):
     Test that overriding the server URL is possible
     """
     endpoint = "secret/utils/read"
-    if vault_container_version in ["1.3.1", "latest"]:
+    if vault_container_version == "1.3.1":
         endpoint = "secret/data/utils/read"
 
     with pytest.raises(

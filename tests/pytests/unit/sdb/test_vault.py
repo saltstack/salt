@@ -4,138 +4,182 @@ Test case for the vault SDB module
 
 import pytest
 
-import salt.exceptions
 import salt.sdb.vault as vault
-import salt.utils.vault as vaultutil
-from tests.support.mock import ANY, patch
+from tests.support.mock import MagicMock, call, patch
 
 
 @pytest.fixture
 def configure_loader_modules():
-    return {vault: {}}
+    return {
+        vault: {
+            "__opts__": {
+                "vault": {
+                    "url": "http://127.0.0.1",
+                    "auth": {"token": "test", "method": "token"},
+                }
+            }
+        }
+    }
 
 
-@pytest.fixture
-def data():
-    return {"bar": "super awesome"}
-
-
-@pytest.fixture
-def read_kv(data):
-    with patch("salt.utils.vault.read_kv", autospec=True) as read:
-        read.return_value = data
-        yield read
-
-
-@pytest.fixture
-def read_kv_not_found(read_kv):
-    read_kv.side_effect = vaultutil.VaultNotFoundError
-
-
-@pytest.fixture
-def read_kv_not_found_once(read_kv, data):
-    read_kv.side_effect = (vaultutil.VaultNotFoundError, data)
-    yield read_kv
-
-
-@pytest.fixture
-def read_kv_err(read_kv):
-    read_kv.side_effect = vaultutil.VaultPermissionDeniedError("damn")
-    yield read_kv
-
-
-@pytest.fixture
-def write_kv():
-    with patch("salt.utils.vault.write_kv", autospec=True) as write:
-        yield write
-
-
-@pytest.fixture
-def write_kv_err(write_kv):
-    write_kv.side_effect = vaultutil.VaultPermissionDeniedError("damn")
-    yield write_kv
-
-
-@pytest.mark.parametrize(
-    "key,exp_path",
-    [
-        ("sdb://myvault/path/to/foo/bar", "path/to/foo"),
-        ("sdb://myvault/path/to/foo?bar", "path/to/foo"),
-    ],
-)
-def test_set(write_kv, key, exp_path, data):
+def test_set():
     """
-    Test salt.sdb.vault.set_ with current and old (question mark) syntax.
-    KV v1/2 distinction is unnecessary, since that is handled in the utils module.
+    Test salt.sdb.vault.set function
     """
-    vault.set_(key, "super awesome")
-    write_kv.assert_called_once_with(
-        f"sdb://myvault/{exp_path}", data, opts=ANY, context=ANY
-    )
+    version = {"v2": False, "data": None, "metadata": None, "type": None}
+    mock_version = MagicMock(return_value=version)
+    mock_vault = MagicMock()
+    mock_vault.return_value.status_code = 200
+    with patch.dict(vault.__utils__, {"vault.make_request": mock_vault}), patch.dict(
+        vault.__utils__, {"vault.is_v2": mock_version}
+    ):
+        vault.set_("sdb://myvault/path/to/foo/bar", "super awesome")
+
+    assert mock_vault.call_args_list == [
+        call(
+            "POST",
+            "v1/sdb://myvault/path/to/foo",
+            json={"bar": "super awesome"},
+        )
+    ]
 
 
-@pytest.mark.usefixtures("write_kv_err")
-def test_set_err():
+def test_set_v2():
     """
-    Test that salt.sdb.vault.set_ raises CommandExecutionError from other exceptions
+    Test salt.sdb.vault.set function with kv v2 backend
     """
-    with pytest.raises(salt.exceptions.CommandExecutionError, match="damn") as exc:
-        vault.set_("sdb://myvault/path/to/foo/bar", "foo")
+    version = {
+        "v2": True,
+        "data": "path/data/to/foo",
+        "metadata": "path/metadata/to/foo",
+        "type": "kv",
+    }
+    mock_version = MagicMock(return_value=version)
+    mock_vault = MagicMock()
+    mock_vault.return_value.status_code = 200
+    with patch.dict(vault.__utils__, {"vault.make_request": mock_vault}), patch.dict(
+        vault.__utils__, {"vault.is_v2": mock_version}
+    ):
+        vault.set_("sdb://myvault/path/to/foo/bar", "super awesome")
+
+    assert mock_vault.call_args_list == [
+        call(
+            "POST",
+            "v1/path/data/to/foo",
+            json={"data": {"bar": "super awesome"}},
+        )
+    ]
 
 
-@pytest.mark.parametrize(
-    "key,exp_path",
-    [
-        ("sdb://myvault/path/to/foo/bar", "path/to/foo"),
-        ("sdb://myvault/path/to/foo?bar", "path/to/foo"),
-    ],
-)
-def test_get(read_kv, key, exp_path):
+def test_set_question_mark():
     """
-    Test salt.sdb.vault.get_ with current and old (question mark) syntax.
-    KV v1/2 distinction is unnecessary, since that is handled in the utils module.
+    Test salt.sdb.vault.set_ while using the old
+    deprecated solution with a question mark.
     """
-    res = vault.get(key)
-    assert res == "super awesome"
-    read_kv.assert_called_once_with(f"sdb://myvault/{exp_path}", opts=ANY, context=ANY)
+    version = {"v2": False, "data": None, "metadata": None, "type": None}
+    mock_version = MagicMock(return_value=version)
+    mock_vault = MagicMock()
+    mock_vault.return_value.status_code = 200
+    with patch.dict(vault.__utils__, {"vault.make_request": mock_vault}), patch.dict(
+        vault.__utils__, {"vault.is_v2": mock_version}
+    ):
+        vault.set_("sdb://myvault/path/to/foo?bar", "super awesome")
+
+    assert mock_vault.call_args_list == [
+        call(
+            "POST",
+            "v1/sdb://myvault/path/to/foo",
+            json={"bar": "super awesome"},
+        )
+    ]
 
 
-@pytest.mark.usefixtures("read_kv")
-def test_get_missing_key():
+def test_get():
     """
-    Test that salt.sdb.vault.get returns None if vault does not have the key
-    but does have the entry.
+    Test salt.sdb.vault.get function
     """
-    res = vault.get("sdb://myvault/path/to/foo/foo")
-    assert res is None
+    version = {"v2": False, "data": None, "metadata": None, "type": None}
+    mock_version = MagicMock(return_value=version)
+    mock_vault = MagicMock()
+    mock_vault.return_value.status_code = 200
+    mock_vault.return_value.json.return_value = {"data": {"bar": "test"}}
+    with patch.dict(vault.__utils__, {"vault.make_request": mock_vault}), patch.dict(
+        vault.__utils__, {"vault.is_v2": mock_version}
+    ):
+        assert vault.get("sdb://myvault/path/to/foo/bar") == "test"
+
+    assert mock_vault.call_args_list == [call("GET", "v1/sdb://myvault/path/to/foo")]
 
 
-@pytest.mark.usefixtures("read_kv_not_found")
+def test_get_v2():
+    """
+    Test salt.sdb.vault.get function with kv v2 backend
+    """
+    version = {
+        "v2": True,
+        "data": "path/data/to/foo",
+        "metadata": "path/metadata/to/foo",
+        "type": "kv",
+    }
+    mock_version = MagicMock(return_value=version)
+    mock_vault = MagicMock()
+    mock_vault.return_value.status_code = 200
+    mock_vault.return_value.json.return_value = {"data": {"data": {"bar": "test"}}}
+    with patch.dict(vault.__utils__, {"vault.make_request": mock_vault}), patch.dict(
+        vault.__utils__, {"vault.is_v2": mock_version}
+    ):
+        assert vault.get("sdb://myvault/path/to/foo/bar") == "test"
+
+    assert mock_vault.call_args_list == [call("GET", "v1/path/data/to/foo")]
+
+
+def test_get_question_mark():
+    """
+    Test salt.sdb.vault.get while using the old
+    deprecated solution with a question mark.
+    """
+    version = {"v2": False, "data": None, "metadata": None, "type": None}
+    mock_version = MagicMock(return_value=version)
+    mock_vault = MagicMock()
+    mock_vault.return_value.status_code = 200
+    mock_vault.return_value.json.return_value = {"data": {"bar": "test"}}
+    with patch.dict(vault.__utils__, {"vault.make_request": mock_vault}), patch.dict(
+        vault.__utils__, {"vault.is_v2": mock_version}
+    ):
+        assert vault.get("sdb://myvault/path/to/foo?bar") == "test"
+    assert mock_vault.call_args_list == [call("GET", "v1/sdb://myvault/path/to/foo")]
+
+
 def test_get_missing():
     """
-    Test that salt.sdb.vault.get returns None if vault does have the entry.
+    Test salt.sdb.vault.get function returns None
+    if vault does not have an entry
     """
-    res = vault.get("sdb://myvault/path/to/foo/foo")
-    assert res is None
+    version = {"v2": False, "data": None, "metadata": None, "type": None}
+    mock_version = MagicMock(return_value=version)
+    mock_vault = MagicMock()
+    mock_vault.return_value.status_code = 404
+    with patch.dict(vault.__utils__, {"vault.make_request": mock_vault}), patch.dict(
+        vault.__utils__, {"vault.is_v2": mock_version}
+    ):
+        assert vault.get("sdb://myvault/path/to/foo/bar") is None
+
+    assert mock_vault.call_args_list == [call("GET", "v1/sdb://myvault/path/to/foo")]
 
 
-def test_get_whole_dataset(read_kv_not_found_once, data):
+def test_get_missing_key():
     """
-    Test that salt.sdb.vault.get retries the whole path without key if the
-    first request reported the dataset was not found.
+    Test salt.sdb.vault.get function returns None
+    if vault does not have the key but does have the entry
     """
-    res = vault.get("sdb://myvault/path/to/foo")
-    assert res == data
-    read_kv_not_found_once.assert_called_with(
-        "sdb://myvault/path/to/foo", opts=ANY, context=ANY
-    )
-    assert read_kv_not_found_once.call_count == 2
+    version = {"v2": False, "data": None, "metadata": None, "type": None}
+    mock_version = MagicMock(return_value=version)
+    mock_vault = MagicMock()
+    mock_vault.return_value.status_code = 200
+    mock_vault.return_value.json.return_value = {"data": {"bar": "test"}}
+    with patch.dict(vault.__utils__, {"vault.make_request": mock_vault}), patch.dict(
+        vault.__utils__, {"vault.is_v2": mock_version}
+    ):
+        assert vault.get("sdb://myvault/path/to/foo/foo") is None
 
-
-@pytest.mark.usefixtures("read_kv_err")
-def test_get_err():
-    """
-    Test that salt.sdb.vault.get raises CommandExecutionError from other exceptions
-    """
-    with pytest.raises(salt.exceptions.CommandExecutionError, match="damn") as exc:
-        vault.get("sdb://myvault/path/to/foo/bar")
+    assert mock_vault.call_args_list == [call("GET", "v1/sdb://myvault/path/to/foo")]
