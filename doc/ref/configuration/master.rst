@@ -339,6 +339,74 @@ listens on for incoming TCP connections. The default is ``4520``
 
     cluster_pool_port: 4520
 
+.. conf_master:: cluster_secret
+
+``cluster_secret``
+------------------
+
+.. versionadded:: 3008.0
+
+A pre-shared string that authenticates a master attempting to join a running
+cluster at runtime (see :ref:`tutorial-master-cluster`, "Dynamic Join"). All
+masters in the cluster -- both the existing peers and any new master that will
+bootstrap into the cluster -- must be configured with the **same**
+``cluster_secret``. During the join handshake the joining master encrypts the
+secret with the contacted peer's public key; the peer decrypts it and rejects
+the join unless the value matches its own ``cluster_secret``.
+
+The secret is checked on every ``cluster/peer/join`` the master receives,
+including the discover/join handshake that statically-configured peers run
+against each other on startup.
+
+There is no default. Leaving ``cluster_secret`` unset on every peer trivially
+passes the equality check (empty equals empty) but provides no real
+authentication: any process that can reach the cluster transport and that
+presents a syntactically valid join payload will be accepted. Always set a
+high-entropy value in production, distribute it over a secure channel, and
+rotate it by updating the value on every peer and restarting them.
+
+.. code-block:: yaml
+
+    cluster_secret: "d8b4c2e1f07a4c3e8a1b5d0a9c7f3e42b6d9a1c4f8e2b7d0a3c6e9f1b4d7a0c3"
+
+.. conf_master:: cluster_pub_fingerprint
+
+``cluster_pub_fingerprint``
+---------------------------
+
+.. versionadded:: 3008.0
+
+Optional pin for the shared cluster public key. When set, a master that is
+bootstrapping into an existing cluster will reject any
+``cluster/peer/discover-reply`` whose advertised cluster public key does not
+hash to this value. The pin is the SHA-256 hex digest of the PEM-encoded
+cluster public key (case-insensitive). Partial/truncated digests are
+rejected, and the comparison is performed in constant time.
+
+This setting is intended for deployments where the joining master cannot
+read the cluster public key directly from a shared ``cluster_pki_dir`` --
+for example, future topologies that replace the shared filesystem with an
+explicit enrollment flow. In the shared-filesystem topology documented in
+:ref:`tutorial-master-cluster`, the joining master already has access to
+the cluster public key on disk and ``cluster_pub_fingerprint`` is not
+required.
+
+Leaving it unset preserves trust-on-first-contact behavior: the joining
+master accepts the cluster public key presented in the first valid
+discover-reply. Because ``cluster_secret`` is still required to complete
+the join, an attacker who does not know the shared secret cannot convince
+a joining master to converge on a rogue cluster regardless of this
+setting.
+
+Compute the digest with any tool that produces a SHA-256 hex of the PEM
+file on disk, for example::
+
+    openssl dgst -sha256 /path/to/cluster_pki_dir/cluster.pub | awk '{print $2}'
+
+.. code-block:: yaml
+
+    cluster_pub_fingerprint: "3b1f9d...<64 hex chars>...c7a2"
+
 .. conf_master:: extension_modules
 
 ``extension_modules``

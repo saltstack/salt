@@ -9,6 +9,7 @@ import binascii
 import collections
 import errno
 import hashlib
+import hmac
 import logging
 import os
 import pathlib
@@ -57,6 +58,34 @@ def _get_crypticle(opts, key_string, key_size=192, serial=0):
         return salt.crypt.TLSAwareCrypticle(opts, key_string, key_size, serial)
     else:
         return salt.crypt.Crypticle(opts, key_string, key_size, serial)
+
+
+def cluster_pub_matches_fingerprint(opts, cluster_pub):
+    """
+    Verify a received cluster public key against a pinned fingerprint.
+
+    When ``opts["cluster_pub_fingerprint"]`` is set, the joining master
+    requires the ``cluster_pub`` it receives in a
+    ``cluster/peer/discover-reply`` to hash to that value (SHA-256 hex
+    digest of the PEM bytes, case-insensitive). When the option is unset
+    this function returns ``True`` unconditionally, which is the
+    trust-on-first-contact behavior documented for deployments that share
+    ``cluster_pki_dir`` over a filesystem.
+
+    ``cluster_pub`` may be a ``str`` (PEM text) or ``bytes``.
+
+    Returns ``True`` on match (or when no fingerprint is pinned) and
+    ``False`` on mismatch.
+    """
+    pinned = opts.get("cluster_pub_fingerprint")
+    if not pinned:
+        return True
+    if isinstance(cluster_pub, str):
+        pub_bytes = cluster_pub.encode()
+    else:
+        pub_bytes = cluster_pub
+    digest = hashlib.sha256(pub_bytes).hexdigest()
+    return hmac.compare_digest(digest.lower(), str(pinned).lower())
 
 
 class ReqServerChannel:
@@ -2193,14 +2222,15 @@ class MasterPubServerChannel:
             elif tag.startswith("cluster/peer/discover-reply"):
                 payload = salt.payload.loads(data["payload"])
 
-                # Verify digest
-                digest = hashlib.sha1(payload["cluster_pub"].encode()).hexdigest()
-                if self.opts.get("cluster_pub_signature", None):
-                    if digest != self.opts["clsuter_pub_signature"]:
-                        log.warning("Invalid cluster public key")
-                        return
-                else:
-                    log.warning("No cluster signature provided, trusting %s", digest)
+                if not cluster_pub_matches_fingerprint(
+                    self.opts, payload["cluster_pub"]
+                ):
+                    log.warning(
+                        "cluster_pub fingerprint mismatch in discover-reply "
+                        "from %s; rejecting",
+                        payload.get("peer_id"),
+                    )
+                    return
 
                 cluster_pub = salt.crypt.PublicKeyString(payload["cluster_pub"])
                 if not cluster_pub.verify(data["payload"], data["sig"]):
