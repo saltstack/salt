@@ -5,7 +5,6 @@
 import asyncio
 import hashlib
 import logging
-import selectors
 import socket
 import time
 
@@ -300,7 +299,11 @@ async def test_publish_client_connect_server_comes_up(transport, io_loop):
 
 async def test_recv_timeout_zero():
     """
-    Test recv method with timeout=0.
+    ``PublishClient.recv(timeout=0)`` must return ``None`` promptly when
+    nothing is buffered and the read does not complete within its short
+    non-blocking wait, without cancelling the in-flight read task (which
+    would leave ``tornado.iostream.IOStream._read_future`` set and break
+    subsequent reads with ``AssertionError: Already reading``).
     """
     host = "127.0.0.1"
     port = 11122
@@ -308,27 +311,29 @@ async def test_recv_timeout_zero():
     mock_stream = MagicMock()
     mock_unpacker = MagicMock()
     mock_unpacker.__iter__.return_value = []
-    mock_socket = MagicMock()
-    mock_stream.socket = mock_socket
+    mock_stream.socket = MagicMock()
 
-    mock_selector_instance = MagicMock()
-    mock_selector_instance.__enter__.return_value = mock_selector_instance
-    mock_selector_instance.__exit__.return_value = None
-    mock_selector_instance.select.return_value = []
+    # A read_bytes call that never completes -- simulates the common
+    # "no data yet" case where the non-blocking recv() should return None
+    # without cancelling the pending read.
+    never_completes = ioloop.create_future()
+    mock_stream.read_bytes = MagicMock(return_value=never_completes)
 
-    with patch(
-        "salt.transport.tcp.selectors.DefaultSelector",
-        return_value=mock_selector_instance,
-    ), patch("salt.utils.msgpack.Unpacker", return_value=mock_unpacker):
-
+    with patch("salt.utils.msgpack.Unpacker", return_value=mock_unpacker):
         client = salt.transport.tcp.PublishClient({}, ioloop, host=host, port=port)
         client._stream = mock_stream
+
         result = await client.recv(timeout=0)
 
         assert result is None
-        mock_selector_instance.register.assert_called_once_with(
-            mock_socket, selectors.EVENT_READ
-        )
-        mock_selector_instance.unregister.assert_called_once_with(mock_socket)
-    mock_selector_instance.__enter__.assert_called_once()
-    mock_selector_instance.__exit__.assert_called_once()
+        # A read task was started and left in flight for the next recv()
+        # call; it must not have been cancelled.
+        assert client._read_task is not None
+        assert not client._read_task.done()
+        # Cleanup: release the pending future so asyncio does not warn
+        # about a dangling task when the test exits.
+        client._read_task.cancel()
+        try:
+            await client._read_task
+        except (asyncio.CancelledError, Exception):  # pylint: disable=broad-except
+            pass
