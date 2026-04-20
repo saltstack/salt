@@ -448,23 +448,20 @@ class PublishClient(salt.transport.base.PublishClient):
             return msg[b"body"]
 
         if timeout == 0:
-            # Non-blocking mode: peek at the socket and, if readable,
-            # do at most one read; never wait.
+            # Non-blocking mode: ensure a read is in flight and give the
+            # ioloop a tiny slice to satisfy it. We do NOT use a raw
+            # selectors.select() peek on the socket -- Tornado's IOStream
+            # can buffer data into its internal ``_read_buffer`` while
+            # leaving the kernel socket empty, so a kernel-level peek
+            # misses data that ``read_bytes`` would return immediately.
             if self._stream is None:
-                return None
-            with selectors.DefaultSelector() as sel:
-                sel.register(self._stream.socket, selectors.EVENT_READ)
-                ready = sel.select(timeout=0)
-                events = [key.fileobj for key, _ in ready]
-                sel.unregister(self._stream.socket)
-            if not events:
                 return None
             task = self._ensure_read_task()
             if task is None:
                 return None
-            # Wait briefly; if nothing comes back, return None rather than
-            # cancelling the read (cancellation corrupts IOStream state).
-            done, _ = await asyncio.wait({task}, timeout=0.1)
+            # Give the loop up to 10ms to satisfy the read. If the task
+            # does not complete, leave it in flight for the next recv().
+            done, _ = await asyncio.wait({task}, timeout=0.01)
             if not done:
                 return None
             try:
