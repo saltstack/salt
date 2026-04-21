@@ -1,12 +1,10 @@
 import json
 import logging
-import os
 import subprocess
 import time
 
 import pytest
 from pytestshellutils.utils.processes import ProcessResult
-from saltfactories.daemons.container import Container
 
 import salt.utils.files
 import salt.utils.path
@@ -14,36 +12,6 @@ from tests.support.helpers import PatchedEnviron
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
-
-
-# Workaround for https://github.com/saltstack/pytest-salt-factories/issues/198
-# Container.terminate() does not wait for Docker to fully release the container
-# name, causing 409 "name already in use" errors when parameterized fixtures
-# recreate a container immediately after termination.
-_original_terminate = Container.terminate
-
-
-def _terminate_and_wait(self):
-    """
-    Call the original terminate and then poll Docker until the container
-    name is fully released.  This prevents 409 "name already in use"
-    errors when a new container is created immediately after termination.
-    """
-    if self._terminate_result is not None:
-        return self._terminate_result
-    name = self.name
-    client = self.docker_client
-    result = _original_terminate(self)
-    for _ in range(30):
-        try:
-            client.containers.get(name)
-            time.sleep(1)
-        except Exception:  # pylint: disable=broad-except
-            break
-    return result
-
-
-Container.terminate = _terminate_and_wait  # pylint: disable=E9502
 
 
 def _vault_cmd(cmd, textinput=None, raw=False):
@@ -288,7 +256,7 @@ def vault_container_version(request, salt_factories, vault_port, vault_environ):
     }
 
     factory = salt_factories.get_container(
-        f"vault-{vault_version.replace('.', '-')}",
+        "vault",
         f"ghcr.io/saltstack/salt-ci-containers/vault:{vault_version}",
         check_ports=[vault_port],
         container_run_kwargs={
@@ -308,15 +276,11 @@ def vault_container_version(request, salt_factories, vault_port, vault_environ):
         while attempts < 3:
             attempts += 1
             time.sleep(1)
-            # Ensure the VAULT_TOKEN environment variable is set for the login command
-            env = os.environ.copy()
-            env["VAULT_TOKEN"] = "testsecret"
             proc = subprocess.run(
-                [vault_binary, "login", "testsecret"],
+                [vault_binary, "login", "token=testsecret"],
                 check=False,
                 capture_output=True,
                 text=True,
-                env=env,
             )
             if proc.returncode == 0:
                 break
@@ -332,9 +296,16 @@ def vault_container_version(request, salt_factories, vault_port, vault_environ):
             pytest.fail("Failed to login to vault")
 
         vault_write_policy_file("salt_master")
-        vault_write_policy_file("salt_minion", "salt_minion_old")
 
-        if vault_version == "1.3.1":
+        if "latest" == vault_version:
+            vault_write_policy_file("salt_minion")
+        else:
+            vault_write_policy_file("salt_minion", "salt_minion_old")
+
+        if vault_version in ("1.3.1", "latest"):
             vault_enable_secret_engine("kv-v2")
+            if vault_version == "latest":
+                vault_enable_auth_method("approle", ["-path=salt-minions"])
+                vault_enable_secret_engine("kv", ["-version=2", "-path=salt"])
 
         yield vault_version

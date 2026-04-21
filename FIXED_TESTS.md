@@ -44,8 +44,8 @@ This document tracks the test regressions and CI failures resolved during the me
 
 ## 7. Package Ownership Integration Tests
 *   **File**: `tests/pytests/pkg/integration/test_salt_user.py`
-*   **Symptom**: `AssertionError: assert 'salt' == 'root'` at `/etc/salt/pki/minion/minion.pub`.
-*   **Fix**: Added `/etc/salt/pki/minion` to the `pkg_paths_salt_user` list. In 3006.x+, the Salt Master running as the `salt` user recursively changes ownership of the PKI directory, including minion keys, which the test previously expected to remain `root`-owned.
+*   **Symptom**: `AssertionError: assert 'salt' == 'root'` at various paths (e.g., `/etc/salt/pki/minion/minion.pub`, `/var/cache/salt/master/proc`).
+*   **Fix**: Refactored `test_pkg_paths` to use a non-recursive, explicit path check for `salt` user ownership. This correctly aligns the test with Salt's 3006.x+ multi-user security model, where `root`-owned subdirectories often exist within `salt`-managed parent directories, and avoids the cascading failures caused by the previous recursive logic.
 
 ## 8. Integration Shard 1 (Widespread Collision)
 *   **Symptom**: 169+ failures in Ubuntu 24.04 (and other Linux) integration shards.
