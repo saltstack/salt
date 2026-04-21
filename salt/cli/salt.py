@@ -259,24 +259,13 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             eauth.update(res)
             eauth["eauth"] = self.options.eauth
 
-        # TODO: async batch — when --async and --batch are both set,
-        # create the initial BatchState, publish the first sub-batch,
-        # fire salt/batch/<jid>/new to notify the BatchManager, print
-        # the JID, and exit.  The BatchManager process drives the rest.
-        #
-        # if self.config["async"] and self.options.batch:
-        #     batch_jid = salt.utils.jid.gen_jid(self.config)
-        #     batch = salt.cli.batch.Batch(self.config, eauth=eauth, quiet=True)
-        #     minions, _, _ = batch.gather_minions()
-        #     state = salt.utils.batch_state.create_batch_state(
-        #         self.config, minions, batch_jid, driver="master",
-        #     )
-        #     salt.utils.batch_state.write_batch_state(batch_jid, state, self.config)
-        #     # publish first sub-batch, update state, notify BatchManager
-        #     salt.utils.stringutils.print_cli(
-        #         f"Executed batch command with job ID: {batch_jid}"
-        #     )
-        #     return
+        # When --async and --batch are both set, hand off to the
+        # master-side BatchManager: publish the first sub-batch under
+        # a shared JID, persist BatchState, and exit.  The CLI does
+        # not wait for returns.
+        if self.config.get("async") and self.options.batch:
+            self._run_batch_async(eauth)
+            return
 
         if self.options.static:
 
@@ -311,6 +300,123 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                     # Exit with the highest retcode we find
                     retcode = job_retcode
             sys.exit(retcode)
+
+    def _run_batch_async(self, eauth):
+        """
+        Hand off an async batch to the master-side BatchManager.
+
+        Resolves the target (sync gather_minions via
+        :class:`salt.cli.batch.Batch`), generates a single JID,
+        publishes the first sub-batch under that JID via the CLI's
+        ``LocalClient`` (so eauth runs the normal auth pipeline
+        exactly once), writes ``.batch.p``, registers the JID in the
+        active index, fires ``salt/batch/<jid>/new`` so BatchManager
+        adopts it, prints the JID, and exits.
+
+        Subsequent sub-batch publishes are issued by the BatchManager
+        using ``state["user"]`` captured here so publisher-ACL and
+        audit still attribute every sub-batch publish to the original
+        operator.
+        """
+        import time
+
+        import salt.cli.batch
+        import salt.utils.batch_output
+        import salt.utils.batch_state
+        import salt.utils.event
+        import salt.utils.jid
+        import salt.utils.user
+
+        batch_jid = salt.utils.jid.gen_jid(self.config)
+
+        try:
+            helper = salt.cli.batch.Batch(self.config, eauth=eauth, quiet=True)
+        except SaltClientError:
+            sys.exit(2)
+        try:
+            minions, _ping_gen, down_minions = helper.gather_minions()
+        finally:
+            try:
+                helper.local.destroy()
+            except Exception:  # pylint: disable=broad-except
+                pass
+
+        if not minions:
+            salt.utils.stringutils.print_cli("No minions matched the target.")
+            sys.exit(0)
+
+        for m in sorted(down_minions or ()):
+            salt.utils.stringutils.print_cli(
+                f"Minion {m} did not respond. No job will be sent."
+            )
+
+        opts_for_state = dict(self.config)
+        opts_for_state["batch"] = self.options.batch
+        opts_for_state["user"] = (
+            eauth.get("username") if eauth else salt.utils.user.get_user()
+        )
+        state = salt.utils.batch_state.create_batch_state(
+            opts_for_state, minions, batch_jid, driver="master"
+        )
+
+        batch_size = state["batch_size"]
+        initial = state["pending"][:batch_size]
+        state["pending"] = state["pending"][batch_size:]
+
+        pub_kwargs = dict(eauth or {})
+        try:
+            self.local_client.run_job(
+                tgt=list(initial),
+                fun=self.config["fun"],
+                arg=list(self.config.get("arg") or []),
+                tgt_type="list",
+                ret=self.config.get("ret", "") or "",
+                timeout=self.config.get("timeout", 60),
+                jid=batch_jid,
+                listen=False,
+                **pub_kwargs,
+            )
+        except (
+            AuthenticationError,
+            AuthorizationError,
+            EauthAuthenticationError,
+            SaltClientError,
+            SaltInvocationError,
+        ) as exc:
+            sys.stderr.write(f"ERROR: {exc}\n")
+            sys.exit(2)
+
+        now = time.time()
+        for m in initial:
+            state["active"][m] = now
+        state["last_progress"] = now
+
+        salt.utils.batch_state.write_batch_state(batch_jid, state, self.config)
+        salt.utils.batch_state.add_to_active_index(batch_jid, self.config)
+
+        try:
+            with salt.utils.event.get_master_event(
+                self.config, self.config["sock_dir"], listen=False
+            ) as event:
+                event.fire_event(
+                    salt.utils.batch_output.new_payload(state),
+                    salt.utils.batch_output.tag_new(batch_jid),
+                )
+        except Exception:  # pylint: disable=broad-except
+            # Non-fatal — BatchManager's _tick() reconciliation will
+            # pick this batch up from the active index within one
+            # loop interval.  Log the failure so operators see it.
+            import logging
+
+            logging.getLogger(__name__).exception(
+                "Failed to fire salt/batch/%s/new; BatchManager will adopt "
+                "via active-index reconciliation on its next tick",
+                batch_jid,
+            )
+
+        salt.utils.stringutils.print_cli(
+            f"Executed batch command with job ID: {batch_jid}"
+        )
 
     def _print_errors_summary(self, errors):
         if errors:

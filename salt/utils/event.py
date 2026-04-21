@@ -102,6 +102,7 @@ TAGS = {
     "cloud": "cloud",  # prefix for all salt/cloud events
     "fileserver": "fileserver",  # prefix for all salt/fileserver events
     "queue": "queue",  # prefix for all salt/queue events
+    "batch": "batch",  # prefix for all salt/batch events (async batch lifecycle)
 }
 
 

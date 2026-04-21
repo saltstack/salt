@@ -2,8 +2,6 @@
 Unit Tests for the salt.cli.batch module
 """
 
-import datetime
-
 import pytest
 
 from salt.cli.batch import Batch
@@ -311,54 +309,6 @@ def test_get_bnum_fractional_percentage(batch):
     assert Batch.get_bnum(batch) == 3
 
 
-def test_update_wait_empty(batch):
-    """
-    __update_wait is a no-op on an empty list.
-    """
-    wait = []
-    batch._Batch__update_wait(wait)
-    assert wait == []
-
-
-def test_update_wait_all_past(batch):
-    """
-    Every entry in the past is removed.
-    """
-    now = datetime.datetime.now()
-    wait = [now - datetime.timedelta(seconds=10), now - datetime.timedelta(seconds=1)]
-    batch._Batch__update_wait(wait)
-    assert wait == []
-
-
-def test_update_wait_all_future(batch):
-    """
-    Entries strictly in the future are all kept, in order.
-    """
-    now = datetime.datetime.now()
-    future = [
-        now + datetime.timedelta(seconds=30),
-        now + datetime.timedelta(seconds=60),
-    ]
-    wait = list(future)
-    batch._Batch__update_wait(wait)
-    assert wait == future
-
-
-def test_update_wait_mixed(batch):
-    """
-    For a sorted wait list (which Batch.run maintains), only the leading
-    past entries are removed; future entries remain untouched.
-    """
-    now = datetime.datetime.now()
-    past1 = now - datetime.timedelta(seconds=10)
-    past2 = now - datetime.timedelta(seconds=5)
-    future1 = now + datetime.timedelta(seconds=30)
-    future2 = now + datetime.timedelta(seconds=60)
-    wait = [past1, past2, future1, future2]
-    batch._Batch__update_wait(wait)
-    assert wait == [future1, future2]
-
-
 def test_run_no_minions_returns_early(batch):
     """
     When gather_minions yields no targets, run() must exit immediately
@@ -566,17 +516,18 @@ def test_run_batch_wait_delays_next_dispatch(batch):
 
     batch.local.cmd_iter_no_block = MagicMock(side_effect=_make_iter)
 
-    # Controlled clock: the first several now() calls stay inside the
-    # wait window so the loop idles, then jump past it so dispatch
-    # resumes and the test terminates.
-    t0 = datetime.datetime(2025, 1, 1)
+    # Controlled clock: the first few time.time() calls stay before
+    # the batch_wait entry expires so the loop idles; later calls jump
+    # past it so dispatch resumes.  We return the same value on each
+    # invocation to keep the state machine deterministic.
+    t0 = 1_700_000_000.0
     now_calls = [0]
 
-    def _fake_now():
+    def _fake_time():
         now_calls[0] += 1
         if now_calls[0] <= 4:
             return t0
-        return t0 + datetime.timedelta(hours=2)
+        return t0 + 7200
 
     spin_sleeps = [0]
 
@@ -584,8 +535,7 @@ def test_run_batch_wait_delays_next_dispatch(batch):
         if duration == 0.02:
             spin_sleeps[0] += 1
 
-    with patch("salt.cli.batch.datetime") as dt_mock:
-        dt_mock.now.side_effect = _fake_now
+    with patch("salt.cli.batch.time.time", side_effect=_fake_time):
         with patch("salt.cli.batch.time.sleep", side_effect=_fake_sleep):
             ret = list(Batch.run(batch))
 
