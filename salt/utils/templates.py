@@ -10,7 +10,6 @@ import os
 import sys
 import tempfile
 import traceback
-from collections import OrderedDict
 from pathlib import Path
 
 import jinja2
@@ -33,6 +32,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError, SaltRend
 from salt.loader.context import NamedLoaderContext
 from salt.loader.dunder import __file_client__
 from salt.utils.decorators.jinja import JinjaFilter, JinjaGlobal, JinjaTest
+from salt.utils.odict import OrderedDict
 from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
@@ -427,6 +427,25 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             jinja_env = jinja2.sandbox.SandboxedEnvironment(
                 undefined=jinja2.StrictUndefined, **env_args
             )
+
+        # Fix for Issue #30690: Unescape literal \n sequences in context
+        # When YAML data is loaded via import_yaml and passed through Jinja
+        # templates, newlines in multi-line scalars may be escaped as literal
+        # \n sequences. This function recursively converts them back to actual
+        # newlines before the context is used for templating.
+        def _unescape_newlines(data):
+            """Recursively convert literal \\n sequences to actual newlines"""
+            if isinstance(data, dict):
+                return {k: _unescape_newlines(v) for k, v in data.items()}
+            elif isinstance(data, list):
+                return [_unescape_newlines(item) for item in data]
+            elif isinstance(data, str):
+                # Convert literal \n (backslash-n) to actual newline
+                return data.replace("\\n", "\n")
+            return data
+
+        # Apply unescape to context before creating decoded_context
+        context = _unescape_newlines(context)
 
         indent_filter = jinja_env.filters.get("indent")
         jinja_env.tests.update(JinjaTest.salt_jinja_tests)
