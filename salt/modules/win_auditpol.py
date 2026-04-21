@@ -9,7 +9,12 @@ local or domain group policy.
 .. versionadded:: 2019.2.1
 
 This module allows you to view and modify the audit settings as they are applied
-on the machine. The audit settings are broken down into nine categories:
+on the machine. Implementation uses the ``auditpol`` execution utility
+(``__utils__['auditpol']``), which reads and writes policy through Windows
+``advapi32`` audit APIs with English subcategory names, independent of the host
+display language.
+
+The audit settings are broken down into nine categories:
 
 - Account Logon
 - Account Management
@@ -95,11 +100,13 @@ def get_settings(category="All"):
 
     Returns:
         dict: A dictionary containing all subcategories for the specified
-            category along with their current configuration
+            category along with their current configuration (English names and
+            value labels).
 
     Raises:
         KeyError: On invalid category
         CommandExecutionError: If an error is encountered retrieving the settings
+            from the underlying Windows API.
 
     CLI Example:
 
@@ -128,6 +135,7 @@ def get_setting(name):
     Raises:
         KeyError: On invalid setting name
         CommandExecutionError: If an error is encountered retrieving the settings
+            from the underlying Windows API.
 
     CLI Example:
 
@@ -162,6 +170,7 @@ def set_setting(name, value):
     Raises:
         KeyError: On invalid ``name`` or ``value``
         CommandExecutionError: If an error is encountered modifying the setting
+            (for example insufficient privilege for ``AuditSetSystemPolicy``).
 
     CLI Example:
 

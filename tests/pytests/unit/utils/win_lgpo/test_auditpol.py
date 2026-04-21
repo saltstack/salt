@@ -1,11 +1,9 @@
-import locale
+import contextlib
 import random
-import sys
+from copy import copy
 
 import pytest
 
-import salt.modules.cmdmod
-import salt.utils.platform
 import salt.utils.win_lgpo_auditpol as win_lgpo_auditpol
 from tests.support.mock import MagicMock, patch
 
@@ -20,12 +18,18 @@ def settings():
     return ["No Auditing", "Success", "Failure", "Success and Failure"]
 
 
+@pytest.fixture(autouse=True)
+def reset_auditpol_api_cache():
+    win_lgpo_auditpol._API = None
+    yield
+    win_lgpo_auditpol._API = None
+
+
 @pytest.fixture
 def configure_loader_modules():
     return {
         win_lgpo_auditpol: {
             "__context__": {},
-            "__salt__": {"cmd.run_all": salt.modules.cmdmod.run_all},
         }
     }
 
@@ -55,20 +59,30 @@ def test_get_setting_invalid_name():
 
 def test_set_setting(settings):
     names = ["Credential Validation", "IPsec Driver", "File System", "SAM"]
-    mock_set = MagicMock(return_value={"retcode": 0, "stdout": "Success"})
-    with patch.object(salt.modules.cmdmod, "run_all", mock_set):
+    mock_set = MagicMock(return_value=True)
+    real_api = win_lgpo_auditpol._load_advapi32()
+    patched_api = copy(real_api)
+    patched_api.AuditSetSystemPolicy = mock_set
+    with patch.object(win_lgpo_auditpol, "_API", patched_api):
         with patch.object(
             win_lgpo_auditpol,
-            "_get_valid_names",
-            return_value=[k.lower() for k in names],
+            "_enable_se_security_privilege",
+            lambda: contextlib.nullcontext(),
         ):
-            for name in names:
-                value = random.choice(settings)
-                win_lgpo_auditpol.set_setting(name=name, value=value)
-                switches = win_lgpo_auditpol.settings[value]
-                cmd = f'auditpol /set /subcategory:"{name}" {switches}'
-                mock_set.assert_called_once_with(cmd=cmd, python_shell=True)
-                mock_set.reset_mock()
+            with patch.object(
+                win_lgpo_auditpol,
+                "_get_valid_names",
+                return_value=[k.lower() for k in names],
+            ):
+                for name in names:
+                    value = random.choice(settings)
+                    win_lgpo_auditpol.set_setting(name=name, value=value)
+                    mask = win_lgpo_auditpol.settings[value]
+                    mock_set.assert_called_once()
+                    args, _kwargs = mock_set.call_args
+                    assert args[1] == 1
+                    assert args[0].contents.AuditingInformation == mask
+                    mock_set.reset_mock()
 
 
 def test_set_setting_invalid_setting():
@@ -113,40 +127,8 @@ def test_get_auditpol_dump():
         assert found is True
 
 
-def test_auditpol_backup_encoding_mbcs_fallback():
-    if sys.version_info < (3, 11):
-        # locale.getencoding does not exist; implementation falls back to mbcs.
-        assert win_lgpo_auditpol._auditpol_backup_encoding() == "mbcs"
-    else:
-        with patch.object(locale, "getencoding", side_effect=AttributeError):
-            assert win_lgpo_auditpol._auditpol_backup_encoding() == "mbcs"
-
-
-def test_get_auditpol_dump_non_utf8_csv(tmp_path):
-    """
-    auditpol /backup CSV uses system ANSI encoding (e.g. cp1252), not UTF-8.
-    """
-    csv_path = tmp_path / "auditpol-backup.csv"
-    # 0xDC is "Ü" in cp1252 — invalid as UTF-8 alone (issue #68354).
-    csv_path.write_bytes(b"col1;col2\nMachine Name;\xdcber\n")
-
-    class FakeTmp:
-        name = str(csv_path)
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *args):
-            return False
-
-    with patch.object(
-        win_lgpo_auditpol.tempfile, "NamedTemporaryFile", return_value=FakeTmp()
-    ):
-        with patch.object(win_lgpo_auditpol, "_auditpol_cmd", MagicMock()):
-            with patch.object(
-                win_lgpo_auditpol,
-                "_auditpol_backup_encoding",
-                return_value="cp1252",
-            ):
-                lines = win_lgpo_auditpol.get_auditpol_dump()
-    assert any("Über" in line for line in lines), lines
+def test_get_advaudit_policy_rows_matches_fieldnames():
+    rows = win_lgpo_auditpol.get_advaudit_policy_rows()
+    assert rows
+    expected = win_lgpo_auditpol._FIELDNAMES
+    assert list(rows[0].keys()) == expected

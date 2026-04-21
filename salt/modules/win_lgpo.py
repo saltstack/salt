@@ -318,9 +318,9 @@ class _policy_info:
     AdvAudit Mechanism
     ------------------
 
-    The Advanced Audit Policies are configured using a combination of the
-    auditpol command-line utility and modifying the audit.csv file in two
-    locations. The value of this key is a dict with the following make-up:
+    The Advanced Audit Policies are configured using the Windows security APIs
+    (via Salt's ``auditpol`` execution utility) and modifying the audit.csv file
+    in two locations. The value of this key is a dict with the following make-up:
 
     ======  ===================================
     Key     Value
@@ -5375,6 +5375,15 @@ def _get_advaudit_defaults(option=None):
     configurable policies as keys. The values are used to create/modify the
     ``audit.csv`` file. The first entry is `fieldnames` used to create the
     header for the csv file. The rest of the entries are the audit policy names.
+
+    Row templates are built from ``__utils__['auditpol.get_advaudit_policy_rows']()``,
+    which uses Windows ``AuditQuerySystemPolicy`` and English metadata (not
+    ``auditpol /backup``), so defaults stay consistent on non-English Windows.
+    Those templates are still used to **create or update** the machine's
+    ``audit.csv`` files (see ``_advaudit_check_csv`` / ``_set_advaudit_file_data``);
+    only the source of the default *content* changed, not LGPO's use of
+    ``audit.csv`` on disk.
+
     Sample data follows:
 
     {
@@ -5413,8 +5422,9 @@ def _get_advaudit_defaults(option=None):
     }
 
     .. note::
-        `Auditpol Name` designates the value to use when setting the value with
-        the auditpol command
+        ``Auditpol Name`` is the English subcategory string passed to
+        ``__utils__['auditpol.set_setting']``, which applies policy via
+        ``AuditSetSystemPolicy`` (not ``auditpol.exe``).
 
     Args:
         option (str): The item from the dictionary to return. If ``None`` the
@@ -5427,11 +5437,10 @@ def _get_advaudit_defaults(option=None):
     if "lgpo.audit_defaults" not in __context__:
         # Get available setting names and GUIDs
         # This is used to get the fieldnames and GUIDs for individual policies
-        log.debug("Loading auditpol defaults into __context__")
-        dump = __utils__["auditpol.get_auditpol_dump"]()
-        reader = csv.DictReader(dump)
-        audit_defaults = {"fieldnames": reader.fieldnames}
-        for row in reader:
+        log.debug("Loading advanced audit defaults into __context__")
+        rows = __utils__["auditpol.get_advaudit_policy_rows"]()
+        audit_defaults = {"fieldnames": list(rows[0].keys())}
+        for row in rows:
             row["Machine Name"] = ""
             row["Auditpol Name"] = row["Subcategory"]
             # Special handling for snowflake scenarios where the audit.csv names
@@ -5643,7 +5652,10 @@ def _set_advaudit_pol_data(option, value):
     """
     Helper function that updates the current applied settings to match what has
     just been set in the audit.csv files. We're doing it this way instead of
-    running `gpupdate`
+    running `gpupdate`.
+
+    Calls ``__utils__['auditpol.set_setting']``, which uses Windows
+    ``AuditSetSystemPolicy`` (not ``auditpol.exe``).
 
     Args:
         option (str): The name of the option to set
@@ -5673,7 +5685,8 @@ def _set_advaudit_value(option, value):
     C:\\Windows\\Security\\Audit\\audit.csv
     C:\\Windows\\System32\\GroupPolicy\\Machine\\Microsoft\\Windows NT\\Audit\\audit.csv
 
-    Then it applies those settings using ``auditpol``
+    Then it applies those settings using ``__utils__['auditpol.set_setting']``
+    (native ``AuditSetSystemPolicy``).
 
     After that, it updates ``__context__`` with the new setting
 
