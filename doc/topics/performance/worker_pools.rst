@@ -75,11 +75,10 @@ long-running ``_return`` or ``_minion_event`` traffic in the default pool.
 Configuration reference
 =======================
 
-Worker pools are controlled by three master options:
+Worker pools are controlled by two master options:
 
 * :conf_master:`worker_pools_enabled`
 * :conf_master:`worker_pools`
-* :conf_master:`worker_pool_default`
 
 See :ref:`the master configuration reference <configuration-salt-master>` for
 the authoritative description of each option.
@@ -102,22 +101,18 @@ keys:
     * A single ``"*"`` entry makes the pool a *catchall* that receives every
       command no other pool has claimed.
 
-    A command must be mapped to at most one pool.  At most one pool may use
-    the ``"*"`` catchall entry.
+    A command must be mapped to at most one pool.  Exactly one pool must use
+    the ``"*"`` catchall entry so every command has a routing destination.
 
-Catchall and default pool
--------------------------
+The catchall pool
+-----------------
 
-Every configuration must have a fallback for commands that are not explicitly
-mapped.  There are two ways to provide one:
+Every configuration must have a fallback for commands that are not
+explicitly mapped.  Designate one pool as the catchall by giving it
+``commands: ["*"]`` (or by including ``"*"`` alongside explicit commands).
 
-1. Designate one pool as a catchall by giving it ``commands: ["*"]`` (or by
-   including ``"*"`` alongside explicit commands).
-2. Leave no catchall and set :conf_master:`worker_pool_default` to the name of
-   the pool that should receive unmapped commands.
-
-The master refuses to start if neither option is provided, or if multiple
-pools declare the ``"*"`` catchall.
+The master refuses to start if no pool provides a catchall, or if multiple
+pools declare one.
 
 Backward compatibility with ``worker_threads``
 ----------------------------------------------
@@ -180,27 +175,6 @@ the authentication and publish paths:
         worker_count: 4
         commands:
           - "*"
-
-Partition without a catchall
-----------------------------
-
-If you want every command routed explicitly, omit the ``"*"`` entry and name a
-default pool:
-
-.. code-block:: yaml
-
-    worker_pool_default: general
-
-    worker_pools:
-      auth:
-        worker_count: 2
-        commands:
-          - _auth
-      general:
-        worker_count: 6
-        commands:
-          - _return
-          - _minion_event
 
 
 Architecture
@@ -288,9 +262,7 @@ any of the following are true:
 * A pool is missing ``worker_count`` or the value is not an integer ``>= 1``.
 * A pool's ``commands`` field is missing, not a list, or empty.
 * The same command is claimed by more than one pool.
-* More than one pool uses the ``"*"`` catchall entry.
-* No catchall exists and :conf_master:`worker_pool_default` is either unset or
-  points at a pool that does not exist.
+* No pool, or more than one pool, uses the ``"*"`` catchall entry.
 
 Errors are reported with a consolidated message listing every problem the
 validator found, making it straightforward to fix the configuration in a

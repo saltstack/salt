@@ -2579,16 +2579,16 @@ with two required fields:
     name (for example ``_auth`` or ``_return``) or the single catchall
     entry ``"*"``.
 
-A command may be mapped to at most one pool.  At most one pool may use the
-``"*"`` catchall.  When a payload's ``cmd`` does not match any exact
-mapping, it is routed to the catchall pool (if present) or to
-:conf_master:`worker_pool_default` otherwise.
+A command may be mapped to at most one pool.  Exactly one pool must use
+the ``"*"`` catchall so that every command has a routing destination;
+payloads whose ``cmd`` is not matched by an explicit mapping are sent to
+that pool.
 
 The master refuses to start if the configuration is invalid — for example
-if two pools claim the same command, if no catchall or
-:conf_master:`worker_pool_default` is provided, or if a pool has no
-``commands``.  See :ref:`tunable worker pools <tunable-worker-pools>` for a
-full walkthrough of the validation rules and recommended layouts.
+if two pools claim the same command, if no pool (or more than one pool)
+uses the ``"*"`` catchall, or if a pool has no ``commands``.  See
+:ref:`tunable worker pools <tunable-worker-pools>` for a full walkthrough
+of the validation rules and recommended layouts.
 
 .. code-block:: yaml
 
@@ -2601,38 +2601,6 @@ full walkthrough of the validation rules and recommended layouts.
         worker_count: 8
         commands:
           - "*"
-
-.. conf_master:: worker_pool_default
-
-``worker_pool_default``
------------------------
-
-.. versionadded:: 3008.0
-
-Default: ``None``
-
-Name of the pool that should receive commands not matched by any explicit
-mapping, for configurations that do not use the ``"*"`` catchall.  Ignored
-when a pool with ``commands: ["*"]`` is present.
-
-If no pool uses the catchall and ``worker_pool_default`` is either unset or
-refers to a pool that does not exist in :conf_master:`worker_pools`, the
-master refuses to start.
-
-.. code-block:: yaml
-
-    worker_pool_default: general
-
-    worker_pools:
-      auth:
-        worker_count: 2
-        commands:
-          - _auth
-      general:
-        worker_count: 6
-        commands:
-          - _return
-          - _minion_event
 
 .. conf_master:: pub_hwm
 

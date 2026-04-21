@@ -1026,10 +1026,11 @@ class RequestRouter:
     payload to the pool's IPC RequestServer.
 
     The mapping is built once at construction time from the
-    ``worker_pools`` section of the master configuration.  An explicit
-    ``worker_pool_default`` is used when no pool claims the ``"*"``
-    catchall.  See :func:`salt.config.worker_pools.validate_worker_pools_config`
-    for the structural invariants enforced before this class ever sees the
+    ``worker_pools`` section of the master configuration.  Exactly one
+    pool must claim the ``"*"`` catchall, which handles any command that
+    is not listed explicitly.  See
+    :func:`salt.config.worker_pools.validate_worker_pools_config` for the
+    structural invariants enforced before this class ever sees the
     configuration.
 
     Instances also keep a per-pool routing counter in :attr:`stats`, which
@@ -1049,7 +1050,7 @@ class RequestRouter:
         self.opts = opts
         self.secrets = secrets
         self.cmd_to_pool = {}
-        self.default_pool = opts.get("worker_pool_default")
+        self.default_pool = None
         self.pools = {}
         self.stats = {}
 
@@ -1085,23 +1086,14 @@ class RequestRouter:
                     )
                 self.cmd_to_pool[cmd] = pool_name
 
-        # Set up default routing
-        if catchall_pool:
-            # If catchall exists, use it for unmapped commands
-            self.default_pool = catchall_pool
-        elif self.default_pool:
-            # Validate explicitly configured default pool exists
-            if self.default_pool not in worker_pools:
-                raise ValueError(
-                    f"Default pool '{self.default_pool}' not found in worker_pools. "
-                    f"Available pools: {list(worker_pools.keys())}"
-                )
-        else:
-            # No catchall and no default pool specified
+        # Exactly one pool must own the catchall so every command has a
+        # routing destination.
+        if not catchall_pool:
             raise ValueError(
-                "Configuration must have either: (1) a pool with catchall ('*') "
-                "in its commands, or (2) worker_pool_default specified and existing"
+                "Worker pool configuration must have exactly one pool with "
+                "catchall ('*') in its commands."
             )
+        self.default_pool = catchall_pool
 
         # Initialize stats for each pool
         for pool_name in worker_pools.keys():

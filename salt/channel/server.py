@@ -1118,7 +1118,16 @@ class PoolRoutingChannel:
         )
 
     def _build_routing_table(self):
-        """Build command-to-pool routing table from configuration."""
+        """
+        Build command-to-pool routing table from configuration.
+
+        Exactly one pool must include ``"*"`` in its commands and becomes
+        :attr:`default_pool`.  Pool configuration is validated during master
+        startup (see
+        :func:`salt.config.worker_pools.validate_worker_pools_config`), so
+        this method only translates the validated layout into the lookup
+        table used at routing time.
+        """
         self.command_to_pool = {}
         self.default_pool = None
 
@@ -1129,9 +1138,11 @@ class PoolRoutingChannel:
                 else:
                     self.command_to_pool[cmd] = pool_name
 
-        if not self.default_pool and self.worker_pools:
-            # Use first pool as default if no catchall defined
-            self.default_pool = list(self.worker_pools.keys())[0]
+        if self.worker_pools and not self.default_pool:
+            raise ValueError(
+                "Worker pool configuration must have exactly one pool with "
+                "catchall ('*') in its commands."
+            )
 
     def pre_fork(self, process_manager, *args, **kwargs):
         """
@@ -1393,9 +1404,6 @@ class PoolRoutingChannel:
                     cmd = "unknown"
 
             pool_name = self.command_to_pool.get(cmd, self.default_pool)
-
-            if not pool_name and self.worker_pools:
-                pool_name = self.default_pool or list(self.worker_pools.keys())[0]
 
             log.debug(
                 "Routing: cmd=%s -> pool='%s' (pools: %s)",

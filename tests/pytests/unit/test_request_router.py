@@ -23,18 +23,6 @@ class TestRequestRouter:
         assert "ping" in router.cmd_to_pool
         assert router.cmd_to_pool["ping"] == "fast"
 
-    def test_router_initialization_with_explicit_default(self):
-        """Test router initializes correctly with explicit default pool"""
-        opts = {
-            "worker_pools": {
-                "pool1": {"worker_count": 2, "commands": ["ping"]},
-                "pool2": {"worker_count": 3, "commands": ["_pillar"]},
-            },
-            "worker_pool_default": "pool2",
-        }
-        router = RequestRouter(opts)
-        assert router.default_pool == "pool2"
-
     def test_router_route_to_specific_pool(self):
         """Test routing to specific pool based on command"""
         opts = {
@@ -65,20 +53,6 @@ class TestRequestRouter:
         # Unmapped command should go to catchall
         assert router.route_request({"load": {"cmd": "unknown_command"}}) == "default"
         assert router.route_request({"load": {"cmd": "_pillar"}}) == "default"
-
-    def test_router_route_to_explicit_default(self):
-        """Test routing unmapped commands to explicit default pool"""
-        opts = {
-            "worker_pools": {
-                "pool1": {"worker_count": 2, "commands": ["ping"]},
-                "pool2": {"worker_count": 3, "commands": ["_pillar"]},
-            },
-            "worker_pool_default": "pool2",
-        }
-        router = RequestRouter(opts)
-
-        # Unmapped command should go to default
-        assert router.route_request({"load": {"cmd": "unknown"}}) == "pool2"
 
     def test_router_extract_command_from_payload(self):
         """Test command extraction from various payload formats"""
@@ -139,23 +113,19 @@ class TestRequestRouter:
         """Test router fails to initialize with duplicate command mapping"""
         opts = {
             "worker_pools": {
-                "pool1": {"worker_count": 2, "commands": ["ping"]},
+                "pool1": {"worker_count": 2, "commands": ["ping", "*"]},
                 "pool2": {"worker_count": 3, "commands": ["ping"]},
             },
-            "worker_pool_default": "pool1",
         }
         with pytest.raises(ValueError, match="Command 'ping' mapped to multiple pools"):
             RequestRouter(opts)
 
-    def test_router_fails_no_default(self):
-        """Test router fails without catchall or explicit default"""
+    def test_router_fails_no_catchall(self):
+        """Test router fails without a catchall pool"""
         opts = {
             "worker_pools": {
                 "pool1": {"worker_count": 2, "commands": ["ping"]},
             },
-            "worker_pool_default": None,
         }
-        with pytest.raises(
-            ValueError, match="Configuration must have either.*catchall.*default"
-        ):
+        with pytest.raises(ValueError, match="exactly one pool with catchall"):
             RequestRouter(opts)

@@ -30,7 +30,7 @@ The pool dictionary shape is::
     }
 
 ``commands`` entries are either exact command names (for example ``_auth``)
-or the catchall marker ``"*"``.  At most one pool may use ``"*"``, and no
+or the catchall marker ``"*"``.  Exactly one pool must use ``"*"``, and no
 command may be claimed by more than one pool.
 """
 
@@ -70,9 +70,8 @@ def validate_worker_pools_config(opts):
     * Each pool value is a dictionary containing an integer
       ``worker_count >= 1`` and a non-empty list of string ``commands``.
     * No command string is claimed by more than one pool.
-    * At most one pool uses the ``"*"`` catchall entry.
-    * If no pool uses ``"*"``, ``worker_pool_default`` must name a pool
-      that exists.
+    * Exactly one pool uses the ``"*"`` catchall entry so that any
+      command not listed explicitly has a well-defined destination.
 
     When ``worker_pools_enabled`` is ``False`` validation is skipped; the
     master runs in the legacy single-queue MWorker mode where pool routing
@@ -93,8 +92,6 @@ def validate_worker_pools_config(opts):
     # If pools are disabled, no validation needed
     if worker_pools is None:
         return True
-
-    default_pool = opts.get("worker_pool_default")
 
     errors = []
 
@@ -193,18 +190,12 @@ def validate_worker_pools_config(opts):
             else:
                 cmd_to_pool[cmd] = pool_name
 
-    # 3. Validate default pool exists (if no catchall)
+    # 3. Require exactly one catchall pool
     if catchall_pool is None:
-        if default_pool is None:
-            errors.append(
-                "No catchall pool ('*') found and worker_pool_default not specified. "
-                "Either use a catchall pool or specify worker_pool_default."
-            )
-        elif default_pool not in worker_pools:
-            errors.append(
-                f"No catchall pool ('*') found and default pool '{default_pool}' "
-                f"not found in worker_pools. Available: {list(worker_pools.keys())}"
-            )
+        errors.append(
+            "No catchall pool ('*') found. One pool must include '*' in its "
+            "commands so every command has a routing destination."
+        )
 
     if errors:
         raise ValueError(

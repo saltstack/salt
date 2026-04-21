@@ -65,18 +65,6 @@ class TestWorkerPoolsConfig:
         }
         assert validate_worker_pools_config(opts) is True
 
-    def test_validate_worker_pools_config_valid_default_pool(self):
-        """Test validation with valid explicit default pool"""
-        opts = {
-            "worker_pools_enabled": True,
-            "worker_pools": {
-                "pool1": {"worker_count": 2, "commands": ["ping"]},
-                "pool2": {"worker_count": 3, "commands": ["_pillar"]},
-            },
-            "worker_pool_default": "pool2",
-        }
-        assert validate_worker_pools_config(opts) is True
-
     def test_validate_worker_pools_config_duplicate_catchall(self):
         """Test validation catches duplicate catchall"""
         opts = {
@@ -94,10 +82,9 @@ class TestWorkerPoolsConfig:
         opts = {
             "worker_pools_enabled": True,
             "worker_pools": {
-                "pool1": {"worker_count": 2, "commands": ["ping"]},
+                "pool1": {"worker_count": 2, "commands": ["ping", "*"]},
                 "pool2": {"worker_count": 3, "commands": ["ping"]},
             },
-            "worker_pool_default": "pool1",
         }
         with pytest.raises(ValueError, match="Command 'ping' mapped to multiple pools"):
             validate_worker_pools_config(opts)
@@ -113,28 +100,15 @@ class TestWorkerPoolsConfig:
         with pytest.raises(ValueError, match="worker_count must be integer >= 1"):
             validate_worker_pools_config(opts)
 
-    def test_validate_worker_pools_config_missing_default_pool(self):
-        """Test validation catches missing default pool"""
+    def test_validate_worker_pools_config_no_catchall(self):
+        """Test validation requires a catchall pool"""
         opts = {
             "worker_pools_enabled": True,
             "worker_pools": {
                 "pool1": {"worker_count": 2, "commands": ["ping"]},
             },
-            "worker_pool_default": "nonexistent",
         }
-        with pytest.raises(ValueError, match="not found in worker_pools"):
-            validate_worker_pools_config(opts)
-
-    def test_validate_worker_pools_config_no_catchall_no_default(self):
-        """Test validation requires either catchall or default pool"""
-        opts = {
-            "worker_pools_enabled": True,
-            "worker_pools": {
-                "pool1": {"worker_count": 2, "commands": ["ping"]},
-            },
-            "worker_pool_default": None,
-        }
-        with pytest.raises(ValueError, match="Either use a catchall pool"):
+        with pytest.raises(ValueError, match="No catchall pool"):
             validate_worker_pools_config(opts)
 
     def test_validate_worker_pools_config_disabled(self):

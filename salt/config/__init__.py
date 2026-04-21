@@ -532,8 +532,6 @@ VALID_OPTS = immutabletypes.freeze(
         "worker_pools_enabled": bool,
         # Worker pool configuration (dict of pool_name -> {worker_count, commands})
         "worker_pools": dict,
-        # Default pool for unmapped commands (when no catchall exists)
-        "worker_pool_default": (type(None), str),
         # The port for the master to listen to returns on. The minion needs to connect to this port
         # to send returns.
         "ret_port": int,
@@ -1399,7 +1397,6 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "worker_threads": 5,
         "worker_pools_enabled": True,
         "worker_pools": {},
-        "worker_pool_default": None,
         "sock_dir": os.path.join(salt.syspaths.SOCK_DIR, "master"),
         "sock_pool_size": 1,
         "ret_port": 4506,
