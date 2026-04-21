@@ -1,4 +1,5 @@
 import contextlib
+import ctypes
 import random
 from copy import copy
 
@@ -83,7 +84,11 @@ def test_set_setting(settings):
                     mock_set.assert_called_once()
                     args, _kwargs = mock_set.call_args
                     assert args[1] == 1
-                    assert args[0].contents.AuditingInformation == mask
+                    policy_ptr = ctypes.cast(
+                        args[0],
+                        ctypes.POINTER(win_lgpo_auditpol._AUDIT_POLICY_INFORMATION),
+                    )
+                    assert policy_ptr.contents.AuditingInformation == mask
                     mock_set.reset_mock()
 
 
