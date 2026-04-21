@@ -368,16 +368,82 @@ key contains a populated dictionary (changes occurred in the watched state),
 then the ``watch`` requisite can add additional behavior. This additional
 behavior is defined by the ``mod_watch`` function within the watching state
 module. If the ``mod_watch`` function exists in the watching state module, it
-will be called *in addition to* the normal watching state, regardless of
-whether the normal run of the watching state produced changes of its own.
-The ``changes`` and ``comment`` returned by ``mod_watch`` are merged into the
-result of the normal run so that neither set of changes is lost; the
-``result`` of the combined return is ``True`` only if both the normal run
-and ``mod_watch`` succeeded.
+will be called *in addition to* the normal watching state. The return data
+from the ``mod_watch`` function is what will be returned to the master in this
+case; the return data from the main watching function is discarded.
 
 If the "changes" key contains an empty dictionary, the ``watch`` requisite acts
 exactly like the ``require`` requisite (the watching state will execute if
 "result" is ``True``, and fail if "result" is ``False`` in the watched state).
+
+.. note::
+
+   If the watching state's normal run produces its own ``changes``,
+   ``mod_watch`` will not be called. This is intentional: many watchers
+   (for example, :py:func:`cmd.run <salt.states.cmd.run>`) are
+   non-idempotent, and their ``mod_watch`` simply re-invokes the main
+   action. Running both would execute the action twice. When working with
+   ``watch`` or ``watch_in``, prefer states that only enforce a single
+   attribute, e.g. splitting ``service.running`` and ``service.enabled``
+   into separate states.
+
+   A watching state may override this by returning ``force_mod_watch:
+   True`` from its normal run. This signals that the changes produced by
+   the normal run do not subsume the work of ``mod_watch``, so the state
+   system must invoke ``mod_watch`` as well. The ``changes`` and
+   ``comment`` returned by ``mod_watch`` are merged into the normal run's
+   result and the combined ``result`` is ``True`` only if both succeeded.
+   Setting ``force_mod_watch`` is only meaningful for state modules whose
+   ``mod_watch`` performs work orthogonal to the normal run (for example,
+   :py:func:`docker_container.running
+   <salt.states.docker_container.running>`, whose ``mod_watch`` forces a
+   container rebuild that is not performed by a network-only reconcile).
+
+One common source of confusion is expecting ``mod_watch`` to be called for
+every necessary change. You might be tempted to write something like this:
+
+.. code-block:: yaml
+
+   httpd:
+     service.running:
+       - enable: True
+       - watch:
+         - file: httpd-config
+
+   httpd-config:
+     file.managed:
+       - name: /etc/httpd/conf/httpd.conf
+       - source: salt://httpd/files/apache.conf
+
+If your service is already running but not enabled, you might expect that Salt
+will be able to tell that since the config file changed your service needs to
+be restarted. This is not the case. Because the service needs to be enabled,
+that change will be made and ``mod_watch`` will never be triggered. In this
+case, changes to your ``apache.conf`` will fail to be loaded. If you want to
+ensure that your service always reloads the correct way to handle this is
+either ensure that your service is not running before applying your state, or
+simply make sure that ``service.running`` is in a state on its own:
+
+.. code-block:: yaml
+
+   enable-httpd:
+     service.enabled:
+       - name: httpd
+
+   start-httpd:
+     service.running:
+       - name: httpd
+       - watch:
+         - file: httpd-config
+
+   httpd-config:
+     file.managed:
+       - name: /etc/httpd/conf/httpd.conf
+       - source: salt://httpd/files/apache.conf
+
+Now that ``service.running`` is its own state, changes to ``service.enabled``
+will no longer prevent ``mod_watch`` from getting triggered, so your ``httpd``
+service will get restarted like you want.
 
 .. _requisites-listen:
 

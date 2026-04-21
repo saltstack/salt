@@ -3051,25 +3051,27 @@ class State:
                 )
         elif status == "change" and not low.get("__prereq__"):
             ret = self.call(low, chunks, running)
-            if not ret.get("skip_watch", False):
+            force_mod_watch = ret.pop("force_mod_watch", False)
+            if not ret.get("skip_watch", False) and (
+                not ret["changes"] or force_mod_watch
+            ):
                 low = low.copy()
                 low["sfun"] = low["fun"]
                 low["fun"] = "mod_watch"
                 low["__reqs__"] = reqs
                 if not ret["changes"]:
-                    # Normal run reported no changes: replace its result
-                    # with the mod_watch result (preserves existing behavior
-                    # and keeps the single-result output).
+                    # Normal run produced no changes: replace its result
+                    # with mod_watch's, preserving the historical
+                    # single-result output.
                     ret = self.call(low, chunks, running)
                 else:
-                    # Normal run reported changes of its own. Historically
-                    # mod_watch was skipped in this case, which silently
-                    # dropped the watched-state trigger whenever the normal
-                    # run happened to produce any unrelated changes (e.g.
-                    # docker_container.running performing a network
-                    # reconnection while a watched config file had changed).
-                    # Invoke mod_watch anyway and merge its result into the
-                    # normal run's result so neither set of changes is lost.
+                    # Normal run produced changes and explicitly opted in
+                    # via ``force_mod_watch`` because those changes do not
+                    # subsume the work of mod_watch (e.g.
+                    # docker_container.running did a network reconnect but
+                    # did not recreate or restart the container). Run
+                    # mod_watch and merge its result so neither set of
+                    # changes is lost.
                     mod_ret = self.call(low, chunks, running)
                     for change_key, change_val in mod_ret.get("changes", {}).items():
                         ret["changes"][change_key] = change_val
