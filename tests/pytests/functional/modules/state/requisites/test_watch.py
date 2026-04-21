@@ -218,16 +218,13 @@ def test_issue_30820_requisite_in_match_by_name(state, state_tree):
         assert ret[bar_state].comment == 'Command "echo bar" run'
 
 
-def test_watch_fires_when_normal_run_has_changes(state, state_tree):
+def test_watch_skips_mod_watch_when_normal_run_has_changes(state, state_tree):
     """
-    The watcher's ``mod_watch`` must be invoked whenever a watched state
-    reports changes, even if the watcher's own normal run already produced
-    some unrelated changes of its own. Previously Salt skipped ``mod_watch``
-    in that case, which silently dropped the watched-state trigger (for
-    example, ``docker_container.running`` performing a network reconnect
-    inside its normal run would prevent the force-replacement that
-    ``mod_watch`` is supposed to perform when a watched config file has
-    changed).
+    By default, if the watcher's normal run already produces changes,
+    ``mod_watch`` is not invoked. This preserves the long-standing Salt
+    behavior that non-idempotent watchers (such as ``cmd.run``, whose
+    ``mod_watch`` re-executes the command) do not run twice per state
+    apply.
     """
     sls_contents = """
     trigger:
@@ -235,6 +232,38 @@ def test_watch_fires_when_normal_run_has_changes(state, state_tree):
 
     watcher:
       test.succeed_with_changes:
+        - watch:
+          - test: trigger
+    """
+    watcher = "test_|-watcher_|-watcher_|-succeed_with_changes"
+    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+        ret = state.sls("requisite")
+        # The normal run's own change is present.
+        assert "testing" in ret[watcher].changes
+        # mod_watch did not fire, so no "Requisites with changes" entry and
+        # no "Watch statement fired." comment were appended.
+        assert "Requisites with changes" not in ret[watcher].changes
+        assert "Watch statement fired." not in ret[watcher].comment
+        assert ret[watcher].result is True
+
+
+def test_watch_fires_when_force_mod_watch_is_set(state, state_tree):
+    """
+    A watcher's normal return may set ``force_mod_watch: True`` to signal
+    that its own changes do not subsume the work of ``mod_watch`` (for
+    example, ``docker_container.running`` performing a network reconnect
+    without recreating the container while a watched config file has
+    changed). When the flag is set, ``mod_watch`` must fire in addition to
+    the normal run and its result must be merged in so neither set of
+    changes is lost.
+    """
+    sls_contents = """
+    trigger:
+      test.succeed_with_changes
+
+    watcher:
+      test.succeed_with_changes:
+        - force_mod_watch: True
         - watch:
           - test: trigger
     """
