@@ -32,6 +32,7 @@ def configure_loader_modules(tmp_path):
                 "file.write": win_file.write,
             },
             "__utils__": {
+                "auditpol.get_advaudit_policy_rows": auditpol.get_advaudit_policy_rows,
                 "auditpol.get_auditpol_dump": auditpol.get_auditpol_dump,
                 "auditpol.set_setting": auditpol.set_setting,
             },
@@ -136,7 +137,11 @@ def test_get_value(setting, expected):
 def test_get_defaults():
     patch_context = patch.dict(win_lgpo.__context__, {})
     patch_salt = patch.dict(
-        win_lgpo.__utils__, {"auditpol.get_auditpol_dump": auditpol.get_auditpol_dump}
+        win_lgpo.__utils__,
+        {
+            "auditpol.get_advaudit_policy_rows": auditpol.get_advaudit_policy_rows,
+            "auditpol.get_auditpol_dump": auditpol.get_auditpol_dump,
+        },
     )
     with patch_context, patch_salt:
         assert "Machine Name" in win_lgpo._get_advaudit_defaults("fieldnames")

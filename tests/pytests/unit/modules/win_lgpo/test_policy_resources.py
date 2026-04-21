@@ -35,6 +35,7 @@ def configure_loader_modules(tmp_path):
                 "cachedir": str(cachedir),
             },
             "__utils__": {
+                "auditpol.get_advaudit_policy_rows": win_lgpo_auditpol.get_advaudit_policy_rows,
                 "auditpol.get_auditpol_dump": win_lgpo_auditpol.get_auditpol_dump,
                 "reg.read_value": win_reg.read_value,
             },
