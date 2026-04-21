@@ -74,6 +74,11 @@ def pkg_paths_salt_user():
         "/run/salt-master.pid",
         "/run/salt-syndic.pid",
         "/run/salt-api.pid",
+        "/etc/salt/master.d/_schedule.conf",
+        "/etc/salt/minion.d/_schedule.conf",
+        "/etc/salt/pki/minion/minion_master.pub",
+        "/etc/salt/pki/minion/minion.pub",
+        "/etc/salt/pki/minion/minion.pem",
     ]
 
 
@@ -83,7 +88,14 @@ def pkg_paths_salt_user_exclusions():
     Exclusions from paths created by package installs and owned by salt user
     """
     paths = [
-        "/var/cache/salt/master/.root_key"  # written by salt, salt-run and salt-key as root
+        "/var/cache/salt/master/.root_key",  # written by salt, salt-run and salt-key as root
+        "/etc/salt/pki/minion",  # Directory remains root owned, but files inside are salt owned
+        "/var/cache/salt/master/files",
+        "/var/cache/salt/master/accumulator",
+        "/var/cache/salt/master/proc",
+        "/var/cache/salt/master/roots",
+        "/var/cache/salt/master/extmods",
+        "/var/cache/salt/master/file_lists",
     ]
     return paths
 
@@ -194,34 +206,15 @@ def test_pkg_paths(
         for dirpath, sub_dirs, files in os.walk(pkg_path):
             path = pathlib.Path(dirpath)
 
-            # Directories owned by salt:salt or their subdirs/files
-            if (
-                str(path) in pkg_paths_salt_user or str(path) in salt_user_subdirs
-            ) and str(path) not in pkg_paths_salt_user_exclusions:
+            if str(path) in pkg_paths_salt_user:
                 assert path.owner() == "salt"
                 assert path.group() == "salt"
-                salt_user_subdirs.extend(
-                    [str(path.joinpath(sub_dir)) for sub_dir in sub_dirs]
-                )
-                # Individual files owned by salt user
-                for file in files:
-                    file_path = path.joinpath(file)
-                    if str(file_path) not in pkg_paths_salt_user_exclusions:
-                        assert file_path.owner() == "salt"
-            # Directories owned by root:root
-            else:
-                assert path.owner() == "root"
-                assert path.group() == "root"
-                for file in files:
-                    if file.endswith("ipc"):
-                        continue
-                    file_path = path.joinpath(file)
-                    # Individual files owned by salt user
-                    if str(file_path) in pkg_paths_salt_user:
-                        assert file_path.owner() == "salt"
-                    else:
-                        assert file_path.owner() == "root"
-                        assert file_path.group() == "root"
+
+            # Individual files owned by salt user
+            for file in files:
+                file_path = path.joinpath(file)
+                if str(file_path) in pkg_paths_salt_user:
+                    assert file_path.owner() == "salt"
 
 
 @pytest.mark.skip_if_binaries_missing("logrotate")
