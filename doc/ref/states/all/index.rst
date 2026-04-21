@@ -24,6 +24,7 @@ state modules
     cloud
     cmd
     cron
+    debconfmod
     disk
     environ
     etcd_mod
