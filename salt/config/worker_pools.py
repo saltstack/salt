@@ -1,33 +1,87 @@
 """
-Default worker pool configuration for Salt master.
+Default worker-pool configuration and validation for the Salt master.
 
-This module defines the default worker pool routing configuration.
-Users can override this in their master config file.
+Worker pools partition the master's MWorkers into named groups and route
+specific commands to specific groups, so a slow workload cannot starve
+time-critical traffic (for example ``_auth``).  See the
+:ref:`tunable worker pools <tunable-worker-pools>` topic guide for the
+user-facing overview.
+
+This module contains three things:
+
+* :data:`DEFAULT_WORKER_POOLS`, the configuration used when the operator
+  provides no explicit ``worker_pools`` stanza and no ``worker_threads``
+  override.
+* :func:`validate_worker_pools_config`, called from master configuration
+  processing to enforce structural and security invariants before the master
+  is allowed to start.
+* :func:`get_worker_pools_config`, which resolves the effective pool layout
+  from the master opts, handling backward compatibility with
+  ``worker_threads`` and the ``worker_pools_enabled=False`` legacy switch.
+
+The pool dictionary shape is::
+
+    {
+        "<pool-name>": {
+            "worker_count": <int >= 1>,
+            "commands": ["<cmd>", ..., "*"?],
+        },
+        ...
+    }
+
+``commands`` entries are either exact command names (for example ``_auth``)
+or the catchall marker ``"*"``.  At most one pool may use ``"*"``, and no
+command may be claimed by more than one pool.
 """
 
-# Default worker pool routing configuration
-# This provides maximum backward compatibility by using a single pool
-# with a catchall pattern that handles all commands (identical to current behavior)
+# Default worker pool routing configuration.
+#
+# Single pool with a catchall that matches every command.  This is the exact
+# legacy behavior: all MWorkers service every command, sized the same as the
+# long-standing ``worker_threads`` default of 5.  The master falls back to
+# this value only when the operator sets neither ``worker_pools`` nor
+# ``worker_threads``.
 DEFAULT_WORKER_POOLS = {
     "default": {
-        "worker_count": 5,  # Same as current worker_threads default
-        "commands": ["*"],  # Catchall - handles all commands
+        "worker_count": 5,
+        "commands": ["*"],
     },
 }
 
 
 def validate_worker_pools_config(opts):
     """
-    Validate worker pools configuration at master startup.
+    Validate the effective worker-pool configuration at master startup.
 
-    Args:
-        opts: Master configuration dictionary
+    Called during master configuration processing.  Returns ``True`` when
+    the configuration is acceptable; raises :class:`ValueError` with a
+    consolidated multi-line message listing every problem the validator
+    found.  The accumulated reporting style lets operators fix their config
+    in a single pass instead of discovering errors one at a time.
 
-    Returns:
-        True if valid
+    The following invariants are enforced:
 
-    Raises:
-        ValueError: If configuration is invalid with detailed error messages
+    * ``worker_pools`` is a non-empty dictionary.
+    * Pool names are non-empty strings, contain no path separators
+      (``/`` or ``\\``), do not begin with ``..``, and contain no null
+      byte.  These rules exist purely to prevent pool names from being
+      abused to steer IPC sockets or logs out of the master's runtime
+      directories.
+    * Each pool value is a dictionary containing an integer
+      ``worker_count >= 1`` and a non-empty list of string ``commands``.
+    * No command string is claimed by more than one pool.
+    * At most one pool uses the ``"*"`` catchall entry.
+    * If no pool uses ``"*"``, ``worker_pool_default`` must name a pool
+      that exists.
+
+    When ``worker_pools_enabled`` is ``False`` validation is skipped; the
+    master runs in the legacy single-queue MWorker mode where pool routing
+    does not apply.
+
+    :param dict opts: The master configuration dictionary.
+    :returns: ``True`` when the configuration is valid.
+    :raises ValueError: If the configuration is invalid.  The exception
+        message lists every detected error.
     """
     if not opts.get("worker_pools_enabled", True):
         # Legacy mode, no validation needed
@@ -163,15 +217,24 @@ def validate_worker_pools_config(opts):
 
 def get_worker_pools_config(opts):
     """
-    Get the effective worker pools configuration.
+    Resolve the effective worker-pool configuration from master opts.
 
-    Handles backward compatibility with worker_threads.
+    Resolution order, first match wins:
 
-    Args:
-        opts: Master configuration dictionary
+    1. ``worker_pools_enabled`` is ``False`` — returns ``None`` to signal
+       the legacy non-pooled code path.
+    2. ``worker_pools`` is set and non-empty — returned verbatim.  The
+       operator is fully in charge of pool layout.
+    3. ``worker_threads`` is set — returns a synthesized single-pool
+       configuration whose ``worker_count`` matches ``worker_threads`` and
+       whose ``commands`` is the catchall ``["*"]``.  This is the upgrade
+       path that keeps pre-3008.0 configurations byte-for-byte compatible.
+    4. Neither is set — returns :data:`DEFAULT_WORKER_POOLS`.
 
-    Returns:
-        Dictionary of worker pools configuration
+    :param dict opts: The master configuration dictionary.
+    :returns: The resolved pool layout, or ``None`` when pooling is
+        explicitly disabled.
+    :rtype: dict or None
     """
     # If pools explicitly disabled, return None (legacy mode)
     if not opts.get("worker_pools_enabled", True):

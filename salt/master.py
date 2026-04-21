@@ -1015,26 +1015,43 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
 
 class RequestRouter:
     """
-    Routes requests to appropriate worker pools based on command type.
+    Classify incoming master requests and map them to their worker pool.
 
-    This class handles the classification of incoming requests and routes
-    them to the appropriate worker pool based on user-defined configuration.
+    :class:`RequestRouter` is the in-process routing table used by the
+    pooled request path (see :py:class:`salt.channel.server.PoolRoutingChannel`).
+    Given a payload, :meth:`route_request` extracts the ``cmd`` field
+    (transparently decrypting the load when necessary) and returns the name
+    of the pool that should service it.  It does not own sockets or spawn
+    processes — the transport layer uses the decision to forward the
+    payload to the pool's IPC RequestServer.
+
+    The mapping is built once at construction time from the
+    ``worker_pools`` section of the master configuration.  An explicit
+    ``worker_pool_default`` is used when no pool claims the ``"*"``
+    catchall.  See :func:`salt.config.worker_pools.validate_worker_pools_config`
+    for the structural invariants enforced before this class ever sees the
+    configuration.
+
+    Instances also keep a per-pool routing counter in :attr:`stats`, which
+    the master can surface for observability.
+
+    :param dict opts: Master configuration dictionary.  Must contain a
+        resolved ``worker_pools`` layout; the layout is read directly from
+        ``opts`` without re-running validation.
+    :param dict secrets: Optional master secrets dictionary.  When present,
+        :meth:`_extract_command` can decrypt AES- or RSA-encrypted payloads
+        in order to inspect their ``cmd`` field for routing.  This is
+        required for netapi and minion traffic where the transport delivers
+        encrypted blobs to the routing process.
     """
 
     def __init__(self, opts, secrets=None):
-        """
-        Initialize the request router.
-
-        Args:
-            opts: Master configuration dictionary
-            secrets: Master secrets dictionary (optional)
-        """
         self.opts = opts
         self.secrets = secrets
-        self.cmd_to_pool = {}  # cmd -> pool_name mapping (built from config)
+        self.cmd_to_pool = {}
         self.default_pool = opts.get("worker_pool_default")
-        self.pools = {}  # pool_name -> dealer_socket mapping (populated later)
-        self.stats = {}  # routing statistics per pool
+        self.pools = {}
+        self.stats = {}
 
         self._build_routing_table()
 
