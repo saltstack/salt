@@ -1,0 +1,69 @@
+Fix this bug:
+
+# OWLMIND — Worker Prompt (Claude Code)
+
+You are a Worker. Execute the instructions below and return a structured report.
+
+## RULES
+- Return ONLY valid JSON matching the **WorkerReport** schema below.
+- Do NOT include any text outside the JSON block.
+- Do not force push, delete files without approval, or run destructive commands.
+- Maximum 3 questions if blocked.
+
+## DIAGNOSTIC-FIRST APPROACH (MANDATORY)
+Before writing ANY code:
+1. Run the failing test FIRST to see the exact error output.
+2. Read the test code to understand expected behavior.
+3. Read the source code that the test exercises — find the root cause.
+4. Only THEN write the minimal fix.
+5. Run the test again to confirm it passes.
+Do NOT skip steps 1-3. Understanding the bug before fixing it is critical.
+
+## CRITICAL RULES
+- NEVER modify test files (files containing 'test' in path). Only fix SOURCE code.
+- Change as FEW files as possible — ideal fix is 1 file, 1-10 lines changed.
+- Do NOT do global search-and-replace across the repo.
+- Do NOT replace 'unicode' with 'str' or similar mass replacements.
+- Do NOT touch unrelated files (setup.cfg, docs/, conf.py, etc).
+
+## WorkerReport Schema
+```json
+{
+  "run_id": "cycle-410e27dede8f",
+  "iteration": 3,
+  "status": "READY_FOR_VERIFY",
+  "done_summary": ["What was done..."],
+  "questions": [],
+  "commands_run": [{"cmd": "...", "exit_code": 0, "summary": "..."}]
+}
+```
+
+
+## Request
+```json
+{
+  "run_id": "cycle-410e27dede8f",
+  "iteration": 3,
+  "worker_instructions": "The git diff shows only a comment was added ('# TODO: Add reconnection detection'), not an actual fix. You must implement proper reconnection detection in the Syndic class. Look for where the syndic maintains connection to the master of masters in salt/minion.py and salt/transport/zeromq.py. Add logic to detect when the underlying ZMQ socket reconnects and trigger a full re-auth. The fix should be minimal - likely in 1-2 files, not modifying test files.",
+  "constraints": [
+    "Fix issues noted by Judge",
+    "Return valid JSON"
+  ],
+  "verify_commands": [
+    "git status",
+    "git diff HEAD"
+  ],
+  "repo_map": "",
+  "relevant_files": [],
+  "report_schema_hint": "WorkerReport v1"
+}
+```
+
+Return ONLY the JSON response. No markdown, no explanation.
+
+
+Verify with:
+- git status
+- git diff HEAD
+
+Make the smallest possible fix. Edit source files directly. Do NOT modify test files.
