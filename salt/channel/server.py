@@ -2176,6 +2176,13 @@ class MasterPubServerChannel:
                 aes_secret = salt.master.SMaster.secrets["aes"]["secret"].value
                 if isinstance(aes_secret, str):
                     aes_secret = aes_secret.encode()
+                # XXX No-shared-filesystem topology is not yet supported: the
+                # join-reply payload still needs to carry the other peers'
+                # public keys and the minion keys so a joiner without access
+                # to a shared cluster_pki_dir can populate it from the wire.
+                # The consumer at ``cluster/peer/join-reply`` also needs to
+                # be reworked to unpack this signed envelope before that
+                # path can be exercised.
                 tosign = salt.payload.package(
                     {
                         "return_token": payload["token"],
@@ -2184,33 +2191,9 @@ class MasterPubServerChannel:
                             token_bytes + cluster_key_bytes
                         ),
                         "aes": joiner_pub.encrypt(token_bytes + aes_secret),
-                        # "peers": {},
-                        # "minions": {},
                     }
                 )
                 sig = salt.crypt.PrivateKeyString(self.private_key()).sign(tosign)
-                # for key in (
-                #     pathlib.Path(self.opts["cluster_pki_dir"]) / "peers"
-                # ).glob("*"):
-                #     peer = key.name[:-4]
-                #     if peer == payload["peer_id"]:
-                #         continue
-                #     log.error("Populate peer key %s", peer)
-                #     reply["peers"][peer] = key.read_text()
-                # kinds = [
-                #     "minions",
-                #     "minions_autosign",
-                #     "minions_denied",
-                #     "minions_pre",
-                #     "minions_rejected",
-                # ]
-                # for kind in kinds:
-                #     reply["minions"][kind] = {}
-                #     for key in (
-                #         pathlib.Path(self.opts["cluster_pki_dir"]) / kind
-                #     ).glob("*"):
-                #         minion = key.name
-                #         reply["minions"][kind][minion] = key.read_text()
                 event_data = salt.utils.event.SaltEvent.pack(
                     salt.utils.event.tagify("join-reply", "peer", "cluster"),
                     {
