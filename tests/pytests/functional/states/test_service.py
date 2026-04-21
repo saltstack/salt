@@ -123,6 +123,47 @@ def test_service_running(service_name, modules, states):
 
 @pytest.mark.slow_test
 @pytest.mark.skipif(_check_systemctl(), reason="systemctl degraded")
+def test_service_running_enable_restarts_on_watch(
+    service_name, modules, grains, state_tree, tmp_path
+):
+    """
+    test service.running restarting a running service through a watch requisite
+    when the same state also enables the service
+    """
+    if not grains.get("systemd"):
+        pytest.skip("The test reads the start time of the service from systemd")
+
+    if not modules.service.status(service_name):
+        assert modules.service.start(service_name) is True
+    assert modules.service.disable(service_name) is True
+    started = modules.service.show(service_name)["ExecMainStartTimestampMonotonic"]
+
+    watched = tmp_path / "watched.conf"
+    watched.write_text("before\n")
+    sls_contents = f"""
+    watched:
+      file.managed:
+        - name: {watched}
+        - contents: after
+
+    {service_name}:
+      service.running:
+        - enable: True
+        - watch:
+          - file: watched
+    """
+    with pytest.helpers.temp_file("service-watch.sls", sls_contents, state_tree):
+        ret = modules.state.sls("service-watch")
+    assert ret.failed is False, ret.raw
+    for state_ret in ret:
+        assert state_ret.result is True, state_ret.full_return
+    assert modules.service.enabled(service_name)
+    restarted = modules.service.show(service_name)["ExecMainStartTimestampMonotonic"]
+    assert restarted != started
+
+
+@pytest.mark.slow_test
+@pytest.mark.skipif(_check_systemctl(), reason="systemctl degraded")
 def test_service_dead(service_name, modules, states):
     """
     test service.dead state module

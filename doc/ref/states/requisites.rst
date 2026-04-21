@@ -384,8 +384,7 @@ exactly like the ``require`` requisite (the watching state will execute if
    non-idempotent, and their ``mod_watch`` simply re-invokes the main
    action. Running both would execute the action twice. When working with
    ``watch`` or ``watch_in``, prefer states that only enforce a single
-   attribute, e.g. splitting ``service.running`` and ``service.enabled``
-   into separate states.
+   attribute, unless the watching state opts in as described below.
 
    A watching state may override this by returning ``force_mod_watch:
    True`` from its normal run. This signals that the changes produced by
@@ -395,12 +394,14 @@ exactly like the ``require`` requisite (the watching state will execute if
    result and the combined ``result`` is ``True`` only if both succeeded.
    Setting ``force_mod_watch`` is only meaningful for state modules whose
    ``mod_watch`` performs work orthogonal to the normal run (for example,
-   :py:func:`docker_container.running
-   <salt.states.docker_container.running>`, whose ``mod_watch`` forces a
-   container rebuild that is not performed by a network-only reconcile).
+   :py:func:`service.running <salt.states.service.running>`, whose
+   ``mod_watch`` restarts or reloads the service, which enabling an already
+   running service does not do).
 
-One common source of confusion is expecting ``mod_watch`` to be called for
-every necessary change. You might be tempted to write something like this:
+For example, ``service.running`` sets ``force_mod_watch`` when the service was
+already running and the state only enabled or disabled it. In the following
+state, ``httpd`` is restarted when its configuration file changes, also when the
+same state run enables the service:
 
 .. code-block:: yaml
 
@@ -414,36 +415,6 @@ every necessary change. You might be tempted to write something like this:
      file.managed:
        - name: /etc/httpd/conf/httpd.conf
        - source: salt://httpd/files/apache.conf
-
-If your service is already running but not enabled, you might expect that Salt
-will be able to tell that since the config file changed your service needs to
-be restarted. This is not the case. Because the service needs to be enabled,
-that change will be made and ``mod_watch`` will never be triggered. In this
-case, changes to your ``apache.conf`` will fail to be loaded. If you want to
-ensure that your service always reloads the correct way to handle this is
-either ensure that your service is not running before applying your state, or
-simply make sure that ``service.running`` is in a state on its own:
-
-.. code-block:: yaml
-
-   enable-httpd:
-     service.enabled:
-       - name: httpd
-
-   start-httpd:
-     service.running:
-       - name: httpd
-       - watch:
-         - file: httpd-config
-
-   httpd-config:
-     file.managed:
-       - name: /etc/httpd/conf/httpd.conf
-       - source: salt://httpd/files/apache.conf
-
-Now that ``service.running`` is its own state, changes to ``service.enabled``
-will no longer prevent ``mod_watch`` from getting triggered, so your ``httpd``
-service will get restarted like you want.
 
 .. _requisites-listen:
 
