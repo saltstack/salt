@@ -13,11 +13,6 @@ import salt.utils.files
 import salt.utils.verify
 from tests.support.mock import patch
 
-if sys.platform.startswith("win"):
-    import win32file
-else:
-    import resource
-
 log = logging.getLogger(__name__)
 
 
@@ -235,7 +230,17 @@ def test_max_open_files(caplog):
                 # Since we patched those above, it will use our mof_s (10000).
                 # But the test expects to trigger warnings based on 256.
                 # So we patch the internal mof_s inside the test's view.
-                with patch("salt.utils.verify.resource.getrlimit", return_value=(mof_test, mof_h)) if not sys.platform.startswith("win") else patch("salt.utils.verify.win32file._getmaxstdio", return_value=mof_test):
+                with (
+                    patch(
+                        "salt.utils.verify.resource.getrlimit",
+                        return_value=(mof_test, mof_h),
+                    )
+                    if not sys.platform.startswith("win")
+                    else patch(
+                        "salt.utils.verify.win32file._getmaxstdio",
+                        return_value=mof_test,
+                    )
+                ):
 
                     prev = 0
                     for newmax, level in (

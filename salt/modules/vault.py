@@ -249,6 +249,12 @@ def read_secret(path, key=None, metadata=False, default=NOT_SET):
         secrets:
             first: {{ supersecret.first }}
             second: {{ supersecret.second }}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vault.read_secret "secret/my/secret"
     """
     if default == NOT_SET:
         default = CommandExecutionError

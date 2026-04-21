@@ -3,7 +3,7 @@
 This document tracks the test regressions and CI failures resolved during the merge of Salt 3006.x into 3007.x (PR #68929).
 
 ## 1. Package Lifecycle Tests (Downgrade/Upgrade)
-*   **Files**: 
+*   **Files**:
     *   `tests/pytests/pkg/downgrade/test_salt_downgrade.py`
     *   `tests/pytests/pkg/upgrade/test_salt_upgrade.py`
 *   **Symptom**: `AssertionError` where `3007.13` was incorrectly evaluated as equal to `3007.13+187.g813a978cff` due to `.base_version` usage.
@@ -14,7 +14,7 @@ This document tracks the test regressions and CI failures resolved during the me
     *   `tests/pytests/unit/client/ssh/test_ssh.py`
     *   `tests/pytests/unit/client/ssh/test_password.py`
 *   **Symptom**: `ValueError` (too many values to unpack) and `AttributeError` after refactoring.
-*   **Fix**: 
+*   **Fix**:
     *   Refactored tests to match the renamed `_handle_routine_thread` method.
     *   Updated mocks to handle the new 3-tuple return format (`stdout`, `stderr`, `retcode`).
     *   Added robust `retcode = None` handling.
