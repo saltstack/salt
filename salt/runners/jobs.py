@@ -2,6 +2,7 @@
 A convenience system to manage jobs, both active and already run
 """
 
+import collections.abc
 import fnmatch
 import logging
 import os
@@ -334,6 +335,17 @@ def list_jobs(
                 targets = ret[item]["Target"]
                 if isinstance(targets, str):
                     targets = [targets]
+                elif not isinstance(targets, collections.abc.Iterable):
+                    # Failed/aborted jobs can leave Target as None or some
+                    # other non-iterable value in the cache; iterating would
+                    # raise TypeError. Log once at debug level and treat as
+                    # no target so the rest of list_jobs keeps working.
+                    log.debug(
+                        "list_jobs: ignoring non-iterable Target %r on jid %s",
+                        targets,
+                        item,
+                    )
+                    targets = []
                 for target in targets:
                     for key in salt.utils.args.split_input(search_target):
                         if fnmatch.fnmatch(target, key):
