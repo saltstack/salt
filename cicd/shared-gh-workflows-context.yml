@@ -8,6 +8,7 @@ relenv_version: "0.22.4"
 release_branches:
   - "3006.x"
   - "3007.x"
+  - "3008.x"
 
 # Test run slugs for PR testing (subset of platforms)
 pr-testrun-slugs:
