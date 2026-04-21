@@ -40,6 +40,25 @@ ARTIFACTS_DIR = CODE_DIR / "artifacts" / "pkg"
 log = logging.getLogger(__name__)
 
 
+import pytestshellutils.shell
+import pytestshellutils.utils.processes
+
+_original_terminate = pytestshellutils.shell.SubprocessImpl._terminate
+
+
+def _patched_terminate(self):
+    if not platform.is_darwin():
+        return _original_terminate(self)
+
+    from tests.support.mock import patch
+
+    with patch("psutil.Process.children", return_value=[]):
+        return _original_terminate(self)
+
+
+pytestshellutils.shell.SubprocessImpl._terminate = _patched_terminate
+
+
 @attr.s(kw_only=True, slots=True)
 class SaltPkgInstall:
     pkg_system_service: bool = attr.ib(default=False)
@@ -265,7 +284,18 @@ class SaltPkgInstall:
     def update_process_path(self):
         # The installer updates the path for the system, but that doesn't
         # make it to this python session, so we need to update that
-        os.environ["PATH"] = ";".join([str(self.install_dir), os.getenv("path")])
+        if platform.is_windows():
+            os.environ["PATH"] = ";".join([str(self.install_dir), os.getenv("path")])
+        elif platform.is_darwin():
+            # On macOS, salt executables are in install_dir (/opt/salt)
+            # while Python executables are in bin_dir (/opt/salt/bin)
+            path_parts = [str(self.install_dir), str(self.bin_dir), os.getenv("PATH")]
+            os.environ["PATH"] = ":".join(path_parts)
+        else:
+            os.environ["PATH"] = ":".join([str(self.bin_dir), os.getenv("PATH")])
+        # Update the proc's captured environment so run() calls pick up the new PATH
+        if self.proc is not None:
+            self.proc.environ["PATH"] = os.environ["PATH"]
 
     def __attrs_post_init__(self):
         self.relenv = packaging.version.parse(self.version) >= packaging.version.parse(
@@ -547,8 +577,20 @@ class SaltPkgInstall:
             self._check_retcode(ret)
 
             # Stop the service installed by the installer
-            self.proc.run("launchctl", "disable", f"system/{service_name}")
-            self.proc.run("launchctl", "bootout", "system", str(plist_file))
+
+            try:
+                subprocess.run(
+                    ["launchctl", "disable", f"system/{service_name}"],
+                    check=False,
+                    timeout=30,
+                )
+                subprocess.run(
+                    ["launchctl", "bootout", "system", str(plist_file)],
+                    check=False,
+                    timeout=30,
+                )
+            except subprocess.TimeoutExpired:
+                log.warning("launchctl command timed out")
 
         elif upgrade:
             env = os.environ.copy()
@@ -944,6 +986,7 @@ class SaltPkgInstall:
             self.ssm_bin = self.install_dir / "ssm.exe"
             pkg = str(pathlib.Path(self.pkgs[0]).resolve())
 
+            win_pkg = None
             if self.file_ext == "exe":
                 win_pkg = (
                     f"Salt-Minion-{self.prev_version}-Py3-AMD64-Setup.{self.file_ext}"
@@ -1047,32 +1090,30 @@ class SaltPkgInstall:
                 service_name = f"com.saltstack.salt.{service}"
                 plist_file = daemons_dir / f"{service_name}.plist"
                 # Stop the services
-                self.proc.run("launchctl", "disable", f"system/{service_name}")
-                self.proc.run("launchctl", "bootout", "system", str(plist_file))
+
+                try:
+                    subprocess.run(
+                        ["launchctl", "disable", f"system/{service_name}"],
+                        check=False,
+                        timeout=30,
+                    )
+                    subprocess.run(
+                        ["launchctl", "bootout", "system", str(plist_file)],
+                        check=False,
+                        timeout=30,
+                    )
+                except subprocess.TimeoutExpired:
+                    log.warning("launchctl command timed out")
 
             # Remove Symlink to salt-config
             if os.path.exists("/usr/local/sbin/salt-config"):
                 os.unlink("/usr/local/sbin/salt-config")
 
             # Remove supporting files
+            # Use shell=True for piped commands
             self.proc.run(
-                "pkgutil",
-                "--only-files",
-                "--files",
-                "com.saltstack.salt",
-                "|",
-                "grep",
-                "-v",
-                "opt",
-                "|",
-                "tr",
-                "'\n'",
-                "' '",
-                "|",
-                "xargs",
-                "-0",
-                "rm",
-                "-f",
+                "pkgutil --only-files --files com.saltstack.salt | grep -v opt | sed 's|^|/|' | tr '\\n' '\\0' | xargs -0 rm -f",
+                shell=True,
             )
 
             # Remove directories
@@ -1186,8 +1227,7 @@ class SaltPkgInstall:
             self._check_retcode(ret)
 
     def __enter__(self):
-        if platform.is_windows():
-            self.update_process_path()
+        self.update_process_path()
 
         if self.no_install:
             return self
@@ -1205,14 +1245,57 @@ class SaltPkgInstall:
 
         # Did we left anything running?!
         procs = []
-        for proc in psutil.process_iter():
-            if "salt" in proc.name():
-                cmdl_strg = " ".join(str(element) for element in _get_cmdline(proc))
-                if "/opt/saltstack" in cmdl_strg:
-                    procs.append(proc)
+        if not platform.is_windows():
+
+            try:
+                output = subprocess.check_output(
+                    ["ps", "-eo", "pid,command"], text=True
+                )
+                for line in output.splitlines()[1:]:
+                    parts = line.strip().split(maxsplit=1)
+                    if len(parts) == 2:
+                        pid_str, cmdline = parts
+                        if "salt" in cmdline and (
+                            "/opt/saltstack" in cmdline or "/opt/salt" in cmdline
+                        ):
+                            try:
+                                pid = int(pid_str)
+                                if pid != os.getpid():
+                                    procs.append(psutil.Process(pid))
+                            except (ValueError, psutil.NoSuchProcess):
+                                pass
+            except subprocess.CalledProcessError:
+                pass
+        else:
+            for proc in psutil.process_iter():
+                try:
+                    name = proc.name()
+                    if "salt" in name or "python" in name:
+                        cmdl_strg = " ".join(
+                            str(element) for element in _get_cmdline(proc)
+                        )
+                        if "salt" in name or "salt" in cmdl_strg:
+                            if (
+                                "/opt/saltstack" in cmdl_strg
+                                or "/opt/salt" in cmdl_strg
+                            ):
+                                procs.append(proc)
+                except (
+                    psutil.NoSuchProcess,
+                    psutil.AccessDenied,
+                    psutil.ZombieProcess,
+                ):
+                    continue
 
         if procs:
-            terminate_process_list(procs, kill=True, slow_stop=True)
+            if platform.is_darwin():
+                for proc in procs:
+                    try:
+                        proc.kill()
+                    except psutil.NoSuchProcess:
+                        pass
+            else:
+                terminate_process_list(procs, kill=True, slow_stop=True)
 
 
 class PkgSystemdSaltDaemonImpl(SystemdSaltDaemonImpl):
@@ -1314,11 +1397,12 @@ class PkgLaunchdSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
         pid = self.pid
         # Collect any child processes information before terminating the process
         with contextlib.suppress(psutil.NoSuchProcess):
-            for child in psutil.Process(pid).children(recursive=True):
-                # pylint: disable=access-member-before-definition
-                if child not in self._children:
-                    self._children.append(child)
-                # pylint: enable=access-member-before-definition
+            if not platform.is_darwin():
+                for child in psutil.Process(pid).children(recursive=True):
+                    # pylint: disable=access-member-before-definition
+                    if child not in self._children:
+                        self._children.append(child)
+                    # pylint: enable=access-member-before-definition
 
         if self._process.is_running():  # pragma: no cover
             cmdline = _get_cmdline(self._process)
@@ -1326,25 +1410,36 @@ class PkgLaunchdSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
             cmdline = []
 
         # Disable the service
-        self._internal_run(
-            "launchctl",
-            "disable",
-            f"system/{self.get_service_name()}",
-        )
-        # Unload the service
-        self._internal_run("launchctl", "bootout", "system", str(self.plist_file))
+
+        try:
+            subprocess.run(
+                ["launchctl", "disable", f"system/{self.get_service_name()}"],
+                check=False,
+                timeout=30,
+            )
+            # Unload the service
+            subprocess.run(
+                ["launchctl", "bootout", "system", str(self.plist_file)],
+                check=False,
+                timeout=30,
+            )
+        except subprocess.TimeoutExpired:
+            log.warning("launchctl command timed out")
 
         if self._process.is_running():  # pragma: no cover
             try:
-                self._process.wait()
+                self._process.wait(10)
             except psutil.TimeoutExpired:
                 self._process.terminate()
                 try:
-                    self._process.wait()
+                    self._process.wait(10)
                 except psutil.TimeoutExpired:
                     pass
 
-        exitcode = self._process.wait() or 0
+        try:
+            exitcode = self._process.wait(5) or 0
+        except psutil.TimeoutExpired:
+            exitcode = 0
 
         # Dereference the internal _process attribute
         self._process = None
@@ -1453,11 +1548,12 @@ class PkgSsmSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
         pid = self.pid
         # Collect any child processes information before terminating the process
         with contextlib.suppress(psutil.NoSuchProcess):
-            for child in psutil.Process(pid).children(recursive=True):
-                # pylint: disable=access-member-before-definition
-                if child not in self._children:
-                    self._children.append(child)
-                # pylint: enable=access-member-before-definition
+            if not platform.is_darwin():
+                for child in psutil.Process(pid).children(recursive=True):
+                    # pylint: disable=access-member-before-definition
+                    if child not in self._children:
+                        self._children.append(child)
+                    # pylint: enable=access-member-before-definition
 
         if self._process.is_running():  # pragma: no cover
             cmdline = _get_cmdline(self._process)
@@ -1476,15 +1572,18 @@ class PkgSsmSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
 
         if self._process.is_running():  # pragma: no cover
             try:
-                self._process.wait()
+                self._process.wait(10)
             except psutil.TimeoutExpired:
                 self._process.terminate()
                 try:
-                    self._process.wait()
+                    self._process.wait(10)
                 except psutil.TimeoutExpired:
                     pass
 
-        exitcode = self._process.wait() or 0
+        try:
+            exitcode = self._process.wait(5) or 0
+        except psutil.TimeoutExpired:
+            exitcode = 0
 
         # Dereference the internal _process attribute
         self._process = None

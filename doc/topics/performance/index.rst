@@ -11,3 +11,4 @@ for Salt.
     :maxdepth: 1
 
     pki_index
+    worker_pools

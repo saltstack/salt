@@ -11,8 +11,8 @@ import errno
 import inspect
 import logging
 import multiprocessing
+import os
 import queue
-import selectors
 import socket
 import ssl
 import threading
@@ -252,6 +252,11 @@ class PublishClient(salt.transport.base.PublishClient):
         self.backoff = opts.get("tcp_reconnect_backoff", 1)
         self.resolver = kwargs.get("resolver")
         self._read_in_progress = asyncio.Lock()
+        # Persistent read task. Kept across recv() calls so a timed-out
+        # recv does not have to cancel an in-flight tornado.IOStream
+        # read_bytes -- cancelling leaves IOStream._read_future set and
+        # subsequent reads fail with "Already reading".
+        self._read_task = None
         self.poller = None
 
         self.host = kwargs.get("host", None)
@@ -279,6 +284,9 @@ class PublishClient(salt.transport.base.PublishClient):
         if self.on_recv_task:
             self.on_recv_task.cancel()
             self.on_recv_task = None
+        if self._read_task is not None and not self._read_task.done():
+            self._read_task.cancel()
+        self._read_task = None
         if self._stream is not None:
             self._stream.close()
         self._stream = None
@@ -311,7 +319,7 @@ class PublishClient(salt.transport.base.PublishClient):
                             ssl_options=ctx,
                             **kwargs,
                         ),
-                        1,
+                        timeout if timeout is not None else 5,
                     )
                     # When SSL is enabled, tornado does lazy SSL handshaking.
                     # Give the handshake time to complete so failures are detected.
@@ -331,7 +339,9 @@ class PublishClient(salt.transport.base.PublishClient):
                     stream = tornado.iostream.IOStream(
                         socket.socket(sock_type, socket.SOCK_STREAM)
                     )
-                    await asyncio.wait_for(stream.connect(self.path), 1)
+                    await asyncio.wait_for(
+                        stream.connect(self.path), timeout if timeout is not None else 5
+                    )
                     self.unpacker = salt.utils.msgpack.Unpacker()
                     log.debug("PubClient connected to %r %r", self, self.path)
             except Exception as exc:  # pylint: disable=broad-except
@@ -394,68 +404,132 @@ class PublishClient(salt.transport.base.PublishClient):
     async def send(self, msg):
         await self._stream.write(msg)
 
+    async def _read_into_unpacker(self):
+        """
+        Read one chunk of bytes from the stream and feed the unpacker.
+
+        Returns True on success, False if the stream was closed.
+
+        IMPORTANT: callers MUST NOT cancel this coroutine externally.
+        Tornado's IOStream does not reset ``_read_future`` when
+        ``read_bytes`` is cancelled from the outside; the next
+        ``read_bytes`` call then raises ``AssertionError: Already
+        reading``. ``recv()`` uses ``asyncio.wait`` (which never cancels)
+        to implement timeouts on top of this helper.
+        """
+        try:
+            byts = await self._stream.read_bytes(4096, partial=True)
+        except tornado.iostream.StreamClosedError:
+            log.trace("Stream closed, reconnecting.")
+            stream = self._stream
+            self._stream = None
+            stream.close()
+            if self.disconnect_callback:
+                await self.disconnect_callback()
+            return False
+        self.unpacker.feed(byts)
+        return True
+
+    def _ensure_read_task(self):
+        """
+        Return the in-flight read task, starting a new one if needed.
+        """
+        if self._read_task is None or self._read_task.done():
+            if self._stream is None:
+                self._read_task = None
+            else:
+                self._read_task = asyncio.ensure_future(self._read_into_unpacker())
+        return self._read_task
+
     async def recv(self, timeout=None):
-        while self._stream is None:
-            await self.connect()
-            await asyncio.sleep(0.001)
+        # Fast path: any message already buffered from a previous read.
+        for msg in self.unpacker:
+            return msg[b"body"]
+
         if timeout == 0:
-            for msg in self.unpacker:
-                return msg[b"body"]
-
-            with selectors.DefaultSelector() as sel:
-                sel.register(self._stream.socket, selectors.EVENT_READ)
-                ready = sel.select(timeout=0)
-                events = [key.fileobj for key, _ in ready]
-                sel.unregister(self._stream.socket)
-
-            if events:
-                while not self._closing:
-                    async with self._read_in_progress:
-                        try:
-                            byts = await self._stream.read_bytes(4096, partial=True)
-                        except tornado.iostream.StreamClosedError:
-                            log.trace("Stream closed, reconnecting.")
-                            stream = self._stream
-                            self._stream = None
-                            stream.close()
-                            if self.disconnect_callback:
-                                self.disconnect_callback()
-                            await self.connect()
-                            return
-                        self.unpacker.feed(byts)
-                        for msg in self.unpacker:
-                            return msg[b"body"]
-        elif timeout:
+            # Non-blocking mode: ensure a read is in flight and give the
+            # ioloop a tiny slice to satisfy it. We do NOT use a raw
+            # selectors.select() peek on the socket -- Tornado's IOStream
+            # can buffer data into its internal ``_read_buffer`` while
+            # leaving the kernel socket empty, so a kernel-level peek
+            # misses data that ``read_bytes`` would return immediately.
+            if self._stream is None:
+                return None
+            task = self._ensure_read_task()
+            if task is None:
+                return None
+            # Give the loop up to 10ms to satisfy the read. If the task
+            # does not complete, leave it in flight for the next recv().
+            done, _ = await asyncio.wait({task}, timeout=0.01)
+            if not done:
+                return None
             try:
-                return await asyncio.wait_for(self.recv(), timeout=timeout)
-            except (
-                TimeoutError,
-                asyncio.exceptions.TimeoutError,
-                asyncio.exceptions.CancelledError,
-            ):
-                self.close()
-                await self.connect()
-                return
-        else:
+                got = task.result()
+            except asyncio.CancelledError:
+                return None
+            finally:
+                if self._read_task is task:
+                    self._read_task = None
+            if not got:
+                return None
             for msg in self.unpacker:
                 return msg[b"body"]
-            while not self._closing:
-                async with self._read_in_progress:
-                    try:
-                        byts = await self._stream.read_bytes(4096, partial=True)
-                    except tornado.iostream.StreamClosedError:
-                        log.trace("Stream closed, reconnecting.")
-                        stream = self._stream
-                        self._stream = None
-                        stream.close()
-                        if self.disconnect_callback:
-                            await self.disconnect_callback()
-                        await self.connect()
-                        log.debug("Re-connected - continue")
-                        continue
-                    self.unpacker.feed(byts)
-                    for msg in self.unpacker:
-                        return msg[b"body"]
+            return None
+
+        deadline = None
+        if timeout is not None:
+            deadline = time.monotonic() + timeout
+
+        while not self._closing:
+            while self._stream is None and not self._closing:
+                await self.connect()
+                if self._stream is None:
+                    if deadline is not None and time.monotonic() >= deadline:
+                        return None
+                    await asyncio.sleep(0.001)
+
+            # Drain anything a concurrent call may have buffered.
+            for msg in self.unpacker:
+                return msg[b"body"]
+
+            task = self._ensure_read_task()
+            if task is None:
+                continue
+
+            if deadline is None:
+                # No timeout: wait for the read to complete (shield so an
+                # external cancel of recv does not cancel the read task
+                # and corrupt the IOStream).
+                await asyncio.shield(task)
+            else:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return None
+                # asyncio.wait does NOT cancel the task on timeout.
+                done, _ = await asyncio.wait({task}, timeout=remaining)
+                if not done:
+                    return None
+
+            try:
+                got = task.result()
+            except asyncio.CancelledError:
+                return None
+            finally:
+                if self._read_task is task:
+                    self._read_task = None
+
+            if not got:
+                # Stream was closed. Reconnect and try again within the
+                # deadline; if we are out of time, give up.
+                if deadline is not None and time.monotonic() >= deadline:
+                    return None
+                await self.connect()
+                continue
+
+            for msg in self.unpacker:
+                return msg[b"body"]
+            # Partial frame received: loop to read more, respecting the
+            # deadline.
 
     async def on_recv_handler(self, callback):
         while not self._stream:
@@ -563,7 +637,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
     def __exit__(self, *args):
         self.close()
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, *args, **kwargs):
         """
         Pre-fork we need to create the zmq router device
         """
@@ -575,13 +649,24 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 name="LoadBalancerServer",
             )
         elif not salt.utils.platform.is_windows():
-            self._socket = _get_socket(self.opts)
-            self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            _set_tcp_keepalive(self._socket, self.opts)
-            self._socket.setblocking(0)
-            self._socket.bind(_get_bind_addr(self.opts, "ret_port"))
+            if self.opts.get("ipc_mode") == "ipc" and self.opts.get("workers_ipc_name"):
+                self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                self._socket.setblocking(0)
+                ipc_path = os.path.join(
+                    self.opts["sock_dir"], self.opts["workers_ipc_name"]
+                )
+                if os.path.exists(ipc_path):
+                    os.unlink(ipc_path)
+                self._socket.bind(ipc_path)
+                os.chmod(ipc_path, 0o600)
+            else:
+                self._socket = _get_socket(self.opts)
+                self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                _set_tcp_keepalive(self._socket, self.opts)
+                self._socket.setblocking(0)
+                self._socket.bind(_get_bind_addr(self.opts, "ret_port"))
 
-    def post_fork(self, message_handler, io_loop):
+    def post_fork(self, message_handler, io_loop, **kwargs):
         """
         After forking we need to create all of the local sockets to listen to the
         router
@@ -632,6 +717,19 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
 
     def decode_payload(self, payload):
         return payload
+
+    async def forward_message(self, payload):
+        """
+        Forward a message into this transport's worker queue.
+
+        Not implemented for TCP transport. Worker pool routing is only
+        supported for ZeroMQ transport.
+        """
+        log.warning(
+            "Worker pool message forwarding is not supported for TCP transport. "
+            "Use ZeroMQ transport for worker pool routing."
+        )
+        return None
 
 
 class TCPReqServer(RequestServer):
@@ -1495,10 +1593,14 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         publish_payload,
         presence_callback=None,
         remove_presence_callback=None,
+        secrets=None,
+        started=None,
     ):
         """
         Bind to the interface specified in the configuration file
         """
+        if started is not None:
+            self.started = started
         io_loop = tornado.ioloop.IOLoop()
         io_loop.add_callback(
             self.publisher,
@@ -1583,7 +1685,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.pull_sock.start()
         self.started.set()
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, *args, **kwargs):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
@@ -1750,6 +1852,7 @@ class _TCPPubServerPublisher:
         """
         Connect to a running IPCServer
         """
+        timeout_at = None
         if self.path:
             sock_type = socket.AF_UNIX
             sock_addr = self.path
@@ -1853,12 +1956,18 @@ class RequestClient(salt.transport.base.RequestClient):
         self.opts = opts
         self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
 
-        parse = urllib.parse.urlparse(self.opts["master_uri"])
-        master_host, master_port = parse.netloc.rsplit(":", 1)
-        master_addr = (master_host, int(master_port))
-        resolver = kwargs.get("resolver", None)
-        self.host = master_host
-        self.port = int(master_port)
+        if self.opts["master_uri"].startswith("ipc://"):
+            self.host = self.opts["master_uri"][6:]
+            self.port = None
+            self.is_ipc = True
+        else:
+            parse = urllib.parse.urlparse(self.opts["master_uri"])
+            master_host, master_port = parse.netloc.rsplit(":", 1)
+            master_addr = (master_host, int(master_port))
+            resolver = kwargs.get("resolver", None)
+            self.host = master_host
+            self.port = int(master_port)
+            self.is_ipc = False
         self._tcp_client = TCPClientKeepAlive(opts)
         self.source_ip = opts.get("source_ip")
         self.source_port = opts.get("source_ret_port")
@@ -1887,12 +1996,19 @@ class RequestClient(salt.transport.base.RequestClient):
                 ctx = None
                 if self.ssl is not None:
                     ctx = salt.transport.base.ssl_context(self.ssl, server_side=False)
-                stream = await self._tcp_client.connect(
-                    ip_bracket(self.host, strip=True),
-                    self.port,
-                    ssl_options=ctx,
-                    **kwargs,
-                )
+
+                if getattr(self, "is_ipc", False):
+                    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                    sock.setblocking(0)
+                    stream = tornado.iostream.IOStream(sock)
+                    await stream.connect(self.host)
+                else:
+                    stream = await self._tcp_client.connect(
+                        ip_bracket(self.host, strip=True),
+                        self.port,
+                        ssl_options=ctx,
+                        **kwargs,
+                    )
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
                     "TCP Message Client encountered an exception while connecting to"

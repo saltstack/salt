@@ -25,6 +25,26 @@ def minion_config_overrides(request):
 def salt_master(salt_master_factory):
     config_overrides = {
         "open_mode": True,
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "test.ping",
+                    "test.echo",
+                    "test.fib",
+                    "grains.items",
+                    "sys.doc",
+                    "pillar.items",
+                    "runner.test.arg",
+                    "auth",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],
+            },
+        },
     }
     factory = salt_master_factory.salt_master_daemon(
         random_string("master-"),

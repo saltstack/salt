@@ -266,6 +266,8 @@ async def test_request_client_recv_poll_loop_closed(
 
     socket = request_client.socket
 
+    orig_poll = socket.poll
+
     def poll(*args, **kwargs):
         """
         Mock this error because it is incredibly hard to time this.
@@ -273,7 +275,7 @@ async def test_request_client_recv_poll_loop_closed(
         if args[1] == zmq.POLLIN:
             raise zmq.eventloop.future.CancelledError()
         else:
-            return socket.poll(*args, **kwargs)
+            return orig_poll(*args, **kwargs)
 
     socket.poll = poll
     with caplog.at_level(logging.TRACE):
@@ -300,6 +302,8 @@ async def test_request_client_recv_poll_socket_closed(
 
     socket = request_client.socket
 
+    orig_poll = socket.poll
+
     def poll(*args, **kwargs):
         """
         Mock this error because it is incredibly hard to time this.
@@ -307,7 +311,7 @@ async def test_request_client_recv_poll_socket_closed(
         if args[1] == zmq.POLLIN:
             raise zmq.ZMQError()
         else:
-            return socket.poll(*args, **kwargs)
+            return orig_poll(*args, **kwargs)
 
     socket.poll = poll
     with caplog.at_level(logging.TRACE):

@@ -84,6 +84,7 @@ def test_req_server_validate_token_removes_token(root_dir):
         "optimization_order": (0, 1, 2),
         "permissive_pki_access": False,
         "cluster_id": "",
+        "worker_pools_enabled": False,
     }
     reqsrv = server.ReqServerChannel.factory(opts)
     payload = {
@@ -111,6 +112,7 @@ def test_req_server_validate_token_removes_token_id_traversal(root_dir):
         "optimization_order": (0, 1, 2),
         "permissive_pki_access": False,
         "cluster_id": "",
+        "worker_pools_enabled": False,
     }
     reqsrv = server.ReqServerChannel.factory(opts)
     payload = {

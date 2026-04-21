@@ -553,6 +553,13 @@ class IPCMessagePublisher:
 
         pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
         for stream in self.streams:
+            # Backpressure: if the stream is already writing, skip spawning
+            # another write callback. Otherwise pending write coroutines
+            # accumulate in the event loop for slow or non-consuming clients
+            # and cause significant memory growth during high-frequency event
+            # firing.
+            if stream.writing():
+                continue
             self.io_loop.spawn_callback(self._write, stream, pack)
 
     def handle_connection(self, connection, address):

@@ -818,7 +818,9 @@ class Master(SMaster):
             ipc_publisher = salt.channel.server.MasterPubServerChannel.factory(
                 self.opts
             )
-            ipc_publisher.pre_fork(self.process_manager)
+            ipc_publisher.pre_fork(
+                self.process_manager, kwargs={"secrets": SMaster.secrets}
+            )
             if not ipc_publisher.transport.started.wait(30):
                 raise salt.exceptions.SaltMasterError(
                     "IPC publish server did not start within 30 seconds. Something went wrong."
@@ -896,10 +898,10 @@ class Master(SMaster):
                 kwargs["secrets"] = SMaster.secrets
 
             self.process_manager.add_process(
-                ReqServer,
+                RequestServer,
                 args=(self.opts, self.key, self.master_key),
                 kwargs=kwargs,
-                name="ReqServer",
+                name="RequestServer",
             )
 
             self.process_manager.add_process(
@@ -1011,7 +1013,177 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
                 io_loop.close()
 
 
-class ReqServer(salt.utils.process.SignalHandlingProcess):
+class RequestRouter:
+    """
+    Classify incoming master requests and map them to their worker pool.
+
+    :class:`RequestRouter` is the in-process routing table used by the
+    pooled request path (see :py:class:`salt.channel.server.PoolRoutingChannel`).
+    Given a payload, :meth:`route_request` extracts the ``cmd`` field
+    (transparently decrypting the load when necessary) and returns the name
+    of the pool that should service it.  It does not own sockets or spawn
+    processes — the transport layer uses the decision to forward the
+    payload to the pool's IPC RequestServer.
+
+    The mapping is built once at construction time from the
+    ``worker_pools`` section of the master configuration.  Exactly one
+    pool must claim the ``"*"`` catchall, which handles any command that
+    is not listed explicitly.  See
+    :func:`salt.config.worker_pools.validate_worker_pools_config` for the
+    structural invariants enforced before this class ever sees the
+    configuration.
+
+    Instances also keep a per-pool routing counter in :attr:`stats`, which
+    the master can surface for observability.
+
+    :param dict opts: Master configuration dictionary.  Must contain a
+        resolved ``worker_pools`` layout; the layout is read directly from
+        ``opts`` without re-running validation.
+    :param dict secrets: Optional master secrets dictionary.  When present,
+        :meth:`_extract_command` can decrypt AES- or RSA-encrypted payloads
+        in order to inspect their ``cmd`` field for routing.  This is
+        required for netapi and minion traffic where the transport delivers
+        encrypted blobs to the routing process.
+    """
+
+    def __init__(self, opts, secrets=None):
+        self.opts = opts
+        self.secrets = secrets
+        self.cmd_to_pool = {}
+        self.default_pool = None
+        self.pools = {}
+        self.stats = {}
+
+        self._build_routing_table()
+
+    def _build_routing_table(self):
+        """Build command-to-pool routing table from user configuration."""
+        from salt.config.worker_pools import DEFAULT_WORKER_POOLS
+
+        worker_pools = self.opts.get("worker_pools", DEFAULT_WORKER_POOLS)
+        catchall_pool = None
+
+        # Build reverse mapping: cmd -> pool_name
+        for pool_name, pool_config in worker_pools.items():
+            commands = pool_config.get("commands", [])
+            for cmd in commands:
+                if cmd == "*":
+                    # Found catchall pool
+                    if catchall_pool is not None:
+                        raise ValueError(
+                            f"Multiple pools have catchall ('*'): "
+                            f"'{catchall_pool}' and '{pool_name}'. "
+                            "Only one pool can use catchall."
+                        )
+                    catchall_pool = pool_name
+                    continue
+
+                if cmd in self.cmd_to_pool:
+                    # Validation: detect duplicate command mappings
+                    raise ValueError(
+                        f"Command '{cmd}' mapped to multiple pools: "
+                        f"'{self.cmd_to_pool[cmd]}' and '{pool_name}'"
+                    )
+                self.cmd_to_pool[cmd] = pool_name
+
+        # Exactly one pool must own the catchall so every command has a
+        # routing destination.
+        if not catchall_pool:
+            raise ValueError(
+                "Worker pool configuration must have exactly one pool with "
+                "catchall ('*') in its commands."
+            )
+        self.default_pool = catchall_pool
+
+        # Initialize stats for each pool
+        for pool_name in worker_pools.keys():
+            self.stats[pool_name] = 0
+
+    def route_request(self, payload):
+        """
+        Determine which pool should handle this request.
+
+        Args:
+            payload: Request payload dictionary
+
+        Returns:
+            str: Name of the pool that should handle this request
+        """
+        cmd = self._extract_command(payload)
+        pool = self._classify_request(cmd)
+        self.stats[pool] = self.stats.get(pool, 0) + 1
+        return pool
+
+    def _classify_request(self, cmd):
+        """
+        Classify request based on user-defined pool routing.
+
+        Args:
+            cmd: Command name string
+
+        Returns:
+            str: Pool name for this command
+        """
+        # O(1) lookup in pre-built routing table
+        return self.cmd_to_pool.get(cmd, self.default_pool)
+
+    def _extract_command(self, payload):
+        """
+        Extract command from request payload.
+
+        Args:
+            payload: Request payload dictionary
+
+        Returns:
+            str: Command name or empty string if not found
+        """
+        try:
+            load = payload.get("load", {})
+            if isinstance(load, bytes) and self.secrets:
+                # Payload is encrypted. Try to decrypt it to extract the command.
+                # This is common for netapi and minion-to-master communication.
+                try:
+                    # Determine which key to use based on the 'enc' field
+                    enc = payload.get("enc", "aes")
+                    if enc == "aes":
+                        key = self.secrets.get("aes", {}).get("secret", {}).value
+                        if key:
+                            import salt.crypt
+
+                            crypticle = salt.crypt.Crypticle(self.opts, key)
+                            load = crypticle.decrypt(load)
+                    elif enc == "pub":
+                        # RSA encryption
+                        import salt.crypt
+
+                        mkey = salt.crypt.MasterKeys(self.opts)
+                        load = mkey.priv_decrypt(load)
+
+                    if isinstance(load, bytes):
+                        import salt.payload
+
+                        load = salt.payload.loads(load)
+                except Exception:  # pylint: disable=broad-except
+                    # If decryption fails, we can't extract the command
+                    pass
+
+            if isinstance(load, dict):
+                # Standard payload: {'cmd': '...', ...}
+                if "cmd" in load:
+                    return load["cmd"]
+                # Peer publish: {'publish': {'cmd': '...', ...}}
+                if "publish" in load and isinstance(load["publish"], dict):
+                    return load["publish"].get("cmd", "")
+                return ""
+            if isinstance(load, str):
+                # String command (uncommon but possible in some tests)
+                return load
+            return ""
+        except (AttributeError, KeyError):
+            return ""
+
+
+class RequestServer(salt.utils.process.SignalHandlingProcess):
     """
     Starts up the master request server, minions send results to this
     interface.
@@ -1025,7 +1197,7 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         :key dict: The user starting the server and the AES key
         :mkey dict: The user starting the server and the RSA key
 
-        :rtype: ReqServer
+        :rtype: RequestServer
         :returns: Request server
         """
         super().__init__(**kwargs)
@@ -1061,10 +1233,19 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
             name="ReqServer_ProcessManager", wait_for_kill=1
         )
 
+        # Create request server channels
         req_channels = []
+        worker_pools = None
+        if self.opts.get("worker_pools_enabled", True):
+            from salt.config.worker_pools import get_worker_pools_config
+
+            worker_pools = get_worker_pools_config(self.opts)
+
         for transport, opts in iter_transport_opts(self.opts):
             chan = salt.channel.server.ReqServerChannel.factory(opts)
-            chan.pre_fork(self.process_manager)
+            # Pass worker_pools to pre_fork. Transports that support it (ZeroMQ)
+            # will start the router/device. Others will just bind/initialize.
+            chan.pre_fork(self.process_manager, worker_pools=worker_pools)
             req_channels.append(chan)
 
         if self.opts["req_server_niceness"] and not salt.utils.platform.is_windows():
@@ -1078,18 +1259,38 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         # manager. We don't want the processes being started to inherit those
         # signal handlers
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-            for ind in range(int(self.opts["worker_threads"])):
-                name = f"MWorker-{ind}"
-                self.process_manager.add_process(
-                    MWorker,
-                    args=(self.opts, self.master_key, self.key, req_channels),
-                    name=name,
-                )
+            if worker_pools:
+                # Multi-pool mode: Create workers for each pool
+                for pool_name, pool_config in worker_pools.items():
+                    worker_count = pool_config.get("worker_count", 1)
+                    for pool_index in range(worker_count):
+                        name = f"MWorker-{pool_name}-{pool_index}"
+                        self.process_manager.add_process(
+                            MWorker,
+                            args=(
+                                self.opts,
+                                self.master_key,
+                                self.key,
+                                req_channels,
+                            ),
+                            kwargs={"pool_name": pool_name, "pool_index": pool_index},
+                            name=name,
+                        )
+            else:
+                # Legacy single-pool mode
+                for ind in range(int(self.opts["worker_threads"])):
+                    name = f"MWorker-{ind}"
+                    self.process_manager.add_process(
+                        MWorker,
+                        args=(self.opts, self.master_key, self.key, req_channels),
+                        name=name,
+                    )
+
         self.process_manager.run()
 
     def run(self):
         """
-        Start up the ReqServer
+        Start up the RequestServer
         """
         self.__bind()
 
@@ -1112,19 +1313,23 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
     salt master.
     """
 
-    def __init__(self, opts, mkey, key, req_channels, **kwargs):
+    def __init__(
+        self, opts, mkey, key, req_channels, pool_name=None, pool_index=None, **kwargs
+    ):
         """
         Create a salt master worker process
 
         :param dict opts: The salt options
         :param dict mkey: The user running the salt master and the RSA key
         :param dict key: The user running the salt master and the AES key
+        :param str pool_name: Name of the worker pool this worker belongs to
+        :param int pool_index: Index of this worker within its pool
 
         :rtype: MWorker
         :return: Master worker
         """
         super().__init__(**kwargs)
-        self.opts = opts
+        self.opts = opts.copy()  # Copy opts to avoid modifying the shared instance
         self.req_channels = req_channels
 
         self.mkey = mkey
@@ -1132,6 +1337,10 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         self.k_mtime = 0
         self.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
         self.stat_clock = time.time()
+
+        # Pool-specific attributes
+        self.pool_name = pool_name or "default"
+        self.pool_index = pool_index if pool_index is not None else 0
 
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
     # Otherwise, 'SMaster.secrets' won't be copied over to the spawned process
@@ -1167,14 +1376,54 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
 
     def __bind(self):
         """
-        Bind to the local port
+        Bind to the local port.
+
+        The event loop and socket binding happen first so that auth requests
+        can be processed immediately while the heavier module loading
+        (ClearFuncs, AESFuncs) proceeds concurrently in a background thread.
+        This allows minions to authenticate without waiting for full
+        initialization to complete.
         """
         self.io_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.io_loop)
+
+        # Create a threading event to signal when modules are ready.
+        # We use threading.Event here because it's set from a background thread
+        # and then converted to an asyncio.Event for use in coroutines.
+        self._modules_loaded = threading.Event()
+
         for req_channel in self.req_channels:
             req_channel.post_fork(
-                self._handle_payload, io_loop=self.io_loop
-            )  # TODO: cleaner? Maybe lazily?
+                self._handle_payload, io_loop=self.io_loop, pool_name=self.pool_name
+            )
+
+        def _load_modules():
+            try:
+                self.clear_funcs = ClearFuncs(
+                    self.opts,
+                    self.key,
+                )
+                self.clear_funcs.connect()
+                self.aes_funcs = AESFuncs(self.opts)
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "%s failed to load modules, worker will be non-functional",
+                    self.name,
+                )
+            finally:
+                self._modules_loaded.set()
+                self.io_loop.call_soon_threadsafe(self._async_modules_ready.set)
+
+        loader_thread = threading.Thread(
+            target=_load_modules, name=f"{self.name}-loader", daemon=True
+        )
+
+        async def _start():
+            self._async_modules_ready = asyncio.Event()
+            loader_thread.start()
+
+        self.io_loop.run_until_complete(_start())
+
         try:
             self.io_loop.run_forever()
         except (KeyboardInterrupt, SystemExit):
@@ -1208,6 +1457,17 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                 self.stats["_auth"]["runs"] += 1
                 self._post_stats(payload["_start"], "_auth")
             return
+        # Wait for module initialization to complete before handling non-auth
+        # requests. Auth requests are handled at the channel level before
+        # reaching this handler, so they don't need modules to be loaded.
+        if not self._modules_loaded.is_set():
+            await self._async_modules_ready.wait()
+        if not hasattr(self, "clear_funcs") or not hasattr(self, "aes_funcs"):
+            log.error(
+                "%s received request but module initialization failed",
+                self.name,
+            )
+            return {}, {"fun": "send_clear"}
         key = payload["enc"]
         load = payload["load"]
         if key == "clear":
@@ -1231,6 +1491,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                 {
                     "time": end - self.stat_clock,
                     "worker": self.name,
+                    "pool": self.pool_name,
+                    "pool_index": self.pool_index,
                     "stats": self.stats,
                 },
                 tagify(self.name, "stats"),
@@ -1300,7 +1562,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             if self.opts["req_server_niceness"]:
                 if salt.utils.user.get_user() == "root":
                     log.info(
-                        "%s decrementing inherited ReqServer niceness to 0", self.name
+                        "%s decrementing inherited RequestServer niceness to 0",
+                        self.name,
                     )
                     os.nice(-1 * self.opts["req_server_niceness"])
                 else:
@@ -1319,12 +1582,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                     self.opts["mworker_niceness"],
                 )
                 os.nice(self.opts["mworker_niceness"])
-        self.clear_funcs = ClearFuncs(
-            self.opts,
-            self.key,
-        )
-        self.clear_funcs.connect()
-        self.aes_funcs = AESFuncs(self.opts)
         self.__bind()
 
 
