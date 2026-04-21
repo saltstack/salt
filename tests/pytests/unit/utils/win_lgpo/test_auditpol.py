@@ -20,9 +20,8 @@ def settings():
 
 @pytest.fixture(autouse=True)
 def reset_auditpol_api_cache():
-    win_lgpo_auditpol._API = None
-    yield
-    win_lgpo_auditpol._API = None
+    with patch.object(win_lgpo_auditpol, "_API", new=None):
+        yield
 
 
 @pytest.fixture
@@ -58,6 +57,9 @@ def test_get_setting_invalid_name():
 
 
 def test_set_setting(settings):
+    def noop_security_privilege():
+        return contextlib.nullcontext()
+
     names = ["Credential Validation", "IPsec Driver", "File System", "SAM"]
     mock_set = MagicMock(return_value=True)
     real_api = win_lgpo_auditpol._load_advapi32()
@@ -67,7 +69,7 @@ def test_set_setting(settings):
         with patch.object(
             win_lgpo_auditpol,
             "_enable_se_security_privilege",
-            lambda: contextlib.nullcontext(),
+            noop_security_privilege,
         ):
             with patch.object(
                 win_lgpo_auditpol,
