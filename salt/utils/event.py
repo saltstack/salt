@@ -789,7 +789,7 @@ class SaltEvent:
         self.pusher.publish(msg)
         if cb is not None:
             warn_until(
-                3008,
+                3009,
                 "The cb argument to fire_event_async will be removed in 3008",
             )
             cb(None)
@@ -1060,7 +1060,7 @@ class AsyncEventPublisher:
 
     def __init__(self, opts, io_loop=None):
         warn_until(
-            3008,
+            3009,
             "salt.utils.event.AsyncEventPublisher is deprecated. "
             "Please use salt.transport.publish_server instead.",
         )
@@ -1167,7 +1167,7 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
 
     def __init__(self, opts, **kwargs):
         warn_until(
-            3008,
+            3009,
             "salt.utils.event.EventPublisher is deprecated. "
             "Please use salt.transport.publish_server instead.",
         )

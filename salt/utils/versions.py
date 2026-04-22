@@ -59,7 +59,7 @@ class Version(packaging.version.Version):
 class StrictVersion(Version):
     def __init__(self, *args, **kwargs):
         warn_until(
-            3008,
+            3009,
             f"'{__name__}.StrictVersion' is no longer a subclass of "
             "'distutils.versions.StrictVersion'. It's usage has been "
             "deprecated and should no longer be used. Please switch to "

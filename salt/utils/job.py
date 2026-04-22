@@ -194,7 +194,7 @@ def get_keep_jobs_seconds(opts):
     keep_jobs = opts.get("keep_jobs", 24)
     if keep_jobs_seconds == 86400 and keep_jobs != 24:
         salt.utils.versions.warn_until(
-            3008,
+            3009,
             "The 'keep_jobs' option has been deprecated and replaced with "
             "'keep_jobs_seconds'.",
         )
