@@ -80,6 +80,12 @@ jobs:
         run: |
           gh workflow run scheduled.yml --repo ${{ github.repository }} --ref 3007.x
 
+      - name: Trigger 3008.x branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run scheduled.yml --repo ${{ github.repository }} --ref 3008.x
+
   prepare-workflow:
     name: Prepare Workflow Run
     runs-on: ubuntu-22.04
