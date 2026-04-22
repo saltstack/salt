@@ -41,6 +41,7 @@ import salt.utils.master
 import salt.utils.minion
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.secret
 import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.yaml
@@ -779,8 +780,8 @@ class Schedule:
 
             minion_blackout_violation = False
             if self.opts.get("pillar", {}).get("minion_blackout", False):
-                whitelist = self.opts.get("pillar", {}).get(
-                    "minion_blackout_whitelist", []
+                whitelist = salt.utils.secret.expose(
+                    self.opts.get("pillar", {}).get("minion_blackout_whitelist", [])
                 )
                 # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
                 if func != "saltutil.refresh_pillar" and func not in whitelist:

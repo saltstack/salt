@@ -22,6 +22,7 @@ import salt.utils.crypt
 import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.master
+import salt.utils.secret
 import salt.utils.url
 from salt.exceptions import SaltClientError
 from salt.template import compile_template
@@ -283,7 +284,7 @@ class AsyncRemotePillar(RemotePillarMixin):
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
-        return ret_pillar
+        return salt.utils.secret.hide(ret_pillar)
 
     def destroy(self):
         if self._closing:
@@ -374,7 +375,7 @@ class RemotePillar(RemotePillarMixin):
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
-        return ret_pillar
+        return salt.utils.secret.hide(ret_pillar)
 
     def destroy(self):
         if hasattr(self, "_closing") and self._closing:
@@ -418,12 +419,14 @@ class Pillar:
         self.client = salt.fileclient.get_file_client(self.opts, True)
         self.fileclient = salt.fileclient.get_file_client(self.opts, False)
         self.avail = self.__gather_avail()
-        self.pillar_data = self.opts.get("pillar", {})
-        if not isinstance(self.pillar_data, dict):
-            self.pillar_data = {}
+        pillar_data = self.opts.get("pillar", {})
+        if not isinstance(pillar_data, dict):
+            pillar_data = {}
         else:
             # Ensure we have a plain dict and not a proxy into opts
-            self.pillar_data = dict(self.pillar_data)
+            pillar_data = dict(pillar_data)
+
+        self.pillar_data = salt.utils.secret.hide(pillar_data)
 
         if opts.get("file_client", "") == "local" and not opts.get(
             "use_master_when_local", False
