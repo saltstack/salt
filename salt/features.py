@@ -25,7 +25,7 @@ class Features:
         import salt.utils.versions
 
         salt.utils.versions.warn_until(
-            3008,
+            3009,
             "Please stop checking feature flags using 'salt.features' and instead "
             "check the 'features' keyword on the configuration dictionary. The "
             "'salt.features' module will go away in {version}.",
