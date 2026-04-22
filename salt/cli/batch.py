@@ -249,7 +249,7 @@ class Batch:
                                 break
                             continue
                         if self.opts.get("raw"):
-                            if ("data" in part and part["data"]["id"] != "error"):
+                            if "data" in part and part["data"]["id"] != "error":
                                 minion_id = part["data"]["id"]
                                 parts[minion_id] = part
                                 minion_tracker[queue]["minions"].discard(minion_id)
@@ -258,7 +258,10 @@ class Batch:
                                 continue
                         else:
                             for minion_id, data in part.items():
-                                if minion_id == "error" or minion_id not in self.minions:
+                                if (
+                                    minion_id == "error"
+                                    or minion_id not in self.minions
+                                ):
                                     continue
                                 parts[minion_id] = data
                                 minion_tracker[queue]["minions"].discard(minion_id)
@@ -279,7 +282,9 @@ class Batch:
                                     parts[minion] = {}
                                     parts[minion]["ret"] = {}
                                 else:
-                                    log.debug("Skipping error entry from minions tracker")
+                                    log.debug(
+                                        "Skipping error entry from minions tracker"
+                                    )
 
             for minion, data in parts.items():
                 if minion in active:

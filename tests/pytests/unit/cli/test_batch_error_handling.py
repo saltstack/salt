@@ -51,7 +51,7 @@ def base_opts():
         "conf_file": "/dev/null",
         "gather_job_timeout": 5,
     }
-    
+
 
 def test_gather_minions_ignores_error_payload(monkeypatch, base_opts):
     ping_returns = [
@@ -74,6 +74,7 @@ def test_gather_minions_ignores_error_payload(monkeypatch, base_opts):
 
     assert "error" not in minions
     assert minions == ["minion1"]
+
 
 def test_batch_run_ignores_error_return(monkeypatch, base_opts):
     ping_returns = [
