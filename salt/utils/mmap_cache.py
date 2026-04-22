@@ -3,6 +3,7 @@ import errno
 import logging
 import mmap
 import os
+import time
 import zlib
 
 import salt.utils.files
@@ -26,6 +27,125 @@ EMPTY = 0
 OCCUPIED = 1
 DELETED = 2
 
+#: Minimum interval between ``os.stat`` staleness checks on an already-open
+#: mmap. Without throttling, every ``get()`` syscalls. Overridable per
+#: instance via ``MmapCache(path, staleness_check_interval=...)``.
+DEFAULT_STALENESS_CHECK_INTERVAL = 0.25  # seconds
+
+
+# ---------------------------------------------------------------------------
+# Sorted-placement compactor (O(N log N) vs naive O(N^2) open addressing).
+#
+# Rationale and correctness proof: see ``mmap-compaction-design.md``.
+# In short: for linear-probing hash tables without deletions the *set* of
+# occupied slots depends only on the key set and the hash, not on
+# insertion order. Sorting items by their home slot and packing each
+# cluster contiguously from a monotone cursor produces a valid layout
+# that any reader using the same hash + linear probe can search.
+# ---------------------------------------------------------------------------
+
+
+def _write_slot(buf, slot, slot_size, data_bytes):
+    """
+    Write ``data_bytes`` into the given slot and flip the status byte to
+    OCCUPIED. Caller is responsible for the slot being reachable from
+    readers probing from the correct home.
+    """
+    off = slot * slot_size
+    ld = len(data_bytes)
+    buf[off + 1 : off + 1 + ld] = data_bytes
+    if ld < slot_size - 1:
+        buf[off + 1 + ld] = 0
+    buf[off] = OCCUPIED
+
+
+def _naive_probe_insert(buf, home, num_slots, slot_size, data_bytes):
+    """
+    Place ``data_bytes`` at the first non-OCCUPIED slot reachable from
+    ``home`` via linear probing. Used as the wrap-around fallback for
+    :func:`pack_sorted`.
+    """
+    for i in range(num_slots):
+        slot = (home + i) % num_slots
+        if buf[slot * slot_size] != OCCUPIED:
+            _write_slot(buf, slot, slot_size, data_bytes)
+            return
+    raise RuntimeError("mmap cache full during sorted-placement overflow")
+
+
+def pack_sorted(buf, items, num_slots, slot_size):
+    """
+    O(N log N) compaction placement into a zero-initialised buffer.
+
+    :param buf: ``mmap.mmap`` or ``bytearray`` of size
+        ``num_slots * slot_size``, zero-initialised. Mutated in place.
+    :param items: Iterable of ``(key_bytes, data_bytes)`` tuples, where
+        ``data_bytes`` is the full per-slot payload starting at ``offset+1``
+        (i.e. the key, or ``key + b"\\x00" + value``). ``data_bytes`` must be
+        shorter than ``slot_size`` and must start with the key bytes used to
+        compute the probe home.
+    :param int num_slots: Total slot count (``MmapCache.size``).
+    :param int slot_size: Per-slot byte width (``MmapCache.slot_size``).
+
+    Duplicate keys: the last occurrence wins, matching the naive rebuild's
+    "insert over existing" semantics.
+
+    Complexity: ``O(N log N)`` from the sort plus one pass of ``N`` writes.
+    Wrap-around (a cluster that straddles ``num_slots``) falls back to
+    linear-probe insert for just the overflow tail.
+    """
+    deduped = {}
+    for key_bytes, data_bytes in items:
+        if len(data_bytes) >= slot_size:
+            raise ValueError(
+                "pack_sorted: data {} does not fit in slot_size {}".format(
+                    len(data_bytes), slot_size
+                )
+            )
+        deduped[key_bytes] = data_bytes
+
+    indexed = [(zlib.adler32(k) % num_slots, k, d) for k, d in deduped.items()]
+    indexed.sort(key=lambda t: t[0])
+
+    cursor = 0
+    overflow_from = None
+    for idx, (home, _k, data_bytes) in enumerate(indexed):
+        if cursor < home:
+            cursor = home
+        if cursor >= num_slots:
+            overflow_from = idx
+            break
+        _write_slot(buf, cursor, slot_size, data_bytes)
+        cursor += 1
+
+    if overflow_from is not None:
+        for home, _k, data_bytes in indexed[overflow_from:]:
+            _naive_probe_insert(buf, home, num_slots, slot_size, data_bytes)
+
+
+def pack_naive(buf, items, num_slots, slot_size):
+    """
+    O(N^2) worst-case reference packer. Kept for parity testing against
+    :func:`pack_sorted` and as a diagnostic fallback. Prefer
+    ``pack_sorted`` for production rebuilds.
+
+    Same arguments as :func:`pack_sorted`; duplicate keys resolve to
+    last-wins to match ``pack_sorted``.
+    """
+    deduped = {}
+    for key_bytes, data_bytes in items:
+        if len(data_bytes) >= slot_size:
+            raise ValueError(
+                "pack_naive: data {} does not fit in slot_size {}".format(
+                    len(data_bytes), slot_size
+                )
+            )
+        deduped[key_bytes] = data_bytes
+
+    for key_bytes, data_bytes in deduped.items():
+        home = zlib.adler32(key_bytes) % num_slots
+        _naive_probe_insert(buf, home, num_slots, slot_size, data_bytes)
+
 
 class MmapCache:
     """
@@ -33,12 +153,22 @@ class MmapCache:
     This class handles the file management and mmap lifecycle.
     """
 
-    def __init__(self, path, size=1000000, slot_size=128):
+    def __init__(
+        self,
+        path,
+        size=1000000,
+        slot_size=128,
+        staleness_check_interval=DEFAULT_STALENESS_CHECK_INTERVAL,
+    ):
         self.path = os.path.realpath(path)
         self.size = size
         self.slot_size = slot_size
         self._mm = None
         self._cache_id = None
+        #: How often we're willing to ``os.stat`` the file to detect an
+        #: atomic-swap compaction. Set to 0 to stat on every ``open()``.
+        self._staleness_check_interval = staleness_check_interval
+        self._last_staleness_check = 0.0
 
     @property
     def _lock_path(self):
@@ -99,6 +229,46 @@ class MmapCache:
         except OSError:
             return None
 
+    def get_content_version(self):
+        """
+        Return a fine-grained version token for the current file contents.
+
+        Unlike :meth:`_get_cache_id` (which only tracks the inode and so is
+        stable across in-place writes), this returns ``(st_ino, st_mtime_ns)``
+        so that *any* write bumps the token — even in-place ``put`` / ``delete``
+        by another process.
+
+        Callers that maintain derived in-process views of the mmap (e.g.
+        :class:`salt.utils.resource_registry._ResourceIndexStore`) use this
+        token to detect cross-process mutations. Writers bump ``st_mtime_ns``
+        via :meth:`_touch_mtime` on every successful ``put`` / ``delete``.
+
+        Returns ``None`` if the file cannot be stat'd.
+        """
+        try:
+            st = os.stat(self.path)
+            return (st.st_ino, st.st_mtime_ns)
+        except OSError:
+            return None
+
+    def _touch_mtime(self):
+        """
+        Bump the file's mtime to ``now`` without modifying contents.
+
+        This is how writers advertise in-place mutations (``put`` / ``delete``)
+        to other processes holding live mmap handles: the inode is unchanged
+        (so readers keep their mmap), but :meth:`get_content_version` will
+        return a fresh token, prompting any derived view to rebuild from the
+        (now-updated) slots.
+
+        Errors are swallowed: failing to bump mtime degrades cross-process
+        visibility but does not corrupt data.
+        """
+        try:
+            os.utime(self.path, None)
+        except OSError:
+            pass
+
     def _init_file(self):
         """
         Initialize the file with zeros if it doesn't exist.
@@ -135,9 +305,20 @@ class MmapCache:
         Open the memory-mapped file.
         Readers (write=False) do not use any locks.
         Writers (write=True) use file initialization if needed.
+
+        Already-open readers pay at most one ``os.stat`` per
+        ``self._staleness_check_interval`` seconds to detect an atomic-swap
+        compaction (``os.replace`` bumps ``st_ino``). Hot read paths that
+        call ``open()`` every op therefore do not amortise to one syscall
+        per operation.
         """
         if self._mm:
-            # Check for staleness (Atomic Swap detection)
+            # Check for staleness (Atomic Swap detection).
+            now = time.monotonic()
+            interval = self._staleness_check_interval
+            if interval and (now - self._last_staleness_check) < interval:
+                return True
+            self._last_staleness_check = now
             current_id = self._get_cache_id()
             if current_id != self._cache_id:
                 self.close()
@@ -259,6 +440,7 @@ class MmapCache:
                             if len(data) < self.slot_size - 1:
                                 self._mm[offset + 1 + len(data)] = 0
                             self._mm.flush()
+                            self._touch_mtime()
                             return True
                         continue
 
@@ -269,6 +451,7 @@ class MmapCache:
                         self._mm[offset + 1 + len(data)] = 0
                     self._mm[offset] = OCCUPIED
                     self._mm.flush()
+                    self._touch_mtime()
                     return True
 
             log.error("Mmap cache is full!")
@@ -371,6 +554,7 @@ class MmapCache:
                     if existing_key == key_bytes:
                         self._mm[offset] = DELETED
                         self._mm.flush()
+                        self._touch_mtime()
                         return True
             return False
         except OSError as exc:
@@ -470,25 +654,62 @@ class MmapCache:
         )
         return counts
 
-    def atomic_rebuild(self, iterator):
+    def _normalize_iterator(self, iterator):
         """
-        Rebuild the cache from an iterator of (key, value) or (key,)
-        This populates a temporary file and swaps it in atomically.
+        Consume ``iterator`` and yield normalised ``(key_bytes, data_bytes)``
+        pairs ready for slot packing. Items that don't fit in a single slot
+        are skipped with a warning, matching the previous rebuild behaviour.
         """
-        # Ensure directory exists
+        for item in iterator:
+            if isinstance(item, (list, tuple)) and len(item) > 1:
+                key, value = item[0], item[1]
+            else:
+                key = item[0] if isinstance(item, (list, tuple)) else item
+                value = None
+
+            key_bytes = salt.utils.stringutils.to_bytes(key)
+            if value is None:
+                data = key_bytes
+            else:
+                val_bytes = salt.utils.stringutils.to_bytes(value)
+                data = key_bytes + b"\x00" + val_bytes
+
+            if len(data) > self.slot_size - 1:
+                log.warning("Data too long for slot: %s", key)
+                continue
+            yield key_bytes, data
+
+    def atomic_rebuild(self, iterator, strategy="sorted"):
+        """
+        Rebuild the cache from an iterator of ``(key, value)`` or ``(key,)``.
+        Populates a temporary file and atomically swaps it in via
+        ``os.replace`` so active readers continue to see the pre-swap file
+        until their next staleness check.
+
+        :param iterator: Source of ``(key, value)`` / ``(key,)`` items.
+        :param str strategy: ``"sorted"`` (default, O(N log N), see
+            :func:`pack_sorted`) or ``"naive"`` (O(N^2) worst case, kept for
+            parity testing and as a diagnostic fallback).
+        :returns: ``True`` on success, ``False`` on I/O error.
+        """
+        if strategy not in ("sorted", "naive"):
+            raise ValueError("strategy must be 'sorted' or 'naive'")
+
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
 
-        # Use a unique temp file to avoid clashes with other processes or readers
         import tempfile
 
         tmp_dir = os.path.dirname(self.path)
-        tmp_fd, tmp_path = tempfile.mkstemp(dir=tmp_dir, prefix=".pki_rebuild_")
+        tmp_fd, tmp_path = tempfile.mkstemp(dir=tmp_dir, prefix=".rebuild_")
+
+        packer = pack_sorted if strategy == "sorted" else pack_naive
 
         try:
-            # We use the lock file to prevent multiple concurrent rebuilds
             with self._lock():
-                # Initialize empty file with explicit writes (no sparse files)
-                # We use the already open tmp_fd
+                # Materialise items once so we can log count and hand them
+                # to the packer (which needs random access for sorting).
+                items = list(self._normalize_iterator(iterator))
+
                 with os.fdopen(tmp_fd, "wb") as f:
                     total_size = self.size * self.slot_size
                     chunk_size = 1024 * 1024
@@ -503,58 +724,18 @@ class MmapCache:
                         bytes_written += to_write
                     f.flush()
                     os.fsync(f.fileno())
+                tmp_fd = None  # os.fdopen closed it
 
-                # Open for writing the actual data
                 with salt.utils.files.fopen(tmp_path, "r+b") as f:
                     mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_WRITE)
-
                     try:
-                        # Bulk insert all items
-                        for item in iterator:
-                            if isinstance(item, (list, tuple)) and len(item) > 1:
-                                key, value = item[0], item[1]
-                            else:
-                                key = (
-                                    item[0] if isinstance(item, (list, tuple)) else item
-                                )
-                                value = None
-
-                            key_bytes = salt.utils.stringutils.to_bytes(key)
-                            val_bytes = (
-                                salt.utils.stringutils.to_bytes(value)
-                                if value is not None
-                                else b""
-                            )
-
-                            data = key_bytes
-                            if value is not None:
-                                data += b"\x00" + val_bytes
-
-                            if len(data) > self.slot_size - 1:
-                                log.warning("Data too long for slot: %s", key)
-                                continue
-
-                            # Find slot using same hash function
-                            h = zlib.adler32(key_bytes) % self.size
-                            for i in range(self.size):
-                                slot = (h + i) % self.size
-                                offset = slot * self.slot_size
-
-                                if mm[offset] != OCCUPIED:
-                                    # Write data then status (reader-safe order)
-                                    mm[offset + 1 : offset + 1 + len(data)] = data
-                                    if len(data) < self.slot_size - 1:
-                                        mm[offset + 1 + len(data)] = 0
-                                    mm[offset] = OCCUPIED
-                                    break
+                        packer(mm, items, self.size, self.slot_size)
                         mm.flush()
                     finally:
                         mm.close()
+                    os.fsync(f.fileno())
 
-                # Close current mmap before replacing file
                 self.close()
-
-                # Atomic swap
                 os.replace(tmp_path, self.path)
                 return True
         except OSError as exc:
@@ -566,8 +747,8 @@ class MmapCache:
                     pass
             return False
         finally:
-            # Ensure tmp_fd is always closed if it hasn't been by os.fdopen
-            try:
-                os.close(tmp_fd)
-            except OSError:
-                pass
+            if tmp_fd is not None:
+                try:
+                    os.close(tmp_fd)
+                except OSError:
+                    pass
