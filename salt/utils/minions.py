@@ -6,8 +6,6 @@ expected to return
 import fnmatch
 import logging
 import re
-import threading
-import time
 
 import salt.cache
 import salt.key
@@ -17,6 +15,7 @@ import salt.transport
 import salt.utils.data
 import salt.utils.files
 import salt.utils.network
+import salt.utils.resource_registry
 import salt.utils.stringutils
 import salt.utils.versions
 from salt._compat import ipaddress
@@ -197,18 +196,31 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
 
 
 # ---------------------------------------------------------------------------
-# Resource index — O(1) lookup for T@ targeting and wildcard augmentation
+# Resource-index call-path
 # ---------------------------------------------------------------------------
 #
-# A single flat dict stored in one cache file replaces the old per-minion
-# ``minion_resources/<id>`` files.  Each master worker keeps an in-process
-# copy that is refreshed from disk at most once every _RESOURCE_INDEX_TTL
-# seconds.  AESFuncs._register_resources updates the in-process copy AND
-# the on-disk file immediately, so the current worker is always consistent.
+# The authoritative store is :class:`salt.utils.resource_registry.ResourceRegistry`
+# (mmap-backed primary on disk, in-process derived by_type / by_minion views).
+# This module only exposes thin helpers over the registry:
+#
+# * :func:`update_resource_index` — called by the master's
+#   ``_register_resources`` handler when a minion reports its resource set.
+# * :meth:`CkMinions._check_resource_minions` and
+#   :meth:`CkMinions._augment_with_resources` — hot targeting paths.
+#
+# The legacy ``schema_version`` / ``_build_resource_index`` / ``_coerce_*``
+# helpers below are preserved as pure utilities because they're still used for
+# constructing test fixtures and for one-shot migration scripts; they are not
+# on any production code path.
+#
+# Single-writer invariant: only the master's AESFuncs process mutates the
+# registry. All other master workers (and any runner) are readers.
 
+# Legacy bank name retained for any on-disk artefact still shipped as a blob
+# (e.g. the ``resources`` bank referenced by :class:`ResourceRegistry` for
+# topology lookups — distinct from the mmap primary).
 _RESOURCE_INDEX_BANK = "resource_index"
 _RESOURCE_INDEX_KEY = "index"
-_RESOURCE_INDEX_TTL = 5.0  # seconds
 
 # Persisted resource index schema: v2 uses composite SRN keys in ``by_id``
 # (``"<type>:<id>"``) so the same bare ``id`` may exist under multiple types.
@@ -223,7 +235,9 @@ def resource_index_srn_key(resource_type, resource_id):
     :param str resource_id: Bare resource id (e.g. ``"web-01"``).
     :rtype: str
     """
-    return f"{resource_type}:{resource_id}"
+    return salt.utils.resource_registry.resource_index_srn_key(
+        resource_type, resource_id
+    )
 
 
 def _empty_resource_index():
@@ -240,8 +254,11 @@ def _coerce_resource_index_schema(index):
     Normalize a loaded index dict to :data:`RESOURCE_INDEX_SCHEMA_VERSION`.
 
     Older indexes used bare resource ids as ``by_id`` keys, which cannot
-    represent the same id under multiple types.  Those are rebuilt from
+    represent the same id under multiple types. Those are rebuilt from
     ``by_minion``, which remains authoritative.
+
+    Preserved as a pure utility for test fixtures and one-shot migration
+    from legacy on-disk blobs. Not on any production read path.
     """
     if not isinstance(index, dict):
         return _empty_resource_index()
@@ -275,7 +292,7 @@ def _coerce_resource_index_schema(index):
 
 
 # Functions where resources run inline and their results are merged into the
-# managing minion's own response.  The operator sees ONE combined block + ONE
+# managing minion's own response. The operator sees ONE combined block + ONE
 # Summary section instead of separate blocks per resource.
 _MERGE_RESOURCE_FUNS = frozenset(
     {
@@ -287,15 +304,11 @@ _MERGE_RESOURCE_FUNS = frozenset(
     }
 )
 
-_resource_index_lock = threading.Lock()
-_resource_index: dict = _empty_resource_index()
-_resource_index_ts: float = 0.0
-
 
 def _build_resource_index(by_minion):
     """
     Build the three-way flat index from a ``{minion_id: {rtype: [rid, ...]}}``
-    mapping.
+    mapping. Pure utility; used by test fixtures and migration scripts.
 
     Returns::
 
@@ -305,9 +318,6 @@ def _build_resource_index(by_minion):
             "by_type":   {rtype: [rid, ...], ...},
             "by_minion": {minion_id: {rtype: [rid, ...]}, ...},
         }
-
-    ``by_id`` keys are SRNs (``type:id``) so the same bare ``id`` may appear
-    under multiple resource types without collision.
     """
     by_id = {}
     by_type = {}
@@ -330,89 +340,38 @@ def _build_resource_index(by_minion):
     }
 
 
-def _get_resource_index(cache):
+def update_resource_index(opts, minion_id, resources):
     """
-    Return the in-process resource index, refreshing from disk if the TTL has
-    expired.  Thread-safe via double-checked locking.
+    Register or update the full set of resources managed by ``minion_id``.
+
+    Thin wrapper around :meth:`ResourceRegistry.register_minion` that wires
+    the per-process singleton. Called by the master's ``_register_resources``
+    handler.
+
+    :param dict opts: Salt opts (needs ``cachedir``).
+    :param str minion_id: The reporting minion.
+    :param dict resources: ``{resource_type: [resource_id, ...]}``.
+    :returns: ``(n_put, n_deleted)`` for logging.
     """
-    global _resource_index, _resource_index_ts  # pylint: disable=global-statement
-    now = time.monotonic()
-    if now - _resource_index_ts < _RESOURCE_INDEX_TTL:
-        return _resource_index
-    with _resource_index_lock:
-        if now - _resource_index_ts < _RESOURCE_INDEX_TTL:
-            return _resource_index
-        try:
-            loaded = cache.fetch(_RESOURCE_INDEX_BANK, _RESOURCE_INDEX_KEY)
-            if loaded is None:
-                loaded = {}
-        except Exception:  # pylint: disable=broad-except
-            log.error("Failed to load resource index from cache", exc_info=True)
-            loaded = {}
-        if not isinstance(loaded, dict):
-            loaded = {}
-        _resource_index = _coerce_resource_index_schema(loaded)
-        _resource_index_ts = now
-    return _resource_index
-
-
-def _update_resource_index(cache, minion_id, resources):
-    """
-    Surgically update the in-process index for one minion and persist it to
-    disk.
-
-    Called from ``AESFuncs._register_resources`` so the current worker's index
-    is immediately consistent after a minion registers without waiting for the
-    TTL to expire.
-
-    Cost is O(r) where r is the number of resources for *this minion* — the
-    old per-minion entries are removed individually and the new ones are
-    inserted directly, without rebuilding the entire index.
-    """
-    global _resource_index, _resource_index_ts  # pylint: disable=global-statement
-    with _resource_index_lock:
-        _resource_index = _coerce_resource_index_schema(_resource_index)
-        by_id = _resource_index.get("by_id", {})
-        by_type = _resource_index.get("by_type", {})
-        by_minion = _resource_index.get("by_minion", {})
-
-        # Remove old entries for this minion only.
-        old = by_minion.pop(minion_id, {})
-        for rtype, rids in old.items():
-            old_set = set(rids)
-            for rid in rids:
-                by_id.pop(resource_index_srn_key(rtype, rid), None)
-            if rtype in by_type:
-                by_type[rtype] = [r for r in by_type[rtype] if r not in old_set]
-                if not by_type[rtype]:
-                    del by_type[rtype]
-
-        # Insert new entries.
-        if resources:
-            by_minion[minion_id] = resources
-            for rtype, rids in resources.items():
-                existing = by_type.setdefault(rtype, [])
-                existing_set = set(existing)
-                for rid in rids:
-                    by_id[resource_index_srn_key(rtype, rid)] = {
-                        "minion": minion_id,
-                        "type": rtype,
-                    }
-                    if rid not in existing_set:
-                        existing.append(rid)
-                        existing_set.add(rid)
-
-        _resource_index = {
-            "schema_version": RESOURCE_INDEX_SCHEMA_VERSION,
-            "by_id": by_id,
-            "by_type": by_type,
-            "by_minion": by_minion,
-        }
-        try:
-            cache.store(_RESOURCE_INDEX_BANK, _RESOURCE_INDEX_KEY, _resource_index)
-        except Exception:  # pylint: disable=broad-except
-            log.error("Failed to persist resource index to cache", exc_info=True)
-        _resource_index_ts = time.monotonic()
+    try:
+        registry = salt.utils.resource_registry.get_registry(opts)
+    except Exception:  # pylint: disable=broad-except
+        log.error(
+            "Failed to open resource registry while registering %s; "
+            "resource targeting for this minion will be unavailable.",
+            minion_id,
+            exc_info=True,
+        )
+        return (0, 0)
+    try:
+        return registry.register_minion(minion_id, resources or {})
+    except Exception:  # pylint: disable=broad-except
+        log.error(
+            "Failed to register resources for minion '%s'",
+            minion_id,
+            exc_info=True,
+        )
+        return (0, 0)
 
 
 class CkMinions:
@@ -429,7 +388,10 @@ class CkMinions:
         self.opts = opts
         self.cache = salt.cache.factory(opts)
         self.key = salt.key.get_key(opts)
-        # TODO(resources): self.registry = ResourceRegistry(opts)
+        # Process-wide singleton — shared with every other CkMinions /
+        # AESFuncs collaborator in this process, so the derived-view cache
+        # and the mmap handle are reused.
+        self.registry = salt.utils.resource_registry.get_registry(opts)
         # TODO: this is actually an *auth* check
         if self.opts.get("transport", "zeromq") in salt.transport.TRANSPORTS:
             self.acc = "minions"
@@ -953,46 +915,54 @@ class CkMinions:
         (``dummy:dummy-01``).
 
         Unlike other ``_check_*_minions`` methods, the returned IDs are
-        **resource IDs**, not managing-minion IDs.  This is intentional: the
+        **resource IDs**, not managing-minion IDs. This is intentional: the
         CLI uses this list to know which return IDs to expect, and resource
-        returns are keyed by resource ID (remapped by the master's ``_return``
-        handler after the transport security check passes).
+        returns are keyed by resource ID (remapped by the master's
+        ``_return`` handler after the transport security check passes).
 
         Job delivery is handled separately: the job is published with the
         original ``T@`` target expression and ``tgt_type=compound``; managing
         minions receive it via broadcast and filter locally with
         ``resource_match.match()``.
 
-        Full-SRN lookups use O(1) dict access on ``by_id`` keys shaped as
-        ``type:id`` (see :func:`resource_index_srn_key`).  The in-process index
-        is refreshed from a single flat cache file at most once per TTL;
-        legacy caches without ``schema_version`` are coerced on load.
+        Backed by :class:`ResourceRegistry`: full-SRN lookups are O(1) on
+        the mmap primary; bare-type lookups are O(k) on the derived
+        ``by_type`` view. Reads during compaction are consistent because
+        the registry detects atomic swaps via inode (see
+        :data:`STALENESS_CHECK_INTERVAL`).
         """
-        if ":" in expr:
-            resource_type, resource_id = expr.split(":", 1)
-            # Treat a trailing colon with no ID (e.g. "dummy:") as a bare-type
-            # expression so it matches all resources of that type rather than
-            # returning an invalid empty-string resource ID.
-            if not resource_id:
-                resource_id = None
-        else:
-            resource_type, resource_id = expr, None
+        parsed = salt.utils.resource_registry.parse_srn(expr)
+        resource_type = parsed["type"]
+        resource_id = parsed["id"]
 
-        index = _get_resource_index(self.cache)
+        if resource_type is None:
+            return {"minions": [], "missing": []}
 
         if resource_id is not None:
-            # Full SRN: O(1) lookup by composite ``type:id`` in ``by_id``.
-            srn_key = resource_index_srn_key(resource_type, resource_id)
-            if srn_key in index["by_id"]:
-                return {"minions": [resource_id], "missing": []}
-            log.debug(
-                "T@%s not in resource index; using resource ID from expression",
-                expr,
-            )
+            # Full SRN: echo the resource ID back. The managing minion will
+            # filter locally via ``resource_match.match()``. We log if the
+            # SRN is not registered so operators can detect typos without
+            # blocking the job (minion might not have registered yet).
+            try:
+                known = self.registry.has_srn(resource_type, resource_id)
+            except Exception:  # pylint: disable=broad-except
+                log.error(
+                    "Resource registry lookup failed for T@%s", expr, exc_info=True
+                )
+                known = False
+            if not known:
+                log.debug(
+                    "T@%s not in resource registry; using resource ID from expression",
+                    expr,
+                )
             return {"minions": [resource_id], "missing": []}
 
-        # Bare type: O(1) lookup by type.
-        rids = index["by_type"].get(resource_type)
+        # Bare type: return every registered resource id of this type.
+        try:
+            rids = self.registry.get_resource_ids_by_type(resource_type)
+        except Exception:  # pylint: disable=broad-except
+            log.error("Resource registry lookup failed for T@%s", expr, exc_info=True)
+            rids = []
         if rids:
             return {"minions": list(rids), "missing": []}
 
@@ -1010,27 +980,26 @@ class CkMinions:
         Called by :meth:`check_minions` for wildcard glob targets so that
         ``salt '*' test.ping`` also includes returns from managed resources.
 
-        Lookups are O(1) dict access per minion against the in-process
-        resource index.  If the index is unavailable the method logs an error
-        and returns ``minion_ids`` unchanged so ordinary targeting is never
-        disrupted by a resource-cache failure.
+        Per-minion lookups hit the in-process ``by_minion`` derived view
+        (O(1) dict access). If the registry is unavailable the method logs
+        an error and returns ``minion_ids`` unchanged so ordinary targeting
+        is never disrupted by a registry failure.
         """
-        try:
-            index = _get_resource_index(self.cache)
-        except Exception:  # pylint: disable=broad-except
-            log.error(
-                "Failed to load resource index; resource IDs will not be "
-                "included in this target expansion.",
-                exc_info=True,
-            )
-            return list(minion_ids)
-        by_minion = index.get("by_minion", {})
-        if not by_minion:
-            return list(minion_ids)
         result = list(minion_ids)
+        if not result:
+            return result
         seen = set(result)
         for minion_id in minion_ids:
-            resources = by_minion.get(minion_id, {})
+            try:
+                resources = self.registry.get_resources_for_minion(minion_id)
+            except Exception:  # pylint: disable=broad-except
+                log.error(
+                    "Failed to load resources for minion %s; resource IDs will "
+                    "not be included in this target expansion.",
+                    minion_id,
+                    exc_info=True,
+                )
+                return list(minion_ids)
             for rids in resources.values():
                 for rid in rids:
                     if rid not in seen:
