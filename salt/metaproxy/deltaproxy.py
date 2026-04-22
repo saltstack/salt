@@ -656,8 +656,8 @@ def thread_return(cls, minion_instance, opts, data):
             if minion_instance.connected and minion_instance.opts["pillar"].get(
                 "minion_blackout", False
             ):
-                whitelist = minion_instance.opts["pillar"].get(
-                    "minion_blackout_whitelist", []
+                whitelist = salt.utils.secret.expose(
+                    minion_instance.opts["pillar"].get("minion_blackout_whitelist", [])
                 )
                 # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
                 if (
@@ -667,9 +667,7 @@ def thread_return(cls, minion_instance, opts, data):
                     minion_blackout_violation = True
             # use minion_blackout_whitelist from grains if it exists
             if minion_instance.opts["grains"].get("minion_blackout", False):
-                whitelist = minion_instance.opts["grains"].get(
-                    "minion_blackout_whitelist", []
-                )
+                minion_instance.opts["grains"].get("minion_blackout_whitelist", [])
                 if (
                     function_name != "saltutil.refresh_pillar"
                     and function_name not in whitelist
@@ -900,8 +898,8 @@ def thread_multi_return(cls, minion_instance, opts, data):
             if minion_instance.connected and minion_instance.opts["pillar"].get(
                 "minion_blackout", False
             ):
-                whitelist = minion_instance.opts["pillar"].get(
-                    "minion_blackout_whitelist", []
+                whitelist = salt.utils.secret.expose(
+                    minion_instance.opts["pillar"].get("minion_blackout_whitelist", [])
                 )
                 # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
                 if (
