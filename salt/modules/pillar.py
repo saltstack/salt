@@ -540,7 +540,7 @@ def raw(key=None):
     else:
         ret = dict(__pillar__)
 
-    return ret
+    return salt.utils.secret.expose(ret)
 
 
 def ext(external, pillar=None):

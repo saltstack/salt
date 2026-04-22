@@ -48,6 +48,7 @@ import salt.utils.jid
 import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.secret
 import salt.utils.url
 import salt.utils.verify
 
@@ -102,6 +103,7 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "reload_pillar",
         "runas",
         "runas_password",
+        "no_log",
         "fire_event",
         "saltenv",
         "umask",
@@ -2366,6 +2368,8 @@ class State:
         ret["__sls__"] = low.get("__sls__")
         ret["__run_num__"] = self.__run_num
         self.__run_num += 1
+        if low.get("no_log"):
+            salt.utils.secret.no_log_mask(ret)
         format_log(ret)
         self.check_refresh(low, ret)
         utc_finish_time = datetime.datetime.now(tz=datetime.timezone.utc)

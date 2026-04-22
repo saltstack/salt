@@ -15,6 +15,7 @@ from collections import OrderedDict
 from collections.abc import Mapping, MutableMapping, Sequence
 
 import salt.utils.dictupdate
+import salt.utils.secret
 import salt.utils.stringutils
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
@@ -901,6 +902,7 @@ def subdict_match(
         # XXX: A lot of this logic is here because of supporting PY2 and PY3,
         # now that we only support PY3 we should probably re-visit what's going
         # on here.
+        target = salt.utils.secret.expose(target)
         try:
             target = str(target).lower()
         except UnicodeDecodeError:
