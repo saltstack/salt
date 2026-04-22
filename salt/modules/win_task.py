@@ -108,6 +108,8 @@ duration = {
     "4 hours": "PT4H",
     "8 hours": "PT8H",
     "12 hours": "PT12H",
+    "24 hours": "PT24H",
+    "72 hours": "PT72H",
     "1 day": ["P1D", "PT24H"],
     "3 days": ["P3D", "PT72H"],
     "30 days": "P30D",
@@ -168,6 +170,7 @@ results = {
     0x800704DD: "The service is not available (Run only when logged in?)",
     0xC000013A: "The application terminated as a result of CTRL+C",
     0xC06D007E: "Unknown software exception",
+    0x8007045B: "A shutdown is in progress",
 }
 
 
@@ -527,7 +530,7 @@ def list_actions(name, location="\\"):
 
 
 def create_task(
-    name, location="\\", user_name="System", password=None, force=False, **kwargs
+    name, location="\\", user_name="System", password=None, force=False, compatibility=2, **kwargs
 ):
     r"""
     Create a new task in the designated location. This function has many keyword
@@ -566,6 +569,11 @@ def create_task(
             If the task exists, overwrite the existing task.
 
             Default is ``False``.
+
+        compatibility (:obj:`int`, optional):
+            The task compatibility level
+
+            Default is 2
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``.
@@ -852,6 +860,7 @@ def edit_task(
     force_stop=None,
     delete_after=None,
     multiple_instances=None,
+    compatibility=None,
     **kwargs,
 ):
     r"""
@@ -1067,6 +1076,16 @@ def edit_task(
 
             Default is ``None``.
 
+        compatibility (:obj:`int`, optional):
+            Sets the task compatibility level. Valid values are:
+            
+            - 0
+            - 1
+            - 2
+            - 3
+
+            Default is ``None``.
+
     Returns:
         bool: ``True`` if successful, otherwise ``False``.
 
@@ -1145,6 +1164,8 @@ def edit_task(
         # Settings: General Tab
         if hidden is not None:
             task_definition.Settings.Hidden = hidden
+        if compatibility:
+            task_definition.Settings.Compatibility = compatibility
 
         # Settings: Conditions Tab (Idle)
         # https://msdn.microsoft.com/en-us/library/windows/desktop/aa380669(v=vs.85).aspx
@@ -2461,7 +2482,7 @@ def add_trigger(
         if trigger_types[trigger_type] == TASK_TRIGGER_EVENT:
             # Check for required kwargs
             if kwargs.get("subscription", False):
-                trigger.Id = "Event_ID1"
+                trigger.Id = "Event_{}".format(kwargs.get("subscription"))
                 trigger.Subscription = kwargs.get("subscription")
             else:
                 return 'Required parameter "subscription" not passed'
@@ -2471,12 +2492,12 @@ def add_trigger(
 
         # Daily Trigger Parameters
         elif trigger_types[trigger_type] == TASK_TRIGGER_DAILY:
-            trigger.Id = "Daily_ID1"
+            trigger.Id = "Daily__{}".format(start_boundary)
             trigger.DaysInterval = kwargs.get("days_interval", 1)
 
         # Weekly Trigger Parameters
         elif trigger_types[trigger_type] == TASK_TRIGGER_WEEKLY:
-            trigger.Id = "Weekly_ID1"
+            trigger.Id = "Weekly_{}".format(start_boundary)
             trigger.WeeksInterval = kwargs.get("weeks_interval", 1)
             if kwargs.get("days_of_week", False):
                 bits_days = 0
@@ -2488,7 +2509,7 @@ def add_trigger(
 
         # Monthly Trigger Parameters
         elif trigger_types[trigger_type] == TASK_TRIGGER_MONTHLY:
-            trigger.Id = "Monthly_ID1"
+            trigger.Id = "Monthly_{}".format(start_boundary)
             if kwargs.get("months_of_year", False):
                 bits_months = 0
                 for month in kwargs.get("months_of_year"):
