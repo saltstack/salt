@@ -145,7 +145,14 @@ locale_dirs = [
 
 master_doc = "contents"
 templates_path = ["_templates"]
-exclude_patterns = ["_build", "_incl/*", "ref/cli/_includes/*.rst"]
+exclude_patterns = [
+    "_build",
+    "_incl/*",
+    "ref/cli/_includes/*.rst",
+    # Stand-alone design notes; not linked from the doc toctree (see e.g.
+    # ``topics/proposals/async-batch.md``).
+    "topics/proposals/*.md",
+]
 
 extensions = [
     "saltdomain",  # Must come early
