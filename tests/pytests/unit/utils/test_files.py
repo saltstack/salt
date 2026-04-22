@@ -5,6 +5,7 @@ Unit Tests for functions located in salt/utils/files.py
 import copy
 import io
 import os
+import shutil
 
 import pytest
 
@@ -324,3 +325,111 @@ def test_is_binary_returns_false_for_text_files():
     ):
         result = salt.utils.files.is_binary("/fake/file")
         assert result is False
+
+
+@pytest.mark.skip_on_windows(reason="Unix-only permission test")
+def test_copyfile_preserves_perms_before_move(tmp_path):
+    """
+    Test that copyfile applies the destination file's mode to the result
+    and copies the content correctly.
+    """
+    source = str(tmp_path / "source")
+    dest = str(tmp_path / "dest")
+
+    with salt.utils.files.fopen(source, "w") as f:
+        f.write("new content")
+    with salt.utils.files.fopen(dest, "w") as f:
+        f.write("old content")
+    os.chmod(dest, 0o644)
+
+    import stat as stat_mod
+
+    dest_mode_before = stat_mod.S_IMODE(os.stat(dest).st_mode)
+
+    salt.utils.files.copyfile(source, dest)
+
+    dest_mode_after = stat_mod.S_IMODE(os.stat(dest).st_mode)
+    assert dest_mode_after == dest_mode_before
+    with salt.utils.files.fopen(dest) as f:
+        assert f.read() == "new content"
+
+
+@pytest.mark.skip_on_windows(reason="Unix-only permission test")
+def test_copyfile_perms_applied_before_move(tmp_path):
+    """
+    Test that ownership and permissions are set on the temp file before
+    shutil.move, not after. We patch shutil.move to capture the temp
+    file's mode at move time, and patch os.chown to verify it is called
+    with the correct (fake) uid/gid before the move happens.
+    """
+    import stat as stat_mod
+
+    source = str(tmp_path / "source")
+    dest = str(tmp_path / "dest")
+
+    with salt.utils.files.fopen(source, "w") as f:
+        f.write("new content")
+    with salt.utils.files.fopen(dest, "w") as f:
+        f.write("old content")
+    os.chmod(dest, 0o644)
+
+    # Fake stat result with uid/gid different from current process
+    fake_uid = os.getuid() + 42
+    fake_gid = os.getgid() + 42
+    real_stat = os.stat(dest)
+    fake_stat = MagicMock()
+    fake_stat.st_uid = fake_uid
+    fake_stat.st_gid = fake_gid
+    fake_stat.st_mode = real_stat.st_mode
+
+    captured_modes = []
+    chown_calls = []
+    move_called = []
+    original_move = shutil.move
+
+    def capturing_move(src, dst):
+        captured_modes.append(os.stat(src).st_mode)
+        move_called.append(True)
+        return original_move(src, dst)
+
+    def capturing_chown(path, uid, gid):
+        chown_calls.append((uid, gid))
+        # Verify chown is called BEFORE move
+        assert not move_called, "os.chown must be called before shutil.move"
+
+    original_stat = os.stat
+
+    def patched_stat(path):
+        result = original_stat(path)
+        if path == dest:
+            return fake_stat
+        return result
+
+    with patch("salt.utils.files.shutil.move", side_effect=capturing_move), patch(
+        "salt.utils.files.os.chown", side_effect=capturing_chown
+    ), patch("salt.utils.files.os.stat", side_effect=patched_stat):
+        salt.utils.files.copyfile(source, dest)
+
+    assert move_called, "shutil.move was not called"
+    # Mode should be 0o644 at move time, not mkstemp's default 0o600
+    assert stat_mod.S_IMODE(captured_modes[0]) == 0o644
+    # chown should have been called with the fake uid/gid
+    assert chown_calls, "os.chown was not called"
+    assert chown_calls[0] == (fake_uid, fake_gid)
+
+
+def test_copyfile_new_file(tmp_path):
+    """
+    Test that copyfile works when the destination does not exist yet.
+    No permissions to preserve in this case.
+    """
+    source = str(tmp_path / "source")
+    dest = str(tmp_path / "dest")
+
+    with salt.utils.files.fopen(source, "w") as f:
+        f.write("content")
+
+    salt.utils.files.copyfile(source, dest)
+
+    with salt.utils.files.fopen(dest) as f:
+        assert f.read() == "content"

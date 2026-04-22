@@ -209,21 +209,24 @@ def copyfile(source, dest, backup_mode="", cachedir=""):
     if backup_mode == "master" or backup_mode == "both" and bkroot:
         # TODO, backup to master
         pass
-    # Get current file stats to they can be replicated after the new file is
-    # moved to the destination path.
-    fstat = None
-    # We must check for platform availability first, or use a conditional import
-    # salt.utils.platform is available, but if this function is called early, it might fail?
-    # Actually, the error says 'salt' variable is used before assignment.
-    # This means 'import salt.utils.platform' is likely missing or 'salt' is not in scope.
-    # But this file starts with 'import salt.utils.platform'.
-    # Ah, 'import salt.utils.platform' is NOT at the top level of this file in the provided context?
-    # Let me check the imports.
+    # Get current file stats so they can be applied to the temp file BEFORE
+    # it is moved to the destination path. This eliminates a race condition
+    # where inotify-based services (e.g. nscd) detect the new file with
+    # mkstemp's default 0600 permissions before chown/chmod can restore
+    # them, causing "Permission denied" on inotify re-watch.
     if not salt.utils.platform.is_windows():
         try:
             fstat = os.stat(dest)
         except OSError:
-            pass
+            # dest does not exist yet; nothing to preserve
+            fstat = None
+        if fstat is not None:
+            try:
+                os.chown(tgt, fstat.st_uid, fstat.st_gid)
+                os.chmod(tgt, fstat.st_mode)
+            except OSError:
+                __clean_tmp(tgt)
+                raise
 
     # The move could fail if the dest has xattr protections, so delete the
     # temp file in this case
@@ -232,10 +235,6 @@ def copyfile(source, dest, backup_mode="", cachedir=""):
     except Exception:  # pylint: disable=broad-except
         __clean_tmp(tgt)
         raise
-
-    if fstat is not None:
-        os.chown(dest, fstat.st_uid, fstat.st_gid)
-        os.chmod(dest, fstat.st_mode)
     # If SELINUX is available run a restorecon on the file
     rcon = salt.utils.path.which("restorecon")
     if rcon:
