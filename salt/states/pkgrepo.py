@@ -403,7 +403,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     if key_is_insecure:
         if allow_insecure_key:
             salt.utils.versions.warn_until(
-                3008,
+                3009,
                 "allow_insecure_key will default to False starting in salt 3008.",
             )
         else:
