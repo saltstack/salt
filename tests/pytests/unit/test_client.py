@@ -121,10 +121,10 @@ def test_pub_async_no_timeout(master_opts):
                     io_loop = tornado.ioloop.IOLoop.current()
                     io_loop.run_sync(lambda: local_client.pub_async("*", "test.ping"))
 
-                    # Verify _prep_pub was called with timeout=30 (the default)
+                    # Verify _prep_pub was called with timeout=15 (the default for pub_async)
                     assert len(prep_pub_calls) == 1
                     # timeout is the 7th positional arg
-                    assert prep_pub_calls[0][0][6] == 30
+                    assert prep_pub_calls[0][0][6] == 15
 
 
 async def test_pub_async_default_timeout(master_opts):

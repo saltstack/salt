@@ -52,6 +52,16 @@ This document tracks the test regressions and CI failures resolved during the me
 *   **Error**: `salt.loader.lazy: ERROR Module/package collision: '.../salt/utils/vault.py' and '.../salt/utils/vault'`.
 *   **Fix**: Deleted the redundant `salt/utils/vault.py` (which was accidentally restored from 3006.x) in favor of the `salt/utils/vault/` directory structure required by 3007.x. Also removed redundant `tests/pytests/unit/utils/test_vault.py`.
 
+## 9. GPG Key Download Failures
+*   **File**: `tests/support/pytest/helpers.py`
+*   **Symptom**: `requests.exceptions.ConnectionError` in restricted/air-gapped CI environments when downloading Broadcom GPG keys.
+*   **Fix**: Added a local PGP public key fallback to the `download_file` helper, allowing tests to proceed even when the Broadcom artifactory is unreachable.
+
+## 10. Systemd Masked Service Hangs
+*   **File**: `tests/pytests/pkg/upgrade/systemd/test_service_preservation.py`
+*   **Symptom**: **5-hour Hang** in package upgrade tests.
+*   **Fix**: Disabled automated service stopping for masked units during the `install(upgrade=True)` call. `systemctl stop` can block indefinitely on masked services in certain environments.
+
 ---
 
 ## Core Supporting Fixes (Verified)

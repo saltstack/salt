@@ -294,11 +294,17 @@ def salt_master_factory(
         else:
             shutil.copyfile(source, dest)
 
+    factory_kwargs = {}
+    if salt_factories.system_service is False:
+        factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
+            "--log-level=info"
+        ]
+
     factory = salt_factories.salt_master_daemon(
         master_id,
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+        **factory_kwargs,
     )
     return factory
 
@@ -380,7 +386,7 @@ def salt_sub_minion_factory(salt_master_factory, salt_sub_minion_id):
 
 
 @pytest.fixture(scope="session")
-def salt_proxy_factory(salt_master_factory):
+def salt_proxy_factory(salt_factories, salt_master_factory):
     proxy_minion_id = random_string("proxytest-")
 
     config_overrides = {
@@ -392,11 +398,18 @@ def salt_proxy_factory(salt_master_factory):
         "lazy_loader_strict_matching": True,
     }
 
+    factory_kwargs = {
+        "start_timeout": 240,
+    }
+    if salt_factories.system_service is False:
+        factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
+            "--log-level=info"
+        ]
+
     factory = salt_master_factory.salt_proxy_minion_daemon(
         proxy_minion_id,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
-        start_timeout=240,
+        **factory_kwargs,
     )
     factory.before_start(pytest.helpers.remove_stale_proxy_minion_cache_file, factory)
     factory.after_terminate(
@@ -410,8 +423,12 @@ def salt_proxy_factory(salt_master_factory):
 
 @pytest.fixture(scope="session")
 def salt_delta_proxy_factory(salt_factories, salt_master_factory):
+    import saltfactories.daemons.minion
+
     proxy_minion_id = random_string("delta-proxy-test-")
-    root_dir = salt_factories.get_root_dir_for_daemon(proxy_minion_id)
+    root_dir = salt_factories.get_root_dir_for_daemon(
+        proxy_minion_id, factory_class=saltfactories.daemons.minion.SaltProxyMinion
+    )
     conf_dir = root_dir / "conf"
     conf_dir.mkdir(parents=True, exist_ok=True)
 
@@ -433,12 +450,20 @@ def salt_delta_proxy_factory(salt_factories, salt_master_factory):
         "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
+
+    factory_kwargs = {
+        "start_timeout": 240,
+    }
+    if salt_factories.system_service is False:
+        factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
+            "--log-level=info"
+        ]
+
     factory = salt_master_factory.salt_proxy_minion_daemon(
         proxy_minion_id,
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
-        start_timeout=240,
+        **factory_kwargs,
     )
 
     for minion_id in [factory.id] + pytest.helpers.proxy.delta_proxy_minion_ids():

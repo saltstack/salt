@@ -206,15 +206,34 @@ def test_pkg_paths(
         for dirpath, sub_dirs, files in os.walk(pkg_path):
             path = pathlib.Path(dirpath)
 
-            if str(path) in pkg_paths_salt_user:
+            # Directories owned by salt:salt or their subdirs/files
+            if (
+                str(path) in pkg_paths_salt_user or str(path) in salt_user_subdirs
+            ) and str(path) not in pkg_paths_salt_user_exclusions:
                 assert path.owner() == "salt"
                 assert path.group() == "salt"
-
-            # Individual files owned by salt user
-            for file in files:
-                file_path = path.joinpath(file)
-                if str(file_path) in pkg_paths_salt_user:
-                    assert file_path.owner() == "salt"
+                salt_user_subdirs.extend(
+                    [str(path.joinpath(sub_dir)) for sub_dir in sub_dirs]
+                )
+                # Individual files owned by salt user
+                for file in files:
+                    file_path = path.joinpath(file)
+                    if str(file_path) not in pkg_paths_salt_user_exclusions:
+                        assert file_path.owner() == "salt"
+            # Directories owned by root:root
+            else:
+                assert path.owner() == "root"
+                assert path.group() == "root"
+                for file in files:
+                    if file.endswith("ipc"):
+                        continue
+                    file_path = path.joinpath(file)
+                    # Individual files owned by salt user
+                    if str(file_path) in pkg_paths_salt_user:
+                        assert file_path.owner() == "salt"
+                    else:
+                        assert file_path.owner() == "root"
+                        assert file_path.group() == "root"
 
 
 @pytest.mark.skip_if_binaries_missing("logrotate")

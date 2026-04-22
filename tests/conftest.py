@@ -978,7 +978,11 @@ def salt_syndic_master_factory(
     prod_env_state_tree_root_dir,
     prod_env_pillar_tree_root_dir,
 ):
-    root_dir = salt_factories.get_root_dir_for_daemon("syndic_master")
+    import saltfactories.daemons.master
+
+    root_dir = salt_factories.get_root_dir_for_daemon(
+        "syndic_master", factory_class=saltfactories.daemons.master.SaltMaster
+    )
     conf_dir = root_dir / "conf"
     conf_dir.mkdir(exist_ok=True)
 
@@ -1058,12 +1062,18 @@ def salt_syndic_master_factory(
         }
     )
 
+    factory_kwargs = {}
+    if salt_factories.system_service is False:
+        factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
+            "--log-level=info"
+        ]
+
     factory = salt_factories.salt_master_daemon(
         "syndic_master",
         order_masters=True,
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+        **factory_kwargs,
     )
     return factory
 
@@ -1079,11 +1089,17 @@ def salt_syndic_factory(salt_factories, salt_syndic_master_factory):
         opts["transport"] = salt_syndic_master_factory.config["transport"]
         config_defaults["syndic"] = opts
     config_overrides = {"log_level_logfile": "info"}
+    factory_kwargs = {}
+    if salt_factories.system_service is False:
+        factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
+            "--log-level=info"
+        ]
+
     factory = salt_syndic_master_factory.salt_syndic_daemon(
         "syndic",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+        **factory_kwargs,
     )
     return factory
 
@@ -1099,7 +1115,11 @@ def salt_master_factory(
     ext_pillar_file_tree_root_dir,
     salt_api_account_factory,
 ):
-    root_dir = salt_factories.get_root_dir_for_daemon("master")
+    import saltfactories.daemons.master
+
+    root_dir = salt_factories.get_root_dir_for_daemon(
+        "master", factory_class=saltfactories.daemons.master.SaltMaster
+    )
     conf_dir = root_dir / "conf"
     conf_dir.mkdir(exist_ok=True)
 
@@ -1208,17 +1228,23 @@ def salt_master_factory(
         else:
             shutil.copyfile(source, dest)
 
+    factory_kwargs = {}
+    if salt_factories.system_service is False:
+        factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
+            "--log-level=info"
+        ]
+
     factory = salt_syndic_master_factory.salt_master_daemon(
         "master",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+        **factory_kwargs,
     )
     return factory
 
 
 @pytest.fixture(scope="session")
-def salt_minion_factory(salt_master_factory):
+def salt_minion_factory(salt_factories, salt_master_factory):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "minion")) as rfh:
         config_defaults = yaml.deserialize(rfh.read())
     config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
@@ -1237,11 +1263,18 @@ def salt_minion_factory(salt_master_factory):
     virtualenv_binary = get_virtualenv_binary_path()
     if virtualenv_binary:
         config_overrides["venv_bin"] = virtualenv_binary
+
+    factory_kwargs = {}
+    if salt_factories.system_service is False:
+        factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
+            "--log-level=info"
+        ]
+
     factory = salt_master_factory.salt_minion_daemon(
         "minion",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+        **factory_kwargs,
     )
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
@@ -1250,7 +1283,7 @@ def salt_minion_factory(salt_master_factory):
 
 
 @pytest.fixture(scope="session")
-def salt_sub_minion_factory(salt_master_factory):
+def salt_sub_minion_factory(salt_factories, salt_master_factory):
     with salt.utils.files.fopen(
         os.path.join(RUNTIME_VARS.CONF_DIR, "sub_minion")
     ) as rfh:
@@ -1271,11 +1304,18 @@ def salt_sub_minion_factory(salt_master_factory):
     virtualenv_binary = get_virtualenv_binary_path()
     if virtualenv_binary:
         config_overrides["venv_bin"] = virtualenv_binary
+
+    factory_kwargs = {}
+    if salt_factories.system_service is False:
+        factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
+            "--log-level=info"
+        ]
+
     factory = salt_master_factory.salt_minion_daemon(
         "sub_minion",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+        **factory_kwargs,
     )
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
@@ -1308,6 +1348,30 @@ def salt_call_cli(salt_minion_factory):
     return salt_minion_factory.salt_call_cli()
 
 
+def pytest_sessionstart(session):
+    # Surgically remove colliding vault.py if it exists in site-packages
+    # This resolves the Module/package collision: salt/utils/vault.py and salt/utils/vault
+    try:
+        import salt.utils.vault as vault_module
+
+        vault_file = pathlib.Path(vault_module.__file__)
+        if vault_file.name == "__init__.py":
+            # We are good, we are in a package
+            # Check for colliding vault.py in the same parent directory
+            for path in sys.path:
+                if not path:
+                    continue
+                redundant_file = pathlib.Path(path) / "salt" / "utils" / "vault.py"
+                if redundant_file.exists():
+                    redundant_file.unlink()
+                    for pyc_file in redundant_file.parent.glob(
+                        "__pycache__/vault.cpython-*.pyc"
+                    ):
+                        pyc_file.unlink()
+    except (ImportError, AttributeError):
+        pass
+
+
 @pytest.fixture(scope="session", autouse=True)
 def bridge_pytest_and_runtests(
     salt_factories,
@@ -1318,6 +1382,8 @@ def bridge_pytest_and_runtests(
     salt_sub_minion_factory,
     sshd_config_dir,
 ):
+    import salt.config
+
     # Make sure unittest2 uses the pytest generated configuration
     RUNTIME_VARS.RUNTIME_CONFIGS["master"] = freeze(salt_master_factory.config)
     RUNTIME_VARS.RUNTIME_CONFIGS["minion"] = freeze(salt_minion_factory.config)
@@ -1352,7 +1418,11 @@ def bridge_pytest_and_runtests(
 
 @pytest.fixture(scope="session")
 def sshd_config_dir(salt_factories):
-    config_dir = salt_factories.get_root_dir_for_daemon("sshd")
+    import saltfactories.daemons.sshd
+
+    config_dir = salt_factories.get_root_dir_for_daemon(
+        "sshd", factory_class=saltfactories.daemons.sshd.Sshd
+    )
     yield config_dir
     shutil.rmtree(str(config_dir), ignore_errors=True)
 
