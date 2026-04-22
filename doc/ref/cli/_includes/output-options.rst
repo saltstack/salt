@@ -44,8 +44,19 @@ Output Options
 .. option:: --state-output=STATE_OUTPUT, --state_output=STATE_OUTPUT
 
     Override the configured state_output value for minion
-    output. One of 'full', 'terse', 'mixed', 'changes' or
-    'filter'. Default: 'none'.
+    output. One of ``full``, ``terse``, ``mixed``, ``changes`` or
+    ``filter``. Default: ``none``.
+
+    Each mode accepts two optional suffixes:
+
+    * ``_id`` — use the state ID as the display name instead of the state's
+      ``name`` value (e.g. ``full_id``).
+    * ``_color`` — colorize unified diffs in the changes section: added lines
+      green, removed lines red, hunk headers (``@@``) cyan, file headers
+      (``---``) red, context lines gray (e.g. ``full_color``).
+
+    The two suffixes can be combined in either order, e.g. ``full_id_color``
+    or ``full_color_id``.
 
 .. option:: --state-verbose=STATE_VERBOSE, --state_verbose=STATE_VERBOSE
 
