@@ -11,6 +11,12 @@ import salt.version
 from salt.utils.versions import LooseVersion, Version
 from tests.support.mock import patch
 
+
+@pytest.fixture(autouse=True)
+def raise_deprecations_runtime_errors(monkeypatch):
+    monkeypatch.setenv("RAISE_DEPRECATIONS_RUNTIME_ERRORS", "1")
+
+
 TEST_MOD = """
 __version__ = (1, 2, 3)
 """

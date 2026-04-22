@@ -758,6 +758,34 @@ class SaltEvent:
                 continue
             yield data
 
+    async def get_event_async(self, tag="", wait=5, full=False):
+        """
+        Asynchronously get a single event.
+        """
+        if self._run_io_loop_sync:
+            return self.get_event(tag=tag, wait=wait, full=full)
+
+        loop = salt.utils.asynchronous.aioloop(self.io_loop)
+        future = loop.create_future()
+
+        async def _handle(raw):
+            if not future.done():
+                event_tag, event_data = self.unpack(raw)
+                if not tag or event_tag.startswith(tag):
+                    if full:
+                        future.set_result({"tag": event_tag, "data": event_data})
+                    else:
+                        future.set_result(event_data)
+
+        self.subscribe(tag)
+        self.set_event_handler(_handle)
+        try:
+            return await asyncio.wait_for(future, timeout=wait)
+        except (asyncio.TimeoutError, tornado.gen.TimeoutError):
+            return None
+        finally:
+            self.unsubscribe(tag)
+
     async def fire_event_async(self, data, tag, cb=None, timeout=1000):
         """
         Send a single event into the publisher with payload dict "data" and
@@ -785,7 +813,7 @@ class SaltEvent:
         data["_stamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
         event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
-        self.pusher.publish(msg)
+        await self.pusher.publish(msg)
         if cb is not None:
             warn_until(
                 3008,

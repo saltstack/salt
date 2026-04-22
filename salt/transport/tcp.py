@@ -1735,7 +1735,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.pull_sock = None
         if self.io_loop:
             self.io_loop.stop()
-            self.io_loop.close(all_fds=True)
+            self.io_loop.close()
             self.io_loop = None
 
     # pylint: disable=W1701

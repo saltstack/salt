@@ -633,6 +633,10 @@ def onedir_dependencies(
     # Cryptography needs openssl dir set to link to the proper openssl libs.
     if platform == "macos":
         env["OPENSSL_DIR"] = f"{dest}"
+        # Apple Clang 16+ (Xcode 16, macOS 14+) treats pointer-to-integer
+        # conversions as hard errors. Suppress for packages with older C code
+        # (e.g. multidict 6.0.4) that predate stricter Clang defaults.
+        env["CFLAGS"] = env.get("CFLAGS", "") + " -Wno-int-conversion"
 
     if platform == "linux":
         # This installs the ppbt package. We'll remove it after installing all

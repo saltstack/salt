@@ -22,6 +22,9 @@ class MockSaltfileParser(
         salt.utils.parsers.OptionParser.__init__(self, *args, **kwargs)
         self.config = {}
 
+    def get_prog_name(self):
+        return "salt-test"
+
     def _mixin_setup(self):
         self.add_option(
             "-l",
@@ -166,7 +169,7 @@ def test_saltfile(parser, saltfile):
     Test a valid saltfile
     """
     contents = """
-    __main__.py:
+    salt-test:
       log_level: debug
       output: json
     """
@@ -182,7 +185,7 @@ def test_saltfile_unusual_option(parser, saltfile):
     Test a valid saltfile
     """
     contents = """
-    __main__.py:
+    salt-test:
       go: birds
     """
     saltfile.write_text(contents)
@@ -195,7 +198,7 @@ def test_saltfile_cli_override(parser, saltfile):
     Test a valid saltfile
     """
     contents = """
-    __main__.py:
+    salt-test:
       log_level: debug
       output: json
       output_file: /fake/file

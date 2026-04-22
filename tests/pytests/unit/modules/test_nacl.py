@@ -4,13 +4,9 @@
 
 import pytest
 
+import salt.modules.nacl as nacl
 import salt.utils.stringutils
 from tests.support.mock import patch
-
-pytest.importorskip("nacl.public")
-pytest.importorskip("nacl.secret")
-
-import salt.modules.nacl as nacl
 
 
 @pytest.fixture
@@ -51,51 +47,62 @@ def test_fips_mode():
         assert ret == (False, "nacl module not available in FIPS mode")
 
 
-def test_keygen(test_keys):
+class TestNaclModule:
     """
-    Test keygen
+    Test the nacl module. These tests are skipped if the module
+    fails to load (e.g. due to Python 3.12 + ZMQ incompatibility).
     """
-    test_pk, test_sk = test_keys
-    assert len(test_pk) == 44
-    assert len(test_sk) == 44
 
+    @pytest.fixture(autouse=True)
+    def _check_nacl(self):
+        # We mock __opts__ to avoid the FIPS check since that is tested separately.
+        with patch("salt.modules.nacl.__opts__", {"fips_mode": False}, create=True):
+            success, reason = nacl.__virtual__()
+            if success is False:
+                pytest.skip(reason)
 
-def test_enc_dec(test_data, test_keys):
-    """
-    Generate keys, encrypt, then decrypt.
-    """
-    # Encrypt with pk
-    test_pk, test_sk = test_keys
-    encrypted_data = nacl.enc(data=test_data, pk=test_pk)
+    def test_keygen(self, test_keys):
+        """
+        Test keygen
+        """
+        test_pk, test_sk = test_keys
+        assert len(test_pk) == 44
+        assert len(test_sk) == 44
 
-    # Decrypt with sk
-    decrypted_data = nacl.dec(data=encrypted_data, sk=test_sk)
-    assert test_data == decrypted_data
+    def test_enc_dec(self, test_data, test_keys):
+        """
+        Generate keys, encrypt, then decrypt.
+        """
+        # Encrypt with pk
+        test_pk, test_sk = test_keys
+        encrypted_data = nacl.enc(data=test_data, pk=test_pk)
 
+        # Decrypt with sk
+        decrypted_data = nacl.dec(data=encrypted_data, sk=test_sk)
+        assert test_data == decrypted_data
 
-def test_sealedbox_enc_dec(test_data, test_keys):
-    """
-    Generate keys, encrypt, then decrypt.
-    """
-    # Encrypt with pk
-    test_pk, test_sk = test_keys
-    encrypted_data = nacl.sealedbox_encrypt(data=test_data, pk=test_pk)
+    def test_sealedbox_enc_dec(self, test_data, test_keys):
+        """
+        Generate keys, encrypt, then decrypt.
+        """
+        # Encrypt with pk
+        test_pk, test_sk = test_keys
+        encrypted_data = nacl.sealedbox_encrypt(data=test_data, pk=test_pk)
 
-    # Decrypt with sk
-    decrypted_data = nacl.sealedbox_decrypt(data=encrypted_data, sk=test_sk)
+        # Decrypt with sk
+        decrypted_data = nacl.sealedbox_decrypt(data=encrypted_data, sk=test_sk)
 
-    assert test_data == decrypted_data
+        assert test_data == decrypted_data
 
+    def test_secretbox_enc_dec(self, test_data, test_keys):
+        """
+        Generate keys, encrypt, then decrypt.
+        """
+        # Encrypt with sk
+        test_pk, test_sk = test_keys
+        encrypted_data = nacl.secretbox_encrypt(data=test_data, sk=test_sk)
 
-def test_secretbox_enc_dec(test_data, test_keys):
-    """
-    Generate keys, encrypt, then decrypt.
-    """
-    # Encrypt with sk
-    test_pk, test_sk = test_keys
-    encrypted_data = nacl.secretbox_encrypt(data=test_data, sk=test_sk)
+        # Decrypt with sk
+        decrypted_data = nacl.secretbox_decrypt(data=encrypted_data, sk=test_sk)
 
-    # Decrypt with sk
-    decrypted_data = nacl.secretbox_decrypt(data=encrypted_data, sk=test_sk)
-
-    assert test_data == decrypted_data
+        assert test_data == decrypted_data

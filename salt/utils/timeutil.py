@@ -5,12 +5,51 @@ Functions various time manipulations.
 # Import Python
 import logging
 import re
+import sys
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 # Import Salt modules
 
 log = logging.getLogger(__name__)
+
+
+def utcnow():
+    """
+    Return current UTC time as a naive datetime object.
+
+    In Python 3.12+, ``datetime.utcnow()`` is deprecated in favor of
+    ``datetime.now(timezone.utc)``. However, because Salt's internal
+    logic and event data predominantly use naive datetimes, this function
+    provides compatibility by returning a naive datetime (without timezone
+    info).
+
+    Returning an aware datetime would cause ``TypeError`` when comparing
+    against existing naive datetime objects found throughout the codebase.
+    """
+    if sys.version_info >= (3, 12):
+        return datetime.now(timezone.utc).replace(tzinfo=None)
+    else:
+        return datetime.utcnow()
+
+
+def utcfromtimestamp(timestamp):
+    """
+    Return a naive datetime from a POSIX timestamp.
+
+    In Python 3.12+, ``datetime.utcfromtimestamp()`` is deprecated in favor
+    of ``datetime.fromtimestamp(timestamp, tz=timezone.utc)``. This function
+    provides compatibility by returning a naive datetime (without timezone
+    info) to match the behavior of the deprecated function and ensure
+    compatibility with Salt's internal naive datetime logic.
+
+    Args:
+        timestamp: POSIX timestamp (seconds since epoch)
+    """
+    if sys.version_info >= (3, 12):
+        return datetime.fromtimestamp(timestamp, tz=timezone.utc).replace(tzinfo=None)
+    else:
+        return datetime.utcfromtimestamp(timestamp)
 
 
 def get_timestamp_at(time_in=None, time_at=None):
@@ -34,7 +73,7 @@ def get_timestamp_at(time_in=None, time_at=None):
                 minutes = 0
             hours, minutes = int(hours), int(minutes)
         dt = timedelta(hours=hours, minutes=minutes)
-        time_now = datetime.utcnow()
+        time_now = utcnow()
         time_at = time_now + dt
         return time.mktime(time_at.timetuple())
     elif time_at:

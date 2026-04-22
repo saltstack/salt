@@ -24,9 +24,24 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
         )
         local_opts["file_client"] = "local"
         local_opts["conf_file"] = "/etc/salt/minion"
-        patcher = patch("salt.config.minion_config", MagicMock(return_value=local_opts))
-        patcher.start()
-        self.addCleanup(patcher.stop)
+
+        # Mock salt.client.Caller to avoid initializing a real SMinion which tries to access /var/cache/salt
+        self.mock_caller = MagicMock()
+
+        def mock_cmd(fun, *args, **kwargs):
+            if fun == "test.echo" and args:
+                return args[0]
+            return "This works!"
+
+        self.mock_caller.cmd.side_effect = mock_cmd
+
+        patchers = [
+            patch("salt.config.minion_config", MagicMock(return_value=local_opts)),
+            patch("salt.client.Caller", MagicMock(return_value=self.mock_caller)),
+        ]
+        for patcher in patchers:
+            patcher.start()
+            self.addCleanup(patcher.stop)
         return {saltcheck: {"__opts__": local_opts}}
 
     @pytest.mark.slow_test

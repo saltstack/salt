@@ -1715,7 +1715,10 @@ class MasterPubServerChannel:
 
     @classmethod
     def factory(cls, opts, **kwargs):
+        _discover_event = kwargs.get("_discover_event", None)
         transport = salt.transport.ipc_publish_server("master", opts)
+        if _discover_event:
+            _discover_event.set()
         return cls(opts, transport)
 
     def __init__(self, opts, transport, presence_events=False):

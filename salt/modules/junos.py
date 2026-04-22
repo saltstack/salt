@@ -64,6 +64,7 @@ except ImportError:
     HAS_JUNOS = False
 
 # Set up logging
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name

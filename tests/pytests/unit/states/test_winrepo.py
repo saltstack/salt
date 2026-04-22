@@ -60,7 +60,9 @@ def test_genrepo():
     mock_empty_list = MagicMock(return_value=[])
     with patch.object(salt.config, "master_config", mock_config), patch.object(
         os, "stat", mock_stat
-    ), patch.object(salt.utils.path, "os_walk", mock_empty_list), patch.dict(
+    ), patch("os.path.exists", MagicMock(return_value=True)), patch.object(
+        salt.utils.path, "os_walk", mock_empty_list
+    ), patch.dict(
         winrepo.__opts__, {"test": True}
     ):
         # With test=True

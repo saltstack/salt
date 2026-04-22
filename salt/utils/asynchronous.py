@@ -14,20 +14,74 @@ import tornado.ioloop
 log = logging.getLogger(__name__)
 
 
+def get_ioloop():
+    """
+    Get the current IOLoop. If one is not set, create one and set it.
+    """
+    try:
+        # We try to get the current asyncio loop first
+        asyncio.get_running_loop()
+    except RuntimeError:
+        # No running loop, create/set one to avoid tornado triggering warning
+        try:
+            tornado.ioloop.IOLoop.current()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+    return tornado.ioloop.IOLoop.current()
+
+
+get_event_loop = get_ioloop
+
+
 def aioloop(io_loop, warn=False):
     """
     Ensure the ioloop is an asyncio loop not a tornado ioloop.
     """
+    if io_loop is None:
+        try:
+            return asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.get_event_loop()
+
+    # If it is a Tornado IOLoop, we MUST extract the raw asyncio loop
+    # attribute first, before checking for AbstractEventLoop.
+    if hasattr(io_loop, "asyncio_loop"):
+        return io_loop.asyncio_loop
+
     if isinstance(io_loop, asyncio.AbstractEventLoop):
         return io_loop
-    elif isinstance(io_loop, tornado.ioloop.IOLoop):
-        if warn:
-            import traceback
 
-            log.warning("Passed tornado loop %s", "".join(traceback.format_stack()))
-        return io_loop.asyncio_loop
-    else:
-        raise RuntimeError("Loop must be AbstractEventLoop (prefered) or IOLoop")
+    # If it is a Tornado IOLoop but doesn't have .asyncio_loop attribute,
+    # we can try to get it from the current asyncio policy if it's the current loop.
+    if hasattr(io_loop, "make_current"):
+        try:
+            return asyncio.get_event_loop()
+        except RuntimeError:
+            pass
+
+    # Fallback: check for common asyncio loop methods
+    if hasattr(io_loop, "create_task") and hasattr(io_loop, "call_soon"):
+        return io_loop
+
+    # Final fallback: current running loop
+    try:
+        return asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.get_event_loop()
+
+
+def safe_exception(future):
+    """
+    Return the exception from a future without raising it
+    """
+    if future.done():
+        try:
+            return future.exception()
+        except Exception:  # pylint: disable=broad-except
+            return None
+    return None
 
 
 @contextlib.contextmanager
@@ -132,10 +186,11 @@ class SyncWrapper:
         io_loop = self.io_loop
         io_loop.stop()
         try:
-            io_loop.close(all_fds=True)
-        except KeyError:
+            io_loop.close()
+        except (KeyError, RuntimeError):
             pass
-        self.asyncio_loop.close()
+        if not self.asyncio_loop.is_closed():
+            self.asyncio_loop.close()
 
     def __getattr__(self, key):
         if key in self._async_methods:

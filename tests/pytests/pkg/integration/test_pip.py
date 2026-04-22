@@ -76,12 +76,8 @@ def test_pip_install(salt_call_cli, install_salt, shell):
 def extras_pypath(install_salt):
     # Handle both single-element (Path) and multi-element (path components) lists
     python_path = install_salt.binary_paths["python"]
-    if len(python_path) == 1:
-        python_bin = str(python_path[0])
-    else:
-        python_bin = os.path.join(*python_path)
-    ret = subprocess.run([python_bin, "--version"], check=True, capture_output=True)
-    v = packaging.version.Version(ret.stdout.decode().split()[1])
+    ret = install_salt.proc.run(*python_path, "--version")
+    v = packaging.version.Version(ret.stdout.strip().split()[1])
     extras_dir = f"extras-{v.major}.{v.minor}"
 
     if platform.is_windows():
@@ -99,12 +95,12 @@ def extras_pypath_bin(extras_pypath):
     return extras_pypath / "bin"
 
 
-def test_pip_install_extras(shell, install_salt, extras_pypath_bin):
+def test_pip_install_extras(shell, install_salt, extras_pypath_bin, extras_pypath):
     """
     Test salt-pip installs into the correct directory
     """
     dep = "pep8"
-    extras_keyword = "extras-3"
+    extras_keyword = extras_pypath.name
     if platform.is_windows():
         check_path = extras_pypath_bin / f"{dep}.exe"
     else:

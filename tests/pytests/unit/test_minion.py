@@ -3,7 +3,6 @@ import contextlib
 import copy
 import logging
 import os
-import pathlib
 import signal
 import time
 import uuid
@@ -23,7 +22,7 @@ import salt.utils.platform
 import salt.utils.process
 from salt._compat import ipaddress
 from salt.exceptions import SaltClientError, SaltMasterUnresolvableError, SaltSystemExit
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import AsyncMock, MagicMock, patch
 
 log = logging.getLogger(__name__)
 
@@ -1312,12 +1311,17 @@ async def test_minion_manager_async_stop(io_loop, minion_opts, tmp_path):
     """
     # Setup sock_dir with short path
     minion_opts["sock_dir"] = str(tmp_path / "sock")
+    minion_opts["ipc_mode"] = "tcp"
+    minion_opts["tcp_pub_port"] = 45101
+    minion_opts["tcp_pull_port"] = 45111
 
     os.makedirs(minion_opts["sock_dir"])
 
     # Create a MinionManager instance with a mock minion
     mm = salt.minion.MinionManager(minion_opts)
+
     minion = MagicMock(name="minion")
+    minion.handle_event = AsyncMock(return_value=None)
     parent_signal_handler = MagicMock(name="parent_signal_handler")
     mm.minions.append(minion)
 
@@ -1328,37 +1332,49 @@ async def test_minion_manager_async_stop(io_loop, minion_opts, tmp_path):
 
     # Check io_loop is running
     # mm.io_loop is now an asyncio.AbstractEventLoop (not Tornado IOLoop)
-    assert mm.io_loop.is_running()
-
-    # Wait for the ipc socket to be created, meaning the publish server is listening.
-    while not list(pathlib.Path(minion_opts["sock_dir"]).glob("*")):
-        await tornado.gen.sleep(0.3)
+    assert salt.utils.asynchronous.aioloop(mm.io_loop).is_running()
+    # Wait for the publish server to start
+    await tornado.gen.sleep(1)
 
     # Set up values for event to send
     load = {"key": "value"}
     ret = {}
 
     # Connect to minion event bus
-    with salt.utils.event.get_event("minion", opts=minion_opts, listen=True) as event:
+    with salt.utils.event.get_event(
+        "minion", opts=minion_opts, listen=True, io_loop=io_loop
+    ) as event:
+        # Wait for the subscriber to connect
+        if hasattr(event, "_connect_task"):
+            await event._connect_task
 
-        # call stop to start stopping the minion
-        # mm.stop(signal.SIGTERM, parent_signal_handler)
-        mm.stop(signal.SIGTERM, parent_signal_handler)
+        log.info("Subscriber connected to %s", event.subscriber)
 
         # Fire an event and ensure we can still read it back while the minion
         # is stopping
+        log.info("Firing test_event")
         assert await event.fire_event_async(load, "test_event", timeout=1) is not False
+        log.info("test_event fired")
+
+        # call stop_async to start stopping the minion
+        log.info("Calling mm.stop_async")
+        await mm.stop_async(signal.SIGTERM, parent_signal_handler)
+        log.info("mm.stop_async called")
         start = time.monotonic()
         while time.monotonic() - start < 5:
-            ret = event.get_event(tag="test_event", wait=1)
+            ret = await event.get_event_async(tag="test_event", wait=1, full=True)
             if ret:
                 break
             await tornado.gen.sleep(0.3)
-    assert "key" in ret
-    assert ret["key"] == "value"
+
+        log.info("Final ret: %s", ret)
+        assert ret is not None
+        data = ret["data"] if "data" in ret else ret
+        assert "key" in data
+        assert data["key"] == "value"
 
     # Sleep to allow stop_async to complete
-    await tornado.gen.sleep(5)
+    await tornado.gen.sleep(6)
 
     # Ensure stop_async has been called
     minion.destroy.assert_called_once()

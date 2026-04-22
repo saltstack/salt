@@ -946,7 +946,7 @@ class SMinion(MinionBase):
         if self.opts.get("file_client", "remote") == "remote" or self.opts.get(
             "use_master_when_local", False
         ):
-            io_loop = tornado.ioloop.IOLoop.current()
+            io_loop = salt.utils.asynchronous.get_ioloop()
 
             async def eval_master():
                 """
@@ -1058,13 +1058,13 @@ class MinionManager(MinionBase):
         self.max_auth_wait = self.opts["acceptance_wait_time_max"]
         self.minions = []
         self.jid_queue = []
-        try:
-            self.io_loop = asyncio.get_running_loop()
-        except RuntimeError:
-            self.io_loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self.io_loop)
+        self.io_loop = salt.utils.asynchronous.aioloop(
+            salt.utils.asynchronous.get_event_loop()
+        )
         self.process_manager = ProcessManager(name="MultiMinionProcessManager")
-        self.io_loop.create_task(self.process_manager.run(asynchronous=True))
+        salt.utils.asynchronous.aioloop(self.io_loop).create_task(
+            self.process_manager.run(asynchronous=True)
+        )
         self.event_publisher = None
         self.event = None
 
@@ -1077,7 +1077,7 @@ class MinionManager(MinionBase):
     def _bind(self):
         # start up the event publisher, so we can see events during startup
         self.event_publisher = salt.transport.ipc_publish_server("minion", self.opts)
-        self.io_loop.create_task(
+        salt.utils.asynchronous.aioloop(self.io_loop).create_task(
             self.event_publisher.publisher(
                 self.event_publisher.publish_payload,
                 io_loop=self.io_loop,
@@ -1157,7 +1157,9 @@ class MinionManager(MinionBase):
                 loaded_base_name="salt.loader.{}".format(s_opts["master"]),
                 jid_queue=self.jid_queue,
             )
-            self.io_loop.create_task(self._connect_minion(minion))
+            salt.utils.asynchronous.aioloop(self.io_loop).create_task(
+                self._connect_minion(minion)
+            )
         self.io_loop.call_later(timeout, self._check_minions)
 
     async def _connect_minion(self, minion):
@@ -1226,7 +1228,7 @@ class MinionManager(MinionBase):
 
         # serve forever!
         try:
-            self.io_loop.run_forever()
+            salt.utils.asynchronous.aioloop(self.io_loop).run_forever()
         except (KeyboardInterrupt, SystemExit):
             pass
         finally:
@@ -1246,7 +1248,9 @@ class MinionManager(MinionBase):
         Called from cli.daemons.Minion._handle_signals().
         Adds stop_async as callback to the io_loop to prevent blocking.
         """
-        self.io_loop.create_task(self.stop_async(signum, parent_sig_handler))
+        salt.utils.asynchronous.aioloop(self.io_loop).create_task(
+            self.stop_async(signum, parent_sig_handler)
+        )
 
     async def stop_async(self, signum, parent_sig_handler):
         """
@@ -1268,6 +1272,9 @@ class MinionManager(MinionBase):
             # kill any remaining processes
             minion.process_manager.kill_children()
             minion.destroy()
+        # Give the event publisher a moment to send any final events (like the
+        # "test_event" in unit tests) before closing it.
+        await asyncio.sleep(1)
         if self.event_publisher is not None:
             self.event_publisher.close()
             self.event_publisher = None
@@ -1343,18 +1350,11 @@ class Minion(MinionBase):
         self._system_resource_limit_hit_timestamp = 0
 
         if io_loop is None:
-            try:
-                self.io_loop = asyncio.get_running_loop()
-            except RuntimeError:
-                self.io_loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(self.io_loop)
+            self.io_loop = salt.utils.asynchronous.aioloop(
+                salt.utils.asynchronous.get_event_loop()
+            )
         else:
-            # Accept either asyncio loop or Tornado IOLoop (extract asyncio loop)
-            if isinstance(io_loop, asyncio.AbstractEventLoop):
-                self.io_loop = io_loop
-            else:
-                # Assume it's a Tornado IOLoop, extract the asyncio loop
-                self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
+            self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
 
         # Warn if ZMQ < 3.2
         if zmq:
@@ -1400,11 +1400,13 @@ class Minion(MinionBase):
             time.sleep(sleep_time)
 
         self.process_manager = ProcessManager(name="MinionProcessManager")
-        self.io_loop.create_task(self.process_manager.run(asynchronous=True))
+        salt.utils.asynchronous.aioloop(self.io_loop).create_task(
+            self.process_manager.run(asynchronous=True)
+        )
         # We don't have the proxy setup yet, so we can't start engines
         # Engines need to be able to access __proxy__
         if not salt.utils.platform.is_proxy():
-            self.io_loop.call_soon(
+            salt.utils.asynchronous.aioloop(self.io_loop).call_soon(
                 salt.engines.start_engines, self.opts, self.process_manager
             )
 
@@ -1477,7 +1479,7 @@ class Minion(MinionBase):
         if timeout:
             self.io_loop.call_later(timeout, self.io_loop.stop)
         try:
-            self.io_loop.run_forever()
+            salt.utils.asynchronous.aioloop(self.io_loop).run_forever()
         except KeyboardInterrupt:
             self.destroy()
         # I made the following 3 line oddity to preserve traceback.
@@ -2241,7 +2243,9 @@ class Minion(MinionBase):
             return
 
         self._process_queue_processing_active = True
-        self.io_loop.create_task(self._process_process_queue_async())
+        salt.utils.asynchronous.aioloop(self.io_loop).create_task(
+            self._process_process_queue_async()
+        )
 
     async def _process_process_queue_async(self):
         """
@@ -2389,7 +2393,9 @@ class Minion(MinionBase):
 
                         log.info("Re-submitting queued job %s", data.get("jid"))
 
-                        self.io_loop.create_task(self._handle_decoded_payload(data))
+                        salt.utils.asynchronous.aioloop(self.io_loop).create_task(
+                            self._handle_decoded_payload(data)
+                        )
 
                         # Remove from queue
                         try:
@@ -3131,7 +3137,9 @@ class Minion(MinionBase):
                 else:
                     data["fun"] = "state.highstate"
                     data["arg"] = []
-                self.io_loop.create_task(self._handle_decoded_payload(data))
+                salt.utils.asynchronous.aioloop(self.io_loop).create_task(
+                    self._handle_decoded_payload(data)
+                )
 
     def _refresh_grains_watcher(self, refresh_interval_in_minutes):
         """
@@ -3847,7 +3855,9 @@ class Minion(MinionBase):
             return
 
         self._state_queue_processing_active = True
-        self.io_loop.create_task(self._process_state_queue_async())
+        salt.utils.asynchronous.aioloop(self.io_loop).create_task(
+            self._process_state_queue_async()
+        )
 
     async def _process_state_queue_async(self):
         """
@@ -3999,7 +4009,9 @@ class Minion(MinionBase):
                     data["__ignore_process_count_max"] = True
 
                     if hasattr(self, "io_loop"):
-                        self.io_loop.create_task(self._handle_decoded_payload(data))
+                        salt.utils.asynchronous.aioloop(self.io_loop).create_task(
+                            self._handle_decoded_payload(data)
+                        )
                     else:
                         await self._handle_decoded_payload(data)
 
@@ -4069,7 +4081,9 @@ class Minion(MinionBase):
                 self.setup_scheduler(before_connect=True)
             self.sync_connect_master()
         if self.connected:
-            self.io_loop.create_task(self._fire_master_minion_start())
+            salt.utils.asynchronous.aioloop(self.io_loop).create_task(
+                self._fire_master_minion_start()
+            )
             log.info("Minion is ready to receive requests!")
 
         # Make sure to gracefully handle SIGUSR1
@@ -4114,7 +4128,7 @@ class Minion(MinionBase):
                                     "minion is running under an init system."
                                 )
 
-                    self.io_loop.create_task(
+                    salt.utils.asynchronous.aioloop(self.io_loop).create_task(
                         self._fire_master_main(
                             "ping",
                             "minion_ping",
@@ -4137,7 +4151,7 @@ class Minion(MinionBase):
 
         if start:
             try:
-                self.io_loop.run_forever()
+                salt.utils.asynchronous.aioloop(self.io_loop).run_forever()
                 if self.restart:
                     self.destroy()
             except (
@@ -4431,18 +4445,11 @@ class SyndicManager(MinionBase):
         self.jid_forward_cache = set()
 
         if io_loop is None:
-            try:
-                self.io_loop = asyncio.get_running_loop()
-            except RuntimeError:
-                self.io_loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(self.io_loop)
+            self.io_loop = salt.utils.asynchronous.aioloop(
+                salt.utils.asynchronous.get_event_loop()
+            )
         else:
-            # Accept either asyncio loop or Tornado IOLoop (extract asyncio loop)
-            if isinstance(io_loop, asyncio.AbstractEventLoop):
-                self.io_loop = io_loop
-            else:
-                # Assume it's a Tornado IOLoop, extract the asyncio loop
-                self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
+            self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
 
         # List of events
         self.raw_events = []
@@ -4479,7 +4486,9 @@ class SyndicManager(MinionBase):
                 except Exception as exc:  # pylint: disable=broad-except
                     future.set_exception(exc)
 
-            self.io_loop.create_task(connect(future, s_opts))
+            salt.utils.asynchronous.aioloop(self.io_loop).create_task(
+                connect(future, s_opts)
+            )
 
     async def _connect_syndic(self, opts):
         """
@@ -4677,7 +4686,7 @@ class SyndicManager(MinionBase):
         enable_sigusr1_handler()
 
         try:
-            self.io_loop.run_forever()
+            salt.utils.asynchronous.aioloop(self.io_loop).run_forever()
         except (KeyboardInterrupt, SystemExit):
             pass
         finally:

@@ -24,6 +24,7 @@ google-auth==2.35.0; python_version == '3.9'
 jmespath>=1.1.0
 jsonschema
 junos-eznc; sys_platform != 'win32'
+ncclient>=0.6.16; sys_platform != 'win32'
 junit-xml>=1.9
 jxmlease; sys_platform != 'win32'
 kazoo; sys_platform != 'win32' and sys_platform != 'darwin'
