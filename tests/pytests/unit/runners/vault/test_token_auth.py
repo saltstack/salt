@@ -11,6 +11,7 @@ import pytest
 
 import salt.runners.vault as vault
 from tests.pytests.unit.runners.vault.test_token_auth_deprecated import (  # pylint: disable=unused-import
+    auth,
     client,
     configure_loader_modules,
     policies,
