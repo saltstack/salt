@@ -1659,26 +1659,35 @@ class AESFuncs(TransportMethods):
 
     def _register_resources(self, load):
         """
-        Update the flat resource index for a minion and persist it to the
-        cache.  Called by the minion on startup via ``cmd: "_register_resources"``
-        so that the master knows which resource IDs each minion manages.
+        Update the resource registry for a minion. Called by the minion on
+        startup via ``cmd: "_register_resources"`` so that the master knows
+        which resource IDs each minion manages.
 
-        Uses :func:`salt.utils.minions._update_resource_index` which atomically
-        updates both the in-process index (so this worker sees the change
-        immediately) and the single flat ``resource_index`` cache file (so
-        other workers pick it up within their TTL window).
+        Delegates to :func:`salt.utils.minions.update_resource_index`, which
+        is a thin shim over
+        :meth:`salt.utils.resource_registry.ResourceRegistry.register_minion`.
+        The registry is an mmap-backed primary with in-process derived
+        ``by_type`` / ``by_minion`` views; this master worker sees the new
+        entries on its next read (its version cache is invalidated
+        on-write) and other worker processes pick up the writes on their
+        next throttled staleness check against the primary file — the
+        ``st_mtime_ns`` bump on every put/delete (see
+        :meth:`MmapCache._touch_mtime`) makes cross-process mutations
+        visible without a compaction.
         """
         load = self.__verify_load(load, ("id", "resources"))
         if load is False:
             return {}
         if self.opts.get("minion_data_cache", True):
-            salt.utils.minions._update_resource_index(
-                self.masterapi.cache, load["id"], load["resources"]
+            n_put, n_del = salt.utils.minions.update_resource_index(
+                self.opts, load["id"], load["resources"]
             )
             log.debug(
-                "Registered resources for minion '%s': %s",
+                "Registered resources for minion '%s': %s (put=%d, deleted=%d)",
                 load["id"],
                 list(load["resources"].keys()),
+                n_put,
+                n_del,
             )
         return True
 
