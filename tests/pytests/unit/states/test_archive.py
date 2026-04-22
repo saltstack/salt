@@ -8,6 +8,7 @@ import pytest
 
 import salt.states.archive as archive
 import salt.utils.platform
+from salt.exceptions import CommandExecutionError, CommandNotFoundError
 from tests.support.mock import MagicMock, patch
 
 
@@ -483,3 +484,480 @@ def test_skip_files_list_verify_success():
                 enforce_toplevel=False,
             )
             assert ret == expected_ret
+
+
+class TestCompressed:
+    """
+    Tests for archive.compressed state function
+    """
+
+    @pytest.fixture
+    def configure_loader_modules(self):
+        return {
+            archive: {
+                "__grains__": {"os": "FooOS!"},
+                "__opts__": {"cachedir": "/tmp", "test": False, "hash_type": "sha256"},
+                "__env__": "test",
+            }
+        }
+
+    def test_compressed_non_absolute_path(self):
+        """
+        Test that non-absolute paths are rejected
+        """
+        ret = archive.compressed(
+            name="relative/path/archive.zip",
+            sources=["/tmp/test"],
+        )
+        assert ret["result"] is False
+        assert "not an absolute path" in ret["comment"]
+        assert ret["changes"] == {}
+
+    def test_compressed_invalid_sources_type(self):
+        """
+        Test that invalid sources type is rejected
+        """
+        ret = archive.compressed(
+            name="/tmp/archive.zip",
+            sources=123,
+        )
+        assert ret["result"] is False
+        assert "must be a string or list" in ret["comment"]
+        assert ret["changes"] == {}
+
+    def test_compressed_missing_sources(self):
+        """
+        Test that missing source paths are detected
+        """
+        with patch.object(os.path, "exists", MagicMock(return_value=False)):
+            ret = archive.compressed(
+                name="/tmp/archive.zip",
+                sources=["/nonexistent/path", "/another/missing"],
+            )
+            assert ret["result"] is False
+            assert "do not exist" in ret["comment"]
+            assert "/nonexistent/path" in ret["comment"]
+            assert "/another/missing" in ret["comment"]
+            assert ret["changes"] == {}
+
+    def test_compressed_archive_already_exists(self):
+        """
+        Test that existing archives are not recreated by default
+        """
+        with patch.object(os.path, "isfile", MagicMock(return_value=True)), patch.object(
+            os.path, "exists", MagicMock(return_value=True)
+        ):
+            ret = archive.compressed(
+                name="/tmp/archive.zip",
+                sources=["/tmp/test"],
+            )
+            assert ret["result"] is True
+            assert "already exists" in ret["comment"]
+            assert ret["changes"] == {}
+
+    def test_compressed_test_mode_create(self):
+        """
+        Test mode when archive doesn't exist
+        """
+        mock_opts = {"test": True, "cachedir": "/tmp", "hash_type": "sha256"}
+        with patch.dict(
+            archive.__opts__, mock_opts
+        ), patch.object(
+            os.path, "isfile", MagicMock(return_value=False)
+        ), patch.object(
+            os.path, "exists", MagicMock(return_value=True)
+        ):
+            ret = archive.compressed(
+                name="/tmp/archive.zip",
+                sources=["/tmp/test1", "/tmp/test2"],
+            )
+            assert ret["result"] is None
+            assert "would be created" in ret["comment"]
+            assert "2 source(s)" in ret["comment"]
+            assert ret["changes"] == {}
+
+    def test_compressed_test_mode_recreate(self):
+        """
+        Test mode when archive exists and overwrite=True
+        """
+        mock_opts = {"test": True, "cachedir": "/tmp", "hash_type": "sha256"}
+        with patch.dict(
+            archive.__opts__, mock_opts
+        ), patch.object(
+            os.path, "isfile", MagicMock(return_value=True)
+        ), patch.object(
+            os.path, "exists", MagicMock(return_value=True)
+        ):
+            ret = archive.compressed(
+                name="/tmp/archive.zip",
+                sources=["/tmp/test"],
+                overwrite=True,
+            )
+            assert ret["result"] is None
+            assert "would be recreated" in ret["comment"]
+            assert ret["changes"] == {}
+
+    def test_compressed_zip_success(self):
+        """
+        Test successful zip archive creation
+        """
+        mock_zip = MagicMock(return_value=True)
+        mock_file_managed = MagicMock(return_value={"changes": {}})
+        
+        with patch.dict(
+            archive.__salt__, {"archive.zip": mock_zip}
+        ), patch.dict(
+            archive.__states__, {"file.managed": mock_file_managed}
+        ), patch.object(
+            os.path, "isfile", MagicMock(return_value=False)
+        ), patch.object(
+            os.path, "exists", MagicMock(return_value=True)
+        ), patch.object(
+            os.path, "dirname", MagicMock(return_value="/tmp")
+        ):
+            ret = archive.compressed(
+                name="/tmp/archive.zip",
+                sources=["/tmp/test1", "/tmp/test2"],
+                archive_format="zip",
+            )
+            assert ret["result"] is True
+            assert "Successfully created" in ret["comment"]
+            assert ret["changes"]["created"] == "/tmp/archive.zip"
+            assert ret["changes"]["sources_added"] == ["/tmp/test1", "/tmp/test2"]
+            mock_zip.assert_called_once_with("/tmp/archive.zip", "/tmp/test1", "/tmp/test2")
+
+    def test_compressed_zip_with_single_source_string(self):
+        """
+        Test zip creation with a single source as string
+        """
+        mock_zip = MagicMock(return_value=True)
+        mock_file_managed = MagicMock(return_value={"changes": {}})
+        
+        with patch.dict(
+            archive.__salt__, {"archive.zip": mock_zip}
+        ), patch.dict(
+            archive.__states__, {"file.managed": mock_file_managed}
+        ), patch.object(
+            os.path, "isfile", MagicMock(return_value=False)
+        ), patch.object(
+            os.path, "exists", MagicMock(return_value=True)
+        ), patch.object(
+            os.path, "dirname", MagicMock(return_value="/tmp")
+        ):
+            ret = archive.compressed(
+                name="/tmp/archive.zip",
+                sources="/tmp/test",
+            )
+            assert ret["result"] is True
+            mock_zip.assert_called_once_with("/tmp/archive.zip", "/tmp/test")
+
+    def test_compressed_tar_gz_success(self):
+        """
+        Test successful tar.gz archive creation
+        """
+        mock_tar = MagicMock(return_value=True)
+        mock_file_managed = MagicMock(return_value={"changes": {}})
+        
+        with patch.dict(
+            archive.__salt__, {"archive.tar": mock_tar}
+        ), patch.dict(
+            archive.__states__, {"file.managed": mock_file_managed}
+        ), patch.object(
+            os.path, "isfile", MagicMock(return_value=False)
+        ), patch.object(
+            os.path, "exists", MagicMock(return_value=True)
+        ), patch.object(
+            os.path, "dirname", MagicMock(return_value="/tmp")
+        ):
+            ret = archive.compressed(
+                name="/tmp/archive.tar.gz",
+                sources=["/tmp/test"],
+                archive_format="tar.gz",
+            )
+            assert ret["result"] is True
+            assert "Successfully created" in ret["comment"]
+            mock_tar.assert_called_once_with("czf", "/tmp/archive.tar.gz", ["/tmp/test"])
+
+    def test_compressed_tar_bz2_success(self):
+        """
+        Test successful tar.bz2 archive creation
+        """
+        mock_tar = MagicMock(return_value=True)
+        mock_file_managed = MagicMock(return_value={"changes": {}})
+        
+        with patch.dict(
+            archive.__salt__, {"archive.tar": mock_tar}
+        ), patch.dict(
+            archive.__states__, {"file.managed": mock_file_managed}
+        ), patch.object(
+            os.path, "isfile", MagicMock(return_value=False)
+        ), patch.object(
+            os.path, "exists", MagicMock(return_value=True)
+        ), patch.object(
+            os.path, "dirname", MagicMock(return_value="/tmp")
+        ):
+            ret = archive.compressed(
+                name="/tmp/archive.tar.bz2",
+                sources=["/tmp/test"],
+                archive_format="tar.bz2",
+            )
+            assert ret["result"] is True
+            mock_tar.assert_called_once_with("cjf", "/tmp/archive.tar.bz2", ["/tmp/test"])
+
+    def test_compressed_tar_xz_success(self):
+        """
+        Test successful tar.xz archive creation
+        """
+        mock_tar = MagicMock(return_value=True)
+        mock_file_managed = MagicMock(return_value={"changes": {}})
+        
+        with patch.dict(
+            archive.__salt__, {"archive.tar": mock_tar}
+        ), patch.dict(
+            archive.__states__, {"file.managed": mock_file_managed}
+        ), patch.object(
+            os.path, "isfile", MagicMock(return_value=False)
+        ), patch.object(
+            os.path, "exists", MagicMock(return_value=True)
+        ), patch.object(
+            os.path, "dirname", MagicMock(return_value="/tmp")
+        ):
+            ret = archive.compressed(
+                name="/tmp/archive.tar.xz",
+                sources=["/tmp/test"],
+                archive_format="tar.xz",
+            )
+            assert ret["result"] is True
+            mock_tar.assert_called_once_with("cJf", "/tmp/archive.tar.xz", ["/tmp/test"])
+
+    def test_compressed_tar_plain_success(self):
+        """
+        Test successful plain tar (no compression) archive creation
+        """
+        mock_tar = MagicMock(return_value=True)
+        mock_file_managed = MagicMock(return_value={"changes": {}})
+        
+        with patch.dict(
+            archive.__salt__, {"archive.tar": mock_tar}
+        ), patch.dict(
+            archive.__states__, {"file.managed": mock_file_managed}
+        ), patch.object(
+            os.path, "isfile", MagicMock(return_value=False)
+        ), patch.object(
+            os.path, "exists", MagicMock(return_value=True)
+        ), patch.object(
+            os.path, "dirname", MagicMock(return_value="/tmp")
+        ):
+            ret = archive.compressed(
+                name="/tmp/archive.tar",
+                sources=["/tmp/test"],
+                archive_format="tar",
+            )
+            assert ret["result"] is True
+            mock_tar.assert_called_once_with("cf", "/tmp/archive.tar", ["/tmp/test"])
+
+    def test_compressed_unsupported_format(self):
+        """
+        Test that unsupported archive formats are rejected
+        """
+        with patch.object(
+            os.path, "isfile", MagicMock(return_value=False)
+        ), patch.object(
+            os.path, "exists", MagicMock(return_value=True)
+        ), patch.object(
+            os.path, "dirname", MagicMock(return_value="/tmp")
+        ):
+            ret = archive.compressed(
+                name="/tmp/archive.rar",
+                sources=["/tmp/test"],
+                archive_format="rar",
+            )
+            assert ret["result"] is False
+            assert "Unsupported archive format" in ret["comment"]
+            assert ret["changes"] == {}
+
+    def test_compressed_with_ownership(self):
+        """
+        Test archive creation with ownership and permissions
+        """
+        mock_zip = MagicMock(return_value=True)
+        mock_file_managed = MagicMock(
+            return_value={
+                "changes": {
+                    "user": "testuser",
+                    "group": "testgroup",
+                    "mode": "0644",
+                }
+            }
+        )
+        
+        with patch.dict(
+            archive.__salt__, {"archive.zip": mock_zip}
+        ), patch.dict(
+            archive.__states__, {"file.managed": mock_file_managed}
+        ), patch.object(
+            os.path, "isfile", MagicMock(return_value=False)
+        ), patch.object(
+            os.path, "exists", MagicMock(return_value=True)
+        ), patch.object(
+            os.path, "dirname", MagicMock(return_value="/tmp")
+        ):
+            ret = archive.compressed(
+                name="/tmp/archive.zip",
+                sources=["/tmp/test"],
+                user="testuser",
+                group="testgroup",
+                mode="0644",
+            )
+            assert ret["result"] is True
+            assert "ownership" in ret["changes"]
+            mock_file_managed.assert_called_once()
+
+    def test_compressed_create_directory(self):
+        """
+        Test that archive directory is created if it doesn't exist
+        """
+        mock_zip = MagicMock(return_value=True)
+        mock_file_managed = MagicMock(return_value={"changes": {}})
+        mock_makedirs = MagicMock()
+        
+        with patch.dict(
+            archive.__salt__, {"archive.zip": mock_zip}
+        ), patch.dict(
+            archive.__states__, {"file.managed": mock_file_managed}
+        ), patch.object(
+            os.path, "isfile", MagicMock(return_value=False)
+        ), patch.object(
+            os.path, "exists", MagicMock(side_effect=[True, False])
+        ), patch.object(
+            os.path, "dirname", MagicMock(return_value="/new/path")
+        ), patch.object(
+            os, "makedirs", mock_makedirs
+        ):
+            ret = archive.compressed(
+                name="/new/path/archive.zip",
+                sources=["/tmp/test"],
+            )
+            assert ret["result"] is True
+            mock_makedirs.assert_called_once_with("/new/path")
+            assert "directories_created" in ret["changes"]
+
+    def test_compressed_directory_creation_failure(self):
+        """
+        Test handling of directory creation failure
+        """
+        mock_makedirs = MagicMock(side_effect=OSError("Permission denied"))
+        
+        with patch.object(
+            os.path, "isfile", MagicMock(return_value=False)
+        ), patch.object(
+            os.path, "exists", MagicMock(side_effect=[True, False])
+        ), patch.object(
+            os.path, "dirname", MagicMock(return_value="/new/path")
+        ), patch.object(
+            os, "makedirs", mock_makedirs
+        ):
+            ret = archive.compressed(
+                name="/new/path/archive.zip",
+                sources=["/tmp/test"],
+            )
+            assert ret["result"] is False
+            assert "Failed to create directory" in ret["comment"]
+
+    def test_compressed_archive_creation_failure(self):
+        """
+        Test handling of archive creation failure
+        """
+        mock_zip = MagicMock(return_value=False)
+        
+        with patch.dict(
+            archive.__salt__, {"archive.zip": mock_zip}
+        ), patch.object(
+            os.path, "isfile", MagicMock(return_value=False)
+        ), patch.object(
+            os.path, "exists", MagicMock(return_value=True)
+        ), patch.object(
+            os.path, "dirname", MagicMock(return_value="/tmp")
+        ):
+            ret = archive.compressed(
+                name="/tmp/archive.zip",
+                sources=["/tmp/test"],
+            )
+            assert ret["result"] is False
+            assert "Failed to create archive" in ret["comment"]
+
+    def test_compressed_command_execution_error(self):
+        """
+        Test handling of CommandExecutionError
+        """
+        mock_zip = MagicMock(side_effect=CommandExecutionError("Command failed"))
+        
+        with patch.dict(
+            archive.__salt__, {"archive.zip": mock_zip}
+        ), patch.object(
+            os.path, "isfile", MagicMock(return_value=False)
+        ), patch.object(
+            os.path, "exists", MagicMock(return_value=True)
+        ), patch.object(
+            os.path, "dirname", MagicMock(return_value="/tmp")
+        ):
+            ret = archive.compressed(
+                name="/tmp/archive.zip",
+                sources=["/tmp/test"],
+            )
+            assert ret["result"] is False
+            assert "Error creating archive" in ret["comment"]
+
+    def test_compressed_overwrite_existing(self):
+        """
+        Test overwriting an existing archive
+        """
+        mock_zip = MagicMock(return_value=True)
+        mock_file_managed = MagicMock(return_value={"changes": {}})
+        
+        with patch.dict(
+            archive.__salt__, {"archive.zip": mock_zip}
+        ), patch.dict(
+            archive.__states__, {"file.managed": mock_file_managed}
+        ), patch.object(
+            os.path, "isfile", MagicMock(return_value=True)
+        ), patch.object(
+            os.path, "exists", MagicMock(return_value=True)
+        ), patch.object(
+            os.path, "dirname", MagicMock(return_value="/tmp")
+        ):
+            ret = archive.compressed(
+                name="/tmp/archive.zip",
+                sources=["/tmp/test"],
+                overwrite=True,
+            )
+            assert ret["result"] is True
+            assert ret["changes"]["created"] == "/tmp/archive.zip"
+            mock_zip.assert_called_once()
+
+    def test_compressed_ownership_failure(self):
+        """
+        Test that ownership/permission failures generate warnings
+        """
+        mock_zip = MagicMock(return_value=True)
+        mock_file_managed = MagicMock(side_effect=Exception("Permission denied"))
+        
+        with patch.dict(
+            archive.__salt__, {"archive.zip": mock_zip}
+        ), patch.dict(
+            archive.__states__, {"file.managed": mock_file_managed}
+        ), patch.object(
+            os.path, "isfile", MagicMock(return_value=False)
+        ), patch.object(
+            os.path, "exists", MagicMock(return_value=True)
+        ), patch.object(
+            os.path, "dirname", MagicMock(return_value="/tmp")
+        ):
+            ret = archive.compressed(
+                name="/tmp/archive.zip",
+                sources=["/tmp/test"],
+                user="testuser",
+            )
+            assert ret["result"] is True
+            assert "warnings" in ret
+            assert "Failed to set ownership/permissions" in ret["warnings"][0]
