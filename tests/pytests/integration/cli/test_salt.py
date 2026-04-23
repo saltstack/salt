@@ -32,8 +32,9 @@ def salt_minion_2(salt_master):
     """
     A running salt-minion fixture
     """
+    _minion_id = "minion-2"
     factory = salt_master.salt_minion_daemon(
-        "minion-2",
+        _minion_id,
         overrides={
             "fips_mode": FIPS_TESTRUN,
             "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
@@ -41,8 +42,17 @@ def salt_minion_2(salt_master):
         },
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
-    with factory.started(start_timeout=120):
-        yield factory
+    try:
+        with factory.started(start_timeout=120):
+            yield factory
+    finally:
+        # Remove stale key if it exists
+        minion_key_file = os.path.join(
+            salt_master.config["pki_dir"], "minions", _minion_id
+        )
+        if os.path.exists(minion_key_file):
+            log.debug("Minion %r KEY FILE: %s", _minion_id, minion_key_file)
+            os.unlink(minion_key_file)
 
 
 def test_context_retcode_salt(salt_cli, salt_minion):
