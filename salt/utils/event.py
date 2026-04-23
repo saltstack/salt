@@ -1151,18 +1151,37 @@ class AsyncEventPublisher:
                         # Let's stop at this stage
                         raise
 
-        self.publisher = salt.transport.ipc.IPCMessagePublisher(
-            self.opts, epub_uri, io_loop=self.io_loop
+        from salt.transport import publish_client, publish_server
+
+        self.publisher = publish_server(
+            self.opts,
+            pub_path=epub_sock_path,
+            pull_path=epull_sock_path,
+            pub_host=epub_uri if self.opts["ipc_mode"] == "tcp" else None,
+            pub_port=epub_uri if self.opts["ipc_mode"] == "tcp" else None,
+            pull_host=epull_uri if self.opts["ipc_mode"] == "tcp" else None,
+            pull_port=epull_uri if self.opts["ipc_mode"] == "tcp" else None,
+            transport="tcp",
         )
 
-        self.puller = salt.transport.ipc.IPCMessageServer(
-            epull_uri, io_loop=self.io_loop, payload_handler=self.handle_publish
+        self.puller = publish_client(
+            self.opts,
+            io_loop=self.io_loop,
+            path=epull_sock_path,
+            host="127.0.0.1" if self.opts["ipc_mode"] == "tcp" else None,
+            port=epull_uri if self.opts["ipc_mode"] == "tcp" else None,
+            transport="tcp",
         )
 
         log.info("Starting pull socket on %s", epull_uri)
         with salt.utils.files.set_umask(0o177):
-            self.publisher.start()
-            self.puller.start()
+            if hasattr(self.publisher, "post_fork"):
+                self.publisher.post_fork(
+                    self.publisher.publish_payload,
+                    io_loop=self.io_loop,
+                )
+            # Start the puller task
+            self.io_loop.add_callback(self.puller.on_recv, self.handle_publish)
 
     def handle_publish(self, package, _):
         """

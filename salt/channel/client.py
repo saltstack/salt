@@ -661,9 +661,15 @@ class AsyncPushChannel:
             3009,
             "AsyncPushChannel is deprecated. Use zeromq or tcp transport instead.",
         )
-        import salt.transport.ipc
+        from salt.transport import publish_client
 
-        return salt.transport.ipc.IPCMessageClient(opts, **kwargs)
+        if opts.get("transport") == "tcp":
+            kwargs.setdefault("host", "127.0.0.1")
+            kwargs.setdefault("port", opts.get("tcp_pull_port"))
+        else:
+            kwargs.setdefault("path", opts.get("sock_dir"))
+
+        return publish_client(opts, transport="tcp", **kwargs)
 
 
 class AsyncPullChannel:
@@ -680,6 +686,12 @@ class AsyncPullChannel:
             3009,
             "AsyncPullChannel is deprecated. Use zeromq or tcp transport instead.",
         )
-        import salt.transport.ipc
+        from salt.transport import publish_server
 
-        return salt.transport.ipc.IPCMessageServer(opts, **kwargs)
+        if opts.get("transport") == "tcp":
+            kwargs.setdefault("pub_host", "127.0.0.1")
+            kwargs.setdefault("pub_port", opts.get("tcp_pub_port"))
+        else:
+            kwargs.setdefault("pub_path", opts.get("sock_dir"))
+
+        return publish_server(opts, transport="tcp", **kwargs)
