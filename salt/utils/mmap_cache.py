@@ -168,7 +168,10 @@ class MmapCache:
         #: How often we're willing to ``os.stat`` the file to detect an
         #: atomic-swap compaction. Set to 0 to stat on every ``open()``.
         self._staleness_check_interval = staleness_check_interval
-        self._last_staleness_check = 0.0
+        # ``None`` means no staleness timestamp yet — must not use ``0.0`` or
+        # ``(now - 0) < interval`` can spuriously throttle right after process
+        # start when ``time.monotonic()`` is still small (seen on macOS CI).
+        self._last_staleness_check = None
 
     @property
     def _lock_path(self):
@@ -316,7 +319,11 @@ class MmapCache:
             # Check for staleness (Atomic Swap detection).
             now = time.monotonic()
             interval = self._staleness_check_interval
-            if interval and (now - self._last_staleness_check) < interval:
+            if (
+                interval
+                and self._last_staleness_check is not None
+                and (now - self._last_staleness_check) < interval
+            ):
                 return True
             self._last_staleness_check = now
             current_id = self._get_cache_id()
@@ -382,6 +389,9 @@ class MmapCache:
                 pass
             self._mm = None
         self._cache_id = None
+        # Next ``open()`` must not inherit a pre-close timestamp or the first
+        # post-open throttle window can be wrong for a freshly mapped file.
+        self._last_staleness_check = None
 
     def _hash(self, key_bytes):
         """
