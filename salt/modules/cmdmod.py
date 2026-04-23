@@ -79,6 +79,9 @@ DEFAULT_SHELL = salt.grains.extra.shell()["shell"]
 # Overwriting the cmd python module makes debugging modules with pdb a bit
 # harder so let's do it this way instead.
 def __virtual__():
+    # Yield to resource-type override modules (e.g. sshresource_cmd.py).
+    if __opts__.get("resource_type"):  # pylint: disable=undefined-variable
+        return False, "cmd: not loaded in resource-type loaders"
     return __virtualname__
 
 
