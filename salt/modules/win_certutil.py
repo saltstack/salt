@@ -90,7 +90,7 @@ def get_stored_cert_serials(store):
     return matches
 
 
-def add_store(source, store, retcode=False, saltenv="base"):
+def add_store(source, store, saltenv="base", retcode=False):
     """
     Add the cert to the given Certificate Store
 
@@ -132,7 +132,7 @@ def add_store(source, store, retcode=False, saltenv="base"):
         return __salt__["cmd.run"](cmd)
 
 
-def del_store(source, store, retcode=False, saltenv="base"):
+def del_store(source, store, saltenv="base", retcode=False):
     """
     Delete the cert from the given Certificate Store
 
