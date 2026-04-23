@@ -5,7 +5,7 @@ import pytest
 
 import salt.crypt as crypt
 import salt.exceptions
-from tests.support.mock import patch
+from tests.support.mock import mock_open, patch
 
 
 @pytest.fixture
@@ -243,3 +243,47 @@ def test_async_auth_cache_token(minion_root, io_loop):
         auth.gen_token("salt")
         auth.gen_token("salt")
         moc.assert_called_once()
+
+
+@pytest.mark.parametrize("linesep", ["\r\n", "\r", "\n"])
+def test_gen_signature_signs_clean_key(key_data, linesep):
+    """
+    Regression test for https://github.com/saltstack/salt/issues/68930
+
+    gen_signature() must apply clean_key() before signing so the signed
+    content matches what get_pub_str() sends to minions.
+    """
+    raw_pub_on_disk = linesep.join(key_data)
+    expected = crypt.clean_key(raw_pub_on_disk)
+
+    with (
+        patch("salt.utils.files.fopen", mock_open(read_data=raw_pub_on_disk)),
+        patch("os.path.isfile", return_value=False),
+        patch("salt.crypt.sign_message", return_value=b"fakesig") as mock_sign,
+    ):
+        crypt.gen_signature("priv_path", "pub_path", "sig_path")
+
+    _, signed_content, _ = mock_sign.call_args[0]
+    assert signed_content == expected
+
+
+@pytest.mark.parametrize("linesep", ["\r\n", "\r", "\n"])
+def test_gen_signature_signs_clean_key_trailing_newline(key_data, linesep):
+    """
+    Same as above but with a trailing newline, which is the common case
+    because the cryptography library writes PEM files with one.
+    """
+    raw_pub_on_disk = linesep.join(key_data) + linesep
+    expected = crypt.clean_key(raw_pub_on_disk)
+
+    assert raw_pub_on_disk != expected
+
+    with (
+        patch("salt.utils.files.fopen", mock_open(read_data=raw_pub_on_disk)),
+        patch("os.path.isfile", return_value=False),
+        patch("salt.crypt.sign_message", return_value=b"fakesig") as mock_sign,
+    ):
+        crypt.gen_signature("priv_path", "pub_path", "sig_path")
+
+    _, signed_content, _ = mock_sign.call_args[0]
+    assert signed_content == expected
