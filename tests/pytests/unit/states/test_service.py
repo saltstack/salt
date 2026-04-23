@@ -710,7 +710,6 @@ def test_running_with_reload(minion_opts):
     service_name = "cron"
     cmd_name = "crontab"
     os_family = minion_opts["grains"]["os_family"]
-    os_name = minion_opts["grains"]["os"]
     os_release = minion_opts["grains"]["osrelease"]
     if os_family == "RedHat":
         service_name = "crond"
