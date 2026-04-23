@@ -67,7 +67,7 @@ def pkg_name(grains):
         if grains["os"] == "VMware Photon OS":
             _pkg = "bc"
         elif grains["osfinger"] == "Amazon Linux-2023":
-            return "dnf-utils"
+            return "dnf-plugins-core"
         else:
             _pkg = "units"
     elif grains["os_family"] == "Debian":
