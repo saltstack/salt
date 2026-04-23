@@ -14,6 +14,7 @@ import traceback
 import salt.loader
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.secret
 import salt.utils.stringutils
 
 # Are you really sure !!!

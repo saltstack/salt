@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterable, MutableMapping, MutableSequence
-from typing import Any, ClassVar, Generic, TypeVar
+from typing import Any, ClassVar, Generic, TypeVar, Mapping
 
 log = logging.getLogger(__name__)
 
@@ -18,8 +18,8 @@ SecretType_co = TypeVar("SecretType_co", covariant=True)
 
 
 class _SecretBase(Generic[SecretType_co]):
-    def __init__(self, secret_value: SecretType_co) -> None:
-        self._secret_value: SecretType_co = secret_value
+    def __init__(self, secret_value) -> None:
+        self._secret_value = secret_value
 
     def get_secret_value(self) -> Any:
         """Get the secret value.
@@ -166,7 +166,7 @@ class SecretIterable(_SecretBase[SecretType_co]):
     def __delitem__(self, key):
         del self._secret_value[key]
 
-    def _display(self) -> SecretType_co:
+    def _display(self):
         cast = type(self._secret_value)
         return cast(v._display() if isinstance(v, _SecretBase) else v for v in self)
 
@@ -195,7 +195,7 @@ class SecretList(SecretIterable[list], MutableSequence[Any]):
         self._secret_value.insert(index, hide(value))
 
 
-def hide(value: Any) -> SecretType_co:
+def hide(value: Any) -> _SecretBase:
     """
     Morph a leaf value into a secret-safe container.
     Args:
@@ -217,15 +217,31 @@ def hide(value: Any) -> SecretType_co:
         return value
 
 
-def expose(secret_value: SecretType_co) -> Any:
+def expose(value: _SecretBase) -> Any:
     """
     If the value is a secret, return the secret value.
     """
-    if isinstance(secret_value, _SecretBase):
-        return secret_value.get_secret_value()
+    if isinstance(value, (str, bytes)):
+        return value
+    elif isinstance(value, _SecretBase):
+        return value.get_secret_value()
     else:
-        return secret_value
+        return value
 
+def serial(value):
+    """
+    Keep secrets redacted while serializing the structure to native python types.
+    """
+    if isinstance(value, (str, bytes)):
+        return value
+    elif isinstance(value, _SecretBase):
+        return value._display()
+    elif isinstance(value, Mapping):
+        return {k: serial(v) for k, v in value.items()}
+    elif isinstance(value, Iterable):
+        return [serial(v) for v in value]
+    else:
+        return value
 
 def no_log_mask(state_ret: dict[str, Any]):
     """
@@ -236,7 +252,7 @@ def no_log_mask(state_ret: dict[str, Any]):
     state_ret["changes"] = {REDACT_PLACEHOLDER: REDACT_PLACEHOLDER}
 
 
-def _gather(obj: SecretType_co) -> list[str | bytes]:
+def _gather(obj: _SecretBase) -> list[str | bytes]:
     """
     Gather all the secret values from the object from longest to shortest.
     """
@@ -253,7 +269,7 @@ def _gather(obj: SecretType_co) -> list[str | bytes]:
     return sorted(secrets, key=len, reverse=True)
 
 
-def redact(value, secrets: SecretType_co, known: list[str | bytes] = None) -> str:
+def redact(value, secrets: _SecretBase, known: list[str | bytes] = None) -> str:
     """
     If any secrets are found in the value, replace them with the placeholder.
     """

@@ -105,7 +105,7 @@ def test_pillar_cache_passes_extra_minion_data(pillar_salt_call_cli):
     Test that pillar cache does not disable passing of
     extra_minion_data to external pillars
     """
-    ret = pillar_salt_call_cli.run("pillar.items")
+    ret = pillar_salt_call_cli.run("pillar.raw")
     assert ret.returncode == 0
     assert ret.data
     assert "hi" in ret.data
