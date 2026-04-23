@@ -13,6 +13,7 @@ import salt.utils.crypt
 import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.functools
+import salt.utils.secret
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM, NOT_SET
 from salt.exceptions import CommandExecutionError
@@ -186,7 +187,7 @@ def get(
     if ret is KeyError:
         raise KeyError(f"Pillar key not found: {key}")
 
-    return ret
+    return salt.utils.secret.serial(ret)
 
 
 def items(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
@@ -271,7 +272,8 @@ def items(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
         pillar_override=pillar_override,
         pillarenv=pillarenv,
     )
-    return pillar.compile_pillar()
+    ret = pillar.compile_pillar()
+    return salt.utils.secret.serial(ret)
 
 
 # Allow pillar.data to also be used to return pillar data
@@ -514,7 +516,7 @@ def item(*args, default=None, delimiter=None, pillarenv=None, saltenv=None):
     except KeyError:
         pass
 
-    return ret
+    return salt.utils.secret.serial(ret)
 
 
 def raw(key=None):
@@ -608,7 +610,7 @@ def ext(external, pillar=None):
 
     ret = pillar_obj.compile_pillar()
 
-    return ret
+    return salt.utils.secret.serial(ret)
 
 
 def keys(key, delimiter=DEFAULT_TARGET_DELIM):
@@ -741,7 +743,7 @@ def filter_by(lookup_dict, pillar, merge=None, default="default", base=None):
 
         salt '*' pillar.filter_by '{web: Serve it up, db: I query, default: x_x}' role
     """
-    return salt.utils.data.filter_by(
+    ret = salt.utils.data.filter_by(
         lookup_dict=lookup_dict,
         lookup=pillar,
         traverse=__pillar__,
@@ -749,3 +751,4 @@ def filter_by(lookup_dict, pillar, merge=None, default="default", base=None):
         default=default,
         base=base,
     )
+    return salt.utils.secret.serial(ret)

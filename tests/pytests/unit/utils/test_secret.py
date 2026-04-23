@@ -1,5 +1,5 @@
 """
-Tests for salt.utils.secret (SafeDict, SafeList, SecretStr wrapping, redaction).
+Tests for salt.utils.secret (SecretDict, SecretList, SecretStr wrapping, redaction).
 """
 
 import copy
@@ -10,25 +10,26 @@ import salt.utils.secret as secret
 import salt.utils.versions
 
 
-def test_safe_dict_wraps_string_and_nested_dict():
-    d = secret.SafeDict()
+def test_secret_dict_wraps_string_and_nested_dict():
+    d = secret.hide({})
     d["k"] = "secret"
     assert isinstance(d["k"], secret.SecretStr)
     assert d["k"].get_secret_value() == "secret"
     d["n"] = {"a": "x"}
-    assert isinstance(d["n"], secret.SafeDict)
+    assert isinstance(d["n"], secret.SecretDict)
     assert isinstance(d["n"]["a"], secret.SecretStr)
 
 
-def test_safe_dict_skips_errors_key():
-    d = secret.SafeDict()
+def test_secret_dict_errors_key_values_still_wrapped():
+    """_errors entries are wrapped like other string leaves (no SafeDict skip)."""
+    d = secret.hide({})
     d["_errors"] = ["plain error"]
-    assert d["_errors"] == ["plain error"]
-    assert not isinstance(d["_errors"][0], secret.SecretStr)
+    assert isinstance(d["_errors"][0], secret.SecretStr)
+    assert d["_errors"][0].get_secret_value() == "plain error"
 
 
-def test_safe_list_append_and_extend():
-    lst = secret.SafeList()
+def test_secret_list_append_and_extend():
+    lst = secret.SecretList([])
     lst.append("a")
     assert isinstance(lst[0], secret.SecretStr)
     lst.extend(["b", "c"])
@@ -37,8 +38,8 @@ def test_safe_list_append_and_extend():
     assert lst[-1].get_secret_value() == "d"
 
 
-def test_safe_list_setitem_and_insert():
-    lst = secret.SafeList(["a", "b"])
+def test_secret_list_setitem_and_insert():
+    lst = secret.SecretList(["a", "b"])
     lst[0] = "z"
     assert lst[0].get_secret_value() == "z"
     lst.insert(1, "mid")
@@ -68,31 +69,33 @@ def test_unwrap_blackout_whitelist_for_str_membership():
     assert "test.ping" in plain
 
 
-def test_iter_pillar_secret_literals_order():
+def test_gather_secret_literals_longest_first():
+    from salt.utils.secret import _gather
+
     p = secret.hide({"secrets": {"short": "ab", "longer": "abcd"}})
-    lit = secret.expose(p)
-    assert "abcd" in lit
-    assert "ab" in lit
-    assert lit[0] == "abcd"  # longest first
+    lit = _gather(p)
+    assert lit == ["abcd", "ab"]
 
 
-def test_iter_pillar_secret_literals_public_keys_excluded():
+def test_gather_includes_all_string_leaf_values():
+    from salt.utils.secret import _gather
+
     p = secret.hide({"target-path": "/tmp/pytest-of-root/x", "db_password": "hunter2"})
-    lit = secret.expose(p)
+    lit = _gather(p)
     assert "hunter2" in lit
-    assert "/tmp/pytest-of-root/x" not in lit
+    assert "/tmp/pytest-of-root/x" in lit
 
 
 def test_redact_known_literals():
     pillar = secret.hide({"pw": "hunter2"})
-    lit = secret.expose(pillar)
     ret = {
         "comment": "pw is hunter2 here",
         "changes": {"out": "hunter2"},
     }
     red = secret.redact(ret, pillar)
     assert "hunter2" not in str(red)
-    assert secret.REDACT_PLACEHOLDER in red["comment"]
+    # redact replaces known secret substrings with same-length asterisks
+    assert "*" in red["comment"]
 
 
 def test_apply_no_log_mask():
@@ -128,8 +131,8 @@ def test_secret_bytes_not_equal_to_plain_bytes():
     assert s.get_secret_value() == b"secret"
 
 
-def test_safe_dict_bytes():
-    d = secret.SafeDict()
+def test_secret_dict_bytes():
+    d = secret.hide({})
     d["b"] = b"bin"
     assert isinstance(d["b"], secret.SecretBytes)
     assert d["b"].get_secret_value() == b"bin"
@@ -142,9 +145,9 @@ def test_safe_dict_bytes():
         pytest.param({"type": "list", "items": [1, "two"]}, id="nested_list"),
     ],
 )
-def test_wrap_pillar_tree_yamlish(container):
-    w = secret.wrap_pillar_tree(container)
-    assert isinstance(w, secret.SafeDict)
+def test_hide_yamlish_structures(container):
+    w = secret.hide(container)
+    assert isinstance(w, secret.SecretDict)
 
 
 @pytest.mark.skipif(

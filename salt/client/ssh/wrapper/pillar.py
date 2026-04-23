@@ -191,7 +191,7 @@ def filter_by(lookup_dict, pillar, merge=None, default="default", base=None):
 
         salt '*' pillar.filter_by '{web: Serve it up, db: I query, default: x_x}' role
     """
-    return salt.utils.data.filter_by(
+    ret = salt.utils.data.filter_by(
         lookup_dict=lookup_dict,
         lookup=pillar,
         traverse=__pillar__.value(),
@@ -199,6 +199,7 @@ def filter_by(lookup_dict, pillar, merge=None, default="default", base=None):
         default=default,
         base=base,
     )
+    return salt.utils.secret.serial(ret)
 
 
 # Allow pillar.data to also be used to return pillar data

@@ -552,7 +552,9 @@ def test_ext_pillar_first(tmp_path):
         ),
     ):
         pillar = salt.pillar.Pillar(opts, grains, "mocked-minion", "base")
-        assert pillar.compile_pillar()["generic"]["key1"] == "value1"
+        assert salt.utils.secret.expose(pillar.compile_pillar())[
+            "generic"
+        ]["key1"] == "value1"
 
 
 @patch("salt.fileclient.Client.list_states")
@@ -768,7 +770,9 @@ def test_topfile_order():
                 pillar = salt.pillar.Pillar(opts, grains, "mocked-minion", "base")
                 # Make sure that confirm_top.confirm_top returns True
                 pillar.matchers["confirm_top.confirm_top"] = lambda *x, **y: True
-                assert pillar.compile_pillar()["ssh"] == expected
+                assert salt.utils.secret.expose(pillar.compile_pillar())[
+                    "ssh"
+                ] == expected
         finally:
             shutil.rmtree(tempdir, ignore_errors=True)
 
@@ -929,14 +933,15 @@ def test_relative_include(tmp_path):
     # Act
     compiled_pillar = pillar.compile_pillar()
 
-    # Assert
-    assert compiled_pillar["this"] == "is all good"
-    assert compiled_pillar["that"] == "is also all good"
-    assert compiled_pillar["simple"] == "simon"
-    assert compiled_pillar["super simple"] == "a caveman"
-    assert compiled_pillar["mordor"] == "has dark depths"
-    assert compiled_pillar["found"] == "my precious"
-    assert compiled_pillar["mojo"] == "bad risin'"
+    # Assert (semantic equality on exposed tree)
+    exp = salt.utils.secret.expose(compiled_pillar)
+    assert exp["this"] == "is all good"
+    assert exp["that"] == "is also all good"
+    assert exp["simple"] == "simon"
+    assert exp["super simple"] == "a caveman"
+    assert exp["mordor"] == "has dark depths"
+    assert exp["found"] == "my precious"
+    assert exp["mojo"] == "bad risin'"
 
 
 def test_missing_include(tmp_path):
@@ -997,9 +1002,11 @@ def test_missing_include(tmp_path):
     compiled_pillar = pillar.compile_pillar()
 
     # Assert
-    assert compiled_pillar["simple_include"] == "is ok"
+    exp = salt.utils.secret.expose(compiled_pillar)
+    assert exp["simple_include"] == "is ok"
     assert "_errors" in compiled_pillar
-    assert "simple_include.missing_include" in compiled_pillar["_errors"][0]
+    err0 = salt.utils.secret.expose(compiled_pillar["_errors"][0])
+    assert "simple_include.missing_include" in err0
 
 
 def test_get_opts_in_pillar_override_call(minion_opts, grains):
@@ -1176,11 +1183,12 @@ def test_include(tmp_path):
         # Make sure that confirm_top.confirm_top returns True
         pillar.matchers["confirm_top.confirm_top"] = lambda *x, **y: True
         compiled_pillar = pillar.compile_pillar()
-        assert compiled_pillar["foo_wildcard"] == "bar_wildcard"
-        assert compiled_pillar["foo1"] == "bar1"
-        assert compiled_pillar["foo2"] == "bar2"
-        assert compiled_pillar["sub_with_slashes"] == "sub_slashes_worked"
-        assert compiled_pillar["sub_init_dot"] == "sub_with_init_dot_worked"
+        exp = salt.utils.secret.expose(compiled_pillar)
+        assert exp["foo_wildcard"] == "bar_wildcard"
+        assert exp["foo1"] == "bar1"
+        assert exp["foo2"] == "bar2"
+        assert exp["sub_with_slashes"] == "sub_slashes_worked"
+        assert exp["sub_init_dot"] == "sub_with_init_dot_worked"
 
 
 def test_compile_pillar_cache(master_opts):
@@ -1283,9 +1291,8 @@ def test_compile_pillar_disk_cache(master_opts, grains):
 
 def test_pillar_cache_compile_returns_plain_dict_for_transport(master_opts, grains):
     """
-    PillarCache is used on the master when pillar_cache or minion_data_cache is set.
-    The returned pillar must use plain dict/str types for master→minion crypto/msgpack;
-    SecretStr/SafeDict wrapping belongs on the minion after RemotePillar.fetch.
+    PillarCache compile may return wrapped pillar (SecretDict). Serialization must
+    expose secrets before msgpack so master→minion transport carries plaintext.
     """
     master_opts.update({"pillar_cache_ttl": 3600, "pillar_cache": True})
     pillar = salt.pillar.PillarCache(
@@ -1295,14 +1302,20 @@ def test_pillar_cache_compile_returns_plain_dict_for_transport(master_opts, grai
         "fake_env",
         pillarenv="base",
     )
+    wrapped = secret.hide({"info": "test", "nested": {"k": "v"}})
     with patch.object(
         salt.pillar.Pillar,
         "compile_pillar",
-        return_value={"info": "test", "nested": {"k": "v"}},
+        return_value=wrapped,
     ):
         out = pillar.compile_pillar()
-    assert not isinstance(out, secret.SecretDict)
-    salt.utils.json.dumps(out)
+    assert isinstance(out, secret.SecretDict)
+    roundtrip = salt.payload.loads(
+        salt.payload.dumps({"opts": {"pillar": out}})
+    )
+    assert roundtrip["opts"]["pillar"]["info"] == "test"
+    assert roundtrip["opts"]["pillar"]["nested"]["k"] == "v"
+    salt.utils.json.dumps(salt.utils.secret.expose(out))
 
 
 def test_remote_pillar_bad_return(grains, tmp_pki):
