@@ -38,6 +38,7 @@ def service_name(grains, modules):
     service_name = "cron"
     cmd_name = "crontab"
     os_family = grains.get("os_family")
+    os_name = grains.get("os")
     is_systemd = grains.get("systemd")
     if os_family == "RedHat":
         service_name = "crond"
