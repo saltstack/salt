@@ -68,6 +68,9 @@ def _find_libcrypto():
             lib = lib or glob.glob(
                 os.path.join(brew_prefix, "opt/openssl@*/lib/libcrypto.dylib")
             )
+            lib = lib or glob.glob(
+                os.path.join(brew_prefix, "lib/libcrypto.dylib")
+            )
 
         # look in macports.
         lib = lib or glob.glob("/opt/local/lib/libcrypto.dylib")
