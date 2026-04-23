@@ -4,7 +4,7 @@ Phase 2 regression: replay conformance scenarios through the sync
 ``progress_batch()`` produces directly.
 
 These scenarios are ``SCENARIOS`` from the Phase 1 conformance harness
-(``tests/pytests/unit/utils/batch_state/_scenarios.py``).  Each one is
+(``tests/pytests/unit/utils/batch_state/batch_state_scenarios.py``).  Each one is
 a declarative step-by-step spec.  Here we replay the ``new_returns``
 inputs through the sync driver's iterator machinery and verify:
 
@@ -24,7 +24,7 @@ import pytest
 
 from salt.cli.batch import Batch
 from salt.utils.batch_state import progress_batch
-from tests.pytests.unit.utils.batch_state._scenarios import SCENARIOS
+from tests.pytests.unit.utils.batch_state.batch_state_scenarios import SCENARIOS
 from tests.support.mock import MagicMock, patch
 
 
