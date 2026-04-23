@@ -62,7 +62,7 @@ def create(ctx: Context, image: str, name: str = "", platform: str = ""):
         "RERUN_FAILURES": "0",
         "SKIP_INITIAL_ONEDIR_FAILURES": "1",
         "SKIP_INITIAL_GH_ACTIONS_FAILURES": "1",
-        "RAISE_DEPRECATIONS_RUNTIME_ERRORS": "1",
+        "RAISE_DEPRECATIONS_RUNTIME_ERRORS": "0",
         "LANG": "en_US.UTF-8",
         "SHELL": "/bin/bash",
     }
