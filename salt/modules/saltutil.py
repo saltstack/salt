@@ -1320,6 +1320,7 @@ def refresh_modules(**kwargs):
         salt '*' saltutil.refresh_modules
     """
     asynchronous = bool(kwargs.get("async", True))
+    timeout = int(kwargs.get("timeout", 30))
     try:
         if asynchronous:
             ret = __salt__["event.fire"]({}, "module_refresh")
@@ -1333,7 +1334,7 @@ def refresh_modules(**kwargs):
                 log.trace("refresh_modules waiting for module refresh to complete")
                 # Blocks until we hear this event or until the timeout expires
                 eventer.get_event(
-                    tag=salt.defaults.events.MINION_MOD_REFRESH_COMPLETE, wait=30
+                    tag=salt.defaults.events.MINION_MOD_REFRESH_COMPLETE, wait=timeout
                 )
     except KeyError:
         log.error("Event module not available. Module refresh failed.")
