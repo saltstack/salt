@@ -10,9 +10,17 @@ Salt Project and to encourage more active engagement from the Salt community.
 * `Pull request management`_
 * `Salt Enhancement Proposals (SEP) process`_
 
-
 Issue management
 ================
+
+.. warning::
+   **Effective immediately.**
+
+   - All opened but un-assigned bugs will be migrated to discussions.
+   - All new bugs should be opened as a discussion.
+   - The only bugs and features that should have a corresponding issue are things that are assigned and actively being worked on.
+   - We are currently working on updating the triage process. This document will be updated as things progress.
+
 Issues for the Salt Project are critical to Salt community communication and to
 find and resolve issues in the Salt Project. As such, the issue tracker needs to
 be kept clean and current to the currently supported releases of Salt. They also
