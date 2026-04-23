@@ -1435,7 +1435,10 @@ def pre_archive_cleanup(session, pkg):
     if pkg:
         cmdline.append("--pkg")
     cmdline.append(".nox")
-    session_run_always(session, *cmdline)
+    success_codes = [0]
+    if IS_WINDOWS or IS_DARWIN:
+        success_codes.append(1)
+    session_run_always(session, *cmdline, success_codes=success_codes)
 
 
 @nox.session(python="3", name="combine-coverage")
