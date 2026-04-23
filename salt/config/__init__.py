@@ -16,7 +16,6 @@ from copy import deepcopy
 import salt.crypt
 import salt.defaults.exitcodes
 import salt.exceptions
-import salt.features
 import salt.syspaths
 import salt.utils.data
 import salt.utils.dictupdate
@@ -2465,7 +2464,6 @@ def minion_config(
     if role != "master":
         apply_sdb(opts)
         _validate_opts(opts)
-    salt.features.setup_features(opts)
     # Convert to OptsDict for memory efficiency
     return salt.utils.optsdict.OptsDict.from_dict(
         opts, name=f"minion_config:role={role}"
@@ -2480,7 +2478,6 @@ def mminion_config(path, overrides, ignore_config_errors=True):
     _validate_opts(opts)
     opts["grains"] = salt.loader.grains(opts)
     opts["pillar"] = {}
-    salt.features.setup_features(opts)
     return opts
 
 
@@ -2567,7 +2564,6 @@ def proxy_config(
 
     apply_sdb(opts)
     _validate_opts(opts)
-    salt.features.setup_features(opts)
 
     # Convert to OptsDict for memory efficiency
     return salt.utils.optsdict.OptsDict.from_dict(
@@ -2649,7 +2645,6 @@ def syndic_config(
         if should_prepend_root_dir(config_key, opts):
             prepend_root_dirs.append(config_key)
     prepend_root_dir(opts, prepend_root_dirs)
-    salt.features.setup_features(opts)
     return opts
 
 
@@ -2928,7 +2923,6 @@ def cloud_config(
         prepend_root_dirs.append("log_file")
     prepend_root_dir(opts, prepend_root_dirs)
 
-    salt.features.setup_features(opts)
     # Return the final options
     return opts
 
@@ -4122,7 +4116,6 @@ def master_config(
     if salt.utils.data.is_dictlist(opts["nodegroups"]):
         opts["nodegroups"] = salt.utils.data.repack_dictlist(opts["nodegroups"])
     apply_sdb(opts)
-    salt.features.setup_features(opts)
     # Convert to OptsDict for memory efficiency
     return salt.utils.optsdict.OptsDict.from_dict(opts, name="master_config")
 
@@ -4415,7 +4408,6 @@ def client_config(path, env_var="SALT_CLIENT_CONFIG", defaults=None):
 
     # Return the client options
     _validate_opts(opts)
-    salt.features.setup_features(opts)
     return salt.utils.optsdict.OptsDict.from_dict(opts, name="client_config")
 
 
@@ -4439,7 +4431,6 @@ def api_config(path):
     )
 
     prepend_root_dir(opts, ["api_pidfile", "api_logfile", "log_file", "pidfile"])
-    salt.features.setup_features(opts)
     return opts
 
 
