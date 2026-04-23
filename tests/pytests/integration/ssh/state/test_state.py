@@ -113,3 +113,10 @@ def test_state_test(salt_ssh_cli, state_tree):
         ret.data["test_|-Ok with def_|-Ok with def_|-succeed_with_changes"]["result"]
         is None
     )
+
+
+def test_state_pkg(salt_ssh_cli):
+    ret = salt_ssh_cli.run("state.single", "pkg.installed", "coreutils", "test=True")
+    assert ret.returncode == 0
+    assert ret.data
+    assert ret.data["pkg_|-coreutils_|-coreutils_|-installed"]["result"] is not False
