@@ -2470,6 +2470,7 @@ def test_get_yum_config_no_config():
 
 def test_get_yum_config(grains):
     os_family = grains["os_family"]
+    os_name = grains["os"]
     if os_family in ("Arch", "Debian", "Suse"):
         pytest.skip(f"{os_family} does not have yum.conf")
     setting = "cache_dir"
@@ -2484,6 +2485,7 @@ def test_get_yum_config(grains):
 
 def test_get_yum_config_value_none(grains):
     os_family = grains["os_family"]
+    os_name = grains["os"]
     if os_family in ("Arch", "Debian", "Suse"):
         pytest.skip(f"{os_family} does not have yum.conf")
     result = yumpkg._get_yum_config_value("spongebob")
