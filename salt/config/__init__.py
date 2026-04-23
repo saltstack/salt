@@ -2480,7 +2480,6 @@ def mminion_config(path, overrides, ignore_config_errors=True):
     _validate_opts(opts)
     opts["grains"] = salt.loader.grains(opts)
     opts["pillar"] = {}
-    salt.features.setup_features(opts)
     return opts
 
 
@@ -2567,8 +2566,8 @@ def proxy_config(
 
     apply_sdb(opts)
     _validate_opts(opts)
-    salt.features.setup_features(opts)
 
+    salt.features.setup_features(opts)
     # Convert to OptsDict for memory efficiency
     return salt.utils.optsdict.OptsDict.from_dict(
         opts, name="minion_config:role=master"
@@ -2649,7 +2648,6 @@ def syndic_config(
         if should_prepend_root_dir(config_key, opts):
             prepend_root_dirs.append(config_key)
     prepend_root_dir(opts, prepend_root_dirs)
-    salt.features.setup_features(opts)
     return opts
 
 
@@ -2928,7 +2926,6 @@ def cloud_config(
         prepend_root_dirs.append("log_file")
     prepend_root_dir(opts, prepend_root_dirs)
 
-    salt.features.setup_features(opts)
     # Return the final options
     return opts
 
@@ -4343,6 +4340,7 @@ def apply_master_config(overrides=None, defaults=None):
             f"Please specify one of {','.join(salt.crypt.VALID_SIGNING_ALGORITHMS)}."
         )
 
+    salt.features.setup_features(opts)
     return opts
 
 
@@ -4439,7 +4437,6 @@ def api_config(path):
     )
 
     prepend_root_dir(opts, ["api_pidfile", "api_logfile", "log_file", "pidfile"])
-    salt.features.setup_features(opts)
     return opts
 
 

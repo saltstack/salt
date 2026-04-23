@@ -254,7 +254,7 @@ def is_photonos():
     (osname, osrelease, oscodename) = (
         x.strip('"').strip("'") for x in linux_distribution()
     )
-    return osname == "VMware Photon OS"
+    return osname in ("VMware Photon OS", "Photon OS")
 
 
 @real_memoize

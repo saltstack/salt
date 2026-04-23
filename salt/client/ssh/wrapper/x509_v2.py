@@ -38,8 +38,6 @@ __virtualname__ = "x509"
 def __virtual__():
     if not HAS_CRYPTOGRAPHY:
         return (False, "Could not load cryptography")
-    if not __opts__.get("features", {}).get("x509_v2", True):
-        return (False, "x509_v2 modules were explicitly disabled in `features:x509_v2`")
     return __virtualname__
 
 

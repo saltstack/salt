@@ -94,7 +94,6 @@ import salt.utils.platform
 from salt.exceptions import CommandExecutionError, NxosError, SaltInvocationError
 from salt.utils.args import clean_kwargs
 from salt.utils.pycrypto import gen_hash
-from salt.utils.versions import warn_until
 
 __virtualname__ = "nxos"
 
@@ -191,44 +190,6 @@ def check_role(username, role, **kwargs):
         salt '*' nxos.check_role username=admin role=network-admin
     """
     return role in get_roles(username, **kwargs)
-
-
-def cmd(command, *args, **kwargs):
-    """
-    NOTE: This function is preserved for backwards compatibility.  This allows
-    commands to be executed using either of the following syntactic forms.
-
-    salt '*' nxos.cmd <function>
-
-    or
-
-    salt '*' nxos.<function>
-
-    command
-        function from `salt.modules.nxos` to run
-
-    args
-        positional args to pass to `command` function
-
-    kwargs
-        key word arguments to pass to `command` function
-
-    .. code-block:: bash
-
-        salt '*' nxos.cmd sendline 'show ver'
-        salt '*' nxos.cmd show_run
-        salt '*' nxos.cmd check_password username=admin password='$5$lkjsdfoi$blahblahblah' encrypted=True
-    """
-    warn_until(3008, "'nxos.cmd COMMAND' is deprecated in favor of 'nxos.COMMAND'")
-
-    for k in list(kwargs):
-        if k.startswith("__pub_"):
-            kwargs.pop(k)
-    local_command = ".".join(["nxos", command])
-    log.info("local command: %s", local_command)
-    if local_command not in __salt__:
-        return False
-    return __salt__[local_command](*args, **kwargs)
 
 
 def find(pattern, **kwargs):
@@ -362,56 +323,6 @@ def sendline(command, method="cli_show_ascii", **kwargs):
         return e.strerror + "\n" + CONNECTION_ERROR_MSG
 
 
-def show(commands, raw_text=True, **kwargs):
-    """
-    Execute one or more show (non-configuration) commands.
-
-    commands
-        The commands to be executed.
-
-    raw_text: ``True``
-        Whether to return raw text or structured data.
-        NOTE: raw_text option is ignored for SSH proxy minion.  Data is
-        returned unstructured.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-call --local nxos.show 'show version'
-        salt '*' nxos.show 'show bgp sessions ; show processes' raw_text=False
-        salt 'regular-minion' nxos.show 'show interfaces' host=sw01.example.com username=test password=test
-    """
-    warn_until(
-        3008,
-        "'nxos.show commands' is deprecated in favor of 'nxos.sendline commands'",
-    )
-
-    if not isinstance(raw_text, bool):
-        msg = """
-        INPUT ERROR: Second argument 'raw_text' must be either True or False
-        Value passed: {}
-        Hint: White space separated show commands should be wrapped by double quotes
-        """.format(
-            raw_text
-        )
-        return msg
-
-    if raw_text:
-        method = "cli_show_ascii"
-    else:
-        method = "cli_show"
-
-    response_list = sendline(commands, method, **kwargs)
-    if isinstance(response_list, list):
-        ret = [response for response in response_list if response]
-        if not ret:
-            ret = [""]
-        return ret
-    else:
-        return response_list
-
-
 def show_ver(**kwargs):
     """
     Shortcut to run `show version` on the NX-OS device.
@@ -442,47 +353,9 @@ def show_run(**kwargs):
     return info
 
 
-def system_info(**kwargs):
-    """
-    Return system information for grains of the minion.
-
-    .. code-block:: bash
-
-        salt '*' nxos.system_info
-    """
-    warn_until(3008, "'nxos.system_info' is deprecated in favor of 'nxos.grains'")
-    return salt.utils.nxos.system_info(show_ver(**kwargs))["nxos"]
-
-
 # -----------------------------------------------------------------------------
 # Device Set Functions
 # -----------------------------------------------------------------------------
-def add_config(lines, **kwargs):
-    """
-    Add one or more config lines to the NX-OS device running config.
-
-    lines
-        Configuration lines to add
-
-    save_config
-        If False, don't save configuration commands to startup configuration.
-        If True, save configuration to startup configuration.
-        Default: True
-
-    .. code-block:: bash
-
-        salt '*' nxos.add_config 'snmp-server community TESTSTRINGHERE group network-operator'
-
-    .. note::
-        For more than one config added per command, lines should be a list.
-    """
-    warn_until(
-        3008,
-        "'nxos.add_config lines' is deprecated in favor of 'nxos.config commands'",
-    )
-
-    kwargs = clean_kwargs(**kwargs)
-    return config(lines, **kwargs)
 
 
 def config(

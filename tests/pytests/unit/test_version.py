@@ -301,6 +301,9 @@ def test_full_info_all_versions(vstr, full_info):
         (3000, None, b"v3000.0rc2-0-g44fe283a77\n", "3000rc2"),
         (3000, None, b"v3000", "3000"),
         (3000, None, b"1234567", "3000-0na-1234567"),
+        # New branch (e.g. 3008.x) before the first v3008* tag: describe still
+        # anchors on the previous line; version must follow the codename.
+        (3008, None, b"v3007.13-1100-gabcdef12\n", "3008.0+1100.gabcdef12"),
         (2019, 2, b"v2019.2.0rc2-12-g44fe283a77\n", "2019.2.0rc2-12-g44fe283a77"),
         (2019, 2, b"v2019.2.0", "2019.2.0"),
         (2019, 2, b"afc9830198dj", "2019.2.0-0na-afc9830198dj"),
