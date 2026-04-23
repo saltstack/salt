@@ -1604,6 +1604,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self.send_future_map = {}
         self._closing = False
         self.socket = None
+        self.send_recv_task_id = 0
         self._queue = asyncio.Queue()
         self.tasks = set()
 
@@ -1614,6 +1615,12 @@ class RequestClient(salt.transport.base.RequestClient):
             # wire up sockets
             self._queue = asyncio.Queue()
             self._init_socket()
+
+    async def _reconnect(self):
+        if self.socket is not None:
+            self.socket.close()
+            self.socket = None
+        await self.connect()
 
     def _init_socket(self):
         if self.socket is not None:
@@ -1637,8 +1644,9 @@ class RequestClient(salt.transport.base.RequestClient):
                 self.socket.setsockopt(zmq.IPV4ONLY, 0)
         self.socket.linger = self.linger
         self.socket.connect(self.master_uri)
+        self.send_recv_task_id += 1
         self.send_recv_task = self.io_loop.create_task(
-            self._send_recv(self.socket, self._queue)
+            self._send_recv(self.socket, self._queue, task_id=self.send_recv_task_id)
         )
         self.send_recv_task.add_done_callback(self.tasks.discard)
         self.tasks.add(self.send_recv_task)
@@ -1720,7 +1728,9 @@ class RequestClient(salt.transport.base.RequestClient):
         # if we've reached here something is very abnormal
         raise SaltException("ReqChannel: missing master_uri/master_ip in self.opts")
 
-    async def _send_recv(self, socket, queue, _TimeoutError=tornado.gen.TimeoutError):
+    async def _send_recv(
+        self, socket, queue, task_id=None, _TimeoutError=tornado.gen.TimeoutError
+    ):
         """
         Long running send/receive coroutine. This should be started once for
         each socket created. Once started, the coroutine will run until the
@@ -1733,6 +1743,10 @@ class RequestClient(salt.transport.base.RequestClient):
         # close method is called. This allows us to fail gracefully once it's
         # been closed.
         while send_recv_running:
+            if task_id is not None and task_id != self.send_recv_task_id:
+                log.trace("superseded _send_recv task %s exiting", task_id)
+                send_recv_running = False
+                break
             try:
                 future, message = await asyncio.wait_for(queue.get(), 0.3)
             except asyncio.TimeoutError:
@@ -1813,7 +1827,7 @@ class RequestClient(salt.transport.base.RequestClient):
                     )
 
                 if exc:
-                    await self.connect()
+                    await self._reconnect()
                     send_recv_running = False
                     break
 
@@ -1882,7 +1896,7 @@ class RequestClient(salt.transport.base.RequestClient):
                     log.error("The request ended with an error. reconnecting. %r", exc)
 
                 if exc:
-                    await self.connect()
+                    await self._reconnect()
                     send_recv_running = False
             elif received:
                 data = salt.payload.loads(recv)
