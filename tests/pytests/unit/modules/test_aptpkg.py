@@ -241,17 +241,22 @@ def deb822_repo_file(tmp_path: pathlib.Path, deb822_repo_content: str):
 
 
 @pytest.fixture
-def mock_apt_config(deb822_repo_file: pathlib.Path):
+def mock_apt_config(deb822_repo_file: pathlib.Path, tmp_path: pathlib.Path):
     """
     Mocking common to deb822 testing so that apt_pkg uses the
     tmp_path/sources.list.d as the sourceparts location
     """
+    tmp_sources_list = tmp_path / "sources.list"
+    tmp_sources_list.write_text("", encoding="utf-8")
     with patch.dict(
         aptpkg.__salt__,
         {"config.option": MagicMock()},
     ) as mock_config, patch(
         "salt.utils.pkg.deb._APT_SOURCES_PARTSDIR",
         os.path.dirname(str(deb822_repo_file)),
+    ), patch(
+        "salt.utils.pkg.deb._APT_SOURCES_LIST",
+        str(tmp_sources_list),
     ):
         yield mock_config
 

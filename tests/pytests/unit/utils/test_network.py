@@ -1476,7 +1476,7 @@ def test_ip_to_host(grains):
     if grains["os"] == "Amazon":
         assert ret in ("localhost6", "localhost")
     elif grains["os_family"] == "Debian":
-        if grains["osmajorrelease"] == 12:
+        if grains.get("osmajorrelease") == 12:
             assert ret == hostname
         else:
             assert ret in ("ip6-localhost", "localhost")

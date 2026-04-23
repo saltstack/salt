@@ -1,7 +1,7 @@
 """
 Conformance harness for :mod:`salt.utils.batch_state`.
 
-The scenarios in :mod:`._scenarios` are the behavioral specification
+The scenarios in :mod:`.batch_state_scenarios` are the behavioral specification
 for :func:`salt.utils.batch_state.progress_batch`.  This module runs
 them.
 
@@ -21,7 +21,7 @@ import importlib
 import pytest
 
 from salt.utils.batch_state import progress_batch
-from tests.pytests.unit.utils.batch_state._scenarios import SCENARIOS
+from tests.pytests.unit.utils.batch_state.batch_state_scenarios import SCENARIOS
 
 SYNC_TEST_MODULE = "tests.pytests.unit.cli.test_batch"
 
