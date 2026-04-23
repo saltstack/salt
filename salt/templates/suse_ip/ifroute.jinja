@@ -5,4 +5,5 @@
 {%- if route.netmask %}	{{route.netmask}}{% else %}	-{% endif %}
 {%- if route.dev %}	{{route.dev}}{% else %}{%- if iface and iface != "routes" %}	{{iface}}{% else %}	-{% endif %}{% endif %}
 {%- if route.metric %}	metric {{route.metric}} {%- endif %}
+{%- if route.source %}	src {{route.source}} {%- endif %}
 {% endfor -%}
