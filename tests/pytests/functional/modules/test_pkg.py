@@ -63,10 +63,10 @@ def pkg_name(grains):
     _pkg = "figlet"
     if salt.utils.platform.is_windows():
         _pkg = "putty"
+    elif grains["os_family"] == "Photon":
+        _pkg = "bc"
     elif grains["os_family"] == "RedHat":
-        if grains["os"] == "VMware Photon OS":
-            _pkg = "snoopy"
-        elif grains["osfinger"] == "Amazon Linux-2023":
+        if grains["osfinger"] == "Amazon Linux-2023":
             return "dnf-utils"
         else:
             _pkg = "units"
@@ -134,7 +134,7 @@ def test_mod_del_repo(grains, modules):
 
             assert isinstance(ret, dict) is True
             assert ret["uri"] == uri
-        elif grains["os_family"] == "RedHat":
+        elif grains["os_family"] in ("RedHat", "Photon"):
             repo = "saltstack"
             name = "SaltStack repo for RHEL/CentOS {}".format(grains["osmajorrelease"])
             baseurl = "https://packages.broadcom.com/artifactory/saltproject-rpm/"
@@ -385,6 +385,11 @@ def test_pkg_info(grains, modules, pkg_name):
         ret = modules.pkg.info_installed("rpm", "bash")
         keys = ret.keys()
         assert "rpm" in keys
+        assert "bash" in keys
+    elif grains["os_family"] == "Photon":
+        ret = modules.pkg.info_installed("tdnf", "bash")
+        keys = ret.keys()
+        assert "tdnf" in keys
         assert "bash" in keys
     elif grains["os_family"] == "Suse":
         ret = modules.pkg.info_installed("less", "zypper")

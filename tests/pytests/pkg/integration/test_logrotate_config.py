@@ -17,7 +17,7 @@ def logrotate_config_file(grains):
     """
     Fixture for logrotate config file path
     """
-    if grains["os_family"] == "RedHat":
+    if grains["os_family"] in ("RedHat", "Photon"):
         return pathlib.Path("/etc/logrotate.d", "salt")
     elif grains["os_family"] == "Debian":
         return pathlib.Path("/etc/logrotate.d", "salt-common")

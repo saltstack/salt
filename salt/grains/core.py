@@ -1827,6 +1827,7 @@ _OS_NAME_MAP = {
     "rocky": "Rocky",
     "alibabaclo": "Alinux",
     "mendel": "Mendel",
+    "photon": "VMware Photon OS",
 }
 
 # This dictionary maps the pair of os-release ID and NAME to the 'os' grain
@@ -1888,7 +1889,7 @@ _OS_FAMILY_MAP = {
     "XenServer": "RedHat",
     "RES": "RedHat",
     "Sangoma": "RedHat",
-    "VMware Photon OS": "RedHat",
+    "VMware Photon OS": "Photon",
     "Mandrake": "Mandriva",
     "Mint": "Debian",
     "VMwareESX": "VMware",

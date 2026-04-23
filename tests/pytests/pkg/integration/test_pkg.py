@@ -20,10 +20,10 @@ def pkg_name(salt_call_cli, grains):
         else:
             pytest.fail("Failed to run 'pkg.refresh_db' 3 times.")
         return "putty"
+    elif grains["os_family"] == "Photon":
+        return "bc"
     elif grains["os_family"] == "RedHat":
-        if grains["os"] == "VMware Photon OS":
-            return "snoopy"
-        elif grains["osfinger"] == "Amazon Linux-2023":
+        if grains["osfinger"] == "Amazon Linux-2023":
             return "dnf-utils"
         return "units"
     elif grains["os_family"] == "Debian":

@@ -39,7 +39,7 @@ def service_name(grains, modules):
     cmd_name = "crontab"
     os_family = grains.get("os_family")
     is_systemd = grains.get("systemd")
-    if os_family == "RedHat":
+    if os_family in ("RedHat", "Photon"):
         service_name = "crond"
     elif os_family == "Arch":
         service_name = "sshd"

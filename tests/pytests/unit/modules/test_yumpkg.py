@@ -2473,7 +2473,7 @@ def test_get_yum_config(grains):
     if os_family in ("Arch", "Debian", "Suse"):
         pytest.skip(f"{os_family} does not have yum.conf")
     setting = "cache_dir"
-    if os_family == "RedHat":
+    if os_family in ("RedHat", "Photon"):
         # This one seems to be in all of them...
         # If this ever breaks in the future, we'll need to get more specific
         # than os_family
