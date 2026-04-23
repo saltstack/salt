@@ -77,8 +77,11 @@ The available options for this setting are:
     sdb
     serializers
     states
+    all
     thorium
     utils
+    
+Do not use this feature until https://github.com/saltstack/salt/pull/58394 is merged and released.
 
 A present and non-falsy value that doesn't match one of these list items will
 assume `all`, so `sync_after_install: True` and `sync_after_install: all` are
