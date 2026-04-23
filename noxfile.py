@@ -1418,6 +1418,21 @@ def pre_archive_cleanup(session, pkg):
             "The nox session 'pre-archive-cleanup' needs Python 3.10+ to run."
         )
 
+    if IS_WINDOWS:
+        # On Windows, we don't want to use ptscripts VirtualEnvPipConfig because it fails
+        # to find the site-packages path.
+        # Instead, we'll just run the cleanup directly.
+        cmdline = [
+            sys.executable,
+            "tools/pkg/__init__.py",
+            "pre-archive-cleanup",
+            ".nox",
+        ]
+        if pkg:
+            cmdline.append("--pkg")
+        session.run(*cmdline, external=True)
+        return
+
     if _upgrade_pip_setuptools_and_wheel(session):
         requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "tools.txt"
