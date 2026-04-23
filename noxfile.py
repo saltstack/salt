@@ -1401,94 +1401,6 @@ def compress_dependencies(session):
     )
 
 
-def _pre_archive_cleanup(session, cleanup_path, pkg=False):
-    import fnmatch
-    import pathlib
-    import shutil
-
-    import yaml
-
-    rules_file = REPO_ROOT / "pkg" / "common" / "env-cleanup-rules.yml"
-    with rules_file.open("r", encoding="utf-8") as rfh:
-        patterns = yaml.safe_load(rfh.read())
-
-    if pkg:
-        patterns = patterns["pkg"]
-    else:
-        patterns = patterns["ci"]
-
-    if IS_WINDOWS:
-        patterns = patterns["windows"]
-    elif IS_DARWIN:
-        patterns = patterns["darwin"]
-    else:
-        patterns = patterns["linux"]
-
-    def unnest_lists(patterns):
-        if isinstance(patterns, list):
-            for pattern in patterns:
-                yield from unnest_lists(pattern)
-        else:
-            yield patterns
-
-    exclude_patterns = set(unnest_lists(patterns["exclude_patterns"]))
-    dir_patterns = set(unnest_lists(patterns["dir_patterns"]))
-    file_patterns = set(unnest_lists(patterns["file_patterns"]))
-
-    for root, dirs, files in os.walk(cleanup_path, topdown=True, followlinks=False):
-        for dirname in dirs:
-            path = pathlib.Path(root, dirname).resolve()
-            if not path.exists():
-                continue
-            match_path = path.as_posix()
-            skip_match = False
-            for pattern in exclude_patterns:
-                if fnmatch.fnmatch(str(match_path), pattern):
-                    session.log(
-                        "Excluded directory: %s; Matching pattern: %r",
-                        match_path,
-                        pattern,
-                    )
-                    skip_match = True
-                    break
-            if skip_match:
-                continue
-            for pattern in dir_patterns:
-                if fnmatch.fnmatch(str(match_path), pattern):
-                    session.log(
-                        "Deleting directory: %s; Matching pattern: %r",
-                        match_path,
-                        pattern,
-                    )
-                    shutil.rmtree(str(path))
-                    break
-        for filename in files:
-            path = pathlib.Path(root, filename).resolve()
-            if not path.exists():
-                continue
-            match_path = path.as_posix()
-            skip_match = False
-            for pattern in exclude_patterns:
-                if fnmatch.fnmatch(str(match_path), pattern):
-                    session.log(
-                        "Excluded file: %s; Matching pattern: %r", match_path, pattern
-                    )
-                    skip_match = True
-                    break
-            if skip_match:
-                continue
-            for pattern in file_patterns:
-                if fnmatch.fnmatch(str(match_path), pattern):
-                    session.log(
-                        "Deleting file: %s; Matching pattern: %r", match_path, pattern
-                    )
-                    try:
-                        os.remove(str(path))
-                    except FileNotFoundError:
-                        pass
-                    break
-
-
 @nox.session(
     python=str(ONEDIR_PYTHON_PATH),
     name="pre-archive-cleanup",
@@ -1500,8 +1412,30 @@ def pre_archive_cleanup(session, pkg):
     """
     if session.posargs:
         session.error("No additional arguments can be passed to 'pre-archive-cleanup'")
+    version_info = _get_session_python_version_info(session)
+    if version_info < (3, 10):
+        session.error(
+            "The nox session 'pre-archive-cleanup' needs Python 3.10+ to run."
+        )
 
-    _pre_archive_cleanup(session, ".nox", pkg=pkg)
+    if _upgrade_pip_setuptools_and_wheel(session):
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "tools.txt"
+        )
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
+    cmdline = [
+        "python",
+        "-m",
+        "tools",
+        "pkg",
+        "pre-archive-cleanup",
+    ]
+    if pkg:
+        cmdline.append("--pkg")
+    cmdline.append(".nox")
+    session_run_always(session, *cmdline)
 
 
 @nox.session(python="3", name="combine-coverage")
