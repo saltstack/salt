@@ -60,7 +60,6 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
         return sub_channel
 
     def tearDown(self):
-        super().tearDown()
         try:
             self.pub_channel.close()
         except RuntimeError as exc:
@@ -80,6 +79,7 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
         os.unlink(self.socket_path)
         del self.pub_channel
         del self.sub_channel
+        super().tearDown()
 
     def test_multi_client_reading(self):
         # To be completely fair let's create 2 clients.

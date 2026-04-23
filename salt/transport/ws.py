@@ -346,6 +346,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         publish_payload,
         presence_callback=None,
         remove_presence_callback=None,
+        *args,
+        **kwargs,
     ):
         """
         Bind to the interface specified in the configuration file
@@ -445,7 +447,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             for msg in unpacker:
                 await self._pub_payload(msg)
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, *args, **kwargs):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
@@ -533,7 +535,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self._run = None
         self._socket = None
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, *args, **kwargs):
         """
         Pre-fork we need to create the zmq router device
         """
@@ -606,6 +608,12 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 await ws.send_bytes(salt.payload.dumps(reply))
             elif msg.type == aiohttp.WSMsgType.ERROR:
                 log.error("ws connection closed with exception %s", ws.exception())
+
+    async def forward_message(self, *args, **kwargs):
+        """
+        Forward a message to another master
+        """
+        raise NotImplementedError()
 
     def close(self):
         if self._run is not None:

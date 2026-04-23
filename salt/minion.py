@@ -1076,7 +1076,42 @@ class MinionManager(MinionBase):
 
     def _bind(self):
         # start up the event publisher, so we can see events during startup
-        self.event_publisher = salt.transport.ipc_publish_server("minion", self.opts)
+        import hashlib
+
+        hash_type = getattr(hashlib, self.opts["hash_type"])
+        id_hash = hash_type(
+            salt.utils.stringutils.to_bytes(self.opts["id"])
+        ).hexdigest()[:10]
+
+        if self.opts["ipc_mode"] == "tcp":
+            pub_host = "127.0.0.1"
+            pub_port = int(self.opts["tcp_pub_port"])
+            pull_host = "127.0.0.1"
+            pull_port = int(self.opts["tcp_pull_port"])
+            self.event_publisher = salt.transport.publish_server(
+                self.opts,
+                pub_host=pub_host,
+                pub_port=pub_port,
+                pull_host=pull_host,
+                pull_port=pull_port,
+                transport="tcp",
+            )
+        else:
+            epub_sock_path = os.path.join(
+                self.opts["sock_dir"], f"minion_event_{id_hash}_pub.ipc"
+            )
+            epull_sock_path = os.path.join(
+                self.opts["sock_dir"], f"minion_event_{id_hash}_pull.ipc"
+            )
+            if os.path.exists(epub_sock_path):
+                os.unlink(epub_sock_path)
+            self.event_publisher = salt.transport.publish_server(
+                self.opts,
+                pub_path=epub_sock_path,
+                pull_path=epull_sock_path,
+                transport="tcp",  # Use TCP-backed transport logic for IPC emulation
+            )
+
         salt.utils.asynchronous.aioloop(self.io_loop).create_task(
             self.event_publisher.publisher(
                 self.event_publisher.publish_payload,
@@ -1248,22 +1283,29 @@ class MinionManager(MinionBase):
         Called from cli.daemons.Minion._handle_signals().
         Adds stop_async as callback to the io_loop to prevent blocking.
         """
-        salt.utils.asynchronous.aioloop(self.io_loop).create_task(
-            self.stop_async(signum, parent_sig_handler)
-        )
+        loop = salt.utils.asynchronous.aioloop(self.io_loop)
+        if loop.is_closed():
+            return
+        loop.create_task(self.stop_async(signum, parent_sig_handler))
 
     async def stop_async(self, signum, parent_sig_handler):
         """
         Stop minions managed by the MinionManager allowing the io_loop to run
         and any remaining events to be processed before stopping the minions.
         """
+        loop = salt.utils.asynchronous.aioloop(self.io_loop)
+        if loop.is_closed():
+            return
 
         # Sleep to allow any remaining events to be processed.
         # This gives the minion time to send final "return" messages to the Master.
         # Ideally, we would dynamically wait for all pending messages to be flushed
         # from the I/O loop instead of using a static sleep amount, but for now
         # this 5-second window handles most cases.
-        await asyncio.sleep(5)
+        try:
+            await asyncio.sleep(5)
+        except RuntimeError:
+            return
 
         # Continue to stop the minions
         for minion in self.minions:
@@ -1668,6 +1710,7 @@ class Minion(MinionBase):
         # a memory limit on module imports
         # this feature ONLY works on *nix like OSs (resource module doesn't work on windows)
         modules_max_memory = False
+        old_mem_limit = None
         if opts.get("modules_max_memory", -1) > 0 and HAS_PSUTIL and HAS_RESOURCE:
             log.debug(
                 "modules_max_memory set, enforcing a maximum of %s",

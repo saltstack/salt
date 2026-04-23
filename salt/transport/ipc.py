@@ -83,16 +83,21 @@ class IPCServer:
         while not self._closing and not stream.closed():
             try:
                 wire_bytes = await stream.read_bytes(4096, partial=True)
+                if not wire_bytes:
+                    break
                 unpacker.feed(wire_bytes)
                 for framed_msg in unpacker:
                     body = framed_msg["body"]
                     loop = salt.utils.asynchronous.aioloop(self.io_loop)
-                    task = loop.create_task(
-                        self.payload_handler(
-                            body,
-                            self.write_callback(stream, framed_msg["head"]),
+
+                    async def _handle_payload(msg, head):
+                        ret = self.payload_handler(
+                            msg, self.write_callback(stream, head)
                         )
-                    )
+                        if asyncio.iscoroutine(ret):
+                            await ret
+
+                    task = loop.create_task(_handle_payload(body, framed_msg["head"]))
                     self.tasks.add(task)
                     task.add_done_callback(self.tasks.discard)
             except (tornado.iostream.StreamClosedError, asyncio.CancelledError):
@@ -221,9 +226,10 @@ class IPCClient:
 
         self._connecting_future = asyncio.Future()
         try:
-            self.stream = tornado.iostream.IOStream(
-                socket.socket(sock_type, socket.SOCK_STREAM)
-            )
+            with salt.utils.asynchronous.current_ioloop(self.io_loop):
+                self.stream = tornado.iostream.IOStream(
+                    socket.socket(sock_type, socket.SOCK_STREAM)
+                )
             await self.stream.connect(sock_addr)
             self._connecting_future.set_result(True)
         except Exception as exc:
@@ -305,9 +311,34 @@ class IPCMessagePublisher(IPCServer):
 
         pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
         for stream in list(self.streams):
+            # Calculate current write buffer size safely
+            current_write_buffer_size = 0
+            if hasattr(stream, "write_buffer_size"):
+                current_write_buffer_size = stream.write_buffer_size
+            elif hasattr(stream, "_write_buffer"):
+                if hasattr(stream._write_buffer, "_size"):
+                    current_write_buffer_size = stream._write_buffer._size
+                else:
+                    # Fallback to len() if it's a list/deque
+                    try:
+                        current_write_buffer_size = len(stream._write_buffer)
+                    except (TypeError, AttributeError):
+                        pass
+
             if self._write_semaphore.acquire(blocking=False):
                 try:
-                    stream.write(pack, callback=self._write_semaphore.release)
+                    future = stream.write(pack)
+
+                    def handle_write(f):
+                        loop = salt.utils.asynchronous.aioloop(self.io_loop)
+                        if not loop.is_closed():
+                            salt.utils.asynchronous.add_callback(
+                                loop, self._write_semaphore.release
+                            )
+                        else:
+                            self._write_semaphore.release()
+
+                    future.add_done_callback(handle_write)
                 except tornado.iostream.StreamClosedError:
                     self._write_semaphore.release()
                     self.streams.discard(stream)
@@ -318,9 +349,7 @@ class IPCMessagePublisher(IPCServer):
                         stream.close()
                     self.streams.discard(stream)
             else:
-                if stream.max_write_buffer_size - stream.get_write_buffer_size() > len(
-                    pack
-                ):
+                if stream.max_write_buffer_size - current_write_buffer_size > len(pack):
                     try:
                         stream.write(pack)
                     except tornado.iostream.StreamClosedError:
@@ -333,7 +362,7 @@ class IPCMessagePublisher(IPCServer):
                 else:
                     log.warning(
                         "IPCMessagePublisher: dropped event due to full buffer (%s/%s)",
-                        stream.get_write_buffer_size(),
+                        current_write_buffer_size,
                         stream.max_write_buffer_size,
                     )
 
@@ -354,37 +383,53 @@ class IPCMessageSubscriber(IPCClient):
         self.unpacker = salt.utils.msgpack.Unpacker(raw=False)
         self._read_stream_future = None
         self._saved_data = []
-        self._read_in_progress = threading.Lock()
+        self._read_in_progress = None
         self.tasks = set()
 
     async def _read(self, timeout, callback=None):
-        try:
-            if self._saved_data:
-                ret = self._saved_data.pop(0)
-                if callback:
-                    callback(ret)
-                return ret
+        if self._read_in_progress is None:
+            self._read_in_progress = asyncio.Lock()
 
-            while not self._closing:
-                wire_bytes = await self.stream.read_bytes(4096, partial=True)
-                self.unpacker.feed(wire_bytes)
-                first = True
-                ret = None
-                for framed_msg in self.unpacker:
-                    if first:
-                        ret = framed_msg["body"]
-                        if callback:
-                            callback(ret)
-                        first = False
-                    else:
-                        self._saved_data.append(framed_msg["body"])
-                if ret:
+        async with self._read_in_progress:
+            try:
+                if self._saved_data:
+                    ret = self._saved_data.pop(0)
+                    if callback:
+                        callback(ret)
                     return ret
-        except (tornado.iostream.StreamClosedError, asyncio.CancelledError):
-            return None
-        except Exception as exc:  # pylint: disable=broad-except
-            log.error("IPCMessageSubscriber read error: %s", exc)
-            return None
+
+                if self._closing or self.stream is None or self.stream.closed():
+                    return None
+
+                while not self._closing:
+                    # partial=True allows reading whatever is available
+                    wire_bytes = await self.stream.read_bytes(4096, partial=True)
+                    if not wire_bytes:
+                        return None
+
+                    self.unpacker.feed(wire_bytes)
+                    first = True
+                    ret = None
+                    for framed_msg in self.unpacker:
+                        if first:
+                            ret = framed_msg["body"]
+                            if callback:
+                                callback(ret)
+                            first = False
+                        else:
+                            self._saved_data.append(framed_msg["body"])
+                    if ret:
+                        return ret
+            except (tornado.iostream.StreamClosedError, asyncio.CancelledError):
+                return None
+            except Exception as exc:  # pylint: disable=broad-except
+                if "Already reading" in str(exc):
+                    log.debug(
+                        "IPCMessageSubscriber(%s) read conflict: %s", id(self), exc
+                    )
+                else:
+                    log.error("IPCMessageSubscriber(%s) read error: %s", id(self), exc)
+                return None
 
     async def read(self, timeout=None):
         return await self._read(timeout)
@@ -394,11 +439,24 @@ class IPCMessageSubscriber(IPCClient):
         return loop.run_until_complete(self.read(timeout))
 
     def read_async(self, callback):
+        if self._closing:
+            return
+
         loop = salt.utils.asynchronous.aioloop(self.io_loop)
 
         async def _read_async():
             while not self._closing:
-                await self._read(None, callback)
+                try:
+                    ret = await self._read(None, callback)
+                    if ret is None and not self._closing:
+                        # Avoid tight retry loop on error or stream close
+                        await asyncio.sleep(0.05)
+                    else:
+                        # Yield to loop
+                        await asyncio.sleep(0)
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.error("IPCMessageSubscriber read_async error: %s", exc)
+                    await asyncio.sleep(0.05)
 
         task = loop.create_task(_read_async())
         self.tasks.add(task)

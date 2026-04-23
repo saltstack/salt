@@ -1210,7 +1210,7 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
         """
         Bind the pub and pull sockets for events
         """
-        import salt.transport.ipc
+        from salt.transport import publish_client, publish_server
 
         if (
             self.opts["event_publisher_niceness"]
@@ -1225,26 +1225,54 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
         self.io_loop = tornado.ioloop.IOLoop()
         with salt.utils.asynchronous.current_ioloop(self.io_loop):
             if self.opts["ipc_mode"] == "tcp":
-                epub_uri = int(self.opts["tcp_master_pub_port"])
-                epull_uri = int(self.opts["tcp_master_pull_port"])
+                pub_host = "127.0.0.1"
+                pub_port = int(self.opts["tcp_master_pub_port"])
+                pull_host = "127.0.0.1"
+                pull_port = int(self.opts["tcp_master_pull_port"])
+                self.publisher = publish_server(
+                    self.opts,
+                    pub_host=pub_host,
+                    pub_port=pub_port,
+                    pull_host=pull_host,
+                    pull_port=pull_port,
+                    transport="tcp",
+                )
+                self.puller = publish_client(
+                    self.opts,
+                    io_loop=self.io_loop,
+                    host=pull_host,
+                    port=pull_port,
+                    transport="tcp",
+                )
             else:
-                epub_uri = os.path.join(self.opts["sock_dir"], "master_event_pub.ipc")
-                epull_uri = os.path.join(self.opts["sock_dir"], "master_event_pull.ipc")
-
-            self.publisher = salt.transport.ipc.IPCMessagePublisher(
-                self.opts, epub_uri, io_loop=self.io_loop
-            )
-
-            self.puller = salt.transport.ipc.IPCMessageServer(
-                epull_uri,
-                io_loop=self.io_loop,
-                payload_handler=self.handle_publish,
-            )
+                pub_path = os.path.join(self.opts["sock_dir"], "master_event_pub.ipc")
+                pull_path = os.path.join(self.opts["sock_dir"], "master_event_pull.ipc")
+                self.publisher = publish_server(
+                    self.opts,
+                    pub_path=pub_path,
+                    pull_path=pull_path,
+                    pub_path_perms=0o660,
+                    transport="tcp",
+                )
+                self.puller = publish_client(
+                    self.opts,
+                    io_loop=self.io_loop,
+                    path=pull_path,
+                    transport="tcp",
+                )
 
             # Start the master event publisher
             with salt.utils.files.set_umask(0o177):
-                self.publisher.start()
-                self.puller.start()
+                # Correctly initialize the publisher for this process
+                if hasattr(self.publisher, "post_fork"):
+                    self.publisher.post_fork(
+                        self.publisher.publish_payload,
+                        io_loop=self.io_loop,
+                    )
+
+                # Start the puller task
+                self.io_loop.add_callback(self.puller.on_recv, self.handle_publish)
+
                 if self.opts["ipc_mode"] != "tcp" and (
                     self.opts["publisher_acl"] or self.opts["external_auth"]
                 ):
@@ -1261,7 +1289,7 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
                     # Make sure the IO loop and respective sockets are closed and destroyed
                     self.close()
 
-    def handle_publish(self, package, _):
+    async def handle_publish(self, package, _):
         """
         Get something from epull, publish it out epub, and return the package (or None)
         """

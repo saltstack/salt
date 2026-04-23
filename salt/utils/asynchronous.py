@@ -45,13 +45,12 @@ def aioloop(io_loop, warn=False):
         except RuntimeError:
             return asyncio.get_event_loop()
 
-    # If it is a Tornado IOLoop, we MUST extract the raw asyncio loop
-    # attribute first, before checking for AbstractEventLoop.
-    if hasattr(io_loop, "asyncio_loop"):
-        return io_loop.asyncio_loop
-
     if isinstance(io_loop, asyncio.AbstractEventLoop):
         return io_loop
+
+    # Extract raw asyncio loop from Tornado IOLoop
+    if hasattr(io_loop, "asyncio_loop"):
+        return io_loop.asyncio_loop
 
     # If it is a Tornado IOLoop but doesn't have .asyncio_loop attribute,
     # we can try to get it from the current asyncio policy if it's the current loop.
@@ -65,11 +64,27 @@ def aioloop(io_loop, warn=False):
     if hasattr(io_loop, "create_task") and hasattr(io_loop, "call_soon"):
         return io_loop
 
-    # Final fallback: current running loop
+    # Final fallback: current running loop or create new one
     try:
         return asyncio.get_running_loop()
     except RuntimeError:
-        return asyncio.get_event_loop()
+        try:
+            return asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            return loop
+
+
+def add_callback(loop, callback, *args):
+    """
+    Add a callback to the loop in a loop-agnostic way.
+    """
+    if hasattr(loop, "add_callback"):
+        loop.add_callback(callback, *args)
+    else:
+        # Assume asyncio loop
+        loop.call_soon(callback, *args)
 
 
 def safe_exception(future):

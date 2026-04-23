@@ -541,7 +541,9 @@ class PublishClient(salt.transport.base.PublishClient):
             if msg:
                 try:
                     # XXX This is handled better in the websocket transport work
-                    tasks.append(asyncio.create_task(callback(msg)))
+                    loop = salt.utils.asynchronous.aioloop(self.io_loop)
+                    if not loop.is_closed():
+                        tasks.append(loop.create_task(callback(msg)))
                 except Exception as exc:  # pylint: disable=broad-except
                     log.error(
                         "Unhandled exception while running callback %r",
@@ -563,7 +565,9 @@ class PublishClient(salt.transport.base.PublishClient):
         if callback is None:
             self.on_recv_task = None
         else:
-            self.on_recv_task = asyncio.create_task(self.on_recv_handler(callback))
+            loop = salt.utils.asynchronous.aioloop(self.io_loop)
+            if not loop.is_closed():
+                self.on_recv_task = loop.create_task(self.on_recv_handler(callback))
 
     def __enter__(self):
         return self
@@ -941,10 +945,12 @@ class MessageClient:
         if self._closing or self._closed:
             return
         self._closing = True
-        if not self.send_future_map:
-            self.io_loop.call_later(0, self.check_close)
-        else:
-            self.io_loop.call_later(1, self.check_close)
+        loop = salt.utils.asynchronous.aioloop(self.io_loop)
+        if not loop.is_closed():
+            if not self.send_future_map:
+                loop.call_later(0, self.check_close)
+            else:
+                loop.call_later(1, self.check_close)
 
     def check_close(self):
         if not self.send_future_map:
@@ -955,7 +961,9 @@ class MessageClient:
             self._closed = True
             self._closing = False
         else:
-            self.io_loop.call_later(1, self.check_close)
+            loop = salt.utils.asynchronous.aioloop(self.io_loop)
+            if not loop.is_closed():
+                loop.call_later(1, self.check_close)
 
     # pylint: disable=W1701
     def __del__(self):
@@ -1020,7 +1028,9 @@ class MessageClient:
                         # self.remove_message_timeout(message_id)
                     else:
                         if self._on_recv is not None:
-                            self.io_loop.call_soon(self._on_recv, header, body)
+                            loop = salt.utils.asynchronous.aioloop(self.io_loop)
+                            if not loop.is_closed():
+                                loop.call_soon(self._on_recv, header, body)
                         else:
                             log.error(
                                 "Got response for message_id %s that we are not"
@@ -1113,8 +1123,13 @@ class MessageClient:
         if callback is not None:
 
             def handle_future(future):
-                response = future.result()
-                self.io_loop.add_callback(callback, response)
+                loop = salt.utils.asynchronous.aioloop(self.io_loop)
+                if not loop.is_closed():
+                    try:
+                        response = future.result()
+                        salt.utils.asynchronous.add_callback(loop, callback, response)
+                    except Exception as exc:  # pylint: disable=broad-except
+                        log.error("Error in connect callback: %s", exc)
 
             future.add_done_callback(handle_future)
         # Add this future to the mapping
@@ -1124,7 +1139,9 @@ class MessageClient:
             timeout = 1
 
         if timeout is not None:
-            self.io_loop.call_later(timeout, self.timeout_message, message_id, msg)
+            loop = salt.utils.asynchronous.aioloop(self.io_loop)
+            if not loop.is_closed():
+                loop.call_later(timeout, self.timeout_message, message_id, msg)
 
         item = salt.transport.frame.frame_msg(msg, header=header)
 
@@ -1234,6 +1251,12 @@ class PubServer(tornado.tcpserver.TCPServer):
             try:
                 client._read_until_future = client.stream.read_bytes(4096, partial=True)
                 wire_bytes = await client._read_until_future
+                if not wire_bytes:
+                    log.debug("tcp stream to %s closed (empty read)", client.address)
+                    client.close()
+                    self.remove_presence_callback(client)
+                    self.clients.discard(client)
+                    break
                 unpacker.feed(wire_bytes)
                 for framed_msg in unpacker:
                     framed_msg = salt.transport.frame.decode_embedded_strs(framed_msg)
@@ -1268,13 +1291,15 @@ class PubServer(tornado.tcpserver.TCPServer):
             # to verify the client provided a valid certificate
             if self.ssl is not None:
                 # Schedule async validation after handshake completes
-                self.io_loop.create_task(
-                    self._validate_ssl_and_add_client(stream, address)
-                )
+                loop = salt.utils.asynchronous.aioloop(self.io_loop)
+                if not loop.is_closed():
+                    loop.create_task(self._validate_ssl_and_add_client(stream, address))
                 return
         client = Subscriber(stream, address)
         self.clients.add(client)
-        self.io_loop.create_task(self._stream_read(client))
+        loop = salt.utils.asynchronous.aioloop(self.io_loop)
+        if not loop.is_closed():
+            loop.create_task(self._stream_read(client))
 
     async def _validate_ssl_and_add_client(self, stream, address):
         """
@@ -1298,7 +1323,9 @@ class PubServer(tornado.tcpserver.TCPServer):
                 # Successfully got cert - add client
                 client = Subscriber(stream, address)
                 self.clients.add(client)
-                self.io_loop.create_task(self._stream_read(client))
+                loop = salt.utils.asynchronous.aioloop(self.io_loop)
+                if not loop.is_closed():
+                    loop.create_task(self._stream_read(client))
                 return
             except AttributeError as exc:
                 # Socket has no SSL - this shouldn't happen here but reject just in case
@@ -1450,7 +1477,9 @@ class TCPPuller:
                 unpacker.feed(wire_bytes)
                 for framed_msg in unpacker:
                     body = framed_msg["body"]
-                    self.io_loop.create_task(self.payload_handler(body))
+                    loop = salt.utils.asynchronous.aioloop(self.io_loop)
+                    if not loop.is_closed():
+                        loop.create_task(self.payload_handler(body))
             except tornado.iostream.StreamClosedError:
                 if self.path:
                     log.trace("Client disconnected from IPC %s", self.path)
@@ -1482,7 +1511,9 @@ class TCPPuller:
             stream = tornado.iostream.IOStream(
                 connection,
             )
-            self.io_loop.create_task(self.handle_stream(stream))
+            loop = salt.utils.asynchronous.aioloop(self.io_loop)
+            if not loop.is_closed():
+                loop.create_task(self.handle_stream(stream))
         except Exception as exc:  # pylint: disable=broad-except
             log.error("IPC streaming error: %s", exc)
 
@@ -1602,13 +1633,16 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         if started is not None:
             self.started = started
         io_loop = tornado.ioloop.IOLoop()
-        io_loop.add_callback(
-            self.publisher,
-            publish_payload,
-            presence_callback,
-            remove_presence_callback,
-            io_loop,
-        )
+        loop = salt.utils.asynchronous.aioloop(io_loop)
+        if not loop.is_closed():
+            salt.utils.asynchronous.add_callback(
+                loop,
+                self.publisher,
+                publish_payload,
+                presence_callback,
+                remove_presence_callback,
+                io_loop,
+            )
         # run forever
         try:
             io_loop.start()
@@ -1836,13 +1870,20 @@ class _TCPPubServerPublisher:
             future = tornado.concurrent.Future()
             self._connecting_future = future
             # self._connect(timeout)
-            self.io_loop.create_task(self._connect(timeout))
+            loop = salt.utils.asynchronous.aioloop(self.io_loop)
+            if not loop.is_closed():
+                loop.create_task(self._connect(timeout))
 
         if callback is not None:
 
             def handle_future(future):
-                response = future.result()
-                self.io_loop.add_callback(callback, response)
+                loop = salt.utils.asynchronous.aioloop(self.io_loop)
+                if not loop.is_closed():
+                    try:
+                        response = future.result()
+                        salt.utils.asynchronous.add_callback(loop, callback, response)
+                    except Exception as exc:  # pylint: disable=broad-except
+                        log.error("Error in connect callback: %s", exc)
 
             future.add_done_callback(handle_future)
 
@@ -2048,7 +2089,9 @@ class RequestClient(salt.transport.base.RequestClient):
                         self.send_future_map.pop(message_id).set_result(body)
                     else:
                         if self._on_recv is not None:
-                            self.io_loop.call_soon(self._on_recv, header, body)
+                            loop = salt.utils.asynchronous.aioloop(self.io_loop)
+                            if not loop.is_closed():
+                                loop.call_soon(self._on_recv, header, body)
                         else:
                             log.error(
                                 "Got response for message_id %s that we are not"
@@ -2129,7 +2172,9 @@ class RequestClient(salt.transport.base.RequestClient):
             timeout = 1
 
         if timeout is not None:
-            self.io_loop.call_later(timeout, self.timeout_message, message_id, load)
+            loop = salt.utils.asynchronous.aioloop(self.io_loop)
+            if not loop.is_closed():
+                loop.call_later(timeout, self.timeout_message, message_id, load)
 
         item = salt.transport.frame.frame_msg(load, header=header)
 
@@ -2141,7 +2186,9 @@ class RequestClient(salt.transport.base.RequestClient):
 
         # Run send in a callback so we can wait on the future, in case we time
         # out before we are able to connect.
-        self.io_loop.create_task(_do_send())
+        loop = salt.utils.asynchronous.aioloop(self.io_loop)
+        if not loop.is_closed():
+            loop.create_task(_do_send())
         recv = await future
         return recv
 

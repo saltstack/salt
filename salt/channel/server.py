@@ -209,10 +209,6 @@ class ReqServerChannel:
         """
         Handle an incoming request payload (non-pooled / legacy path only).
 
-        This method is only active when ``worker_pools_enabled=False``.  In
-        that configuration this channel owns the external transport socket and
-        processes every request inline.
-
         ``_auth`` handling
         ------------------
         When the payload command is ``_auth`` this method calls
@@ -1184,7 +1180,8 @@ class PoolRoutingChannel:
                 # Standard IPC mode: use unique socket per pool
                 sock_dir = pool_opts.get("sock_dir", "/tmp/salt")
                 os.makedirs(sock_dir, exist_ok=True)
-                pool_opts["workers_ipc_name"] = f"workers-{pool_name}.ipc"
+                master_id = pool_opts.get("id", "master")
+                pool_opts["workers_ipc_name"] = f"workers-{master_id}-{pool_name}.ipc"
                 log.debug(
                     "Pool '%s' RequestServer using IPC socket: %s",
                     pool_name,
@@ -1218,15 +1215,38 @@ class PoolRoutingChannel:
         2. Create RequestClient connections to each pool's RequestServer
         3. Connect the external transport to our routing handler
         """
+        from salt.utils.channel import create_server_transport
+
         pool_name = kwargs.get("pool_name")
         if pool_name:
             # We are in an MWorker process for a specific pool.
-            # Delegate to the pool's RequestServer.
-            if pool_name in self.pool_servers:
-                pool_server = self.pool_servers[pool_name]
-                return pool_server.post_fork(payload_handler, io_loop, **kwargs)
+            # Re-initialize the pool-specific ReqServerChannel in this process.
+            # This ensures that _auth requests are handled correctly inline
+            # by the ReqServerChannel before reaching the worker's handler.
+            pool_opts = self.opts.copy()
+            pool_opts["pool_name"] = pool_name
+            # Disable worker pools for internal routing to avoid circular dependency
+            pool_opts["worker_pools_enabled"] = False
+
+            # Configure IPC for this pool (must match pre_fork setup)
+            if pool_opts.get("ipc_mode") == "tcp":
+                base_port = pool_opts.get("tcp_master_workers", 4515)
+                port_offset = zlib.adler32(pool_name.encode()) % 1000
+                pool_opts["ret_port"] = base_port + port_offset
             else:
-                log.error("Pool '%s' not found in pool_servers", pool_name)
+                master_id = pool_opts.get("id", "master")
+                pool_opts["workers_ipc_name"] = f"workers-{master_id}-{pool_name}.ipc"
+
+            try:
+                pool_transport = create_server_transport(pool_opts)
+                pool_server = ReqServerChannel(pool_opts, pool_transport)
+                return pool_server.post_fork(payload_handler, io_loop, **kwargs)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error(
+                    "Failed to initialize RequestServer for pool '%s' in worker: %s",
+                    pool_name,
+                    exc,
+                )
                 return
 
         import salt.master
