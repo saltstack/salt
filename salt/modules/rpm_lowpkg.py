@@ -55,6 +55,7 @@ def __virtual__():
         "virtuozzo",
         "issabel pbx",
         "openeuler",
+        "vmware photon os",
     )
 
     if os_family in ["redhat", "suse"] or os_grain in enabled:
