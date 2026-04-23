@@ -152,11 +152,19 @@ def update_deb(ctx: Context, salt_version: Version, draft: bool = False):
     formated = "\n".join([f"  {_.replace('-', '*', 1)}" for _ in changes.split("\n")])
     dt = datetime.datetime.utcnow()
     date = dt.strftime("%a, %d %b %Y %H:%M:%S +0000")
+    # Debian requires a prerelease suffix that sorts *before* the final
+    # version.  PEP 440 already does this for Python (e.g. ``3008.0rc1`` <
+    # ``3008.0``), but ``dpkg`` treats an alphanumeric suffix without ``~``
+    # as *greater* than the bare version.  Use the same ``rc`` -> ``~rc``
+    # substitution ``update_rpm`` performs on the RPM ``Version:`` so both
+    # package families ship a prerelease that sorts correctly (e.g.
+    # ``3008.0~rc1`` < ``3008.0``).
+    str_salt_version = str(salt_version).replace("rc", "~rc")
     tmpchanges = "pkg/rpm/salt.spec.1"
     debian_changelog_path = "pkg/debian/changelog"
     tmp_debian_changelog_path = f"{debian_changelog_path}.1"
     with open(tmp_debian_changelog_path, "w", encoding="utf-8") as wfp:
-        wfp.write(f"salt ({salt_version}) stable; urgency=medium\n\n")
+        wfp.write(f"salt ({str_salt_version}) stable; urgency=medium\n\n")
         wfp.write(formated)
         wfp.write(
             f"\n -- Salt Project Packaging <saltproject-packaging@vmware.com>  {date}\n\n"
