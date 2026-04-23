@@ -1426,6 +1426,8 @@ def pre_archive_cleanup(session, pkg):
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmdline = [
+        "python",
+        "-m",
         "tools",
         "pkg",
         "pre-archive-cleanup",
