@@ -75,6 +75,7 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
+import salt.utils.timeutil
 import salt.utils.zeromq
 from salt.exceptions import SaltDeserializationError, SaltInvocationError
 from salt.utils.versions import warn_until
@@ -782,7 +783,7 @@ class SaltEvent:
             if not self.connect_pull(timeout=timeout_s):
                 return False
 
-        data["_stamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        data["_stamp"] = salt.utils.timeutil.utcnow().isoformat()
         event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
         self.pusher.publish(msg)
@@ -817,7 +818,7 @@ class SaltEvent:
             if not self.connect_pull(timeout=timeout_s):
                 return False
 
-        data["_stamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        data["_stamp"] = salt.utils.timeutil.utcnow().isoformat()
         event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
         if self._run_io_loop_sync:
@@ -1059,9 +1060,8 @@ class AsyncEventPublisher:
 
     def __init__(self, opts, io_loop=None):
         warn_until(
-            3008,
-            "salt.utils.event.AsyncEventPublisher is deprecated. "
-            "Please use salt.transport.publish_server instead.",
+            3009,
+            "salt.utils.event.AsyncEventPublisher is deprecated. Please use salt.transport.publish_server instead.",
         )
         import salt.transport.ipc
 
@@ -1069,7 +1069,7 @@ class AsyncEventPublisher:
         default_minion_sock_dir = self.opts["sock_dir"]
         self.opts.update(opts)
 
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        self.io_loop = io_loop or salt.utils.asynchronous.get_ioloop()
         self._closing = False
         self.publisher = None
         self.puller = None
@@ -1166,9 +1166,8 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
 
     def __init__(self, opts, **kwargs):
         warn_until(
-            3008,
-            "salt.utils.event.EventPublisher is deprecated. "
-            "Please use salt.transport.publish_server instead.",
+            3009,
+            "salt.utils.event.EventPublisher is deprecated. Please use salt.transport.publish_server instead.",
         )
         super().__init__(**kwargs)
         self.opts = salt.config.DEFAULT_MASTER_OPTS.copy()
@@ -1257,7 +1256,15 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
             self.puller.close()
             self.puller = None
         if self.io_loop is not None:
-            self.io_loop.close()
+            # We can only close the loop if it is not running
+            try:
+                if not salt.utils.asynchronous.aioloop(self.io_loop).is_running():
+                    self.io_loop.close()
+                else:
+                    self.io_loop.stop()
+            except RuntimeError:
+                # If we're already closing or the loop is in a weird state
+                pass
             self.io_loop = None
 
     def _handle_signals(self, signum, sigframe):

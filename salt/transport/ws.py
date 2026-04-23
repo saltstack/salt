@@ -45,7 +45,7 @@ class PublishClient(salt.transport.base.PublishClient):
     def __init__(self, opts, io_loop, **kwargs):  # pylint: disable=W0231
         self.opts = opts
         if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
+            io_loop = salt.utils.asynchronous.get_ioloop()
         self.io_loop = io_loop
         self.asyncio_loop = salt.utils.asynchronous.aioloop(io_loop)
 
@@ -143,7 +143,9 @@ class PublishClient(salt.transport.base.PublishClient):
                     else:
                         url = "http://ipc.saltproject.io/ws"
                 log.debug("pub client connect %r %r", url, ctx)
-                ws = await asyncio.wait_for(session.ws_connect(url, ssl=ctx), 3)
+                ws = await asyncio.wait_for(
+                    session.ws_connect(url, ssl=ctx if ctx is not None else False), 3
+                )
                 # For SSL connections, give handshake time to complete and fail if invalid
                 if ws and self.ssl:
                     await asyncio.sleep(0.1)
@@ -372,7 +374,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         io_loop=None,
     ):
         if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
+            io_loop = salt.utils.asynchronous.get_ioloop()
         if self._run is None:
             self._run = asyncio.Event()
 
@@ -635,7 +637,9 @@ class RequestClient(salt.transport.base.RequestClient):
         self.session = aiohttp.ClientSession()
         URL = self.get_master_uri(self.opts)
         log.debug("Connect to %s %s", URL, ctx)
-        self.ws = await self.session.ws_connect(URL, ssl=ctx)
+        self.ws = await self.session.ws_connect(
+            URL, ssl=ctx if ctx is not None else False
+        )
 
     async def send(self, load, timeout=60):
         if self.sending or self._closing:

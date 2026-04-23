@@ -30,13 +30,52 @@ def aioloop(io_loop, warn=False):
         raise RuntimeError("Loop must be AbstractEventLoop (prefered) or IOLoop")
 
 
+def get_event_loop():
+    """
+    Get the current event loop. If one is not set, create one and set it.
+    """
+    import warnings
+
+    try:
+        return asyncio.get_running_loop()
+    except RuntimeError:
+        pass
+
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            return asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        return loop
+
+
+def get_ioloop():
+    """
+    Get the current IOLoop. If one is not set, create one and set it.
+    """
+    import warnings
+
+    try:
+        # We try to get the current asyncio loop first
+        asyncio.get_running_loop()
+    except RuntimeError:
+        # No running loop, create/set one to avoid tornado triggering warning
+        get_event_loop()
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        return tornado.ioloop.IOLoop.current()
+
+
 @contextlib.contextmanager
 def current_ioloop(io_loop):
     """
     A context manager that will set the current ioloop to io_loop for the context
     """
     try:
-        orig_loop = tornado.ioloop.IOLoop.current()
+        orig_loop = get_ioloop()
     except RuntimeError:
         orig_loop = None
 
@@ -133,9 +172,10 @@ class SyncWrapper:
         io_loop.stop()
         try:
             io_loop.close(all_fds=True)
-        except KeyError:
+        except (KeyError, RuntimeError):
             pass
-        self.asyncio_loop.close()
+        if not self.asyncio_loop.is_running():
+            self.asyncio_loop.close()
 
     def __getattr__(self, key):
         if key in self._async_methods:
@@ -172,9 +212,10 @@ class SyncWrapper:
 
     def _target(self, key, args, kwargs, results, asyncio_loop):
         asyncio.set_event_loop(asyncio_loop)
-        io_loop = tornado.ioloop.IOLoop.current()
         try:
-            result = io_loop.run_sync(lambda: getattr(self.obj, key)(*args, **kwargs))
+            result = self.io_loop.run_sync(
+                lambda: getattr(self.obj, key)(*args, **kwargs)
+            )
             results.append(True)
             results.append(result)
         except Exception:  # pylint: disable=broad-except

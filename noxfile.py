@@ -85,7 +85,7 @@ if IS_WINDOWS:
 else:
     ONEDIR_PYTHON_PATH = ONEDIR_ARTIFACT_PATH / "bin" / "python3"
 # Python versions to run against
-_PYTHON_VERSIONS = ("3", "3.8", "3.9", "3.10", "3.11")
+_PYTHON_VERSIONS = ("3", "3.8", "3.9", "3.10", "3.11", "3.12", "3.13")
 
 # Nox options
 #  Reuse existing virtualenvs
@@ -1571,7 +1571,7 @@ def _lint_pre_commit(session, rcfile, flags, paths):
         os.environ["VIRTUAL_ENV"],
         interpreter=session._runner.func.python,
         reuse_existing=True,
-        venv=True,
+        venv_backend="venv",
     )
     _lint(
         session,
@@ -1892,12 +1892,12 @@ def ci_test_onedir_pkgs(session):
 
     ci_test_onedir_path = REPO_ROOT / ".nox" / "ci-test-onedir"
     if hasattr(session._runner.venv, "venv_or_virtualenv"):
-        venv = session._runner.venv.venv_or_virtualenv == "venv"
+        venv_backend = session._runner.venv.venv_or_virtualenv
         session._runner.venv = VirtualEnv(
             str(ci_test_onedir_path.relative_to(REPO_ROOT)),
             interpreter=session._runner.func.python,
             reuse_existing=True,
-            venv=venv,
+            venv_backend=venv_backend,
             venv_params=session._runner.venv.venv_params,
         )
     else:

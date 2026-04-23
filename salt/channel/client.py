@@ -9,9 +9,6 @@ import os
 import time
 import uuid
 
-import tornado.gen
-import tornado.ioloop
-
 import salt.crypt
 import salt.exceptions
 import salt.payload
@@ -107,7 +104,7 @@ class AsyncReqChannel:
             opts["master_uri"] = kwargs["master_uri"]
         io_loop = kwargs.get("io_loop")
         if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
+            io_loop = salt.utils.asynchronous.get_ioloop()
 
         timeout = opts.get("request_channel_timeout", REQUEST_CHANNEL_TIMEOUT)
         tries = opts.get("request_channel_tries", REQUEST_CHANNEL_TRIES)
@@ -412,7 +409,7 @@ class AsyncPubChannel:
 
         io_loop = kwargs.get("io_loop")
         if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
+            io_loop = salt.utils.asynchronous.get_ioloop()
 
         auth = salt.crypt.AsyncAuth(opts, io_loop=io_loop)
         host = opts.get("master_ip", "127.0.0.1")

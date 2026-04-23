@@ -13,13 +13,13 @@ import tornado.concurrent
 import tornado.gen
 import tornado.ioloop
 import tornado.netutil
-from tornado.ioloop import IOLoop
 from tornado.ioloop import TimeoutError as TornadoTimeoutError
 from tornado.iostream import IOStream, StreamClosedError
 from tornado.locks import Lock
 
 import salt.defaults
 import salt.transport.frame
+import salt.utils.asynchronous
 import salt.utils.msgpack
 from salt.utils.versions import warn_until
 
@@ -121,7 +121,7 @@ class IPCServer:
 
         # Placeholders for attributes to be populated by method calls
         self.sock = None
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        self.io_loop = io_loop or salt.utils.asynchronous.get_ioloop()
         self._closing = False
 
     def start(self):
@@ -274,7 +274,7 @@ class IPCClient:
         to the server.
 
         """
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        self.io_loop = io_loop or salt.utils.asynchronous.get_ioloop()
         self.socket_path = socket_path
         self._closing = False
         self.stream = None
@@ -296,7 +296,7 @@ class IPCClient:
                 self._connecting_future.exception()  # pylint: disable=E0203
             future = tornado.concurrent.Future()
             self._connecting_future = future
-            self._connect(timeout)
+            self.io_loop.add_callback(self._connect, timeout)
 
         if callback is not None:
 
@@ -329,8 +329,8 @@ class IPCClient:
                 break
 
             if self.stream is None:
-                # with salt.utils.asynchronous.current_ioloop(self.io_loop):
-                self.stream = IOStream(socket.socket(sock_type, socket.SOCK_STREAM))
+                with salt.utils.asynchronous.current_ioloop(self.io_loop):
+                    self.stream = IOStream(socket.socket(sock_type, socket.SOCK_STREAM))
             try:
                 log.trace("IPCClient: Connecting to socket: %s", self.socket_path)
                 yield self.stream.connect(sock_addr)
@@ -403,7 +403,7 @@ class IPCMessageClient(IPCClient):
     import salt.config
     import salt.transport.ipc
 
-    io_loop = tornado.ioloop.IOLoop.current()
+    io_loop = salt.utils.asynchronous.get_ioloop()
 
     ipc_server_socket_path = '/var/run/ipc_server.ipc'
 
@@ -458,7 +458,7 @@ class IPCMessageServer(IPCServer):
         # Import Salt libs
         import salt.transport.ipc
 
-        io_loop = tornado.ioloop.IOLoop.current()
+        io_loop = salt.utils.asynchronous.get_ioloop()
         ipc_server_socket_path = '/var/run/ipc_server.ipc'
         ipc_server = salt.transport.ipc.IPCMessageServer(ipc_server_socket_path, io_loop=io_loop,
                                                          payload_handler=print_to_console)
@@ -502,7 +502,7 @@ class IPCMessagePublisher:
 
         # Placeholders for attributes to be populated by method calls
         self.sock = None
-        self.io_loop = io_loop or IOLoop.current()
+        self.io_loop = io_loop or salt.utils.asynchronous.get_ioloop()
         self._closing = False
         self.streams = set()
 

@@ -246,6 +246,13 @@ class PublishClient(salt.transport.base.PublishClient):
         self.callbacks = {}
         for callback, (running, task) in callbacks.items():
             running.clear()
+            if not task.done():
+                task.cancel()
+                if not self.io_loop.asyncio_loop.is_running():
+                    try:
+                        self.io_loop.asyncio_loop.run_until_complete(task)
+                    except (asyncio.CancelledError, RuntimeError):
+                        pass
         return
 
     # pylint: enable=W1701
@@ -379,6 +386,13 @@ class PublishClient(salt.transport.base.PublishClient):
             self.callbacks = {}
             for callback, (running, task) in callbacks.items():
                 running.clear()
+                if not task.done():
+                    task.cancel()
+                    if not self.io_loop.asyncio_loop.is_running():
+                        try:
+                            self.io_loop.asyncio_loop.run_until_complete(task)
+                        except (asyncio.CancelledError, RuntimeError):
+                            pass
             return
 
         running = asyncio.Event()
@@ -570,14 +584,21 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 reply = await self.handle_message(None, request)
                 await self._socket.send(self.encode_payload(reply))
             except zmq.error.Again:
+                await asyncio.sleep(0.01)
                 continue
             except asyncio.exceptions.TimeoutError:
                 continue
+            except RuntimeError as exc:
+                if "Event loop is closed" not in str(exc):
+                    raise
+                log.trace("Loop closed while handling request in request_handler.")
+                break
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
                     "Exception in request handler",
                     exc_info_on_loglevel=logging.DEBUG,
                 )
+                await asyncio.sleep(0.01)
                 continue
 
     async def handle_message(self, stream, payload):
@@ -661,7 +682,7 @@ class AsyncReqMessageClient:
         self.addr = addr
         self.linger = linger
         if io_loop is None:
-            self.io_loop = tornado.ioloop.IOLoop.current()
+            self.io_loop = salt.utils.asynchronous.get_ioloop()
         else:
             self.io_loop = io_loop
         self.context = zmq.eventloop.future.Context()
@@ -1112,7 +1133,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         io_loop=None,
     ):
         if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
+            io_loop = salt.utils.asynchronous.get_ioloop()
         self.daemon_context = zmq.asyncio.Context()
         (
             self.daemon_pull_sock,
@@ -1124,6 +1145,11 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             try:
                 package = await self.daemon_pull_sock.recv()
                 await publish_payload(package)
+            except RuntimeError as exc:
+                if "Event loop is closed" not in str(exc):
+                    raise
+                log.trace("Loop closed while receiving package in publisher.")
+                break
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
                     "Exception in publisher %s %s",
@@ -1242,7 +1268,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self.linger = linger
         if io_loop is None:
             self.io_loop = salt.utils.asynchronous.aioloop(
-                tornado.ioloop.IOLoop.current()
+                salt.utils.asynchronous.get_ioloop()
             )
         else:
             self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
@@ -1304,38 +1330,17 @@ class RequestClient(salt.transport.base.RequestClient):
             # This hangs if closing the stream causes an import error
             self.context.term()
             self.context = None
-        # if getattr(self, "send_recv_task", None):
-        #    task = self.send_recv_task
-        #    if not task.done():
-        #        task.cancel()
 
-        #        # Suppress "Task was destroyed but it is pending!" warnings
-        #        # by ensuring the task knows its exception will be handled
-        #        task._log_destroy_pending = False
-
-        #        def _drain_cancelled(cancelled_task):
-        #            try:
-        #                cancelled_task.exception()
-        #            except asyncio.CancelledError:  # pragma: no cover
-        #                # Task was cancelled - log the expected messages
-        #                log.trace("Send socket closed while polling.")
-        #                log.trace("Send and receive coroutine ending %s", task_socket)
-        #            except (
-        #                Exception  # pylint: disable=broad-exception-caught
-        #            ):  # pragma: no cover
-        #                log.trace(
-        #                    "Exception while cancelling send/receive task.",
-        #                    exc_info=True,
-        #                )
-        #                log.trace("Send and receive coroutine ending %s", task_socket)
-
-        #        task.add_done_callback(_drain_cancelled)
-        #    else:
-        #        try:
-        #            task.result()
-        #        except Exception as exc:  # pylint: disable=broad-except
-        #            log.trace("Exception while retrieving send/receive task: %r", exc)
-        #    self.send_recv_task = None
+        if hasattr(self, "send_recv_task") and self.send_recv_task is not None:
+            task = self.send_recv_task
+            if not task.done():
+                task.cancel()
+                if not self.io_loop.asyncio_loop.is_running():
+                    try:
+                        self.io_loop.asyncio_loop.run_until_complete(task)
+                    except (asyncio.CancelledError, RuntimeError):
+                        pass
+            self.send_recv_task = None
 
     async def send(self, load, timeout=60):
         """
@@ -1410,6 +1415,12 @@ class RequestClient(salt.transport.base.RequestClient):
                     # The ioloop was closed before polling finished.
                     send_recv_running = False
                     break
+                except RuntimeError as exc:
+                    if "Event loop is closed" not in str(exc):
+                        raise
+                    log.trace("Loop closed while polling send socket.")
+                    send_recv_running = False
+                    break
                 except zmq.ZMQError:
                     log.trace("Send socket closed while polling.")
                     send_recv_running = False
@@ -1422,13 +1433,14 @@ class RequestClient(salt.transport.base.RequestClient):
                 break
             try:
                 await socket.send(message)
-            except asyncio.CancelledError as exc:
+            except (asyncio.CancelledError, zmq.eventloop.future.CancelledError) as exc:
                 log.trace("Loop closed while sending.")
                 send_recv_running = False
                 future.set_exception(exc)
-            except zmq.eventloop.future.CancelledError as exc:
+            except RuntimeError as exc:
+                if "Event loop is closed" not in str(exc):
+                    raise
                 log.trace("Loop closed while sending.")
-                # The ioloop was closed before polling finished.
                 send_recv_running = False
                 future.set_exception(exc)
             except zmq.ZMQError as exc:
@@ -1469,11 +1481,16 @@ class RequestClient(salt.transport.base.RequestClient):
                 try:
                     # Time is in milliseconds.
                     ready = await socket.poll(300, zmq.POLLIN)
-                except asyncio.CancelledError as exc:
+                except (
+                    asyncio.CancelledError,
+                    zmq.eventloop.future.CancelledError,
+                ) as exc:
                     log.trace("Loop closed while polling receive socket.")
                     send_recv_running = False
                     future.set_exception(exc)
-                except zmq.eventloop.future.CancelledError as exc:
+                except RuntimeError as exc:
+                    if "Event loop is closed" not in str(exc):
+                        raise
                     log.trace("Loop closed while polling receive socket.")
                     send_recv_running = False
                     future.set_exception(exc)
@@ -1486,11 +1503,16 @@ class RequestClient(salt.transport.base.RequestClient):
                     try:
                         recv = await socket.recv()
                         received = True
-                    except asyncio.CancelledError as exc:
+                    except (
+                        asyncio.CancelledError,
+                        zmq.eventloop.future.CancelledError,
+                    ) as exc:
                         log.trace("Loop closed while receiving.")
                         send_recv_running = False
                         future.set_exception(exc)
-                    except zmq.eventloop.future.CancelledError as exc:
+                    except RuntimeError as exc:
+                        if "Event loop is closed" not in str(exc):
+                            raise
                         log.trace("Loop closed while receiving.")
                         send_recv_running = False
                         future.set_exception(exc)

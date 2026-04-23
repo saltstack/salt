@@ -36,6 +36,7 @@ import salt.runner
 import salt.serializers.msgpack
 import salt.state
 import salt.utils.args
+import salt.utils.asynchronous
 import salt.utils.atomicfile
 import salt.utils.ctx
 import salt.utils.event
@@ -996,8 +997,7 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
             log.trace("Ignore tag %s", tag)
 
     def run(self):
-        io_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(io_loop)
+        io_loop = salt.utils.asynchronous.get_event_loop()
         with salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], io_loop=io_loop, listen=True
         ) as event_bus:
@@ -1169,8 +1169,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         Bind to the local port
         """
-        self.io_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.io_loop)
+        self.io_loop = salt.utils.asynchronous.get_event_loop()
         for req_channel in self.req_channels:
             req_channel.post_fork(
                 self._handle_payload, io_loop=self.io_loop

@@ -181,7 +181,6 @@ connection credentials are used instead of vCenter credentials, the ``host_names
                     6500
 """
 
-import datetime
 import logging
 import sys
 from functools import wraps
@@ -191,6 +190,7 @@ import salt.utils.dictupdate as dictupdate
 import salt.utils.http
 import salt.utils.path
 import salt.utils.pbm
+import salt.utils.timeutil
 import salt.utils.vmware
 import salt.utils.vsan
 from salt.config.schemas.esxcluster import (
@@ -3877,7 +3877,7 @@ def update_host_datetime(
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         date_time_manager = _get_date_time_mgr(host_ref)
         try:
-            date_time_manager.UpdateDateTime(datetime.datetime.utcnow())
+            date_time_manager.UpdateDateTime(salt.utils.timeutil.utcnow())
         except vim.fault.HostConfigFault as err:
             msg = "'vsphere.update_date_time' failed for host {}: {}".format(
                 host_name, err

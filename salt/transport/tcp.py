@@ -413,14 +413,25 @@ class PublishClient(salt.transport.base.PublishClient):
                     async with self._read_in_progress:
                         try:
                             byts = await self._stream.read_bytes(4096, partial=True)
-                        except tornado.iostream.StreamClosedError:
-                            log.trace("Stream closed, reconnecting.")
+                        except (
+                            tornado.iostream.StreamClosedError,
+                            RuntimeError,
+                        ) as exc:
+                            if isinstance(
+                                exc, RuntimeError
+                            ) and "Event loop is closed" not in str(exc):
+                                raise
+                            log.trace(
+                                "Stream closed or loop closed, reconnecting: %s", exc
+                            )
                             stream = self._stream
                             self._stream = None
-                            stream.close()
+                            if stream:
+                                stream.close()
                             if self.disconnect_callback:
-                                self.disconnect_callback()
-                            await self.connect()
+                                await self.disconnect_callback()
+                            if not self._closing:
+                                await self.connect()
                             return
                         self.unpacker.feed(byts)
                         for msg in self.unpacker:
@@ -443,14 +454,20 @@ class PublishClient(salt.transport.base.PublishClient):
                 async with self._read_in_progress:
                     try:
                         byts = await self._stream.read_bytes(4096, partial=True)
-                    except tornado.iostream.StreamClosedError:
-                        log.trace("Stream closed, reconnecting.")
+                    except (tornado.iostream.StreamClosedError, RuntimeError) as exc:
+                        if isinstance(
+                            exc, RuntimeError
+                        ) and "Event loop is closed" not in str(exc):
+                            raise
+                        log.trace("Stream closed or loop closed, reconnecting: %s", exc)
                         stream = self._stream
                         self._stream = None
-                        stream.close()
+                        if stream:
+                            stream.close()
                         if self.disconnect_callback:
                             await self.disconnect_callback()
-                        await self.connect()
+                        if not self._closing:
+                            await self.connect()
                         log.debug("Re-connected - continue")
                         continue
                     self.unpacker.feed(byts)
@@ -650,7 +667,7 @@ class SaltMessageServer(tornado.tcpserver.TCPServer):
     """
 
     def __init__(self, message_handler, *args, **kwargs):
-        io_loop = kwargs.pop("io_loop", None) or tornado.ioloop.IOLoop.current()
+        io_loop = kwargs.pop("io_loop", None) or salt.utils.asynchronous.get_ioloop()
         self._closing = False
         super().__init__(*args, **kwargs)
         self.io_loop = io_loop
@@ -758,9 +775,17 @@ class LoadBalancerWorker(SaltMessageServer):
                 # Schedule handling the connection using the event loop.
                 # Must use call_soon_threadsafe since we're in a background thread
                 aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
-                aio_loop.call_soon_threadsafe(
-                    self._handle_connection, client_socket, address
-                )
+                try:
+                    aio_loop.call_soon_threadsafe(
+                        self._handle_connection, client_socket, address
+                    )
+                except RuntimeError as exc:
+                    if "Event loop is closed" not in str(exc):
+                        raise
+                    log.trace(
+                        "Loop closed while scheduling connection in LoadBalancerWorker."
+                    )
+                    break
         except (KeyboardInterrupt, SystemExit):
             pass
 
@@ -821,7 +846,7 @@ class MessageClient:
         self.connect_callback = connect_callback
         self.disconnect_callback = disconnect_callback
         if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
+            io_loop = salt.utils.asynchronous.get_ioloop()
         self.io_loop = io_loop
         self.asyncio_loop = salt.utils.asynchronous.aioloop(io_loop)
         self._tcp_client = TCPClientKeepAlive(opts, resolver=resolver)
@@ -1053,11 +1078,15 @@ class Subscriber:
         self._closing = False
         self._read_until_future = None
         self.id_ = None
+        self.task = None
 
     def close(self):
         if self._closing:
             return
         self._closing = True
+        if self.task is not None:
+            self.task.cancel()
+            self.task = None
         if not self.stream.closed():
             self.stream.close()
             if self._read_until_future is not None and self._read_until_future.done():
@@ -1095,7 +1124,7 @@ class PubServer(tornado.tcpserver.TCPServer):
         super().__init__(ssl_options=ssl)
         if io_loop is None:
             self.io_loop = salt.utils.asynchronous.aioloop(
-                tornado.ioloop.IOLoop.current()
+                salt.utils.asynchronous.get_ioloop()
             )
         else:
             self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
@@ -1148,6 +1177,10 @@ class PubServer(tornado.tcpserver.TCPServer):
                 self.remove_presence_callback(client)
                 self.clients.discard(client)
                 break
+            except RuntimeError as exc:
+                if "Event loop is closed" not in str(exc):
+                    raise
+                break
             except Exception as e:  # pylint: disable=broad-except
                 log.error(
                     "Exception parsing response from %s", client.address, exc_info=True
@@ -1176,7 +1209,7 @@ class PubServer(tornado.tcpserver.TCPServer):
                 return
         client = Subscriber(stream, address)
         self.clients.add(client)
-        self.io_loop.create_task(self._stream_read(client))
+        client.task = self.io_loop.create_task(self._stream_read(client))
 
     async def _validate_ssl_and_add_client(self, stream, address):
         """
@@ -1200,7 +1233,7 @@ class PubServer(tornado.tcpserver.TCPServer):
                 # Successfully got cert - add client
                 client = Subscriber(stream, address)
                 self.clients.add(client)
-                self.io_loop.create_task(self._stream_read(client))
+                client.task = self.io_loop.create_task(self._stream_read(client))
                 return
             except AttributeError as exc:
                 # Socket has no SSL - this shouldn't happen here but reject just in case
@@ -1305,7 +1338,7 @@ class TCPPuller:
         self.sock = None
         if io_loop is None:
             self.io_loop = salt.utils.asynchronous.aioloop(
-                tornado.ioloop.IOLoop.current()
+                salt.utils.asynchronous.get_ioloop()
             )
         else:
             self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
@@ -1523,7 +1556,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         io_loop=None,
     ):
         if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
+            io_loop = salt.utils.asynchronous.get_ioloop()
         # Spin up the publisher
         ctx = None
         if self.ssl is not None:
@@ -1673,7 +1706,7 @@ class _TCPPubServerPublisher:
     import salt.config
     import salt.transport.ipc
 
-    io_loop = tornado.ioloop.IOLoop.current()
+    io_loop = salt.utils.asynchronous.get_ioloop()
 
     ipc_server_socket_path = '/var/run/ipc_server.ipc'
 
@@ -1706,7 +1739,7 @@ class _TCPPubServerPublisher:
         """
         if io_loop is None:
             self.io_loop = salt.utils.asynchronous.aioloop(
-                tornado.ioloop.IOLoop.current()
+                salt.utils.asynchronous.get_ioloop()
             )
         else:
             self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
@@ -2039,12 +2072,13 @@ class RequestClient(salt.transport.base.RequestClient):
         if self.task is not None:
             self.task.cancel()
             # Wait for the task to finish via asyncio
-            group = asyncio.gather(self.task)
-            try:
-                self.task.get_loop().run_until_complete(group)
-            except RuntimeError:
-                # Ignore event loop was already running message
-                pass
+            if not self.task.get_loop().is_running():
+                group = asyncio.gather(self.task)
+                try:
+                    self.task.get_loop().run_until_complete(group)
+                except RuntimeError:
+                    # Ignore event loop was already running message
+                    pass
             self.task = None
 
     def __enter__(self):

@@ -63,11 +63,14 @@ class DictProxy(dict):
     def __init__(self, target: dict, parent_optsdict: OptsDict, key: str):
         # Initialize underlying dict with target data AND keep _target
         # We need both: underlying dict for C code, _target for our logic
-        super().__init__(target)
+        # Initialize empty first to avoid triggering COW during init
+        super().__init__()
         object.__setattr__(self, "_target", target)
         object.__setattr__(self, "_parent", parent_optsdict)
         object.__setattr__(self, "_key", key)
         object.__setattr__(self, "_copied", False)
+        # Sync underlying storage using C-level update to avoid COW
+        dict.update(self, target)
 
     def _ensure_copied(self):
         """Copy target to parent's _local on first mutation."""
@@ -181,11 +184,14 @@ class ListProxy(list):
     def __init__(self, target: list, parent_optsdict: OptsDict, key: str):
         # Initialize underlying list with target data AND keep _target
         # We need both: underlying list for C code, _target for our logic
-        super().__init__(target)
+        # Initialize empty first to avoid triggering COW during init
+        super().__init__()
         object.__setattr__(self, "_target", target)
         object.__setattr__(self, "_parent", parent_optsdict)
         object.__setattr__(self, "_key", key)
         object.__setattr__(self, "_copied", False)
+        # Sync underlying storage using C-level extend to avoid COW
+        list.extend(self, target)
 
     def _ensure_copied(self):
         """Copy target to parent's _local on first mutation."""
@@ -964,9 +970,14 @@ class OptsDict(dict):
         more memory efficient. When the copied OptsDict is modified, only the
         modified keys are copied, not the entire dict.
         """
+        if id(self) in memo:
+            return memo[id(self)]
+
         # Use copy-on-write by creating a child OptsDict
         # This shares data with parent until mutations occur
         child = OptsDict.from_parent(self, name=f"{self._name}_deepcopy")
+        memo[id(self)] = child
+
         # Sync underlying dict to support C-level iteration (e.g., JSON serialization)
         # This ensures json.dumps() works without needing to call __iter__() first
         list(child)  # Triggers __iter__() which syncs the underlying dict
