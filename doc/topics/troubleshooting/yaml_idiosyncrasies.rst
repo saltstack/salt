@@ -121,7 +121,7 @@ example the following state:
 
     /tmp/foo.txt:
       file.managed:
-        - contents: |
+        contents: |
           foo
           bar
           baz
@@ -139,7 +139,7 @@ run the state:
     ---
     /tmp/foo.txt:
       file.managed:
-        - contents: |
+        contents: |
           foo
           bar    <======================
           baz
@@ -152,7 +152,7 @@ The correct indentation would be as follows:
 
     /tmp/foo.txt:
       file.managed:
-        - contents: |
+        contents: |
             foo
             bar
             baz
@@ -193,9 +193,9 @@ string literal:
 
     cheese:
       ssh_auth.present:
-        - user: tbortels
-        - source: salt://ssh_keys/chease.pub
-        - config: '%h/.ssh/authorized_keys'
+        user: tbortels
+        source: salt://ssh_keys/chease.pub
+        config: '%h/.ssh/authorized_keys'
 
 Time Expressions
 ================
@@ -270,10 +270,10 @@ ALSO DOES NOT WORK:
     fred:
       user.present
       ssh_auth.present:
-        - name: AAAAB3NzaC...
-        - user: fred
-        - enc: ssh-dss
-        - require:
+        name: AAAAB3NzaC...
+        user: fred
+        enc: ssh-dss
+        require:
           - user: fred
 
 The correct way is to define them like this:
@@ -287,10 +287,10 @@ The correct way is to define them like this:
     fred:
       user.present: []
       ssh_auth.present:
-        - name: AAAAB3NzaC...
-        - user: fred
-        - enc: ssh-dss
-        - require:
+        name: AAAAB3NzaC...
+        user: fred
+        enc: ssh-dss
+        require:
           - user: fred
 
 

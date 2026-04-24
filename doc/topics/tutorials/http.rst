@@ -478,28 +478,28 @@ Therefore, the following states are valid:
 
     http://example.com/restapi:
       http.query:
-        - match: 'SUCCESS'
-        - username: 'larry'
-        - password: '5700g3543v4r'
-        - data_render: True
-        - header_file: /tmp/headers.txt
-        - data_file: /tmp/data.txt
-        - header_render: True
-        - cookies: True
-        - persist_session: True
+        match: 'SUCCESS'
+        username: 'larry'
+        password: '5700g3543v4r'
+        data_render: True
+        header_file: /tmp/headers.txt
+        data_file: /tmp/data.txt
+        header_render: True
+        cookies: True
+        persist_session: True
 
     http://example.com/restapi:
       http.query:
-        - match_type: pcre
-        - match: '(?i)succe[ss|ed]'
-        - username: 'larry'
-        - password: '5700g3543v4r'
-        - data_render: True
-        - header_file: /tmp/headers.txt
-        - data_file: /tmp/data.txt
-        - header_render: True
-        - cookies: True
-        - persist_session: True
+        match_type: pcre
+        match: '(?i)succe[ss|ed]'
+        username: 'larry'
+        password: '5700g3543v4r'
+        data_render: True
+        header_file: /tmp/headers.txt
+        data_file: /tmp/data.txt
+        header_render: True
+        cookies: True
+        persist_session: True
 
 In addition to, or instead of a match pattern, the status code for a URL can be
 checked. This is done using the ``status`` argument:
@@ -508,7 +508,7 @@ checked. This is done using the ``status`` argument:
 
     http://example.com/:
       http.query:
-        - status: 200
+        status: 200
 
 If both are specified, both will be checked, but if only one is ``True`` and the
 other is ``False``, then ``False`` will be returned. In this case, the comments

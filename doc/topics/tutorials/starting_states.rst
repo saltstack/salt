@@ -70,7 +70,7 @@ A typical SLS file will often look like this in YAML:
     apache:
       pkg.installed: []
       service.running:
-        - require:
+        require:
           - pkg: apache
 
 This SLS data will ensure that the package named apache is installed, and
@@ -105,28 +105,28 @@ and a user and group may need to be set up.
     apache:
       pkg.installed: []
       service.running:
-        - watch:
+        watch:
           - pkg: apache
           - file: /etc/httpd/conf/httpd.conf
           - user: apache
       user.present:
-        - uid: 87
-        - gid: 87
-        - home: /var/www/html
-        - shell: /bin/nologin
-        - require:
+        uid: 87
+        gid: 87
+        home: /var/www/html
+        shell: /bin/nologin
+        require:
           - group: apache
       group.present:
-        - gid: 87
-        - require:
+        gid: 87
+        require:
           - pkg: apache
 
     /etc/httpd/conf/httpd.conf:
       file.managed:
-        - source: salt://apache/httpd.conf
-        - user: root
-        - group: root
-        - mode: 644
+        source: salt://apache/httpd.conf
+        user: root
+        group: root
+        mode: 644
 
 This SLS data greatly extends the first example, and includes a config file,
 a user, a group and new requisite statement: ``watch``.
@@ -185,11 +185,11 @@ the toolkit. Consider this SSH example:
 
     /etc/ssh/ssh_config:
       file.managed:
-        - user: root
-        - group: root
-        - mode: 644
-        - source: salt://ssh/ssh_config
-        - require:
+        user: root
+        group: root
+        mode: 644
+        source: salt://ssh/ssh_config
+        require:
           - pkg: openssh-client
 
 ``ssh/server.sls:``
@@ -204,7 +204,7 @@ the toolkit. Consider this SSH example:
 
     sshd:
       service.running:
-        - require:
+        require:
           - pkg: openssh-client
           - pkg: openssh-server
           - file: /etc/ssh/banner
@@ -212,11 +212,11 @@ the toolkit. Consider this SSH example:
 
     /etc/ssh/sshd_config:
       file.managed:
-        - user: root
-        - group: root
-        - mode: 644
-        - source: salt://ssh/sshd_config
-        - require:
+        user: root
+        group: root
+        mode: 644
+        source: salt://ssh/sshd_config
+        require:
           - pkg: openssh-server
 
     /etc/ssh/banner:
@@ -296,7 +296,7 @@ add more watchers to apache to include mod_python.
     extend:
       apache:
         service:
-          - watch:
+          watch:
             - pkg: mod_python
 
     mod_python:
@@ -371,34 +371,34 @@ for the Grains to be accessed from within the template. A few examples:
     apache:
       pkg.installed:
         {% if grains['os'] == 'RedHat'%}
-        - name: httpd
+        name: httpd
         {% endif %}
       service.running:
         {% if grains['os'] == 'RedHat'%}
-        - name: httpd
+        name: httpd
         {% endif %}
-        - watch:
+        watch:
           - pkg: apache
           - file: /etc/httpd/conf/httpd.conf
           - user: apache
       user.present:
-        - uid: 87
-        - gid: 87
-        - home: /var/www/html
-        - shell: /bin/nologin
-        - require:
+        uid: 87
+        gid: 87
+        home: /var/www/html
+        shell: /bin/nologin
+        require:
           - group: apache
       group.present:
-        - gid: 87
-        - require:
+        gid: 87
+        require:
           - pkg: apache
 
     /etc/httpd/conf/httpd.conf:
       file.managed:
-        - source: salt://apache/httpd.conf
-        - user: root
-        - group: root
-        - mode: 644
+        source: salt://apache/httpd.conf
+        user: root
+        group: root
+        mode: 644
 
 This example is simple. If the ``os`` grain states that the operating system is
 Red Hat, then the name of the Apache package and service needs to be httpd.
@@ -418,42 +418,42 @@ a MooseFS distributed filesystem chunkserver:
     {% for mnt in salt['cmd.run']('ls /dev/data/moose*').split() %}
     /mnt/moose{{ mnt[-1] }}:
       mount.mounted:
-        - device: {{ mnt }}
-        - fstype: xfs
-        - mkmnt: True
+        device: {{ mnt }}
+        fstype: xfs
+        mkmnt: True
       file.directory:
-        - user: mfs
-        - group: mfs
-        - require:
+        user: mfs
+        group: mfs
+        require:
           - user: mfs
           - group: mfs
     {% endfor %}
 
     /etc/mfshdd.cfg:
       file.managed:
-        - source: salt://moosefs/mfshdd.cfg
-        - user: root
-        - group: root
-        - mode: 644
-        - template: jinja
-        - require:
+        source: salt://moosefs/mfshdd.cfg
+        user: root
+        group: root
+        mode: 644
+        template: jinja
+        require:
           - pkg: mfs-chunkserver
 
     /etc/mfschunkserver.cfg:
       file.managed:
-        - source: salt://moosefs/mfschunkserver.cfg
-        - user: root
-        - group: root
-        - mode: 644
-        - template: jinja
-        - require:
+        source: salt://moosefs/mfschunkserver.cfg
+        user: root
+        group: root
+        mode: 644
+        template: jinja
+        require:
           - pkg: mfs-chunkserver
 
     mfs-chunkserver:
       pkg.installed: []
     mfschunkserver:
       service.running:
-        - require:
+        require:
     {% for mnt in salt['cmd.run']('ls /dev/data/moose*') %}
           - mount: /mnt/moose{{ mnt[-1] }}
           - file: /mnt/moose{{ mnt[-1] }}

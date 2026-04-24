@@ -189,7 +189,7 @@ PATH using a :mod:`file.symlink <salt.states.file.symlink>` state.
 
     /usr/bin/foo:
       file.symlink:
-        - target: /usr/local/bin/foo
+        target: /usr/local/bin/foo
 
 .. _which-version:
 
@@ -240,10 +240,10 @@ via a :py:func:`file.managed <salt.states.file.managed>` state, using the
 
     /etc/my_super_secret_file:
       file.managed:
-        - user: secret
-        - group: secret
-        - mode: 600
-        - contents_pillar: secret_files:my_super_secret_file
+        user: secret
+        group: secret
+        mode: 600
+        contents_pillar: secret_files:my_super_secret_file
 
 In this example, the source file would be located in a directory called
 ``secret_files`` underneath the file_tree path for the minion. The syntax for
@@ -284,38 +284,38 @@ service to restart right after the upgrade:
 
     Disable starting services:
       file.managed:
-        - name: /usr/sbin/policy-rc.d
-        - user: root
-        - group: root
-        - mode: 0755
-        - contents:
+        name: /usr/sbin/policy-rc.d
+        user: root
+        group: root
+        mode: 0755
+        contents:
           - '#!/bin/sh'
           - exit 101
         # do not touch if already exists
-        - replace: False
-        - prereq:
+        replace: False
+        prereq:
           - pkg: Upgrade Salt Minion
 
     {%- endif %}
 
     Upgrade Salt Minion:
       pkg.installed:
-        - name: salt-minion
-        - version: 2016.11.3{% if grains['os_family'] == 'Debian' %}+ds-1{% endif %}
-        - order: last
+        name: salt-minion
+        version: 2016.11.3{% if grains['os_family'] == 'Debian' %}+ds-1{% endif %}
+        order: last
 
     Enable Salt Minion:
       service.enabled:
-        - name: salt-minion
-        - require:
+        name: salt-minion
+        require:
           - pkg: Upgrade Salt Minion
 
     {%- if grains['os_family'] == 'Debian' %}
 
     Enable starting services:
       file.absent:
-        - name: /usr/sbin/policy-rc.d
-        - onchanges:
+        name: /usr/sbin/policy-rc.d
+        onchanges:
           - pkg: Upgrade Salt Minion
 
     {%- endif %}
@@ -331,9 +331,9 @@ The following example works on UNIX-like operating systems:
     {%- if grains['os'] != 'Windows' %}
     Restart Salt Minion:
       cmd.run:
-        - name: 'salt-call service.restart salt-minion'
-        - bg: True
-        - onchanges:
+        name: 'salt-call service.restart salt-minion'
+        bg: True
+        onchanges:
           - pkg: Upgrade Salt Minion
     {%- endif %}
 
@@ -351,12 +351,12 @@ as follows:
     Restart Salt Minion:
       cmd.run:
     {%- if grains['kernel'] == 'Windows' %}
-        - name: 'C:\salt\salt-call.bat service.restart salt-minion'
+        name: 'C:\salt\salt-call.bat service.restart salt-minion'
     {%- else %}
-        - name: 'salt-call service.restart salt-minion'
+        name: 'salt-call service.restart salt-minion'
     {%- endif %}
-        - bg: True
-        - onchanges:
+        bg: True
+        onchanges:
           - pkg: Upgrade Salt Minion
 
 However, it requires more advanced tricks to upgrade from legacy version of
@@ -374,10 +374,10 @@ should run last or watch for the ``pkg`` state changes:
     Restart Salt Minion:
       cmd.run:
     {%- if grains['kernel'] == 'Windows' %}
-        - name: 'start powershell "Restart-Service -Name salt-minion"'
+        name: 'start powershell "Restart-Service -Name salt-minion"'
     {%- else %}
         # fork and disown the process
-        - name: |-
+        name: |-
             exec 0>&- # close stdin
             exec 1>&- # close stdout
             exec 2>&- # close stderr
@@ -408,15 +408,15 @@ needs to run on the master):
 
     Wait for salt minion:
       loop.until_no_eval:
-        - name: saltutil.runner
-        - expected:
+        name: saltutil.runner
+        expected:
             - my_minion
-        - args:
+        args:
             - manage.up
-        - kwargs:
+        kwargs:
             tgt: my_minion
-        - period: 3
-        - init_wait: 3
+        period: 3
+        init_wait: 3
 
 This will, after an initial delay of 3 seconds, execute the `manage.up`-runner
 targeted specifically for `my_minion`. It will do this every `period` seconds

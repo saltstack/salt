@@ -19,8 +19,8 @@ can revert to the default service module:
 
     httpd:
       service.running:
-        - enable: True
-        - provider: service
+        enable: True
+        provider: service
 
 In this instance, the basic :py:mod:`~salt.modules.service` module (which
 manages :program:`sysvinit`-based services) will replace the
@@ -45,7 +45,7 @@ module can be used to provide certain functionality.
 
     emacs:
       pkg.installed:
-        - provider:
+        provider:
           - cmd: customcmd
 
 In this example, the state is being instructed to use a custom module to invoke

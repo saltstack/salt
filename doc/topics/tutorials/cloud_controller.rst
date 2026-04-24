@@ -60,20 +60,20 @@ to set up the libvirt pki keys.
     libvirt:
       pkg.installed: []
       file.managed:
-        - name: /etc/sysconfig/libvirtd
-        - contents: 'LIBVIRTD_ARGS="--listen"'
-        - require:
+        name: /etc/sysconfig/libvirtd
+        contents: 'LIBVIRTD_ARGS="--listen"'
+        require:
           - pkg: libvirt
       virt.keys:
-        - require:
+        require:
           - pkg: libvirt
       service.running:
-        - name: libvirtd
-        - require:
+        name: libvirtd
+        require:
           - pkg: libvirt
           - network: br0
           - libvirt: libvirt
-        - watch:
+        watch:
           - file: libvirt
 
     libvirt-python:
@@ -81,7 +81,7 @@ to set up the libvirt pki keys.
 
     libguestfs:
       pkg.installed:
-        - pkgs:
+        pkgs:
           - libguestfs
           - libguestfs-tools
 
@@ -96,16 +96,16 @@ a hypervisor connecting the bridge to eth0:
 
     eth0:
       network.managed:
-        - enabled: True
-        - type: eth
-        - bridge: br0
+        enabled: True
+        type: eth
+        bridge: br0
 
     br0:
       network.managed:
-        - enabled: True
-        - type: bridge
-        - proto: dhcp
-        - require:
+        enabled: True
+        type: bridge
+        proto: dhcp
+        require:
           - network: eth0
 
 

@@ -238,12 +238,12 @@ presence of the instance will be managed statefully.
 
     my-instance-name:
       cloud.present:
-        - cloud_provider: my-ec2-config
-        - image: ami-1624987f
-        - size: 't1.micro'
-        - ssh_username: ec2-user
-        - securitygroup: default
-        - delvol_on_destroy: True
+        cloud_provider: my-ec2-config
+        image: ami-1624987f
+        size: 't1.micro'
+        ssh_username: ec2-user
+        securitygroup: default
+        delvol_on_destroy: True
 
 cloud.profile
 ~~~~~~~~~~~~~
@@ -256,7 +256,7 @@ instance will be managed statefully.
 
     my-instance-name:
       cloud.profile:
-        - profile: ec2-centos64-x64
+        profile: ec2-centos64-x64
 
 cloud.absent
 ~~~~~~~~~~~~

@@ -220,11 +220,11 @@ preferred:
 
     apache_conf:
       file.managed:
-        - name: {{ name }}
-        - source: {{ tmpl }}
-        - template: jinja
-        - user: root
-        - watch_in:
+        name: {{ name }}
+        source: {{ tmpl }}
+        template: jinja
+        user: root
+        watch_in:
           - service: apache
 
 
@@ -253,11 +253,11 @@ locations within a single state:
 
     apache_conf:
       file.managed:
-        - name: {{ salt['pillar.get']('apache:lookup:name') }}
-        - source: {{ salt['pillar.get']('apache:lookup:config:tmpl') }}
-        - template: jinja
-        - user: root
-        - watch_in:
+        name: {{ salt['pillar.get']('apache:lookup:name') }}
+        source: {{ salt['pillar.get']('apache:lookup:config:tmpl') }}
+        template: jinja
+        user: root
+        watch_in:
           - service: apache
 
 This flexibility provides users with a centralized location to modify
@@ -280,13 +280,13 @@ is not very modular to one that is:
       pkg:
         - installed
       service.running:
-        - enable: True
+        enable: True
 
     /etc/httpd/httpd.conf:
       file.managed:
-        - source: salt://apache/files/httpd.conf
-        - template: jinja
-        - watch_in:
+        source: salt://apache/files/httpd.conf
+        template: jinja
+        watch_in:
           - service: httpd
 
 The example above is probably the worst-case scenario when writing a state.
@@ -303,7 +303,7 @@ There is also the issue of having the configuration file located in the init,
 as a user would be unable to simply install the service and use the default
 conf file.
 
-Our second revision begins to address the referencing by using ``- name``, as
+Our second revision begins to address the referencing by using ``name``, as
 opposed to direct ID references:
 
 ``/srv/salt/apache/init.sls``:
@@ -312,17 +312,17 @@ opposed to direct ID references:
 
     apache:
       pkg.installed:
-        - name: httpd
+        name: httpd
       service.running:
-        - name: httpd
-        - enable: True
+        name: httpd
+        enable: True
 
     apache_conf:
       file.managed:
-        - name: /etc/httpd/httpd.conf
-        - source: salt://apache/files/httpd.conf
-        - template: jinja
-        - watch_in:
+        name: /etc/httpd/httpd.conf
+        source: salt://apache/files/httpd.conf
+        template: jinja
+        watch_in:
           - service: apache
 
 The above init file is better than our original, yet it has several issues
@@ -374,18 +374,18 @@ modification of static values:
 
     apache:
       pkg.installed:
-        - name: {{ apache.server }}
+        name: {{ apache.server }}
       service.running:
-        - name: {{ apache.service }}
-        - enable: True
+        name: {{ apache.service }}
+        enable: True
 
     apache_conf:
       file.managed:
-        - name: {{ apache.conf }}
-        - source: {{ salt['pillar.get']('apache:lookup:config:tmpl') }}
-        - template: jinja
-        - user: root
-        - watch_in:
+        name: {{ apache.conf }}
+        source: {{ salt['pillar.get']('apache:lookup:config:tmpl') }}
+        template: jinja
+        user: root
+        watch_in:
           - service: apache
 
 The changes to this state now allow us to easily identify the location of the
@@ -431,10 +431,10 @@ to be broken into two states.
 
     apache:
       pkg.installed:
-        - name: {{ apache.server }}
+        name: {{ apache.server }}
       service.running:
-        - name: {{ apache.service }}
-        - enable: True
+        name: {{ apache.service }}
+        enable: True
 
 ``/srv/salt/apache/conf.sls``:
 
@@ -447,11 +447,11 @@ to be broken into two states.
 
     apache_conf:
       file.managed:
-        - name: {{ apache.conf }}
-        - source: {{ salt['pillar.get']('apache:lookup:config:tmpl') }}
-        - template: jinja
-        - user: root
-        - watch_in:
+        name: {{ apache.conf }}
+        source: {{ salt['pillar.get']('apache:lookup:config:tmpl') }}
+        template: jinja
+        user: root
+        watch_in:
           - service: apache
 
 This new structure now allows users to choose whether they only wish to
@@ -480,7 +480,7 @@ accessible by the appropriate hosts:
 
     testdb:
       mysql_database.present:
-        - name: testerdb
+        name: testerdb
 
 ``/srv/salt/mysql/user.sls``:
 
@@ -491,10 +491,10 @@ accessible by the appropriate hosts:
 
     testdb_user:
       mysql_user.present:
-        - name: frank
-        - password: "test3rdb"
-        - host: localhost
-        - require:
+        name: frank
+        password: "test3rdb"
+        host: localhost
+        require:
           - sls: mysql.testerdb
 
 Many users would review this state and see that the password is there in plain
@@ -536,7 +536,7 @@ the associated pillar:
 
     testdb:
       mysql_database.present:
-        - name: {{ salt['pillar.get']('mysql:lookup:name') }}
+        name: {{ salt['pillar.get']('mysql:lookup:name') }}
 
 ``/srv/salt/mysql/user.sls``:
 
@@ -547,10 +547,10 @@ the associated pillar:
 
     testdb_user:
       mysql_user.present:
-        - name: {{ salt['pillar.get']('mysql:lookup:user') }}
-        - password: {{ salt['pillar.get']('mysql:lookup:password') }}
-        - host: {{ salt['pillar.get']('mysql:lookup:host') }}
-        - require:
+        name: {{ salt['pillar.get']('mysql:lookup:user') }}
+        password: {{ salt['pillar.get']('mysql:lookup:password') }}
+        host: {{ salt['pillar.get']('mysql:lookup:host') }}
+        require:
           - sls: mysql.testerdb
 
 Now that the database details have been moved to the associated pillar file,

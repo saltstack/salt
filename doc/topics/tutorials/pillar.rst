@@ -165,7 +165,7 @@ state, you can use Jinja:
     {% for user, uid in pillar.get('users', {}).items() %}
     {{user}}:
       user.present:
-        - uid: {{uid}}
+        uid: {{uid}}
     {% endfor %}
 
 This approach allows for users to be safely defined in a pillar and then the
@@ -220,7 +220,7 @@ inside of the pillar, so sls files can be safely parameterized:
 
     apache:
       pkg.installed:
-        - name: {{ pillar['pkgs']['apache'] }}
+        name: {{ pillar['pkgs']['apache'] }}
 
 Or, if no pillar is available a default can be set as well:
 
@@ -235,7 +235,7 @@ Or, if no pillar is available a default can be set as well:
 
     apache:
       pkg.installed:
-        - name: {{ salt['pillar.get']('pkgs:apache', 'httpd') }}
+        name: {{ salt['pillar.get']('pkgs:apache', 'httpd') }}
 
 In the above example, if the pillar value ``pillar['pkgs']['apache']`` is not
 set in the minion's pillar, then the default of ``httpd`` will be used.
@@ -262,11 +262,11 @@ A simple formula:
 
     /etc/vimrc:
       file.managed:
-        - source: salt://edit/vimrc
-        - mode: 644
-        - user: root
-        - group: root
-        - require:
+        source: salt://edit/vimrc
+        mode: 644
+        user: root
+        group: root
+        require:
           - pkg: vim
 
 Can be easily transformed into a powerful, parameterized formula:
@@ -277,15 +277,15 @@ Can be easily transformed into a powerful, parameterized formula:
 
     vim:
       pkg.installed:
-        - name: {{ pillar['pkgs']['vim'] }}
+        name: {{ pillar['pkgs']['vim'] }}
 
     /etc/vimrc:
       file.managed:
-        - source: {{ pillar['vimrc'] }}
-        - mode: 644
-        - user: root
-        - group: root
-        - require:
+        source: {{ pillar['vimrc'] }}
+        mode: 644
+        user: root
+        group: root
+        require:
           - pkg: vim
 
 Where the vimrc source location can now be changed via pillar:
@@ -394,8 +394,8 @@ problem if you do this:
 
     mysql-admin-passwd:
       mysql_user.present:
-        - name: root
-        - password: somepasswd
+        name: root
+        password: somepasswd
 
     mydb:
       mysql_db.present

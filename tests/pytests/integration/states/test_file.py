@@ -1323,8 +1323,8 @@ def test_directory_recurse(salt_master, salt_call_cli, tmp_path, grains):
     with sls_tempfile:
         ret = salt_call_cli.run("state.sls", sls_name)
         key = f"file_|-{target_dir}_|-{target_dir}_|-directory"
-        assert key in ret.json
-        result = ret.json[key]
+        assert key in ret.data
+        result = ret.data[key]
         assert "changes" in result and result["changes"]
 
     # Permissions of file should not have changed.

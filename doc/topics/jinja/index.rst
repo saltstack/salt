@@ -30,11 +30,11 @@ wrap conditional or redundant state elements:
     motd:
       file.managed:
         {% if grains['os'] == 'FreeBSD' %}
-        - name: /etc/motd
+        name: /etc/motd
         {% elif grains['os'] == 'Debian' %}
-        - name: /etc/motd.tail
+        name: /etc/motd.tail
         {% endif %}
-        - source: salt://motd
+        source: salt://motd
 
 In this example, the first **if** block will only be evaluated on minions that
 aren't running FreeBSD, and the second block changes the file name based on the
@@ -54,7 +54,7 @@ defined variable might be easier:
     {% for motdfile in motd %}
     {{ motdfile }}:
       file.managed:
-        - source: salt://motd
+        source: salt://motd
     {% endfor %}
 
 Using a variable set by the template, the `for loop`_ will iterate over the
@@ -125,11 +125,11 @@ contained blocks, may be necessary to emulate a variable return from the macro.
 
     python-virtualenv:
       pkg.installed:
-        - name: {{ pythonpkg('virtualenv') }}
+        name: {{ pythonpkg('virtualenv') }}
 
     python-fabric:
       pkg.installed:
-        - name: {{ pythonpkg('fabric') }}
+        name: {{ pythonpkg('fabric') }}
 
 .. code-block:: jinja
 
@@ -311,9 +311,9 @@ Returns:
 
     thing:
       test.configurable_test_state:
-        - name: thing
-        - changes: true
-        - warnings: OMG! Stuff is happening!
+        name: thing
+        changes: true
+        warnings: OMG! Stuff is happening!
 
 
 .. jinja_ref:: to_bool
@@ -2441,9 +2441,9 @@ Jinja_ can be used in the same way in managed files:
     # redis.sls
     /etc/redis/redis.conf:
         file.managed:
-            - source: salt://redis.conf
-            - template: jinja
-            - context:
+            source: salt://redis.conf
+            template: jinja
+            context:
                 bind: 127.0.0.1
 
 .. code-block:: jinja
@@ -2601,7 +2601,7 @@ log at the ``profile`` level along with the render time of the block.
 
     test:
       cmd.run:
-        - name: |-
+        name: |-
             printf 'data: %s' '{{ local_data['counter'] }}'
 
 The ``profile`` block in the ``example.sls`` state will emit the following log
@@ -2638,7 +2638,7 @@ Using the same logic as the ``profile`` block, the ``import_yaml``,
 
     test:
       cmd.run:
-        - name: |-
+        name: |-
             printf 'data: %s' '{{ imported['data'] }}'
 
 For ``import_*`` blocks, the ``profile`` log statement has the following form:

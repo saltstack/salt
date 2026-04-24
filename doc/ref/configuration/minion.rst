@@ -2983,12 +2983,12 @@ data in a state file:
 
     apply_showpillar:
       module.run:
-        - name: state.apply
-        - mods:
+        name: state.apply
+        mods:
           - showpillar
-        - kwargs:
-              pillar:
-                  test: "foo bar"
+        kwargs:
+          pillar:
+            test: "foo bar"
 
 If set to ``True``, the ``showpillar`` state will have access to the
 global pillar data.

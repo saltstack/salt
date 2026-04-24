@@ -154,7 +154,7 @@ example:
 
     install_vim_now:
       pkg.installed:
-        - pkgs:
+        pkgs:
           - vim
 
 To apply this state to a minion, you would use the ``state.apply`` module, such

@@ -52,8 +52,8 @@ Here is a simple example:
 
     copy-some-file:
       file.copy:
-        - name: __slot__:salt:test.echo(text=/tmp/some_file)
-        - source: __slot__:salt:test.echo(/etc/hosts)
+        name: __slot__:salt:test.echo(text=/tmp/some_file)
+        source: __slot__:salt:test.echo(/etc/hosts)
 
 This will execute the :py:func:`test.echo <salt.modules.test.echo>` execution
 functions right before calling the state. The functions in the example will
@@ -66,8 +66,8 @@ Here is an example of result parsing and appending:
 
     file-in-user-home:
       file.copy:
-        - name: __slot__:salt:user.info(someuser).home ~ /subdirectory
-        - source: salt://somefile
+        name: __slot__:salt:user.info(someuser).home ~ /subdirectory
+        source: salt://somefile
 
 Example Usage
 -------------
@@ -86,14 +86,14 @@ modified during the Salt run.
 
     add_group_known_users:
       group.present:
-        - name: known_users
+        name: known_users
 
     add_user:
       user.present:
-        - name: foobar
-        - uid: 600
-        - gid: __slot__:salt:group.info("known_users").gid
-        - require:
+        name: foobar
+        uid: 600
+        gid: __slot__:salt:group.info("known_users").gid
+        require:
           - group: add_group_known_users
 
 In this example, the ``add_group_known_users`` state ensures the presence of the
@@ -132,8 +132,8 @@ text "hello world." This output is then used as the content of the file
 
     content-from-slots:
       file.managed:
-        - name: /tmp/things.txt
-        - contents: __slot__:salt:test.echo("hello world")
+        name: /tmp/things.txt
+        contents: __slot__:salt:test.echo("hello world")
 
 **Example 2: Using Multiple `test.echo` Outputs as Appended Content**
 
@@ -145,8 +145,8 @@ and then used as the content of the file `/tmp/things.txt`:
 
     content-from-multiple-slots:
       file.managed:
-        - name: /tmp/things.txt
-        - contents:
+        name: /tmp/things.txt
+        contents:
           - __slot__:salt:test.echo("hello")
           - __slot__:salt:test.echo("world")
 
@@ -167,9 +167,9 @@ the file `/tmp/grains.json`:
 
     serialize-dataset-from-slots:
       file.serialize:
-        - name: /tmp/grains.json
-        - serializer: json
-        - dataset: __slot__:salt:grains.items()
+        name: /tmp/grains.json
+        serializer: json
+        dataset: __slot__:salt:grains.items()
 
 These examples showcase how to leverage Salt's flexibility to use execution
 module returns as file contents or serialized data in your Salt states, allowing

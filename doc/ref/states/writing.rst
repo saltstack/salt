@@ -22,10 +22,10 @@ illustrate:
 
     /etc/salt/master: # maps to "name", unless a "name" argument is specified below
       file.managed: # maps to <filename>.<function> - e.g. "managed" in https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/states/file.py
-        - user: root # one of many options passed to the manage function
-        - group: root
-        - mode: 644
-        - source: salt://salt/master
+        user: root # one of many options passed to the manage function
+        group: root
+        mode: 644
+        source: salt://salt/master
 
 Therefore this SLS data can be directly linked to a module, function, and
 arguments passed to that function.

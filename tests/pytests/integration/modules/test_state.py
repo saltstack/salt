@@ -15,14 +15,12 @@ def test_logging_and_state_output_order(salt_master, salt_minion, salt_cli, tmp_
     """
     target_path = tmp_path / "file-target.txt"
     sls_name = "file-target"
-    sls_contents = """
+    sls_contents = f"""
     add_contents_pillar_sls:
       file.managed:
-        - name: {}
+        - name: {target_path}
         - contents: foo
-    """.format(
-        target_path
-    )
+    """
     sls_tempfile = salt_master.state_tree.base.temp_file(
         f"{sls_name}.sls", sls_contents
     )

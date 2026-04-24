@@ -401,9 +401,9 @@ Define the SLS state file, making use of the
 
     ntp_config_example:
       netconfig.managed:
-        - template_name: salt://ntp.jinja
-        - peers: {{ pillar.get('ntp.peers', []) | json }}
-        - servers: {{ pillar.get('ntp.servers', []) | json }}
+        template_name: salt://ntp.jinja
+        peers: {{ pillar.get('ntp.peers', []) | json }}
+        servers: {{ pillar.get('ntp.servers', []) | json }}
 
 Run the state and assure NTP configuration consistency across your
 multi-vendor network:

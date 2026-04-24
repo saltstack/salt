@@ -126,7 +126,7 @@ package until after the EPEL repository has also been installed:
 
     python26:
       pkg.installed:
-        - require:
+        require:
           - pkg: epel
 
 Including a Formula from a Top File
@@ -257,8 +257,8 @@ file. This section contains several suggestions and examples.
 
     deploy_myapp:
       git.latest:
-        - name: git@github.com/myco/myapp.git
-        - version: {{ salt['pillar.get']('myapp:version', 'master') }}
+        name: git@github.com/myco/myapp.git
+        version: {{ salt['pillar.get']('myapp:version', 'master') }}
 
 Use a descriptive State ID
 ``````````````````````````
@@ -285,7 +285,7 @@ Mine, the Scheduler, as well as with the CLI.
     # Do
     apache:
       pkg.installed:
-        - name: httpd
+        name: httpd
 
     # Don't
     apache:
@@ -332,9 +332,9 @@ concepts or actions.
       # This template is fetched from a third-party and does not fit our
       # company norm of using Jinja. This must be processed using Mako.
       file.managed:
-        - name: /path/to/file.cfg
-        - source: salt://path/to/file.cfg.template
-        - template: mako
+        name: /path/to/file.cfg
+        source: salt://path/to/file.cfg.template
+        template: mako
 
       # Provide a description or explanation that did not fit within the state
       # ID. For example:
@@ -346,10 +346,10 @@ concepts or actions.
         # FIXME: Joe needs this to run on Windows by next quarter. Switch these
         # from shell commands to Salt's file.managed and file.replace state
         # modules.
-        - name: |
+        name: |
             touch /path/to/file_last_updated
             sed -e 's/foo/bar/g' /path/to/file_environment
-        - onchanges:
+        onchanges:
           - file: a_config_file
 
 Be careful to use Jinja comments for commenting Jinja code and YAML comments
@@ -479,8 +479,8 @@ Below is a simple example of a readable loop:
     {# Ensure unique state IDs when looping. #}
     {{ user.name }}-{{ loop.index }}:
       user.present:
-        - name: {{ user.name }}
-        - shell: {{ user.shell }}
+        name: {{ user.name }}
+        shell: {{ user.shell }}
 
     {% endfor %}
 
@@ -496,9 +496,9 @@ both useful techniques to avoid this. For example:
     apache:
       pkg.installed:
         {% if grains.os_family == 'RedHat' %}
-        - name: httpd
+        name: httpd
         {% elif grains.os_family == 'Debian' %}
-        - name: apache2
+        name: apache2
         {% endif %}
 
     {# ---- Better example ---- #}
@@ -511,7 +511,7 @@ both useful techniques to avoid this. For example:
 
      apache:
       pkg.installed:
-        - name: {{ name }}
+        name: {{ name }}
 
     {# ---- Good example ---- #}
 
@@ -522,7 +522,7 @@ both useful techniques to avoid this. For example:
 
      apache:
       pkg.installed:
-        - name: {{ name }}
+        name: {{ name }}
 
 Dictionaries are useful to effectively "namespace" a collection of variables.
 This is useful with parametrization (discussed below). Dictionaries are also
@@ -536,14 +536,14 @@ example:
 
     haproxy_conf:
       file.managed:
-        - name: /etc/haproxy/haproxy.cfg
-        - template: jinja
+        name: /etc/haproxy/haproxy.cfg
+        template: jinja
         {% if 'external_loadbalancer' in grains.roles %}
-        - source: salt://haproxy/external_haproxy.cfg
+        source: salt://haproxy/external_haproxy.cfg
         {% elif 'internal_loadbalancer' in grains.roles %}
-        - source: salt://haproxy/internal_haproxy.cfg
+        source: salt://haproxy/internal_haproxy.cfg
         {% endif %}
-        - context:
+        context:
             {% if 'external_loadbalancer' in grains.roles %}
             ssl_termination: True
             {% elif 'internal_loadbalancer' in grains.roles %}
@@ -578,10 +578,10 @@ example:
 
     haproxy_conf:
       file.managed:
-        - name: /etc/haproxy/haproxy.cfg
-        - template: jinja
-        - source: {{ haproxy.source }}
-        - context: {{ haproxy.settings | yaml() }}
+        name: /etc/haproxy/haproxy.cfg
+        template: jinja
+        source: {{ haproxy.source }}
+        context: {{ haproxy.settings | yaml() }}
 
 There is still room for improvement in the above example. For example,
 extracting into an external file or replacing the if-elif conditional with a
@@ -624,7 +624,7 @@ example is a state tree of two sls files, one simple and one complicated.
 
     common_users:
       user.present:
-        - names:
+        names:
           - larry
           - curly
           - moe
@@ -681,9 +681,9 @@ Macros are useful for creating reusable, parameterized states. For example:
     {% macro user_state(state_id, user_name, shell='/bin/bash', groups=[]) %}
     {{ state_id }}:
       user.present:
-        - name: {{ user_name }}
-        - shell: {{ shell }}
-        - groups: {{ groups | json() }}
+        name: {{ user_name }}
+        shell: {{ shell }}
+        groups: {{ groups | json() }}
     {% endmacro %}
 
     {% for user_info in salt['pillar.get']('my_users', []) %}
@@ -700,10 +700,10 @@ example, the following macro could be used to write a php.ini config file:
 
     php_ini:
       file.managed:
-        - name: /etc/php.ini
-        - source: salt://php.ini.tmpl
-        - template: jinja
-        - context:
+        name: /etc/php.ini
+        source: salt://php.ini.tmpl
+        template: jinja
+        context:
             php_ini_settings: {{ salt['pillar.get']('php_ini', {}) | json() }}
 
 ``/srv/pillar/php.sls``:
@@ -799,9 +799,9 @@ state file using the following syntax:
 
     mysql-server:
       pkg.installed:
-        - name: {{ mysql.server }}
+        name: {{ mysql.server }}
       service.running:
-        - name: {{ mysql.service }}
+        name: {{ mysql.service }}
 
 Organizing Pillar data
 ``````````````````````
@@ -998,9 +998,9 @@ XML.)
 
     appX_server_xml:
       file.serialize:
-        - name: /etc/tomcat/server.xml
-        - dataset: {{ server_xml_final_values | json() }}
-        - formatter: xml_badgerfish
+        name: /etc/tomcat/server.xml
+        dataset: {{ server_xml_final_values | json() }}
+        formatter: xml_badgerfish
 
 The :py:func:`file.serialize <salt.states.file.serialize>` state can provide a
 shorthand for creating some files from data structures. There are also many
@@ -1037,15 +1037,15 @@ example:
 
     deploy_application:
       git.latest:
-        - name: {{ app.repo_url }}
-        - version: {{ app.version }}
-        - target: {{ app.deploy_dir }}
+        name: {{ app.repo_url }}
+        version: {{ app.version }}
+        target: {{ app.deploy_dir }}
 
     myco/myapp/deployed:
       event.send:
-        - data:
+        data:
             version: {{ app.version }}
-        - onchanges:
+        onchanges:
           - git: deploy_application
 
 ``/srv/salt/app/defaults.yaml``:
@@ -1097,7 +1097,7 @@ skips platform-specific options for brevity. See the full
     mod_wsgi:
       pkg.installed:
         [...]
-        - require:
+        require:
           - pkg: apache
 
     # apache/conf.sls
@@ -1107,7 +1107,7 @@ skips platform-specific options for brevity. See the full
     apache_conf:
       file.managed:
         [...]
-        - watch_in:
+        watch_in:
           - service: apache
 
 To illustrate a bad example, say the above Apache formula installed Apache and
@@ -1166,8 +1166,8 @@ the same.
     {% for user in list_list %}
     {{ user.name }}:
       user.present:
-        - name: {{ user.name }}
-        - shell: {{ user.shell }}
+        name: {{ user.name }}
+        shell: {{ user.shell }}
     {% endfor %}
 
 Configuration
@@ -1197,9 +1197,9 @@ thousands of function calls across a large state tree.
 
     mod_status:
       file.managed:
-        - name: {{ apache.conf_dir }}
-        - source: {{ settings.get('mod_status_conf', 'salt://apache/mod_status.conf') }}
-        - template: {{ settings.get('template_engine', 'jinja') }}
+        name: {{ apache.conf_dir }}
+        source: {{ settings.get('mod_status_conf', 'salt://apache/mod_status.conf') }}
+        template: {{ settings.get('template_engine', 'jinja') }}
 
 Any default values used in the Formula must also be documented in the
 :file:`pillar.example` file in the root of the repository. Comments should be
