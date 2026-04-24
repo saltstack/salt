@@ -529,7 +529,7 @@ jobs:
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
-      raise-deprecations-runtime-errors: ${{ env.RAISE_DEPRECATIONS_RUNTIME_ERRORS }}
+      raise-deprecations-runtime-errors: "1"
   test-packages:
     name: Test Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg'] }}
@@ -548,7 +548,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['pkg-test-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
-      raise-deprecations-runtime-errors: ${{ env.RAISE_DEPRECATIONS_RUNTIME_ERRORS }}
+      raise-deprecations-runtime-errors: "1"
   test:
     name: Test Salt
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test'] }}
@@ -568,7 +568,7 @@ jobs:
       default-timeout: 360
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['test-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
-      raise-deprecations-runtime-errors: ${{ env.RAISE_DEPRECATIONS_RUNTIME_ERRORS }}
+      raise-deprecations-runtime-errors: "1"
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
     # on a pull request instead of requiring all
