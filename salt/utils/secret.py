@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterable, MutableMapping, MutableSequence
-from typing import Any, ClassVar, Generic, TypeVar, Mapping
+from typing import Any, ClassVar, Generic, Mapping, TypeVar
 
 log = logging.getLogger(__name__)
 
@@ -228,6 +228,7 @@ def expose(value: _SecretBase) -> Any:
     else:
         return value
 
+
 def serial(value):
     """
     Keep secrets redacted while serializing the structure to native python types.
@@ -242,6 +243,7 @@ def serial(value):
         return [serial(v) for v in value]
     else:
         return value
+
 
 def no_log_mask(state_ret: dict[str, Any]):
     """

@@ -296,9 +296,10 @@ def test_ssh_merge_pillar_in_dunder_pillar(temp_salt_minion):
         assert exposed["normal_key"] == "normal_value"
 
     # The loader pack should contain the merged SSH pillar
-    assert salt.utils.secret.expose(pillar.functions.pack["__pillar__"])[
-        "ssh_key"
-    ] == "ssh_value"
+    assert (
+        salt.utils.secret.expose(pillar.functions.pack["__pillar__"])["ssh_key"]
+        == "ssh_value"
+    )
     sk = pillar.functions["pillar.get"]("ssh_key")
     assert isinstance(sk, secret.SecretStr)
     assert sk.get_secret_value() == "ssh_value"
@@ -328,7 +329,10 @@ def test_decrypt_pillar_in_dunder_pillar(temp_salt_minion):
             assert salt.utils.secret.expose(compiled)["secret"] == "decrypted_value"
 
     # The loader pack should contain the decrypted pillar
-    assert salt.utils.secret.expose(pillar.functions.pack["__pillar__"])["secret"] == "decrypted_value"
+    assert (
+        salt.utils.secret.expose(pillar.functions.pack["__pillar__"])["secret"]
+        == "decrypted_value"
+    )
     sec = pillar.functions["pillar.get"]("secret")
     assert isinstance(sec, secret.SecretStr)
     assert sec.get_secret_value() == "decrypted_value"
