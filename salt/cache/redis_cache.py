@@ -241,7 +241,10 @@ def _get_redis_cache_opts():
         ),
         "banks_prefix": __opts__.get("cache.redis.banks_prefix", _BANKS_PREFIX) + sep,
         "keys_prefix": __opts__.get("cache.redis.keys_prefix", _KEYS_PREFIX) + sep,
-        "timestamp_prefix": __opts__.get("cache.redis.timestamp_prefix", _TIMESTAMP_PREFIX) + sep,
+        "timestamp_prefix": __opts__.get(
+            "cache.redis.timestamp_prefix", _TIMESTAMP_PREFIX
+        )
+        + sep,
     }
     prefix_confs = [opts["banks_prefix"], opts["keys_prefix"], opts["timestamp_prefix"]]
     if any("/" in conf for conf in prefix_confs):
@@ -304,9 +307,9 @@ def _timestamp_from_bank_key(bank_key):
     """
     Convert a bank key into a timestamp key.
     """
-    return '{0}{1}'.format(
-        __context__['cache.redis']['timestamp_prefix'],
-        bank_key.removeprefix(__context__['cache.redis']['keys_prefix']),
+    return "{0}{1}".format(
+        __context__["cache.redis"]["timestamp_prefix"],
+        bank_key.removeprefix(__context__["cache.redis"]["keys_prefix"]),
     )
 
 
@@ -353,7 +356,9 @@ def _get_subbanks(redis_server, bank_key):
     """
     startrange = "[{0}".format(bank_key)
     endrange = "({0}0".format(bank_key.rstrip("/"))
-    return list(_decode(redis_server.zrange(_banks_set_key(), startrange, endrange, bylex=True)))
+    return list(
+        _decode(redis_server.zrange(_banks_set_key(), startrange, endrange, bylex=True))
+    )
 
 
 def _decode(iterable):
@@ -382,7 +387,9 @@ def store(bank, key, data):
         redis_pipe.execute()
     except (RedisConnectionError, RedisResponseError) as rerr:
         mesg = "Cannot set the Redis cache key {rbank}.{rkey}: {rerr}".format(
-            rbank=bank_key, rkey=key, rerr=rerr
+            rbank=bank_key,
+            rkey=key,
+            rerr=rerr,
         )
         log.error(mesg)
         raise SaltCacheError(mesg)
@@ -398,7 +405,9 @@ def fetch(bank, key):
         redis_value = redis_server.hget(bank_key, key)
     except (RedisConnectionError, RedisResponseError) as rerr:
         mesg = "Cannot fetch the Redis cache key {rbank}.{rkey}: {rerr}".format(
-            rbank=bank_key, rkey=key, rerr=rerr
+            rbank=bank_key,
+            rkey=key,
+            rerr=rerr,
         )
         log.error(mesg)
         raise SaltCacheError(mesg)
@@ -419,11 +428,14 @@ def flush(bank, key=None):
         bank_key, _ = _normalize_bank(bank)
         if key is None:
             mesg = "Cannot flush Redis cache bank {rbank}: {rerr}".format(
-                rbank=bank_key, rerr=rerr,
+                rbank=bank_key,
+                rerr=rerr,
             )
         else:
             mesg = "Cannot flush Redis cache key {rbank}.{rkey}: {rerr}".format(
-                rbank=bank_key, rkey=key, rerr=rerr,
+                rbank=bank_key,
+                rkey=key,
+                rerr=rerr,
             )
         log.error(mesg)
         raise SaltCacheError(mesg)
@@ -440,23 +452,26 @@ def list_(bank):
         subbanks = _get_subbanks(redis_server, bank_key)
     except (RedisConnectionError, RedisResponseError) as rerr:
         mesg = "Cannot list the Redis cache key subbanks {rbank}: {rerr}".format(
-            rbank=bank_key, rerr=rerr,
+            rbank=bank_key,
+            rerr=rerr,
         )
         log.error(mesg)
         raise SaltCacheError(mesg)
     # Unfortunately we get all subsub+ banks from the _get_subbanks() function call. A simple method
     # of filter just the direct descendents is to count the number of slashes. If there is +1 slashes
     # it is a direct descendent. Also strip out the full path and extra gunk for the final listing.
-    slashcount = bank_key.count('/') + 1
+    slashcount = bank_key.count("/") + 1
     listing = [
-        sub.removeprefix(bank_key).rstrip('/')
-        for sub in subbanks if sub.count('/') == slashcount
+        sub.removeprefix(bank_key).rstrip("/")
+        for sub in subbanks
+        if sub.count("/") == slashcount
     ]
     try:
         listing.extend(_decode(redis_server.hkeys(bank_key)))
     except (RedisConnectionError, RedisResponseError) as rerr:
         mesg = "Cannot list the Redis cache key {rbank}: {rerr}".format(
-            rbank=bank_key, rerr=rerr,
+            rbank=bank_key,
+            rerr=rerr,
         )
         log.error(mesg)
         raise SaltCacheError(mesg)
@@ -476,11 +491,14 @@ def contains(bank, key=None):
     except (RedisConnectionError, RedisResponseError) as rerr:
         if key is None:
             mesg = "Cannot check contains of Redis cache bank {rbank}: {rerr}".format(
-                rbank=bank_key, rerr=rerr,
+                rbank=bank_key,
+                rerr=rerr,
             )
         else:
             mesg = "Cannot check contains of Redis cache key {rbank}.{rkey}: {rerr}".format(
-                rbank=bank_key, rkey=key, rerr=rerr,
+                rbank=bank_key,
+                rkey=key,
+                rerr=rerr,
             )
         log.error(mesg)
         raise SaltCacheError(mesg)
@@ -497,7 +515,9 @@ def updated(bank, key):
         cache_time = redis_server.hget(timestamp_key, key)
     except (RedisConnectionError, RedisResponseError) as rerr:
         mesg = "Cannot get timestamp of Redis cache key {rstamp}.{rkey}: {rerr}".format(
-            rstamp=timestamp_key, rkey=key, rerr=rerr,
+            rstamp=timestamp_key,
+            rkey=key,
+            rerr=rerr,
         )
         log.error(mesg)
         raise SaltCacheError(mesg)
