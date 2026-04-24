@@ -1,22 +1,11 @@
 import logging
 import sys
-import warnings
 
 import pytest
 
-from salt.utils.functools import namespaced_function
 from tests.conftest import CODE_DIR
 
 log = logging.getLogger(__name__)
-
-
-def preserve_context_ids(value):
-    return f"preserve_context={value}"
-
-
-@pytest.fixture(params=[True, False], ids=preserve_context_ids)
-def preserve_context(request):
-    return request.param
 
 
 def test_namespacing(tmp_path, shell):
@@ -98,35 +87,3 @@ def test_namespacing(tmp_path, shell):
         assert ret.data["module"] == "foopkg.mod2"
         assert isinstance(ret.data["func1"], float)
         assert ret.data["time_present"] is True
-
-
-def test_deprecated_defaults_kwarg():
-    def foo():
-        pass
-
-    with warnings.catch_warnings(record=True) as w:
-        # Cause all warnings to always be triggered.
-        warnings.simplefilter("always")
-        namespaced_function(foo, globals(), defaults={"foo": 1})
-
-    assert str(w[-1].message) == (
-        "Passing 'defaults' to 'namespaced_function' is deprecated, slated "
-        "for removal in 3009.0 (Potassium) and no longer does anything for the function "
-        "being namespaced."
-    )
-
-
-def test_deprecated_preserve_context_kwarg(preserve_context):
-    def foo():
-        pass
-
-    with warnings.catch_warnings(record=True) as w:
-        # Cause all warnings to always be triggered.
-        warnings.simplefilter("always")
-        namespaced_function(foo, globals(), preserve_context=preserve_context)
-
-    assert str(w[-1].message) == (
-        "Passing 'preserve_context' to 'namespaced_function' is deprecated, slated "
-        "for removal in 3009.0 (Potassium) and no longer does anything for the function "
-        "being namespaced."
-    )

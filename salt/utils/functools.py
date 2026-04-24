@@ -6,13 +6,12 @@ import logging
 import types
 
 import salt.utils.args
-import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
 
-def namespaced_function(function, global_dict, defaults=None, preserve_context=None):
+def namespaced_function(function, global_dict):
     """
     Redefine (clone) a function under a different globals() namespace scope.
 
@@ -20,33 +19,7 @@ def namespaced_function(function, global_dict, defaults=None, preserve_context=N
     passed function ``__globals__`` attribute get's copied over into
     ``global_dict``, thus avoiding ``NameError`` from modules imported in
     the original function module.
-
-    :param defaults:
-        .. deprecated:: 3005
-
-    :param preserve_context:
-        .. deprecated:: 3005
-
-        Allow keeping the context taken from orignal namespace,
-        and extend it with globals() taken from
-        new targetted namespace.
     """
-    if defaults is not None:
-        salt.utils.versions.warn_until(
-            3009,
-            "Passing 'defaults' to 'namespaced_function' is deprecated, slated "
-            "for removal in {version} and no longer does anything for the "
-            "function being namespaced.",
-        )
-
-    if preserve_context is not None:
-        salt.utils.versions.warn_until(
-            3009,
-            "Passing 'preserve_context' to 'namespaced_function' is deprecated, "
-            "slated for removal in {version} and no longer does anything for the "
-            "function being namespaced.",
-        )
-
     # Make sure that any key on the globals of the function being copied get's
     # added to the destination globals dictionary, if not present.
     for key, value in function.__globals__.items():

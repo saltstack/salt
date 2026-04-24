@@ -184,19 +184,6 @@ def get_retcode(ret):
 
 def get_keep_jobs_seconds(opts):
     """
-    Temporary function until 'keep_jobs' is fully deprecated,
-    this will prefer 'keep_jobs_seconds', and only use
-    'keep_jobs' as the configuration value if 'keep_jobs_seconds'
-    is unmodified, and 'keep_jobs' is modified (in which case it
-    will emit a deprecation warning).
+    Return the number of seconds to retain old job data in the cache.
     """
-    keep_jobs_seconds = opts.get("keep_jobs_seconds", 86400)
-    keep_jobs = opts.get("keep_jobs", 24)
-    if keep_jobs_seconds == 86400 and keep_jobs != 24:
-        salt.utils.versions.warn_until(
-            3009,
-            "The 'keep_jobs' option has been deprecated and replaced with "
-            "'keep_jobs_seconds'.",
-        )
-        keep_jobs_seconds = keep_jobs * 3600
-    return keep_jobs_seconds
+    return opts.get("keep_jobs_seconds", 86400)

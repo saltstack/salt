@@ -213,22 +213,29 @@ def test_salt_upgrade(
 
     original_py_version = install_salt.package_python_version()
 
-    # Test pip install before an upgrade
+    # Test pip integration before the upgrade: install a package via salt-pip
+    # and verify it shows up in `salt-call pip.list`. The previous incarnation
+    # of this test invoked `github.get_repo_info`, but the github execution
+    # module was moved to an external extension, so it always returns
+    # 'is not available'. `pip.list` lives in core and exercises the same
+    # underlying salt-pip integration.
+    dep_name = "PyGithub"
+    dep = f"{dep_name}==1.56.0"
+    install = salt_call_cli.run("--local", "pip.install", dep)
     try:
-        dep = "PyGithub==1.56.0"
-        install = salt_call_cli.run("--local", "pip.install", dep)
-        assert install.returncode == 0
-
-        # Verify we can use the module dependent on the installed package
-        repo = "https://github.com/saltstack/salt.git"
-        use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
-        assert "Authentication information could" in use_lib.stderr
-    except AssertionError as e:
-        # Skip if pip operations fail due to environment issues (permissions, relenv, etc.)
-        pytest.skip(f"Pip installation test failed: {e}")
-
-    # perform Salt package upgrade test
-    salt_test_upgrade(salt_call_cli, install_salt, salt_master, salt_minion)
+        assert (
+            install.returncode == 0
+        ), f"pip.install of {dep} failed before upgrade: {install.stderr}"
+        listing = salt_call_cli.run("--local", "pip.list", dep_name)
+        assert listing.returncode == 0, f"pip.list failed: {listing.stderr}"
+        assert dep_name.lower() in {
+            k.lower() for k in (listing.data or {})
+        }, f"{dep_name} missing from pip.list before upgrade: {listing.data!r}"
+    finally:
+        # The upgrade must run even if the pre-upgrade pip assertions fail,
+        # so downstream integration tests (which run with --no-install) see
+        # the upgraded salt version on disk.
+        salt_test_upgrade(salt_call_cli, install_salt, salt_master, salt_minion)
 
     # Verify only one Salt package is installed after upgrade (Windows)
     if platform.is_windows():
@@ -245,10 +252,12 @@ def test_salt_upgrade(
 
     new_py_version = install_salt.package_python_version()
     if new_py_version == original_py_version:
-        try:
-            # test pip install after an upgrade
-            use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
-            assert "Authentication information could" in use_lib.stderr
-        except AssertionError as e:
-            # Skip if pip operations fail due to environment issues
-            pytest.skip(f"Post-upgrade pip test failed: {e}")
+        # The pip-installed dep should survive an upgrade that keeps the same
+        # bundled python version.
+        listing = salt_call_cli.run("--local", "pip.list", dep_name)
+        assert (
+            listing.returncode == 0
+        ), f"pip.list failed after upgrade: {listing.stderr}"
+        assert dep_name.lower() in {
+            k.lower() for k in (listing.data or {})
+        }, f"{dep_name} missing from pip.list after upgrade: {listing.data!r}"

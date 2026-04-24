@@ -454,23 +454,6 @@ Verify and set permissions on configuration directories at startup.
 
     verify_env: True
 
-.. conf_master:: keep_jobs
-
-``keep_jobs``
--------------
-
-Default: ``24``
-
-Set the number of hours to keep old job information. Note that setting this option
-to ``0`` disables the cache cleaner.
-
-.. deprecated:: 3006
-    Replaced by :conf_master:`keep_jobs_seconds`
-
-.. code-block:: yaml
-
-    keep_jobs: 24
-
 .. conf_master:: keep_jobs_seconds
 
 ``keep_jobs_seconds``

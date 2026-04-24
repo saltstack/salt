@@ -535,9 +535,6 @@ VALID_OPTS = immutabletypes.freeze(
         # The port for the master to listen to returns on. The minion needs to connect to this port
         # to send returns.
         "ret_port": int,
-        # The number of hours to keep jobs around in the job cache on the master
-        # This option is deprecated by keep_jobs_seconds
-        "keep_jobs": int,
         # The number of seconds to keep jobs around in the job cache on the master
         "keep_jobs_seconds": int,
         # If the returner supports `clean_old_jobs`, then at cleanup time,
@@ -1401,7 +1398,6 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "sock_pool_size": 1,
         "ret_port": 4506,
         "timeout": 5,
-        "keep_jobs": 24,
         "keep_jobs_seconds": 86400,
         "archive_jobs": False,
         "root_dir": salt.syspaths.ROOT_DIR,

@@ -17,7 +17,6 @@ import salt.minion
 import salt.modules.test as test_mod
 import salt.syspaths
 import salt.utils.crypt
-import salt.utils.event as event
 import salt.utils.jid
 import salt.utils.platform
 import salt.utils.process
@@ -992,35 +991,6 @@ def test_prep_ip_port():
 
     opts = {"master": "10.10.0.3::1234", "master_uri_format": "default"}
     pytest.raises(SaltClientError, salt.minion.prep_ip_port, opts)
-
-
-@pytest.mark.skip_if_not_root
-def test_sock_path_len(minion_opts):
-    """
-    This tests whether or not a larger hash causes the sock path to exceed
-    the system's max sock path length. See the below link for more
-    information.
-
-    https://github.com/saltstack/salt/issues/12172#issuecomment-43903643
-    """
-    minion_opts.update(
-        {
-            "id": "salt-testing",
-            "hash_type": "sha512",
-            "sock_dir": os.path.join(salt.syspaths.SOCK_DIR, "minion"),
-            "extension_modules": "",
-        }
-    )
-    try:
-        event_publisher = event.AsyncEventPublisher(minion_opts)
-        result = True
-    except ValueError:
-        #  There are rare cases where we operate a closed socket, especially in containers.
-        # In this case, don't fail the test because we'll catch it down the road.
-        result = True
-    except SaltSystemExit:
-        result = False
-    assert result
 
 
 @pytest.mark.skip_on_windows(reason="Skippin, no Salt master running on Windows.")
