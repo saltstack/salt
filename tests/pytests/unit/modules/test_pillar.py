@@ -3,6 +3,7 @@ from collections import OrderedDict
 import pytest
 
 import salt.modules.pillar as pillarmod
+import salt.utils.secret as secret
 from tests.support.mock import MagicMock, call, patch
 
 
@@ -190,3 +191,44 @@ def test_ls_pass_kwargs(pillar_value):
     with patch("salt.modules.pillar.items", MagicMock(return_value=pillar_value)):
         ls = sorted(pillarmod.ls(pillarenv="base"))
         assert ls == ["a", "b"]
+
+
+def test_items_returns_obfuscated_wrapped_pillar(configure_loader_modules):
+    """pillar.items returns wrapped pillar (obfuscated strings); use pillar.raw for plaintext."""
+    wrapped = secret.hide({"secret": "hunter2", "n": 1})
+    pillar_obj = MagicMock()
+    pillar_obj.compile_pillar.return_value = wrapped
+    with patch("salt.pillar.get_pillar", return_value=pillar_obj), patch.dict(
+        pillarmod.__opts__,
+        {
+            "id": "test-minion",
+            "pillarenv": "",
+            "pillarenv_from_saltenv": False,
+            "saltenv": "base",
+        },
+    ), patch.dict(pillarmod.__grains__, {"os": "linux"}):
+        ret = pillarmod.items()
+    assert isinstance(ret["secret"], secret.SecretStr)
+    assert secret.expose(ret) == {"secret": "hunter2", "n": 1}
+
+
+def test_get_returns_obfuscated_value_from_wrapped_pillar(configure_loader_modules):
+    """pillar.get returns SecretStr leaves for in-memory __pillar__; use pillar.raw to expose."""
+    wrapped = secret.hide({"k": "plain"})
+    with patch.dict(
+        pillarmod.__opts__,
+        {"pillar_raise_on_missing": False},
+    ):
+        with patch.dict(pillarmod.__pillar__, wrapped, clear=True):
+            got = pillarmod.get("k")
+    assert isinstance(got, secret.SecretStr)
+    assert got.get_secret_value() == "plain"
+
+
+def test_raw_exposes_in_memory_pillar(configure_loader_modules):
+    """pillar.raw returns plaintext via expose."""
+    wrapped = secret.hide({"k": "plain", "n": 2})
+    with patch.dict(pillarmod.__opts__, {}):
+        with patch.dict(pillarmod.__pillar__, wrapped, clear=True):
+            assert pillarmod.raw() == {"k": "plain", "n": 2}
+            assert pillarmod.raw("k") == "plain"

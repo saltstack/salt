@@ -60,6 +60,7 @@ import salt.utils.network
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.schedule
+import salt.utils.secret
 import salt.utils.ssdp
 import salt.utils.state
 import salt.utils.user
@@ -2460,7 +2461,9 @@ class Minion(MinionBase):
         """
         minion_blackout_violation = False
         if self.connected and self.opts["pillar"].get("minion_blackout", False):
-            whitelist = self.opts["pillar"].get("minion_blackout_whitelist", [])
+            whitelist = salt.utils.secret.expose(
+                self.opts["pillar"].get("minion_blackout_whitelist", [])
+            )
             # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
             if (
                 function_name != "saltutil.refresh_pillar"

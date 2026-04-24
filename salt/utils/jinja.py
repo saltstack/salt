@@ -26,6 +26,7 @@ from jinja2.ext import Extension
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
+import salt.utils.secret
 import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.yaml
@@ -1001,6 +1002,7 @@ class SerializerExtension(Extension):
         return explore(data)
 
     def format_json(self, value, sort_keys=True, indent=None):
+        value = salt.utils.secret.expose(value)
         json_txt = salt.utils.json.dumps(
             value, sort_keys=sort_keys, indent=indent
         ).strip()
@@ -1010,6 +1012,7 @@ class SerializerExtension(Extension):
             return Markup(salt.utils.stringutils.to_unicode(json_txt))
 
     def format_yaml(self, value, flow_style=True):
+        value = salt.utils.secret.expose(value)
         yaml_txt = salt.utils.yaml.safe_dump(
             value, default_flow_style=flow_style
         ).strip()
