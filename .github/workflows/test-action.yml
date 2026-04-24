@@ -56,6 +56,10 @@ on:
         required: true
         type: string
         description: Json job matrix config
+      raise-deprecations-runtime-errors:
+        required: true
+        type: string
+        description: Whether to raise RuntimeError on deprecation warnings ("1" or "0")
 
 env:
   COLUMNS: 190
@@ -64,7 +68,7 @@ env:
   PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
   PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
-  RAISE_DEPRECATIONS_RUNTIME_ERRORS: "0"
+  RAISE_DEPRECATIONS_RUNTIME_ERRORS: ${{ inputs.raise-deprecations-runtime-errors }}
 
 jobs:
 
@@ -193,7 +197,7 @@ jobs:
           PIP_TRUSTED_HOST: "${{ vars.PIP_TRUSTED_HOST }}"
           PIP_EXTRA_INDEX_URL: "${{ vars.PIP_EXTRA_INDEX_URL }}"
           PIP_DISABLE_PIP_VERSION_CHECK: 1
-          RAISE_DEPRECATIONS_RUNTIME_ERRORS: 0
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: ${{ inputs.raise-deprecations-runtime-errors }}
           SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           tools container create ${{ matrix.container }} --name ${{ github.run_id }}_salt-test
@@ -545,7 +549,7 @@ jobs:
           PIP_TRUSTED_HOST: "${{ vars.PIP_TRUSTED_HOST }}"
           PIP_EXTRA_INDEX_URL: "${{ vars.PIP_EXTRA_INDEX_URL }}"
           PIP_DISABLE_PIP_VERSION_CHECK: 1
-          RAISE_DEPRECATIONS_RUNTIME_ERRORS: 0
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: ${{ inputs.raise-deprecations-runtime-errors }}
           SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           tools container create ${{ matrix.container }} --name ${{ github.run_id }}_salt-test
@@ -864,7 +868,7 @@ jobs:
           PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
           PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
-          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "0"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: ${{ inputs.raise-deprecations-runtime-errors }}
           SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
@@ -890,7 +894,7 @@ jobs:
           PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
           PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
-          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "0"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: ${{ inputs.raise-deprecations-runtime-errors }}
           SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
@@ -915,7 +919,7 @@ jobs:
           PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
           PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
-          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "0"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: ${{ inputs.raise-deprecations-runtime-errors }}
           SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
@@ -940,7 +944,7 @@ jobs:
           PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
           PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
-          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "0"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: ${{ inputs.raise-deprecations-runtime-errors }}
           SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
@@ -965,7 +969,7 @@ jobs:
           PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
           PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
-          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "0"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: ${{ inputs.raise-deprecations-runtime-errors }}
           SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
@@ -990,7 +994,7 @@ jobs:
           PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
           PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
-          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "0"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: ${{ inputs.raise-deprecations-runtime-errors }}
           SALT_TRANSPORT: ${{ matrix.transport }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
@@ -1153,7 +1157,7 @@ jobs:
           PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
           PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
-          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "0"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: ${{ inputs.raise-deprecations-runtime-errors }}
           SALT_TRANSPORT: ${{ matrix.transport }}
           TMPDIR: ${{ runner.temp }}
         shell: powershell
@@ -1181,7 +1185,7 @@ jobs:
           PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
           PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
-          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "0"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: ${{ inputs.raise-deprecations-runtime-errors }}
           SALT_TRANSPORT: ${{ matrix.transport }}
           TMPDIR: ${{ runner.temp }}
         shell: powershell
@@ -1208,7 +1212,7 @@ jobs:
           PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
           PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
-          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "0"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: ${{ inputs.raise-deprecations-runtime-errors }}
           SALT_TRANSPORT: ${{ matrix.transport }}
           TMPDIR: ${{ runner.temp }}
         shell: powershell
@@ -1235,7 +1239,7 @@ jobs:
           PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
           PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
-          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "0"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: ${{ inputs.raise-deprecations-runtime-errors }}
           SALT_TRANSPORT: ${{ matrix.transport }}
           TMPDIR: ${{ runner.temp }}
         shell: powershell
@@ -1262,7 +1266,7 @@ jobs:
           PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
           PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
-          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "0"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: ${{ inputs.raise-deprecations-runtime-errors }}
           SALT_TRANSPORT: ${{ matrix.transport }}
           TMPDIR: ${{ runner.temp }}
         shell: powershell
@@ -1289,7 +1293,7 @@ jobs:
           PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
           PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
-          RAISE_DEPRECATIONS_RUNTIME_ERRORS: "0"
+          RAISE_DEPRECATIONS_RUNTIME_ERRORS: ${{ inputs.raise-deprecations-runtime-errors }}
           SALT_TRANSPORT: ${{ matrix.transport }}
           TMPDIR: ${{ runner.temp }}
         shell: powershell
