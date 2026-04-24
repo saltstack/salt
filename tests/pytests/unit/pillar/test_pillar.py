@@ -192,7 +192,7 @@ def test_pillar_fetch_pillar_override_skipped(temp_salt_minion, caplog):
         pillar_cache = pillar.cache.fetch("pillar", f"{temp_salt_minion.id}:base")
         assert "inline_pillar" not in pillar_cache
         assert (
-            pillar.functions["pillar.get"]("inline_pillar") == secret.REDACT_PLACEHOLDER
+            pillar.functions["pillar.get"]("inline_pillar") is True
         )
 
 
@@ -300,7 +300,6 @@ def test_ssh_merge_pillar_in_dunder_pillar(temp_salt_minion):
         assert exposed["ssh_key"] == "ssh_value"
         assert exposed["normal_key"] == "normal_value"
 
-    return
     # The loader pack should contain the merged SSH pillar
     assert (
         salt.utils.secret.expose(pillar.functions.pack["__pillar__"])["ssh_key"]
