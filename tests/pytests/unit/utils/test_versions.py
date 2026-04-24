@@ -1,4 +1,5 @@
 import datetime
+import os
 import sys
 import warnings
 
@@ -10,6 +11,11 @@ import salt.utils.versions
 import salt.version
 from salt.utils.versions import LooseVersion, Version
 from tests.support.mock import patch
+
+skipunless_deprecation_runtime_errors = pytest.mark.skipif(
+    os.environ.get("RAISE_DEPRECATIONS_RUNTIME_ERRORS", "0") != "1",
+    reason="Set RAISE_DEPRECATIONS_RUNTIME_ERRORS=1 to assert warn_until raises RuntimeError",
+)
 
 TEST_MOD = """
 __version__ = (1, 2, 3)
@@ -111,6 +117,7 @@ def test_compare():
         salt.version.SaltVersionsInfo.CHLORINE,
     ),
 )
+@skipunless_deprecation_runtime_errors
 def test_warn_until_good_version_argument(version):
     with pytest.raises(
         RuntimeError,
@@ -184,6 +191,33 @@ def test_warn_until_warning_raised(subtests):
             )
             assert 0 == len(recorded_warnings)
 
+    with subtests.test("version on the deprecation message gets properly formatted"):
+        with warnings.catch_warnings(record=True) as recorded_warnings:
+            vrs = salt.version.SaltStackVersion.from_name("Helium")
+            salt.utils.versions.warn_until(
+                "Helium",
+                "Deprecation Message until {version}!",
+                _version_info_=(vrs.major - 1, 0),
+            )
+            assert f"Deprecation Message until {vrs.formatted_version}!" == str(
+                recorded_warnings[0].message
+            )
+
+
+@skipunless_deprecation_runtime_errors
+def test_warn_until_raises_when_deadline_passed(subtests):
+    warnings.filterwarnings("always", "", DeprecationWarning, __name__)
+
+    def raise_warning(_version_info_=(0, 16, 0)):
+        salt.utils.versions.warn_until(
+            (0, 17), "Deprecation Message!", _version_info_=_version_info_
+        )
+
+    def raise_named_version_warning(_version_info_=(0, 16, 0)):
+        salt.utils.versions.warn_until(
+            "hydrogen", "Deprecation Message!", _version_info_=_version_info_
+        )
+
     with subtests.test(
         "Let's set version info to (0, 17), a RuntimeError should be raised"
     ):
@@ -243,18 +277,6 @@ def test_warn_until_warning_raised(subtests):
                 _version_info_=(sys.maxsize, 16, 0),
             )
 
-    with subtests.test("version on the deprecation message gets properly formatted"):
-        with warnings.catch_warnings(record=True) as recorded_warnings:
-            vrs = salt.version.SaltStackVersion.from_name("Helium")
-            salt.utils.versions.warn_until(
-                "Helium",
-                "Deprecation Message until {version}!",
-                _version_info_=(vrs.major - 1, 0),
-            )
-            assert f"Deprecation Message until {vrs.formatted_version}!" == str(
-                recorded_warnings[0].message
-            )
-
 
 def test_kwargs_warn_until_warning_raised(subtests):
     # We *always* want *all* warnings thrown on this module
@@ -285,6 +307,17 @@ def test_kwargs_warn_until_warning_raised(subtests):
                 {}, (0, 17), _version_info_=(0, 16, 0)  # no kwargs
             )
             assert 0 == len(recorded_warnings)
+
+
+@skipunless_deprecation_runtime_errors
+def test_kwargs_warn_until_raises_when_deadline_passed(subtests):
+    warnings.filterwarnings("always", "", DeprecationWarning, __name__)
+
+    def raise_warning(**kwargs):
+        _version_info_ = kwargs.pop("_version_info_", (0, 16, 0))
+        salt.utils.versions.kwargs_warn_until(
+            kwargs, (0, 17), _version_info_=_version_info_
+        )
 
     with subtests.test(
         "Let's set version info to (0, 17), a RuntimeError should be raised "
@@ -355,7 +388,11 @@ def test_warn_until_date_warning_raised():
         )
         assert len(recorded_warnings) == 0
 
-    # Let's test for RuntimeError raise
+
+@skipunless_deprecation_runtime_errors
+def test_warn_until_date_raises_when_past_deadline():
+    _current_date = datetime.date(2000, 1, 1)
+
     with pytest.raises(
         RuntimeError,
         match=(
@@ -367,8 +404,6 @@ def test_warn_until_date_warning_raised():
     ):
         salt.utils.versions.warn_until_date("20000101", "Deprecation Message!")
 
-    # Even though we're calling warn_until_date, we pass _dont_call_warnings
-    # because we're only after the RuntimeError
     with pytest.raises(
         RuntimeError,
         match=(
