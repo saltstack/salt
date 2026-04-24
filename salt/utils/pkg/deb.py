@@ -24,9 +24,9 @@ def string_to_bool(s):
     if isinstance(s, bool):
         return s
     s = s.lower()
-    if s in ("no", "false", "without", "off", "disable"):
+    if s in ("no", "false", "without", "off", "disable", "0"):
         return False
-    elif s in ("yes", "true", "with", "on", "enable"):
+    elif s in ("yes", "true", "with", "on", "enable", "1"):
         return True
     raise ValueError(f"Unable to convert to boolean: {s}")
 
