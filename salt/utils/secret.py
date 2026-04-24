@@ -181,8 +181,7 @@ class SecretDict(SecretIterable[dict], MutableMapping[str, Any]):
 
     def _display(self) -> dict:
         return {
-            k: v._display() if isinstance(v, Secret) else v
-            for k, v in self.items()
+            k: v._display() if isinstance(v, Secret) else v for k, v in self.items()
         }
 
 
