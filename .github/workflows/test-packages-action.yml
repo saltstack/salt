@@ -47,6 +47,10 @@ on:
         required: true
         type: string
         description: Json job matrix config
+      raise-deprecations-runtime-errors:
+        required: true
+        type: string
+        description: Whether to raise RuntimeError on deprecation warnings ("1" or "0")
 
 env:
   COLUMNS: 190
@@ -56,7 +60,7 @@ env:
   PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
   PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
-  RAISE_DEPRECATIONS_RUNTIME_ERRORS: "0"
+  RAISE_DEPRECATIONS_RUNTIME_ERRORS: ${{ inputs.raise-deprecations-runtime-errors }}
   USE_S3_CACHE: 'false'
 
 jobs:

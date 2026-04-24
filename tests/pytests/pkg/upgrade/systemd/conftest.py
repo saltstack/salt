@@ -387,6 +387,20 @@ def salt_systemd_setup(
     ret = call_cli.run("--local", "test.version")
     assert ret.returncode == 0
     installed_minion_version = packaging.version.parse(ret.data)
+    if installed_minion_version < upgrade_version:
+        # ``test_salt_ownership_permission`` can skip before ``install(upgrade=True)``
+        # when ``systemctl restart`` fails; finish the upgrade so teardown can
+        # reset services and downgrade without an impossible version assertion.
+        install_salt_systemd.install(upgrade=True)
+        if (
+            install_salt_systemd.pkg_system_service
+            and not platform.is_windows()
+            and not platform.is_darwin()
+        ):
+            install_salt_systemd.restart_services()
+        ret = call_cli.run("--local", "test.version")
+        assert ret.returncode == 0
+        installed_minion_version = packaging.version.parse(ret.data)
     assert installed_minion_version == upgrade_version
 
     # Reset systemd services to their preset states
@@ -398,8 +412,11 @@ def salt_systemd_setup(
     # Install previous version, downgrading if necessary
     install_salt_systemd.install_previous(downgrade=True)
 
-    # Ensure services are started on debian/ubuntu
-    if install_salt_systemd.distro_name in ["debian", "ubuntu"]:
+    if (
+        install_salt_systemd.pkg_system_service
+        and not platform.is_windows()
+        and not platform.is_darwin()
+    ):
         install_salt_systemd.restart_services()
 
     # For debian/ubuntu, ensure pinning file is for major version of previous

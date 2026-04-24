@@ -99,7 +99,14 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
         install_salt.install(downgrade=True)
 
     time.sleep(10)
-    if install_salt.distro_id in ("ubuntu", "debian"):
+    if (
+        install_salt.pkg_system_service
+        and not platform.is_windows()
+        and not platform.is_darwin()
+    ):
+        # Debian/Ubuntu start daemons on install and need a controlled restart cycle.
+        # RPM-based installs often leave systemd units stopped or mis-pointed after a
+        # ``yum downgrade`` until an explicit ``systemctl restart`` (see Rocky/Photon).
         install_salt.restart_services()
 
     time.sleep(30)
