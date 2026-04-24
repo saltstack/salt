@@ -40,6 +40,39 @@ ARTIFACTS_DIR = CODE_DIR / "artifacts" / "pkg"
 log = logging.getLogger(__name__)
 
 
+def pep440_version_to_rpm_nevra_version(version: str) -> str:
+    """
+    Map a PEP440-style version string to the RPM ``Version`` field spelling.
+
+    Published RPMs use a tilde before pre-release labels (``3008.0~rc1``) while
+    CI and pytest often pass ``3008.0rc1``. :command:`yum` / :command:`tdnf`
+    then cannot resolve ``salt-3008.0rc1``.
+
+    If *version* already contains ``~`` (RPM-shaped), it is returned unchanged.
+    Non-pre-release versions are returned unchanged.
+    """
+    if not version or "~" in version:
+        return version
+    try:
+        parsed = packaging.version.parse(version)
+    except packaging.version.InvalidVersion:
+        return version
+    if parsed.pre is None and parsed.dev is None:
+        return version
+    release = ".".join(str(p) for p in parsed.release)
+    out = release
+    if parsed.pre is not None:
+        pre_l, pre_n = parsed.pre
+        out = f"{out}~{pre_l}{pre_n}"
+    else:
+        out = f"{out}~dev{parsed.dev}"
+    if parsed.post is not None:
+        out = f"{out}.post{parsed.post}"
+    if parsed.local is not None:
+        out = f"{out}+{parsed.local}"
+    return out
+
+
 import pytestshellutils.shell
 import pytestshellutils.utils.processes
 
@@ -759,6 +792,16 @@ class SaltPkgInstall:
         self._install_pkgs(upgrade=upgrade, downgrade=downgrade)
         if self.distro_id in ("ubuntu", "debian") and stop_services:
             self.stop_services()
+        elif (
+            upgrade
+            and self.pkg_system_service
+            and not platform.is_windows()
+            and not platform.is_darwin()
+        ):
+            # RPM/DEB upgrade replaces on disk while systemd units can keep old
+            # processes until restart; ``salt-call --local test.version`` then
+            # still reports the previous release (see upgrade systemd teardown).
+            self.restart_services()
 
     def stop_services(self):
         """
@@ -847,10 +890,11 @@ class SaltPkgInstall:
             pkgs_to_install = self.salt_pkgs.copy()
 
             if self.distro_name == "photon":
+                rpm_prev = pep440_version_to_rpm_nevra_version(self.prev_version)
                 orig_pkgs = pkgs_to_install[:]
                 pkgs_to_install = []
                 for _ in orig_pkgs:
-                    pkgs_to_install.append(f"{_}-{self.prev_version}")
+                    pkgs_to_install.append(f"{_}-{rpm_prev}")
                 ret = self.proc.run(self.pkg_mngr, "clean", "all")
                 self._check_retcode(ret)
             else:
