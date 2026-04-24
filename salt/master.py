@@ -281,6 +281,15 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         self.event = salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
         )
+
+        if self.ipc_publisher is not None:
+            if hasattr(self.ipc_publisher, "post_fork"):
+                # Maintenance process typically doesn't have an IOLoop yet
+                # transport.post_fork should handle loop creation if None
+                self.ipc_publisher.post_fork(
+                    self.ipc_publisher.publish_payload, io_loop=None
+                )
+
         # Init any values needed by the git ext pillar
         self.git_pillar = salt.daemons.masterapi.init_git_pillar(self.opts)
 
@@ -819,7 +828,9 @@ class Master(SMaster):
             ipc_publisher = salt.channel.server.MasterPubServerChannel.factory(
                 self.opts
             )
-            ipc_publisher.pre_fork(self.process_manager)
+            ipc_publisher.pre_fork(
+                self.process_manager, kwargs={"secrets": SMaster.secrets}
+            )
             if not ipc_publisher.transport.started.wait(30):
                 raise salt.exceptions.SaltMasterError(
                     "IPC publish server did not start within 30 seconds. Something went wrong."
