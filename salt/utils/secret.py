@@ -225,6 +225,11 @@ def expose(value: Secret) -> Any:
         return value
     elif isinstance(value, Secret):
         return value.get_secret_value()
+    elif isinstance(value, dict):
+        return {k: expose(v) for k, v in value.items()}
+    elif isinstance(value, Iterable):
+        cast = type(value)
+        return cast(expose(v) for v in value)
     else:
         return value
 
