@@ -423,11 +423,14 @@ def salt_proxy_factory(salt_factories, salt_master_factory):
 
 @pytest.fixture(scope="session")
 def salt_delta_proxy_factory(salt_factories, salt_master_factory):
-    import saltfactories.daemons.minion
+    try:
+        from saltfactories.daemons.proxy import SaltProxyMinion
+    except ImportError:  # pragma: no cover
+        from saltfactories.daemons.minion import SaltProxyMinion
 
     proxy_minion_id = random_string("delta-proxy-test-")
     root_dir = salt_factories.get_root_dir_for_daemon(
-        proxy_minion_id, factory_class=saltfactories.daemons.minion.SaltProxyMinion
+        proxy_minion_id, factory_class=SaltProxyMinion
     )
     conf_dir = root_dir / "conf"
     conf_dir.mkdir(parents=True, exist_ok=True)

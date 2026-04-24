@@ -1276,11 +1276,28 @@ def decompress_dependencies(session):
         nox_dependencies_tarball_path.unlink()
 
     session.log("Finding broken 'python' symlinks and configs under '.nox/' ...")
-    for dirname in os.scandir(REPO_ROOT / ".nox"):
-        scan_path = REPO_ROOT.joinpath(".nox", dirname, scripts_dir_name)
+    # ``compress-dependencies`` archives the whole ``.nox`` tree. That tree is not
+    # only per-session virtualenv folders (``ci-test-onedir``, etc.): it can also
+    # contain plain files written by tooling, for example:
+    #
+    #   - ``.nox/.gitignore`` — tells Git to ignore generated venv files
+    #   - ``.nox/CACHEDIR.TAG`` — cache-dir marker used by virtualenv and similar tools
+    #
+    # Those files are siblings of the venv directories. The code below must only
+    # treat *directories* as virtualenvs. Otherwise we build paths like
+    # ``.nox/.gitignore/Scripts`` and ``os.scandir`` raises FileNotFoundError.
+    for entry in os.scandir(REPO_ROOT / ".nox"):
+        if not entry.is_dir():
+            continue
+
+        venv_dir = pathlib.Path(entry.path)
+        scan_path = venv_dir / scripts_dir_name
+        if not scan_path.is_dir():
+            # Unexpected layout; skip rather than failing the whole session.
+            continue
 
         # Fix the values of the directories in a pyvenv.cfg file.
-        config = pathlib.Path(dirname) / "pyvenv.cfg"
+        config = venv_dir / "pyvenv.cfg"
         values = {}
         if config.exists():
             session.log(f"Found venv config: {config}")
@@ -1326,7 +1343,7 @@ def decompress_dependencies(session):
                     )
                     session.log(
                         "Fixing broken symlink in nox virtualenv %r, from %r to %r",
-                        dirname.name,
+                        entry.name,
                         resolved_link,
                         str(fixed_link.relative_to(REPO_ROOT)),
                     )

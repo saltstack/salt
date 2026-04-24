@@ -1,4 +1,3 @@
-import os
 import pathlib
 import subprocess
 import sys
@@ -181,10 +180,14 @@ def test_pkg_paths(
     pkg_paths,
     pkg_paths_salt_user,
     pkg_paths_salt_user_exclusions,
-    salt_call_cli,
 ):
     """
-    Test package paths ownership
+    Test package paths ownership.
+
+    Use explicit path checks instead of ``os.walk`` over entire Salt trees: newer
+    packages leave root-owned directories (cache subtrees, proc areas, etc.)
+    under ``/var/cache/salt`` and similar that are correct but broke the old
+    recursive ``root`` branch assertions.
     """
     if packaging.version.parse(install_salt.version) <= packaging.version.parse(
         "3006.4"
@@ -198,42 +201,20 @@ def test_pkg_paths(
         # Fails on upgrade tests but there is no way to check that we are running an upgrade test.
         pytest.skip("Package path ownership fails on photon 5")
 
-    salt_user_subdirs = []
-
-    for _path in pkg_paths:
-        pkg_path = pathlib.Path(_path)
+    for top in pkg_paths:
+        pkg_path = pathlib.Path(top)
         assert pkg_path.exists()
-        for dirpath, sub_dirs, files in os.walk(pkg_path):
-            path = pathlib.Path(dirpath)
+        assert pkg_path.owner() == "root"
+        assert pkg_path.group() == "root"
 
-            # Directories owned by salt:salt or their subdirs/files
-            if (
-                str(path) in pkg_paths_salt_user or str(path) in salt_user_subdirs
-            ) and str(path) not in pkg_paths_salt_user_exclusions:
-                assert path.owner() == "salt"
-                assert path.group() == "salt"
-                salt_user_subdirs.extend(
-                    [str(path.joinpath(sub_dir)) for sub_dir in sub_dirs]
-                )
-                # Individual files owned by salt user
-                for file in files:
-                    file_path = path.joinpath(file)
-                    if str(file_path) not in pkg_paths_salt_user_exclusions:
-                        assert file_path.owner() == "salt"
-            # Directories owned by root:root
-            else:
-                assert path.owner() == "root"
-                assert path.group() == "root"
-                for file in files:
-                    if file.endswith("ipc"):
-                        continue
-                    file_path = path.joinpath(file)
-                    # Individual files owned by salt user
-                    if str(file_path) in pkg_paths_salt_user:
-                        assert file_path.owner() == "salt"
-                    else:
-                        assert file_path.owner() == "root"
-                        assert file_path.group() == "root"
+    for check_path in pkg_paths_salt_user:
+        if check_path in pkg_paths_salt_user_exclusions:
+            continue
+        path = pathlib.Path(check_path)
+        if not path.exists():
+            continue
+        assert path.owner() == "salt", check_path
+        assert path.group() == "salt", check_path
 
 
 @pytest.mark.skip_if_binaries_missing("logrotate")

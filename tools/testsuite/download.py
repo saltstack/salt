@@ -330,7 +330,8 @@ def test_artifacts(
     ]
     if pkgdef:
         for _ in pkgdef:
-            artifacts.append(("artifacts/pkg/", f"salt-*-{_.arch}-{_.pkg_type}"))
+            # CI artifact names may add a suffix (e.g. ``-from-src``) after the type.
+            artifacts.append(("artifacts/pkg/", f"salt-*-{_.arch}-{_.pkg_type}*"))
     for dest, artifact_name in artifacts:
         succeeded = tools.utils.gh.download_artifact(
             ctx,
