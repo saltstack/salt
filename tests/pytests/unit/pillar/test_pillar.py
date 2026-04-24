@@ -191,9 +191,7 @@ def test_pillar_fetch_pillar_override_skipped(temp_salt_minion, caplog):
 
         pillar_cache = pillar.cache.fetch("pillar", f"{temp_salt_minion.id}:base")
         assert "inline_pillar" not in pillar_cache
-        assert (
-            pillar.functions["pillar.get"]("inline_pillar") is True
-        )
+        assert pillar.functions["pillar.get"]("inline_pillar") is True
 
 
 def test_remote_pillar_timeout(temp_salt_minion, tmp_path):
