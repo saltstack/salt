@@ -17,7 +17,7 @@ REDACT_PLACEHOLDER = "**********"
 SecretType_co = TypeVar("SecretType_co", covariant=True)
 
 
-class _SecretBase(Generic[SecretType_co]):
+class Secret(Generic[SecretType_co]):
     def __init__(self, secret_value) -> None:
         self._secret_value = secret_value
 
@@ -48,7 +48,7 @@ class _SecretBase(Generic[SecretType_co]):
         raise NotImplementedError
 
 
-class SecretStr(_SecretBase[str]):
+class SecretStr(Secret[str]):
     """A string used for storing sensitive information that you do not want to be visible in logging or tracebacks.
 
     When the secret value is nonempty, it is displayed as `'**********'` instead of the underlying value in
@@ -114,7 +114,7 @@ class SecretStr(_SecretBase[str]):
         return REDACT_PLACEHOLDER if self._secret_value else ""
 
 
-class SecretBytes(_SecretBase[bytes]):
+class SecretBytes(Secret[bytes]):
     """A bytes used for storing sensitive information that you do not want to be visible in logging or tracebacks.
 
     It displays `b'**********'` instead of the string value on `repr()` and `str()` calls.
@@ -146,7 +146,7 @@ class SecretBytes(_SecretBase[bytes]):
         return REDACT_PLACEHOLDER.encode() if self._secret_value else b""
 
 
-class SecretIterable(_SecretBase[SecretType_co]):
+class SecretIterable(Secret[SecretType_co]):
     def get_secret_value(self):
         cast = type(self._secret_value)
         return cast(expose(v) for v in self._secret_value)
@@ -168,7 +168,7 @@ class SecretIterable(_SecretBase[SecretType_co]):
 
     def _display(self):
         cast = type(self._secret_value)
-        return cast(v._display() if isinstance(v, _SecretBase) else v for v in self)
+        return cast(v._display() if isinstance(v, Secret) else v for v in self)
 
 
 class SecretDict(SecretIterable[dict], MutableMapping[str, Any]):
@@ -181,7 +181,7 @@ class SecretDict(SecretIterable[dict], MutableMapping[str, Any]):
 
     def _display(self) -> dict:
         return {
-            k: v._display() if isinstance(v, _SecretBase) else v
+            k: v._display() if isinstance(v, Secret) else v
             for k, v in self.items()
         }
 
@@ -195,7 +195,7 @@ class SecretList(SecretIterable[list], MutableSequence[Any]):
         self._secret_value.insert(index, hide(value))
 
 
-def hide(value: Any) -> _SecretBase:
+def hide(value: Any) -> Secret:
     """
     Morph a leaf value into a secret-safe container.
     Args:
@@ -203,7 +203,7 @@ def hide(value: Any) -> _SecretBase:
     Returns:
         The morphed value.
     """
-    if isinstance(value, _SecretBase):
+    if isinstance(value, Secret):
         return value
     elif isinstance(value, str):
         return SecretStr(value)
@@ -217,13 +217,13 @@ def hide(value: Any) -> _SecretBase:
         return value
 
 
-def expose(value: _SecretBase) -> Any:
+def expose(value: Secret) -> Any:
     """
     If the value is a secret, return the secret value.
     """
     if isinstance(value, (str, bytes)):
         return value
-    elif isinstance(value, _SecretBase):
+    elif isinstance(value, Secret):
         return value.get_secret_value()
     else:
         return value
@@ -235,7 +235,7 @@ def serial(value):
     """
     if isinstance(value, (str, bytes)):
         return value
-    elif isinstance(value, _SecretBase):
+    elif isinstance(value, Secret):
         return value._display()
     elif isinstance(value, Mapping):
         return {k: serial(v) for k, v in value.items()}
@@ -254,7 +254,7 @@ def no_log_mask(state_ret: dict[str, Any]):
     state_ret["changes"] = {REDACT_PLACEHOLDER: REDACT_PLACEHOLDER}
 
 
-def _gather(obj: _SecretBase) -> list[str | bytes]:
+def _gather(obj: Secret) -> list[str | bytes]:
     """
     Gather all the secret values from the object from longest to shortest.
     """
@@ -265,13 +265,13 @@ def _gather(obj: _SecretBase) -> list[str | bytes]:
     elif isinstance(obj, SecretIterable):
         for v in obj:
             secrets.update(_gather(v))
-    elif isinstance(obj, _SecretBase):
+    elif isinstance(obj, Secret):
         secrets.add(obj.get_secret_value())
 
     return sorted(secrets, key=len, reverse=True)
 
 
-def redact(value, secrets: _SecretBase, known: list[str | bytes] = None) -> str:
+def redact(value, secrets: Secret, known: list[str | bytes] = None) -> str:
     """
     If any secrets are found in the value, replace them with the placeholder.
     """
