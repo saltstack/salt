@@ -710,7 +710,10 @@ class SSH(MultiprocessingStateMixin):
                 }
                 if isinstance(ret[single.id], dict):
                     inner_retcode = ret[single.id].get("retcode")
-                    if inner_retcode is not None:
+                    # Treat any *present* ``retcode`` key as authoritative, including
+                    # JSON ``null`` (``None``). ``dict.get("retcode")`` alone cannot
+                    # distinguish "missing key" from "null retcode", so use membership.
+                    if "retcode" in ret[single.id]:
                         try:
                             retcode = int(inner_retcode)
                         except (TypeError, ValueError):

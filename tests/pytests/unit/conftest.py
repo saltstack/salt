@@ -79,8 +79,15 @@ def syndic_opts(tmp_path):
 def mocked_tcp_pub_client():
     transport = MagicMock(spec=salt.transport.tcp.PublishClient)
     transport.connect = MagicMock()
-    future = asyncio.Future()
-    transport.connect.return_value = future
-    future.set_result(True)
-    with patch("salt.transport.tcp.PublishClient", transport):
-        yield
+    # Bind the Future to a dedicated loop. ``asyncio.Future()`` without a running
+    # loop raises on Python 3.10+ (asyncio's default policy no longer creates one
+    # implicitly on the main thread), which broke unit tests under ``nox``.
+    loop = asyncio.new_event_loop()
+    try:
+        future = loop.create_future()
+        future.set_result(True)
+        transport.connect.return_value = future
+        with patch("salt.transport.tcp.PublishClient", transport):
+            yield
+    finally:
+        loop.close()

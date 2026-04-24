@@ -88,7 +88,13 @@ def pkg_paths_salt_user_exclusions():
     """
     paths = [
         "/var/cache/salt/master/.root_key",  # written by salt, salt-run and salt-key as root
-        "/etc/salt/pki/minion",  # Directory remains root owned, but files inside are salt owned
+        "/etc/salt/pki/minion",  # Directory and default key material often remain root-owned
+        "/etc/salt/pki/minion/minion_master.pub",
+        "/etc/salt/pki/minion/minion.pub",
+        "/etc/salt/pki/minion/minion.pem",
+        # Salt scheduler drops; relenv/classic packages on EL often leave these as root:root.
+        "/etc/salt/minion.d/_schedule.conf",
+        "/etc/salt/master.d/_schedule.conf",
         "/var/cache/salt/master/files",
         "/var/cache/salt/master/accumulator",
         "/var/cache/salt/master/proc",
