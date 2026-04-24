@@ -52,7 +52,7 @@ For example, to store the key ``my-key`` with value ``my-value`` under the bank
     2) "1773671718"
 
 
-There are four types of keys stored:
+There are three types of keys stored:
 
 - ``$BANKS_*`` is a Redis SORTED SET containing the list of all banks
 - ``$KEYS_*`` is a Redis SET containing key, value pairs of the current bank.
@@ -64,11 +64,10 @@ banks_prefix: ``$BANK``
     The prefix used for the name of the Redis key storing the sorted set of banks.
 
 keys_prefix: ``$KEY``
-    The prefix of the Redis keys having the value of the keys to be cached under
-    a certain bank.
+    The prefix used for Redis keys storing bank key/value pairs.
 
 timestamp_prefix: ``$TSTAMP``
-    The prefix for the last modified timestamp for keys.
+    The prefix used for Redis keys storing timestamps of bank keys.
 
     .. versionadded:: 3005
 
