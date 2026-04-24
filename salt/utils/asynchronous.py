@@ -80,7 +80,15 @@ def add_callback(loop, callback, *args):
     """
     Add a callback to the loop in a loop-agnostic way.
     """
-    if hasattr(loop, "add_callback"):
+    if asyncio.iscoroutinefunction(callback):
+        if hasattr(loop, "create_task"):
+            loop.create_task(callback(*args))
+        elif hasattr(loop, "add_callback"):
+            loop.add_callback(callback, *args)
+        else:
+            # Final fallback, try to get loop and create task
+            asyncio.get_event_loop().create_task(callback(*args))
+    elif hasattr(loop, "add_callback"):
         loop.add_callback(callback, *args)
     else:
         # Assume asyncio loop

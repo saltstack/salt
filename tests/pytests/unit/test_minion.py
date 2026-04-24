@@ -1012,6 +1012,7 @@ def test_sock_path_len(minion_opts):
     )
     try:
         event_publisher = event.AsyncEventPublisher(minion_opts)
+        event_publisher.start()
         result = True
     except ValueError:
         #  There are rare cases where we operate a closed socket, especially in containers.

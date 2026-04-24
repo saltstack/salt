@@ -1174,6 +1174,11 @@ class AsyncEventPublisher:
         )
 
         log.info("Starting pull socket on %s", epull_uri)
+
+    def start(self):
+        """
+        Start the AsyncEventPublisher
+        """
         with salt.utils.files.set_umask(0o177):
             if hasattr(self.publisher, "post_fork"):
                 self.publisher.post_fork(
@@ -1183,12 +1188,12 @@ class AsyncEventPublisher:
             # Start the puller task
             self.io_loop.add_callback(self.puller.on_recv, self.handle_publish)
 
-    def handle_publish(self, package, _):
+    async def handle_publish(self, package, _):
         """
         Get something from epull, publish it out epub, and return the package (or None)
         """
         try:
-            self.publisher.publish(package)
+            await self.publisher.publish(package)
             return package
         # Add an extra fallback in case a forked process leeks through
         except Exception:  # pylint: disable=broad-except
@@ -1313,7 +1318,7 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
         Get something from epull, publish it out epub, and return the package (or None)
         """
         try:
-            self.publisher.publish(package)
+            await self.publisher.publish(package)
             return package
         # Add an extra fallback in case a forked process leeks through
         except Exception:  # pylint: disable=broad-except

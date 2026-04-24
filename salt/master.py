@@ -1322,7 +1322,6 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
                                 self.opts,
                                 self.master_key,
                                 self.key,
-                                req_channels,
                             ),
                             kwargs={"pool_name": pool_name, "pool_index": pool_index},
                             name=name,
@@ -1333,7 +1332,7 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
                     name = f"MWorker-{ind}"
                     self.process_manager.add_process(
                         MWorker,
-                        args=(self.opts, self.master_key, self.key, req_channels),
+                        args=(self.opts, self.master_key, self.key),
                         name=name,
                     )
         self.process_manager.run()
@@ -1364,7 +1363,14 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
     """
 
     def __init__(
-        self, opts, mkey, key, req_channels, pool_name=None, pool_index=None, **kwargs
+        self,
+        opts,
+        mkey,
+        key,
+        req_channels=None,
+        pool_name=None,
+        pool_index=None,
+        **kwargs,
     ):
         """
         Create a salt master worker process
@@ -1372,6 +1378,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         :param dict opts: The salt options
         :param dict mkey: The user running the salt master and the RSA key
         :param dict key: The user running the salt master and the AES key
+        :param list req_channels: [DEPRECATED] No longer used, workers re-init their own.
         :param str pool_name: Name of the worker pool this worker belongs to
         :param int pool_index: Index of this worker within its pool
 
@@ -1380,7 +1387,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         super().__init__(**kwargs)
         self.opts = opts.copy()  # Copy opts to avoid modifying the shared instance
-        self.req_channels = req_channels
+        self.req_channels = []  # Initialize empty, will be populated in _post_fork_init
 
         self.mkey = mkey
         self.key = key
@@ -1437,15 +1444,20 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         self.io_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.io_loop)
 
+        # Re-initialize required channels for this worker process.
+        # This ensures we have process-local sockets and event loops.
+        self.req_channels = []
+        for transport, opts in iter_transport_opts(self.opts):
+            chan = salt.channel.server.ReqServerChannel.factory(opts)
+            chan.post_fork(
+                self._handle_payload, io_loop=self.io_loop, pool_name=self.pool_name
+            )
+            self.req_channels.append(chan)
+
         # Create a threading event to signal when modules are ready.
         # We use threading.Event here because it's set from a background thread
         # and then converted to an asyncio.Event for use in coroutines.
         self._modules_loaded = threading.Event()
-
-        for req_channel in self.req_channels:
-            req_channel.post_fork(
-                self._handle_payload, io_loop=self.io_loop, pool_name=self.pool_name
-            )
 
         def _load_modules():
             try:
