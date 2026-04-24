@@ -91,12 +91,12 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
     # Downgrade Salt to the previous version and test
     install_salt.install(downgrade=True)
 
-    time.sleep(10)  # give it some time
-    # downgrade install will stop services on Debian/Ubuntu
-    # This is due to RedHat systems are not active after an install, but Debian/Ubuntu are active after an install
-    # want to ensure our tests start with the config settings we have set,
-    # trying restart for Debian/Ubuntu to see the outcome
-    if install_salt.distro_id in ("ubuntu", "debian"):
+    time.sleep(10)
+    if (
+        install_salt.pkg_system_service
+        and not platform.is_windows()
+        and not platform.is_darwin()
+    ):
         install_salt.restart_services()
 
     time.sleep(60)  # give it some time
