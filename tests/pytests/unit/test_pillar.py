@@ -552,9 +552,10 @@ def test_ext_pillar_first(tmp_path):
         ),
     ):
         pillar = salt.pillar.Pillar(opts, grains, "mocked-minion", "base")
-        assert salt.utils.secret.expose(pillar.compile_pillar())[
-            "generic"
-        ]["key1"] == "value1"
+        assert (
+            salt.utils.secret.expose(pillar.compile_pillar())["generic"]["key1"]
+            == "value1"
+        )
 
 
 @patch("salt.fileclient.Client.list_states")
@@ -770,9 +771,9 @@ def test_topfile_order():
                 pillar = salt.pillar.Pillar(opts, grains, "mocked-minion", "base")
                 # Make sure that confirm_top.confirm_top returns True
                 pillar.matchers["confirm_top.confirm_top"] = lambda *x, **y: True
-                assert salt.utils.secret.expose(pillar.compile_pillar())[
-                    "ssh"
-                ] == expected
+                assert (
+                    salt.utils.secret.expose(pillar.compile_pillar())["ssh"] == expected
+                )
         finally:
             shutil.rmtree(tempdir, ignore_errors=True)
 
@@ -1310,9 +1311,7 @@ def test_pillar_cache_compile_returns_plain_dict_for_transport(master_opts, grai
     ):
         out = pillar.compile_pillar()
     assert isinstance(out, secret.SecretDict)
-    roundtrip = salt.payload.loads(
-        salt.payload.dumps({"opts": {"pillar": out}})
-    )
+    roundtrip = salt.payload.loads(salt.payload.dumps({"opts": {"pillar": out}}))
     assert roundtrip["opts"]["pillar"]["info"] == "test"
     assert roundtrip["opts"]["pillar"]["nested"]["k"] == "v"
     salt.utils.json.dumps(salt.utils.secret.expose(out))
