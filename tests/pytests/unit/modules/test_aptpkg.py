@@ -240,6 +240,38 @@ def deb822_repo_file(tmp_path: pathlib.Path, deb822_repo_content: str):
     return repo
 
 
+@pytest.fixture(
+    params=["no", "false", "without", "off", "disable", "DisAble", "WithOUT", "0"]
+)
+def deb822_repo_bool_false_file(
+    request, tmp_path: pathlib.Path, deb822_repo_content: str
+):
+    """
+    Create a Debian-style repository in the deb822 format with a False bool and return
+    the path of the repository file.
+    """
+    disabled_line = f"Enabled: {request.param}\n"
+    repo = tmp_path / "sources.list.d" / "test.sources"
+    repo.parent.mkdir(parents=True, exist_ok=True)
+    repo.write_text(f"{deb822_repo_content}\n{disabled_line}", encoding="UTF-8")
+    return repo
+
+
+@pytest.fixture(params=["yes", "true", "with", "on", "enable", "EnAble", "With", "1"])
+def deb822_repo_bool_true_file(
+    request, tmp_path: pathlib.Path, deb822_repo_content: str
+):
+    """
+    Create a Debian-style repository in the deb822 format with a True bool and return
+    the path of the repository file.
+    """
+    enabled_line = f"Enabled: {request.param}\n"
+    repo = tmp_path / "sources.list.d" / "test.sources"
+    repo.parent.mkdir(parents=True, exist_ok=True)
+    repo.write_text(f"{deb822_repo_content}\n{enabled_line}", encoding="UTF-8")
+    return repo
+
+
 @pytest.fixture
 def mock_apt_config(deb822_repo_file: pathlib.Path):
     """
@@ -315,6 +347,36 @@ def test_get_repo_deb822(deb822_repo_file: pathlib.Path, mock_apt_config):
 
     assert bool(result)
     assert result["uri"] == uri
+
+
+def test_get_repo_deb822_with_false(
+    deb822_repo_bool_false_file: pathlib.Path, mock_apt_config
+):
+    """
+    Test that aptpkg can parse False correctly.
+    """
+    uri = "http://cz.archive.ubuntu.com/ubuntu/"
+    repo = f"deb {uri} noble main"
+
+    result = aptpkg.get_repo(repo)
+
+    assert bool(result)
+    assert result["enabled"] is False
+
+
+def test_get_repo_deb822_with_true(
+    deb822_repo_bool_false_file: pathlib.Path, mock_apt_config
+):
+    """
+    Test that aptpkg can parse False correctly.
+    """
+    uri = "http://cz.archive.ubuntu.com/ubuntu/"
+    repo = f"deb {uri} noble main"
+
+    result = aptpkg.get_repo(repo)
+
+    assert bool(result)
+    assert result["enabled"] is False
 
 
 def test_version(lowpkg_info_var):
