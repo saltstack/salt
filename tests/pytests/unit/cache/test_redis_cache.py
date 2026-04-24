@@ -11,7 +11,7 @@ import salt.cache.redis_cache as redis_cache
 log = logging.getLogger(__name__)
 
 
-class MockRedisCache():
+class MockRedisCache:
     """
     Mock a redis server.
 
@@ -50,7 +50,9 @@ class MockRedisCache():
 
     def zadd(self, key, items):
         keyset = self._get_type(key, "sortedset", {})
-        items = {k if isinstance(k, bytes) else k.encode("utf8"): s for k, s in items.items()}
+        items = {
+            k if isinstance(k, bytes) else k.encode("utf8"): s for k, s in items.items()
+        }
         keyset["data"].update(items)
         self.db[key] = keyset
         self.results.append(None)
@@ -142,14 +144,19 @@ class MockRedisCache():
 @pytest.fixture
 def mock_redis_cache(monkeypatch):
     monkeypatch.setattr(redis_cache, "__opts__", {}, raising=False)
-    monkeypatch.setattr(redis_cache, "__context__", {
-        "cache.redis": {
-            "client": MockRedisCache(),
-            "banks_prefix": redis_cache._BANKS_PREFIX + "_",
-            "keys_prefix": redis_cache._KEYS_PREFIX + "_",
-            "timestamp_prefix": redis_cache._TIMESTAMP_PREFIX + "_",
-        }
-    }, raising=False)
+    monkeypatch.setattr(
+        redis_cache,
+        "__context__",
+        {
+            "cache.redis": {
+                "client": MockRedisCache(),
+                "banks_prefix": redis_cache._BANKS_PREFIX + "_",
+                "keys_prefix": redis_cache._KEYS_PREFIX + "_",
+                "timestamp_prefix": redis_cache._TIMESTAMP_PREFIX + "_",
+            }
+        },
+        raising=False,
+    )
     monkeypatch.setattr(redis_cache.time, "time", lambda: 0)
 
 
@@ -163,7 +170,10 @@ def test_basic_store(mock_redis_cache):
 
     expected = {
         "$BANKS_": {"type": "sortedset", "data": {b"$KEYS_minions/myhost/": 0}},
-        "$KEYS_minions/myhost/": {"type": "hash", "data": {b"grain": b"\x81\xa2os\xa5Linux"}},
+        "$KEYS_minions/myhost/": {
+            "type": "hash",
+            "data": {b"grain": b"\x81\xa2os\xa5Linux"},
+        },
         "$TSTAMP_minions/myhost/": {"type": "hash", "data": {b"grain": b"\x00"}},
     }
     assert expected == redis_server.db
@@ -183,13 +193,56 @@ def test_store_multiple(mock_redis_cache):
     redis_cache.store("minions/yourhost", "pillar", {"os": "MacOS"})
 
     expected = {
-        "$BANKS_": {"type": "sortedset", "data": {b"$KEYS_minions/myhost/": 0, b"$KEYS_minions/myhost/vm/": 0, b"$KEYS_minions/yourhost/": 0}},
-        "$KEYS_minions/myhost/": {"type": "hash", "data": {b"grain": b"\x81\xa2os\xa5Linux", b"pillar": b"\x81\xa2os\xa5Linux"}},
-        "$TSTAMP_minions/myhost/": {"type": "hash", "data": {b"grain": b"\x00", b"pillar": b"\x00"}},
-        "$KEYS_minions/myhost/vm/": {"type": "hash", "data": {b"grain": b"\x81\xa2os\xa7Windows", b"pillar": b"\x81\xa2os\xa7Windows"}},
-        "$TSTAMP_minions/myhost/vm/": {"type": "hash", "data": {b"grain": b"\x00", b"pillar": b"\x00"}},
-        "$KEYS_minions/yourhost/": {"type": "hash", "data": {b"grain": b"\x81\xa2os\xa5MacOS", b"pillar": b"\x81\xa2os\xa5MacOS"}},
-        "$TSTAMP_minions/yourhost/": {"type": "hash", "data": {b"grain": b"\x00", b"pillar": b"\x00"}},
+        "$BANKS_": {
+            "type": "sortedset",
+            "data": {
+                b"$KEYS_minions/myhost/": 0,
+                b"$KEYS_minions/myhost/vm/": 0,
+                b"$KEYS_minions/yourhost/": 0,
+            },
+        },
+        "$KEYS_minions/myhost/": {
+            "type": "hash",
+            "data": {
+                b"grain": b"\x81\xa2os\xa5Linux",
+                b"pillar": b"\x81\xa2os\xa5Linux",
+            },
+        },
+        "$TSTAMP_minions/myhost/": {
+            "type": "hash",
+            "data": {
+                b"grain": b"\x00",
+                b"pillar": b"\x00",
+            },
+        },
+        "$KEYS_minions/myhost/vm/": {
+            "type": "hash",
+            "data": {
+                b"grain": b"\x81\xa2os\xa7Windows",
+                b"pillar": b"\x81\xa2os\xa7Windows",
+            },
+        },
+        "$TSTAMP_minions/myhost/vm/": {
+            "type": "hash",
+            "data": {
+                b"grain": b"\x00",
+                b"pillar": b"\x00",
+            },
+        },
+        "$KEYS_minions/yourhost/": {
+            "type": "hash",
+            "data": {
+                b"grain": b"\x81\xa2os\xa5MacOS",
+                b"pillar": b"\x81\xa2os\xa5MacOS",
+            },
+        },
+        "$TSTAMP_minions/yourhost/": {
+            "type": "hash",
+            "data": {
+                b"grain": b"\x00",
+                b"pillar": b"\x00",
+            },
+        },
     }
     assert expected == redis_server.db
 
@@ -241,7 +294,10 @@ def test_remove_remaining(mock_redis_cache):
 
     expected = {
         "$BANKS_": {"type": "sortedset", "data": {b"$KEYS_minions/myhost/": 0}},
-        "$KEYS_minions/myhost/": {"type": "hash", "data": {b"grain": b"\x81\xa2os\xa5Linux"}},
+        "$KEYS_minions/myhost/": {
+            "type": "hash",
+            "data": {b"grain": b"\x81\xa2os\xa5Linux"},
+        },
         "$TSTAMP_minions/myhost/": {"type": "hash", "data": {b"grain": b"\x00"}},
     }
     assert expected == redis_server.db
@@ -263,8 +319,17 @@ def test_flush_bank(mock_redis_cache):
     redis_cache.flush("minions/myhost")
     expected = {
         "$BANKS_": {"type": "sortedset", "data": {b"$KEYS_minions/yourhost/": 0}},
-        "$KEYS_minions/yourhost/": {"type": "hash", "data": {b"grain": b"\x81\xa2os\xa5MacOS", b"pillar": b"\x81\xa2os\xa5MacOS"}},
-        "$TSTAMP_minions/yourhost/": {"type": "hash", "data": {b"grain": b"\x00", b"pillar": b"\x00"}},
+        "$KEYS_minions/yourhost/": {
+            "type": "hash",
+            "data": {
+                b"grain": b"\x81\xa2os\xa5MacOS",
+                b"pillar": b"\x81\xa2os\xa5MacOS",
+            },
+        },
+        "$TSTAMP_minions/yourhost/": {
+            "type": "hash",
+            "data": {b"grain": b"\x00", b"pillar": b"\x00"},
+        },
     }
     assert expected == redis_server.db
 
