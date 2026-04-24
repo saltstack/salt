@@ -120,8 +120,13 @@ def create_batch_state(opts, minions, jid, driver="cli", now=None):
         "tgt_type": opts.get("tgt_type", "glob"),
         "failhard": bool(opts.get("failhard", False)),
         "batch_wait": opts.get("batch_wait", 0) or 0,
-        "timeout": opts.get("timeout", 60),
-        "gather_job_timeout": opts.get("gather_job_timeout", 10),
+        # saltmod / LocalClient may pass explicit None; dict.get still returns None.
+        "timeout": 60 if opts.get("timeout") is None else opts.get("timeout"),
+        "gather_job_timeout": (
+            10
+            if opts.get("gather_job_timeout") is None
+            else opts.get("gather_job_timeout")
+        ),
         "last_progress": now,
         "created": now,
         "halted": False,
@@ -290,7 +295,9 @@ def progress_batch(state, new_returns=None, *, now=None, timed_out=None):
                 state["wait"].append(now + bwait)
 
     # ---- 4. Internal timeout sweep -------------------------------------
-    timeout_window = state.get("timeout", 60) + state.get("gather_job_timeout", 10)
+    _t = state.get("timeout")
+    _g = state.get("gather_job_timeout")
+    timeout_window = (60 if _t is None else _t) + (10 if _g is None else _g)
     for minion_id, dispatch_ts in list(state["active"].items()):
         if now - dispatch_ts >= timeout_window:
             del state["active"][minion_id]
