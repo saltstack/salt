@@ -286,6 +286,19 @@ def test_artifacts(
                 platdef = _
                 break
 
+    # Package-only slugs (e.g. ``amazonlinux-2023-pkg``) live under
+    # ``test-salt-pkg-listing`` but not ``test-salt-listing``. Re-use the pkg
+    # row for onedir/nox artifact globs (platform + arch).
+    if not platdef:
+        for platform in PLATFORMS:
+            for _ in TEST_SALT_PKG_LISTING[platform]:
+                if _.slug == slug:
+                    ctx.info(f"Found package-matrix definition {slug}")
+                    platdef = _
+                    break
+            if platdef:
+                break
+
     if not platdef:
         ctx.error(f"No platform definition found for {slug}")
         ctx.exit(1)

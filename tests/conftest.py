@@ -18,6 +18,40 @@ import more_itertools
 import pytest
 import pytestskipmarkers
 
+TESTS_DIR = pathlib.Path(__file__).resolve().parent
+PYTESTS_DIR = TESTS_DIR / "pytests"
+CODE_DIR = TESTS_DIR.parent
+os.chdir(str(CODE_DIR))
+if str(CODE_DIR) in sys.path:
+    sys.path.remove(str(CODE_DIR))
+if os.environ.get("ONEDIR_TESTRUN", "0") == "0":
+    sys.path.insert(0, str(CODE_DIR))
+
+
+def _remove_redundant_salt_utils_vault_py() -> None:
+    """
+    Onedir artifacts may contain both ``salt/utils/vault.py`` (legacy) and the
+    ``salt/utils/vault/`` package. Delete the stray module before importing
+    Salt so the lazy loader never records a module/package collision.
+    """
+    for path in list(sys.path):
+        if not path:
+            continue
+        redundant = pathlib.Path(path) / "salt" / "utils" / "vault.py"
+        if redundant.is_file():
+            try:
+                redundant.unlink()
+            except OSError:
+                pass
+            for pyc in redundant.parent.glob("__pycache__/vault.cpython-*.pyc"):
+                try:
+                    pyc.unlink()
+                except OSError:
+                    pass
+
+
+_remove_redundant_salt_utils_vault_py()
+
 import salt
 import salt._logging
 import salt._logging.mixins
@@ -36,19 +70,6 @@ from tests.support.helpers import (
 from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import,wildcard-import
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import check_required_sminion_attributes, create_sminion
-
-TESTS_DIR = pathlib.Path(__file__).resolve().parent
-PYTESTS_DIR = TESTS_DIR / "pytests"
-CODE_DIR = TESTS_DIR.parent
-
-# Change to code checkout directory
-os.chdir(str(CODE_DIR))
-
-# Make sure the current directory is the first item in sys.path
-if str(CODE_DIR) in sys.path:
-    sys.path.remove(str(CODE_DIR))
-if os.environ.get("ONEDIR_TESTRUN", "0") == "0":
-    sys.path.insert(0, str(CODE_DIR))
 
 os.environ["REPO_ROOT_DIR"] = str(CODE_DIR)
 
@@ -809,6 +830,11 @@ def salt_factories_default_root_dir(salt_factories_default_root_dir):
         ).resolve()
         return tempdir / "stsuite"
 
+    # Set ``SALT_PYTEST_FACTORIES_ROOT`` to a writable directory (e.g.
+    # ``$TMPDIR/salt-factories-stsuite``) to avoid using ``/tmp/stsuite``.
+    env_root = os.environ.get("SALT_PYTEST_FACTORIES_ROOT")
+    if env_root:
+        return pathlib.Path(env_root)
     return salt_factories_default_root_dir / "stsuite"
 
 
@@ -1349,27 +1375,8 @@ def salt_call_cli(salt_minion_factory):
 
 
 def pytest_sessionstart(session):
-    # Surgically remove colliding vault.py if it exists in site-packages
-    # This resolves the Module/package collision: salt/utils/vault.py and salt/utils/vault
-    try:
-        import salt.utils.vault as vault_module
-
-        vault_file = pathlib.Path(vault_module.__file__)
-        if vault_file.name == "__init__.py":
-            # We are good, we are in a package
-            # Check for colliding vault.py in the same parent directory
-            for path in sys.path:
-                if not path:
-                    continue
-                redundant_file = pathlib.Path(path) / "salt" / "utils" / "vault.py"
-                if redundant_file.exists():
-                    redundant_file.unlink()
-                    for pyc_file in redundant_file.parent.glob(
-                        "__pycache__/vault.cpython-*.pyc"
-                    ):
-                        pyc_file.unlink()
-    except (ImportError, AttributeError):
-        pass
+    # Belt-and-suspenders if anything reintroduced vault.py after process start
+    _remove_redundant_salt_utils_vault_py()
 
 
 @pytest.fixture(scope="session", autouse=True)

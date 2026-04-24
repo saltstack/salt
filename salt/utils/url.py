@@ -45,9 +45,14 @@ def create(path, saltenv=None):
         path = salt.utils.path.sanitize_win_path(path)
     path = salt.utils.data.decode(path)
 
-    query = f"saltenv={saltenv}" if saltenv else ""
-    url = salt.utils.data.decode(urlunparse(("file", "", path, "", query, "")))
-    return "salt://{}".format(url[len("file:///") :])
+    # Build salt:// URLs directly. The previous approach used
+    # ``urlunparse(("file", "", path, ...))`` and stripped a ``file:///``
+    # prefix; for relative paths like ``ssh_state_tests.sls`` that yields
+    # ``file:ssh_state_tests.sls``, which ``urlparse`` treats as host ``ssh``
+    # and path ``_state_tests.sls``, breaking ``salt://`` resolution.
+    if saltenv:
+        return f"salt://{path}?saltenv={saltenv}"
+    return f"salt://{path}"
 
 
 def is_escaped(url):

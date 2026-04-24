@@ -82,6 +82,33 @@ RSTR = "_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878"
 # NOTE - must use non-grouping match groups or output splitting will fail.
 RSTR_RE = r"(?:^|\r?\n)" + RSTR + r"(?:\r?\n|$)"
 
+
+def _ssh_cli_process_exit_code(retcode):
+    """
+    Map shim / per-minion retcodes to the salt-ssh CLI process exit code.
+
+    Codes for thin transfer, checksum, and similar infrastructure faults are
+    returned unchanged so callers can distinguish them. Typical execution
+    failures (including module and state retcodes) are collapsed to
+    :const:`~salt.defaults.exitcodes.EX_AGGREGATE`, matching salt-ssh tests and
+    the documented "one of a collection failed" semantics.
+    """
+    if retcode == salt.defaults.exitcodes.EX_OK:
+        return retcode
+    preserved = (
+        salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,
+        salt.defaults.exitcodes.EX_THIN_DEPLOY,
+        salt.defaults.exitcodes.EX_THIN_CHECKSUM,
+        salt.defaults.exitcodes.EX_MOD_DEPLOY,
+        salt.defaults.exitcodes.EX_SCP_NOT_FOUND,
+        salt.defaults.exitcodes.EX_CANTCREAT,
+        salt.defaults.exitcodes.EX_SOFTWARE,
+    )
+    if retcode in preserved:
+        return retcode
+    return salt.defaults.exitcodes.EX_AGGREGATE
+
+
 # METHODOLOGY:
 #
 #   1) Make the _thinnest_ /bin/sh shim (SSH_SH_SHIM) to find the python
@@ -693,13 +720,10 @@ class SSH(MultiprocessingStateMixin):
                                 inner_retcode,
                             )
                             retcode = 1
-                    else:
-                        log.warning(
-                            "Got an invalid retcode for host '%s': '%s'",
-                            single.id,
-                            inner_retcode,
-                        )
-                        retcode = 1
+                    # Many module returns are plain dicts without a retcode key;
+                    # parse_ret() already enforced JSON/shim success using the
+                    # SSH exit code. Preserve that retcode when inner retcode
+                    # is absent.
                     if retcode == 0 and "_error" in ret[single.id]:
                         retcode = 1
                 elif retcode == 0:
@@ -916,7 +940,7 @@ class SSH(MultiprocessingStateMixin):
                         "Host '%s' returned an invalid retcode: %s", host, retcode
                     )
                     retcode = 1
-                final_exit = max(final_exit, retcode)
+                final_exit = max(final_exit, _ssh_cli_process_exit_code(retcode))
 
                 self.cache_job(jid, host, ret[host], fun)
                 ret, deploy_retcode = self.key_deploy(host, ret)
@@ -930,7 +954,7 @@ class SSH(MultiprocessingStateMixin):
                             retcode,
                         )
                         retcode = 1
-                final_exit = max(final_exit, retcode)
+                final_exit = max(final_exit, _ssh_cli_process_exit_code(retcode))
 
                 if isinstance(ret[host], dict) and (
                     ret[host].get("stderr") or ""

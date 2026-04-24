@@ -57,6 +57,34 @@ def _client():
     )
 
 
+def _minion_visible_cache_path(client, path):
+    """
+    Normalize paths returned from ``SSHCpClient`` (master FS cache, staging
+    tree, or already under the minion ``cachedir``) to ``__opts__["cachedir"]``
+    layout on the SSH target.
+    """
+    if path in (None, False, True):
+        return path
+    retp = Path(path)
+    _opts = globals().get("__opts__")
+    if _opts is not None:
+        minion_root = Path(_opts["cachedir"])
+    else:
+        # Unit tests import this module without loader-injected ``__opts__``;
+        # ``SSHCpClient`` tests merge the minion cache root into ``client.opts``.
+        minion_root = Path(client.opts["cachedir"])
+    for base in (
+        Path(client.get_cachedir(master=True)),
+        Path(client.opts["cachedir"]),
+        minion_root,
+    ):
+        try:
+            return str(minion_root / retp.relative_to(base))
+        except ValueError:
+            continue
+    return str(retp)
+
+
 def get_file(path, dest, saltenv="base", makedirs=False, template=None, **kwargs):
     """
     Send a file from the fileserver to the specified location.
@@ -126,7 +154,7 @@ def get_file(path, dest, saltenv="base", makedirs=False, template=None, **kwargs
             if not ret:
                 return ret
             # Return the cache path on the minion, not the local one
-            return client.target_map[ret]
+            return _minion_visible_cache_path(client, client.target_map[ret])
 
 
 def envs():
@@ -190,7 +218,7 @@ def get_template(
         if not ret:
             return ret
         # Return the cache path on the minion, not the local one
-        return client.target_map[ret]
+        return _minion_visible_cache_path(client, client.target_map[ret])
 
 
 def get_dir(path, dest, saltenv="base", template=None, **kwargs):
@@ -310,7 +338,7 @@ def get_url(path, dest="", saltenv="base", makedirs=False, source_hash=None):
             return result
         if isinstance(dest, str):
             # Return the cache path on the minion, not the local one
-            result = client.target_map[result]
+            result = _minion_visible_cache_path(client, client.target_map[result])
         return salt.utils.stringutils.to_unicode(result)
 
 
@@ -718,7 +746,7 @@ def is_cached(path, saltenv="base"):
         ret = client.is_cached(path, saltenv)
         if not ret:
             return ret
-        return str(client.convert_path(ret))
+        return _minion_visible_cache_path(client, ret)
 
 
 def hash_file(path, saltenv="base"):
@@ -908,7 +936,15 @@ class SSHCpClient(salt.fileclient.FSClient):
         )
         extrndest = self._extrn_path(path, saltenv, cachedir=cachedir)
 
-        if self._path_exists(filesdest):
+        extrn_ok = self._path_exists(extrndest)
+        files_ok = self._path_exists(filesdest)
+        # If both a plain fileserver cache and a rendered-template cache exist,
+        # prefer the template output path. Otherwise preserve the historical
+        # order (files, then localsfiles, then extrn) so ``cp.cache_file`` hits
+        # resolve to ``files/`` as before.
+        if extrn_ok and files_ok:
+            return extrndest
+        if files_ok:
             return salt.utils.url.escape(filesdest) if escaped else filesdest
         # While we do not cache minion-local files back on the master,
         # we can inspect the minion cache dir remotely
@@ -916,25 +952,40 @@ class SSHCpClient(salt.fileclient.FSClient):
             return (
                 salt.utils.url.escape(localsfilesdest) if escaped else localsfilesdest
             )
-        if self._path_exists(extrndest):
+        if extrn_ok:
             return extrndest
 
         return ""
 
+    def _master_staging_root(self):
+        """
+        Directory root for ``salt-ssh/<id>/`` file staging on the SSH target.
+
+        When ``thin_dir`` is set, staging must live *next to* the thin tree, not
+        under it: ``ssh_py_shim`` removes ``OPTIONS.saltdir`` (the thin dir) when
+        ``ssh_wipe`` is enabled, which would otherwise delete fetched files before
+        integration tests (or callers) can inspect them on ``localhost``.
+        """
+        thin_dir = self.opts.get("thin_dir")
+        if not thin_dir:
+            return self.opts["cachedir"]
+        thin_dir = os.path.abspath(str(thin_dir).rstrip(os.sep))
+        parent = os.path.dirname(thin_dir)
+        return os.path.join(parent, os.path.basename(thin_dir) + ".salt-ssh-file-cache")
+
     def get_cachedir(
         self, cachedir=None, master=True
     ):  # pylint: disable=arguments-differ
-        prefix = []
-        if master:
-            prefix = ["salt-ssh", self.tgt]
+        prefix = ["salt-ssh", self.tgt] if master else []
+        root = self._master_staging_root() if master else self.opts["cachedir"]
         if cachedir is None:
-            cachedir = os.path.join(self.opts["cachedir"], *prefix)
-        elif not os.path.isabs(cachedir):
-            cachedir = os.path.join(self.opts["cachedir"], *prefix, cachedir)
-        elif master:
+            return os.path.join(root, *prefix)
+        if not os.path.isabs(cachedir):
+            return os.path.join(root, *prefix, cachedir)
+        if master:
             # The root cachedir on the master-side should not be overridden
-            cachedir = os.path.join(
-                self.opts["cachedir"],
+            return os.path.join(
+                root,
                 *prefix,
                 "absolute_root",
                 str(Path(*cachedir.split(os.sep)[1:])),
@@ -953,19 +1004,20 @@ class SSHCpClient(salt.fileclient.FSClient):
         master_cachedir = Path(self.get_cachedir(cachedir, master=True))
         minion_cachedir = Path(self.get_cachedir(cachedir, master=False))
         if master:
-            # This check could be path.is_relative_to(curr_prefix),
-            # but that requires Python 3.9
-            if master_cachedir in path.parents:
+            # ``Path.parents`` membership is a poor proxy for "under this dir":
+            # e.g. ``/var/tmp/thin`` is an ancestor of ``thin/running_data/.../files``
+            # even when the path is still the minion-side layout.
+            if path.is_relative_to(master_cachedir):
                 return path
             return master_cachedir / path.relative_to(minion_cachedir)
-        if master_cachedir not in path.parents:
+        if not path.is_relative_to(master_cachedir):
             return path
         return minion_cachedir / path.relative_to(master_cachedir)
 
     def _send_file(self, src, dest, makedirs, cachedir):
         def _error(stdout, stderr):
             log.error("Failed sending file: %s", stderr or stdout)
-            if Path(self.get_cachedir(cachedir)) in Path(src).parents:
+            if Path(src).is_relative_to(Path(self.get_cachedir(cachedir))):
                 # remove the cached file if the transfer fails
                 Path(src).unlink(missing_ok=True)
             return False
@@ -1014,7 +1066,7 @@ class SSHCpClient(salt.fileclient.FSClient):
                 f"Not deleting unspecified, relative or root path: '{path}'"
             )
         minion_cachedir = Path(self.get_cachedir(cachedir, master=False))
-        if minion_cachedir not in path.parents and path != minion_cachedir:
+        if not path.is_relative_to(minion_cachedir):
             raise ValueError(
                 f"Not recursively deleting a path outside of the cachedir. Path: '{path}'"
             )
@@ -1080,9 +1132,8 @@ class SSHCpClient(salt.fileclient.FSClient):
         # of the time and is mostly how the regular client handles it.
         if dest.endswith("/") or self._isdir(dest):
             if not dest.endswith("/"):
-                if (
-                    strict
-                    or self.get_cachedir(cachedir, master=False) in Path(dest).parents
+                if strict or Path(dest).is_relative_to(
+                    Path(self.get_cachedir(cachedir, master=False))
                 ):
                     strict = True
                     if not self._rmpath(dest):
@@ -1133,9 +1184,8 @@ class SSHCpClient(salt.fileclient.FSClient):
         # of the time and is mostly how the regular client handles it.
         if dest.endswith("/") or self._isdir(dest):
             if not dest.endswith("/"):
-                if (
-                    strict
-                    or self.get_cachedir(cachedir, master=False) in Path(dest).parents
+                if strict or Path(dest).is_relative_to(
+                    Path(self.get_cachedir(cachedir, master=False))
                 ):
                     strict = True
                     if not self._rmpath(dest):
@@ -1181,9 +1231,8 @@ class SSHCpClient(salt.fileclient.FSClient):
             strict = True
         if dest.endswith("/") or self._isdir(dest):
             if not dest.endswith("/"):
-                if (
-                    strict
-                    or self.get_cachedir(cachedir, master=False) in Path(dest).parents
+                if strict or Path(dest).is_relative_to(
+                    Path(self.get_cachedir(cachedir, master=False))
                 ):
                     strict = True
                     if not self._rmpath(dest):

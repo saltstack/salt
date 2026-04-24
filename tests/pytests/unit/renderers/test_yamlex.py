@@ -1,3 +1,7 @@
+import os
+import shutil
+import tempfile
+
 import pytest
 
 import salt.serializers.yamlex as yamlex
@@ -7,18 +11,26 @@ from salt.template import compile_template_str
 
 
 def render(template, opts=None):
-    _config = minion_config(None)
-    _config["file_client"] = "local"
-    if opts:
-        _config.update(opts)
-    _state = salt.state.State(_config)
-    return compile_template_str(
-        template,
-        _state.rend,
-        _state.opts["renderer"],
-        _state.opts["renderer_blacklist"],
-        _state.opts["renderer_whitelist"],
-    )
+    tmp = tempfile.mkdtemp(prefix="yamlex-renderer-")
+    try:
+        _config = minion_config(None)
+        _config["file_client"] = "local"
+        _config["root_dir"] = tmp
+        _config["cachedir"] = os.path.join(tmp, "cache")
+        _config["pki_dir"] = os.path.join(tmp, "pki")
+        _config["sock_dir"] = os.path.join(tmp, "sock")
+        if opts:
+            _config.update(opts)
+        _state = salt.state.State(_config)
+        return compile_template_str(
+            template,
+            _state.rend,
+            _state.opts["renderer"],
+            _state.opts["renderer_blacklist"],
+            _state.opts["renderer_whitelist"],
+        )
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 @pytest.fixture

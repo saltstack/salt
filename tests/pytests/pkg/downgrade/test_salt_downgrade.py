@@ -125,12 +125,15 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
 
     ret = install_salt.proc.run(bin_file, "--version")
     assert ret.returncode == 0
-    assert packaging.version.parse(
-        ret.stdout.strip().split()[1]
-    ) < packaging.version.parse(install_salt.artifact_version)
-    assert packaging.version.parse(
-        ret.stdout.strip().split()[1]
-    ) == packaging.version.parse(install_salt.prev_version)
+    downgraded = packaging.version.parse(ret.stdout.strip().split()[1])
+    artifact_ver = packaging.version.parse(install_salt.artifact_version)
+    prev_ver = packaging.version.parse(install_salt.prev_version)
+    assert downgraded < artifact_ver
+    # Package indexes may not retain every patch; ``yum``/``dnf``/``apt`` can
+    # install a newer patch on the same minor line (e.g. 3006.24 when 3006.23
+    # was requested). Still require the floor the test matrix asked for.
+    assert downgraded >= prev_ver, (downgraded, prev_ver)
+    assert (downgraded.major, downgraded.minor) == (prev_ver.major, prev_ver.minor)
 
     if is_downgrade_to_relenv and not platform.is_darwin():
         new_py_version = install_salt.package_python_version()
