@@ -40,6 +40,22 @@ ARTIFACTS_DIR = CODE_DIR / "artifacts" / "pkg"
 log = logging.getLogger(__name__)
 
 
+def _macos_salt_onedir_prefix():
+    """
+    Return the on-disk Salt onedir prefix on macOS, if installed.
+
+    Newer macOS packages install under ``/opt/saltstack/salt`` (same layout as
+    Linux onedir). Older releases used ``/opt/salt``.
+    """
+    for candidate in (
+        pathlib.Path("/opt/saltstack/salt"),
+        pathlib.Path("/opt/salt"),
+    ):
+        if (candidate / "bin" / "salt").is_file():
+            return candidate
+    return None
+
+
 def pep440_version_to_rpm_nevra_version(version: str) -> str:
     """
     Map a PEP440-style version string to the RPM ``Version`` field spelling.
@@ -254,7 +270,8 @@ class SaltPkgInstall:
                 os.getenv("ProgramFiles"), "Salt Project", "Salt"
             ).resolve()
         elif platform.is_darwin():
-            install_dir = pathlib.Path("/opt", "salt")
+            found = _macos_salt_onedir_prefix()
+            install_dir = found if found is not None else pathlib.Path("/opt", "salt")
         else:
             install_dir = pathlib.Path("/opt", "saltstack", "salt")
         return install_dir
@@ -376,7 +393,7 @@ class SaltPkgInstall:
                 elif platform.is_darwin():
                     self.root = pathlib.Path("/opt")
                     if self.file_ext == "pkg":
-                        self.bin_dir = self.root / "salt" / "bin"
+                        self.bin_dir = self.install_dir / "bin"
                         self.run_root = self.bin_dir / "run"
                     else:
                         log.error("Unexpected file extension: %s", self.file_ext)
@@ -493,6 +510,89 @@ class SaltPkgInstall:
         log.debug("binary_paths: %s", self.binary_paths)
         log.debug("install_dir: %s", self.install_dir)
 
+    def _refresh_macos_binary_paths(self):
+        """
+        Re-resolve ``install_dir`` / ``binary_paths`` after a ``.pkg`` install.
+
+        ``__attrs_post_init__`` runs before installers populate ``/opt/...``,
+        so upgrade/downgrade sessions need a second pass once files exist.
+        """
+        if not platform.is_darwin():
+            return
+        found = _macos_salt_onedir_prefix()
+        if found is None:
+            return
+        self.install_dir = found
+        self.bin_dir = found / "bin"
+        self.run_root = self.bin_dir / "run"
+        python_bin = self.install_dir / "bin" / "python3"
+        if os.path.exists(self.install_dir / "bin" / "salt"):
+            install_dir = self.install_dir / "bin"
+        else:
+            install_dir = self.install_dir
+        if self.relenv:
+            self.binary_paths = {
+                "salt": [install_dir / "salt"],
+                "api": [install_dir / "salt-api"],
+                "call": [install_dir / "salt-call"],
+                "cloud": [install_dir / "salt-cloud"],
+                "cp": [install_dir / "salt-cp"],
+                "key": [install_dir / "salt-key"],
+                "master": [install_dir / "salt-master"],
+                "minion": [install_dir / "salt-minion"],
+                "proxy": [install_dir / "salt-proxy"],
+                "run": [install_dir / "salt-run"],
+                "ssh": [install_dir / "salt-ssh"],
+                "syndic": [install_dir / "salt-syndic"],
+                "spm": [install_dir / "spm"],
+                "pip": [install_dir / "salt-pip"],
+                "python": [python_bin],
+            }
+        else:
+            self.binary_paths = {
+                "salt": [shutil.which("salt")],
+                "api": [shutil.which("salt-api")],
+                "call": [shutil.which("salt-call")],
+                "cloud": [shutil.which("salt-cloud")],
+                "cp": [shutil.which("salt-cp")],
+                "key": [shutil.which("salt-key")],
+                "master": [shutil.which("salt-master")],
+                "minion": [shutil.which("salt-minion")],
+                "proxy": [shutil.which("salt-proxy")],
+                "run": [shutil.which("salt-run")],
+                "ssh": [shutil.which("salt-ssh")],
+                "syndic": [shutil.which("salt-syndic")],
+                "spm": [shutil.which("spm")],
+                "python": [str(pathlib.Path("/usr/bin/python3"))],
+            }
+            if self.classic:
+                self.binary_paths = {
+                    "salt": [self.bin_dir / "salt"],
+                    "api": [self.bin_dir / "salt-api"],
+                    "call": [self.bin_dir / "salt-call"],
+                    "cloud": [self.bin_dir / "salt-cloud"],
+                    "cp": [self.bin_dir / "salt-cp"],
+                    "key": [self.bin_dir / "salt-key"],
+                    "master": [self.bin_dir / "salt-master"],
+                    "minion": [self.bin_dir / "salt-minion"],
+                    "proxy": [self.bin_dir / "salt-proxy"],
+                    "run": [self.bin_dir / "salt-run"],
+                    "ssh": [self.bin_dir / "salt-ssh"],
+                    "syndic": [self.bin_dir / "salt-syndic"],
+                    "spm": [self.bin_dir / "spm"],
+                    "python": [str(self.bin_dir / "python3")],
+                    "pip": [str(self.bin_dir / "pip3")],
+                }
+            else:
+                self.binary_paths["python"] = [shutil.which("salt"), "shell"]
+                self.binary_paths["pip"] = [self.run_root, "pip"]
+                self.binary_paths["spm"] = [shutil.which("salt-spm")]
+        log.debug(
+            "Refreshed macOS binary_paths (install_dir=%s): %s",
+            self.install_dir,
+            self.binary_paths,
+        )
+
     @staticmethod
     def salt_factories_root_dir(system_service: bool = False) -> pathlib.Path:
         if system_service is False:
@@ -500,7 +600,8 @@ class SaltPkgInstall:
         if platform.is_windows():
             return pathlib.Path("C:\\salt")
         if platform.is_darwin():
-            return pathlib.Path("/opt/salt")
+            found = _macos_salt_onedir_prefix()
+            return found if found is not None else pathlib.Path("/opt/salt")
         return pathlib.Path("/")
 
     def _check_retcode(self, ret):
@@ -624,6 +725,8 @@ class SaltPkgInstall:
                 )
             except subprocess.TimeoutExpired:
                 log.warning("launchctl command timed out")
+
+            self._refresh_macos_binary_paths()
 
         elif upgrade:
             env = os.environ.copy()
@@ -1109,6 +1212,7 @@ class SaltPkgInstall:
 
             ret = self.proc.run("installer", "-pkg", mac_pkg_path, "-target", "/")
             self._check_retcode(ret)
+            self._refresh_macos_binary_paths()
 
     def uninstall(self):
         pkg = self.pkgs[0]
@@ -1272,6 +1376,8 @@ class SaltPkgInstall:
 
     def __enter__(self):
         self.update_process_path()
+        if platform.is_darwin():
+            self._refresh_macos_binary_paths()
 
         if self.no_install:
             return self
