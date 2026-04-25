@@ -39,6 +39,7 @@ async-timeout==5.0.1
     #   aiohttp
 attrs==25.4.0
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/pkg/py3.10/linux.txt
     #   aiohttp
     #   jsonschema
@@ -233,7 +234,9 @@ jmespath==1.1.0
     #   boto3
     #   botocore
 jsonschema==3.2.0
-    # via -r requirements/static/ci/common.in
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.in
 junit-xml==1.9
     # via -r requirements/static/ci/common.in
 junos-eznc==2.6.7

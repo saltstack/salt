@@ -11,7 +11,9 @@ annotated-doc==0.0.4
 apache-libcloud==3.9.0
     # via -r requirements/base.txt
 attrs==25.4.0
-    # via aiohttp
+    # via
+    #   -c requirements/constraints.txt
+    #   aiohttp
 backports-tarfile==1.2.0
     # via jaraco-context
 certifi==2026.2.25

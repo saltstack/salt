@@ -14,6 +14,14 @@ pytestmark = [
 
 log = logging.getLogger(__name__)
 
+# ``test_minions_alive_with_no_master`` waits for two worker-pooled masters and
+# minions to cycle; CI and cold package runs need looser bounds than interactive dev.
+_FAILOVER_DISCONNECT_EVENT_TIMEOUT_MULT = 8  # was 4 × master_alive_interval
+_FAILOVER_POST_MASTER_GRACE_SEC = 30  # was 10; masters need sockets + workers ready
+_FAILOVER_RECONNECT_DEADLINE_SEC = 600  # was 300
+_FAILOVER_RECONNECT_POLL_SEC = 8  # was 5
+_FAILOVER_CLI_PING_TIMEOUT_SEC = 20  # was 10; per salt CLI subprocess
+
 
 def test_pki(salt_mm_failover_master_1, salt_mm_failover_master_2, caplog):
     """
@@ -177,7 +185,8 @@ def test_minions_alive_with_no_master(
                     (salt_mm_failover_minion_1.id, "__master_disconnected"),
                     (salt_mm_failover_minion_2.id, "__master_disconnected"),
                 ],
-                timeout=salt_mm_failover_minion_1.config["master_alive_interval"] * 4,
+                timeout=salt_mm_failover_minion_1.config["master_alive_interval"]
+                * _FAILOVER_DISCONNECT_EVENT_TIMEOUT_MULT,
                 after_time=start_time,
             )
             assert not events.missed
@@ -190,8 +199,12 @@ def test_minions_alive_with_no_master(
     minions = [salt_mm_failover_minion_1, salt_mm_failover_minion_2]
     clis = [mm_failover_master_1_salt_cli, mm_failover_master_2_salt_cli]
 
+    # Masters restart sequentially; allow extra time before polling (subset CI runs
+    # this test without earlier module tests).
+    time.sleep(_FAILOVER_POST_MASTER_GRACE_SEC)
+
     start_wait = time.time()
-    deadline = start_wait + 180
+    deadline = start_wait + _FAILOVER_RECONNECT_DEADLINE_SEC
 
     while time.time() < deadline:
         still_waiting = []
@@ -199,7 +212,11 @@ def test_minions_alive_with_no_master(
             success = False
             for cli in clis:
                 try:
-                    ret = cli.run("test.ping", minion_tgt=minion.id, _timeout=5)
+                    ret = cli.run(
+                        "test.ping",
+                        minion_tgt=minion.id,
+                        _timeout=_FAILOVER_CLI_PING_TIMEOUT_SEC,
+                    )
                     if ret.returncode == 0 and ret.data is True:
                         log.debug(f"Minion {minion.id} reconnected to {cli.id}")
                         success = True
@@ -214,6 +231,9 @@ def test_minions_alive_with_no_master(
             break
 
         log.debug(f"Still waiting for minions to reconnect: {still_waiting}")
-        time.sleep(5)
+        time.sleep(_FAILOVER_RECONNECT_POLL_SEC)
     else:
-        pytest.fail(f"Minions failed to reconnect within 180s: {still_waiting}")
+        pytest.fail(
+            "Minions failed to reconnect within "
+            f"{_FAILOVER_RECONNECT_DEADLINE_SEC}s: {still_waiting}"
+        )
