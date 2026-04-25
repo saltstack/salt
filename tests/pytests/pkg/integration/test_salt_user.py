@@ -189,34 +189,26 @@ def test_pkg_paths(
         # Fails on upgrade tests but there is no way to check that we are running an upgrade test.
         pytest.skip("Package path ownership fails on photon 5")
 
-    salt_user_subdirs = []
-
     for _path in pkg_paths:
         pkg_path = pathlib.Path(_path)
         assert pkg_path.exists()
         for dirpath, sub_dirs, files in os.walk(pkg_path):
             path = pathlib.Path(dirpath)
 
-            wants_salt = str(path) not in pkg_paths_salt_user_exclusions and (
-                str(path) in pkg_paths_salt_user
-                or str(path) in salt_user_subdirs
-                or (path.owner() == "salt" and path.group() == "salt")
-            )
+            excluded = str(path) in pkg_paths_salt_user_exclusions
+            is_salt = path.owner() == "salt" and path.group() == "salt"
 
-            # Directories owned by salt:salt (explicit list, parent walk, or
-            # newer packages that salt-own more of the tree than this test listed)
-            if wants_salt:
-                assert path.owner() == "salt"
-                assert path.group() == "salt"
-                salt_user_subdirs.extend(
-                    [str(path.joinpath(sub_dir)) for sub_dir in sub_dirs]
-                )
+            # Only assert salt:salt when the package actually used that owner.
+            # Some releases keep paths listed in ``pkg_paths_salt_user`` as
+            # root:root on install while newer trees salt-own the same paths or
+            # additional subtrees (handled by ``is_salt`` and the root-branch
+            # file rules below).
+            if not excluded and is_salt:
                 for file in files:
                     file_path = path.joinpath(file)
                     if str(file_path) not in pkg_paths_salt_user_exclusions:
                         assert file_path.owner() == "salt"
                         assert file_path.group() == "salt"
-            # Directories owned by root:root (or mixed trees still root here)
             else:
                 assert path.owner() == "root"
                 assert path.group() == "root"

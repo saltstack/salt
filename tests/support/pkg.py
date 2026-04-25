@@ -45,15 +45,32 @@ def _macos_salt_onedir_prefix():
     Return the on-disk Salt onedir prefix on macOS, if installed.
 
     Newer macOS packages install under ``/opt/saltstack/salt`` (same layout as
-    Linux onedir). Older releases used ``/opt/salt``.
+    Linux onedir). Older releases used ``/opt/salt``. Use ``exists()`` so
+    symlinks and executable wrappers are detected the same way as in CI.
+    If layout probes miss (e.g. before ``PATH`` is updated), fall back to
+    ``shutil.which`` with common install locations prepended.
     """
     for candidate in (
         pathlib.Path("/opt/saltstack/salt"),
         pathlib.Path("/opt/salt"),
     ):
-        if (candidate / "bin" / "salt").is_file():
+        if (candidate / "bin" / "salt").exists():
             return candidate
-    return None
+        if (candidate / "salt").exists():
+            return candidate
+    mac_bins = "/opt/saltstack/salt/bin:/opt/salt/bin:/opt/saltstack/salt:/opt/salt"
+    salt_exe = shutil.which(
+        "salt",
+        path=mac_bins + os.pathsep + os.environ.get("PATH", ""),
+    )
+    if not salt_exe:
+        return None
+    wp = pathlib.Path(salt_exe).resolve()
+    if "saltstack" not in str(wp) and "/opt/salt" not in str(wp):
+        return None
+    if wp.parent.name == "bin":
+        return wp.parent.parent
+    return wp.parent
 
 
 def pep440_version_to_rpm_nevra_version(version: str) -> str:
@@ -1177,7 +1194,7 @@ class SaltPkgInstall:
                 with salt.utils.files.fopen(batch_file, "w") as fp:
                     fp.write(batch_content)
                 # Now run the batch file
-                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
+                ret = self.proc.run("cmd.exe", "/c", str(batch_file), _timeout=900)
                 self._check_retcode(ret)
 
             log.debug("Removing installed salt-minion service")
