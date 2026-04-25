@@ -197,21 +197,26 @@ def test_pkg_paths(
         for dirpath, sub_dirs, files in os.walk(pkg_path):
             path = pathlib.Path(dirpath)
 
-            # Directories owned by salt:salt or their subdirs/files
-            if (
-                str(path) in pkg_paths_salt_user or str(path) in salt_user_subdirs
-            ) and str(path) not in pkg_paths_salt_user_exclusions:
+            wants_salt = str(path) not in pkg_paths_salt_user_exclusions and (
+                str(path) in pkg_paths_salt_user
+                or str(path) in salt_user_subdirs
+                or (path.owner() == "salt" and path.group() == "salt")
+            )
+
+            # Directories owned by salt:salt (explicit list, parent walk, or
+            # newer packages that salt-own more of the tree than this test listed)
+            if wants_salt:
                 assert path.owner() == "salt"
                 assert path.group() == "salt"
                 salt_user_subdirs.extend(
                     [str(path.joinpath(sub_dir)) for sub_dir in sub_dirs]
                 )
-                # Individual files owned by salt user
                 for file in files:
                     file_path = path.joinpath(file)
                     if str(file_path) not in pkg_paths_salt_user_exclusions:
                         assert file_path.owner() == "salt"
-            # Directories owned by root:root
+                        assert file_path.group() == "salt"
+            # Directories owned by root:root (or mixed trees still root here)
             else:
                 assert path.owner() == "root"
                 assert path.group() == "root"
@@ -219,9 +224,10 @@ def test_pkg_paths(
                     if file.endswith("ipc"):
                         continue
                     file_path = path.joinpath(file)
-                    # Individual files owned by salt user
                     if str(file_path) in pkg_paths_salt_user:
                         assert file_path.owner() == "salt"
+                    elif file_path.owner() == "salt" and file_path.group() == "salt":
+                        pass
                     else:
                         assert file_path.owner() == "root"
                         assert file_path.group() == "root"

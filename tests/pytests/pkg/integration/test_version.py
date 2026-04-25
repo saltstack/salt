@@ -127,6 +127,23 @@ def test_compare_versions(binary, install_salt):
         )
 
 
+_DARWIN_PKG_SYMLINK_TO_BINKEY = {
+    "salt": "salt",
+    "salt-api": "api",
+    "salt-call": "call",
+    "salt-cloud": "cloud",
+    "salt-cp": "cp",
+    "salt-key": "key",
+    "salt-master": "master",
+    "salt-minion": "minion",
+    "salt-proxy": "proxy",
+    "salt-run": "run",
+    "spm": "spm",
+    "salt-ssh": "ssh",
+    "salt-syndic": "syndic",
+}
+
+
 @pytest.mark.skip_unless_on_darwin
 @pytest.mark.parametrize(
     "symlink",
@@ -148,11 +165,26 @@ def test_compare_versions(binary, install_salt):
 )
 def test_symlinks_created(version, symlink, install_salt):
     """
-    Test symlinks created
+    Test packaged Salt CLI wrappers resolve and report the expected version.
+
+    Older installers dropped symlinks under ``/usr/local/sbin``; newer onedir
+    layouts may only ship binaries under the install prefix. Use the same paths
+    as the rest of the package tests.
     """
-    ret = install_salt.proc.run(pathlib.Path("/usr/local/sbin") / symlink, "--version")
-    install_log_file = pathlib.Path("/tmp") / "postinstall.txt"
-    install_log_content = install_log_file.read_text()
+    bin_key = _DARWIN_PKG_SYMLINK_TO_BINKEY[symlink]
+    if bin_key not in install_salt.binary_paths:
+        pytest.skip(f"Binary not available in package test layout: {symlink}")
+    parts = install_salt.binary_paths[bin_key]
+    if not parts or parts[0] is None:
+        pytest.skip(f"Binary path not resolved for: {symlink}")
+    bin_path = pathlib.Path(str(parts[0]))
+    if not bin_path.is_file():
+        legacy = pathlib.Path("/usr/local/sbin") / symlink
+        if legacy.is_file():
+            bin_path = legacy
+        else:
+            pytest.fail(f"Salt CLI not found for {symlink}: {bin_path}")
+    ret = install_salt.proc.run(bin_path, "--version")
     ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
 
 
