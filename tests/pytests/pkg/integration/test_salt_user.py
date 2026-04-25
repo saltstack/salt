@@ -208,7 +208,8 @@ def test_pkg_paths(
                     file_path = path.joinpath(file)
                     if str(file_path) not in pkg_paths_salt_user_exclusions:
                         assert file_path.owner() == "salt"
-                        assert file_path.group() == "salt"
+                        # Some .deb layouts keep file group root while owner is salt.
+                        assert file_path.group() in ("root", "salt")
             else:
                 assert path.owner() == "root"
                 assert path.group() == "root"

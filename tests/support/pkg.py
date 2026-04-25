@@ -59,13 +59,14 @@ def _macos_salt_onedir_prefix():
         if (candidate / "salt").exists():
             return candidate
     mac_bins = "/opt/saltstack/salt/bin:/opt/salt/bin:/opt/saltstack/salt:/opt/salt"
-    salt_exe = shutil.which(
-        "salt",
-        path=mac_bins + os.pathsep + os.environ.get("PATH", ""),
-    )
+    path_for_which = mac_bins + os.pathsep + os.environ.get("PATH", "")
+    salt_exe = shutil.which("salt", path=path_for_which)
     if not salt_exe:
         return None
-    wp = pathlib.Path(salt_exe).resolve()
+    try:
+        wp = pathlib.Path(salt_exe).resolve()
+    except OSError:
+        return None
     if "saltstack" not in str(wp) and "/opt/salt" not in str(wp):
         return None
     if wp.parent.name == "bin":
@@ -536,7 +537,26 @@ class SaltPkgInstall:
         """
         if not platform.is_darwin():
             return
-        found = _macos_salt_onedir_prefix()
+        # Prepends so :func:`shutil.which` inside prefix detection can see
+        # ``/opt`` layouts before a stale default ``/opt/salt`` mis-seeds
+        # ``$PATH`` from :meth:`update_process_path`.
+        opt_first = [
+            p
+            for p in (
+                "/opt/saltstack/salt/bin",
+                "/opt/saltstack/salt",
+                "/opt/salt/bin",
+                "/opt/salt",
+            )
+            if pathlib.Path(p).exists()
+        ]
+        _old = os.environ.get("PATH", "")
+        if opt_first:
+            os.environ["PATH"] = os.pathsep.join(opt_first) + os.pathsep + _old
+        try:
+            found = _macos_salt_onedir_prefix()
+        finally:
+            os.environ["PATH"] = _old
         if found is None:
             return
         self.install_dir = found
