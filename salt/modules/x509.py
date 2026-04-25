@@ -20,7 +20,6 @@ Manage X509 certificates
 
 import ast
 import ctypes
-import datetime
 import glob
 import hashlib
 import logging
@@ -30,6 +29,7 @@ import re
 import sys
 import tempfile
 from collections import OrderedDict
+from datetime import datetime, timedelta, timezone
 
 import salt.exceptions
 import salt.utils.data
@@ -256,15 +256,11 @@ def _parse_openssl_crl(crl_filename):
             crl["Issuer"] = subject
         if line.startswith("Last Update: "):
             crl["Last Update"] = line.replace("Last Update: ", "")
-            last_update = datetime.datetime.strptime(
-                crl["Last Update"], "%b %d %H:%M:%S %Y %Z"
-            )
+            last_update = datetime.strptime(crl["Last Update"], "%b %d %H:%M:%S %Y %Z")
             crl["Last Update"] = last_update.strftime("%Y-%m-%d %H:%M:%S")
         if line.startswith("Next Update: "):
             crl["Next Update"] = line.replace("Next Update: ", "")
-            next_update = datetime.datetime.strptime(
-                crl["Next Update"], "%b %d %H:%M:%S %Y %Z"
-            )
+            next_update = datetime.strptime(crl["Next Update"], "%b %d %H:%M:%S %Y %Z")
             crl["Next Update"] = next_update.strftime("%Y-%m-%d %H:%M:%S")
         if line.startswith("Revoked Certificates:"):
             break
@@ -286,7 +282,7 @@ def _parse_openssl_crl(crl_filename):
         rev_yaml = salt.utils.data.decode(salt.utils.yaml.safe_load(revoked))
         for rev_values in rev_yaml.values():
             if "Revocation Date" in rev_values:
-                rev_date = datetime.datetime.strptime(
+                rev_date = datetime.strptime(
                     rev_values["Revocation Date"], "%b %d %H:%M:%S %Y %Z"
                 )
                 rev_values["Revocation Date"] = rev_date.strftime("%Y-%m-%d %H:%M:%S")
@@ -1004,20 +1000,14 @@ def create_crl(
         serial_number = salt.utils.stringutils.to_bytes(serial_number)
 
         if "not_after" in rev_item and not include_expired:
-            not_after = datetime.datetime.strptime(
-                rev_item["not_after"], "%Y-%m-%d %H:%M:%S"
-            )
-            if datetime.datetime.now() > not_after:
+            not_after = datetime.strptime(rev_item["not_after"], "%Y-%m-%d %H:%M:%S")
+            if datetime.now() > not_after:
                 continue
 
         if "revocation_date" not in rev_item:
-            rev_item["revocation_date"] = datetime.datetime.now().strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
+            rev_item["revocation_date"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        rev_date = datetime.datetime.strptime(
-            rev_item["revocation_date"], "%Y-%m-%d %H:%M:%S"
-        )
+        rev_date = datetime.strptime(rev_item["revocation_date"], "%Y-%m-%d %H:%M:%S")
         rev_date = rev_date.strftime("%Y%m%d%H%M%SZ")
         rev_date = salt.utils.stringutils.to_bytes(rev_date)
 
@@ -1538,7 +1528,7 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
     fmt = "%Y-%m-%d %H:%M:%S"
     if "not_before" in kwargs:
         try:
-            time = datetime.datetime.strptime(kwargs["not_before"], fmt)
+            time = datetime.strptime(kwargs["not_before"], fmt)
         except:
             raise salt.exceptions.SaltInvocationError(
                 "not_before: {} is not in required format {}".format(
@@ -1556,7 +1546,7 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
 
     if "not_after" in kwargs:
         try:
-            time = datetime.datetime.strptime(kwargs["not_after"], fmt)
+            time = datetime.strptime(kwargs["not_after"], fmt)
         except:
             raise salt.exceptions.SaltInvocationError(
                 "not_after: {} is not in required format {}".format(
@@ -1963,7 +1953,7 @@ def expired(certificate):
             ret["path"] = certificate
             cert = _get_certificate_obj(certificate)
 
-            _now = datetime.datetime.utcnow()
+            _now = datetime.now(timezone.utc)
             _expiration_date = cert.get_not_after().get_datetime()
 
             ret["cn"] = _parse_subject(cert.get_subject())["CN"]
@@ -2007,7 +1997,7 @@ def will_expire(certificate, days):
 
             cert = _get_certificate_obj(certificate)
 
-            _check_time = datetime.datetime.utcnow() + datetime.timedelta(days=days)
+            _check_time = datetime.now(timezone.utc) + timedelta(days=days)
             _expiration_date = cert.get_not_after().get_datetime()
 
             ret["cn"] = _parse_subject(cert.get_subject())["CN"]
