@@ -6,33 +6,24 @@ import time
 import pytest
 from pytestskipmarkers.utils import platform
 
+from tests.support.pkg import pep440_public_equal
+
 
 @pytest.mark.skip_on_windows
 def test_salt_version(version, install_salt):
     """
     Test version output from salt --version
     """
-    actual = []
     test_bin = os.path.join(*install_salt.binary_paths["salt"])
     ret = install_salt.proc.run(test_bin, "--version")
-    if "+" in version:
-        # testing a non-release build artifact version
-        actual = ret.stdout.strip().split(" ")[:2]
-    else:
-        # testing against release build version, for example: downgrade
-        actual_ver = ret.stdout.strip().split(" ")[:2]
-        actual_ver_salt = actual_ver[1]  # get salt version
-        if "+" in actual_ver_salt:
-            actual_ver_salt_stripped = actual_ver_salt.split("+")[
-                0
-            ]  # strip any git versioning
-            actual.append(actual_ver[0])
-            actual.append(actual_ver_salt_stripped)
-        else:
-            pytest.skip("We don't run this test on release builds")
-
-    expected = ["salt", version]
-    assert actual == expected
+    assert ret.returncode == 0
+    parts = ret.stdout.strip().split()
+    assert len(parts) >= 2
+    assert parts[0] == "salt"
+    reported = parts[1]
+    assert pep440_public_equal(
+        reported, version
+    ), f"salt --version reported {reported!r}, expected compatible with {version!r}"
 
 
 @pytest.mark.skip_on_windows
@@ -118,7 +109,8 @@ def test_compare_versions(binary, install_salt):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
+        ver_pat = version.split("+", 1)[0] if "+" in version else version
+        ret.stdout.matcher.fnmatch_lines([f"*{ver_pat}*"])
     else:
         if platform.is_windows():
             pytest.skip(f"Binary not available on windows: {binary}")
@@ -185,7 +177,8 @@ def test_symlinks_created(version, symlink, install_salt):
         else:
             pytest.fail(f"Salt CLI not found for {symlink}: {bin_path}")
     ret = install_salt.proc.run(bin_path, "--version")
-    ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
+    ver_pat = version.split("+", 1)[0] if "+" in version else version
+    ret.stdout.matcher.fnmatch_lines([f"*{ver_pat}*"])
 
 
 @pytest.mark.skip_unless_on_linux

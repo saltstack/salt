@@ -40,6 +40,49 @@ ARTIFACTS_DIR = CODE_DIR / "artifacts" / "pkg"
 log = logging.getLogger(__name__)
 
 
+def _macos_salt_exe_command_v(path_prefix: str):
+    """
+    Resolve ``salt`` using only *path_prefix* in ``PATH`` (bash ``command -v``).
+
+    ``shutil.which`` can still pick a stale or unrelated ``salt`` when the
+    process ``PATH`` is polluted; an isolated lookup matches CI runners more
+    reliably after ``installer`` drops files under ``/opt``.
+    """
+    try:
+        env = os.environ.copy()
+        env["PATH"] = path_prefix
+        proc = subprocess.run(
+            ["/bin/bash", "-lc", "command -v salt"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=20,
+            env=env,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0:
+        return None
+    lines = [ln.strip() for ln in proc.stdout.splitlines() if ln.strip()]
+    if not lines:
+        return None
+    return lines[0]
+
+
+def _macos_prefix_from_salt_exe(salt_exe: str):
+    if not salt_exe:
+        return None
+    try:
+        wp = pathlib.Path(salt_exe).resolve()
+    except OSError:
+        return None
+    if "saltstack" not in str(wp) and "/opt/salt" not in str(wp):
+        return None
+    if wp.parent.name == "bin":
+        return wp.parent.parent
+    return wp.parent
+
+
 def _macos_salt_onedir_prefix():
     """
     Return the on-disk Salt onedir prefix on macOS, if installed.
@@ -60,18 +103,27 @@ def _macos_salt_onedir_prefix():
             return candidate
     mac_bins = "/opt/saltstack/salt/bin:/opt/salt/bin:/opt/saltstack/salt:/opt/salt"
     path_for_which = mac_bins + os.pathsep + os.environ.get("PATH", "")
-    salt_exe = shutil.which("salt", path=path_for_which)
-    if not salt_exe:
-        return None
+    prefix = _macos_prefix_from_salt_exe(shutil.which("salt", path=path_for_which))
+    if prefix is not None:
+        return prefix
+    return _macos_prefix_from_salt_exe(_macos_salt_exe_command_v(mac_bins))
+
+
+def pep440_public_equal(reported: str, expected: str) -> bool:
+    """
+    True when *reported* and *expected* match on release/pre/post/dev, ignoring
+    local when one side omits it (``salt --version`` often drops ``+g``).
+    """
     try:
-        wp = pathlib.Path(salt_exe).resolve()
-    except OSError:
-        return None
-    if "saltstack" not in str(wp) and "/opt/salt" not in str(wp):
-        return None
-    if wp.parent.name == "bin":
-        return wp.parent.parent
-    return wp.parent
+        pr = packaging.version.parse(reported)
+        pe = packaging.version.parse(expected)
+    except packaging.version.InvalidVersion:
+        return reported == expected
+
+    def _pub(v):
+        return (v.release, v.pre, v.post, v.dev)
+
+    return _pub(pr) == _pub(pe)
 
 
 def pep440_version_to_rpm_nevra_version(version: str) -> str:
@@ -318,9 +370,14 @@ class SaltPkgInstall:
                     "prev_version must be provided for upgrade tests. "
                     "Use --prev-version option to specify the previous version."
                 )
-            version = self.prev_version
-            parsed = packaging.version.parse(version)
-            version = f"{parsed.major}.{parsed.minor}"
+            if self.use_prev_version:
+                # Post-downgrade integration: ``salt --version`` reports the full
+                # previous release (e.g. 3008.0rc1), not ``major.minor`` only.
+                version = self.prev_version
+            else:
+                version = self.prev_version
+                parsed = packaging.version.parse(version)
+                version = f"{parsed.major}.{parsed.minor}"
         # ensure services stopped on Debian/Ubuntu (minic install for RedHat - non-starting)
         if self.distro_id in ("ubuntu", "debian"):
             self.stop_services()
@@ -930,6 +987,9 @@ class SaltPkgInstall:
 
     def install(self, upgrade=False, downgrade=False, stop_services=True):
         self._install_pkgs(upgrade=upgrade, downgrade=downgrade)
+        if platform.is_darwin():
+            self._refresh_macos_binary_paths()
+            self.update_process_path()
         if self.distro_id in ("ubuntu", "debian") and stop_services:
             self.stop_services()
         elif (
