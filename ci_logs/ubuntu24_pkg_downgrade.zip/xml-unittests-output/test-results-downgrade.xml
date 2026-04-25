@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="105.627" timestamp="2026-04-20T07:43:20.890627" hostname="9d89ef8bd5dc"><testcase classname="tests.pytests.pkg.downgrade.test_salt_downgrade" name="test_salt_downgrade_minion" time="105.365" /></testsuite></testsuites>

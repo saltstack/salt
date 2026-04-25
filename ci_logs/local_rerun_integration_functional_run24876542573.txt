@@ -1,0 +1,46 @@
+Local follow-up for GitHub Actions run 24876542573 (integration + functional failed jobs only)
+
+Source list: ci_logs/github_actions_run_24876542573_failures.txt
+
+1) Scope
+   From the 123 failed *workflow jobs*, the Test Salt jobs split into:
+   - Test Package / ...  (ignored here — package/nox matrix, not pytest integration/functional shards)
+   - Test Salt / ... integration ...
+   - Test Salt / ... functional ...
+
+   There were 66 failed Test Salt jobs, deduped to 17 unique combinations of
+   (functional|integration, zeromq|tcp, optional fips, test-group, optional windows flag).
+
+2) CI diagnosis (no admin token needed for first job log sample)
+   Public log for job 72839234226 (Amazon Linux 2 integration zeromq 5) showed every
+   deltaproxy test ERROR with:
+     AttributeError: module 'saltfactories.daemons.minion' has no attribute 'SaltProxyMinion'
+   In salt-factories 1.0.x, SaltProxyMinion lives in saltfactories.daemons.proxy, not .minion.
+
+3) Code fix (uncommitted)
+   tests/pytests/conftest.py — salt_delta_proxy_factory now imports SaltProxyMinion from
+   saltfactories.daemons.proxy with ImportError fallback to the legacy minion module.
+
+4) Local pytest verification
+   venv311 path used: /home/dan/src/salt/venv311/bin/pytest (no venv311 under this worktree).
+
+   Repro + fix check:
+     SALT_TRANSPORT=zeromq .../pytest \
+       'tests/pytests/integration/proxy/test_deltaproxy.py::test_can_it_ping[parallel_startup=False-dummy_proxy_one]' \
+       -vv --core-tests --run-slow
+     Result: PASSED (~14s).
+
+   Functional shard collect-only sanity (matches CI grouping):
+     SALT_TRANSPORT=zeromq .../pytest tests/pytests/functional -vv --core-tests --run-slow \
+       --test-group-count=4 --test-group=2 --collect-only -q
+     Result: 707 tests in group 2 / 2828 total collected.
+
+5) Full per-shard execution
+   Running all 17 deduped CI-equivalent shards end-to-end on one machine would take many
+   hours (integration grp 5/6 alone mirror CI’s ~7-way split over the whole tree plus
+   --ssh-tests/--run-destructive). After the deltaproxy fixture fix, those shards should
+   match CI’s pytest selection; re-run in CI or spot-check additional groups as needed.
+
+6) Windows-only rows
+   Two deduped keys set windows=True (integration zeromq 2). They were not executed here
+   (Linux host); they likely share the same deltaproxy fix when run on Windows runners.

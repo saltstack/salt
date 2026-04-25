@@ -1,0 +1,226 @@
+04:38:59,600 [saltfactories.plugins.log_server:74  ][INFO    ][MainProcess(614)] LogServer(log_host='0.0.0.0', log_port=46773, log_level='DEBUG', socket_hwm=1000000) starting...
+04:38:59,601 [saltfactories.plugins.log_server:84  ][INFO    ][MainProcess(614)] LogServer(log_host='0.0.0.0', log_port=46773, log_level='DEBUG', socket_hwm=1000000) started
+04:39:00,508 [git.cmd                                     :1270][DEBUG   ][MainProcess(614)] Popen(['git', 'version'], cwd=/__w/salt/salt, stdin=None, shell=False, universal_newlines=False)
+04:39:00,510 [git.cmd                                     :1270][DEBUG   ][MainProcess(614)] Popen(['git', 'version'], cwd=/__w/salt/salt, stdin=None, shell=False, universal_newlines=False)
+04:39:02,757 [salt.utils.win_pwsh                                         :17  ][DEBUG   ][MainProcess(614)] could not import clr, pythonnet is not available
+04:39:02,758 [salt.utils.win_pwsh                                         :27  ][DEBUG   ][MainProcess(614)] win_pwsh could not load PowerShell SDK: name 'clr' is not defined
+04:39:06,561 [saltfactories.plugins                                            :23  ][DEBUG   ][MainProcess(614)] >>>>>>> START tests/pytests/functional/modules/test_ipset.py::test_ipset_new_set_with_family >>>>>>>
+04:39:06,561 [pytestskipmarkers.utils.markers                                  :95  ][DEBUG   ][MainProcess(614)] All binaries found. Searched for: ipset
+04:39:06,574 [saltfactories.manager                                            :142 ][WARNING ][MainProcess(614)] FactoriesManager(root_dir=PosixPath('/tmp/salt-tests-tmpdir-root'), log_server_port=46773, log_server_level='DEBUG', log_server_host='0.0.0.0', python_executable='/__w/salt/salt/.nox/ci-test-onedir/bin/python', scripts_dir=PosixPath('/tmp/salt-tests-tmpdir-root/scripts'), code_dir=None, coverage_db_path=None, coverage_rc_path=None, inject_sitecustomize=False, cwd=PosixPath('/__w/salt/salt'), slow_stop=True, start_timeout=120, tmp_root_dir=PosixPath('/tmp/salt-tests-tmpdir-root'))
+04:40:32,234 [tests.pytests.functional.conftest.loaded.int.module.mysql                       :1457][ERROR   ][MainProcess(614)] Unable to verify password.
+04:40:32,739 [tests.pytests.functional.conftest.loaded.int.module.mysql                       :1457][ERROR   ][MainProcess(614)] Unable to verify password.
+04:40:33,244 [tests.pytests.functional.conftest.loaded.int.module.mysql                       :1457][ERROR   ][MainProcess(614)] Unable to verify password.
+04:42:37,835 [tests.pytests.functional.conftest.loaded.int.module.mysql                       :1457][ERROR   ][MainProcess(614)] Unable to verify password.
+04:42:38,341 [tests.pytests.functional.conftest.loaded.int.module.mysql                       :1457][ERROR   ][MainProcess(614)] Unable to verify password.
+04:42:38,846 [tests.pytests.functional.conftest.loaded.int.module.mysql                       :1457][ERROR   ][MainProcess(614)] Unable to verify password.
+04:42:55,634 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1006][ERROR   ][MainProcess(614)] Command 'ping' failed with return code: 1
+04:42:55,634 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1008][ERROR   ][MainProcess(614)] stdout: PING ns.google.com (216.239.32.10): 56 data bytes
+--- ns.google.com ping statistics ---
+4 packets transmitted, 0 packets received, 100% packet loss
+04:42:55,634 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1012][ERROR   ][MainProcess(614)] retcode: 1
+04:42:55,634 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1452][ERROR   ][MainProcess(614)] Command 'ping' failed with return code: 1
+04:42:55,634 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1457][ERROR   ][MainProcess(614)] output: PING ns.google.com (216.239.32.10): 56 data bytes
+--- ns.google.com ping statistics ---
+4 packets transmitted, 0 packets received, 100% packet loss
+04:42:58,003 [salt.modules.cmdmod                                                             :1006][ERROR   ][MainProcess(614)] Command 'stat' failed with return code: 1
+04:42:58,003 [salt.modules.cmdmod                                                             :1008][ERROR   ][MainProcess(614)] stdout: stat: cannot statx '/lib/modules/6.17.0-1010-azure/modules.dep': No such file or directory
+04:42:58,003 [salt.modules.cmdmod                                                             :1012][ERROR   ][MainProcess(614)] retcode: 1
+04:42:58,003 [salt.modules.cmdmod                                                             :1452][ERROR   ][MainProcess(614)] Command 'stat' failed with return code: 1
+04:42:58,003 [salt.modules.cmdmod                                                             :1457][ERROR   ][MainProcess(614)] output: stat: cannot statx '/lib/modules/6.17.0-1010-azure/modules.dep': No such file or directory
+04:42:58,006 [salt.modules.cmdmod                                                             :1006][ERROR   ][MainProcess(614)] Command 'md5sum' failed with return code: 1
+04:42:58,006 [salt.modules.cmdmod                                                             :1008][ERROR   ][MainProcess(614)] stdout: md5sum: /lib/modules/6.17.0-1010-azure/modules.dep: No such file or directory
+04:42:58,006 [salt.modules.cmdmod                                                             :1012][ERROR   ][MainProcess(614)] retcode: 1
+04:42:58,006 [salt.modules.cmdmod                                                             :1452][ERROR   ][MainProcess(614)] Command 'md5sum' failed with return code: 1
+04:42:58,006 [salt.modules.cmdmod                                                             :1457][ERROR   ][MainProcess(614)] output: md5sum: /lib/modules/6.17.0-1010-azure/modules.dep: No such file or directory
+04:42:58,017 [salt.modules.cmdmod                                                             :1006][ERROR   ][MainProcess(614)] Command 'stat' failed with return code: 1
+04:42:58,017 [salt.modules.cmdmod                                                             :1008][ERROR   ][MainProcess(614)] stdout: stat: cannot statx '/lib/modules/6.17.0-1010-azure/modules.dep': No such file or directory
+04:42:58,017 [salt.modules.cmdmod                                                             :1012][ERROR   ][MainProcess(614)] retcode: 1
+04:42:58,017 [salt.modules.cmdmod                                                             :1452][ERROR   ][MainProcess(614)] Command 'stat' failed with return code: 1
+04:42:58,017 [salt.modules.cmdmod                                                             :1457][ERROR   ][MainProcess(614)] output: stat: cannot statx '/lib/modules/6.17.0-1010-azure/modules.dep': No such file or directory
+04:42:58,020 [salt.modules.cmdmod                                                             :1006][ERROR   ][MainProcess(614)] Command 'md5sum' failed with return code: 1
+04:42:58,020 [salt.modules.cmdmod                                                             :1008][ERROR   ][MainProcess(614)] stdout: md5sum: /lib/modules/6.17.0-1010-azure/modules.dep: No such file or directory
+04:42:58,020 [salt.modules.cmdmod                                                             :1012][ERROR   ][MainProcess(614)] retcode: 1
+04:42:58,020 [salt.modules.cmdmod                                                             :1452][ERROR   ][MainProcess(614)] Command 'md5sum' failed with return code: 1
+04:42:58,020 [salt.modules.cmdmod                                                             :1457][ERROR   ][MainProcess(614)] output: md5sum: /lib/modules/6.17.0-1010-azure/modules.dep: No such file or directory
+04:42:58,030 [salt.modules.cmdmod                                                             :1006][ERROR   ][MainProcess(614)] Command 'stat' failed with return code: 1
+04:42:58,030 [salt.modules.cmdmod                                                             :1008][ERROR   ][MainProcess(614)] stdout: stat: cannot statx '/lib/modules/6.17.0-1010-azure/modules.dep': No such file or directory
+04:42:58,030 [salt.modules.cmdmod                                                             :1012][ERROR   ][MainProcess(614)] retcode: 1
+04:42:58,030 [salt.modules.cmdmod                                                             :1452][ERROR   ][MainProcess(614)] Command 'stat' failed with return code: 1
+04:42:58,030 [salt.modules.cmdmod                                                             :1457][ERROR   ][MainProcess(614)] output: stat: cannot statx '/lib/modules/6.17.0-1010-azure/modules.dep': No such file or directory
+04:42:58,033 [salt.modules.cmdmod                                                             :1006][ERROR   ][MainProcess(614)] Command 'md5sum' failed with return code: 1
+04:42:58,033 [salt.modules.cmdmod                                                             :1008][ERROR   ][MainProcess(614)] stdout: md5sum: /lib/modules/6.17.0-1010-azure/modules.dep: No such file or directory
+04:42:58,033 [salt.modules.cmdmod                                                             :1012][ERROR   ][MainProcess(614)] retcode: 1
+04:42:58,033 [salt.modules.cmdmod                                                             :1452][ERROR   ][MainProcess(614)] Command 'md5sum' failed with return code: 1
+04:42:58,034 [salt.modules.cmdmod                                                             :1457][ERROR   ][MainProcess(614)] output: md5sum: /lib/modules/6.17.0-1010-azure/modules.dep: No such file or directory
+04:43:48,350 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1006][ERROR   ][MainProcess(614)] Command '/tmp/pytest-of-root/pytest-0/test_issue_2087_missing_pip0/the-venv/bin/python' failed with return code: 1
+04:43:48,350 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1010][ERROR   ][MainProcess(614)] stderr: /tmp/pytest-of-root/pytest-0/test_issue_2087_missing_pip0/the-venv/bin/python: No module named pip
+04:43:48,350 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1012][ERROR   ][MainProcess(614)] retcode: 1
+04:43:48,446 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1006][ERROR   ][MainProcess(614)] Command '/tmp/pytest-of-root/pytest-0/test_issue_2087_missing_pip0/the-venv/bin/python' failed with return code: 1
+04:43:48,446 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1010][ERROR   ][MainProcess(614)] stderr: /tmp/pytest-of-root/pytest-0/test_issue_2087_missing_pip0/the-venv/bin/python: No module named pip
+04:43:48,446 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1012][ERROR   ][MainProcess(614)] retcode: 1
+04:47:24,223 [salt.utils.parsers                                                              :222 ][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] Configuration file path: /tmp/salt-tests-tmpdir-root/minion-w4erR3/conf/minion
+04:47:24,224 [salt.config                                                                     :2058][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] Reading configuration from /tmp/salt-tests-tmpdir-root/minion-w4erR3/conf/minion
+04:47:24,237 [salt.loader                                                                     :1124][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] Grains refresh requested. Refreshing grains.
+04:47:24,237 [salt.config                                                                     :2058][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] Reading configuration from /tmp/salt-tests-tmpdir-root/minion-w4erR3/conf/minion
+04:47:24,415 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] The functions from module 'core' are being loaded by dir() on the loaded module
+04:47:24,417 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] The functions from module 'disks' are being loaded by dir() on the loaded module
+04:47:24,419 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] The functions from module 'extra' are being loaded by dir() on the loaded module
+04:47:24,428 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] The functions from module 'lvm' are being loaded by dir() on the loaded module
+04:47:24,429 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] The functions from module 'mdadm' are being loaded by dir() on the loaded module
+04:47:24,432 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] The functions from module 'minion_process' are being loaded by dir() on the loaded module
+04:47:24,441 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] The functions from module 'opts' are being loaded by dir() on the loaded module
+04:47:24,442 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] The functions from module 'package' are being loaded by dir() on the loaded module
+04:47:24,456 [salt.loader.lazy                                                                :991 ][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] Override  __utils__: <module 'salt.loaded.int.grains.zfs' from '/__w/salt/salt/artifacts/salt/lib/python3.10/site-packages/salt/grains/zfs.py'>
+04:47:24,456 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] The functions from module 'zfs' are being loaded by dir() on the loaded module
+04:47:24,511 [salt.loaded.int.grains.core                                                     :273 ][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] The `lspci` binary is not available on the system. GPU grains will not be available.
+04:47:24,524 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] The functions from module 'zfs' are being loaded by dir() on the loaded module
+04:47:24,525 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] LazyLoaded zfs.is_supported
+04:47:24,534 [salt.pillar                                                                     :72  ][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] Determining pillar cache
+04:47:24,545 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] The functions from module 'roots' are being loaded by dir() on the loaded module
+04:47:24,546 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] LazyLoaded roots.envs
+04:47:24,546 [salt.utils.lazy                                                                 :101 ][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] Could not LazyLoad roots.init: 'roots.init' is not available.
+04:47:24,546 [salt.fileserver                                                                 :473 ][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] Updating roots fileserver cache
+04:47:24,562 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] The functions from module 'jinja' are being loaded by dir() on the loaded module
+04:47:24,563 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] LazyLoaded jinja.render
+04:47:24,565 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] The functions from module 'yaml' are being loaded by dir() on the loaded module
+04:47:24,565 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] LazyLoaded yaml.render
+04:47:24,586 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] The functions from module 'jinja' are being loaded by dir() on the loaded module
+04:47:24,586 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] LazyLoaded jinja.render
+04:47:24,587 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] The functions from module 'yaml' are being loaded by dir() on the loaded module
+04:47:24,588 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] LazyLoaded yaml.render
+04:47:24,592 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] The functions from module 'test' are being loaded by dir() on the loaded module
+04:47:24,592 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] LazyLoaded test.deprecation_warning
+04:47:24,593 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] The functions from module 'direct_call' are being loaded by dir() on the loaded module
+04:47:24,593 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] LazyLoaded direct_call.execute
+04:47:24,599 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] The functions from module 'json' are being loaded by dir() on the loaded module
+04:47:24,599 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10705)] [SaltMinion(id='minion-w4erR3')] LazyLoaded json.output
+04:47:26,087 [salt.utils.parsers                                                              :222 ][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] Configuration file path: /tmp/salt-tests-tmpdir-root/minion-w4erR3/conf/minion
+04:47:26,087 [salt.config                                                                     :2058][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] Reading configuration from /tmp/salt-tests-tmpdir-root/minion-w4erR3/conf/minion
+04:47:26,100 [salt.loader                                                                     :1124][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] Grains refresh requested. Refreshing grains.
+04:47:26,100 [salt.config                                                                     :2058][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] Reading configuration from /tmp/salt-tests-tmpdir-root/minion-w4erR3/conf/minion
+04:47:26,277 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] The functions from module 'core' are being loaded by dir() on the loaded module
+04:47:26,278 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] The functions from module 'disks' are being loaded by dir() on the loaded module
+04:47:26,280 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] The functions from module 'extra' are being loaded by dir() on the loaded module
+04:47:26,289 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] The functions from module 'lvm' are being loaded by dir() on the loaded module
+04:47:26,290 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] The functions from module 'mdadm' are being loaded by dir() on the loaded module
+04:47:26,292 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] The functions from module 'minion_process' are being loaded by dir() on the loaded module
+04:47:26,302 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] The functions from module 'opts' are being loaded by dir() on the loaded module
+04:47:26,303 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] The functions from module 'package' are being loaded by dir() on the loaded module
+04:47:26,317 [salt.loader.lazy                                                                :991 ][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] Override  __utils__: <module 'salt.loaded.int.grains.zfs' from '/__w/salt/salt/artifacts/salt/lib/python3.10/site-packages/salt/grains/zfs.py'>
+04:47:26,317 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] The functions from module 'zfs' are being loaded by dir() on the loaded module
+04:47:26,374 [salt.loaded.int.grains.core                                                     :273 ][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] The `lspci` binary is not available on the system. GPU grains will not be available.
+04:47:26,388 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] The functions from module 'zfs' are being loaded by dir() on the loaded module
+04:47:26,389 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] LazyLoaded zfs.is_supported
+04:47:26,398 [salt.pillar                                                                     :72  ][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] Determining pillar cache
+04:47:26,414 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] The functions from module 'roots' are being loaded by dir() on the loaded module
+04:47:26,414 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] LazyLoaded roots.envs
+04:47:26,415 [salt.utils.lazy                                                                 :101 ][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] Could not LazyLoad roots.init: 'roots.init' is not available.
+04:47:26,415 [salt.fileserver                                                                 :473 ][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] Updating roots fileserver cache
+04:47:26,437 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] The functions from module 'jinja' are being loaded by dir() on the loaded module
+04:47:26,437 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] LazyLoaded jinja.render
+04:47:26,440 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] The functions from module 'yaml' are being loaded by dir() on the loaded module
+04:47:26,440 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] LazyLoaded yaml.render
+04:47:26,461 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] The functions from module 'jinja' are being loaded by dir() on the loaded module
+04:47:26,461 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] LazyLoaded jinja.render
+04:47:26,462 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] The functions from module 'yaml' are being loaded by dir() on the loaded module
+04:47:26,462 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] LazyLoaded yaml.render
+04:47:26,466 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] The functions from module 'test' are being loaded by dir() on the loaded module
+04:47:26,466 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] LazyLoaded test.deprecation_warning
+04:47:26,467 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] The functions from module 'direct_call' are being loaded by dir() on the loaded module
+04:47:26,467 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] LazyLoaded direct_call.execute
+04:47:26,473 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] The functions from module 'json' are being loaded by dir() on the loaded module
+04:47:26,473 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10729)] [SaltMinion(id='minion-w4erR3')] LazyLoaded json.output
+04:47:27,940 [salt.utils.parsers                                                              :222 ][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] Configuration file path: /tmp/salt-tests-tmpdir-root/minion-w4erR3/conf/minion
+04:47:27,940 [salt.config                                                                     :2058][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] Reading configuration from /tmp/salt-tests-tmpdir-root/minion-w4erR3/conf/minion
+04:47:27,953 [salt.loader                                                                     :1124][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] Grains refresh requested. Refreshing grains.
+04:47:27,953 [salt.config                                                                     :2058][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] Reading configuration from /tmp/salt-tests-tmpdir-root/minion-w4erR3/conf/minion
+04:47:28,128 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] The functions from module 'core' are being loaded by dir() on the loaded module
+04:47:28,130 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] The functions from module 'disks' are being loaded by dir() on the loaded module
+04:47:28,132 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] The functions from module 'extra' are being loaded by dir() on the loaded module
+04:47:28,140 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] The functions from module 'lvm' are being loaded by dir() on the loaded module
+04:47:28,141 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] The functions from module 'mdadm' are being loaded by dir() on the loaded module
+04:47:28,144 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] The functions from module 'minion_process' are being loaded by dir() on the loaded module
+04:47:28,154 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] The functions from module 'opts' are being loaded by dir() on the loaded module
+04:47:28,155 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] The functions from module 'package' are being loaded by dir() on the loaded module
+04:47:28,168 [salt.loader.lazy                                                                :991 ][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] Override  __utils__: <module 'salt.loaded.int.grains.zfs' from '/__w/salt/salt/artifacts/salt/lib/python3.10/site-packages/salt/grains/zfs.py'>
+04:47:28,169 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] The functions from module 'zfs' are being loaded by dir() on the loaded module
+04:47:28,228 [salt.loaded.int.grains.core                                                     :273 ][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] The `lspci` binary is not available on the system. GPU grains will not be available.
+04:47:28,242 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] The functions from module 'zfs' are being loaded by dir() on the loaded module
+04:47:28,242 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] LazyLoaded zfs.is_supported
+04:47:28,250 [salt.pillar                                                                     :72  ][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] Determining pillar cache
+04:47:28,261 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] The functions from module 'roots' are being loaded by dir() on the loaded module
+04:47:28,261 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] LazyLoaded roots.envs
+04:47:28,262 [salt.utils.lazy                                                                 :101 ][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] Could not LazyLoad roots.init: 'roots.init' is not available.
+04:47:28,262 [salt.fileserver                                                                 :473 ][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] Updating roots fileserver cache
+04:47:28,278 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] The functions from module 'jinja' are being loaded by dir() on the loaded module
+04:47:28,278 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] LazyLoaded jinja.render
+04:47:28,281 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] The functions from module 'yaml' are being loaded by dir() on the loaded module
+04:47:28,281 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] LazyLoaded yaml.render
+04:47:28,301 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] The functions from module 'jinja' are being loaded by dir() on the loaded module
+04:47:28,302 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] LazyLoaded jinja.render
+04:47:28,302 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] The functions from module 'yaml' are being loaded by dir() on the loaded module
+04:47:28,303 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] LazyLoaded yaml.render
+04:47:28,307 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] The functions from module 'test' are being loaded by dir() on the loaded module
+04:47:28,307 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] LazyLoaded test.deprecation_warning
+04:47:28,308 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] The functions from module 'direct_call' are being loaded by dir() on the loaded module
+04:47:28,308 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] LazyLoaded direct_call.execute
+04:47:28,314 [salt.loader.lazy                                                                :1092][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] The functions from module 'json' are being loaded by dir() on the loaded module
+04:47:28,314 [salt.utils.lazy                                                                 :98  ][DEBUG   ][MainProcess(10753)] [SaltMinion(id='minion-w4erR3')] LazyLoaded json.output
+04:47:29,965 [salt.loaded.int.module.cmdmod                                                   :1006][ERROR   ][MainProcess(614)] Command '/usr/sbin/userdel' failed with return code: 6
+04:47:29,965 [salt.loaded.int.module.cmdmod                                                   :1010][ERROR   ][MainProcess(614)] stderr: userdel: user 'test-account-k1vkrp' does not exist
+04:47:29,965 [salt.loaded.int.module.cmdmod                                                   :1012][ERROR   ][MainProcess(614)] retcode: 6
+04:47:29,968 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1006][ERROR   ][MainProcess(614)] Command '/usr/sbin/userdel' failed with return code: 6
+04:47:29,968 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1010][ERROR   ][MainProcess(614)] stderr: userdel: user 'test-account-k1vkrp' does not exist
+04:47:29,968 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1012][ERROR   ][MainProcess(614)] retcode: 6
+04:47:30,014 [salt.loaded.int.module.cmdmod                                                   :1006][ERROR   ][MainProcess(614)] Command '/usr/sbin/userdel' failed with return code: 6
+04:47:30,015 [salt.loaded.int.module.cmdmod                                                   :1010][ERROR   ][MainProcess(614)] stderr: userdel: user 'test-account-5dcrvv' does not exist
+04:47:30,015 [salt.loaded.int.module.cmdmod                                                   :1012][ERROR   ][MainProcess(614)] retcode: 6
+04:47:30,018 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1006][ERROR   ][MainProcess(614)] Command '/usr/sbin/userdel' failed with return code: 6
+04:47:30,018 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1010][ERROR   ][MainProcess(614)] stderr: userdel: user 'test-account-5dcrvv' does not exist
+04:47:30,018 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1012][ERROR   ][MainProcess(614)] retcode: 6
+04:47:30,063 [salt.loaded.int.module.cmdmod                                                   :1006][ERROR   ][MainProcess(614)] Command '/usr/sbin/userdel' failed with return code: 6
+04:47:30,063 [salt.loaded.int.module.cmdmod                                                   :1010][ERROR   ][MainProcess(614)] stderr: userdel: user 'test-account-a5np3t' does not exist
+04:47:30,063 [salt.loaded.int.module.cmdmod                                                   :1012][ERROR   ][MainProcess(614)] retcode: 6
+04:47:30,067 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1006][ERROR   ][MainProcess(614)] Command '/usr/sbin/userdel' failed with return code: 6
+04:47:30,067 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1010][ERROR   ][MainProcess(614)] stderr: userdel: user 'test-account-a5np3t' does not exist
+04:47:30,067 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1012][ERROR   ][MainProcess(614)] retcode: 6
+04:47:30,114 [salt.loaded.int.module.cmdmod                                                   :1006][ERROR   ][MainProcess(614)] Command '/usr/sbin/userdel' failed with return code: 6
+04:47:30,114 [salt.loaded.int.module.cmdmod                                                   :1010][ERROR   ][MainProcess(614)] stderr: userdel: user 'test-account-x7guwt' does not exist
+04:47:30,114 [salt.loaded.int.module.cmdmod                                                   :1012][ERROR   ][MainProcess(614)] retcode: 6
+04:47:30,117 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1006][ERROR   ][MainProcess(614)] Command '/usr/sbin/userdel' failed with return code: 6
+04:47:30,117 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1010][ERROR   ][MainProcess(614)] stderr: userdel: user 'test-account-x7guwt' does not exist
+04:47:30,117 [tests.pytests.functional.conftest.loaded.int.module.cmdmod                      :1012][ERROR   ][MainProcess(614)] retcode: 6
+04:47:40,839 [salt.utils.vault.kv                                                             :256 ][ERROR   ][MainProcess(614)] Failed to get secret metadata VaultNotFoundError: 1 error occurred:
+
+* unsupported path
+04:47:40,842 [salt.utils.vault.kv                                                             :256 ][ERROR   ][MainProcess(614)] Failed to get secret metadata VaultNotFoundError: 1 error occurred:
+
+* unsupported path
+04:47:40,844 [salt.utils.vault.kv                                                             :256 ][ERROR   ][MainProcess(614)] Failed to get secret metadata VaultNotFoundError: 1 error occurred:
+
+* unsupported path
+04:47:41,057 [salt.utils.vault.kv                                                             :256 ][ERROR   ][MainProcess(614)] Failed to get secret metadata VaultNotFoundError: 1 error occurred:
+
+* unsupported path
+04:47:41,060 [salt.utils.vault.kv                                                             :256 ][ERROR   ][MainProcess(614)] Failed to get secret metadata VaultNotFoundError: 1 error occurred:
+
+* unsupported path
+04:47:41,274 [salt.utils.vault.kv                                                             :256 ][ERROR   ][MainProcess(614)] Failed to get secret metadata VaultNotFoundError: 1 error occurred:
+
+* unsupported path
+04:47:41,277 [salt.utils.vault.kv                                                             :256 ][ERROR   ][MainProcess(614)] Failed to get secret metadata VaultNotFoundError: 1 error occurred:
+
+* unsupported path
+04:47:46,452 [salt.utils.vault.kv                                                             :256 ][ERROR   ][MainProcess(614)] Failed to get secret metadata VaultNotFoundError: 1 error occurred:
+
+* unsupported path
+04:47:46,455 [salt.utils.vault.kv                                                             :256 ][ERROR   ][MainProcess(614)] Failed to get secret metadata VaultNotFoundError: 1 error occurred:
+
+* unsupported path
+04:48:23,238 [salt.utils.x509                                                                 :470 ][WARNING ][MainProcess(614)] Ignoring invalid CRL extension: CRLNumber
+04:48:25,316 [saltfactories.plugins.log_server                                                :90  ][INFO    ][MainProcess(614)] LogServer(log_host='0.0.0.0', log_port=46773, log_level='DEBUG', socket_hwm=1000000) stopping...
+04:48:25,316 [saltfactories.plugins.log_server                                                :97  ][DEBUG   ][MainProcess(614)] LogServer(log_host='0.0.0.0', log_port=46773, log_level='DEBUG', socket_hwm=1000000) Sent sentinel to trigger log server shutdown
+04:48:25,317 [saltfactories.plugins.log_server                                                :170 ][INFO    ][MainProcess(614)] LogServer(log_host='0.0.0.0', log_port=46773, log_level='DEBUG', socket_hwm=1000000) Received the sentinel to shutdown
+04:48:25,317 [saltfactories.plugins.log_server                                                :204 ][DEBUG   ][MainProcess(614)] LogServer(log_host='0.0.0.0', log_port=46773, log_level='DEBUG', socket_hwm=1000000) Process log thread terminated
+04:48:25,318 [saltfactories.plugins.log_server                                                :109 ][INFO    ][MainProcess(614)] LogServer(log_host='0.0.0.0', log_port=46773, log_level='DEBUG', socket_hwm=1000000) Joining the logging server process thread
+04:48:25,318 [saltfactories.plugins.log_server                                                :112 ][DEBUG   ][MainProcess(614)] LogServer(log_host='0.0.0.0', log_port=46773, log_level='DEBUG', socket_hwm=1000000) Stopped

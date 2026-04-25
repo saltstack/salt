@@ -1,0 +1,13 @@
+<frozen importlib._bootstrap>:914: ImportWarning: NaclImporter.find_spec() not found; falling back to find_module()
+.                                                                        [100%]
+=============================== warnings summary ===============================
+.nox/ci-test-onedir/lib/python3.10/site-packages/paramiko/pkey.py:100
+  /salt/.nox/ci-test-onedir/lib/python3.10/site-packages/paramiko/pkey.py:100: CryptographyDeprecationWarning: TripleDES has been moved to cryptography.hazmat.decrepit.ciphers.algorithms.TripleDES and will be removed from cryptography.hazmat.primitives.ciphers.algorithms in 48.0.0.
+    "cipher": algorithms.TripleDES,
+
+.nox/ci-test-onedir/lib/python3.10/site-packages/paramiko/transport.py:259
+  /salt/.nox/ci-test-onedir/lib/python3.10/site-packages/paramiko/transport.py:259: CryptographyDeprecationWarning: TripleDES has been moved to cryptography.hazmat.decrepit.ciphers.algorithms.TripleDES and will be removed from cryptography.hazmat.primitives.ciphers.algorithms in 48.0.0.
+    "class": algorithms.TripleDES,
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+1 passed, 2 warnings in 60.66s (0:01:00)

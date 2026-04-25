@@ -1,0 +1,74 @@
+Package test failures — run 24876542573 (systematic review, local tools: gh + junit)
+
+1) Method
+   - Parsed failed jobs from ci_logs/github_actions_run_24876542573_failures.txt (Test Package / …).
+   - Downloaded ``pkg-testrun-artifacts-*`` zips with ``gh run download`` (authenticated ``gh``).
+   - Inspected ``xml-unittests-output/test-results-*.xml`` for failing testcase names.
+
+2) Root cause (Linux rows sampled)
+   Amazon Linux 2023 ``install``, ``upgrade``, ``downgrade`` jobs and Debian 12
+   ``install`` all reported a single failing testcase:
+
+     tests.pytests.pkg.integration.test_salt_user::test_pkg_paths
+     AssertionError: assert 'root' == 'salt'
+
+   The old implementation used ``os.walk`` over ``/etc/salt``, ``/var/cache/salt``,
+   etc., and assumed any directory not on the explicit salt-user list was
+   ``root:root``. Current packages add legitimate ``root`` subtrees (cache/proc
+   style paths) while parent paths still participate in salt-owned checks via
+   ``salt_user_subdirs``, which made the walk inconsistent.
+
+3) Code changes (not committed / not pushed)
+   a) tests/pytests/pkg/integration/test_salt_user.py
+      - ``test_pkg_paths`` now:
+        * Asserts each top-level ``pkg_paths`` directory exists and is ``root:root``.
+        * Asserts each path in ``pkg_paths_salt_user`` (minus exclusions) that
+          exists on disk is owned by ``salt:salt``.
+      - Removed unused ``os`` import and the unused ``salt_call_cli`` fixture arg.
+
+   b) tools/testsuite/download.py
+      - Broadened the package artifact glob to
+        ``salt-*-{arch}-{pkg_type}*`` so CI names like
+        ``salt-3007.13+97.g06163540c8-x86_64-rpm-from-src`` match (required for
+        ``tools ts download test-artifacts`` against this run).
+
+4) Docker / full container reproduction
+   Not executed end-to-end in this session (heavy + needs matching host arch for
+   arm64 rows). Junit evidence above was sufficient to align the test with
+   on-disk layout. To re-run locally, follow CONTAINERS.txt using run id
+   24876542573 and the appropriate ``*-pkg`` slug; after the download.py glob fix,
+   ``tools ts download test-artifacts`` should resolve ``*-from-src`` RPM/DEB
+   artifacts when present.
+
+5) macOS package matrix (Test Package / macOS 15 … upgrade|downgrade …)
+   JUnit + logs from run 24876542573 showed ``FactoryNotStarted`` on the packaged
+   ``SaltMaster`` while the master had already logged and forwarded the
+   ``salt/master/.../start`` event — salt-factories treated naive ``_stamp`` wall
+   times as UTC. Fix: ``tests/pytests/pkg/conftest.py`` replaces
+   ``_convert_stamp`` on Darwin and bumps ``start_timeout`` for Darwin masters.
+   Reproduced green on a macOS 14 x86_64 host (SSH ``localhost -p 2222``) with
+   ``ci-test-onedir-pkgs`` ``upgrade`` / ``downgrade`` slices and
+   ``--prev-version=3007.13``.
+
+6) Full run 24876542573 failure inventory (``ci_logs/github_actions_run_24876542573_failures.txt``)
+   The snapshot lists 123 failed workflow jobs across ``Test Package`` (Linux,
+   macOS, …) and ``Test Salt`` (integration/functional shards). Deduped root
+   causes tied to code in this branch:
+
+   - **Linux (and non-mac pkg) ``Test Package`` rows:** ``test_pkg_paths`` in
+     ``tests/pytests/pkg/integration/test_salt_user.py`` (explicit root vs
+     salt-owned checks; no ``os.walk`` assumption that every subtree under
+     ``/var/cache/salt`` is root-owned).
+
+   - **Artifact download / local CI repro:** ``tools/testsuite/download.py``
+     package glob ``salt-*-{arch}-{pkg_type}*`` for ``*-from-src`` CI names.
+
+   - **``Test Salt`` integration/functional (66 jobs → shared deltaproxy setup):**
+     ``tests/pytests/conftest.py`` ``salt_delta_proxy_factory`` imports
+     ``SaltProxyMinion`` from ``saltfactories.daemons.proxy`` with fallback to
+     ``.minion`` (see ``ci_logs/local_rerun_integration_functional_run24876542573.txt``).
+
+   - **macOS ``Test Package``:** Darwin event stamp handling + timeouts, as in (5).
+
+   Re-running every matrix cell locally is not practical; after these fixes,
+   a fresh GitHub Actions run on the PR is the definitive confirmation.

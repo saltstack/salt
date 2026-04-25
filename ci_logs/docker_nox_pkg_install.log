@@ -1,0 +1,461 @@
+nox > Running session ci-test-onedir-pkgs
+nox > Re-using existing virtual environment at .nox/ci-test-onedir-pkgs.
+nox > Replacing VirtualEnv instance...
+nox > Re-using existing virtual environment at .nox/ci-test-onedir.
+nox > python3 -m pip install ppbt
+Requirement already satisfied: ppbt in ./.nox/ci-test-onedir/lib/python3.10/site-packages (0.1.8)
+
+[notice] A new release of pip is available: 25.2 -> 26.0.1
+[notice] To update, run: pip install --upgrade pip
+nox > Skipping Python Requirements because SKIP_REQUIREMENTS_INSTALL was found in the environ
+nox > python -m pytest --rootdir /salt --log-file-level=debug --show-capture=no -ra -s -vv --showlocals --color=yes --sys-stats --run-destructive --output-columns=120 --pkg-system-service --junitxml=artifacts/xml-unittests-output/test-results-install.xml --log-file=artifacts/logs/runtests-install.log tests/pytests/pkg/
+<frozen importlib._bootstrap>:914: ImportWarning: NaclImporter.find_spec() not found; falling back to find_module()
+[1m============================= test session starts ==============================[0m
+platform linux -- Python 3.10.19, pytest-8.1.1, pluggy-1.5.0 -- /salt/.nox/ci-test-onedir/bin/python
+cachedir: .pytest_cache
+max open files: soft=3072; hard=524288
+salt-transport: zeromq
+rootdir: /salt
+configfile: pytest.ini
+plugins: skip-markers-1.5.2, flaky-3.8.1, httpserver-1.0.8, custom-exit-code-0.3.0, pyfakefs-5.3.1, subtests-0.11.0, helpers-namespace-2021.12.29, anyio-4.1.0, salt-factories-1.0.5, system-statistics-1.0.2, timeout-2.3.1, shell-utilities-1.9.7
+[1mcollecting ... [0mcollected 91 items / 15 deselected / 76 selected
+
+tests/pytests/pkg/integration/test_check_imports.py::test_check_imports <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_check_imports.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  13.00 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 3
+
+tests/pytests/pkg/integration/test_clean_zmq_teardown.py::test_check_no_import_error <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_clean_zmq_teardown.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  14.20 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   3.40 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_enabled_disabled.py::test_services <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_enabled_disabled.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  12.30 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   3.10 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_help.py::test_help <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_help.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  14.40 %   MEM:  28.40 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   0.30 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_logrotate_config.py::test_logrotate_config <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_logrotate_config.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:   9.10 %   MEM:  28.40 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU: 276.90 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_logrotate_config.py::test_issue_65231_etc_logrotate_salt_dir_removed <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_logrotate_config.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  30.00 %   MEM:  28.40 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU: 360.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_multi_minion.py::test_script_present [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_multi_minion.py::test_install [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_multi_minion.py::test_install_master [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_multi_minion.py::test_install_prefix [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_multi_minion.py::test_install_log_level [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_multi_minion.py::test_install_start [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_pip.py::test_pip_install <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_pip.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  13.90 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   0.80 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_pip.py::test_pip_install_extras <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_pip.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  13.10 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   1.10 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_pip.py::test_pip_non_root <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_pip.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  18.20 %   MEM:  28.40 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   0.80 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_pip.py::test_pip_install_salt_extension_in_extras <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_pip.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  17.60 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   0.30 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_pip_upgrade.py::test_pip_install <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_pip_upgrade.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  13.80 %   MEM:  28.40 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   0.90 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_pkg.py::test_pkg_install <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_pkg.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  17.50 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   0.40 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_pkg_meta.py::test_provides <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_pkg_meta.py [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_pkg_meta.py::test_requires <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_pkg_meta.py [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_python.py::test_python_script[1-false] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_python.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  11.90 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_python.py::test_python_script[0-true] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_python.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  10.30 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   8.40 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_python.py::test_python_script_exception <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_python.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:   9.40 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   8.30 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_salt_api.py::test_salt_api <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_salt_api.py [33mSKIPPED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:   9.30 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   1.10 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 3
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_salt_call.py::test_salt_call_local <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_salt_call.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  10.40 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:  17.30 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_salt_call.py::test_salt_call <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_salt_call.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  10.50 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   4.40 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_salt_call.py::test_sls <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_salt_call.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  12.40 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   3.60 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_salt_call.py::test_salt_call_local_sys_doc_none <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_salt_call.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  15.00 %   MEM:  28.20 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   0.80 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_salt_call.py::test_salt_call_local_sys_doc_aliases <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_salt_call.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  14.70 %   MEM:  28.20 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   1.10 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_salt_call.py::test_salt_call_cmd_run_id_runas <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_salt_call.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  13.80 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   1.70 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_salt_exec.py::test_salt_cmd_run <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_salt_exec.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  15.20 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   5.20 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 3
+
+tests/pytests/pkg/integration/test_salt_exec.py::test_salt_list_users <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_salt_exec.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  15.80 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   5.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 3
+
+tests/pytests/pkg/integration/test_salt_grains.py::test_grains_items <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_salt_grains.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  15.10 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   4.80 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 3
+
+tests/pytests/pkg/integration/test_salt_grains.py::test_grains_item_os <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_salt_grains.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  13.60 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   5.30 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 3
+
+tests/pytests/pkg/integration/test_salt_grains.py::test_grains_item_pythonversion <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_salt_grains.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  17.80 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   2.30 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 3
+
+tests/pytests/pkg/integration/test_salt_grains.py::test_grains_setval_key_val <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_salt_grains.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  20.00 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   4.40 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 3
+
+tests/pytests/pkg/integration/test_salt_grains.py::test_grains_package_onedir <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_salt_grains.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  18.20 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   7.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_salt_key.py::test_salt_key <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_salt_key.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  13.80 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   3.20 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_salt_minion.py::test_salt_minion_ping <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_salt_minion.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  17.80 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   2.30 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 3
+
+tests/pytests/pkg/integration/test_salt_minion.py::test_salt_minion_setproctitle <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_salt_minion.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  16.90 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   4.70 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 3
+
+tests/pytests/pkg/integration/test_salt_output.py::test_salt_output[yaml] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_salt_output.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  16.30 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   4.60 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 3
+
+tests/pytests/pkg/integration/test_salt_output.py::test_salt_output[json] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_salt_output.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  15.10 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   4.80 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_salt_pillar.py::test_salt_pillar <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_salt_pillar.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  15.40 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   4.30 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 3
+
+tests/pytests/pkg/integration/test_salt_state_file.py::test_salt_state_file <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_salt_state_file.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  17.90 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   3.70 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_salt_ufw.py::test_salt_ufw [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_salt_user.py::test_salt_user_master [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  19.00 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU: 164.10 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_salt_user.py::test_salt_user_home [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  13.30 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_salt_user.py::test_salt_user_group [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:   6.70 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU: 205.40 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_salt_user.py::test_salt_user_shell [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  18.20 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_salt_user.py::test_pkg_paths [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  20.00 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_salt_user.py::test_paths_log_rotation [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_ssm.py::test_ssm_present [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_systemd_config.py::test_system_config <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_systemd_config.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:   4.80 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU: 145.50 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_version.py::test_salt_version <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  13.10 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_version.py::test_salt_versions_report_master <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  14.50 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   3.10 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_version.py::test_salt_versions_report_minion <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  14.20 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   3.20 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 3
+
+tests/pytests/pkg/integration/test_version.py::test_compare_versions[master] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  13.90 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   5.90 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 3
+
+tests/pytests/pkg/integration/test_version.py::test_compare_versions[cloud] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  27.10 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   3.70 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_version.py::test_compare_versions[syndic] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  26.50 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   4.50 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_version.py::test_compare_versions[minion] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:   9.50 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   0.20 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_version.py::test_compare_versions[call] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  17.60 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   3.10 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_version.py::test_compare_versions[api] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [32mPASSED[0m
+[1m----------------------------- Processes Statistics -----------------------------[0m
+  .............................  System  -  CPU:  16.60 %   MEM:  28.30 % (Virtual Memory)  SWAP:  36.10 %
+  .....................  Test Suite Run  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.01 % (RSS)   CHILD PROCS: 2
+  ...  SaltMaster(id='pkg-test-master')  -  CPU:   0.00 %   MEM:   0.01 % (RSS)   MEM SUM:   0.08 % (RSS)   CHILD PROCS: 13
+  .....  SaltMinion(id='minion-Gf40HX')  -  CPU:   0.00 %   MEM:   0.00 % (RSS)   MEM SUM:   0.02 % (RSS)   CHILD PROCS: 2
+
+tests/pytests/pkg/integration/test_version.py::test_symlinks_created[salt] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_version.py::test_symlinks_created[salt-api] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_version.py::test_symlinks_created[salt-call] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_version.py::test_symlinks_created[salt-cloud] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_version.py::test_symlinks_created[salt-cp] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_version.py::test_symlinks_created[salt-key] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_version.py::test_symlinks_created[salt-master] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_version.py::test_symlinks_created[salt-minion] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_version.py::test_symlinks_created[salt-proxy] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_version.py::test_symlinks_created[salt-run] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_version.py::test_symlinks_created[spm] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_version.py::test_symlinks_created[salt-ssh] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_version.py::test_symlinks_created[salt-syndic] <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [33mSKIPPED[0m
+tests/pytests/pkg/integration/test_version.py::test_compare_pkg_versions_redhat_rc <- ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py [33mSKIPPED[0m
+
+[33m=============================== warnings summary ===============================[0m
+.nox/ci-test-onedir/lib/python3.10/site-packages/paramiko/pkey.py:100
+  /salt/.nox/ci-test-onedir/lib/python3.10/site-packages/paramiko/pkey.py:100: CryptographyDeprecationWarning: TripleDES has been moved to cryptography.hazmat.decrepit.ciphers.algorithms.TripleDES and will be removed from cryptography.hazmat.primitives.ciphers.algorithms in 48.0.0.
+    "cipher": algorithms.TripleDES,
+
+.nox/ci-test-onedir/lib/python3.10/site-packages/paramiko/transport.py:259
+  /salt/.nox/ci-test-onedir/lib/python3.10/site-packages/paramiko/transport.py:259: CryptographyDeprecationWarning: TripleDES has been moved to cryptography.hazmat.decrepit.ciphers.algorithms.TripleDES and will be removed from cryptography.hazmat.primitives.ciphers.algorithms in 48.0.0.
+    "class": algorithms.TripleDES,
+
+tests/pytests/pkg/integration/test_version.py::test_compare_pkg_versions_redhat_rc
+  /salt/.nox/ci-test-onedir/lib/python3.10/site-packages/boto/__init__.py:1105: DeprecationWarning: invalid escape sequence '\c'
+    """
+
+tests/pytests/pkg/integration/test_version.py::test_compare_pkg_versions_redhat_rc
+  /salt/.nox/ci-test-onedir/lib/python3.10/site-packages/boto/pyami/config.py:98: DeprecationWarning: invalid escape sequence '\s'
+    match = re.match("^#import[\s\t]*([^\s^\t]*)[\s\t]*$", line)
+
+tests/pytests/pkg/integration/test_version.py::test_compare_pkg_versions_redhat_rc
+  /salt/.nox/ci-test-onedir/lib/python3.10/site-packages/boto/plugin.py:40: DeprecationWarning: the imp module is deprecated in favour of importlib and slated for removal in Python 3.12; see the module's documentation for alternative uses
+    import imp
+
+tests/pytests/pkg/integration/test_version.py::test_compare_pkg_versions_redhat_rc
+  /salt/.nox/ci-test-onedir/lib/python3.10/site-packages/boto/connection.py:672: DeprecationWarning: invalid escape sequence '\w'
+    '(?:(?P<user>[\w\-\.]+):(?P<pass>.*)@)?'
+
+tests/pytests/pkg/integration/test_version.py::test_compare_pkg_versions_redhat_rc
+  /salt/.nox/ci-test-onedir/lib/python3.10/site-packages/boto/connection.py:673: DeprecationWarning: invalid escape sequence '\w'
+    '(?P<host>[\w\-\.]+)'
+
+tests/pytests/pkg/integration/test_version.py::test_compare_pkg_versions_redhat_rc
+  /salt/.nox/ci-test-onedir/lib/python3.10/site-packages/boto/connection.py:674: DeprecationWarning: invalid escape sequence '\d'
+    '(?::(?P<port>\d+))?'
+
+tests/pytests/pkg/integration/test_version.py::test_compare_pkg_versions_redhat_rc
+  /salt/.nox/ci-test-onedir/lib/python3.10/site-packages/boto/https_connection.py:80: DeprecationWarning: invalid escape sequence '\.'
+    host_re = host.replace('.', '\.').replace('*', '[^.]*')
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+- generated xml file: /salt/artifacts/xml-unittests-output/test-results-install.xml -
+[36m[1m=========================== short test summary info ============================[0m
+[33mSKIPPED[0m [1] tests/pytests/pkg/integration/test_multi_minion.py:40: Platform is not Windows, skipped
+[33mSKIPPED[0m [1] tests/pytests/pkg/integration/test_multi_minion.py:47: Platform is not Windows, skipped
+[33mSKIPPED[0m [1] tests/pytests/pkg/integration/test_multi_minion.py:64: Platform is not Windows, skipped
+[33mSKIPPED[0m [1] tests/pytests/pkg/integration/test_multi_minion.py:80: Platform is not Windows, skipped
+[33mSKIPPED[0m [1] tests/pytests/pkg/integration/test_multi_minion.py:96: Platform is not Windows, skipped
+[33mSKIPPED[0m [1] tests/pytests/pkg/integration/test_multi_minion.py:112: Platform is not Windows, skipped
+[33mSKIPPED[0m [1] ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_pkg_meta.py:49: rpm is not installed
+[33mSKIPPED[0m [1] ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_pkg_meta.py:89: rpm is not installed
+[33mSKIPPED[0m [1] ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_salt_api.py:13: Package test are getting reworked in https://github.com/saltstack/salt/issues/66672
+[33mSKIPPED[0m [1] tests/pytests/pkg/integration/test_salt_ufw.py:33: The 'ufw' binary was not found
+[33mSKIPPED[0m [1] tests/pytests/pkg/integration/test_salt_user.py:226: The 'logrotate' binary was not found
+[33mSKIPPED[0m [1] tests/pytests/pkg/integration/test_ssm.py:10: Platform is not Windows, skipped
+[33mSKIPPED[0m [13] ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py:130: Platform is not Darwin, skipped
+[33mSKIPPED[0m [1] ../home/dan/src/salt/worktree/merge_forward/tests/pytests/pkg/integration/test_version.py:159: The 'rpmdev-vercmp' binary was not found
+[33m==== [32m50 passed[0m, [33m[1m26 skipped[0m, [33m[1m15 deselected[0m, [33m[1m9 warnings[0m[33m in 130.54s (0:02:10)[0m[33m =====[0m
+exit=0

@@ -34,13 +34,11 @@ def install_salt_systemd(request, salt_factories_root_dir):
         pkg_system_service=request.config.getoption("--pkg-system-service"),
         upgrade=request.config.getoption("--upgrade"),
         downgrade=request.config.getoption("--downgrade"),
-        no_uninstall=False,
+        no_uninstall=request.config.getoption("--no-uninstall"),
         no_install=request.config.getoption("--no-install"),
         prev_version=request.config.getoption("--prev-version"),
         use_prev_version=request.config.getoption("--use-prev-version"),
     ) as fixture:
-        # XXX Force un-install for now
-        fixture.no_uninstall = False
         yield fixture
 
 

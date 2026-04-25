@@ -1,0 +1,9 @@
+06:07:33,997 [saltfactories.plugins.log_server:74  ][INFO    ][MainProcess(7783)] LogServer(log_host='0.0.0.0', log_port=46595, log_level='DEBUG', socket_hwm=1000000) starting...
+06:07:33,998 [saltfactories.plugins.log_server:84  ][INFO    ][MainProcess(7783)] LogServer(log_host='0.0.0.0', log_port=46595, log_level='DEBUG', socket_hwm=1000000) started
+06:07:34,889 [saltfactories.plugins                      :23  ][DEBUG   ][MainProcess(7783)] >>>>>>> START tests/pytests/unit/test_client.py::test_pub_async_no_timeout >>>>>>>
+06:07:35,902 [saltfactories.plugins.log_server           :90  ][INFO    ][MainProcess(7783)] LogServer(log_host='0.0.0.0', log_port=46595, log_level='DEBUG', socket_hwm=1000000) stopping...
+06:07:35,903 [saltfactories.plugins.log_server           :97  ][DEBUG   ][MainProcess(7783)] LogServer(log_host='0.0.0.0', log_port=46595, log_level='DEBUG', socket_hwm=1000000) Sent sentinel to trigger log server shutdown
+06:07:35,903 [saltfactories.plugins.log_server           :170 ][INFO    ][MainProcess(7783)] LogServer(log_host='0.0.0.0', log_port=46595, log_level='DEBUG', socket_hwm=1000000) Received the sentinel to shutdown
+06:07:35,904 [saltfactories.plugins.log_server           :204 ][DEBUG   ][MainProcess(7783)] LogServer(log_host='0.0.0.0', log_port=46595, log_level='DEBUG', socket_hwm=1000000) Process log thread terminated
+06:07:35,904 [saltfactories.plugins.log_server           :109 ][INFO    ][MainProcess(7783)] LogServer(log_host='0.0.0.0', log_port=46595, log_level='DEBUG', socket_hwm=1000000) Joining the logging server process thread
+06:07:35,904 [saltfactories.plugins.log_server           :112 ][DEBUG   ][MainProcess(7783)] LogServer(log_host='0.0.0.0', log_port=46595, log_level='DEBUG', socket_hwm=1000000) Stopped

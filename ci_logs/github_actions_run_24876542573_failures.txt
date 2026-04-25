@@ -1,0 +1,164 @@
+# GitHub Actions failures snapshot
+# Generated (UTC): 2026-04-24T08:18:48Z
+# Workflow run: https://github.com/saltstack/salt/actions/runs/24876542573
+# Run ID: 24876542573
+# Workflow: CI (pr: #68929)
+# path: .github/workflows/ci.yml
+# head_sha: 3346ef7f07e8c8bd75731185429911d3dd4071b6
+# head_branch: merge/3006.x/3007.x-25-04-13
+# run status: in_progress  conclusion: None
+# total jobs: 431  success: 287  failure: 123  pending: 20  skipped: 1
+
+## Failed jobs (conclusion=failure)
+
+72839231418	Test Package / Amazon Linux 2023 downgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231418
+72839231510	Test Package / Amazon Linux 2023 downgrade 3007.13	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231510
+72839231347	Test Package / Amazon Linux 2023 install	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231347
+72839231415	Test Package / Amazon Linux 2023 upgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231415
+72839231416	Test Package / Amazon Linux 2023 upgrade 3007.13	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231416
+72839231427	Test Package / Debian 11 Arm64 downgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231427
+72839231442	Test Package / Debian 11 Arm64 downgrade 3007.13	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231442
+72839231410	Test Package / Debian 11 Arm64 install	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231410
+72839231424	Test Package / Debian 11 Arm64 upgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231424
+72839231440	Test Package / Debian 11 Arm64 upgrade 3007.13	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231440
+72839231469	Test Package / Debian 12 downgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231469
+72839231464	Test Package / Debian 12 downgrade 3007.13	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231464
+72839231335	Test Package / Debian 12 install	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231335
+72839231390	Test Package / Debian 12 upgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231390
+72839231408	Test Package / Debian 12 upgrade 3007.13	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231408
+72839231445	Test Package / Debian 13 Arm64 downgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231445
+72839231478	Test Package / Debian 13 Arm64 downgrade 3007.13	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231478
+72839231338	Test Package / Debian 13 Arm64 install	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231338
+72839231405	Test Package / Debian 13 Arm64 upgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231405
+72839231449	Test Package / Debian 13 Arm64 upgrade 3007.13	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231449
+72839231357	Test Package / Photon OS 4 Arm64 install	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231357
+72839231400	Test Package / Photon OS 4 Arm64 upgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231400
+72839231420	Test Package / Photon OS 4 Arm64 upgrade 3007.13	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231420
+72839231381	Test Package / Photon OS 4 install	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231381
+72839231398	Test Package / Photon OS 4 upgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231398
+72839231443	Test Package / Photon OS 4 upgrade 3007.13	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231443
+72839231407	Test Package / Photon OS 5 Arm64 upgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231407
+72839231411	Test Package / Photon OS 5 upgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231411
+72839231446	Test Package / Rocky Linux 8 Arm64 downgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231446
+72839231494	Test Package / Rocky Linux 8 Arm64 downgrade 3007.13	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231494
+72839231316	Test Package / Rocky Linux 8 Arm64 install	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231316
+72839231388	Test Package / Rocky Linux 8 Arm64 upgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231388
+72839231457	Test Package / Rocky Linux 8 Arm64 upgrade 3007.13	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231457
+72839231413	Test Package / Rocky Linux 9 downgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231413
+72839231451	Test Package / Rocky Linux 9 downgrade 3007.13	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231451
+72839231352	Test Package / Rocky Linux 9 install	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231352
+72839231370	Test Package / Rocky Linux 9 upgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231370
+72839231428	Test Package / Rocky Linux 9 upgrade 3007.13	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231428
+72839231448	Test Package / Ubuntu 22.04 Arm64 downgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231448
+72839231460	Test Package / Ubuntu 22.04 Arm64 downgrade 3007.13	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231460
+72839231386	Test Package / Ubuntu 22.04 Arm64 install	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231386
+72839231401	Test Package / Ubuntu 22.04 Arm64 upgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231401
+72839231432	Test Package / Ubuntu 22.04 Arm64 upgrade 3007.13	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231432
+72839231422	Test Package / Ubuntu 24.04 downgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231422
+72839231480	Test Package / Ubuntu 24.04 downgrade 3007.13	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231480
+72839231426	Test Package / Ubuntu 24.04 install	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231426
+72839231409	Test Package / Ubuntu 24.04 upgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231409
+72839231499	Test Package / Ubuntu 24.04 upgrade 3007.13	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231499
+72839230547	Test Package / macOS 15 (Intel) downgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839230547
+72839230681	Test Package / macOS 15 (Intel) downgrade 3007.13	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839230681
+72839230567	Test Package / macOS 15 (Intel) upgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839230567
+72839230586	Test Package / macOS 15 (Intel) upgrade 3007.13	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839230586
+72839230543	Test Package / macOS 15 (M1) downgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839230543
+72839230597	Test Package / macOS 15 (M1) downgrade 3007.13	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839230597
+72839230559	Test Package / macOS 15 (M1) upgrade 3006.24	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839230559
+72839230584	Test Package / macOS 15 (M1) upgrade 3007.13	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839230584
+72839234226	Test Salt / Amazon Linux 2 integration zeromq 5	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234226
+72839234316	Test Salt / Amazon Linux 2 integration zeromq 6	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234316
+72839233971	Test Salt / Amazon Linux 2 unit zeromq 2	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233971
+72839233116	Test Salt / Amazon Linux 2023 Arm64 integration zeromq 2	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233116
+72839233148	Test Salt / Amazon Linux 2023 Arm64 integration zeromq 5	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233148
+72839233191	Test Salt / Amazon Linux 2023 Arm64 integration zeromq 6	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233191
+72839232914	Test Salt / Amazon Linux 2023 Arm64 unit zeromq 2	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839232914
+72839234093	Test Salt / Debian 11 functional zeromq 2	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234093
+72839234131	Test Salt / Debian 11 functional zeromq 4	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234131
+72839234262	Test Salt / Debian 11 integration zeromq 1	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234262
+72839234357	Test Salt / Debian 11 integration zeromq 5	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234357
+72839234308	Test Salt / Debian 11 integration zeromq 6	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234308
+72839234005	Test Salt / Debian 11 unit zeromq 2	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234005
+72839233032	Test Salt / Debian 12 Arm64 integration zeromq 1	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233032
+72839233229	Test Salt / Debian 12 Arm64 integration zeromq 5	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233229
+72839233193	Test Salt / Debian 12 Arm64 integration zeromq 6	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233193
+72839232924	Test Salt / Debian 12 Arm64 unit zeromq 2	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839232924
+72839234254	Test Salt / Debian 13 integration zeromq 1	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234254
+72839234252	Test Salt / Debian 13 integration zeromq 5	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234252
+72839234339	Test Salt / Debian 13 integration zeromq 6	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234339
+72839234000	Test Salt / Debian 13 unit zeromq 2	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234000
+72839234367	Test Salt / Fedora 40 integration zeromq 5	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234367
+72839234338	Test Salt / Fedora 40 integration zeromq 6	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234338
+72839233982	Test Salt / Fedora 40 unit zeromq 2	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233982
+72839233005	Test Salt / Photon OS 4 Arm64 functional zeromq 1	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233005
+72839232966	Test Salt / Photon OS 4 Arm64 functional zeromq 2	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839232966
+72839233040	Test Salt / Photon OS 4 Arm64 functional zeromq 3	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233040
+72839233058	Test Salt / Photon OS 4 Arm64 functional zeromq 4	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233058
+72839233137	Test Salt / Photon OS 4 Arm64 integration zeromq 5	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233137
+72839233204	Test Salt / Photon OS 4 Arm64 integration zeromq 6	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233204
+72839232928	Test Salt / Photon OS 4 Arm64 unit zeromq 2	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839232928
+72839234352	Test Salt / Photon OS 4 integration zeromq(fips) 5	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234352
+72839234356	Test Salt / Photon OS 4 integration zeromq(fips) 6	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234356
+72839233995	Test Salt / Photon OS 4 unit zeromq(fips) 2	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233995
+72839233025	Test Salt / Photon OS 5 Arm64 functional zeromq(fips) 2	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233025
+72839233288	Test Salt / Photon OS 5 Arm64 integration tcp(fips) 5	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233288
+72839233404	Test Salt / Photon OS 5 Arm64 integration tcp(fips) 6	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233404
+72839233195	Test Salt / Photon OS 5 Arm64 integration zeromq(fips) 5	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233195
+72839233174	Test Salt / Photon OS 5 Arm64 integration zeromq(fips) 6	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233174
+72839232939	Test Salt / Photon OS 5 Arm64 unit zeromq(fips) 2	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839232939
+72839234075	Test Salt / Photon OS 5 functional zeromq 2	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234075
+72839234486	Test Salt / Photon OS 5 integration tcp 5	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234486
+72839234451	Test Salt / Photon OS 5 integration tcp 6	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234451
+72839234392	Test Salt / Photon OS 5 integration zeromq 5	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234392
+72839234336	Test Salt / Photon OS 5 integration zeromq 6	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234336
+72839233993	Test Salt / Photon OS 5 unit zeromq 2	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233993
+72839233134	Test Salt / Rocky Linux 8 Arm64 integration zeromq 5	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233134
+72839233146	Test Salt / Rocky Linux 8 Arm64 integration zeromq 6	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233146
+72839232911	Test Salt / Rocky Linux 8 Arm64 unit zeromq 2	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839232911
+72839234409	Test Salt / Rocky Linux 9 integration tcp 5	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234409
+72839234440	Test Salt / Rocky Linux 9 integration tcp 6	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234440
+72839234205	Test Salt / Rocky Linux 9 integration zeromq 5	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234205
+72839234420	Test Salt / Rocky Linux 9 integration zeromq 6	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234420
+72839233972	Test Salt / Rocky Linux 9 unit zeromq 2	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233972
+72839233326	Test Salt / Ubuntu 22.04 Arm64 integration tcp 1	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233326
+72839233303	Test Salt / Ubuntu 22.04 Arm64 integration tcp 5	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233303
+72839233279	Test Salt / Ubuntu 22.04 Arm64 integration tcp 6	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233279
+72839233070	Test Salt / Ubuntu 22.04 Arm64 integration zeromq 1	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233070
+72839233160	Test Salt / Ubuntu 22.04 Arm64 integration zeromq 5	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233160
+72839233172	Test Salt / Ubuntu 22.04 Arm64 integration zeromq 6	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233172
+72839232916	Test Salt / Ubuntu 22.04 Arm64 unit zeromq 2	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839232916
+72839234140	Test Salt / Ubuntu 24.04 integration zeromq 1	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234140
+72839234438	Test Salt / Ubuntu 24.04 integration zeromq 5	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234438
+72839234330	Test Salt / Ubuntu 24.04 integration zeromq 6	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234330
+72839234027	Test Salt / Ubuntu 24.04 unit zeromq 2	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234027
+72839231234	Test Salt / Windows 2022 integration zeromq 2	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231234
+72839231235	Test Salt / Windows 2025 integration zeromq 2	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231235
+
+## Jobs not finished yet (conclusion null; status may be queued or in_progress)
+
+72839234386	in_progress	Test Salt / Amazon Linux 2 scenarios zeromq	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234386
+72839233208	in_progress	Test Salt / Amazon Linux 2023 Arm64 scenarios zeromq	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233208
+72839234346	in_progress	Test Salt / Debian 11 scenarios zeromq	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234346
+72839233136	in_progress	Test Salt / Debian 12 Arm64 integration zeromq 7	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233136
+72839234363	in_progress	Test Salt / Debian 13 scenarios zeromq	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234363
+72839233190	in_progress	Test Salt / Photon OS 4 Arm64 integration zeromq 7	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233190
+72839234362	in_progress	Test Salt / Photon OS 4 integration zeromq(fips) 7	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234362
+72839234398	in_progress	Test Salt / Photon OS 4 scenarios zeromq(fips)	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234398
+72839233292	in_progress	Test Salt / Photon OS 5 Arm64 integration tcp(fips) 7	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233292
+72839233323	in_progress	Test Salt / Photon OS 5 Arm64 integration zeromq(fips) 7	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233323
+72839234462	in_progress	Test Salt / Photon OS 5 integration tcp 7	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234462
+72839234325	in_progress	Test Salt / Photon OS 5 integration zeromq 7	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234325
+72839234447	in_progress	Test Salt / Photon OS 5 scenarios tcp	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234447
+72839234360	in_progress	Test Salt / Photon OS 5 scenarios zeromq	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234360
+72839234450	in_progress	Test Salt / Rocky Linux 9 scenarios tcp	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234450
+72839234344	in_progress	Test Salt / Rocky Linux 9 scenarios zeromq	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234344
+72839233343	in_progress	Test Salt / Ubuntu 22.04 Arm64 integration tcp 7	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233343
+72839233226	in_progress	Test Salt / Ubuntu 22.04 Arm64 integration zeromq 7	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839233226
+72839234359	in_progress	Test Salt / Ubuntu 24.04 scenarios zeromq	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839234359
+72839231280	in_progress	Test Salt / Windows 2025 integration zeromq 5	https://github.com/saltstack/salt/actions/runs/24876542573/job/72839231280
+
+## Note
+This list is workflow **jobs** (matrix cells), not individual pytest test nodes.
+Pytest-level failures live in per-job log/junit artifacts on the run page.
+While the run status was 'in_progress', 20 job(s) had not completed; re-fetch after the run finishes for a final count.
