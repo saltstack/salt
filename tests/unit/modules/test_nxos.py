@@ -33,6 +33,8 @@ from tests.unit.modules.nxos.nxos_show_cmd_output import (
     n9k_show_user_account,
     n9k_show_user_account_list,
     n9k_show_ver,
+    n9k_show_ver_int_list,
+    n9k_show_ver_int_list_structured,
     n9k_show_ver_list,
 )
 from tests.unit.modules.nxos.nxos_show_run import (
@@ -162,6 +164,24 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.modules.nxos.get_roles", return_value=roles, autospec=True):
             result = nxos_module.check_role(username, "network-operator")
             self.assertFalse(result)
+
+    def test_cmd_any_function(self):
+        """UT: nxos module: check_role (formerly reachable via removed nxos.cmd)"""
+
+        with patch(
+            "salt.modules.nxos.get_roles",
+            autospec=True,
+            return_value=["network-admin"],
+        ):
+            result = nxos_module.check_role(
+                "salt_test", "network-admin", encrypted=True
+            )
+            self.assertTrue(result)
+
+    def test_cmd_function_absent(self):
+        """UT: nxos module: bogus function names are not exposed"""
+
+        assert not hasattr(nxos_module, "cool_new_function")
 
     def test_find_single_match(self):
         """UT: nxos module:test_find method - Find single match in running config"""
@@ -315,6 +335,12 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
             result = nxos_module.grains_refresh()
             self.assertEqual(result, expected_grains)
 
+    def test_system_info(self):
+        """UT: salt.utils.nxos.system_info parses show version (used by nxos.grains)"""
+
+        result = nxos_utils.system_info(n9k_show_ver)
+        self.assertEqual(result, n9k_grains)
+
     def test_sendline_invalid_method(self):
         """UT: nxos module:sendline method - invalid method"""
 
@@ -354,6 +380,62 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 result = nxos_module.sendline(command, method)
                 self.assertIn(n9k_show_ver, result)
+
+    def test_show_raw_text_invalid(self):
+        """UT: nxos module:sendline rejects invalid *method* (legacy show() behavior)"""
+
+        command = "show version"
+        result = nxos_module.sendline(command, "invalid")
+        self.assertIn("INPUT ERROR", result)
+
+    def test_show_raw_text_true(self):
+        """UT: nxos module: unstructured show via sendline / cli_show_ascii"""
+
+        command = "show version"
+
+        with patch(
+            "salt.modules.nxos.sendline", autospec=True, return_value=n9k_show_ver
+        ):
+            result = nxos_module.sendline(command, "cli_show_ascii")
+            self.assertEqual(result, n9k_show_ver)
+
+    def test_show_raw_text_true_multiple_commands(self):
+        """UT: nxos module: multiple show commands via sendline"""
+
+        command = "show bgp sessions ; show processes"
+        data = ["bgp_session_data", "process_data"]
+
+        with patch("salt.modules.nxos.sendline", autospec=True, return_value=data):
+            result = nxos_module.sendline(command, "cli_show_ascii")
+            self.assertEqual(result, data)
+
+    def test_show_nxapi(self):
+        """UT: nxos module: nxapi returns info as list (cli_show_ascii)"""
+
+        command = "show version; show interface eth1/1"
+
+        with patch(
+            "salt.modules.nxos.sendline",
+            autospec=True,
+            return_value=n9k_show_ver_int_list,
+        ):
+            result = nxos_module.sendline(command, "cli_show_ascii")
+            self.assertEqual(result[0], n9k_show_ver_int_list[0])
+            self.assertEqual(result[1], n9k_show_ver_int_list[1])
+
+    def test_show_nxapi_structured(self):
+        """UT: nxos module: structured show (cli_show)"""
+
+        command = "show version; show interface eth1/1"
+
+        with patch(
+            "salt.modules.nxos.sendline",
+            autospec=True,
+            return_value=n9k_show_ver_int_list_structured,
+        ):
+            result = nxos_module.sendline(command, "cli_show")
+            self.assertEqual(result[0], n9k_show_ver_int_list_structured[0])
+            self.assertEqual(result[1], n9k_show_ver_int_list_structured[1])
 
     def test_show_run(self):
         """UT: nxos module:show_run method"""

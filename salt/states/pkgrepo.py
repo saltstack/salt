@@ -397,7 +397,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         # If neither argument was passed we assume the repo will be enabled
         enabled = True
 
-    # To be changed in version 3008: default to False and still log a warning
+    # To be changed in version 3009: default to False and still log a warning
     allow_insecure_key = kwargs.pop("allow_insecure_key", True)
     key_is_insecure = kwargs.get("key_url", "").strip().startswith("http:")
     if key_is_insecure:

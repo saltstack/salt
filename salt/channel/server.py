@@ -103,9 +103,9 @@ class ReqServerChannel:
         1. **Pooled** (``worker_pools_enabled=True``, the default):
            Returns a :class:`PoolRoutingChannel` that sits in front of the
            external transport.  Incoming requests are routed to per-pool IPC
-           RequestServers and dispatched to MWorkers.  ``_auth`` travels
-           through a worker pool just like any other command — it is NOT
-           intercepted at the channel layer in this path.
+           RequestServers and dispatched to MWorkers.  Clear-text ``_auth``
+           uses that IPC path when connected; before IPC clients exist it is
+           handled inline (same semantics as the non-pooled channel).
 
         2. **Non-pooled** (``worker_pools_enabled=False``, legacy):
            Returns a plain :class:`ReqServerChannel` whose
@@ -114,8 +114,8 @@ class ReqServerChannel:
            :meth:`_auth`.  All other commands are forwarded to the single
            worker pool via ``payload_handler``.
 
-        Because these paths are mutually exclusive, ``_auth`` is always
-        executed exactly once regardless of which path is active.
+        These paths are mutually exclusive at runtime; ``_auth`` is not run
+        twice for a single request.
         """
         if "master_uri" not in opts and "master_uri" in kwargs:
             opts["master_uri"] = kwargs["master_uri"]
@@ -1099,18 +1099,14 @@ class PoolRoutingChannel:
 
     ``_auth`` handling
     ------------------
-    In this path ``_auth`` is treated as a regular command.  It is looked up
-    in the routing table built from ``worker_pools`` config and forwarded to
-    whichever pool is mapped to it (or the catchall/default pool if no
-    explicit mapping exists).  It is then handled inside the worker by
-    :meth:`~salt.master.MWorker._handle_clear` →
+    Under a fully started master, ``_auth`` is looked up in the routing table
+    and forwarded to the mapped pool's IPC RequestServer, then handled in a
+    worker by :meth:`~salt.master.MWorker._handle_clear` →
     :meth:`~salt.master.ClearFuncs._auth`.
 
-    There is **no** inline ``_auth`` interception here.  Combined with the
-    fact that the plain :class:`ReqServerChannel` (which does intercept
-    ``_auth`` inline) is never in the call chain when this class is active,
-    ``_auth`` executes exactly once per request regardless of which path is
-    chosen at startup.
+    If the pool's IPC client is not connected yet (e.g. tests calling
+    :meth:`handle_message` without ``post_fork``), clear-text ``_auth`` is
+    handled inline with the same logic as :meth:`ReqServerChannel.handle_message`.
 
     See :meth:`ReqServerChannel.factory` for the authoritative description of
     the two mutually exclusive paths.
@@ -1141,6 +1137,20 @@ class PoolRoutingChannel:
         self.router = None
         self.crypticle = None
         self.master_key = None
+        self.auto_key = None
+
+        (pathlib.Path(self.opts["cachedir"]) / "sessions").mkdir(exist_ok=True)
+        self.sessions = {}
+
+        # Same key cache / minion bookkeeping as ReqServerChannel so clear-text
+        # _auth can run inline when IPC pool clients are not yet connected
+        # (functional tests and bootstrap scenarios).
+        self.cache = salt.cache.Cache(opts, driver=self.opts["keys.cache_driver"])
+        if self.opts["con_cache"]:
+            self.cache_cli = CacheCli(self.opts)
+        else:
+            self.cache_cli = False
+            self.ckminions = salt.utils.minions.CkMinions(self.opts)
 
         # Build routing table for command-based routing
         self._build_routing_table()
@@ -1176,6 +1186,53 @@ class PoolRoutingChannel:
                 "Worker pool configuration must have exactly one pool with "
                 "catchall ('*') in its commands."
             )
+
+    @property
+    def aes_key(self):
+        if self.opts.get("cluster_id", None):
+            return salt.master.SMaster.secrets["cluster_aes"]["secret"].value
+        return salt.master.SMaster.secrets["aes"]["secret"].value
+
+    def session_key(self, minion):
+        """
+        Returns a session key for the given minion id.
+        """
+        now = time.time()
+        if minion in self.sessions:
+            if now - self.sessions[minion][0] < self.opts["publish_session"]:
+                return self.sessions[minion][1]
+
+        path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
+        try:
+            if now - path.stat().st_mtime > self.opts["publish_session"]:
+                salt.crypt.Crypticle.write_key(path)
+        except FileNotFoundError:
+            salt.crypt.Crypticle.write_key(path)
+
+        self.sessions[minion] = (
+            path.stat().st_mtime,
+            salt.crypt.Crypticle.read_key(path),
+        )
+        return self.sessions[minion][1]
+
+    def _update_aes(self):
+        """
+        Check to see if a fresh AES key is available and update the components
+        of the worker
+        """
+        key = "aes"
+        if self.opts.get("cluster_id", None):
+            key = "cluster_aes"
+
+        if (
+            salt.master.SMaster.secrets[key]["secret"].value
+            != self.crypticle.key_string
+        ):
+            self.crypticle = _get_crypticle(
+                self.opts, salt.master.SMaster.secrets[key]["secret"].value
+            )
+            return True
+        return False
 
     def pre_fork(self, process_manager, *args, **kwargs):
         """
@@ -1284,9 +1341,7 @@ class PoolRoutingChannel:
         )
 
         # Set up crypticle for payload decryption during routing
-        self.crypticle = _get_crypticle(
-            self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
-        )
+        self.crypticle = _get_crypticle(self.opts, self.aes_key)
 
         self.master_key = salt.crypt.MasterKeys(self.opts)
 
@@ -1342,6 +1397,79 @@ class PoolRoutingChannel:
             len(self.pool_clients),
         )
 
+    def _req_channel_auth_delegate(self):
+        """
+        Build a minimal :class:`ReqServerChannel` view for running
+        :meth:`ReqServerChannel._auth` with this channel's opts, keys, and
+        cache (used when pool IPC clients are not connected yet).
+        """
+        ch = ReqServerChannel.__new__(ReqServerChannel)
+        ch.opts = self.opts
+        ch.transport = self.transport
+        ch.cache = self.cache
+        ch.event = self.event
+        ch.master_key = self.master_key
+        ch.sessions = self.sessions
+        ch.auto_key = getattr(self, "auto_key", None)
+        ch.cache_cli = getattr(self, "cache_cli", False)
+        ch.ckminions = getattr(self, "ckminions", None)
+        ch.crypticle = getattr(self, "crypticle", None)
+        return ch
+
+    async def _handle_clear_auth_local(self, payload, version):
+        """
+        Run clear-text ``_auth`` the same way :meth:`ReqServerChannel.handle_message`
+        does, without forwarding to a worker pool (no IPC client yet).
+        """
+        proxy = self._req_channel_auth_delegate()
+        try:
+            payload = ReqServerChannel._decode_payload(proxy, payload, version)
+        except Exception as exc:  # pylint: disable=broad-except
+            exc_type = type(exc).__name__
+            if exc_type == "AuthenticationError":
+                log.debug(
+                    "Minion failed to auth to master. Since the payload is "
+                    "encrypted, it is not known which minion failed to "
+                    "authenticate. It is likely that this is a transient "
+                    "failure due to the master rotating its public key."
+                )
+            else:
+                log.error("Bad load from minion: %s: %s", exc_type, exc)
+            return "bad load"
+
+        if not isinstance(payload, dict) or not isinstance(payload.get("load"), dict):
+            log.error(
+                "payload and load must be a dict. Payload was: %s",
+                payload,
+            )
+            return "payload and load must be a dict"
+
+        try:
+            id_ = payload["load"].get("id", "")
+            if "\0" in id_:
+                log.error("Payload contains an id with a null byte: %s", payload)
+                return "bad load: id contains a null byte"
+        except TypeError:
+            log.error("Payload contains non-string id: %s", payload)
+            return f"bad load: id {id_} is not a string"
+
+        sign_messages = version > 1
+
+        if (
+            payload.get("enc") == "clear"
+            and payload.get("load", {}).get("cmd") == "_auth"
+        ):
+            start = time.time()
+            ret = ReqServerChannel._auth(proxy, payload["load"], sign_messages, version)
+            if self.opts.get("master_stats", False) and getattr(
+                self, "payload_handler", None
+            ):
+                await self.payload_handler({"cmd": "_auth", "_start": start})
+            return ret
+
+        log.error("clear-auth local handler called for non-auth payload: %s", payload)
+        return {"error": "Internal routing error", "success": False}
+
     async def handle_and_route_message(self, payload):
         """
         Route an incoming request to the appropriate worker pool (pooled path).
@@ -1351,14 +1479,19 @@ class PoolRoutingChannel:
         in the routing table, then forwards the raw payload to that pool's
         IPC RequestServer via a RequestClient.
 
-        ``_auth`` is handled here like any other command — it is routed to
-        whatever pool its command is mapped to and executed inside a worker.
-        This method does **not** intercept or short-circuit ``_auth``.
+        Clear-text ``_auth`` is normally routed like any other command. When
+        no IPC client exists for the target pool yet (e.g. functional tests
+        that call :meth:`handle_message` without a full ``post_fork``), it is
+        handled inline using the same logic as :meth:`ReqServerChannel.handle_message`.
 
         See :class:`PoolRoutingChannel` and :meth:`ReqServerChannel.factory`
         for the full explanation of the two mutually exclusive request paths.
         """
-        if not isinstance(payload, dict):
+        if (
+            not isinstance(payload, dict)
+            or "enc" not in payload
+            or "load" not in payload
+        ):
             log.warning("bad load received on socket")
             return "bad load"
         try:
@@ -1446,6 +1579,12 @@ class PoolRoutingChannel:
             )
 
             if pool_name not in self.pool_clients:
+                if (
+                    payload.get("enc") == "clear"
+                    and isinstance(payload.get("load"), dict)
+                    and payload["load"].get("cmd") == "_auth"
+                ):
+                    return await self._handle_clear_auth_local(payload, version)
                 log.error(
                     "No client available for pool '%s'. Available: %s",
                     pool_name,

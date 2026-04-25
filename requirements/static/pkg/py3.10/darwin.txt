@@ -11,7 +11,9 @@ apache-libcloud==3.9.0
 async-timeout==5.0.1
     # via aiohttp
 attrs==25.4.0
-    # via aiohttp
+    # via
+    #   -c requirements/constraints.txt
+    #   aiohttp
 autocommand==2.2.2
     # via jaraco-text
 backports-tarfile==1.2.0

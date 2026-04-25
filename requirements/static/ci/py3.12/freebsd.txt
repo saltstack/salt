@@ -25,6 +25,7 @@ asn1crypto==1.5.1 ; sys_platform != 'win32'
     #   oscrypto
 attrs==23.2.0
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/pkg/py3.12/freebsd.txt
     #   aiohttp
     #   jsonschema
@@ -32,6 +33,7 @@ attrs==23.2.0
     #   pytest-shell-utilities
     #   pytest-skip-markers
     #   pytest-system-statistics
+    #   referencing
 autocommand==2.2.2
     # via
     #   -c requirements/static/pkg/py3.12/freebsd.txt
@@ -209,8 +211,16 @@ jmespath==1.1.0
     #   -r requirements/static/ci/common.in
     #   boto3
     #   botocore
-jsonschema==3.2.0
-    # via -r requirements/static/ci/common.in
+jsonschema==3.2.0 ; python_full_version < '3.13'
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.in
+jsonschema==4.26.0 ; python_full_version >= '3.13'
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.in
+jsonschema-specifications==2025.9.1 ; python_full_version >= '3.13'
+    # via jsonschema
 junit-xml==1.9
     # via -r requirements/static/ci/common.in
 junos-eznc==2.6.7 ; sys_platform != 'win32'
@@ -354,7 +364,7 @@ pyopenssl==25.3.0
     #   etcd3-py
 pyparsing==3.0.9 ; sys_platform != 'win32'
     # via junos-eznc
-pyrsistent==0.19.3
+pyrsistent==0.19.3 ; python_full_version < '3.13'
     # via jsonschema
 pyserial==3.5 ; sys_platform != 'win32'
     # via junos-eznc
@@ -451,6 +461,10 @@ pyzmq==27.1.0
     #   -c requirements/static/pkg/py3.12/freebsd.txt
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
+referencing==0.37.0 ; python_full_version >= '3.13'
+    # via
+    #   jsonschema
+    #   jsonschema-specifications
 requests==2.32.5
     # via
     #   -c requirements/static/pkg/py3.12/freebsd.txt
@@ -470,6 +484,10 @@ responses==0.23.1
     # via moto
 rfc3987==1.3.8
     # via -r requirements/static/ci/common.in
+rpds-py==0.30.0 ; python_full_version >= '3.13'
+    # via
+    #   jsonschema
+    #   referencing
 rpm-vercmp==0.1.2 ; sys_platform == 'linux'
     # via
     #   -c requirements/static/pkg/py3.12/freebsd.txt

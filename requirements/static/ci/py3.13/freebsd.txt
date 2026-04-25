@@ -25,6 +25,7 @@ asn1crypto==1.5.1 ; sys_platform != 'win32'
     #   oscrypto
 attrs==24.2.0
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/pkg/py3.13/freebsd.txt
     #   aiohttp
     #   jsonschema
@@ -207,7 +208,9 @@ jmespath==1.1.0
     #   boto3
     #   botocore
 jsonschema==4.23.0
-    # via -r requirements/static/ci/common.in
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.in
 jsonschema-specifications==2024.10.1
     # via jsonschema
 junit-xml==1.9
