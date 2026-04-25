@@ -7,6 +7,8 @@ import psutil
 import pytest
 from pytestskipmarkers.utils import platform
 
+from tests.support.pkg import pep440_public_equal
+
 log = logging.getLogger(__name__)
 
 
@@ -102,16 +104,15 @@ def salt_test_upgrade(
     ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
 
-    installed_minion_version = packaging.version.parse(ret.data)
-    assert installed_minion_version == packaging.version.parse(
-        install_salt.artifact_version
-    )
+    assert pep440_public_equal(
+        str(ret.data), install_salt.artifact_version
+    ), f"minion test.version {ret.data!r} vs artifact {install_salt.artifact_version!r}"
 
     ret = install_salt.proc.run(bin_file, "--version")
     assert ret.returncode == 0
-    assert packaging.version.parse(
-        ret.stdout.strip().split()[1]
-    ) == packaging.version.parse(install_salt.artifact_version)
+    assert pep440_public_equal(
+        ret.stdout.strip().split()[1], install_salt.artifact_version
+    ), f"salt --version vs artifact {install_salt.artifact_version!r}"
 
     new_minion_pids = _get_running_named_salt_pid(process_minion_name)
     new_master_pids = _get_running_named_salt_pid(process_master_name)

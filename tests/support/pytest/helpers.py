@@ -835,16 +835,47 @@ def change_cwd(path):
 
 @pytest.helpers.register
 def download_file(url, dest, auth=None):
-    # NOTE the stream=True parameter below
-    with requests.get(
-        url, allow_redirects=True, stream=True, auth=auth, timeout=60
-    ) as r:
-        r.raise_for_status()
-        with salt.utils.files.fopen(dest, "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-    return dest
+    """
+    Download *url* to *dest* with retries for transient network/DNS failures.
+    """
+    for attempt in range(5):
+        try:
+            # NOTE the stream=True parameter below
+            with requests.get(
+                url, allow_redirects=True, stream=True, auth=auth, timeout=60
+            ) as r:
+                r.raise_for_status()
+                with salt.utils.files.fopen(dest, "wb") as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+            return dest
+        except requests.exceptions.HTTPError as exc:
+            status = exc.response.status_code if exc.response is not None else None
+            if status is not None and status >= 500 and attempt < 4:
+                log.warning(
+                    "download_file attempt %s/5 HTTP %s for %s: %s",
+                    attempt + 1,
+                    status,
+                    url,
+                    exc,
+                )
+                time.sleep(min(30, 2**attempt))
+                continue
+            raise
+        except (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout,
+        ) as exc:
+            log.warning(
+                "download_file attempt %s/5 failed for %s: %s",
+                attempt + 1,
+                url,
+                exc,
+            )
+            if attempt == 4:
+                raise
+            time.sleep(min(30, 2**attempt))
 
 
 @contextmanager
