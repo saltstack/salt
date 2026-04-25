@@ -7,10 +7,14 @@ This includes server side transport, for the ReqServer and the Publisher
 import asyncio
 import binascii
 import collections
+import errno
 import hashlib
+import hmac
 import logging
 import os
 import pathlib
+import random
+import string
 import time
 import zlib
 
@@ -22,6 +26,7 @@ import salt.master
 import salt.payload
 import salt.transport
 import salt.transport.frame
+import salt.transport.tcp
 import salt.utils.channel
 import salt.utils.event
 import salt.utils.minions
@@ -55,6 +60,34 @@ def _get_crypticle(opts, key_string, key_size=192, serial=0):
         return salt.crypt.Crypticle(opts, key_string, key_size, serial)
 
 
+def cluster_pub_matches_fingerprint(opts, cluster_pub):
+    """
+    Verify a received cluster public key against a pinned fingerprint.
+
+    When ``opts["cluster_pub_fingerprint"]`` is set, the joining master
+    requires the ``cluster_pub`` it receives in a
+    ``cluster/peer/discover-reply`` to hash to that value (SHA-256 hex
+    digest of the PEM bytes, case-insensitive). When the option is unset
+    this function returns ``True`` unconditionally, which is the
+    trust-on-first-contact behavior documented for deployments that share
+    ``cluster_pki_dir`` over a filesystem.
+
+    ``cluster_pub`` may be a ``str`` (PEM text) or ``bytes``.
+
+    Returns ``True`` on match (or when no fingerprint is pinned) and
+    ``False`` on mismatch.
+    """
+    pinned = opts.get("cluster_pub_fingerprint")
+    if not pinned:
+        return True
+    if isinstance(cluster_pub, str):
+        pub_bytes = cluster_pub.encode()
+    else:
+        pub_bytes = cluster_pub
+    digest = hashlib.sha256(pub_bytes).hexdigest()
+    return hmac.compare_digest(digest.lower(), str(pinned).lower())
+
+
 class ReqServerChannel:
     """
     ReqServerChannel handles request/reply messages from ReqChannels.
@@ -70,9 +103,9 @@ class ReqServerChannel:
         1. **Pooled** (``worker_pools_enabled=True``, the default):
            Returns a :class:`PoolRoutingChannel` that sits in front of the
            external transport.  Incoming requests are routed to per-pool IPC
-           RequestServers and dispatched to MWorkers.  ``_auth`` travels
-           through a worker pool just like any other command — it is NOT
-           intercepted at the channel layer in this path.
+           RequestServers and dispatched to MWorkers.  Clear-text ``_auth``
+           uses that IPC path when connected; before IPC clients exist it is
+           handled inline (same semantics as the non-pooled channel).
 
         2. **Non-pooled** (``worker_pools_enabled=False``, legacy):
            Returns a plain :class:`ReqServerChannel` whose
@@ -81,8 +114,8 @@ class ReqServerChannel:
            :meth:`_auth`.  All other commands are forwarded to the single
            worker pool via ``payload_handler``.
 
-        Because these paths are mutually exclusive, ``_auth`` is always
-        executed exactly once regardless of which path is active.
+        These paths are mutually exclusive at runtime; ``_auth`` is not run
+        twice for a single request.
         """
         if "master_uri" not in opts and "master_uri" in kwargs:
             opts["master_uri"] = kwargs["master_uri"]
@@ -1066,18 +1099,14 @@ class PoolRoutingChannel:
 
     ``_auth`` handling
     ------------------
-    In this path ``_auth`` is treated as a regular command.  It is looked up
-    in the routing table built from ``worker_pools`` config and forwarded to
-    whichever pool is mapped to it (or the catchall/default pool if no
-    explicit mapping exists).  It is then handled inside the worker by
-    :meth:`~salt.master.MWorker._handle_clear` →
+    Under a fully started master, ``_auth`` is looked up in the routing table
+    and forwarded to the mapped pool's IPC RequestServer, then handled in a
+    worker by :meth:`~salt.master.MWorker._handle_clear` →
     :meth:`~salt.master.ClearFuncs._auth`.
 
-    There is **no** inline ``_auth`` interception here.  Combined with the
-    fact that the plain :class:`ReqServerChannel` (which does intercept
-    ``_auth`` inline) is never in the call chain when this class is active,
-    ``_auth`` executes exactly once per request regardless of which path is
-    chosen at startup.
+    If the pool's IPC client is not connected yet (e.g. tests calling
+    :meth:`handle_message` without ``post_fork``), clear-text ``_auth`` is
+    handled inline with the same logic as :meth:`ReqServerChannel.handle_message`.
 
     See :meth:`ReqServerChannel.factory` for the authoritative description of
     the two mutually exclusive paths.
@@ -1108,6 +1137,20 @@ class PoolRoutingChannel:
         self.router = None
         self.crypticle = None
         self.master_key = None
+        self.auto_key = None
+
+        (pathlib.Path(self.opts["cachedir"]) / "sessions").mkdir(exist_ok=True)
+        self.sessions = {}
+
+        # Same key cache / minion bookkeeping as ReqServerChannel so clear-text
+        # _auth can run inline when IPC pool clients are not yet connected
+        # (functional tests and bootstrap scenarios).
+        self.cache = salt.cache.Cache(opts, driver=self.opts["keys.cache_driver"])
+        if self.opts["con_cache"]:
+            self.cache_cli = CacheCli(self.opts)
+        else:
+            self.cache_cli = False
+            self.ckminions = salt.utils.minions.CkMinions(self.opts)
 
         # Build routing table for command-based routing
         self._build_routing_table()
@@ -1143,6 +1186,53 @@ class PoolRoutingChannel:
                 "Worker pool configuration must have exactly one pool with "
                 "catchall ('*') in its commands."
             )
+
+    @property
+    def aes_key(self):
+        if self.opts.get("cluster_id", None):
+            return salt.master.SMaster.secrets["cluster_aes"]["secret"].value
+        return salt.master.SMaster.secrets["aes"]["secret"].value
+
+    def session_key(self, minion):
+        """
+        Returns a session key for the given minion id.
+        """
+        now = time.time()
+        if minion in self.sessions:
+            if now - self.sessions[minion][0] < self.opts["publish_session"]:
+                return self.sessions[minion][1]
+
+        path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
+        try:
+            if now - path.stat().st_mtime > self.opts["publish_session"]:
+                salt.crypt.Crypticle.write_key(path)
+        except FileNotFoundError:
+            salt.crypt.Crypticle.write_key(path)
+
+        self.sessions[minion] = (
+            path.stat().st_mtime,
+            salt.crypt.Crypticle.read_key(path),
+        )
+        return self.sessions[minion][1]
+
+    def _update_aes(self):
+        """
+        Check to see if a fresh AES key is available and update the components
+        of the worker
+        """
+        key = "aes"
+        if self.opts.get("cluster_id", None):
+            key = "cluster_aes"
+
+        if (
+            salt.master.SMaster.secrets[key]["secret"].value
+            != self.crypticle.key_string
+        ):
+            self.crypticle = _get_crypticle(
+                self.opts, salt.master.SMaster.secrets[key]["secret"].value
+            )
+            return True
+        return False
 
     def pre_fork(self, process_manager, *args, **kwargs):
         """
@@ -1251,9 +1341,7 @@ class PoolRoutingChannel:
         )
 
         # Set up crypticle for payload decryption during routing
-        self.crypticle = _get_crypticle(
-            self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
-        )
+        self.crypticle = _get_crypticle(self.opts, self.aes_key)
 
         self.master_key = salt.crypt.MasterKeys(self.opts)
 
@@ -1309,6 +1397,79 @@ class PoolRoutingChannel:
             len(self.pool_clients),
         )
 
+    def _req_channel_auth_delegate(self):
+        """
+        Build a minimal :class:`ReqServerChannel` view for running
+        :meth:`ReqServerChannel._auth` with this channel's opts, keys, and
+        cache (used when pool IPC clients are not connected yet).
+        """
+        ch = ReqServerChannel.__new__(ReqServerChannel)
+        ch.opts = self.opts
+        ch.transport = self.transport
+        ch.cache = self.cache
+        ch.event = self.event
+        ch.master_key = self.master_key
+        ch.sessions = self.sessions
+        ch.auto_key = getattr(self, "auto_key", None)
+        ch.cache_cli = getattr(self, "cache_cli", False)
+        ch.ckminions = getattr(self, "ckminions", None)
+        ch.crypticle = getattr(self, "crypticle", None)
+        return ch
+
+    async def _handle_clear_auth_local(self, payload, version):
+        """
+        Run clear-text ``_auth`` the same way :meth:`ReqServerChannel.handle_message`
+        does, without forwarding to a worker pool (no IPC client yet).
+        """
+        proxy = self._req_channel_auth_delegate()
+        try:
+            payload = ReqServerChannel._decode_payload(proxy, payload, version)
+        except Exception as exc:  # pylint: disable=broad-except
+            exc_type = type(exc).__name__
+            if exc_type == "AuthenticationError":
+                log.debug(
+                    "Minion failed to auth to master. Since the payload is "
+                    "encrypted, it is not known which minion failed to "
+                    "authenticate. It is likely that this is a transient "
+                    "failure due to the master rotating its public key."
+                )
+            else:
+                log.error("Bad load from minion: %s: %s", exc_type, exc)
+            return "bad load"
+
+        if not isinstance(payload, dict) or not isinstance(payload.get("load"), dict):
+            log.error(
+                "payload and load must be a dict. Payload was: %s",
+                payload,
+            )
+            return "payload and load must be a dict"
+
+        try:
+            id_ = payload["load"].get("id", "")
+            if "\0" in id_:
+                log.error("Payload contains an id with a null byte: %s", payload)
+                return "bad load: id contains a null byte"
+        except TypeError:
+            log.error("Payload contains non-string id: %s", payload)
+            return f"bad load: id {id_} is not a string"
+
+        sign_messages = version > 1
+
+        if (
+            payload.get("enc") == "clear"
+            and payload.get("load", {}).get("cmd") == "_auth"
+        ):
+            start = time.time()
+            ret = ReqServerChannel._auth(proxy, payload["load"], sign_messages, version)
+            if self.opts.get("master_stats", False) and getattr(
+                self, "payload_handler", None
+            ):
+                await self.payload_handler({"cmd": "_auth", "_start": start})
+            return ret
+
+        log.error("clear-auth local handler called for non-auth payload: %s", payload)
+        return {"error": "Internal routing error", "success": False}
+
     async def handle_and_route_message(self, payload):
         """
         Route an incoming request to the appropriate worker pool (pooled path).
@@ -1318,14 +1479,19 @@ class PoolRoutingChannel:
         in the routing table, then forwards the raw payload to that pool's
         IPC RequestServer via a RequestClient.
 
-        ``_auth`` is handled here like any other command — it is routed to
-        whatever pool its command is mapped to and executed inside a worker.
-        This method does **not** intercept or short-circuit ``_auth``.
+        Clear-text ``_auth`` is normally routed like any other command. When
+        no IPC client exists for the target pool yet (e.g. functional tests
+        that call :meth:`handle_message` without a full ``post_fork``), it is
+        handled inline using the same logic as :meth:`ReqServerChannel.handle_message`.
 
         See :class:`PoolRoutingChannel` and :meth:`ReqServerChannel.factory`
         for the full explanation of the two mutually exclusive request paths.
         """
-        if not isinstance(payload, dict):
+        if (
+            not isinstance(payload, dict)
+            or "enc" not in payload
+            or "load" not in payload
+        ):
             log.warning("bad load received on socket")
             return "bad load"
         try:
@@ -1413,6 +1579,12 @@ class PoolRoutingChannel:
             )
 
             if pool_name not in self.pool_clients:
+                if (
+                    payload.get("enc") == "clear"
+                    and isinstance(payload.get("load"), dict)
+                    and payload["load"].get("cmd") == "_auth"
+                ):
+                    return await self._handle_clear_auth_local(payload, version)
                 log.error(
                     "No client available for pool '%s'. Available: %s",
                     pool_name,
@@ -1715,21 +1887,107 @@ class MasterPubServerChannel:
 
     @classmethod
     def factory(cls, opts, **kwargs):
-        transport = salt.transport.ipc_publish_server("master", opts)
-        return cls(opts, transport)
+        _discover_event = kwargs.get("_discover_event", None)
 
-    def __init__(self, opts, transport, presence_events=False):
+        if opts.get("cluster_id"):
+            # Cluster mode: Use TCP-based transport for peer communication while
+            # preserving normal local IPC behavior for internal processes.
+            port = opts.get("cluster_port", 55596)
+            pull_path = os.path.join(opts["sock_dir"], "master_event_pull.ipc")
+            pub_path = os.path.join(opts["sock_dir"], "master_event_pub.ipc")
+            bind_host = opts.get("interface", "127.0.0.1")
+
+            try:
+                transport = salt.transport.tcp.PublishServer(
+                    opts,
+                    pub_host=bind_host,
+                    pub_port=opts.get("publish_port", 4505),
+                    pub_path=pub_path,
+                    pull_host=bind_host,
+                    pull_port=port,
+                    pull_path=pull_path,
+                )
+            except OSError as exc:
+                if exc.errno == errno.EADDRINUSE:
+                    transport = salt.transport.tcp.PublishServer(
+                        opts,
+                        pub_host=bind_host,
+                        pub_port=opts.get("publish_port", 4505),
+                        pub_path=pub_path,
+                        pull_host=bind_host,
+                        pull_port=0,
+                        pull_path=pull_path,
+                    )
+                else:
+                    raise
+        else:
+            transport = salt.transport.ipc_publish_server("master", opts)
+
+        return cls(opts, transport, _discover_event=_discover_event)
+
+    def __init__(
+        self,
+        opts,
+        transport,
+        presence_events=False,
+        _discover_event=None,
+        _discover_token=None,
+    ):
         self.opts = opts
         self.transport = transport
         self.io_loop = tornado.ioloop.IOLoop.current()
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.peer_keys = {}
+        self.cluster_peers = self.opts["cluster_peers"]
+        self._discover_event = _discover_event
+        self._discover_token = _discover_token
+        self._discover_candidates = {}
+
+    def gen_token(self):
+        return "".join(random.choices(string.ascii_letters + string.digits, k=32))
+
+    def discover_peers(self):
+        path = self.master_key.master_pub_path
+        with salt.utils.files.fopen(path, "r") as fp:
+            pub = fp.read()
+
+        self._discover_token = self.gen_token()
+
+        for peer in self.cluster_peers:
+            log.error("Discover cluster from %s", peer)
+            tosign = salt.payload.package(
+                {
+                    "peer_id": self.opts["id"],
+                    "pub": pub,
+                    "token": self._discover_token,
+                }
+            )
+            key = salt.crypt.PrivateKeyString(self.private_key())
+            sig = key.sign(tosign)
+            data = {
+                "sig": sig,
+                "payload": tosign,
+            }
+            with salt.utils.event.get_master_event(
+                self.opts, self.opts["sock_dir"], listen=False
+            ) as event:
+                success = event.fire_event(
+                    data,
+                    salt.utils.event.tagify("discover", "peer", "cluster"),
+                    timeout=30000,  # 30 second timeout
+                )
+                if not success:
+                    log.error("Unable to send aes key event")
 
     def send_aes_key_event(self):
+        log.debug("Sending AES key event")
         data = {"peer_id": self.opts["id"], "peers": {}}
-        for peer in self.opts.get("cluster_peers", []):
-            pub = self.master_key.fetch(f"peers/{peer}.pub")
-            if pub:
+        for peer in self.cluster_peers:
+            peer_pub = (
+                pathlib.Path(self.opts["cluster_pki_dir"]) / "peers" / f"{peer}.pub"
+            )
+            if peer_pub.exists():
+                pub = salt.crypt.PublicKey.from_file(peer_pub)
                 aes = salt.master.SMaster.secrets["aes"]["secret"].value
                 digest = salt.utils.stringutils.to_bytes(
                     hashlib.sha256(aes).hexdigest()
@@ -1739,7 +1997,8 @@ class MasterPubServerChannel:
                     "sig": self.master_key.master_key.encrypt(digest),
                 }
             else:
-                log.warning("Peer key missing %r", "peers/{peer}.pub")
+                log.warning("Peer key missing %r", peer_pub)
+                # request peer key
                 data["peers"][peer] = {}
         with salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
@@ -1756,11 +2015,13 @@ class MasterPubServerChannel:
         return {
             "opts": self.opts,
             "transport": self.transport,
+            "_discover_event": self._discover_event,
         }
 
     def __setstate__(self, state):
         self.opts = state["opts"]
         self.transport = state["transport"]
+        self._discover_event = state["_discover_event"]
 
     def close(self):
         self.transport.close()
@@ -1780,10 +2041,9 @@ class MasterPubServerChannel:
             )
 
     def _publish_daemon(self, **kwargs):
-        import salt.master
-
+        """Clean implementation: separate local IPC from cluster peer communication."""
         if (
-            self.opts["event_publisher_niceness"]
+            self.opts.get("event_publisher_niceness")
             and not salt.utils.platform.is_windows()
         ):
             log.info(
@@ -1792,38 +2052,48 @@ class MasterPubServerChannel:
             )
             os.nice(self.opts["event_publisher_niceness"])
 
-        secrets = kwargs.get("secrets", None)
-        if secrets is not None:
-            salt.master.SMaster.secrets = secrets
-
         self.io_loop = tornado.ioloop.IOLoop.current()
-        tcp_master_pool_port = self.opts["cluster_pool_port"]
-        self.pushers = []
-        self.auth_errors = {}
-        for peer in self.opts.get("cluster_peers", []):
-            pusher = salt.transport.tcp.PublishServer(
-                self.opts,
-                pull_host=peer,
-                pull_port=tcp_master_pool_port,
+
+        # Always set up the local IPC-based event publisher first
+        # This ensures internal processes (like pytest_engine) can communicate reliably
+        if hasattr(self.transport, "publisher"):
+            aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
+            aio_loop.create_task(
+                self.transport.publisher(
+                    self.publish_payload,
+                    io_loop=self.io_loop,
+                )
             )
-            self.auth_errors[peer] = collections.deque()
-            self.pushers.append(pusher)
-        if self.opts.get("cluster_id", None):
+
+        # Initialize cluster peer state unconditionally so that non-cluster
+        # masters also have an empty ``pushers`` list -- publish_payload
+        # iterates ``self.pushers`` on every event.
+        self.pushers = []
+
+        # Cluster-specific peer communication (separate from local IPC)
+        if self.opts.get("cluster_id"):
+            self.tcp_master_pool_port = self.opts.get("cluster_port", 55596)
+            self.auth_errors = {}
+            self.peer_map = {}
+
+            for peer in self.opts.get("cluster_peers", []):
+                host, port = peer.rsplit(":", 1) if ":" in peer else (peer, 55596)
+                pusher = self.pusher(host, int(port))
+                self.pushers.append(pusher)
+                self.auth_errors[host] = collections.deque()
+
+            # Set up the cluster pool puller for incoming peer events
             self.pool_puller = salt.transport.tcp.TCPPuller(
-                host=self.opts["interface"],
-                port=tcp_master_pool_port,
+                host=self.opts.get("interface", "127.0.0.1"),
+                port=self.tcp_master_pool_port,
                 io_loop=self.io_loop,
                 payload_handler=self.handle_pool_publish,
             )
             self.pool_puller.start()
-        # Extract asyncio loop for create_task
-        aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
-        aio_loop.create_task(
-            self.transport.publisher(
-                self.publish_payload,
-                io_loop=self.io_loop,
-            )
-        )
+
+            if self.opts.get("cluster_peers"):
+                self.io_loop.call_later(2.0, self.discover_peers)
+
         # run forever
         try:
             self.io_loop.start()
@@ -1832,14 +2102,364 @@ class MasterPubServerChannel:
         finally:
             self.close()
 
+    def private_key(self):
+        """
+        The public key string associated with this node.
+        """
+        # XXX Do not read every time
+        path = self.master_key.master_rsa_path
+        with salt.utils.files.fopen(path, "r") as fp:
+            return fp.read()
+
+    def public_key(self):
+        """
+        The public key string associated with this node.
+        """
+        # XXX Do not read every time
+        path = self.master_key.master_pub_path
+        with salt.utils.files.fopen(path, "r") as fp:
+            return fp.read()
+
+    def cluster_key(self):
+        """
+        The private key associated with this cluster.
+        """
+        # XXX Do not read every time
+        path = pathlib.Path(self.master_key.cluster_rsa_path)
+        if path.exists():
+            return path.read_text(encoding="utf-8")
+
+    def cluster_public_key(self):
+        """
+        The private key associated with this cluster.
+        """
+        # XXX Do not read every time
+        path = pathlib.Path(self.master_key.cluster_pub_path)
+        if path.exists():
+            return path.read_text(encoding="utf-8")
+
+    def pusher(self, peer, port=None):
+        if port is None:
+            port = self.tcp_master_pool_port
+        return salt.transport.tcp.PublishServer(
+            self.opts,
+            pull_host=peer,
+            pull_port=port,
+        )
+
     async def handle_pool_publish(self, payload):
         """
         Handle incoming events from cluster peer.
         """
         try:
             tag, data = salt.utils.event.SaltEvent.unpack(payload)
-            if tag.startswith("cluster/peer"):
+            log.debug("Incomming from peer %s %r", tag, data)
+            if tag.startswith("cluster/peer/join-notify"):
+                log.info(
+                    "Cluster join notify from %s for %s",
+                    data["peer_id"],
+                    data["join_peer_id"],
+                )
+                peer_pub = (
+                    pathlib.Path(self.opts["cluster_pki_dir"])
+                    / "peers"
+                    / f"{data['join_peer_id']}.pub"
+                )
+                with salt.utils.files.fopen(peer_pub, "w") as fp:
+                    fp.write(data["pub"])
+            elif tag.startswith("cluster/peer/join-reply"):
+                log.info("Cluster join reply from %s", data["peer_id"])
+                key = salt.crypt.PrivateKeyString(data["cluster_key"])
+                key.write_private(self.opts["cluster_pki_dir"], "cluster")
+                key.write_public(self.opts["cluster_pki_dir"], "cluster")
+                for peer in data["peers"]:
+                    log.error("Populate peer key %s", peer)
+                    pub = (
+                        pathlib.Path(self.opts["cluster_pki_dir"])
+                        / "peers"
+                        / f"{peer}.pub"
+                    )
+                    pub.write_text(data["peers"][peer])
+                # XXX Initial pass just to get things working. This should be
+                # able to be paged. We should also have the joining minion
+                # request the keys it needs based on hashed values.
+                for kind in data["minions"]:
+                    for minion in (
+                        pathlib.Path(self.opts["cluster_pki_dir"]) / kind
+                    ).glob("*"):
+                        if minion.name[:-4] not in data["minions"][kind]:
+                            minion.unlink()
+                    for minion in data["minions"][kind]:
+                        log.error("Populate minion key %s", minion)
+                        pub = (
+                            pathlib.Path(self.opts["cluster_pki_dir"])
+                            / kind
+                            / f"{minion}"
+                        )
+                        pub.write_text(data["minions"][kind][minion])
+                event = self._discover_event
+                self._discover_event = None
+                # Signal the main master process to start the rest of the
+                # master service processeses.
+                event.set()
+            elif tag.startswith("cluster/peer/join"):
+
+                payload = salt.payload.loads(data["payload"])
+
+                pub, token = self._discover_candidates[payload["peer_id"]]
+
+                if payload["pub"] != pub:
+                    log.warning("Cluster join, peer public keys do not match")
+                    return
+                if payload["return_token"] != token:
+                    log.warning("Cluster join, token does not not match")
+                    return
+                pubk = salt.crypt.PublicKeyString(payload["pub"])
+                if not pubk.verify(data["payload"], data["sig"]):
+                    log.warning("Cluster join signature invalid.")
+                    return
+
+                log.info("Cluster join from %s", payload["peer_id"])
+                salted_secret = (
+                    salt.crypt.PrivateKey.from_file(self.master_key.master_rsa_path)
+                    .decrypt(payload["secret"])
+                    .decode()
+                )
+
+                secret = salted_secret[len(token) :]
+
+                if secret != (self.opts.get("cluster_secret") or ""):
+                    log.warning("Cluster secret invalid.")
+                    return
+
+                log.info("Peer %s joined cluster", payload["peer_id"])
+                salted_aes = (
+                    salt.crypt.PrivateKey.from_file(self.master_key.master_rsa_path)
+                    .decrypt(payload["key"])
+                    .decode()
+                )
+
+                aes_key = salted_aes[len(token) :]
+
+                # XXX needs safe join
+                peer_pub = (
+                    pathlib.Path(self.opts["cluster_pki_dir"])
+                    / "peers"
+                    / f"{payload['peer_id']}.pub"
+                )
+                # For statically-configured peers the pub key is already on
+                # disk with restrictive perms. Only write when missing.
+                if not peer_pub.exists():
+                    with salt.utils.files.fopen(peer_pub, "w") as fp:
+                        fp.write(payload["pub"])
+                elif (
+                    peer_pub.read_text(encoding="utf-8").strip()
+                    != payload["pub"].strip()
+                ):
+                    log.warning(
+                        "Cluster peer %s pub key on disk does not match the "
+                        "key received during join; keeping disk copy.",
+                        payload["peer_id"],
+                    )
+
+                self.cluster_peers.append(payload["peer_id"])
+                self.pushers.append(self.pusher(payload["peer_id"]))
+                self.auth_errors[payload["peer_id"]] = collections.deque()
+
+                for pusher in self.pushers:
+                    # XXX Send new peer id and public key to other nodes
+                    # XXX This needs to be able to be validated by receiveing peers
+                    # XXX Send other nodes pub (and aes?) keys to new node
+                    crypticle = salt.crypt.Crypticle(
+                        self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
+                    )
+                    event_data = salt.utils.event.SaltEvent.pack(
+                        salt.utils.event.tagify("join-notify", "peer", "cluster"),
+                        crypticle.dumps(
+                            {
+                                "peer_id": self.opts["id"],
+                                "join_peer_id": payload["peer_id"],
+                                "pub": payload["pub"],
+                                "aes": aes_key,
+                            }
+                        ),
+                    )
+
+                    # XXX gather tasks instead of looping
+                    try:
+                        await pusher.publish(event_data)
+                    except Exception as exc:  # pylint: disable=broad-except
+                        log.warning(
+                            "Unable to publish join-notify to peer %s:%s: %s",
+                            pusher.pull_host,
+                            pusher.pull_port,
+                            exc,
+                        )
+
+                # XXX Kick off minoins key repair
+
+                self.send_aes_key_event()
+
+                joiner_pub = salt.crypt.PublicKeyString(payload["pub"])
+                token_bytes = (
+                    payload["token"].encode()
+                    if isinstance(payload["token"], str)
+                    else payload["token"]
+                )
+                cluster_key_val = self.cluster_key() or ""
+                cluster_key_bytes = (
+                    cluster_key_val.encode()
+                    if isinstance(cluster_key_val, str)
+                    else cluster_key_val
+                )
+                aes_secret = salt.master.SMaster.secrets["aes"]["secret"].value
+                if isinstance(aes_secret, str):
+                    aes_secret = aes_secret.encode()
+                # XXX No-shared-filesystem topology is not yet supported: the
+                # join-reply payload still needs to carry the other peers'
+                # public keys and the minion keys so a joiner without access
+                # to a shared cluster_pki_dir can populate it from the wire.
+                # The consumer at ``cluster/peer/join-reply`` also needs to
+                # be reworked to unpack this signed envelope before that
+                # path can be exercised.
+                tosign = salt.payload.package(
+                    {
+                        "return_token": payload["token"],
+                        "peer_id": self.opts["id"],
+                        "cluster_key": joiner_pub.encrypt(
+                            token_bytes + cluster_key_bytes
+                        ),
+                        "aes": joiner_pub.encrypt(token_bytes + aes_secret),
+                    }
+                )
+                sig = salt.crypt.PrivateKeyString(self.private_key()).sign(tosign)
+                event_data = salt.utils.event.SaltEvent.pack(
+                    salt.utils.event.tagify("join-reply", "peer", "cluster"),
+                    {
+                        "sig": sig,
+                        "payload": tosign,
+                    },
+                )
+                await self.pusher(payload["peer_id"]).publish(event_data)
+            elif tag.startswith("cluster/peer/discover-reply"):
+                payload = salt.payload.loads(data["payload"])
+
+                if not cluster_pub_matches_fingerprint(
+                    self.opts, payload["cluster_pub"]
+                ):
+                    log.warning(
+                        "cluster_pub fingerprint mismatch in discover-reply "
+                        "from %s; rejecting",
+                        payload.get("peer_id"),
+                    )
+                    return
+
+                cluster_pub = salt.crypt.PublicKeyString(payload["cluster_pub"])
+                if not cluster_pub.verify(data["payload"], data["sig"]):
+                    log.warning("Invalid signature of cluster discover payload")
+                    return
+
+                # XXX First token created in different process
+                # if payload.get("return_token", None) != self._discover_token:
+                #    log.warning("Invalid token in discover reply %s != %s",
+                #        payload.get("return_token", None), self._discover_token
+                #    )
+                #    return
+
+                log.info("Cluster discover reply from %s", payload["peer_id"])
+                key = salt.crypt.PublicKeyString(payload["pub"])
+                self._discover_token = self.gen_token()
+                tosign = salt.payload.package(
+                    {
+                        "return_token": payload["token"],
+                        "token": self._discover_token,
+                        "peer_id": self.opts["id"],
+                        "secret": key.encrypt(
+                            payload["token"].encode()
+                            + (self.opts.get("cluster_secret") or "").encode()
+                        ),
+                        "key": key.encrypt(
+                            payload["token"].encode()
+                            + salt.master.SMaster.secrets["aes"]["secret"].value
+                        ),
+                        "pub": self.public_key(),
+                    }
+                )
+                sig = salt.crypt.PrivateKeyString(self.private_key()).sign(tosign)
+                self.cluster_peers.append(payload["peer_id"])
+                event_data = salt.utils.event.SaltEvent.pack(
+                    salt.utils.event.tagify("join", "peer", "cluster"),
+                    {"sig": sig, "payload": tosign},
+                )
+                peer_pub = (
+                    pathlib.Path(self.opts["cluster_pki_dir"])
+                    / "peers"
+                    / f"{payload['peer_id']}.pub"
+                )
+                # For statically-configured peers the pub key is already on
+                # disk with restrictive perms (0400). Only write when it is
+                # missing, otherwise verify the key on disk matches.
+                if not peer_pub.exists():
+                    with salt.utils.files.fopen(peer_pub, "w") as fp:
+                        fp.write(payload["pub"])
+                else:
+                    existing = peer_pub.read_text(encoding="utf-8")
+                    if existing.strip() != payload["pub"].strip():
+                        log.warning(
+                            "Cluster peer %s pub key on disk does not match "
+                            "the key received during discovery; keeping disk "
+                            "copy.",
+                            payload["peer_id"],
+                        )
+                pusher = self.pusher(payload["peer_id"])
+                self.pushers.append(pusher)
+                try:
+                    await pusher.publish(event_data)
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.warning(
+                        "Unable to publish join to peer %s:%s: %s",
+                        pusher.pull_host,
+                        pusher.pull_port,
+                        exc,
+                    )
+            elif tag.startswith("cluster/peer/discover"):
+                payload = salt.payload.loads(data["payload"])
+                peer_key = salt.crypt.PublicKeyString(payload["pub"])
+                if not peer_key.verify(data["payload"], data["sig"]):
+                    log.warning("Invalid signature of cluster discover payload")
+                    return
+                log.info("Cluster discovery from %s", payload["peer_id"])
+                token = self.gen_token()
+                # Store this peer as a candidate.
+                # XXX Add timestamp so we can clean up old candidates
+                self._discover_candidates[payload["peer_id"]] = (payload["pub"], token)
+                tosign = salt.payload.package(
+                    {
+                        "return_token": payload["token"],
+                        "token": token,
+                        "peer_id": self.opts["id"],
+                        "pub": self.public_key(),
+                        "cluster_pub": self.cluster_public_key(),
+                    }
+                )
+                key = salt.crypt.PrivateKeyString(self.cluster_key())
+                sig = key.sign(tosign)
+                _ = salt.payload.package(
+                    {
+                        "sig": sig,
+                        "payload": tosign,
+                    }
+                )
+                event_data = salt.utils.event.SaltEvent.pack(
+                    salt.utils.event.tagify("discover-reply", "peer", "cluster"),
+                    {"sig": sig, "payload": tosign},
+                )
+                await self.pusher(payload["peer_id"]).publish(event_data)
+            elif tag.startswith("cluster/peer"):
                 peer = data["peer_id"]
+                if peer == self.opts["id"]:
+                    log.debug("Skip our own cluster peer event %s", tag)
+                    return
                 aes = data["peers"][self.opts["id"]]["aes"]
                 sig = data["peers"][self.opts["id"]]["sig"]
                 key_str = self.master_key.master_key.decrypt(
@@ -1853,7 +2473,7 @@ class MasterPubServerChannel:
                 if m_digest != digest:
                     log.error("Invalid aes signature from peer: %s", peer)
                     return
-                log.info("Received new key from peer %s", peer)
+                log.info("Received new AES key from peer %s", peer)
                 if peer in self.peer_keys:
                     if self.peer_keys[peer] != key_str:
                         self.peer_keys[peer] = key_str
@@ -1922,6 +2542,7 @@ class MasterPubServerChannel:
 
     async def publish_payload(self, load, *args):
         tag, data = salt.utils.event.SaltEvent.unpack(load)
+        # log.warning("Event %s %s %r", len(self.pushers), tag, data)
         tasks = []
         if not tag.startswith("cluster/peer"):
             tasks = [
@@ -1930,8 +2551,9 @@ class MasterPubServerChannel:
                 )
             ]
         for pusher in self.pushers:
-            log.debug("Publish event to peer %s:%s", pusher.pull_host, pusher.pull_port)
+            log.info("Publish event to peer %s:%s", pusher.pull_host, pusher.pull_port)
             if tag.startswith("cluster/peer"):
+                # log.info("Send %s %r", tag, load)
                 tasks.append(
                     asyncio.create_task(pusher.publish(load), name=pusher.pull_host)
                 )

@@ -208,6 +208,14 @@ VALID_OPTS = immutabletypes.freeze(
         "cluster_pki_dir": str,
         # The port required to be open for a master cluster to properly function
         "cluster_pool_port": int,
+        # Optional SHA-256 hex fingerprint of the shared cluster public key.
+        # When set, a joining master rejects any discover-reply whose
+        # ``cluster_pub`` does not hash to this value. See the ``cluster_secret``
+        # docs and the master-cluster tutorial for the trust model.
+        "cluster_pub_fingerprint": str,
+        # Shared pre-shared string that authenticates a master joining an
+        # existing cluster at runtime.
+        "cluster_secret": str,
         # Use a module function to determine the unique identifier. If this is
         # set and 'id' is not set, it will allow invocation of a module function
         # to determine the value of 'id'. For simple invocations without function
@@ -1756,6 +1764,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_peers": [],
         "cluster_pki_dir": None,
         "cluster_pool_port": 4520,
+        "cluster_pub_fingerprint": None,
+        "cluster_secret": None,
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
         "keys.cache_driver": "localfs_key",
@@ -4250,7 +4260,7 @@ def apply_master_config(overrides=None, defaults=None):
     if "cluster_id" not in opts:
         opts["cluster_id"] = None
     if opts["cluster_id"] is not None:
-        if not opts.get("cluster_peers", None):
+        if not opts.get("cluster_peers", None) and not opts.get("cluster_secret", None):
             log.warning("Cluster id defined without defining cluster peers")
             opts["cluster_peers"] = []
         if not opts.get("cluster_pki_dir", None):

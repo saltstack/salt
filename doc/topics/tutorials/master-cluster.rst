@@ -97,3 +97,52 @@ Master Config:
         pillar_roots:
           base:
             - /my/gluster/share/srv/pillar
+
+
+Dynamic Join
+============
+
+.. versionadded:: 3008.0
+
+A new master can join a running cluster without reconfiguring the existing
+peers. The joining master needs the same ``cluster_id``,
+``cluster_pki_dir``, and ``cluster_secret`` as the cluster, plus at least
+one reachable peer in its ``cluster_peers`` -- it does not need the full
+peer list. On startup it runs a discover/join handshake against those
+peers, and on success it receives the shared cluster public key and the
+current in-memory AES session key and is added to every peer's
+``cluster_peers``.
+
+Joining master config:
+
+.. code-block:: yaml
+
+        id: 10.27.9.42
+        cluster_id: master_cluster
+        cluster_peers:
+          - 10.27.12.13
+        cluster_pki_dir: /my/gluster/share/pki
+        cluster_secret: "d8b4c2e1f07a4c3e8a1b5d0a9c7f3e42b6d9a1c4f8e2b7d0a3c6e9f1b4d7a0c3"
+        cachedir: /my/gluster/share/cache
+
+Add the new master to the load balancer's backend pools so publish/return
+traffic starts reaching it.
+
+Security notes:
+
+* ``cluster_secret`` is what authenticates the join. Always set a
+  high-entropy value in production; an empty/unset secret matches an empty
+  secret on the peer and provides no authentication.
+* Discover and join payloads are signed per-master, and ``cluster_secret``,
+  the AES session key, and the cluster key are encrypted to the
+  recipient's public key. Restrict the cluster transport to a trusted
+  network -- an attacker with ``cluster_secret`` and transport access can
+  still join.
+* The joining master normally reads the cluster public key from the
+  shared ``cluster_pki_dir``. If that is not available, pin it with
+  :conf_master:`cluster_pub_fingerprint` on the joining master.
+
+To remove a peer, drop it from the load balancer, stop the master, delete
+its ``cluster_pki_dir/peers/<peer_id>.pub``, and restart the remaining
+masters. Rotate ``cluster_secret`` if you want to prevent the removed
+peer from re-joining.

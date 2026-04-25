@@ -753,18 +753,48 @@ class OptsDict(dict):
         access which doesn't respect our copy-on-write storage.
 
         For copy-on-write semantics:
-        - If key is in local dict, delete it and return value
-        - If key is in parent chain, return value without deleting (can't modify parent)
+        - If key is only in local dict, delete it and return value
+        - If key is in parent chain (and possibly also local), unwrap/read the
+          value, then mask the key with ``_DELETED`` in ``_local`` so that
+          subsequent lookups, iteration and ``in`` checks no longer see it.
+          The parent data is never mutated.
         - If key doesn't exist, return default or raise KeyError
+
+        Previously this method short-circuited and returned the value without
+        masking, which broke the ``dict.pop`` contract (the key was still
+        visible afterwards). Callers that use ``opts.pop("x")`` to both read
+        and delete a key would then see it come back during later iteration;
+        for example ``salt.cache.mysql_cache._init_client`` relies on pop()
+        actually removing ``mysql.*`` entries so that a follow-up
+        ``for k in opts: if k.startswith("mysql."):`` loop does not re-emit
+        them as connection kwargs (``table_name``, ``fresh_connection``, ...)
+        that ``MySQLdb.connect`` then rejects with
+        ``TypeError: Connection.__init__() got an unexpected keyword
+        argument 'table_name'``.
         """
         with self._ensure_lock():
             if key in self._local:
                 value = self._local[key]
-                del self._local[key]
+                if value is _DELETED:
+                    if args:
+                        return args[0]
+                    raise KeyError(key)
+                if self._key_in_parent_or_base(key):
+                    # Key is shadowed from parent/base - mask it with the
+                    # sentinel so subsequent iteration and ``in`` checks do
+                    # not resurrect the parent's value.
+                    self._local[key] = _DELETED
+                else:
+                    del self._local[key]
                 return value
-            elif key in self:
-                # Key is in parent chain - return value but don't delete
-                return self[key]
+            elif self._key_in_parent_or_base(key):
+                # Key lives only in parent/base. Read through the normal
+                # accessor so mutable values are properly unwrapped, then
+                # mark it deleted locally so later iteration/lookups skip
+                # it. Parent data is never mutated.
+                value = self[key]
+                self._local[key] = _DELETED
+                return value
             elif args:
                 return args[0]
             else:

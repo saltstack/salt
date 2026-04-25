@@ -1359,6 +1359,11 @@ def sshd_config_dir(salt_factories):
 
 @pytest.fixture(scope="module")
 def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
+    if not shutil.which("sshd"):
+        pytest.skip(
+            "The 'sshd' binary was not found on PATH; install an OpenSSH server "
+            "package (for example openssh-server) to run SSH integration tests."
+        )
     sshd_config_dict = {
         "Protocol": "2",
         # Turn strict modes off so that we can operate in /tmp

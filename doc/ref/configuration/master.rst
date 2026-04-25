@@ -339,6 +339,43 @@ listens on for incoming TCP connections. The default is ``4520``
 
     cluster_pool_port: 4520
 
+.. conf_master:: cluster_secret
+
+``cluster_secret``
+------------------
+
+.. versionadded:: 3008.0
+
+Pre-shared string that authenticates a master joining the cluster. All peers
+must be configured with the same value. Leaving it unset matches empty against
+empty and provides no authentication -- always set a high-entropy value in
+production. See :ref:`tutorial-master-cluster`.
+
+.. code-block:: yaml
+
+    cluster_secret: "d8b4c2e1f07a4c3e8a1b5d0a9c7f3e42b6d9a1c4f8e2b7d0a3c6e9f1b4d7a0c3"
+
+.. conf_master:: cluster_pub_fingerprint
+
+``cluster_pub_fingerprint``
+---------------------------
+
+.. versionadded:: 3008.0
+
+Optional SHA-256 hex digest of the shared cluster public key. When set, a
+joining master rejects any discover-reply whose cluster public key does not
+hash to this value. Useful when the joining master cannot read the cluster
+public key from a shared ``cluster_pki_dir``; otherwise leave unset and rely
+on ``cluster_secret`` to authenticate the join.
+
+.. code-block:: shell
+
+    openssl dgst -sha256 /path/to/cluster_pki_dir/cluster.pub
+
+.. code-block:: yaml
+
+    cluster_pub_fingerprint: "3b1f9d...<64 hex chars>...c7a2"
+
 .. conf_master:: extension_modules
 
 ``extension_modules``

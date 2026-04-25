@@ -1,4 +1,3 @@
-import asyncio
 import os
 
 import pytest
@@ -6,7 +5,7 @@ import pytest
 import salt.config
 import salt.transport.tcp
 from tests.conftest import FIPS_TESTRUN
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import AsyncMock, MagicMock, patch
 
 
 @pytest.fixture
@@ -98,10 +97,13 @@ def syndic_opts(tmp_path):
 
 @pytest.fixture
 def mocked_tcp_pub_client():
+    # Use AsyncMock rather than an asyncio.Future so the fixture does not
+    # depend on the presence of a running/default event loop at fixture
+    # setup time. Some tests in the unit suite call
+    # asyncio.set_event_loop(None) during teardown which leaves
+    # asyncio.get_event_loop() raising "There is no current event loop in
+    # thread 'MainThread'" for the next test that uses this fixture.
     transport = MagicMock(spec=salt.transport.tcp.PublishClient)
-    transport.connect = MagicMock()
-    future = asyncio.Future()
-    transport.connect.return_value = future
-    future.set_result(True)
+    transport.connect = AsyncMock(return_value=True)
     with patch("salt.transport.tcp.PublishClient", transport):
         yield

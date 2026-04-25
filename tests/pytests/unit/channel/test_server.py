@@ -57,6 +57,74 @@ def test_compare_keys_newline_tgt(key_data, linesep):
     assert server.ReqServerChannel.compare_keys(src_key, tgt_key) is True
 
 
+class TestClusterPubFingerprint:
+    """
+    Tests for ``cluster_pub_matches_fingerprint`` -- the helper that lets a
+    joining master pin the expected cluster public key by its SHA-256 hex
+    digest in ``opts["cluster_pub_fingerprint"]``.
+    """
+
+    PUB = (
+        "-----BEGIN PUBLIC KEY-----\n"
+        "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoe5QSDYRWKyknbVyRrIj\n"
+        "-----END PUBLIC KEY-----\n"
+    )
+
+    def _digest(self, data):
+        import hashlib
+
+        return hashlib.sha256(data.encode()).hexdigest()
+
+    def test_no_fingerprint_configured_accepts(self):
+        # Unset option: TOFU behavior, accept whatever was received.
+        assert server.cluster_pub_matches_fingerprint({}, self.PUB) is True
+        assert (
+            server.cluster_pub_matches_fingerprint(
+                {"cluster_pub_fingerprint": None}, self.PUB
+            )
+            is True
+        )
+        assert (
+            server.cluster_pub_matches_fingerprint(
+                {"cluster_pub_fingerprint": ""}, self.PUB
+            )
+            is True
+        )
+
+    def test_matching_fingerprint_accepts(self):
+        opts = {"cluster_pub_fingerprint": self._digest(self.PUB)}
+        assert server.cluster_pub_matches_fingerprint(opts, self.PUB) is True
+
+    def test_matching_fingerprint_case_insensitive(self):
+        opts = {"cluster_pub_fingerprint": self._digest(self.PUB).upper()}
+        assert server.cluster_pub_matches_fingerprint(opts, self.PUB) is True
+
+    def test_mismatched_fingerprint_rejects(self):
+        opts = {"cluster_pub_fingerprint": self._digest(self.PUB + "tampered")}
+        assert server.cluster_pub_matches_fingerprint(opts, self.PUB) is False
+
+    def test_bytes_pub_is_accepted(self):
+        opts = {"cluster_pub_fingerprint": self._digest(self.PUB)}
+        assert server.cluster_pub_matches_fingerprint(opts, self.PUB.encode()) is True
+
+    def test_not_sha1_digest(self):
+        # The previous (broken) implementation used SHA-1. A caller that
+        # supplies a SHA-1 digest as the pinned value must now be rejected:
+        # the helper compares against SHA-256 exclusively.
+        import hashlib
+
+        sha1 = hashlib.sha1(self.PUB.encode()).hexdigest()
+        opts = {"cluster_pub_fingerprint": sha1}
+        assert server.cluster_pub_matches_fingerprint(opts, self.PUB) is False
+
+    def test_truncated_fingerprint_rejected(self):
+        # Pinning must require a full hex digest. Accepting a prefix would
+        # silently reduce the pin's strength to whatever length the operator
+        # happened to paste.
+        opts = {"cluster_pub_fingerprint": self._digest(self.PUB)[:16]}
+        assert server.cluster_pub_matches_fingerprint(opts, self.PUB) is False
+
+
 @pytest.fixture
 def root_dir(tmp_path):
     (tmp_path / "var").mkdir()

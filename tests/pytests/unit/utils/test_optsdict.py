@@ -1054,5 +1054,116 @@ def test_to_dict_unwraps_all_proxies():
     assert result["nested"]["deep"]["list"] == [1, 2, 3]
 
 
+def test_pop_removes_parent_chain_key():
+    """
+    ``OptsDict.pop`` must honor the ``dict.pop`` contract for keys that
+    live in the parent chain (or base dict): return the value AND remove
+    the key so it is no longer visible to subsequent iteration, ``in``
+    checks or another ``pop`` call.
+
+    Regression test for a copy-on-write bug that left popped keys
+    resurrected from the parent; ``salt.cache.mysql_cache._init_client``
+    relies on ``opts.pop("mysql.table_name", ...)`` actually deleting the
+    key so that a later ``for k in opts: if k.startswith("mysql.")`` loop
+    does not re-emit it as a ``table_name`` kwarg to ``MySQLdb.connect``.
+    """
+    parent = OptsDict.from_dict(
+        {
+            "mysql.host": "127.0.0.1",
+            "mysql.port": 3306,
+            "mysql.table_name": "cache",
+        },
+        name="parent",
+    )
+
+    child = OptsDict.from_parent(parent, name="child")
+
+    assert child.pop("mysql.table_name") == "cache"
+    assert "mysql.table_name" not in child
+    assert "mysql.table_name" not in list(child)
+    assert "mysql.table_name" not in child.keys()
+
+    # Parent is not mutated.
+    assert parent["mysql.table_name"] == "cache"
+
+    # A follow-up pop with a default returns the default because the key
+    # is truly gone from the child's perspective.
+    assert child.pop("mysql.table_name", "gone") == "gone"
+
+    # Default path still works for missing keys.
+    with pytest.raises(KeyError):
+        child.pop("does_not_exist")
+
+    assert child.pop("does_not_exist", None) is None
+
+
+def test_pop_with_local_and_parent_key_masks_parent():
+    """
+    If a key exists in both the local dict (mutation/override) and the
+    parent chain, ``pop`` returns the local value and masks the key so
+    that the parent's value is not re-exposed.
+    """
+    parent = OptsDict.from_dict({"foo": "parent_value"})
+    child = OptsDict.from_parent(parent)
+
+    child["foo"] = "child_override"
+    assert child.pop("foo") == "child_override"
+    assert "foo" not in child
+    # Subsequent read must not fall back to the parent.
+    with pytest.raises(KeyError):
+        _ = child["foo"]
+    assert child.pop("foo", "default") == "default"
+    # Parent's value is preserved.
+    assert parent["foo"] == "parent_value"
+
+
+def test_pop_local_only_key_still_deletes():
+    """Regression: pop() of a purely local key still removes it (pre-existing behavior preserved)."""
+    opts = OptsDict.from_dict({})
+    opts["only_local"] = 42
+    assert opts.pop("only_local") == 42
+    assert "only_local" not in opts
+    assert opts.pop("only_local", None) is None
+
+
+def test_mysql_cache_pop_pattern():
+    """
+    End-to-end simulation of the failing ``mysql_cache._init_client``
+    pattern on an OptsDict tree: deepcopy parent, pop the known keys,
+    then iterate remaining ``mysql.*`` keys. The iteration must not see
+    any of the popped keys.
+    """
+    base = {
+        "mysql.host": "127.0.0.1",
+        "mysql.user": "user",
+        "mysql.password": "pw",
+        "mysql.database": "db",
+        "mysql.port": 3306,
+        "mysql.unix_socket": None,
+        "mysql.connect_timeout": None,
+        "mysql.table_name": "cache",
+        "mysql.fresh_connection": False,
+    }
+    parent = OptsDict.from_dict(base)
+    opts = copy.deepcopy(parent)
+
+    known = [
+        "mysql.host",
+        "mysql.user",
+        "mysql.password",
+        "mysql.database",
+        "mysql.port",
+        "mysql.unix_socket",
+        "mysql.connect_timeout",
+        "mysql.table_name",
+        "mysql.fresh_connection",
+    ]
+    for k in known:
+        opts.pop(k, None)
+
+    remaining = [k for k in opts if k.startswith("mysql.")]
+    assert remaining == []
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

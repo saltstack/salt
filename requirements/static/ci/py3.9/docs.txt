@@ -24,6 +24,7 @@ async-timeout==5.0.1
     #   aiohttp
 attrs==25.4.0
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/ci/py3.9/linux.txt
     #   aiohttp
 autocommand==2.2.2

@@ -1,4 +1,4 @@
-attrs
+attrs>=22.2.0
 python-tools-scripts >= 0.20.0
 boto3
 pyyaml
