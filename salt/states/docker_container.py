@@ -2005,7 +2005,13 @@ def running(
         if not exists:
             comments.append(f"Created container '{name}'")
         else:
-            if not _replace(name, temp_container):
+            # _replace expects container names/IDs (strings) — it forwards the
+            # second arg to docker.rename, which passes it to inspect_container.
+            # Passing the temp_container dict raises TypeError after the
+            # original container has already been removed, stranding the temp
+            # container under its generated name. Use temp_container_name to
+            # match the other _replace call site at line ~1890.
+            if not _replace(name, temp_container_name):
                 ret["result"] = False
                 return _format_comments(ret, comments)
         ret["changes"].setdefault("container_id", {})["added"] = temp_container["Id"]
