@@ -409,6 +409,16 @@ def gen_signature(priv_path, pub_path, sign_path, passphrase=None):
     with salt.utils.files.fopen(pub_path) as fp_:
         mpub_64 = fp_.read()
 
+    # Sign the canonical PEM that the master will ship to minions. The
+    # auth reply path goes through MasterKeys.get_pub_str(), which applies
+    # clean_key() to strip the PEM trailing newline before putting the
+    # public key on the wire. If we sign the raw file here we embed that
+    # trailing "\n" in the signed bytes, and minion-side verification
+    # against the clean_key()'d pub_key always fails with "signature
+    # verification failed!" (#68930). Apply clean_key() up front so the
+    # signed bytes match what the minion actually checks.
+    mpub_64 = clean_key(mpub_64)
+
     mpub_sig = sign_message(priv_path, mpub_64, passphrase)
     mpub_sig_64 = binascii.b2a_base64(mpub_sig)
     if os.path.isfile(sign_path):
