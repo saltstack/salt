@@ -109,17 +109,19 @@ def state_tree_dir(base_env_state_tree_root_dir):
     State tree with files to test salt-ssh
     when the map.jinja file is in another directory
     """
+    # Remove unused import from top file to avoid salt-ssh file sync issues
+    # Use "testdir" instead of "test" to avoid conflicts with state_tree fixture
     top_file = """
-    {%- from "test/map.jinja" import abc with context %}
     base:
       'localhost':
-        - test
+        - testdir
       '127.0.0.1':
-        - test
+        - testdir
     """
     map_file = """
     {%- set abc = "def" %}
     """
+    # State file imports from subdirectory - this is what we're testing
     state_file = """
     {%- from "test/map.jinja" import abc with context %}
 
@@ -132,8 +134,9 @@ def state_tree_dir(base_env_state_tree_root_dir):
     map_tempfile = pytest.helpers.temp_file(
         "test/map.jinja", map_file, base_env_state_tree_root_dir
     )
+    # Use testdir.sls to avoid collision with state_tree's test.sls
     state_tempfile = pytest.helpers.temp_file(
-        "test.sls", state_file, base_env_state_tree_root_dir
+        "testdir.sls", state_file, base_env_state_tree_root_dir
     )
 
     with top_tempfile, map_tempfile, state_tempfile:

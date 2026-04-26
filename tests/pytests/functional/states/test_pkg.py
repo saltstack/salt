@@ -66,10 +66,7 @@ def PKG_TARGETS(grains):
             _PKG_TARGETS = ["lynx", "gnuplot"]
     elif grains["os_family"] == "RedHat":
         if grains["os"] == "VMware Photon OS":
-            if grains["osmajorrelease"] >= 5:
-                _PKG_TARGETS = ["ctags", "zsh"]
-            else:
-                _PKG_TARGETS = ["ctags", "zsh-html"]
+            _PKG_TARGETS = ["zsh", "pciutils"]
         elif (
             grains["os"] in ("CentOS Stream", "Rocky", "AlmaLinux")
             and grains["osmajorrelease"] == 9
@@ -665,6 +662,9 @@ def test_pkg_014_installed_missing_release(grains, PKG_TARGETS, states, modules)
     assert ret.result is True
 
 
+@pytest.mark.skip_on_photonos(
+    reason="package hold/unhold unsupported on Photon OS",
+)
 @pytest.mark.requires_salt_modules(
     "pkg.hold", "pkg.unhold", "pkg.version", "pkg.list_pkgs"
 )
