@@ -87,8 +87,9 @@ def salt_test_upgrade(
     elif install_salt.distro_id not in ("ubuntu", "debian"):
         # For other distros (like Rocky), we need to manually start them
         # since we terminated them above.
-        salt_master.start()
-        salt_minion.start()
+        start_timeout = 240 if platform.is_darwin() else None
+        salt_master.start(start_timeout=start_timeout)
+        salt_minion.start(start_timeout=start_timeout)
 
     start = time.monotonic()
     while True:
