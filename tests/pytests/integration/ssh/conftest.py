@@ -122,8 +122,10 @@ def state_tree_dir(base_env_state_tree_root_dir):
     {%- set abc = "def" %}
     """
     # State file imports from subdirectory - this is what we're testing
+    # Use "subdir/" instead of "test/" to avoid potential conflicts with
+    # salt's built-in "test" module namespace.
     state_file = """
-    {%- from "test/map.jinja" import abc with context %}
+    {%- from "subdir/map.jinja" import abc with context %}
 
     Ok with {{ abc }}:
       test.succeed_without_changes
@@ -132,7 +134,7 @@ def state_tree_dir(base_env_state_tree_root_dir):
         "top.sls", top_file, base_env_state_tree_root_dir
     )
     map_tempfile = pytest.helpers.temp_file(
-        "test/map.jinja", map_file, base_env_state_tree_root_dir
+        "subdir/map.jinja", map_file, base_env_state_tree_root_dir
     )
     # Use testdir.sls to avoid collision with state_tree's test.sls
     state_tempfile = pytest.helpers.temp_file(

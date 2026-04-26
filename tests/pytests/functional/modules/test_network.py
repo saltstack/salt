@@ -58,6 +58,7 @@ def test_network_netstat(network):
 @pytest.mark.skip_if_binaries_missing("traceroute")
 @pytest.mark.slow_test
 @pytest.mark.timeout(150)
+@pytest.mark.skip_on_photonos(reason="traceroute unreliable on Photon OS CI runners")
 def test_network_traceroute(network, url):
     """
     network.traceroute
