@@ -271,7 +271,7 @@ class SaltPkgInstall:
                 artifact.name,
             )
             if version:
-                version = version.groups()[0].replace("_", "-").replace("~", "")
+                version = version.groups()[0].replace("_", "-")
                 version = version.split("-")[0]
                 break
         if not version:

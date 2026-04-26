@@ -473,7 +473,8 @@ class PublishClient(salt.transport.base.PublishClient):
             if not got:
                 return None
             for msg in self.unpacker:
-                return msg[b"body"]
+                if isinstance(msg, dict):
+                    return msg.get(b"body") or msg.get("body")
             return None
 
         deadline = None
@@ -490,7 +491,8 @@ class PublishClient(salt.transport.base.PublishClient):
 
             # Drain anything a concurrent call may have buffered.
             for msg in self.unpacker:
-                return msg[b"body"]
+                if isinstance(msg, dict):
+                    return msg.get(b"body") or msg.get("body")
 
             task = self._ensure_read_task()
             if task is None:
@@ -527,7 +529,8 @@ class PublishClient(salt.transport.base.PublishClient):
                 continue
 
             for msg in self.unpacker:
-                return msg[b"body"]
+                if isinstance(msg, dict):
+                    return msg.get(b"body") or msg.get("body")
             # Partial frame received: loop to read more, respecting the
             # deadline.
 
@@ -1571,8 +1574,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         pub_path_perms=0o600,
         started=None,
         ssl=None,
+        secrets=None,
     ):
         self.opts = opts
+        self.secrets = secrets
         self.pub_sock = None
         self.pub_host = pub_host
         self.pub_port = pub_port
@@ -1617,6 +1622,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             "pull_path_perms": self.pull_path_perms,
             "ssl": self.ssl,
             "started": self.started,
+            "secrets": getattr(self, "secrets", None),
         }
 
     def publish_daemon(
@@ -1725,6 +1731,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         primarily be used to create IPC channels and create our daemon process to
         do the actual publishing
         """
+        if "secrets" in kwargs:
+            self.secrets = kwargs["secrets"]
         process_manager.add_process(
             self.publish_daemon,
             args=[self.publish_payload],

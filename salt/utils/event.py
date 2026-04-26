@@ -1248,6 +1248,13 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
 
         self.io_loop = tornado.ioloop.IOLoop()
         with salt.utils.asynchronous.current_ioloop(self.io_loop):
+            import hashlib
+
+            hash_type = getattr(hashlib, self.opts["hash_type"])
+            id_hash = hash_type(
+                salt.utils.stringutils.to_bytes(self.opts.get("id", "master"))
+            ).hexdigest()[:10]
+
             if self.opts["ipc_mode"] == "tcp":
                 pub_host = "127.0.0.1"
                 pub_port = int(self.opts["tcp_master_pub_port"])
@@ -1259,30 +1266,30 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
                     pub_port=pub_port,
                     pull_host=pull_host,
                     pull_port=pull_port,
-                    transport="tcp",
                 )
                 self.puller = publish_client(
                     self.opts,
                     io_loop=self.io_loop,
                     host=pull_host,
                     port=pull_port,
-                    transport="tcp",
                 )
             else:
-                pub_path = os.path.join(self.opts["sock_dir"], "master_event_pub.ipc")
-                pull_path = os.path.join(self.opts["sock_dir"], "master_event_pull.ipc")
+                pub_path = os.path.join(
+                    self.opts["sock_dir"], f"master_event_{id_hash}_pub.ipc"
+                )
+                pull_path = os.path.join(
+                    self.opts["sock_dir"], f"master_event_{id_hash}_pull.ipc"
+                )
                 self.publisher = publish_server(
                     self.opts,
                     pub_path=pub_path,
                     pull_path=pull_path,
                     pub_path_perms=0o660,
-                    transport="tcp",
                 )
                 self.puller = publish_client(
                     self.opts,
                     io_loop=self.io_loop,
                     path=pull_path,
-                    transport="tcp",
                 )
 
             # Start the master event publisher
@@ -1301,7 +1308,7 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
                     self.opts["publisher_acl"] or self.opts["external_auth"]
                 ):
                     os.chmod(  # nosec
-                        os.path.join(self.opts["sock_dir"], "master_event_pub.ipc"),
+                        pub_path,
                         0o660,
                     )
 
@@ -1337,7 +1344,11 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
             self.puller.close()
             self.puller = None
         if self.io_loop is not None:
-            self.io_loop.close()
+            try:
+                self.io_loop.stop()
+                self.io_loop.close()
+            except RuntimeError:
+                pass
             self.io_loop = None
 
     def _handle_signals(self, signum, sigframe):

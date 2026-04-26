@@ -450,7 +450,9 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         # Prepare the zeromq sockets
         if self.opts.get("ipc_mode") == "ipc" and self.opts.get("workers_ipc_name"):
             self.uri = "ipc://{}".format(
-                os.path.join(self.opts["sock_dir"], self.opts["workers_ipc_name"])
+                os.path.join(
+                    self.opts.get("sock_dir", ""), self.opts.get("workers_ipc_name", "")
+                )
             )
         else:
             interface = self.opts.get("interface", "0.0.0.0")
@@ -459,7 +461,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
 
         self.clients = context.socket(zmq.ROUTER)
         self.clients.setsockopt(zmq.LINGER, -1)
-        if self.opts["ipv6"] is True and hasattr(zmq, "IPV4ONLY"):
+        if self.opts.get("ipv6") is True and hasattr(zmq, "IPV4ONLY"):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self.clients.setsockopt(zmq.IPV4ONLY, 0)
         self.clients.setsockopt(zmq.BACKLOG, self.opts.get("zmq_backlog", 1000))
@@ -467,12 +469,15 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self.workers = context.socket(zmq.DEALER)
         self.workers.setsockopt(zmq.LINGER, -1)
 
-        if self.opts["mworker_queue_niceness"] and not salt.utils.platform.is_windows():
+        if (
+            self.opts.get("mworker_queue_niceness")
+            and not salt.utils.platform.is_windows()
+        ):
             log.info(
                 "setting mworker_queue niceness to %d",
-                self.opts["mworker_queue_niceness"],
+                self.opts.get("mworker_queue_niceness"),
             )
-            os.nice(self.opts["mworker_queue_niceness"])
+            os.nice(self.opts.get("mworker_queue_niceness"))
 
         if self.opts.get("ipc_mode", "") == "tcp":
             self.w_uri = "tcp://127.0.0.1:{}".format(
@@ -543,17 +548,20 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self.uri = f"tcp://{interface}:{ret_port}"
         self.clients = context.socket(zmq.ROUTER)
         self.clients.setsockopt(zmq.LINGER, -1)
-        if self.opts["ipv6"] is True and hasattr(zmq, "IPV4ONLY"):
+        if self.opts.get("ipv6") is True and hasattr(zmq, "IPV4ONLY"):
             self.clients.setsockopt(zmq.IPV4ONLY, 0)
         self.clients.setsockopt(zmq.BACKLOG, self.opts.get("zmq_backlog", 1000))
         self._start_zmq_monitor()
 
-        if self.opts["mworker_queue_niceness"] and not salt.utils.platform.is_windows():
+        if (
+            self.opts.get("mworker_queue_niceness")
+            and not salt.utils.platform.is_windows()
+        ):
             log.info(
                 "setting mworker_queue niceness to %d",
-                self.opts["mworker_queue_niceness"],
+                self.opts.get("mworker_queue_niceness"),
             )
-            os.nice(self.opts["mworker_queue_niceness"])
+            os.nice(self.opts.get("mworker_queue_niceness"))
 
         # Create backend DEALER sockets (one per pool) that preserve envelopes
         self.pool_workers = {}
@@ -1307,8 +1315,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         pull_path_perms=0o600,
         pub_path_perms=0o600,
         started=None,
+        secrets=None,
     ):
         self.opts = opts
+        self.secrets = secrets
         self.pub_host = pub_host
         self.pub_port = pub_port
         self.pub_path = pub_path
@@ -1518,6 +1528,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         """
+        if "secrets" in kwargs:
+            self.secrets = kwargs["secrets"]
         process_manager.add_process(
             self.publish_daemon,
             args=(self.publish_payload,),
@@ -1843,17 +1855,20 @@ class RequestClient(salt.transport.base.RequestClient):
                 ) as exc:
                     log.trace("Loop closed while polling receive socket.")
                     send_recv_running = False
-                    future.set_exception(exc)
+                    if not future.done():
+                        future.set_exception(exc)
                 except RuntimeError as exc:
                     if "Event loop is closed" not in str(exc):
                         raise
                     log.trace("Loop closed while polling receive socket.")
                     send_recv_running = False
-                    future.set_exception(exc)
+                    if not future.done():
+                        future.set_exception(exc)
                 except zmq.ZMQError as exc:
                     log.trace("Receive socket closed while polling.")
                     send_recv_running = False
-                    future.set_exception(exc)
+                    if not future.done():
+                        future.set_exception(exc)
 
                 if ready:
                     try:

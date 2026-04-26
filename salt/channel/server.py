@@ -1298,7 +1298,8 @@ class PoolRoutingChannel:
                 )
             else:
                 # IPC socket: connect to pool's socket
-                pool_opts["workers_ipc_name"] = f"workers-{pool_name}.ipc"
+                master_id = self.opts.get("id", "master")
+                pool_opts["workers_ipc_name"] = f"workers-{master_id}-{pool_name}.ipc"
                 ipc_path = os.path.join(
                     self.opts["sock_dir"], pool_opts["workers_ipc_name"]
                 )
@@ -1736,7 +1737,14 @@ class MasterPubServerChannel:
     @classmethod
     def factory(cls, opts, **kwargs):
         _discover_event = kwargs.get("_discover_event", None)
+        import hashlib
+
         from salt.transport import publish_server
+
+        hash_type = getattr(hashlib, opts["hash_type"])
+        id_hash = hash_type(
+            salt.utils.stringutils.to_bytes(opts.get("id", "master"))
+        ).hexdigest()[:10]
 
         if opts["ipc_mode"] == "tcp":
             pub_host = "127.0.0.1"
@@ -1749,17 +1757,17 @@ class MasterPubServerChannel:
                 pub_port=pub_port,
                 pull_host=pull_host,
                 pull_port=pull_port,
-                transport="tcp",
             )
         else:
-            pub_path = os.path.join(opts["sock_dir"], "master_event_pub.ipc")
-            pull_path = os.path.join(opts["sock_dir"], "master_event_pull.ipc")
+            pub_path = os.path.join(opts["sock_dir"], f"master_event_{id_hash}_pub.ipc")
+            pull_path = os.path.join(
+                opts["sock_dir"], f"master_event_{id_hash}_pull.ipc"
+            )
             transport = publish_server(
                 opts,
                 pub_path=pub_path,
                 pull_path=pull_path,
                 pub_path_perms=0o660,
-                transport="tcp",
             )
         if _discover_event:
             _discover_event.set()

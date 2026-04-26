@@ -6,14 +6,18 @@ import salt.utils.files
 import salt.utils.stringutils
 from salt.exceptions import InvalidKeyError
 
+# Initialize crypto variables to None to avoid NameError if imports fail
+BIO = EVP = RSA = Random = AES = PKCS1_OAEP = PKCS1_v1_5_CIPHER = SHA = PKCS1_v1_5 = (
+    None
+)
+
 try:
     from M2Crypto import BIO, EVP, RSA
 
     HAS_M2 = True
+    HAS_CRYPTO = False
 except ImportError:
     HAS_M2 = False
-
-if not HAS_M2:
     try:
         from Cryptodome import Random
         from Cryptodome.Cipher import AES, PKCS1_OAEP
@@ -24,21 +28,18 @@ if not HAS_M2:
 
         HAS_CRYPTO = True
     except ImportError:
-        HAS_CRYPTO = False
+        try:
+            # let this be imported, if possible
+            from Crypto import Random  # nosec
+            from Crypto.Cipher import AES, PKCS1_OAEP  # nosec
+            from Crypto.Cipher import PKCS1_v1_5 as PKCS1_v1_5_CIPHER  # nosec
+            from Crypto.Hash import SHA  # nosec
+            from Crypto.PublicKey import RSA  # nosec
+            from Crypto.Signature import PKCS1_v1_5  # nosec
 
-if not HAS_M2 and not HAS_CRYPTO:
-    try:
-        # let this be imported, if possible
-        from Crypto import Random  # nosec
-        from Crypto.Cipher import AES, PKCS1_OAEP  # nosec
-        from Crypto.Cipher import PKCS1_v1_5 as PKCS1_v1_5_CIPHER  # nosec
-        from Crypto.Hash import SHA  # nosec
-        from Crypto.PublicKey import RSA  # nosec
-        from Crypto.Signature import PKCS1_v1_5  # nosec
-
-        HAS_CRYPTO = True
-    except ImportError:
-        HAS_CRYPTO = False
+            HAS_CRYPTO = True
+        except ImportError:
+            HAS_CRYPTO = False
 
 log = logging.getLogger(__name__)
 

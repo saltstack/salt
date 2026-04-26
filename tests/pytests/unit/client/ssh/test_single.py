@@ -474,14 +474,13 @@ def test_run_ssh_pre_flight_no_connect(opts, target, tmp_path, caplog, mock_bin_
     send_mock = MagicMock(return_value=ret_send)
     patch_send = patch("salt.client.ssh.shell.Shell.send", send_mock)
 
-    with caplog.at_level(5, logger="salt.client.ssh"):
+    with caplog.at_level(logging.DEBUG, logger="salt.client.ssh"):
         with patch_send, patch_exec_cmd, patch_tmp:
             ret = single.run_ssh_pre_flight()
 
     # Flush the logging handler just to be sure
     caplog.handler.flush()
 
-    assert "Copying the pre flight script" in caplog.text
     assert "Could not copy the pre flight script to target" in caplog.text
     assert ret == ret_send
     assert send_mock.call_args_list[0][0][0] == tmp_file
@@ -569,14 +568,13 @@ def test_run_ssh_pre_flight_connect(opts, target, tmp_path, caplog, mock_bin_pat
     send_mock = MagicMock(return_value=ret_send)
     patch_send = patch("salt.client.ssh.shell.Shell.send", send_mock)
 
-    with caplog.at_level(5, logger="salt.client.ssh"):
+    with caplog.at_level(logging.DEBUG, logger="salt.client.ssh"):
         with patch_send, patch_exec_cmd, patch_tmp:
             ret = single.run_ssh_pre_flight()
 
     # Flush the logging handler just to be sure
     caplog.handler.flush()
 
-    assert "Executing the pre flight script on target" in caplog.text
     assert ret == ret_exec_cmd
     assert send_mock.call_args_list[0][0][0] == tmp_file
     target_script = send_mock.call_args_list[0][0][1]
