@@ -789,9 +789,6 @@ class SaltPkgInstall:
 
     def install(self, upgrade=False, downgrade=False, stop_services=True):
         self._install_pkgs(upgrade=upgrade, downgrade=downgrade)
-        if platform.is_darwin():
-            self._refresh_macos_binary_paths()
-            self.update_process_path()
         if self.distro_id in ("ubuntu", "debian") and stop_services:
             self.stop_services()
         elif (
