@@ -419,11 +419,13 @@ def _run(
             ):
                 cmd = _prep_powershell_cmd(win_shell, cmd, encoded_cmd)
             elif any(win_shell_lower.endswith(word) for word in ["cmd.exe"]):
-                # runas uses win_runas/CreateProcess*; the user command must be the
-                # single quoted argument to cmd /c (see prepend_cmd) so & | etc.
-                # are handled by cmd.exe, not split by shlex or the outer process.
+                # win_runas uses CreateProcess*; the user string must be one quoted
+                # /c argument (see prepend_cmd). Subprocess/TimedProc does not need
+                # that wrap; apply it only when runas is set.
                 if python_shell or runas:
-                    cmd = salt.platform.win.prepend_cmd(win_shell, cmd)
+                    cmd = salt.platform.win.prepend_cmd(
+                        win_shell, cmd, quote_c_payload=bool(runas)
+                    )
                     # prepend_cmd may have silently converted -Command { } to
                     # -EncodedCommand; treat that the same as encoded_cmd=True so
                     # the CLIXML PowerShell emits to stderr is suppressed.

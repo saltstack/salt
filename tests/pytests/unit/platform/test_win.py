@@ -42,10 +42,10 @@ pytestmark = [
 def test_prepend_cmd(command, expected):
     """
     Test that the command is prepended with ``cmd /c`` and the payload is quoted
-    for ``CreateProcess`` command-line parsing.
+    for ``CreateProcess`` / ``CreateProcessWithTokenW`` command-line parsing.
     """
     win_shell = "cmd.exe"
-    result = win.prepend_cmd(win_shell, command)
+    result = win.prepend_cmd(win_shell, command, quote_c_payload=True)
     assert result == expected
 
 
@@ -76,7 +76,7 @@ def test_prepend_cmd_powershell_block_encoded(command, expected_block_content):
     object) when PowerShell's stdout is piped to a subprocess.
     """
     win_shell = "cmd.exe"
-    result = win.prepend_cmd(win_shell, command)
+    result = win.prepend_cmd(win_shell, command, quote_c_payload=False)
 
     prefix = "cmd.exe /c "
     assert result.startswith(prefix)
@@ -90,3 +90,15 @@ def test_prepend_cmd_powershell_block_encoded(command, expected_block_content):
     encoded = inner.split("-EncodedCommand ", 1)[1].strip()
     decoded = base64.b64decode(encoded).decode("utf-16-le")
     assert decoded == expected_block_content
+
+
+def test_prepend_cmd_unquoted_payload():
+    """
+    Subprocess / ``TimedProc`` path: no outer ``_cmd_exe_cswitch_quoted_argument`` wrap.
+    """
+    assert win.prepend_cmd("cmd.exe", "echo foo", quote_c_payload=False) == (
+        "cmd.exe /c echo foo"
+    )
+    assert win.prepend_cmd(
+        "cmd.exe", ["whoami.exe", "/all"], quote_c_payload=False
+    ) == 'cmd.exe /c whoami.exe /all'

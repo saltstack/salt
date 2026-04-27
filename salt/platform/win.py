@@ -1353,14 +1353,25 @@ def _cmd_exe_cswitch_quoted_argument(payload: str) -> str:
     return '"' + payload.replace('"', '""') + '"'
 
 
-def prepend_cmd(win_shell, cmd):
+def prepend_cmd(win_shell, cmd, quote_c_payload=True):
     """
     Prep cmd when shell is cmd.exe. Always use a command string instead of a
-    list to satisfy both CreateProcess and CreateProcessWithToken.
+    list to satisfy both :class:`subprocess.Popen` and CreateProcess.
 
-    The user payload is wrapped in double quotes after ``/c`` so compound
-    commands (e.g. ``cd /d ... & dir``) and paths with spaces behave correctly
-    under ``CreateProcessWithTokenW``.
+    Args:
+        win_shell: Path to ``cmd.exe``.
+        cmd: String or argv sequence. Lists/tuples are passed through
+            ``list2cmdline`` first.
+        quote_c_payload: If ``True`` (default), wrap the entire user payload
+            in double quotes after ``/c`` and double internal double quotes so
+            the whole command is a single argument (required for
+            ``CreateProcessWithTokenW`` and :mod:`win_runas <salt.utils.win_runas>`).
+            If ``False``, use ``cmd /c`` plus the raw payload (no outer wrap) so
+            command parsing matches the normal :class:`subprocess` / ``TimedProc``
+            path (e.g. ``set /p`` and special characters).
+
+    Returns:
+        A full command line string starting with ``win_shell``.
     """
     if isinstance(cmd, (list, tuple)):
         args = subprocess.list2cmdline(cmd)
@@ -1375,6 +1386,8 @@ def prepend_cmd(win_shell, cmd):
         # object instead of executing it. Converting to -EncodedCommand avoids this
         # and also sidesteps cmd.exe quoting issues with double quotes inside the block.
         args = _maybe_encode_powershell_block(args)
+    if not quote_c_payload:
+        return f"{win_shell} /c {args}"
     return f"{win_shell} /c {_cmd_exe_cswitch_quoted_argument(args)}"
 
 
