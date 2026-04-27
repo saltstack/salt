@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 import threading
 import time
 
@@ -16,7 +17,10 @@ log = logging.getLogger(__name__)
 
 def minion_func(salt_minion, event_listener, salt_master, timeout):
     start = time.time()
-    with salt_minion.started(start_timeout=timeout * 2, max_start_attempts=1):
+    # start_timeout must cover: minion startup time + master-down wait + reconnect
+    # time.  On Windows the minion is slower to start so we give extra headroom.
+    start_timeout = timeout * 4 if sys.platform == "win32" else timeout * 2
+    with salt_minion.started(start_timeout=start_timeout, max_start_attempts=1):
         new_start = time.time()
         while time.time() < new_start + (timeout * 2):
             if event_listener.get_events(
