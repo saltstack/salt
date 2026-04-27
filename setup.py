@@ -11,7 +11,7 @@ import os
 import subprocess
 import sys
 import warnings
-from datetime import datetime
+from datetime import datetime, timezone
 
 # pylint: disable=no-name-in-module
 from distutils import log
@@ -52,9 +52,11 @@ except ImportError:
     HAS_ZMQ = False
 
 try:
-    DATE = datetime.utcfromtimestamp(int(os.environ["SOURCE_DATE_EPOCH"]))
+    DATE = datetime.fromtimestamp(
+        int(os.environ["SOURCE_DATE_EPOCH"]), tz=timezone.utc
+    ).replace(tzinfo=None)
 except (KeyError, ValueError):
-    DATE = datetime.utcnow()
+    DATE = datetime.now(timezone.utc).replace(tzinfo=None)
 
 # Change to salt source's directory prior to running any command
 try:

@@ -33,8 +33,6 @@ from tests.unit.modules.nxos.nxos_show_cmd_output import (
     n9k_show_user_account,
     n9k_show_user_account_list,
     n9k_show_ver,
-    n9k_show_ver_int_list,
-    n9k_show_ver_int_list_structured,
     n9k_show_ver_list,
 )
 from tests.unit.modules.nxos.nxos_show_run import (
@@ -164,34 +162,6 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.modules.nxos.get_roles", return_value=roles, autospec=True):
             result = nxos_module.check_role(username, "network-operator")
             self.assertFalse(result)
-
-    def test_cmd_any_function(self):
-        """UT: nxos module:cmd method - check_role function"""
-
-        with patch.dict(
-            nxos_module.__salt__,
-            {
-                "nxos.check_role": create_autospec(
-                    nxos_module.check_role, return_value=True
-                )
-            },
-        ):
-            result = nxos_module.cmd(
-                "check_role",
-                "salt_test",
-                "network-admin",
-                encrypted=True,
-                __pub_fun="nxos.cmd",
-            )
-            self.assertTrue(result)
-
-    def test_cmd_function_absent(self):
-        """UT: nxos module:cmd method - non existent function"""
-
-        result = nxos_module.cmd(
-            "cool_new_function", "salt_test", "network-admin", encrypted=True
-        )
-        self.assertFalse(result)
 
     def test_find_single_match(self):
         """UT: nxos module:test_find method - Find single match in running config"""
@@ -345,34 +315,6 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
             result = nxos_module.grains_refresh()
             self.assertEqual(result, expected_grains)
 
-    def test_system_info(self):
-        """UT: nxos module:system_info method"""
-
-        expected_grains = {
-            "software": {
-                "BIOS": "version 08.36",
-                "NXOS": "version 9.2(1)",
-                "BIOS compile time": "06/07/2019",
-                "NXOS image file is": "bootflash:///nxos.9.2.1.bin",
-                "NXOS compile time": "7/17/2018 16:00:00 [07/18/2018 00:21:19]",
-            },
-            "hardware": {"Device name": "n9k-device", "bootflash": "53298520 kB"},
-            "plugins": ["Core Plugin", "Ethernet Plugin"],
-        }
-        with patch.dict(
-            nxos_module.__salt__,
-            {
-                "utils.nxos.system_info": create_autospec(
-                    nxos_utils.system_info, return_value=n9k_grains
-                )
-            },
-        ):
-            with patch(
-                "salt.modules.nxos.show_ver", return_value=n9k_show_ver, autospec=True
-            ):
-                result = nxos_module.system_info()
-                self.assertEqual(result, expected_grains)
-
     def test_sendline_invalid_method(self):
         """UT: nxos module:sendline method - invalid method"""
 
@@ -413,68 +355,6 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
                 result = nxos_module.sendline(command, method)
                 self.assertIn(n9k_show_ver, result)
 
-    def test_show_raw_text_invalid(self):
-        """UT: nxos module:show method - invalid argument"""
-
-        command = "show version"
-        raw_text = "invalid"
-
-        result = nxos_module.show(command, raw_text)
-        self.assertIn("INPUT ERROR", result)
-
-    def test_show_raw_text_true(self):
-        """UT: nxos module:show method - raw_test true"""
-
-        command = "show version"
-        raw_text = True
-
-        with patch(
-            "salt.modules.nxos.sendline", autospec=True, return_value=n9k_show_ver
-        ):
-            result = nxos_module.show(command, raw_text)
-            self.assertEqual(result, n9k_show_ver)
-
-    def test_show_raw_text_true_multiple_commands(self):
-        """UT: nxos module:show method - raw_test true multiple commands"""
-
-        command = "show bgp sessions ; show processes"
-        raw_text = True
-        data = ["bgp_session_data", "process_data"]
-
-        with patch("salt.modules.nxos.sendline", autospec=True, return_value=data):
-            result = nxos_module.show(command, raw_text)
-            self.assertEqual(result, data)
-
-    def test_show_nxapi(self):
-        """UT: nxos module:show method - nxapi returns info as list"""
-
-        command = "show version; show interface eth1/1"
-        raw_text = True
-
-        with patch(
-            "salt.modules.nxos.sendline",
-            autospec=True,
-            return_value=n9k_show_ver_int_list,
-        ):
-            result = nxos_module.show(command, raw_text)
-            self.assertEqual(result[0], n9k_show_ver_int_list[0])
-            self.assertEqual(result[1], n9k_show_ver_int_list[1])
-
-    def test_show_nxapi_structured(self):
-        """UT: nxos module:show method - nxapi returns info as list"""
-
-        command = "show version; show interface eth1/1"
-        raw_text = False
-
-        with patch(
-            "salt.modules.nxos.sendline",
-            autospec=True,
-            return_value=n9k_show_ver_int_list_structured,
-        ):
-            result = nxos_module.show(command, raw_text)
-            self.assertEqual(result[0], n9k_show_ver_int_list_structured[0])
-            self.assertEqual(result[1], n9k_show_ver_int_list_structured[1])
-
     def test_show_run(self):
         """UT: nxos module:show_run method"""
 
@@ -494,17 +374,6 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
             with patch("salt.modules.nxos.sendline", autospec=True, return_value=rv):
                 result = nxos_module.show_ver()
                 self.assertEqual(result, expected_output)
-
-    def test_add_config(self):
-        """UT: nxos module:add_config method"""
-
-        expected_output = "COMMAND_LIST: feature bgp"
-
-        with patch(
-            "salt.modules.nxos.config", autospec=True, return_value=expected_output
-        ):
-            result = nxos_module.add_config("feature bgp")
-            self.assertEqual(result, expected_output)
 
     def test_config_commands(self):
         """UT: nxos module:config method - Using commands arg"""

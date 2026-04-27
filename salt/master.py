@@ -36,6 +36,7 @@ import salt.runner
 import salt.serializers.msgpack
 import salt.state
 import salt.utils.args
+import salt.utils.asynchronous
 import salt.utils.atomicfile
 import salt.utils.ctx
 import salt.utils.event
@@ -280,6 +281,15 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         self.event = salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
         )
+
+        if self.ipc_publisher is not None:
+            if hasattr(self.ipc_publisher, "post_fork"):
+                # Maintenance process typically doesn't have an IOLoop yet
+                # transport.post_fork should handle loop creation if None
+                self.ipc_publisher.post_fork(
+                    self.ipc_publisher.publish_payload, io_loop=None
+                )
+
         # Init any values needed by the git ext pillar
         self.git_pillar = salt.daemons.masterapi.init_git_pillar(self.opts)
 
@@ -898,10 +908,10 @@ class Master(SMaster):
                 kwargs["secrets"] = SMaster.secrets
 
             self.process_manager.add_process(
-                RequestServer,
+                ReqServer,
                 args=(self.opts, self.key, self.master_key),
                 kwargs=kwargs,
-                name="RequestServer",
+                name="ReqServer",
             )
 
             self.process_manager.add_process(
@@ -998,15 +1008,14 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
             log.trace("Ignore tag %s", tag)
 
     def run(self):
-        io_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(io_loop)
+        io_loop = salt.utils.asynchronous.get_event_loop()
         with salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], io_loop=io_loop, listen=True
         ) as event_bus:
             event_bus.subscribe("")
             event_bus.set_event_handler(self.handle_event)
             try:
-                io_loop.run_forever()
+                salt.utils.asynchronous.aioloop(io_loop).run_forever()
             except (KeyboardInterrupt, SystemExit):
                 pass
             finally:
@@ -1124,6 +1133,8 @@ class RequestRouter:
         Returns:
             str: Pool name for this command
         """
+        if not cmd:
+            return self.default_pool
         # O(1) lookup in pre-built routing table
         return self.cmd_to_pool.get(cmd, self.default_pool)
 
@@ -1138,22 +1149,81 @@ class RequestRouter:
             str: Command name or empty string if not found
         """
         try:
-            load = payload.get("load", {})
-            if isinstance(load, bytes) and self.secrets:
-                # Payload is encrypted. Try to decrypt it to extract the command.
-                # This is common for netapi and minion-to-master communication.
-                try:
-                    # Determine which key to use based on the 'enc' field
-                    enc = payload.get("enc", "aes")
-                    if enc == "aes":
-                        key = self.secrets.get("aes", {}).get("secret", {}).value
-                        if key:
-                            import salt.crypt
 
-                            crypticle = salt.crypt.Crypticle(self.opts, key)
-                            load = crypticle.decrypt(load)
+            def _scan(data):
+                if data is None:
+                    return None
+                if isinstance(data, (str, bytes)):
+                    try:
+                        val = data.decode("utf-8") if isinstance(data, bytes) else data
+                    except (UnicodeDecodeError, AttributeError):
+                        return None
+                    if val == "_auth":
+                        return "_auth"
+                    return val
+                if isinstance(data, (list, tuple)):
+                    # Aggressively search for _auth or cmd anywhere in the sequence
+                    for item in data:
+                        # Check for literal _auth or a list starting with it
+                        if item == "_auth" or item == b"_auth":
+                            return "_auth"
+                        if isinstance(item, (list, tuple)) and len(item) > 0:
+                            if item[0] == "_auth" or item[0] == b"_auth":
+                                return "_auth"
+                    # Fallback to first element for standard command extraction
+                    if len(data) > 0:
+                        return _scan(data[0])
+                if isinstance(data, dict):
+                    # Check keys and values for _auth or cmd
+                    # Prioritize cmd field
+                    cmd_val = data.get("cmd") or data.get(b"cmd")
+                    if cmd_val:
+                        return _scan(cmd_val)
+                    for k, v in data.items():
+                        if (
+                            k == "_auth"
+                            or k == b"_auth"
+                            or v == "_auth"
+                            or v == b"_auth"
+                        ):
+                            return "_auth"
+                return None
+
+            # 1. Direct scan of the payload
+            res = _scan(payload)
+            if res == "_auth":
+                return "_auth"
+
+            # 2. Check the 'load' field
+            load = None
+            if isinstance(payload, dict):
+                load = payload.get("load") or payload.get(b"load")
+
+            # Handle encrypted load
+            if isinstance(load, bytes) and self.secrets:
+                try:
+                    # Check for enc/b'enc'
+                    enc = payload.get("enc") or payload.get(b"enc") or "aes"
+                    if isinstance(enc, bytes):
+                        try:
+                            enc = enc.decode("utf-8")
+                        except (UnicodeDecodeError, AttributeError):
+                            enc = "aes"
+
+                    if enc == "aes":
+                        aes_secret = self.secrets.get("aes", {}).get("secret")
+                        if aes_secret:
+                            key = (
+                                aes_secret.value
+                                if hasattr(aes_secret, "value")
+                                else aes_secret
+                            )
+                            if key:
+                                import salt.crypt
+
+                                crypticle = salt.crypt.Crypticle(self.opts, key)
+                                load = crypticle.decrypt(load)
                     elif enc == "pub":
-                        # RSA encryption
                         import salt.crypt
 
                         mkey = salt.crypt.MasterKeys(self.opts)
@@ -1163,27 +1233,20 @@ class RequestRouter:
                         import salt.payload
 
                         load = salt.payload.loads(load)
-                except Exception:  # pylint: disable=broad-except
-                    # If decryption fails, we can't extract the command
+                except Exception:  # pylint: disable=broad-exception-caught
                     pass
 
-            if isinstance(load, dict):
-                # Standard payload: {'cmd': '...', ...}
-                if "cmd" in load:
-                    return load["cmd"]
-                # Peer publish: {'publish': {'cmd': '...', ...}}
-                if "publish" in load and isinstance(load["publish"], dict):
-                    return load["publish"].get("cmd", "")
-                return ""
-            if isinstance(load, str):
-                # String command (uncommon but possible in some tests)
-                return load
-            return ""
-        except (AttributeError, KeyError):
+            # 3. Final classification based on load or previous scan
+            load_res = _scan(load)
+            if load_res:
+                return load_res
+
+            return res or ""
+        except (AttributeError, KeyError, TypeError):
             return ""
 
 
-class RequestServer(salt.utils.process.SignalHandlingProcess):
+class ReqServer(salt.utils.process.SignalHandlingProcess):
     """
     Starts up the master request server, minions send results to this
     interface.
@@ -1197,7 +1260,7 @@ class RequestServer(salt.utils.process.SignalHandlingProcess):
         :key dict: The user starting the server and the AES key
         :mkey dict: The user starting the server and the RSA key
 
-        :rtype: RequestServer
+        :rtype: ReqServer
         :returns: Request server
         """
         super().__init__(**kwargs)
@@ -1233,7 +1296,6 @@ class RequestServer(salt.utils.process.SignalHandlingProcess):
             name="ReqServer_ProcessManager", wait_for_kill=1
         )
 
-        # Create request server channels
         req_channels = []
         worker_pools = None
         if self.opts.get("worker_pools_enabled", True):
@@ -1271,7 +1333,6 @@ class RequestServer(salt.utils.process.SignalHandlingProcess):
                                 self.opts,
                                 self.master_key,
                                 self.key,
-                                req_channels,
                             ),
                             kwargs={"pool_name": pool_name, "pool_index": pool_index},
                             name=name,
@@ -1282,15 +1343,14 @@ class RequestServer(salt.utils.process.SignalHandlingProcess):
                     name = f"MWorker-{ind}"
                     self.process_manager.add_process(
                         MWorker,
-                        args=(self.opts, self.master_key, self.key, req_channels),
+                        args=(self.opts, self.master_key, self.key),
                         name=name,
                     )
-
-        self.process_manager.run()
+        asyncio.run(self.process_manager.run())
 
     def run(self):
         """
-        Start up the RequestServer
+        Start up the ReqServer
         """
         self.__bind()
 
@@ -1314,7 +1374,14 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
     """
 
     def __init__(
-        self, opts, mkey, key, req_channels, pool_name=None, pool_index=None, **kwargs
+        self,
+        opts,
+        mkey,
+        key,
+        req_channels=None,
+        pool_name=None,
+        pool_index=None,
+        **kwargs,
     ):
         """
         Create a salt master worker process
@@ -1322,6 +1389,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         :param dict opts: The salt options
         :param dict mkey: The user running the salt master and the RSA key
         :param dict key: The user running the salt master and the AES key
+        :param list req_channels: [DEPRECATED] No longer used, workers re-init their own.
         :param str pool_name: Name of the worker pool this worker belongs to
         :param int pool_index: Index of this worker within its pool
 
@@ -1330,7 +1398,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         super().__init__(**kwargs)
         self.opts = opts.copy()  # Copy opts to avoid modifying the shared instance
-        self.req_channels = req_channels
+        self.req_channels = []  # Initialize empty, will be populated in _post_fork_init
 
         self.mkey = mkey
         self.key = key
@@ -1374,6 +1442,42 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                 pass
         super()._handle_signals(signum, sigframe)
 
+    def _post_fork_init(self):
+        """
+        Do anything that needs to be done after the process has been forked
+        """
+        # if we inherit req_server level without our own, reset it
+        if not salt.utils.platform.is_windows():
+            enforce_mworker_niceness = True
+            if self.opts["req_server_niceness"]:
+                if salt.utils.user.get_user() == "root":
+                    log.info(
+                        "%s decrementing inherited ReqServer niceness to 0", self.name
+                    )
+                    os.nice(self.opts["req_server_niceness"] * -1)
+                else:
+                    log.debug(
+                        "%s not root, cannot decrement inherited ReqServer niceness",
+                        self.name,
+                    )
+                    enforce_mworker_niceness = False
+
+            if enforce_mworker_niceness and self.opts["mworker_niceness"]:
+                log.info(
+                    "setting MWorker %s niceness to %d",
+                    self.name,
+                    self.opts["mworker_niceness"],
+                )
+                os.nice(self.opts["mworker_niceness"])
+
+        self.__bind()
+
+    def run(self):
+        """
+        Start a Master Worker
+        """
+        self._post_fork_init()
+
     def __bind(self):
         """
         Bind to the local port.
@@ -1387,15 +1491,20 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         self.io_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.io_loop)
 
+        # Re-initialize required channels for this worker process.
+        # This ensures we have process-local sockets and event loops.
+        self.req_channels = []
+        for transport, opts in iter_transport_opts(self.opts):
+            chan = salt.channel.server.ReqServerChannel.factory(opts)
+            chan.post_fork(
+                self._handle_payload, io_loop=self.io_loop, pool_name=self.pool_name
+            )
+            self.req_channels.append(chan)
+
         # Create a threading event to signal when modules are ready.
         # We use threading.Event here because it's set from a background thread
         # and then converted to an asyncio.Event for use in coroutines.
         self._modules_loaded = threading.Event()
-
-        for req_channel in self.req_channels:
-            req_channel.post_fork(
-                self._handle_payload, io_loop=self.io_loop, pool_name=self.pool_name
-            )
 
         def _load_modules():
             try:
@@ -1551,38 +1660,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         if self.opts["master_stats"]:
             self._post_stats(start, cmd)
         return ret
-
-    def run(self):
-        """
-        Start a Master Worker
-        """
-        # if we inherit req_server level without our own, reset it
-        if not salt.utils.platform.is_windows():
-            enforce_mworker_niceness = True
-            if self.opts["req_server_niceness"]:
-                if salt.utils.user.get_user() == "root":
-                    log.info(
-                        "%s decrementing inherited RequestServer niceness to 0",
-                        self.name,
-                    )
-                    os.nice(-1 * self.opts["req_server_niceness"])
-                else:
-                    log.error(
-                        "%s unable to decrement niceness for MWorker, not running as"
-                        " root",
-                        self.name,
-                    )
-                    enforce_mworker_niceness = False
-
-            # else set what we're explicitly asked for
-            if enforce_mworker_niceness and self.opts["mworker_niceness"]:
-                log.info(
-                    "setting %s niceness to %i",
-                    self.name,
-                    self.opts["mworker_niceness"],
-                )
-                os.nice(self.opts["mworker_niceness"])
-        self.__bind()
 
 
 class TransportMethods:

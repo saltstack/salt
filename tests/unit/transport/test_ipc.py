@@ -1,5 +1,5 @@
 """
-    :codeauthor: Mike Place <mp@saltstack.com>
+:codeauthor: Mike Place <mp@saltstack.com>
 """
 
 import errno
@@ -56,12 +56,10 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
             socket_path=self.socket_path,
             io_loop=self.io_loop,
         )
-        sub_channel.connect(callback=self.stop)
-        self.wait()
+        self.io_loop.run_sync(sub_channel.connect)
         return sub_channel
 
     def tearDown(self):
-        super().tearDown()
         try:
             self.pub_channel.close()
         except RuntimeError as exc:
@@ -81,6 +79,7 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
         os.unlink(self.socket_path)
         del self.pub_channel
         del self.sub_channel
+        super().tearDown()
 
     def test_multi_client_reading(self):
         # To be completely fair let's create 2 clients.
@@ -94,8 +93,8 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
         def close_server():
             if evt.wait(1):
                 return
-            client2.close()
-            self.stop()
+            self.io_loop.add_callback(client2.close)
+            self.io_loop.add_callback(self.stop)
 
         watchdog = threading.Thread(target=close_server)
         watchdog.start()
@@ -129,7 +128,6 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
         self.assertEqual(ret1, "TEST")
         self.assertEqual(ret2, "TEST")
 
-    @tornado.testing.gen_test
     def test_async_reading_streamclosederror(self):
         client1 = self.sub_channel
         call_cnt = []
@@ -140,8 +138,8 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
         def close_server():
             if evt.wait(0.001):
                 return
-            client1.close()
-            self.stop()
+            self.io_loop.add_callback(client1.close)
+            self.io_loop.add_callback(self.stop)
 
         watchdog = threading.Thread(target=close_server)
         watchdog.start()
@@ -151,7 +149,7 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
             pass
 
         try:
-            ret1 = yield client1.read_async(handler)
+            client1.read_async(handler)
             self.wait()
         except StreamClosedError as ex:
             assert False, "StreamClosedError was raised inside the Future"

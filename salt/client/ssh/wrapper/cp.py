@@ -112,7 +112,7 @@ def get_file(path, dest, saltenv="base", makedirs=False, template=None, **kwargs
     if gzip is not None:
         log.warning("The gzip argument to cp.get_file in salt-ssh is unsupported")
 
-    (path, dest) = _render_filenames(path, dest, saltenv, template, **kwargs)
+    path, dest = _render_filenames(path, dest, saltenv, template, **kwargs)
 
     path, senv = salt.utils.url.split_env(path)
     if senv:
@@ -236,7 +236,7 @@ def get_dir(path, dest, saltenv="base", template=None, **kwargs):
     gzip = kwargs.pop("gzip", None)
     if gzip is not None:
         log.warning("The gzip argument to cp.get_dir in salt-ssh is unsupported")
-    (path, dest) = _render_filenames(path, dest, saltenv, template, **kwargs)
+    path, dest = _render_filenames(path, dest, saltenv, template, **kwargs)
 
     with _client() as client:
         ret = client.get_dir(path, dest, saltenv, gzip)
@@ -862,6 +862,12 @@ class SSHCpClient(salt.fileclient.FSClient):
     """
 
     def __init__(self, opts, shell, tgt):  # pylint: disable=W0231
+        # SSHCpClient caches locally to a master-side minion-specific subdirectory.
+        # We must ensure self.opts["cachedir"] points to that master-side cache
+        # so that inherited FSClient methods (like _extrn_path, cache_dest)
+        # work correctly without needing extra wrappers or path conversions.
+        opts = opts.copy()
+        opts["cachedir"] = os.path.join(opts["cachedir"], "salt-ssh", tgt)
         salt.fileclient.FSClient.__init__(self, opts)  # pylint: disable=W0233
         self.shell = shell
         self.tgt = tgt
@@ -909,36 +915,44 @@ class SSHCpClient(salt.fileclient.FSClient):
         extrndest = self._extrn_path(path, saltenv, cachedir=cachedir)
 
         if self._path_exists(filesdest):
-            return salt.utils.url.escape(filesdest) if escaped else filesdest
+            res = salt.utils.url.escape(filesdest) if escaped else filesdest
+            return str(self.convert_path(res, cachedir=cachedir))
         # While we do not cache minion-local files back on the master,
         # we can inspect the minion cache dir remotely
         if self._remote_path_exists(localsfilesdest):
-            return (
-                salt.utils.url.escape(localsfilesdest) if escaped else localsfilesdest
-            )
+            res = salt.utils.url.escape(localsfilesdest) if escaped else localsfilesdest
+            return str(self.convert_path(res, cachedir=cachedir))
         if self._path_exists(extrndest):
-            return extrndest
+            return str(self.convert_path(extrndest, cachedir=cachedir))
 
         return ""
 
     def get_cachedir(
         self, cachedir=None, master=True
     ):  # pylint: disable=arguments-differ
-        prefix = []
-        if master:
-            prefix = ["salt-ssh", self.tgt]
         if cachedir is None:
-            cachedir = os.path.join(self.opts["cachedir"], *prefix)
+            cachedir = self.opts["cachedir"]
         elif not os.path.isabs(cachedir):
-            cachedir = os.path.join(self.opts["cachedir"], *prefix, cachedir)
+            cachedir = os.path.join(self.opts["cachedir"], cachedir)
         elif master:
-            # The root cachedir on the master-side should not be overridden
+            # The root cachedir on the master-side should not be overridden.
+            # We map absolute paths into a special 'absolute_root' subdir.
             cachedir = os.path.join(
                 self.opts["cachedir"],
-                *prefix,
                 "absolute_root",
-                str(Path(*cachedir.split(os.sep)[1:])),
+                str(Path(*Path(cachedir).parts[1:])),
             )
+
+        if not master:
+            # Convert master-side SSH cache path back to minion-side path
+            # by removing the 'salt-ssh/<tgt>' prefix.
+            # Note: self.opts["cachedir"] already has the 'salt-ssh/<tgt>' prefix
+            # due to our fix in __init__.
+            prefix = os.path.join("salt-ssh", self.tgt)
+            if prefix in cachedir:
+                cachedir = cachedir.replace(prefix + os.sep, "")
+                if cachedir.endswith(prefix):
+                    cachedir = cachedir[: -len(prefix)].rstrip(os.sep)
         return cachedir
 
     def convert_path(self, path, cachedir=None, master=False):
@@ -953,12 +967,10 @@ class SSHCpClient(salt.fileclient.FSClient):
         master_cachedir = Path(self.get_cachedir(cachedir, master=True))
         minion_cachedir = Path(self.get_cachedir(cachedir, master=False))
         if master:
-            # This check could be path.is_relative_to(curr_prefix),
-            # but that requires Python 3.9
-            if master_cachedir in path.parents:
+            if master_cachedir in path.parents or path == master_cachedir:
                 return path
             return master_cachedir / path.relative_to(minion_cachedir)
-        if master_cachedir not in path.parents:
+        if master_cachedir not in path.parents and path != master_cachedir:
             return path
         return minion_cachedir / path.relative_to(master_cachedir)
 
@@ -1192,19 +1204,3 @@ class SSHCpClient(salt.fileclient.FSClient):
             if not strict:
                 dest = os.path.join(dest, os.path.basename(res))
         return self._send_file(res, dest, makedirs, cachedir)
-
-    def _extrn_path(self, url, saltenv, cachedir=None):
-        # _extrn_path accesses self.opts["cachedir"] directly,
-        # so we have to wrap it here to ensure our master prefix works
-        res = super()._extrn_path(url, saltenv, cachedir=cachedir)
-        return str(self.convert_path(res, cachedir, master=True))
-
-    def cache_dest(self, url, saltenv="base", cachedir=None):
-        """
-        Return the expected cache location for the specified URL and
-        environment.
-        """
-        # cache_dest accesses self.opts["cachedir"] directly,
-        # so we have to wrap it here to ensure our master prefix works
-        res = super().cache_dest(url, saltenv=saltenv, cachedir=cachedir)
-        return str(self.convert_path(res, cachedir, master=True))

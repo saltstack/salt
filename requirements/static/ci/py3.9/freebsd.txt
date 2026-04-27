@@ -210,6 +210,8 @@ importlib-metadata==8.7.0
     #   -r requirements/static/pkg/freebsd.in
 iniconfig==2.0.0
     # via pytest
+invoke==2.2.1 ; sys_platform != 'win32'
+    # via paramiko
 jaraco-collections==4.1.0
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.txt
@@ -249,7 +251,7 @@ jsonschema==3.2.0
     # via -r requirements/static/ci/common.in
 junit-xml==1.9
     # via -r requirements/static/ci/common.in
-junos-eznc==2.6.7 ; sys_platform != 'win32'
+junos-eznc==2.7.6 ; sys_platform != 'win32'
     # via
     #   -r requirements/static/ci/common.in
     #   napalm
@@ -284,7 +286,7 @@ markupsafe==2.1.3
     #   jinja2
     #   mako
     #   werkzeug
-mercurial==6.4.4
+mercurial==7.2
     # via -r requirements/static/ci/freebsd.in
 mock==5.1.0
     # via -r requirements/pytest.txt
@@ -304,20 +306,20 @@ msgpack==1.1.2
     #   -c requirements/static/pkg/py3.9/freebsd.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.7.1
+multidict==6.1.0
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.txt
     #   aiohttp
     #   yarl
 napalm==4.1.0 ; python_full_version < '3.10' and sys_platform != 'win32'
     # via -r requirements/static/ci/common.in
-ncclient==0.6.13 ; sys_platform != 'win32'
+ncclient==0.7.0 ; sys_platform != 'win32'
     # via
+    #   -r requirements/static/ci/common.in
     #   junos-eznc
     #   napalm
-netaddr==0.8.0 ; sys_platform != 'win32'
+netaddr==0.8.0 ; python_full_version < '3.10' and sys_platform != 'win32'
     # via
-    #   junos-eznc
     #   napalm
     #   pyeapi
 netmiko==4.2.0 ; python_full_version < '3.10' and sys_platform != 'win32'
@@ -335,7 +337,7 @@ packaging==24.0
     #   -c requirements/static/pkg/py3.9/freebsd.txt
     #   -r requirements/base.txt
     #   pytest
-paramiko==3.4.0 ; sys_platform != 'win32'
+paramiko==4.0.0 ; sys_platform != 'win32'
     # via
     #   -r requirements/static/ci/common.in
     #   junos-eznc
@@ -525,7 +527,7 @@ pyyaml==6.0.1
     #   pytest-salt-factories
     #   responses
     #   yamllint
-    #   yamlordereddictloader
+    #   yamlloader
 pyzmq==27.1.0
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.txt
@@ -594,7 +596,6 @@ six==1.16.0
     #   junos-eznc
     #   kazoo
     #   kubernetes
-    #   ncclient
     #   python-dateutil
     #   pyvmomi
     #   textfsm
@@ -713,7 +714,7 @@ xmltodict==1.0.4
     #   moto
 yamllint==1.32.0
     # via -r requirements/static/ci/freebsd.in
-yamlordereddictloader==0.4.0 ; sys_platform != 'win32'
+yamlloader==1.6.0 ; sys_platform != 'win32'
     # via junos-eznc
 yarl==1.22.0 ; python_full_version < '3.10'
     # via

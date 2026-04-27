@@ -98,7 +98,9 @@ def _present_test(
             )
     else:
         # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w@.-]+\s.+)$")
+        sshre = re.compile(
+            r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w@.-]+\s[^\s]+(?:\s.*)?)$"
+        )
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:
@@ -171,7 +173,9 @@ def _absent_test(
             return (True, f"All host keys in file {source} are already absent")
     else:
         # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w@.-]+\s.+)$")
+        sshre = re.compile(
+            r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w@.-]+\s[^\s]+(?:\s.*)?)$"
+        )
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:
@@ -269,7 +273,9 @@ def present(
 
     if source == "":
         # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w@.-]+\s.+)$")
+        sshre = re.compile(
+            r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w@.-]+\s[^\s]+(?:\s.*)?)$"
+        )
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:
@@ -455,7 +461,9 @@ def absent(
             )
     else:
         # Get just the key
-        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w@.-]+\s.+)$")
+        sshre = re.compile(
+            r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w@.-]+\s[^\s]+(?:\s.*)?)$"
+        )
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:
@@ -548,10 +556,18 @@ def manage(
     ret = {"name": "", "changes": {}, "result": True, "comment": ""}
 
     all_potential_keys = []
+    sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w@.-]+\s[^\s]+(?:\s.*)?)$")
     for ssh_key in ssh_keys:
-        # gather list potential ssh keys for removal comparison
-        # options, enc, and comments could be in the mix
-        all_potential_keys.extend(ssh_key.split(" "))
+        # check if this is of form {options} {enc} {key} {comment}
+        fullkey = sshre.search(ssh_key)
+        # if it is {key} [comment]
+        if not fullkey:
+            key_and_comment = ssh_key.split(None, 1)
+            all_potential_keys.append(key_and_comment[0])
+        else:
+            # key is of format: {enc} {key} [comment]
+            comps = fullkey.group(2).split(None, 2)
+            all_potential_keys.append(comps[1])
 
     existing_keys = __salt__["ssh.auth_keys"](
         user=user, config=config, fingerprint_hash_type=fingerprint_hash_type
