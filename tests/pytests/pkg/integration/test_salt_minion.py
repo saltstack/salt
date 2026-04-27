@@ -1,5 +1,7 @@
 import pytest
 
+import salt.utils.process
+
 pytestmark = [
     pytest.mark.skip_on_windows,
 ]
@@ -16,6 +18,9 @@ def test_salt_minion_ping(salt_cli, salt_minion, salt_master):
     assert ret.data is True
 
 
+@pytest.mark.skipif(
+    not salt.utils.process.HAS_SETPROCTITLE, reason="setproctitle not installed"
+)
 def test_salt_minion_setproctitle(salt_cli, salt_minion, salt_master):
     """
     Test that setproctitle is working

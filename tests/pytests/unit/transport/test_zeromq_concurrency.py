@@ -46,7 +46,7 @@ async def test_request_client_concurrency_serialization(minion_opts, io_loop):
         client.send_recv_task.cancel()
 
     client.send_recv_task = asyncio.create_task(
-        client._send_recv(mock_socket, client._queue, task_id=client.send_recv_task_id)
+        client._send_recv(mock_socket, client._queue)
     )
 
     # Hammer the client with concurrent requests

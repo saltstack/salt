@@ -11,6 +11,7 @@ import os
 import pytest
 
 import salt.utils.files
+import salt.utils.timeutil
 
 try:
     from cryptography import x509
@@ -56,8 +57,8 @@ def _generate_ca_certificate(private_key, common_name="Test CA"):
         .issuer_name(issuer)
         .public_key(private_key.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.utcnow())
-        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=365))
+        .not_valid_before(salt.utils.timeutil.utcnow())
+        .not_valid_after(salt.utils.timeutil.utcnow() + datetime.timedelta(days=365))
         .add_extension(
             x509.BasicConstraints(ca=True, path_length=0),
             critical=True,
@@ -116,8 +117,8 @@ def _generate_certificate(
         .issuer_name(ca_cert.subject)
         .public_key(private_key.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.utcnow())
-        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=365))
+        .not_valid_before(salt.utils.timeutil.utcnow())
+        .not_valid_after(salt.utils.timeutil.utcnow() + datetime.timedelta(days=365))
         .add_extension(
             x509.BasicConstraints(ca=False, path_length=None),
             critical=True,

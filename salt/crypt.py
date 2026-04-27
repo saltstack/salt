@@ -525,7 +525,7 @@ class MasterKeys(dict):
 
         if force or not cache.contains("master_keys", f"{name}.pem"):
             log.info("Generating key-pair for %s", path)
-            (priv, pub) = gen_keys(
+            priv, pub = gen_keys(
                 keysize or self.opts["keysize"],
                 passphrase,
             )
@@ -719,7 +719,7 @@ class AsyncAuth:
         Only create one instance of AsyncAuth per __key()
         """
         # do we have any mapping for this io_loop
-        io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        io_loop = io_loop or salt.utils.asynchronous.get_ioloop()
         if io_loop not in AsyncAuth.instance_map:
             AsyncAuth.instance_map[io_loop] = weakref.WeakValueDictionary()
         loop_instance_map = AsyncAuth.instance_map[io_loop]
@@ -769,7 +769,7 @@ class AsyncAuth:
             self.get_keys()
         if io_loop is None:
             self.io_loop = salt.utils.asynchronous.aioloop(
-                tornado.ioloop.IOLoop.current()
+                salt.utils.asynchronous.get_ioloop()
             )
         else:
             self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
@@ -813,7 +813,8 @@ class AsyncAuth:
         return (
             hasattr(self, "_authenticate_future")
             and self._authenticate_future.done()
-            and self._authenticate_future.exception() is None
+            and salt.utils.asynchronous.safe_exception(self._authenticate_future)
+            is None
         )
 
     def invalidate(self):
@@ -844,7 +845,9 @@ class AsyncAuth:
         if callback is not None:
 
             def handle_future(future):
-                response = future.result()
+                response = salt.utils.asynchronous.safe_exception(future)
+                if response is None:
+                    response = future.result()
                 self.io_loop.call_soon(callback, response)
 
             future.add_done_callback(handle_future)
@@ -1158,7 +1161,7 @@ class AsyncAuth:
 
             if not os.path.exists(self.rsa_path):
                 log.info("Generating keys: %s", self.opts["pki_dir"])
-                (priv, pub) = gen_keys(self.opts["keysize"])
+                priv, pub = gen_keys(self.opts["keysize"])
 
                 # the cache bank is called master keys but the codepath is shared
                 # on master/minion for interacting with pki

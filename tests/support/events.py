@@ -20,11 +20,22 @@ def eventpublisher_process(sock_dir):
         "publish_port": 4506,
         "ipv6": None,
         "zmq_filtering": None,
+        "hash_type": "sha256",
+        "id": "master",
     }
+    import hashlib
+
+    import salt.utils.stringutils
+
+    hash_type = getattr(hashlib, opts["hash_type"])
+    id_hash = hash_type(
+        salt.utils.stringutils.to_bytes(opts.get("id", "master"))
+    ).hexdigest()[:10]
+
     ipc_publisher = salt.transport.publish_server(
         opts,
-        pub_path=os.path.join(opts["sock_dir"], "master_event_pub.ipc"),
-        pull_path=os.path.join(opts["sock_dir"], "master_event_pull.ipc"),
+        pub_path=os.path.join(opts["sock_dir"], f"master_event_{id_hash}_pub.ipc"),
+        pull_path=os.path.join(opts["sock_dir"], f"master_event_{id_hash}_pull.ipc"),
         transport="tcp",
     )
     proc = Process(

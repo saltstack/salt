@@ -12,9 +12,14 @@ import salt.version
 from salt.utils.versions import LooseVersion, Version
 from tests.support.mock import patch
 
+@pytest.fixture(autouse=True)
+def raise_deprecations_runtime_errors(monkeypatch):
+    monkeypatch.setenv("RAISE_DEPRECATIONS_RUNTIME_ERRORS", "1")
+
+
 skipunless_deprecation_runtime_errors = pytest.mark.skipif(
-    os.environ.get("RAISE_DEPRECATIONS_RUNTIME_ERRORS", "0") != "1",
-    reason="Set RAISE_DEPRECATIONS_RUNTIME_ERRORS=1 to assert warn_until raises RuntimeError",
+    False,
+    reason="Always enabled for Python 3.12 stabilization",
 )
 
 TEST_MOD = """

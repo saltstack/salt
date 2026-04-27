@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 
 import pytest
 
@@ -35,11 +36,29 @@ def _extra_requirements():
     "pip_contraint",
     [
         # Latest pip 18
-        "<19.0",
+        pytest.param(
+            "<19.0",
+            marks=pytest.mark.skipif(
+                sys.version_info >= (3, 12),
+                reason="pip < 19.0 is not compatible with Python >= 3.12",
+            ),
+        ),
         # Latest pip 19
-        "<20.0",
+        pytest.param(
+            "<20.0",
+            marks=pytest.mark.skipif(
+                sys.version_info >= (3, 12),
+                reason="pip < 20.0 is not compatible with Python >= 3.12",
+            ),
+        ),
         # Latest pip 20
-        "<21.0",
+        pytest.param(
+            "<21.0",
+            marks=pytest.mark.skipif(
+                sys.version_info >= (3, 12),
+                reason="pip < 21.0 is not compatible with Python >= 3.12",
+            ),
+        ),
         # Latest pip
         None,
     ],

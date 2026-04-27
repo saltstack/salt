@@ -109,7 +109,7 @@ async def test_mem_leak_in_event_listener(http_client, salt_minion, app):
         await http_client.fetch(
             f"/minions/{salt_minion.id}",
             method="GET",
-            follow_redirects=False,
+            follow_redirects=True,
         )
     # Give the event loop a chance to run any pending cleanup callbacks
     # before asserting that the maps are empty.

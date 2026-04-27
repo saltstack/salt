@@ -16,8 +16,6 @@ import types
 import salt
 import salt._logging
 import salt.beacons
-import salt.cli.daemons
-import salt.client
 import salt.config
 import salt.crypt
 import salt.defaults.exitcodes
@@ -26,25 +24,14 @@ import salt.loader
 import salt.minion
 import salt.payload
 import salt.pillar
-import salt.serializers.msgpack
-import salt.syspaths
-import salt.utils.args
-import salt.utils.context
-import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.error
 import salt.utils.event
 import salt.utils.files
-import salt.utils.jid
-import salt.utils.minion
-import salt.utils.minions
-import salt.utils.network
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.schedule
-import salt.utils.ssdp
 import salt.utils.user
-import salt.utils.zeromq
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import (
     CommandExecutionError,
@@ -420,6 +407,12 @@ async def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils
     This is primarily loading modules, pillars, etc. (since they need
     to know which master they connected to) for the sub proxy minions.
     """
+    # Add a small random jitter to reduce contention when many sub-proxies
+    # are starting in parallel.
+    if opts["proxy"].get("parallel_startup"):
+        import random
+
+        await asyncio.sleep(random.random() * 2)
 
     proxy_grains = {}
     proxy_pillar = {}

@@ -67,7 +67,7 @@ def pkg_name(grains):
         if grains["os"] == "VMware Photon OS":
             _pkg = "bc"
         elif grains["osfinger"] == "Amazon Linux-2023":
-            return "dnf-utils"
+            return "dnf-plugins-core"
         else:
             _pkg = "units"
     elif grains["os_family"] == "Debian":
@@ -218,9 +218,9 @@ def test_owner(modules, grains):
     test finding the package owning a file
     """
     binary = "/bin/ls"
-    if grains["os"] == "Ubuntu" and grains["osmajorrelease"] >= 24:
+    if grains["os"] == "Ubuntu" and grains.get("osmajorrelease", 0) >= 24:
         binary = "/usr/bin/ls"
-    if grains["os"] == "Debian" and grains["osmajorrelease"] >= 13:
+    if grains["os"] == "Debian" and grains.get("osmajorrelease", 0) >= 13:
         binary = "/usr/bin/ls"
 
     ret = modules.pkg.owner(binary)
@@ -235,9 +235,9 @@ def test_which(modules, grains):
     test finding the package owning a file
     """
     binary = "/bin/ls"
-    if grains["os"] == "Ubuntu" and grains["osmajorrelease"] >= 24:
+    if grains["os"] == "Ubuntu" and grains.get("osmajorrelease", 0) >= 24:
         binary = "/usr/bin/ls"
-    elif grains["os"] == "Debian" and grains["osmajorrelease"] >= 13:
+    elif grains["os"] == "Debian" and grains.get("osmajorrelease", 0) >= 13:
         binary = "/usr/bin/ls"
     ret = modules.pkg.which(binary)
     assert len(ret) != 0

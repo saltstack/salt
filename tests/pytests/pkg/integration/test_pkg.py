@@ -24,7 +24,7 @@ def pkg_name(salt_call_cli, grains):
         if grains["os"] == "VMware Photon OS":
             return "bc"
         if grains["osfinger"] == "Amazon Linux-2023":
-            return "dnf-utils"
+            return "dnf-plugins-core"
         return "units"
     elif grains["os_family"] == "Debian":
         return "ifenslave"

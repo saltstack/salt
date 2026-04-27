@@ -386,7 +386,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         with patched_environ(
             SALT_MASTER_CONFIG=master_config, SALT_CLIENT_CONFIG=env_fpath
-        ):
+        ), patch("os.path.expanduser", return_value="/tmp/non-existent-file"):
             # Should load from env variable, not the default configuration file
             config = salt.config.client_config(os.path.expanduser("~/.salt"))
             self.assertEqual(config["log_file"], env_fpath)

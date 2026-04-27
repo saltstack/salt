@@ -247,7 +247,7 @@ msgpack==1.1.2
     #   -c requirements/static/pkg/py3.12/windows.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.7.1
+multidict==6.1.0
     # via
     #   -c requirements/static/pkg/py3.12/windows.txt
     #   aiohttp
@@ -303,7 +303,7 @@ pycryptodomex==3.23.0
     #   -r requirements/crypto.txt
 pyfakefs==5.3.1
     # via -r requirements/pytest.txt
-pygit2==1.13.1
+pygit2==1.19.1
     # via -r requirements/static/ci/windows.in
 pygments==2.19.2
     # via

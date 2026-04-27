@@ -71,6 +71,8 @@ def PKG_TARGETS(grains):
     elif grains["os_family"] == "RedHat":
         if grains["os"] == "VMware Photon OS":
             _PKG_TARGETS = ["zsh", "pciutils"]
+        elif grains["osfinger"] == "Amazon Linux-2023":
+            _PKG_TARGETS = ["dnf-plugins-core", "zsh"]
         elif (
             grains["os"] in ("CentOS Stream", "Rocky", "AlmaLinux")
             and grains["osmajorrelease"] >= 9

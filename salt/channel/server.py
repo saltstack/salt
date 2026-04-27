@@ -209,10 +209,6 @@ class ReqServerChannel:
         """
         Handle an incoming request payload (non-pooled / legacy path only).
 
-        This method is only active when ``worker_pools_enabled=False``.  In
-        that configuration this channel owns the external transport socket and
-        processes every request inline.
-
         ``_auth`` handling
         ------------------
         When the payload command is ``_auth`` this method calls
@@ -1184,7 +1180,8 @@ class PoolRoutingChannel:
                 # Standard IPC mode: use unique socket per pool
                 sock_dir = pool_opts.get("sock_dir", "/tmp/salt")
                 os.makedirs(sock_dir, exist_ok=True)
-                pool_opts["workers_ipc_name"] = f"workers-{pool_name}.ipc"
+                master_id = pool_opts.get("id", "master")
+                pool_opts["workers_ipc_name"] = f"workers-{master_id}-{pool_name}.ipc"
                 log.debug(
                     "Pool '%s' RequestServer using IPC socket: %s",
                     pool_name,
@@ -1218,15 +1215,38 @@ class PoolRoutingChannel:
         2. Create RequestClient connections to each pool's RequestServer
         3. Connect the external transport to our routing handler
         """
+        from salt.utils.channel import create_server_transport
+
         pool_name = kwargs.get("pool_name")
         if pool_name:
             # We are in an MWorker process for a specific pool.
-            # Delegate to the pool's RequestServer.
-            if pool_name in self.pool_servers:
-                pool_server = self.pool_servers[pool_name]
-                return pool_server.post_fork(payload_handler, io_loop, **kwargs)
+            # Re-initialize the pool-specific ReqServerChannel in this process.
+            # This ensures that _auth requests are handled correctly inline
+            # by the ReqServerChannel before reaching the worker's handler.
+            pool_opts = self.opts.copy()
+            pool_opts["pool_name"] = pool_name
+            # Disable worker pools for internal routing to avoid circular dependency
+            pool_opts["worker_pools_enabled"] = False
+
+            # Configure IPC for this pool (must match pre_fork setup)
+            if pool_opts.get("ipc_mode") == "tcp":
+                base_port = pool_opts.get("tcp_master_workers", 4515)
+                port_offset = zlib.adler32(pool_name.encode()) % 1000
+                pool_opts["ret_port"] = base_port + port_offset
             else:
-                log.error("Pool '%s' not found in pool_servers", pool_name)
+                master_id = pool_opts.get("id", "master")
+                pool_opts["workers_ipc_name"] = f"workers-{master_id}-{pool_name}.ipc"
+
+            try:
+                pool_transport = create_server_transport(pool_opts)
+                pool_server = ReqServerChannel(pool_opts, pool_transport)
+                return pool_server.post_fork(payload_handler, io_loop, **kwargs)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error(
+                    "Failed to initialize RequestServer for pool '%s' in worker: %s",
+                    pool_name,
+                    exc,
+                )
                 return
 
         import salt.master
@@ -1278,7 +1298,8 @@ class PoolRoutingChannel:
                 )
             else:
                 # IPC socket: connect to pool's socket
-                pool_opts["workers_ipc_name"] = f"workers-{pool_name}.ipc"
+                master_id = self.opts.get("id", "master")
+                pool_opts["workers_ipc_name"] = f"workers-{master_id}-{pool_name}.ipc"
                 ipc_path = os.path.join(
                     self.opts["sock_dir"], pool_opts["workers_ipc_name"]
                 )
@@ -1715,7 +1736,41 @@ class MasterPubServerChannel:
 
     @classmethod
     def factory(cls, opts, **kwargs):
-        transport = salt.transport.ipc_publish_server("master", opts)
+        _discover_event = kwargs.get("_discover_event", None)
+        import hashlib
+
+        from salt.transport import publish_server
+
+        hash_type = getattr(hashlib, opts["hash_type"])
+        id_hash = hash_type(
+            salt.utils.stringutils.to_bytes(opts.get("id", "master"))
+        ).hexdigest()[:10]
+
+        if opts["ipc_mode"] == "tcp":
+            pub_host = "127.0.0.1"
+            pub_port = int(opts["tcp_master_pub_port"])
+            pull_host = "127.0.0.1"
+            pull_port = int(opts["tcp_master_pull_port"])
+            transport = publish_server(
+                opts,
+                pub_host=pub_host,
+                pub_port=pub_port,
+                pull_host=pull_host,
+                pull_port=pull_port,
+            )
+        else:
+            pub_path = os.path.join(opts["sock_dir"], f"master_event_{id_hash}_pub.ipc")
+            pull_path = os.path.join(
+                opts["sock_dir"], f"master_event_{id_hash}_pull.ipc"
+            )
+            transport = publish_server(
+                opts,
+                pub_path=pub_path,
+                pull_path=pull_path,
+                pub_path_perms=0o660,
+            )
+        if _discover_event:
+            _discover_event.set()
         return cls(opts, transport)
 
     def __init__(self, opts, transport, presence_events=False):
@@ -1791,6 +1846,8 @@ class MasterPubServerChannel:
                 self.opts["event_publisher_niceness"],
             )
             os.nice(self.opts["event_publisher_niceness"])
+
+        import salt.transport.tcp
 
         secrets = kwargs.get("secrets", None)
         if secrets is not None:

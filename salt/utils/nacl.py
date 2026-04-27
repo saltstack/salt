@@ -4,6 +4,8 @@ Common code shared between the nacl module and runner.
 
 import base64
 import os
+import sys
+import threading
 
 import salt.syspaths
 import salt.utils.files
@@ -14,13 +16,20 @@ import salt.utils.win_dacl
 import salt.utils.win_functions
 
 REQ_ERROR = None
-try:
-    import nacl.public  # pylint: disable=no-name-in-module
-    import nacl.secret  # pylint: disable=no-name-in-module
-except ImportError:
+if sys.version_info >= (3, 12) and "zmq" in sys.modules:
     REQ_ERROR = (
-        "PyNaCl import error, perhaps missing python PyNaCl package or should update."
+        "nacl module is currently incompatible with zmq in Python 3.12+ "
+        "due to segmentation faults in libsodium/pyzmq interaction."
     )
+
+if REQ_ERROR is None:
+    try:
+        import nacl.public as pynacl_public  # pylint: disable=no-name-in-module
+        import nacl.secret as pynacl_secret  # pylint: disable=no-name-in-module
+    except ImportError:
+        REQ_ERROR = "PyNaCl import error, perhaps missing python PyNaCl package or should update."
+
+NACL_LOCK = threading.RLock()
 
 __virtualname__ = "nacl"
 
@@ -42,6 +51,9 @@ def _get_config(**kwargs):
     """
     Return configuration
     """
+    success, error = check_requirements()
+    if not success:
+        raise Exception(error)
     sk_file = kwargs.get("sk_file")
     if not sk_file:
         sk_file = os.path.join(kwargs["opts"].get("pki_dir"), "master/nacl")
@@ -138,19 +150,25 @@ def keygen(sk_file=None, pk_file=None, **kwargs):
     if "keyfile" in kwargs:
         sk_file = kwargs["keyfile"]
 
+    success, error = check_requirements()
+    if not success:
+        raise Exception(error)
+
     if sk_file is None:
-        kp = nacl.public.PrivateKey.generate()
-        return {
-            "sk": base64.b64encode(kp.encode()),
-            "pk": base64.b64encode(kp.public_key.encode()),
-        }
+        with NACL_LOCK:
+            kp = pynacl_public.PrivateKey.generate()
+            return {
+                "sk": base64.b64encode(kp.encode()),
+                "pk": base64.b64encode(kp.public_key.encode()),
+            }
 
     if pk_file is None:
         pk_file = f"{sk_file}.pub"
 
     if sk_file and pk_file is None:
         if not os.path.isfile(sk_file):
-            kp = nacl.public.PrivateKey.generate()
+            with NACL_LOCK:
+                kp = pynacl_public.PrivateKey.generate()
             with salt.utils.files.fopen(sk_file, "wb") as keyf:
                 keyf.write(base64.b64encode(kp.encode()))
             if salt.utils.platform.is_windows():
@@ -182,14 +200,18 @@ def keygen(sk_file=None, pk_file=None, **kwargs):
         with salt.utils.files.fopen(sk_file, "rb") as keyf:
             sk = salt.utils.stringutils.to_unicode(keyf.read()).rstrip("\n")
             sk = base64.b64decode(sk)
-        kp = nacl.public.PrivateKey(sk)
+        with NACL_LOCK:
+            kp = pynacl_public.PrivateKey(sk)
+            pk_encoded = base64.b64encode(kp.public_key.encode())
         with salt.utils.files.fopen(pk_file, "wb") as keyf:
-            keyf.write(base64.b64encode(kp.public_key.encode()))
+            keyf.write(pk_encoded)
         return f"saved pk_file: {pk_file}"
 
-    kp = nacl.public.PrivateKey.generate()
+    with NACL_LOCK:
+        kp = pynacl_public.PrivateKey.generate()
+        kp_encoded = base64.b64encode(kp.encode())
     with salt.utils.files.fopen(sk_file, "wb") as keyf:
-        keyf.write(base64.b64encode(kp.encode()))
+        keyf.write(kp_encoded)
     if salt.utils.platform.is_windows():
         cur_user = salt.utils.win_functions.get_current_user()
         salt.utils.win_dacl.set_owner(sk_file, cur_user)
@@ -364,9 +386,9 @@ def sealedbox_encrypt(data, **kwargs):
     data = salt.utils.stringutils.to_bytes(data)
 
     pk = _get_pk(**kwargs)
-    keypair = nacl.public.PublicKey(pk)
-    b = nacl.public.SealedBox(keypair)
-    return base64.b64encode(b.encrypt(data))
+    with NACL_LOCK:
+        b = pynacl_public.SealedBox(pynacl_public.PublicKey(pk))
+        return base64.b64encode(b.encrypt(data))
 
 
 def sealedbox_decrypt(data, **kwargs):
@@ -388,44 +410,45 @@ def sealedbox_decrypt(data, **kwargs):
     data = salt.utils.stringutils.to_bytes(data)
 
     sk = _get_sk(**kwargs)
-    keypair = nacl.public.PrivateKey(sk)
-    b = nacl.public.SealedBox(keypair)
-    return b.decrypt(base64.b64decode(data))
+    with NACL_LOCK:
+        b = pynacl_public.SealedBox(pynacl_public.PrivateKey(sk))
+        return b.decrypt(base64.b64decode(data))
 
 
 def secretbox_encrypt(data, **kwargs):
     """
     Encrypt data using a secret key generated from `nacl.keygen`.
-    The same secret key can be used to decrypt the data using `nacl.secretbox_decrypt`.
+    The same secret key can be used to decrypt the data using `pynacl_secretbox_decrypt`.
 
     CLI Examples:
 
     .. code-block:: bash
 
-        salt-run nacl.secretbox_encrypt datatoenc
-        salt-call --local nacl.secretbox_encrypt datatoenc sk_file=/etc/salt/pki/master/nacl
-        salt-call --local nacl.secretbox_encrypt datatoenc sk='YmFkcGFzcwo='
+        salt-run pynacl_secretbox_encrypt datatoenc
+        salt-call --local pynacl_secretbox_encrypt datatoenc sk_file=/etc/salt/pki/master/nacl
+        salt-call --local pynacl_secretbox_encrypt datatoenc sk='YmFkcGFzcwo='
     """
     # ensure data is in bytes
     data = salt.utils.stringutils.to_bytes(data)
 
     sk = _get_sk(**kwargs)
-    b = nacl.secret.SecretBox(sk)
-    return base64.b64encode(b.encrypt(data))
+    with NACL_LOCK:
+        b = pynacl_secret.SecretBox(sk)
+        return base64.b64encode(b.encrypt(data))
 
 
 def secretbox_decrypt(data, **kwargs):
     """
-    Decrypt data that was encrypted using `nacl.secretbox_encrypt` using the secret key
+    Decrypt data that was encrypted using `pynacl_secretbox_encrypt` using the secret key
     that was generated from `nacl.keygen`.
 
     CLI Examples:
 
     .. code-block:: bash
 
-        salt-call nacl.secretbox_decrypt pEXHQM6cuaF7A=
-        salt-call --local nacl.secretbox_decrypt data='pEXHQM6cuaF7A=' sk_file=/etc/salt/pki/master/nacl
-        salt-call --local nacl.secretbox_decrypt data='pEXHQM6cuaF7A=' sk='YmFkcGFzcwo='
+        salt-call pynacl_secretbox_decrypt pEXHQM6cuaF7A=
+        salt-call --local pynacl_secretbox_decrypt data='pEXHQM6cuaF7A=' sk_file=/etc/salt/pki/master/nacl
+        salt-call --local pynacl_secretbox_decrypt data='pEXHQM6cuaF7A=' sk='YmFkcGFzcwo='
     """
     if data is None:
         return None
@@ -433,6 +456,7 @@ def secretbox_decrypt(data, **kwargs):
     # ensure data is in bytes
     data = salt.utils.stringutils.to_bytes(data)
 
-    key = _get_sk(**kwargs)
-    b = nacl.secret.SecretBox(key=key)
-    return b.decrypt(base64.b64decode(data))
+    sk = _get_sk(**kwargs)
+    with NACL_LOCK:
+        b = pynacl_secret.SecretBox(sk)
+        return b.decrypt(base64.b64decode(data))

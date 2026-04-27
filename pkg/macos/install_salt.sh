@@ -127,7 +127,7 @@ fi
 # Install Requirements into the Python Environment
 #-------------------------------------------------------------------------------
 _msg "Installing Salt requirements"
-$PIP_BIN install -r "$REQ_FILE" > /dev/null 2>&1
+CFLAGS="${CFLAGS} -Wno-int-conversion" $PIP_BIN install -r "$REQ_FILE" > /dev/null 2>&1
 if [ -f "$BUILD_DIR/bin/distro" ]; then
     _success
 else

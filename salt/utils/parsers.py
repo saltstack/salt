@@ -495,7 +495,10 @@ class SaltfileMixIn(metaclass=MixInMeta):
 
         # Any left over value in the saltfile can now be safely added
         for key in cli_config:
-            setattr(self.options, key, cli_config[key])
+            if hasattr(self.options, key):
+                setattr(self.options, key, cli_config[key])
+            else:
+                self.options.__dict__[key] = cli_config[key]
 
 
 class HardCrashMixin(metaclass=MixInMeta):

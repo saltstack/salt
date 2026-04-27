@@ -246,10 +246,22 @@ def _init_client():
     __context__["mysql_fresh_connection"] = opts.pop("mysql.fresh_connection", False)
 
     # Gather up any additional MySQL configuration options
-    for k in opts:
+    for k in list(opts.keys()):
         if k.startswith("mysql."):
-            _key = k.split(".")[1]
-            mysql_kwargs[_key] = opts.get(k)
+            _key = k.split(".", 1)[1]
+            if _key in (
+                "host",
+                "user",
+                "password",
+                "database",
+                "port",
+                "unix_socket",
+                "connect_timeout",
+                "table_name",
+                "fresh_connection",
+            ):
+                continue
+            mysql_kwargs[_key] = opts.pop(k)
 
     # TODO: handle SSL connection parameters
 

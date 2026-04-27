@@ -31,7 +31,7 @@ pytestmark = [
 
 @pytest.mark.skipif(HAS_BOTO3 is False, reason="The boto module must be installed.")
 @pytest.mark.skipif(
-    Version(boto3.__version__) < Version(REQUIRED_BOTO3_VERSION),
+    HAS_BOTO3 and Version(boto3.__version__) < Version(REQUIRED_BOTO3_VERSION),
     reason="The boto3 module must be greater or equal to version {}".format(
         REQUIRED_BOTO3_VERSION
     ),

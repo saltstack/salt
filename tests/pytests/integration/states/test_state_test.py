@@ -4,6 +4,12 @@ from textwrap import dedent
 
 import pytest
 
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.windows_whitelisted,
+    pytest.mark.timeout(180),
+]
+
 log = logging.getLogger(__name__)
 
 
@@ -38,7 +44,10 @@ def test_issue_62590(salt_master, salt_minion, salt_cli):
     ), salt_master.state_tree.base.temp_file("test_62590.sls", statesls):
         ret = salt_cli.run("saltutil.sync_all", minion_tgt=salt_minion.id)
         assert ret.returncode == 0
-        ret = salt_cli.run("state.apply", "test_62590", minion_tgt=salt_minion.id)
+        ret = salt_cli.run(
+            "state.apply", "test_62590", minion_tgt=salt_minion.id, _timeout=120
+        )
+
         assert ret.returncode == 0
         assert "Success!" == ret.data["test_|-nop_|-nop_|-nop"]["comment"]
 

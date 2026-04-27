@@ -8,12 +8,14 @@ import pytest
 
 import salt.modules.config as config
 import salt.utils.files
+import salt.utils.nacl as nacl
 from tests.support.mock import patch
 
-pytest.importorskip("nacl.public")
-pytest.importorskip("nacl.secret")
-
-import salt.utils.nacl as nacl
+# NACL is currently incompatible with ZMQ in Python 3.12+ because it can
+# cause segmentation faults. We check check_requirements here to skip early.
+success, reason = nacl.check_requirements()
+if success is False:
+    pytest.skip(reason, allow_module_level=True)
 
 
 @pytest.fixture

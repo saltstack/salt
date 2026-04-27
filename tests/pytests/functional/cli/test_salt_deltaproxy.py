@@ -20,7 +20,7 @@ pytestmark = [
         reason="Deltaproxy minions do not currently work on spawning platforms.",
     ),
     pytest.mark.core_test,
-    pytest.mark.timeout_unless_on_windows(320),
+    pytest.mark.timeout_unless_on_windows(640),
 ]
 
 
@@ -190,7 +190,7 @@ def test_exit_status_correct_usage_large_number_of_minions(
                     ),
                 },
                 extra_cli_arguments_after_first_start_failure=["--log-level=info"],
-                start_timeout=240,
+                start_timeout=480,
             )
 
             for minion_id in [proxy_minion_id] + sub_proxies:

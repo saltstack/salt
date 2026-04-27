@@ -448,17 +448,29 @@ def test_issue_6833_pip_upgrade_pip(tmp_path, create_virtualenv, modules, states
     wheels_dir = tmp_path / "wheels"
     wheels_dir.mkdir()
 
-    pip_22_0_4_url = "https://files.pythonhosted.org/packages/4d/16/0a14ca596f30316efd412a60bdfac02a7259bf8673d4d917dc60b9a21812/pip-22.0.4-py3-none-any.whl"
-    pip_22_1_2_url = "https://files.pythonhosted.org/packages/96/2f/caec18213f6a67852f6997fb0673ae08d2e93d1b81573edb93ba4ef06970/pip-22.1.2-py3-none-any.whl"
+    pip_version_url = "https://files.pythonhosted.org/packages/4d/16/0a14ca596f30316efd412a60bdfac02a7259bf8673d4d917dc60b9a21812/pip-22.0.4-py3-none-any.whl"
+    pip_upgrade_url = "https://files.pythonhosted.org/packages/96/2f/caec18213f6a67852f6997fb0673ae08d2e93d1b81573edb93ba4ef06970/pip-22.1.2-py3-none-any.whl"
 
-    for url in (pip_22_0_4_url, pip_22_1_2_url):
-        subprocess.check_call(["curl", "-L", "-O", url], cwd=str(wheels_dir))
+    if sys.version_info >= (3, 12):
+        # Python 3.12+ requires pip >= 23.2 to avoid distutils dependency
+        pip_version = "23.2.1"
+        pip_upgrade = "23.3.2"
+        pip_version_url = "https://files.pythonhosted.org/packages/50/c2/e06851e8cc28dcad7c155f4753da8833ac06a5c704c109313b8d5a62968a/pip-23.2.1-py3-none-any.whl"
+        pip_upgrade_url = "https://files.pythonhosted.org/packages/15/aa/3f4c7bcee2057a76562a5b33ecbd199be08cdb4443a02e26bd2c3cf6fc39/pip-23.3.2-py3-none-any.whl"
+    else:
+
+        pip_version = "22.0.4"
+        pip_upgrade = "22.1.2"
+
+    for url in (pip_version_url, pip_upgrade_url):
+        filename = url.rsplit("/", maxsplit=1)[-1]
+        subprocess.check_call(["curl", "-L", "-o", filename, url], cwd=str(wheels_dir))
 
     # Use local wheels
     with patched_environ(PIP_NO_INDEX="1", PIP_FIND_LINKS=str(wheels_dir)):
         # Let's install a fixed version pip over whatever pip was
         # previously installed
-        ret = modules.pip.install("pip==22.0.4", upgrade=True, bin_env=venv_dir)
+        ret = modules.pip.install(f"pip=={pip_version}", upgrade=True, bin_env=venv_dir)
 
         if not isinstance(ret, dict):
             pytest.fail(
@@ -469,11 +481,13 @@ def test_issue_6833_pip_upgrade_pip(tmp_path, create_virtualenv, modules, states
         assert ret["retcode"] == 0
         assert "Successfully installed pip" in ret["stdout"]
 
-        # Let's make sure we have pip 22.0.4 installed
-        assert modules.pip.list("pip", bin_env=venv_dir) == {"pip": "22.0.4"}
+        # Let's make sure we have pip installed
+        assert modules.pip.list("pip", bin_env=venv_dir) == {"pip": pip_version}
 
         # Now the actual pip upgrade pip test
-        ret = states.pip.installed(name="pip==22.1.2", upgrade=True, bin_env=venv_dir)
+        ret = states.pip.installed(
+            name=f"pip=={pip_upgrade}", upgrade=True, bin_env=venv_dir
+        )
 
         if not isinstance(ret.raw, dict):
             pytest.fail(
@@ -482,7 +496,7 @@ def test_issue_6833_pip_upgrade_pip(tmp_path, create_virtualenv, modules, states
             )
 
         assert ret.result is True
-        assert ret.changes == {"pip==22.1.2": "Installed"}
+        assert ret.changes == {f"pip=={pip_upgrade}": "Installed"}
 
 
 @pytest.mark.slow_test

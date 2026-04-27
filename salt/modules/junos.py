@@ -37,6 +37,51 @@ except ImportError:
 
 # Juniper interface libraries
 # https://github.com/Juniper/py-junos-eznc
+# Pre-initialize imports to robust placeholders to avoid NameError and TypeError
+class _JunosPlaceholderException(Exception):
+    pass
+
+
+class ConnectClosedError(_JunosPlaceholderException):
+    pass
+
+
+class LockError(_JunosPlaceholderException):
+    pass
+
+
+class RpcTimeoutError(_JunosPlaceholderException):
+    pass
+
+
+class UnlockError(_JunosPlaceholderException):
+    pass
+
+
+class _JunosPlaceholder:
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        pass
+
+    def __call__(self, *args, **kwargs):
+        return self
+
+
+(
+    Device,
+    CfgTable,
+    FactoryLoader,
+    OpTable,
+    Config,
+    SCP,
+    SW,
+) = (_JunosPlaceholder,) * 7
+
 try:
     # pylint: disable=W0611
     import jnpr.junos.cfg
@@ -64,6 +109,7 @@ except ImportError:
     HAS_JUNOS = False
 
 # Set up logging
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name

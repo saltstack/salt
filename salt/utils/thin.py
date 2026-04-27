@@ -309,36 +309,38 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
         "packaging",
     ]
     # backports package doesn't exist in Python 3.13+
-    if sys.version_info < (3, 13):
+    if sys.version_info < (3, 13) and backports is not None:
         mods.append("backports")
     if ext_py_ver and tuple(ext_py_ver) >= (3, 0):
         mods.append("distro")
 
-    for mod in mods:
-        if exclude and mod in exclude:
-            continue
+    if exclude:
+        mods = [mod for mod in mods if mod not in exclude]
 
+    for mod in mods:
+        # Get the module file
+        py_shell_cmd = [
+            py_ver,
+            "-c",
+            "import {0}; print({0}.__file__)".format(mod),
+        ]
         if not salt.utils.path.which(py_ver):
             log.error("%s does not exist. Could not auto detect dependencies", py_ver)
             return {}
-        py_shell_cmd = [py_ver, "-c", "import {0}; print({0}.__file__)".format(mod)]
-        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE)
-        stdout, _ = cmd.communicate()
-        mod_file = os.path.abspath(salt.utils.data.decode(stdout).rstrip("\n"))
-
-        if not stdout or not os.path.exists(mod_file):
-            log.error(
-                "Could not auto detect file location for module %s for python version %s",
-                mod,
-                py_ver,
-            )
+        cmd = subprocess.Popen(
+            py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        stdout, stderr = cmd.communicate()
+        if cmd.returncode != 0:
             continue
-
+        mod_file = salt.utils.data.decode(stdout).strip()
+        if not mod_file:
+            continue
+        mod_file = os.path.abspath(mod_file)
         if os.path.basename(mod_file).split(".")[0] == "__init__":
             mod_file = os.path.dirname(mod_file)
         else:
             mod_file = mod_file.replace("pyc", "py")
-
         files[mod] = mod_file
     return files
 
@@ -699,8 +701,8 @@ def _discover_saltexts(allowlist=None, blocklist=None):
                 dist_name,
             )
             continue
-        if entry_point.dist.name not in loaded_saltexts:
-            loaded_saltexts[entry_point.dist.name] = {
+        if dist_name not in loaded_saltexts:
+            loaded_saltexts[dist_name] = {
                 "name": dist_name,
                 "entrypoints": {},
             }
@@ -711,9 +713,7 @@ def _discover_saltexts(allowlist=None, blocklist=None):
         if ctx.exception_caught:
             continue
 
-        loaded_saltexts[entry_point.dist.name]["entrypoints"][
-            entry_point.name
-        ] = entry_point.value
+        loaded_saltexts[dist_name]["entrypoints"][entry_point.name] = entry_point.value
         _add_dependency(mods, root_mod, namespace=namespace)
 
     # We need the mods to be in a deterministic order for the hash digest later

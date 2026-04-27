@@ -1333,7 +1333,7 @@ def CreateProcessWithLogonW(
     if environment is not None and isinstance(environment, dict):
         environment = ctypes.pointer(environment_string(environment))
     process_info = PROCESS_INFORMATION()
-    advapi32.CreateProcessWithLogonW(
+    ret = advapi32.CreateProcessWithLogonW(
         username,
         domain,
         password,
@@ -1346,6 +1346,8 @@ def CreateProcessWithLogonW(
         ctypes.byref(startupinfo),
         ctypes.byref(process_info),
     )
+    if not ret:
+        raise OSError(ctypes.get_last_error())
     return process_info
 
 
