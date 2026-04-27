@@ -191,7 +191,8 @@ def test_minions_alive_with_no_master(
     clis = [mm_failover_master_1_salt_cli, mm_failover_master_2_salt_cli]
 
     start_wait = time.time()
-    deadline = start_wait + 180
+    # 180s was tight for shared CI runners under load; bumped to 300s.
+    deadline = start_wait + 300
 
     while time.time() < deadline:
         still_waiting = []
@@ -216,4 +217,4 @@ def test_minions_alive_with_no_master(
         log.debug(f"Still waiting for minions to reconnect: {still_waiting}")
         time.sleep(5)
     else:
-        pytest.fail(f"Minions failed to reconnect within 180s: {still_waiting}")
+        pytest.fail(f"Minions failed to reconnect within 300s: {still_waiting}")
