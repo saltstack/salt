@@ -65,7 +65,7 @@ def test_pkg(grains):
         _pkg = "putty"
     elif grains["os_family"] == "RedHat":
         if grains["os"] == "VMware Photon OS":
-            _pkg = "snoopy"
+            _pkg = "bc"
         elif grains["osfinger"] == "Amazon Linux-2023":
             return "dnf-utils"
         else:
@@ -368,10 +368,16 @@ def test_pkg_info(grains, modules, test_pkg):
         assert "bash" in keys
         assert "dpkg" in keys
     elif grains["os_family"] == "RedHat":
-        ret = modules.pkg.info_installed("rpm", "bash")
-        keys = ret.keys()
-        assert "rpm" in keys
-        assert "bash" in keys
+        if grains["os"] == "VMware Photon OS":
+            ret = modules.pkg.info_installed("tdnf", "bash")
+            keys = ret.keys()
+            assert "tdnf" in keys
+            assert "bash" in keys
+        else:
+            ret = modules.pkg.info_installed("rpm", "bash")
+            keys = ret.keys()
+            assert "rpm" in keys
+            assert "bash" in keys
     elif grains["os_family"] == "Suse":
         ret = modules.pkg.info_installed("less", "zypper")
         keys = ret.keys()

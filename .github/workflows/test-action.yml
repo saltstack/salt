@@ -191,6 +191,12 @@ jobs:
         run: |
           docker exec ${{ github.run_id }}_salt-test chage -I -1 -m 0 -M 99999 -E -1 root
 
+      - name: Fix PhotonOS repo URLs
+        if: startsWith(matrix.slug, 'photonos-')
+        run: |
+          docker exec ${{ github.run_id }}_salt-test \
+            sh -c "for f in /etc/yum.repos.d/photon*.repo; do [ -e \"\$f\" ] && sed -i -E 's/packages(-prod)?\.(vmware|broadcom)\.com\/photon/packages.broadcom.com\/photon/g' \"\$f\"; done && tdnf makecache"
+
       - name: "Show container inspect ${{ matrix.container }}"
         run: |
           /usr/bin/docker inspect ${{ github.run_id }}_salt-test
@@ -514,6 +520,12 @@ jobs:
         if: startsWith(matrix.slug, 'photonos-')
         run: |
           docker exec ${{ github.run_id }}_salt-test chage -I -1 -m 0 -M 99999 -E -1 root
+
+      - name: Fix PhotonOS repo URLs
+        if: startsWith(matrix.slug, 'photonos-')
+        run: |
+          docker exec ${{ github.run_id }}_salt-test \
+            sh -c "for f in /etc/yum.repos.d/photon*.repo; do [ -e \"\$f\" ] && sed -i -E 's/packages(-prod)?\.(vmware|broadcom)\.com\/photon/packages.broadcom.com\/photon/g' \"\$f\"; done && tdnf makecache"
 
       - name: "Show container inspect ${{ matrix.container }}"
         run: |

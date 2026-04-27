@@ -21,9 +21,12 @@ def test_salt_master_as_daemon(salt_master_factory, cli_daemon_flag):
     except FactoryNotStarted:
         pass
     finally:
-        assert salt_master_factory.impl._terminal_result.stdout == ""
-        assert salt_master_factory.impl._terminal_result.stderr == ""
-        assert salt_master_factory.impl._terminal_result.returncode == 0
+        result = salt_master_factory.impl._terminal_result
+        if result.stdout and "ports are not available to bind" in result.stdout:
+            pytest.skip("Skipping: master ports still in use from a previous test run")
+        assert result.stdout == ""
+        assert result.stderr == ""
+        assert result.returncode == 0
 
         # We are going to kill the possible child processes based on the entire cmdline
         # We know this is unique to these processes because of the unique name of the config files, for example

@@ -25,13 +25,27 @@ def check_hostnamectl():
         if not salt.utils.platform.is_linux():
             check_hostnamectl.memo = False
         else:
-            proc = subprocess.run(["hostnamectl"], capture_output=True, check=False)
-            check_hostnamectl.memo = (
-                b"Failed to connect to bus: No such file or directory" in proc.stderr
-                or b"Failed to create bus connection: No such file or directory"
-                in proc.stderr
-                or b"Failed to query system properties" in proc.stderr
-            )
+            # Probe the same invocation as system.get_computer_desc: bare
+            # `hostnamectl` can succeed while status/--pretty needs the system bus
+            # (e.g. GitHub Actions / minimal images without /run/dbus/system_bus_socket).
+            hostnamectl_bin = shutil.which("hostnamectl")
+            if not hostnamectl_bin:
+                check_hostnamectl.memo = False
+            else:
+                proc = subprocess.run(
+                    [hostnamectl_bin, "status", "--pretty"],
+                    capture_output=True,
+                    check=False,
+                )
+                out = proc.stdout + proc.stderr
+                check_hostnamectl.memo = (
+                    b"Failed to connect to bus: No such file or directory" in out
+                    or b"Failed to create bus connection: No such file or directory"
+                    in out
+                    or b"Failed to query system properties" in out
+                    or b"Failed to connect to system scope bus via local transport"
+                    in out
+                )
     return check_hostnamectl.memo
 
 
@@ -77,7 +91,9 @@ def setup_teardown_vars(file, service, system):
         _machine_info = False
 
     try:
-        _systemd_timesyncd_available_ = service.available("systemd-timesyncd")
+        _systemd_timesyncd_available_ = service.available(
+            "systemd-timesyncd"
+        ) and not service.masked("systemd-timesyncd")
         if _systemd_timesyncd_available_:
             res = service.stop("systemd-timesyncd")
             assert res

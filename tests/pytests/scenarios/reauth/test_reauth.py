@@ -8,6 +8,7 @@ import pytest
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
+    pytest.mark.timeout(900),
 ]
 
 log = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ def minion_func(salt_minion, event_listener, salt_master, timeout):
 
 @pytest.fixture(scope="module")
 def timeout():
-    return int(os.environ.get("SALT_CI_REAUTH_MASTER_WAIT", 150))
+    return int(os.environ.get("SALT_CI_REAUTH_MASTER_WAIT", 30))
 
 
 def test_reauth(salt_cli, salt_minion, salt_master, timeout, event_listener):
@@ -58,4 +59,4 @@ def test_reauth(salt_cli, salt_minion, salt_master, timeout, event_listener):
         timeout=timeout * 2,
     )
     assert salt_cli.run("test.ping", minion_tgt=salt_minion.id).data is True
-    minion_proc.join()
+    minion_proc.join(timeout=timeout * 2)

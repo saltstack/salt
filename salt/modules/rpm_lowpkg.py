@@ -55,6 +55,7 @@ def __virtual__():
         "virtuozzo",
         "issabel pbx",
         "openeuler",
+        "vmware photon os",
     )
 
     if os_family in ["redhat", "suse"] or os_grain in enabled:
@@ -62,7 +63,7 @@ def __virtual__():
     return (
         False,
         "The rpm execution module failed to load: only available on redhat/suse type"
-        " systems or amazon, xcp, xenserver, virtuozzolinux, virtuozzo, issabel pbx or openeuler.",
+        " systems or amazon, xcp, xenserver, virtuozzolinux, virtuozzo, issabel pbx, openeuler or vmware photon os.",
     )
 
 

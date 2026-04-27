@@ -150,6 +150,12 @@ jobs:
         run: |
           docker exec ${{ github.run_id }}_salt-test-pkg chage -I -1 -m 0 -M 99999 -E -1 root
 
+      - name: Fix PhotonOS repo URLs
+        if: startsWith(matrix.slug, 'photonos-')
+        run: |
+          docker exec ${{ github.run_id }}_salt-test-pkg \
+            sh -c "for f in /etc/yum.repos.d/photon*.repo; do [ -e \"\$f\" ] && sed -i -E 's/packages(-prod)?\.(vmware|broadcom)\.com\/photon/packages.broadcom.com\/photon/g' \"\$f\"; done && tdnf makecache"
+
       - name: Decompress .nox Directory
         run: |
           docker exec ${{ github.run_id}}_salt-test-pkg python3 -m nox --force-color -e decompress-dependencies -- linux ${{ matrix.arch }}
