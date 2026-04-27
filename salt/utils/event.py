@@ -386,6 +386,7 @@ class SaltEvent:
         # For the asynchronous case, the connect will be defered to when
         # set_event_handler() is invoked.
         self.cpub = True
+
         return self.cpub
 
     def close_pub(self):

@@ -363,7 +363,7 @@ class SaltPkgInstall:
         The version to be installed at the start
         """
         if not self.upgrade and not self.use_prev_version:
-            version = self.artifact_version
+            version = self.artifact_version.replace("~", "")
         else:
             if self.prev_version is None:
                 raise ValueError(
@@ -396,7 +396,7 @@ class SaltPkgInstall:
                 artifact.name,
             )
             if version:
-                version = version.groups()[0].replace("_", "-").replace("~", "")
+                version = version.groups()[0].replace("_", "-")
                 version = version.split("-")[0]
                 break
         if not version:
