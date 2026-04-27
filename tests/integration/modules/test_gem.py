@@ -36,12 +36,12 @@ class GemModuleTest(ModuleCase):
         self.GEM_BIN = "gem.cmd" if salt.utils.platform.is_windows() else "gem"
         self.GEM = "tidy"
         self.GEM_VER = "1.1.2"
-        # Use rake as the upgradeable gem: it has many historical versions,
-        # no minimum Ruby version constraint, and is always upgradeable.
-        # brass >= 1.2.0 requires Ruby >= 3.1, so it cannot be updated on
-        # older distros like Debian 11 (Ruby 2.7).
-        self.OLD_GEM = "rake"
-        self.OLD_VERSION = "13.0.0"
+        # Use paint as the upgradeable gem: it is pure Ruby, has many historical
+        # versions, no minimum Ruby version constraint, is not a system gem on
+        # any distro, and is always upgradeable. rake is a system gem on
+        # Debian/Ubuntu and cannot be fully uninstalled, which breaks cleanup.
+        self.OLD_GEM = "paint"
+        self.OLD_VERSION = "2.2.1"
         self.GEM_LIST = [self.GEM, self.OLD_GEM]
         for name in (
             "GEM",
@@ -176,6 +176,7 @@ class GemModuleTest(ModuleCase):
             if not self.run_function("gem.list", [self.OLD_GEM]):
                 break
             self.run_function("gem.uninstall", [self.OLD_GEM])
+        self.assertFalse(self.run_function("gem.list", [self.OLD_GEM]))
 
     @pytest.mark.slow_test
     def test_update_system(self):
