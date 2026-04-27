@@ -217,6 +217,19 @@ def test_pkg_paths(
             )
         )
 
+    def _deb_downgrade_legacy_salt_paths_allow_root():
+        """
+        Pre-3007 .deb layouts often left master/cache log trees root-owned. After a
+        downgrade to 3006.x, those paths match ``pkg_paths_salt_user`` but are not
+        salt:salt like current packages.
+        """
+        return (
+            install_salt.use_prev_version
+            and install_salt.distro_id in ("debian", "ubuntu")
+            and packaging.version.parse(install_salt.version)
+            < packaging.version.parse("3007.0")
+        )
+
     salt_user_subdirs = []
 
     for _path in pkg_paths:
@@ -242,8 +255,12 @@ def test_pkg_paths(
             if (
                 str(path) in pkg_paths_salt_user or str(path) in salt_user_subdirs
             ) and not _is_excluded(path):
-                assert path.owner() == "salt"
-                assert path.group() == "salt"
+                if _deb_downgrade_legacy_salt_paths_allow_root():
+                    assert path.owner() in ("root", "salt")
+                    assert path.group() in ("root", "salt")
+                else:
+                    assert path.owner() == "salt"
+                    assert path.group() == "salt"
                 salt_user_subdirs.extend(
                     [str(path.joinpath(sub_dir)) for sub_dir in sub_dirs]
                 )
@@ -251,7 +268,11 @@ def test_pkg_paths(
                 for file in files:
                     file_path = path.joinpath(file)
                     if not _is_excluded(file_path):
-                        assert file_path.owner() == "salt"
+                        if _deb_downgrade_legacy_salt_paths_allow_root():
+                            assert file_path.owner() in ("root", "salt")
+                            assert file_path.group() in ("root", "salt")
+                        else:
+                            assert file_path.owner() == "salt"
             # Directories owned by root:root
             else:
                 assert path.owner() == "root"

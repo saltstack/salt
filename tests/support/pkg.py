@@ -1116,6 +1116,16 @@ class SaltPkgInstall:
                     self._check_retcode(ret)
                 ret = self.proc.run(self.pkg_mngr, "clean", "expire-cache")
                 self._check_retcode(ret)
+                # Unversioned ``yum downgrade`` only moves one step among *all* repo
+                # versions, so a downgrade from a 3008 pre-release artifact can jump to
+                # 3006.x if the exact ``--prev-version`` build is not selected. Pin the
+                # RPM set like Photon already does (release suffix is distro-specific).
+                if downgrade:
+                    rpm_prev = pep440_version_to_rpm_nevra_version(self.prev_version)
+                    orig_pkgs = pkgs_to_install[:]
+                    if self.dbg_pkg:
+                        orig_pkgs = [p for p in orig_pkgs if self.dbg_pkg not in p]
+                    pkgs_to_install = [f"{pkg}-{rpm_prev}-*" for pkg in orig_pkgs]
 
             if self.distro_version == "8" and self.classic:
                 # centosstream 8 doesn't downgrade properly using the downgrade command for some reason

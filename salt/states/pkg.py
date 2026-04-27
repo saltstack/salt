@@ -3036,7 +3036,16 @@ def _uninstall(
     changes = __salt__[f"pkg.{action}"](
         name, pkgs=pkgs, version=version, split_arch=False, **kwargs
     )
-    new = __salt__["pkg.list_pkgs"](versions_as_list=True, **kwargs)
+    list_pkgs_kwargs = dict(kwargs)
+    if __grains__.get("os_family") == "Windows":
+        # ``win_pkg.list_pkgs`` defaults include Windows Installer child products
+        # and updates. Those registry rows can remain (or repopulate) after the
+        # main application uninstall succeeds, so the parent key still appears
+        # in ``list_pkgs`` and ``pkg.removed`` would falsely fail. Match the
+        # primary Add/Remove Programs view when verifying removal.
+        list_pkgs_kwargs.setdefault("include_components", False)
+        list_pkgs_kwargs.setdefault("include_updates", False)
+    new = __salt__["pkg.list_pkgs"](versions_as_list=True, **list_pkgs_kwargs)
     failed = []
     for param in pkg_params:
         if __grains__["os_family"] in ["Suse", "RedHat", "Windows"]:

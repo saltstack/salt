@@ -119,7 +119,10 @@ def PKG_32_TARGETS(grains):
             else:
                 _PKG_32_TARGETS.append("xz-devel.i686")
     elif grains["os"] == "Windows":
-        _PKG_32_TARGETS = ["npp", "putty"]
+        # Prefer putty first: 32-bit ``npp`` winrepo metadata and uninstall
+        # registry cleanup have been flaky on Windows Server 2022/2025 CI,
+        # causing pkg.removed / latest_version to disagree with reality.
+        _PKG_32_TARGETS = ["putty", "npp"]
     if not _PKG_32_TARGETS:
         pytest.skip("No 32 bit packages have been specified for testing")
     return _PKG_32_TARGETS
