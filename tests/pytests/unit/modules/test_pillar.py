@@ -209,7 +209,7 @@ def test_items_returns_obfuscated_wrapped_pillar(configure_loader_modules):
     ), patch.dict(pillarmod.__grains__, {"os": "linux"}):
         ret = pillarmod.items()
 
-    assert all(c=="*" for c in ret["secret"])
+    assert all(c == "*" for c in ret["secret"])
 
 
 def test_get_returns_obfuscated_value_from_wrapped_pillar(configure_loader_modules):
@@ -222,7 +222,7 @@ def test_get_returns_obfuscated_value_from_wrapped_pillar(configure_loader_modul
         with patch.dict(pillarmod.__pillar__, wrapped, clear=True):
             got = pillarmod.get("k")
 
-    assert all(c=="*" for c in got)
+    assert all(c == "*" for c in got)
 
 
 def test_raw_exposes_in_memory_pillar(configure_loader_modules):
