@@ -17,6 +17,7 @@ import fnmatch
 import importlib
 import inspect
 import logging
+import multiprocessing
 import os
 import pickle
 import random
@@ -2286,13 +2287,36 @@ class State:
         if not name:
             name = low.get("name", low.get("__id__"))
 
-        if salt.utils.platform.spawning_platform():
+        # "spawn" requires pickling and full State reconstruction from
+        # init_kwargs because child processes have no access to parent memory.
+        # "forkserver" also transfers via pickle, but State cannot be
+        # reconstructed from scratch in a forkserver child (no file-server
+        # connection available) -- so for forkserver we explicitly use a
+        # "fork" context, which copies parent memory directly.  This is safe
+        # on Linux and avoids the reconstruction problem entirely.
+        _start_method = multiprocessing.get_start_method(allow_none=False)
+        if _start_method == "forkserver":
+            # "forkserver" transfers the Process via pickle like "spawn", but
+            # State cannot be reconstructed from init_kwargs in a forkserver
+            # child (no file-server connection available).  Use an explicit
+            # "fork" context so the child inherits parent memory directly.
+            instance = self
+            inject_globals = None
+            _mp_ctx = multiprocessing.get_context("fork")
+        elif _start_method == "spawn":
             instance = None
+            _mp_ctx = None
         else:
             instance = self
             inject_globals = None
+            _mp_ctx = None
 
-        proc = salt.utils.process.Process(
+        def _make_proc(target, args, name):
+            if _mp_ctx is not None:
+                return _mp_ctx.Process(target=target, args=args, name=name)
+            return salt.utils.process.Process(target=target, args=args, name=name)
+
+        proc = _make_proc(
             target=self._call_parallel_target,
             args=(instance, self._init_kwargs, name, cdata, low, inject_globals),
             name=f"ParallelState({name})",
@@ -2315,7 +2339,7 @@ class State:
                     clean_context[var] = val
             init_kwargs = self._init_kwargs.copy()
             init_kwargs["context"] = clean_context
-            proc = salt.utils.process.Process(
+            proc = _make_proc(
                 target=self._call_parallel_target,
                 args=(instance, init_kwargs, name, cdata, low, inject_globals),
                 name=f"ParallelState({name})",

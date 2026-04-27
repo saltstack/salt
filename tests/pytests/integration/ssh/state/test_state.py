@@ -10,7 +10,7 @@ def test_state_with_import(salt_ssh_cli, state_tree):
     """
     verify salt-ssh can use imported map files in states
     """
-    ret = salt_ssh_cli.run("state.sls", "test")
+    ret = salt_ssh_cli.run("--extra-filerefs=salt://map.jinja", "state.sls", "test")
     assert ret.returncode == 0
     assert ret.data
 
@@ -93,7 +93,9 @@ def test_state_with_import_from_dir(salt_ssh_cli, nested_state_tree):
     """
     verify salt-ssh can use imported map files in states
     """
-    ret = salt_ssh_cli.run("state.apply", "foo")
+    ret = salt_ssh_cli.run(
+        "--extra-filerefs=salt://foo/map.jinja", "state.apply", "foo"
+    )
     assert ret.returncode == 0
     assert ret.data
 
@@ -117,7 +119,7 @@ def test_state_high(salt_ssh_cli):
 
 
 def test_state_test(salt_ssh_cli, state_tree):
-    ret = salt_ssh_cli.run("state.test", "test")
+    ret = salt_ssh_cli.run("--extra-filerefs=salt://map.jinja", "state.test", "test")
     assert ret.returncode == 0
     assert ret.data
     assert (
