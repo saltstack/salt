@@ -785,8 +785,8 @@ class SaltEvent:
         self.pusher.publish(msg)
         if cb is not None:
             warn_until(
-                3008,
-                "The cb argument to fire_event_async will be removed in 3008",
+                3009,
+                "The cb argument to fire_event_async will be removed in 3009",
             )
             cb(None)
 
