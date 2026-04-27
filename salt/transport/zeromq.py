@@ -441,8 +441,8 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         """
         Multiprocessing target for the zmq queue device
         """
-        import salt.utils.stringutils
         import salt.utils.platform
+        import salt.utils.stringutils
 
         self.__setup_signals()
         context = zmq.Context(self.opts["worker_threads"])
@@ -499,7 +499,9 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                     self.opts["sock_dir"], f"workers-{master_id}-{pool_name}.ipc"
                 )
             else:
-                ipc_path = os.path.join(self.opts["sock_dir"], f"workers-{master_id}.ipc")
+                ipc_path = os.path.join(
+                    self.opts["sock_dir"], f"workers-{master_id}.ipc"
+                )
             os.chmod(ipc_path, 0o600)
 
         # Initialize request router for command classification
@@ -531,8 +533,8 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         :param dict worker_pools: Dict mapping pool_name to pool configuration
         :param dict secrets: Master secrets for payload decryption
         """
-        import salt.utils.stringutils
         import salt.utils.platform
+        import salt.utils.stringutils
 
         self.__setup_signals()
         context = zmq.Context(
@@ -582,7 +584,6 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 )
                 os.chmod(ipc_path, 0o600)
             self.pool_workers[pool_name] = dealer_socket
-
 
         # Initialize request router for command classification
         import salt.master

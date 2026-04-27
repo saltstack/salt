@@ -1,5 +1,4 @@
 import datetime
-import os
 import sys
 import warnings
 
@@ -11,6 +10,7 @@ import salt.utils.versions
 import salt.version
 from salt.utils.versions import LooseVersion, Version
 from tests.support.mock import patch
+
 
 @pytest.fixture(autouse=True)
 def raise_deprecations_runtime_errors(monkeypatch):
