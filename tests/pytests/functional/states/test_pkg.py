@@ -22,6 +22,10 @@ pytestmark = [
     pytest.mark.destructive_test,
     pytest.mark.windows_whitelisted,
     pytest.mark.timeout_unless_on_windows(240),
+    pytest.mark.skipif(
+        bool(salt.utils.path.which("transactional-update")),
+        reason="Skipping on transactional systems",
+    ),
 ]
 
 
@@ -69,13 +73,13 @@ def PKG_TARGETS(grains):
             _PKG_TARGETS = ["zsh", "pciutils"]
         elif (
             grains["os"] in ("CentOS Stream", "Rocky", "AlmaLinux")
-            and grains["osmajorrelease"] == 9
+            and grains["osmajorrelease"] >= 9
         ):
             _PKG_TARGETS = ["units", "zsh"]
         else:
             _PKG_TARGETS = ["units", "zsh-html"]
     elif grains["os_family"] == "Suse":
-        _PKG_TARGETS = ["lynx", "htop"]
+        _PKG_TARGETS = ["iotop", "screen"]
     return _PKG_TARGETS
 
 
