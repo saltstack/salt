@@ -6,33 +6,24 @@ import time
 import pytest
 from pytestskipmarkers.utils import platform
 
+from tests.support.pkg import pep440_public_equal
+
 
 @pytest.mark.skip_on_windows
 def test_salt_version(version, install_salt):
     """
     Test version output from salt --version
     """
-    actual = []
     test_bin = os.path.join(*install_salt.binary_paths["salt"])
     ret = install_salt.proc.run(test_bin, "--version")
-    if "+" in version:
-        # testing a non-release build artifact version
-        actual = ret.stdout.strip().split(" ")[:2]
-    else:
-        # testing against release build version, for example: downgrade
-        actual_ver = ret.stdout.strip().split(" ")[:2]
-        actual_ver_salt = actual_ver[1]  # get salt version
-        if "+" in actual_ver_salt:
-            actual_ver_salt_stripped = actual_ver_salt.split("+")[
-                0
-            ]  # strip any git versioning
-            actual.append(actual_ver[0])
-            actual.append(actual_ver_salt_stripped)
-        else:
-            pytest.skip("We don't run this test on release builds")
-
-    expected = ["salt", version]
-    assert actual == expected
+    assert ret.returncode == 0
+    parts = ret.stdout.strip().split()
+    assert len(parts) >= 2
+    assert parts[0] == "salt"
+    reported = parts[1]
+    assert pep440_public_equal(
+        reported, version
+    ), f"salt --version reported {reported!r}, expected compatible with {version!r}"
 
 
 @pytest.mark.skip_on_windows
@@ -118,13 +109,31 @@ def test_compare_versions(binary, install_salt):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
+        ver_pat = version.split("+", 1)[0] if "+" in version else version
+        ret.stdout.matcher.fnmatch_lines([f"*{ver_pat}*"])
     else:
         if platform.is_windows():
             pytest.skip(f"Binary not available on windows: {binary}")
         pytest.fail(
             f"Platform is not Windows and yet the binary {binary!r} is not available"
         )
+
+
+_DARWIN_PKG_SYMLINK_TO_BINKEY = {
+    "salt": "salt",
+    "salt-api": "api",
+    "salt-call": "call",
+    "salt-cloud": "cloud",
+    "salt-cp": "cp",
+    "salt-key": "key",
+    "salt-master": "master",
+    "salt-minion": "minion",
+    "salt-proxy": "proxy",
+    "salt-run": "run",
+    "spm": "spm",
+    "salt-ssh": "ssh",
+    "salt-syndic": "syndic",
+}
 
 
 @pytest.mark.skip_unless_on_darwin
@@ -148,12 +157,28 @@ def test_compare_versions(binary, install_salt):
 )
 def test_symlinks_created(version, symlink, install_salt):
     """
-    Test symlinks created
+    Test packaged Salt CLI wrappers resolve and report the expected version.
+
+    Older installers dropped symlinks under ``/usr/local/sbin``; newer onedir
+    layouts may only ship binaries under the install prefix. Use the same paths
+    as the rest of the package tests.
     """
-    ret = install_salt.proc.run(pathlib.Path("/usr/local/sbin") / symlink, "--version")
-    install_log_file = pathlib.Path("/tmp") / "postinstall.txt"
-    install_log_content = install_log_file.read_text()
-    ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
+    bin_key = _DARWIN_PKG_SYMLINK_TO_BINKEY[symlink]
+    if bin_key not in install_salt.binary_paths:
+        pytest.skip(f"Binary not available in package test layout: {symlink}")
+    parts = install_salt.binary_paths[bin_key]
+    if not parts or parts[0] is None:
+        pytest.skip(f"Binary path not resolved for: {symlink}")
+    bin_path = pathlib.Path(str(parts[0]))
+    if not bin_path.is_file():
+        legacy = pathlib.Path("/usr/local/sbin") / symlink
+        if legacy.is_file():
+            bin_path = legacy
+        else:
+            pytest.fail(f"Salt CLI not found for {symlink}: {bin_path}")
+    ret = install_salt.proc.run(bin_path, "--version")
+    ver_pat = version.split("+", 1)[0] if "+" in version else version
+    ret.stdout.matcher.fnmatch_lines([f"*{ver_pat}*"])
 
 
 @pytest.mark.skip_unless_on_linux

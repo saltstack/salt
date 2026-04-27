@@ -37,6 +37,9 @@ import salt.serializers.msgpack
 import salt.state
 import salt.utils.args
 import salt.utils.atomicfile
+import salt.utils.batch_manager
+import salt.utils.batch_output
+import salt.utils.batch_state
 import salt.utils.ctx
 import salt.utils.event
 import salt.utils.files
@@ -340,6 +343,10 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             self.handle_key_cache()
             self.handle_presence(old_present)
             self.handle_key_rotate(now)
+            # Safety net for stalled/orphaned async batch jobs.  Fires
+            # salt/batch/<jid>/recover events so the BatchManager can
+            # re-adopt and advance them.
+            self.handle_batch_jobs()
             salt.utils.verify.check_max_open_files(self.opts)
             last = now
             now = int(time.time())
@@ -468,6 +475,62 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             self.event.fire_event(data, tagify("present", "presence"))
             old_present.clear()
             old_present.update(present)
+
+    def handle_batch_jobs(self):
+        """
+        Safety net for stalled or orphaned async batch jobs.
+
+        Reads the active batch index (``batch_active.p``) and checks
+        each active batch for staleness.  A batch is stale if
+        ``last_progress`` exceeds
+        ``timeout + gather_job_timeout + stale_buffer``.
+
+        For stale batches, fires a ``salt/batch/<jid>/recover`` event
+        so the BatchManager can re-adopt and advance them.  Batches
+        that are already ``halted`` are cleaned up from the index.
+
+        The heavy lifting lives in :mod:`salt.utils.batch_state` and
+        :mod:`salt.utils.batch_output`; this method is the scheduler.
+        """
+        jids = salt.utils.batch_state.read_active_index(self.opts)
+        if not jids:
+            return
+        now = time.time()
+        stale_buffer = self.opts.get("batch_manager_loop_interval", 5) * 6
+        for jid in jids:
+            state = salt.utils.batch_state.read_batch_state(jid, self.opts)
+            if state is None:
+                # .batch.p gone or corrupt — drop from the index.
+                log.info(
+                    "Maintenance: pruning stale active-batch entry %s "
+                    "(no readable .batch.p)",
+                    jid,
+                )
+                salt.utils.batch_state.remove_from_active_index(jid, self.opts)
+                continue
+            if state.get("halted"):
+                salt.utils.batch_state.remove_from_active_index(jid, self.opts)
+                continue
+            threshold = (
+                state.get("timeout", 60)
+                + state.get("gather_job_timeout", 10)
+                + stale_buffer
+            )
+            age = now - state.get("last_progress", now)
+            if age <= threshold:
+                continue
+            log.warning(
+                "Maintenance: batch %s is stale (age=%.1fs, threshold=%.1fs); "
+                "firing salt/batch/%s/recover",
+                jid,
+                age,
+                threshold,
+                jid,
+            )
+            self.event.fire_event(
+                salt.utils.batch_output.recover_payload(state, age),
+                salt.utils.batch_output.tag_recover(jid),
+            )
 
 
 class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
@@ -857,6 +920,13 @@ class Master(SMaster):
                     "ipc_publisher": ipc_publisher,
                 },
                 name="Maintenance",
+            )
+
+            log.info("Creating master batch manager process")
+            self.process_manager.add_process(
+                salt.utils.batch_manager.BatchManager,
+                args=(self.opts,),
+                name="BatchManager",
             )
 
             if self.opts.get("event_return"):

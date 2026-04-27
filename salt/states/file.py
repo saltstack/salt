@@ -9321,7 +9321,7 @@ def shortcut(
         process. For existing files and directories it's not enforced.
     """
     salt.utils.versions.warn_until(
-        version="Argon",
+        version="Potassium",
         message="This function is being deprecated in favor of 'shortcut.present'",
     )
     user = _test_owner(kwargs, user=user)
