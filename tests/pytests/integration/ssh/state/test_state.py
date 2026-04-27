@@ -10,7 +10,7 @@ def test_state_with_import(salt_ssh_cli, state_tree):
     """
     verify salt-ssh can use imported map files in states
     """
-    ret = salt_ssh_cli.run("--extra-filerefs=salt://map.jinja", "state.sls", "test")
+    ret = salt_ssh_cli.run("state.sls", "test")
     assert ret.returncode == 0
     assert ret.data
 
@@ -38,15 +38,15 @@ def test_state_with_import_dir(salt_ssh_cli, state_tree_dir, ssh_cmd):
     """
     if ssh_cmd in ("state.sls", "state.show_low_sls", "state.show_sls"):
         ret = salt_ssh_cli.run(
-            "--extra-filerefs=salt://subdir/map.jinja", "-w", "-t", ssh_cmd, "testdir"
+            "--extra-filerefs=salt://test/map.jinja", "-w", "-t", ssh_cmd, "testdir"
         )
     elif ssh_cmd == "state.top":
         ret = salt_ssh_cli.run(
-            "--extra-filerefs=salt://subdir/map.jinja", "-w", "-t", ssh_cmd, "top.sls"
+            "--extra-filerefs=salt://test/map.jinja", "-w", "-t", ssh_cmd, "top.sls"
         )
     elif ssh_cmd == "state.sls_id":
         ret = salt_ssh_cli.run(
-            "--extra-filerefs=salt://subdir/map.jinja",
+            "--extra-filerefs=salt://test/map.jinja",
             "-w",
             "-t",
             ssh_cmd,
@@ -55,7 +55,7 @@ def test_state_with_import_dir(salt_ssh_cli, state_tree_dir, ssh_cmd):
         )
     else:
         ret = salt_ssh_cli.run(
-            "--extra-filerefs=salt://subdir/map.jinja", "-w", "-t", ssh_cmd
+            "--extra-filerefs=salt://test/map.jinja", "-w", "-t", ssh_cmd
         )
     assert ret.returncode == 0
     if ssh_cmd == "state.show_top":
@@ -93,9 +93,7 @@ def test_state_with_import_from_dir(salt_ssh_cli, nested_state_tree):
     """
     verify salt-ssh can use imported map files in states
     """
-    ret = salt_ssh_cli.run(
-        "--extra-filerefs=salt://foo/map.jinja", "state.apply", "foo"
-    )
+    ret = salt_ssh_cli.run("state.apply", "foo")
     assert ret.returncode == 0
     assert ret.data
 
@@ -119,7 +117,7 @@ def test_state_high(salt_ssh_cli):
 
 
 def test_state_test(salt_ssh_cli, state_tree):
-    ret = salt_ssh_cli.run("--extra-filerefs=salt://map.jinja", "state.test", "test")
+    ret = salt_ssh_cli.run("state.test", "test")
     assert ret.returncode == 0
     assert ret.data
     assert (
