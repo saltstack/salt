@@ -1,5 +1,10 @@
 """
-Run processes as a different user in Windows
+Run child processes as another Windows user.
+
+The main entry points are :func:`runas` (starts the child with
+``CreateProcessWithTokenW`` when the minion can obtain a privileged context) and
+:func:`runas_unpriv` (uses ``CreateProcessWithLogonW`` as a fallback). Both are
+used from :mod:`salt.modules.cmdmod` when ``runas`` is set on Windows.
 """
 
 # Import Python Libraries
@@ -35,7 +40,17 @@ log = logging.getLogger(__name__)
 
 
 def _preview_cmd(cmd, max_len=500):
-    """Shorten command lines for log messages (not for execution)."""
+    """
+    Shorten a command line for safe logging (full line is never executed from
+    this helper).
+
+    Args:
+        cmd: Command string; non-strings are formatted with ``repr()``.
+        max_len: Maximum length before truncation; an ellipsis is appended.
+
+    Returns:
+        Truncated string suitable for debug log lines.
+    """
     s = cmd if isinstance(cmd, str) else repr(cmd)
     if len(s) > max_len:
         return s[:max_len] + "…"
@@ -46,7 +61,11 @@ def _preview_cmd(cmd, max_len=500):
 # loader.
 def __virtual__():
     """
-    Only load if Win32 Libraries are installed
+    Load this module only when PyWin32 (and related imports) succeeded.
+
+    Returns:
+        The string ``win_runas`` on success, or ``(False, reason)`` when
+        required imports failed so the loader should skip the module.
     """
     if not HAS_WIN32:
         return False, "This utility requires pywin32"
@@ -56,7 +75,17 @@ def __virtual__():
 
 def split_username(username):
     """
-    Splits out the username from the domain name and returns both.
+    Parse domain-style account names into a plain user name and domain.
+
+    Accepts UPN (``user@domain``), down-level (``DOMAIN\\user``), or a bare
+    name (domain becomes ``.`` for local accounts).
+
+    Args:
+        username: Account string; non-strings are coerced with ``str()`` at the
+            start of this function.
+
+    Returns:
+        A ``(user_name, domain)`` pair suitable for ``LogonUser`` and family.
     """
     domain = "."
     user_name = str(username)
@@ -72,13 +101,28 @@ def split_username(username):
 
 def create_env(user_token, inherit=False, timeout=1):
     """
-    CreateEnvironmentBlock might fail when we close a login session and then
-    try to re-open one very quickly. Run the method multiple times to work
-    around the async nature of logoffs.
+    Build a user environment block for ``CreateProcess*`` using
+    ``CreateEnvironmentBlock``.
 
-    Intentionally does not call LoadUserProfile/UnloadUserProfile: that path
-    can block for a long time (e.g. first logon) and is unnecessary for
-    building an environment block for the token we already hold.
+    Retries for up to ``timeout`` seconds if the call fails (e.g. logon/logoff
+    races). Does not use ``LoadUserProfile`` / ``UnloadUserProfile``: that can
+    block for a long time and is not required when the caller already holds a
+    user token from ``LogonUser`` or similar.
+
+    Args:
+        user_token: Windows access token (handle) for the target user, as used
+            by ``win32profile.CreateEnvironmentBlock`` / ``CreateProcess*``.
+        inherit: Passed through to ``CreateEnvironmentBlock`` (whether to
+            inherit the environment of the process associated with
+            ``user_token``; typically ``False`` for an isolated child env).
+        timeout: If ``CreateEnvironmentBlock`` raises, retry until this many
+            seconds have elapsed since the first attempt, then give up.
+
+    Returns:
+        Environment data for the ``environment`` parameter to ``CreateProcess*``,
+        or ``None`` if no block was produced and there was no exception to
+        re-raise. On repeated failure, the last ``pywintypes.error`` may be
+        raised.
     """
     t0 = time.monotonic()
     log.debug("win_runas.create_env: begin inherit=%s timeout=%ss", inherit, timeout)
@@ -117,11 +161,36 @@ def create_env(user_token, inherit=False, timeout=1):
 
 def runas(cmd, username, password=None, cwd=None):
     """
-    Run a command as another user. If the process is running as an admin or
-    system account, this method does not require a password. Other
-    non-privileged accounts need to provide a password for the user to "runas".
-    Commands are run in with the highest level privileges possible for the
-    account provided.
+    Run ``cmd`` as ``username`` using a logon token and
+    ``CreateProcessWithTokenW``.
+
+    The minion must be able to impersonate ``SYSTEM`` (e.g. admin with
+    ``SeImpersonatePrivilege``) for the primary path. If that fails, this
+    delegates to :func:`runas_unpriv` (logon + ``CreateProcessWithLogonW``) so a
+    password is required for non-service accounts in that case.
+
+    The process is created suspended, the primary thread is resumed with
+    ``ResumeThread``, and stdout/stderr are read on helper threads while waiting
+    so large child output cannot fill the pipe and deadlock the parent.
+
+    Args:
+        cmd: Full process command line (string) or argv sequence; lists are
+            passed through ``subprocess.list2cmdline`` to build
+            ``lpCommandLine``.
+        username: Target account; UPN, ``DOMAIN\\user``, or local name. May be
+            non-string (e.g. numeric local user name) and is coerced to ``str``.
+        password: Password for ``LogonUser`` when required; may be omitted for
+            some service accounts and when S4U logon is used.
+        cwd: Optional working directory for the child (``lpCurrentDirectory``);
+            ``None`` uses the default for the new process.
+
+    Returns:
+        Dict with keys: ``pid``, ``retcode`` (if wait succeeded), ``stdout``,
+        ``stderr`` (empty strings on read failure).
+
+    Raises:
+        salt.exceptions.CommandExecutionError: If the account name cannot be
+            resolved (e.g. ``LookupAccountName`` failure).
     """
     # Sometimes this comes in as an int. LookupAccountName can't handle an int
     # Let's make it a string if it's anything other than a string
@@ -307,6 +376,7 @@ def runas(cmd, username, password=None, cwd=None):
         stderr_buf = []
 
         def _pump_pipecopy(handle, bucket, name):
+            """Read one inherited pipe end into *bucket* (list with one string)."""
             try:
                 fd = msvcrt.open_osfhandle(int(handle), os.O_RDONLY | os.O_TEXT)
                 with os.fdopen(fd, "r") as fh:
@@ -372,7 +442,29 @@ def runas(cmd, username, password=None, cwd=None):
 
 def runas_unpriv(cmd, username, password, cwd=None):
     """
-    Runas that works for non-privileged users
+    Run ``cmd`` as ``username`` using ``CreateProcessWithLogonW`` (with profile).
+
+    Used when :func:`runas` cannot use ``CreateProcessWithTokenW`` (e.g. no
+    SYSTEM impersonation). Requires ``password`` for the target account. Stdin
+    is inherited from the minion; stdout/stderr are collected from anonymous
+    pipes. Output is read after the process exit wait (acceptable for typical
+    output sizes; the privileged :func:`runas` path uses concurrent draining to
+    avoid pipe deadlocks on very large streams).
+
+    Args:
+        cmd: Command line string, or a list/tuple passed to
+            ``subprocess.list2cmdline``.
+        username: Target account; coerced to ``str`` if needed.
+        password: Password for ``CreateProcessWithLogonW`` (required).
+        cwd: Optional working directory for the child; ``None`` for default.
+
+    Returns:
+        Dict with ``pid``, ``retcode`` (if the process handle wait succeeded),
+        ``stdout``, and ``stderr`` strings.
+
+    Raises:
+        salt.exceptions.CommandExecutionError: If the account name cannot be
+            resolved.
     """
     # Sometimes this comes in as an int. LookupAccountName can't handle an int
     # Let's make it a string if it's anything other than a string
