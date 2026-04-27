@@ -4,7 +4,6 @@ import pytest
 @pytest.fixture(scope="module")
 def state_tree(base_env_state_tree_root_dir):
     top_file = """
-    {%- from "map.jinja" import abc with context %}
     base:
       'localhost':
         - basic
@@ -83,20 +82,16 @@ def nested_state_tree(base_env_state_tree_root_dir, tmp_path):
       '127.0.0.1':
         - basic
     """
-    # Inline the Jinja template content to avoid salt-ssh file server lookup issues
-    # The template imports from foo/map.jinja which still needs to exist as a file
-    file_jinja_content = """{% from 'foo/map.jinja' import comment %}{{ comment }}"""
-    state_file = """
-    /{}/file.txt:
-      file.managed:
-        - contents: |
-            {}
-        - template: jinja
-    """.format(
-        tmp_path, file_jinja_content
-    )
+    # Import map.jinja at the SLS level (not inside a file.managed template)
+    # so that --extra-filerefs can properly sync it to the thin tarball.
     map_file = """
     {% set comment = "blah blah" %}
+    """
+    state_file = """
+    {%- from 'foo/map.jinja' import comment with context %}
+    the_comment:
+      test.succeed_with_changes:
+        - comment: {{ comment }}
     """
     statedir = base_env_state_tree_root_dir / "foo"
     top_tempfile = pytest.helpers.temp_file(

@@ -55,15 +55,21 @@ class GemModuleTest(ModuleCase):
                 self.run_function("gem.uninstall", [self.GEM])
 
         def uninstall_old_gem():
-            # Remove all versions of OLD_GEM if any are installed
-            if self.run_function("gem.list", [self.OLD_GEM]):
+            # Remove all versions of OLD_GEM; retry until gem.list returns empty
+            # because gem uninstall -a may only remove one version at a time on
+            # some platforms.
+            for _ in range(5):
+                if not self.run_function("gem.list", [self.OLD_GEM]):
+                    break
                 self.run_function("gem.uninstall", [self.OLD_GEM])
 
         self.addCleanup(uninstall_gem)
         self.addCleanup(uninstall_old_gem)
 
         # Ensure OLD_GEM is not installed before each test
-        if self.run_function("gem.list", [self.OLD_GEM]):
+        for _ in range(5):
+            if not self.run_function("gem.list", [self.OLD_GEM]):
+                break
             self.run_function("gem.uninstall", [self.OLD_GEM])
 
     def run_function(self, function, *args, **kwargs):
