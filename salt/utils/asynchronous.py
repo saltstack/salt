@@ -222,17 +222,6 @@ class SyncWrapper:
 
     def _wrap(self, key):
         def wrap(*args, **kwargs):
-            try:
-                asyncio_loop = asyncio.get_running_loop()
-            except RuntimeError:
-                # asyncio.get_running_loop() raises RuntimeError
-                # if there is no running loop, so we can run the method
-                # directly with no detaching it to the distinct thread.
-                # It will make SyncWrapper way faster for the cases
-                # when there are no nested SyncWrapper objects used.
-                return self.io_loop.run_sync(
-                    lambda: getattr(self.obj, key)(*args, **kwargs)
-                )
             results = []
             thread = threading.Thread(
                 target=self._target,
@@ -250,9 +239,10 @@ class SyncWrapper:
 
     def _target(self, key, args, kwargs, results, asyncio_loop):
         asyncio.set_event_loop(asyncio_loop)
-        io_loop = tornado.ioloop.IOLoop.current()
         try:
-            result = io_loop.run_sync(lambda: getattr(self.obj, key)(*args, **kwargs))
+            result = self.io_loop.run_sync(
+                lambda: getattr(self.obj, key)(*args, **kwargs)
+            )
             results.append(True)
             results.append(result)
         except Exception:  # pylint: disable=broad-except
