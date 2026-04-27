@@ -1,4 +1,5 @@
 import atexit
+import configparser
 import contextlib
 import logging
 import os
@@ -1039,6 +1040,40 @@ class SaltPkgInstall:
             restart_service = self.proc.run("systemctl", "restart", service)
             self._check_retcode(restart_service)
 
+    def _salt_yum_repo_path(self) -> pathlib.Path:
+        """
+        Path to the Broadcom ``salt.repo`` copy under ``/etc/yum.repos.d`` (see
+        :meth:`install_previous`).
+        """
+        distro_name = self.distro_name
+        if distro_name in ("almalinux", "rocky", "centos", "fedora"):
+            distro_name = "redhat"
+        return pathlib.Path("/etc/yum.repos.d") / f"salt-{distro_name}.repo"
+
+    def _rpm_repo_set_enabled_photon(self, repo_id: str, enabled: bool) -> None:
+        """
+        PhotonOS uses ``tdnf`` behind ``yum``; it does not implement
+        ``dnf config-manager --enable``. Toggle ``enabled=`` in the repo file and
+        refresh metadata.
+        """
+        repo_path = self._salt_yum_repo_path()
+        parser = configparser.ConfigParser(interpolation=None)
+        if not parser.read(repo_path, encoding="utf-8"):
+            log.error("Could not read Salt repo file at %s", repo_path)
+            assert False, f"Missing or unreadable repo file: {repo_path}"
+        if not parser.has_section(repo_id):
+            log.error(
+                "Salt repo file %s has no [%s] stanza (upstream salt.repo changed?)",
+                repo_path,
+                repo_id,
+            )
+            assert False, f"Repo file {repo_path} missing [{repo_id}]"
+        parser.set(repo_id, "enabled", "1" if enabled else "0")
+        with salt.utils.files.fopen(repo_path, "w", encoding="utf-8") as fp:
+            parser.write(fp)
+        ret = self.proc.run(self.pkg_mngr, "makecache", "-y")
+        self._check_retcode(ret)
+
     def install_previous(self, downgrade=False):
         """
         Install previous version. This is used for upgrade tests.
@@ -1098,13 +1133,7 @@ class SaltPkgInstall:
                 ret = self.proc.run(self.pkg_mngr, "clean", "all")
                 self._check_retcode(ret)
                 if major_ver >= 3008:
-                    ret = self.proc.run(
-                        self.pkg_mngr,
-                        "config-manager",
-                        "--enable",
-                        "salt-repo-latest",
-                    )
-                    self._check_retcode(ret)
+                    self._rpm_repo_set_enabled_photon("salt-repo-latest", True)
             else:
                 if "3007" in self.prev_version:
                     ret = self.proc.run(
