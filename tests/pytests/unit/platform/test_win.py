@@ -20,10 +20,10 @@ pytestmark = [
         ("cmd /c hostname", 'cmd.exe /c "cmd /c hostname"'),
         ("echo foo", 'cmd.exe /c "echo foo"'),
         ('cmd /c "echo foo"', 'cmd.exe /c "cmd /c ""echo foo"""'),
-        ("icacls 'C:\\Program Files'", 'cmd.exe /c "icacls \'C:\\Program Files\'"'),
+        ("icacls 'C:\\Program Files'", "cmd.exe /c \"icacls 'C:\\Program Files'\""),
         (
             "icacls 'C:\\Program Files' && echo 1",
-            'cmd.exe /c "icacls \'C:\\Program Files\' && echo 1"',
+            "cmd.exe /c \"icacls 'C:\\Program Files' && echo 1\"",
         ),
         (
             ["secedit", "/export", "/cfg", "C:\\A Path\\with\\a\\space"],
@@ -96,9 +96,10 @@ def test_prepend_cmd_unquoted_payload():
     """
     Subprocess / ``TimedProc`` path: no outer ``_cmd_exe_cswitch_quoted_argument`` wrap.
     """
-    assert win.prepend_cmd("cmd.exe", "echo foo", quote_c_payload=False) == (
-        "cmd.exe /c echo foo"
-    )
-    assert win.prepend_cmd(
-        "cmd.exe", ["whoami.exe", "/all"], quote_c_payload=False
-    ) == 'cmd.exe /c whoami.exe /all'
+    expected = "cmd.exe /c echo foo"
+    result = win.prepend_cmd("cmd.exe", "echo foo", quote_c_payload=False)
+    assert result == expected
+
+    result = win.prepend_cmd("cmd.exe", ["whoami.exe", "/all"], quote_c_payload=False)
+    expected = "cmd.exe /c whoami.exe /all"
+    assert result == expected

@@ -395,9 +395,7 @@ def runas(cmd, username, password=None, cwd=None):
         )
         t_out.start()
         t_err.start()
-        log.debug(
-            "win_runas.runas: started pipe-drain threads for pid=%s", dwProcessId
-        )
+        log.debug("win_runas.runas: started pipe-drain threads for pid=%s", dwProcessId)
 
         # Wait for the process to exit and get its return code.
         log.debug(
@@ -573,7 +571,11 @@ def runas_unpriv(cmd, username, password, cwd=None):
         salt.platform.win.kernel32.GetExitCodeProcess(
             process_info.hProcess, ctypes.byref(exitcode)
         )
-        log.debug("win_runas.runas_unpriv: pid=%s exit code=%s", process_info.dwProcessId, exitcode.value)
+        log.debug(
+            "win_runas.runas_unpriv: pid=%s exit code=%s",
+            process_info.dwProcessId,
+            exitcode.value,
+        )
         ret["retcode"] = exitcode.value
 
     # Close handle to process

@@ -59,6 +59,7 @@ def runas_accessible_dir(user):
         ["icacls", path, "/grant", f"{grantee}:(OI)(CI)F"],
         capture_output=True,
         text=True,
+        check=False,
     )
     if proc.returncode != 0:
         try:
