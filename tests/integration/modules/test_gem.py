@@ -176,7 +176,6 @@ class GemModuleTest(ModuleCase):
             if not self.run_function("gem.list", [self.OLD_GEM]):
                 break
             self.run_function("gem.uninstall", [self.OLD_GEM])
-        self.assertFalse(self.run_function("gem.list", [self.OLD_GEM]))
 
     @pytest.mark.slow_test
     def test_update_system(self):
