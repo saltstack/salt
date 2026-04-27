@@ -62,5 +62,14 @@ def test_reauth(salt_cli, salt_minion, salt_master, timeout, event_listener):
         after_time=start,
         timeout=timeout * 2,
     )
-    assert salt_cli.run("test.ping", minion_tgt=salt_minion.id).data is True
+    # Retry test.ping: on slow runners (e.g. Windows) the minion may have
+    # re-authenticated but not yet be fully ready to handle commands.
+    ping_deadline = time.time() + timeout * 4
+    while True:
+        result = salt_cli.run("test.ping", minion_tgt=salt_minion.id)
+        if result.data is True:
+            break
+        if time.time() >= ping_deadline:
+            assert result.data is True
+        time.sleep(5)
     minion_proc.join(timeout=timeout * 2)

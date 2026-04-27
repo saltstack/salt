@@ -4,8 +4,8 @@ import pathlib
 import shutil
 import subprocess
 import sys
-from datetime import datetime, timezone
 
+import packaging.version
 import pytest
 import yaml
 from pytestskipmarkers.utils import platform
@@ -22,64 +22,18 @@ log = logging.getLogger(__name__)
 FIPS_TESTRUN = os.environ.get("FIPS_TESTRUN", "0") == "1"
 
 
-def _pkg_convert_stamp_for_event_listener(stamp):
-    """
-    Normalize Salt event ``_stamp`` strings for salt-factories ``EventListener``.
-
-    ``saltfactories.plugins.event_listener._convert_stamp`` labels naive ISO
-    timestamps as UTC. Salt often emits naive wall-clock strings in the
-    **runner's local** timezone. Then ``get_events(..., after_time=time.time())``
-    drops real events as "too old", and ``Event.expired`` prunes them early
-    (expiry is ``stamp + EventListener.timeout``). The factory then times out
-    waiting for ``salt/master/<id>/start`` even though the master logged that
-    event and forwarded it — exactly what macOS package CI showed on run
-    **24876542573** (``Failed to check events after 120s`` with that event still
-    in ``Remaining events to check``).
-    """
-    if not isinstance(stamp, str):
-        return stamp
-    try:
-        dt = datetime.fromisoformat(stamp)
-    except ValueError:
-        dt = None
-        for fmt in ("%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S"):
-            try:
-                dt = datetime.strptime(stamp, fmt)
-                break
-            except ValueError:
-                continue
-        if dt is None:
-            raise
-    if dt.tzinfo is None:
-        local_tz = datetime.now().astimezone().tzinfo
-        dt = dt.replace(tzinfo=local_tz)
-    return dt.astimezone(timezone.utc)
-
-
-if sys.platform == "darwin":
-    # Apply before any session-scoped ``salt_master`` / listener traffic.
-    import saltfactories.plugins.event_listener as _pkg_event_listener
-
-    _pkg_event_listener._convert_stamp = _pkg_convert_stamp_for_event_listener
-
-
-@pytest.fixture(scope="session", autouse=True)
-def _pkg_drop_windows_pythonpath_for_relenv_children():
-    """
-    Packaged Salt on Windows (relenv) loads ``site`` early. If ``PYTHONPATH``
-    includes the nox ``site-packages`` tree, ``saltfactories``' coverage
-    ``sitecustomize`` can run in that interpreter and abort (fatal ``ConfigError``),
-    which surfaces as ``FactoryNotStarted`` for daemons.
-    """
-    if not platform.is_windows():
-        yield
-        return
-    saved_pp = os.environ.pop("PYTHONPATH", None)
-    try:
-        yield
-    finally:
-        if saved_pp is not None:
-            os.environ["PYTHONPATH"] = saved_pp
+def pytest_configure(config):
+    if (
+        sys.platform == "darwin"
+        and os.getuid() != 0
+        and config.getoption("--pkg-system-service", default=False)
+    ):
+        # launchctl system-domain operations require root on macOS 13+.
+        # The whole pkg test suite must be run via ``sudo -E nox`` (as CI does).
+        raise pytest.UsageError(
+            "Package tests with --pkg-system-service require root on macOS. "
+            "Run the test suite via: sudo -E nox ..."
+        )
 
 
 @pytest.fixture(scope="session")
@@ -330,13 +284,6 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
         pillar_tree = "/srv/pillar"
 
     start_timeout = None
-    if platform.is_darwin():
-        # macOS ``launchd`` + pytest start-event checks hit the default 120s budget
-        # on package CI (e.g. GitHub Actions run 24876542573, ``test_salt_upgrade``).
-        start_timeout = 240
-    elif platform.is_windows():
-        # Windows SSM / scripted daemons are slower than the default factory window.
-        start_timeout = 180
     # Since the daemons are "packaged" with tiamat, the salt plugins provided
     # by salt-factories won't be discovered. Provide the required `*_dirs` on
     # the configuration so that they can still be used.
@@ -495,10 +442,6 @@ def salt_minion(salt_factories, salt_master, install_salt):
     Start up a minion
     """
     start_timeout = None
-    if platform.is_darwin():
-        start_timeout = 240
-    elif platform.is_windows():
-        start_timeout = 180
     minion_id = random_string("minion-")
     # Since the daemons are "packaged" with tiamat, the salt plugins provided
     # by salt-factories won't be discovered. Provide the required `*_dirs` on
@@ -557,9 +500,17 @@ def salt_minion(salt_factories, salt_master, install_salt):
         if minion_pki.exists():
             salt.utils.files.rm_rf(minion_pki)
 
-        # Work around missing WMIC until 3008.10 has been released.
+        # Work around missing WMIC until 3008.10 has been released. Not sure
+        # why this doesn't work anymore on the master branch when it was enough
+        # on 3006.x and 3007.x. We had to add similar logic in
+        # tests/support/pkg.py to fix the upgrade/downgrade tests on master.
         grainsdir = pathlib.Path("c:/salt/etc/grains")
         grainsdir.mkdir(exist_ok=True)
+        shutil.copy(r"salt\grains\disks.py", grainsdir)
+
+        grainsdir = pathlib.Path(
+            r"C:\Program Files\Salt Project\Salt\Lib\site-packages\salt\grains"
+        )
         shutil.copy(r"salt\grains\disks.py", grainsdir)
 
     factory.after_terminate(
@@ -591,8 +542,19 @@ def pkg_tests_account():
 
 
 @pytest.fixture(scope="module")
-def extras_pypath():
-    extras_dir = "extras-{}.{}".format(*sys.version_info)
+def extras_pypath(install_salt):
+    # Use the packaged Salt's Python version, not the test runner's
+    python_path = install_salt.binary_paths["python"]
+    if len(python_path) == 1:
+        python_bin = str(python_path[0])
+    else:
+        python_bin = os.path.join(*python_path)
+    try:
+        ret = subprocess.run([python_bin, "--version"], check=True, capture_output=True)
+        v = packaging.version.Version(ret.stdout.decode().split()[1])
+        extras_dir = f"extras-{v.major}.{v.minor}"
+    except Exception:  # pylint: disable=broad-except
+        extras_dir = "extras-{}.{}".format(*sys.version_info)
     if platform.is_windows():
         return pathlib.Path(
             os.getenv("ProgramFiles"), "Salt Project", "Salt", extras_dir
@@ -620,10 +582,6 @@ def salt_api(salt_master, install_salt, extras_pypath):
     #
     # shutil.rmtree(str(extras_pypath), ignore_errors=True)
     start_timeout = None
-    if platform.is_darwin():
-        start_timeout = 240
-    elif platform.is_windows():
-        start_timeout = 180
     factory = salt_master.salt_api_daemon()
     with factory.started(start_timeout=start_timeout):
         yield factory

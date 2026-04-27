@@ -50,6 +50,7 @@ def pkg_tests_account_environ(pkg_tests_account):
     return environ
 
 
+@pytest.mark.skip("Great module migration")
 def test_pip_install(salt_call_cli, install_salt, shell):
     """
     Test pip.install and ensure module can use installed library

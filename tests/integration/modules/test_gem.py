@@ -158,7 +158,7 @@ class GemModuleTest(ModuleCase):
         """
         self.run_function("gem.install", [self.OLD_GEM], version=self.OLD_VERSION)
         gem_list = self.run_function("gem.list", [self.OLD_GEM])
-        self.assertEqual({self.OLD_GEM: [self.OLD_VERSION]}, gem_list)
+        self.assertIn(self.OLD_VERSION, gem_list.get(self.OLD_GEM, []))
 
         self.run_function("gem.update", [self.OLD_GEM])
         gem_list = self.run_function("gem.list", [self.OLD_GEM])

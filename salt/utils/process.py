@@ -902,12 +902,11 @@ class Process(multiprocessing.Process):
         instance._finalize_methods = []
         instance.__logging_config__ = salt._logging.get_logging_options_dict()
 
-        # Always capture args/kwargs for pickling support.  On macOS/Windows
-        # (spawning platforms) this has always been needed.  On Linux, Python
-        # 3.14+ defaults to the "forkserver" multiprocessing start method which
-        # also requires pickling, so we set these unconditionally.
-        instance._args_for_getstate = copy.copy(args)
-        instance._kwargs_for_getstate = copy.copy(kwargs)
+        if salt.utils.platform.spawning_platform():
+            # On spawning platforms, subclasses should call super if they define
+            # __setstate__ and/or __getstate__
+            instance._args_for_getstate = copy.copy(args)
+            instance._kwargs_for_getstate = copy.copy(kwargs)
 
         # Because we need to enforce our after fork and finalize routines,
         # we must wrap this class run method to allow for these extra steps

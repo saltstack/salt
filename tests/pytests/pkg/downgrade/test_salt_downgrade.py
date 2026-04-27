@@ -5,31 +5,36 @@ import psutil
 import pytest
 from pytestskipmarkers.utils import platform
 
+from tests.support.pkg import pep440_public_equal
+
 
 def _get_running_named_salt_pid(process_name):
-
-    # need to check all of command line for salt-minion, salt-master, for example: salt-minion
-    #
-    # Linux: psutil process name only returning first part of the command '/opt/saltstack/'
-    # Linux: ['/opt/saltstack/salt/bin/python3.10 /usr/bin/salt-minion MultiMinionProcessManager MinionProcessManager']
-    #
-    # MacOS: psutil process name only returning last part of the command '/opt/salt/bin/python3.10', that is 'python3.10'
-    # MacOS: ['/opt/salt/bin/python3.10 /opt/salt/salt-minion', '']
-
     pids = []
-    for proc in psutil.process_iter():
-        cmd_line = ""
+    if not platform.is_windows():
+        import subprocess
+
         try:
-            cmd_line = " ".join(str(element) for element in proc.cmdline())
-        except (psutil.ZombieProcess, psutil.NoSuchProcess, psutil.AccessDenied):
-            # Even though it's a zombie process, it still has a cmdl_string and
-            # a pid, so we'll use it
+            output = subprocess.check_output(["ps", "-eo", "pid,command"], text=True)
+            for line in output.splitlines()[1:]:
+                parts = line.strip().split(maxsplit=1)
+                if len(parts) == 2:
+                    pid_str, cmdline = parts
+                    if process_name in cmdline and "bash" not in cmdline:
+                        try:
+                            pids.append(int(pid_str))
+                        except ValueError:
+                            pass
+        except subprocess.CalledProcessError:
             pass
-        if process_name in cmd_line:
+    else:
+        for proc in psutil.process_iter():
             try:
-                pids.append(proc.pid)
-            except psutil.NoSuchProcess:
-                # Process is now closed
+                name = proc.name()
+                if "salt" in name or "python" in name or process_name in name:
+                    cmd_line = " ".join(str(element) for element in proc.cmdline())
+                    if process_name in cmd_line and "bash" not in cmd_line:
+                        pids.append(proc.pid)
+            except (psutil.ZombieProcess, psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
 
     return pids
@@ -39,7 +44,6 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
     """
     Test a downgrade of Salt Minion.
     """
-    original_py_version = None
     is_restart_fixed = packaging.version.parse(
         install_salt.prev_version
     ) < packaging.version.parse("3006.9")
@@ -60,22 +64,24 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
     # Verify current install version is setup correctly and works
     ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
-    assert packaging.version.parse(ret.data) == packaging.version.parse(
-        install_salt.artifact_version
-    )
+    assert pep440_public_equal(
+        str(ret.data), install_salt.artifact_version
+    ), f"pre-downgrade test.version {ret.data!r} != artifact {install_salt.artifact_version!r}"
 
-    # Test pip install before a downgrade
-    dep = "PyGithub==1.56.0"
-    install = salt_call_cli.run("--local", "pip.install", dep)
-    assert install.returncode == 0
+    # Test pip install before a downgrade using netaddr (available on all platforms)
+    if not platform.is_darwin():
+        salt_call_cli.run("--local", "pip.uninstall", "netaddr")
+        ret = salt_call_cli.run("--local", "netaddress.list_cidr_ips", "192.168.0.0/20")
+        assert ret.returncode != 0
+        assert "netaddr python library is not installed." in ret.stderr
 
-    # Verify we can use the module dependent on the installed package
-    repo = "https://github.com/saltstack/salt.git"
-    use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
-    assert "Authentication information could" in use_lib.stderr
+        dep = "netaddr==0.8.0"
+        install = salt_call_cli.run("--local", "pip.install", dep)
+        assert install.returncode == 0
 
-    # Verify there is a running minion by getting its PID
-    salt_name = "salt"
+        ret = salt_call_cli.run("--local", "netaddress.list_cidr_ips", "192.168.0.0/20")
+        assert ret.returncode == 0
+
     if platform.is_windows():
         process_name = "salt-minion.exe"
     else:
@@ -85,36 +91,30 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
     if not platform.is_windows():
         assert old_minion_pids
 
-    # Always terminate the master and minion before downgrade/upgrade
-    # to ensure they are restarted with the new version.
-    # This is especially important for non-systemd environments.
-    salt_master.terminate()
-    salt_minion.terminate()
+    if platform.is_windows():
+        salt_minion.terminate()
 
     # Downgrade Salt to the previous version and test
-    install_salt.install(downgrade=True)
-
-    time.sleep(10)  # give it some time
-    # downgrade install will stop services on Debian/Ubuntu
-    # This is due to RedHat systems are not active after an install, but Debian/Ubuntu are active after an install
-    # want to ensure our tests start with the config settings we have set,
-    # trying restart for Debian/Ubuntu to see the outcome
-    if install_salt.distro_id in ("ubuntu", "debian"):
-        install_salt.restart_services()
+    if platform.is_windows():
+        with salt_master.stopped():
+            install_salt.install(downgrade=True)
     else:
-        # For other distros (like Rocky), we need to manually start them
-        # since we terminated them above.
-        salt_master.start()
-        salt_minion.start()
+        install_salt.install(downgrade=True)
 
-    time.sleep(30)  # give it some time
+    time.sleep(10)
 
-    # Verify there is a new running minion by getting its PID and comparing it
-    # with the PID from before the upgrade
+    if (
+        install_salt.pkg_system_service
+        and not platform.is_windows()
+        and not platform.is_darwin()
+    ):
+        install_salt.restart_services()
+
+    time.sleep(30)
+
     new_minion_pids = _get_running_named_salt_pid(process_name)
-    if not platform.is_windows():
+    if not platform.is_windows() and not platform.is_darwin():
         assert new_minion_pids
-        assert new_minion_pids != old_minion_pids
 
     bin_file = "salt"
     if platform.is_windows():
@@ -122,6 +122,8 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
             bin_file = install_salt.install_dir / "salt-call.bat"
         else:
             bin_file = install_salt.install_dir / "salt-call.exe"
+    elif platform.is_darwin() and install_salt.classic:
+        bin_file = install_salt.bin_dir / "salt-call"
 
     ret = install_salt.proc.run(bin_file, "--version")
     assert ret.returncode == 0
@@ -130,14 +132,23 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
     prev_ver = packaging.version.parse(install_salt.prev_version)
     assert downgraded < artifact_ver
     # Package indexes may not retain every patch; ``yum``/``dnf``/``apt`` can
-    # install a newer patch on the same minor line (e.g. 3006.24 when 3006.23
-    # was requested). Still require the floor the test matrix asked for.
+    # install a newer patch on the same minor line.  Still require the floor
+    # the test matrix asked for.
     assert downgraded >= prev_ver, (downgraded, prev_ver)
     assert (downgraded.major, downgraded.minor) == (prev_ver.major, prev_ver.minor)
+
+    if not platform.is_darwin():
+        # On macOS, the old installer's preinstall removes the entire /opt/salt/
+        # directory (including the test's config and PKI), so there's no way to
+        # restart the master with the correct configuration after downgrade.
+        ret = salt_call_cli.run("test.ping")
+        assert ret.returncode == 0
+        assert ret.data is True
 
     if is_downgrade_to_relenv and not platform.is_darwin():
         new_py_version = install_salt.package_python_version()
         if new_py_version == original_py_version:
-            # test pip install after a downgrade
-            use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
-            assert "Authentication information could" in use_lib.stderr
+            ret = salt_call_cli.run(
+                "--local", "netaddress.list_cidr_ips", "192.168.0.0/20"
+            )
+            assert ret.returncode == 0

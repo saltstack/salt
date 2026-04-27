@@ -237,12 +237,20 @@ def is_aarch64():
 
 def spawning_platform():
     """
-    Returns True if multiprocessing.get_start_method(allow_none=False) returns "spawn"
+    Returns True if the multiprocessing start method requires pickling to transfer
+    process state to the child.  This is the case for both "spawn" and "forkserver".
 
-    This is the default for Windows Python >= 3.4 and macOS on Python >= 3.8.
-    Salt, however, will force macOS to spawning by default on all python versions
+    "spawn" is the default on Windows (Python >= 3.4) and macOS (Python >= 3.8).
+    Salt forces macOS to spawning by default on all Python versions.
+
+    "forkserver" became the Linux default in Python 3.14 (via PEP 741).  Like
+    "spawn", it transfers the Process object to the child via pickle rather than
+    inheriting it through a plain fork of the parent process.  Salt must therefore
+    treat it identically: capture *args/**kwargs in __new__ so that __getstate__
+    can reconstruct the object on the other side, and skip parent-inherited
+    logging teardown since the child starts with a clean file-descriptor table.
     """
-    return multiprocessing.get_start_method(allow_none=False) == "spawn"
+    return multiprocessing.get_start_method(allow_none=False) in ("spawn", "forkserver")
 
 
 def get_machine_identifier():

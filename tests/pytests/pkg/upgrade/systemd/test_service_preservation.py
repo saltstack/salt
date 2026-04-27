@@ -87,7 +87,7 @@ def test_salt_systemd_masked_preservation(
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
     # pylint: disable=pointless-statement
     try:
-        install_salt_systemd.install(upgrade=True, stop_services=False)
+        install_salt_systemd.install(upgrade=True)
         time.sleep(60)  # give it some time
 
         # test for masked systemd state

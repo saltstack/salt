@@ -7,6 +7,8 @@ import psutil
 import pytest
 from pytestskipmarkers.utils import platform
 
+from tests.support.pkg import pep440_public_equal
+
 log = logging.getLogger(__name__)
 
 
@@ -46,7 +48,7 @@ def salt_test_upgrade(
     ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
     start_version = packaging.version.parse(ret.data)
-    assert start_version <= packaging.version.parse(install_salt.artifact_version)
+    assert start_version < packaging.version.parse(install_salt.artifact_version)
 
     # Verify previous install version salt-master is setup correctly and works
     bin_file = "salt"
@@ -56,7 +58,7 @@ def salt_test_upgrade(
     assert ret.returncode == 0
     assert packaging.version.parse(
         ret.stdout.strip().split()[1]
-    ) <= packaging.version.parse(install_salt.artifact_version)
+    ) < packaging.version.parse(install_salt.artifact_version)
 
     # Verify there is a running minion and master by getting their PIDs
     if platform.is_windows():
@@ -72,24 +74,20 @@ def salt_test_upgrade(
         assert old_minion_pids
         assert old_master_pids
 
-    # Always terminate the master and minion before downgrade/upgrade
-    # to ensure they are restarted with the new version.
-    # This is especially important for non-systemd environments.
-    salt_master.terminate()
-    salt_minion.terminate()
+    if platform.is_windows():
+        # Terminate minion so it doesn't lock files during the upgrade.
+        salt_minion.terminate()
 
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
-    install_salt.install(upgrade=True)
+    if sys.platform == "win32" and salt_master:
+        with salt_master.stopped():
+            install_salt.install(upgrade=True)
+    else:
+        install_salt.install(upgrade=True)
 
     if platform.is_windows():
         # Give the system a moment to fully release all file locks after the installer finishes
         time.sleep(10)
-    elif install_salt.distro_id not in ("ubuntu", "debian"):
-        # For other distros (like Rocky), we need to manually start them
-        # since we terminated them above.
-        start_timeout = 240 if platform.is_darwin() else None
-        salt_master.start(start_timeout=start_timeout)
-        salt_minion.start(start_timeout=start_timeout)
 
     start = time.monotonic()
     while True:
@@ -102,22 +100,20 @@ def salt_test_upgrade(
     ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
 
-    installed_minion_version = packaging.version.parse(ret.data)
-    assert installed_minion_version == packaging.version.parse(
-        install_salt.artifact_version
-    )
+    assert pep440_public_equal(
+        str(ret.data), install_salt.artifact_version
+    ), f"minion test.version {ret.data!r} vs artifact {install_salt.artifact_version!r}"
 
     ret = install_salt.proc.run(bin_file, "--version")
     assert ret.returncode == 0
-    assert packaging.version.parse(
-        ret.stdout.strip().split()[1]
-    ) == packaging.version.parse(install_salt.artifact_version)
+    assert pep440_public_equal(
+        ret.stdout.strip().split()[1], install_salt.artifact_version
+    ), f"salt --version {ret.stdout.strip().split()[1]!r} vs artifact {install_salt.artifact_version!r}"
 
     new_minion_pids = _get_running_named_salt_pid(process_minion_name)
     new_master_pids = _get_running_named_salt_pid(process_master_name)
 
     if sys.platform == "linux" and not new_minion_pids:
-        # services are not always restarted after upgrade
         for service in ("salt-minion", "salt-master"):
             install_salt.proc.run("systemctl", "restart", service)
         time.sleep(5)
@@ -134,18 +130,17 @@ def salt_test_upgrade(
 
 
 def _get_running_named_salt_pid(process_name):
-
     pids = []
     if not platform.is_windows():
-        try:
-            import subprocess
+        import subprocess
 
+        try:
             output = subprocess.check_output(["ps", "-eo", "pid,command"], text=True)
             for line in output.splitlines()[1:]:
                 parts = line.strip().split(maxsplit=1)
                 if len(parts) == 2:
                     pid_str, cmdline = parts
-                    if process_name in cmdline:
+                    if process_name in cmdline and "bash" not in cmdline:
                         try:
                             pids.append(int(pid_str))
                         except ValueError:
@@ -158,7 +153,7 @@ def _get_running_named_salt_pid(process_name):
                 name = proc.name()
                 if "salt" in name or "python" in name or process_name in name:
                     cmdl_strg = " ".join(str(element) for element in proc.cmdline())
-                    if process_name in cmdl_strg:
+                    if process_name in cmdl_strg and "bash" not in cmdl_strg:
                         pids.append(proc.pid)
             except (psutil.ZombieProcess, psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
@@ -213,19 +208,19 @@ def test_salt_upgrade(
 
     original_py_version = install_salt.package_python_version()
 
-    # Test pip install before an upgrade
-    try:
-        dep = "PyGithub==1.56.0"
+    # Test pip install before an upgrade using netaddr (available on all platforms)
+    if not platform.is_darwin():
+        salt_call_cli.run("--local", "pip.uninstall", "netaddr")
+        ret = salt_call_cli.run("--local", "netaddress.list_cidr_ips", "192.168.0.0/20")
+        assert ret.returncode != 0
+        assert "netaddr python library is not installed." in ret.stderr
+
+        dep = "netaddr==0.8.0"
         install = salt_call_cli.run("--local", "pip.install", dep)
         assert install.returncode == 0
 
-        # Verify we can use the module dependent on the installed package
-        repo = "https://github.com/saltstack/salt.git"
-        use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
-        assert "Authentication information could" in use_lib.stderr
-    except AssertionError as e:
-        # Skip if pip operations fail due to environment issues (permissions, relenv, etc.)
-        pytest.skip(f"Pip installation test failed: {e}")
+        ret = salt_call_cli.run("--local", "netaddress.list_cidr_ips", "192.168.0.0/20")
+        assert ret.returncode == 0
 
     # perform Salt package upgrade test
     salt_test_upgrade(salt_call_cli, install_salt, salt_master, salt_minion)
@@ -244,11 +239,6 @@ def test_salt_upgrade(
         )
 
     new_py_version = install_salt.package_python_version()
-    if new_py_version == original_py_version:
-        try:
-            # test pip install after an upgrade
-            use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
-            assert "Authentication information could" in use_lib.stderr
-        except AssertionError as e:
-            # Skip if pip operations fail due to environment issues
-            pytest.skip(f"Post-upgrade pip test failed: {e}")
+    if new_py_version == original_py_version and not platform.is_darwin():
+        ret = salt_call_cli.run("--local", "netaddress.list_cidr_ips", "192.168.0.0/20")
+        assert ret.returncode == 0

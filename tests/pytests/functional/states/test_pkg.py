@@ -119,7 +119,9 @@ def PKG_32_TARGETS(grains):
             else:
                 _PKG_32_TARGETS.append("xz-devel.i686")
     elif grains["os"] == "Windows":
-        _PKG_32_TARGETS = ["npp", "putty"]
+        # putty is MSI-based and uninstalls synchronously; npp uses NSIS which
+        # spawns an async child process making removal verification unreliable.
+        _PKG_32_TARGETS = ["putty", "npp"]
     if not _PKG_32_TARGETS:
         pytest.skip("No 32 bit packages have been specified for testing")
     return _PKG_32_TARGETS

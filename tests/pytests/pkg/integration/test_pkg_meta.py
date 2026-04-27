@@ -1,3 +1,5 @@
+import pathlib
+import re
 import subprocess
 
 import packaging
@@ -41,7 +43,52 @@ def artifact_version(install_salt):
 
 
 @pytest.fixture
-def package(artifact_version, pkg_arch):
+def rpm_pkg_version_release(package):
+    """
+    ``(version, release)`` from the RPM file itself.
+
+    For GA packages ``%{VERSION}`` matches the on-disk filename (no ``~``).
+    Pre-release RPMs use a tilde in ``%{VERSION}`` (e.g. ``3008.0~rc1+7...``)
+    while :py:attr:`SaltPkgInstall.artifact_version` normalizes tildes away.
+    """
+    ver = (
+        subprocess.run(
+            ["rpm", "-qp", "--qf", "%{VERSION}\n", str(package)],
+            capture_output=True,
+            check=True,
+        )
+        .stdout.decode()
+        .strip()
+    )
+    rel = (
+        subprocess.run(
+            ["rpm", "-qp", "--qf", "%{RELEASE}\n", str(package)],
+            capture_output=True,
+            check=True,
+        )
+        .stdout.decode()
+        .strip()
+    )
+    return ver, rel
+
+
+@pytest.fixture
+def package(install_salt, artifact_version, pkg_arch):
+    """
+    Path to the main ``salt`` metapackage RPM.
+
+    RPM file names use ``~`` before pre-release segments (e.g. ``3008.0~rc1``)
+    while ``artifact_version`` strips that tilde when parsing from artifacts;
+    match the real file from ``install_salt.pkgs`` instead of string-building.
+    """
+    rpm_re = re.compile(
+        rf"^salt-\d.*-0\.{re.escape(pkg_arch)}\.rpm$",
+        re.IGNORECASE,
+    )
+    for pkg_path in install_salt.pkgs:
+        path = pathlib.Path(pkg_path)
+        if rpm_re.match(path.name):
+            return path
     name = f"salt-{artifact_version}-0.{pkg_arch}.rpm"
     return ARTIFACTS_DIR / name
 
@@ -50,7 +97,7 @@ def package(artifact_version, pkg_arch):
 def test_provides(
     install_salt,
     package,
-    artifact_version,
+    rpm_pkg_version_release,
     provides_arch,
     rpm_version,
     required_version,
@@ -69,11 +116,13 @@ def test_provides(
         pytest.skip(f"Test requires rpm version {required_version}")
 
     assert package.exists()
+    rpm_ver, rpm_rel = rpm_pkg_version_release
+    vr = f"{rpm_ver}-{rpm_rel}"
     valid_provides = [
-        f"config: config(salt) = {artifact_version}-0",
-        f"manual: salt = {artifact_version}",
-        f"manual: salt = {artifact_version}-0",
-        f"manual: salt({provides_arch}) = {artifact_version}-0",
+        f"config: config(salt) = {vr}",
+        f"manual: salt = {rpm_ver}",
+        f"manual: salt = {vr}",
+        f"manual: salt({provides_arch}) = {vr}",
     ]
     proc = subprocess.run(
         ["rpm", "-q", "-v", "-provides", package], capture_output=True, check=True
@@ -88,7 +137,7 @@ def test_provides(
 
 @pytest.mark.skipif(not salt.utils.path.which("rpm"), reason="rpm is not installed")
 def test_requires(
-    install_salt, package, artifact_version, rpm_version, required_version
+    install_salt, package, rpm_pkg_version_release, rpm_version, required_version
 ):
     if install_salt.distro_id not in (
         "almalinux",
@@ -103,6 +152,8 @@ def test_requires(
     if rpm_version < required_version:
         pytest.skip(f"Test requires rpm version {required_version}")
     assert package.exists()
+    rpm_ver, rpm_rel = rpm_pkg_version_release
+    vr = f"{rpm_ver}-{rpm_rel}"
     valid_requires = [
         "manual: /bin/sh",
         "pre,interp: /bin/sh",
@@ -111,7 +162,7 @@ def test_requires(
         "manual: /usr/sbin/groupadd",
         "manual: /usr/sbin/useradd",
         "manual: /usr/sbin/usermod",
-        f"config: config(salt) = {artifact_version}-0",
+        f"config: config(salt) = {vr}",
         "manual: dmidecode",
         "manual: openssl",
         "manual: pciutils",
@@ -122,8 +173,18 @@ def test_requires(
         "rpmlib: rpmlib(PayloadFilesHavePrefix) <= 4.0-1",
         "manual: which",
     ]
-    proc = subprocess.run(
-        ["rpm", "-q", "-v", "-requires", package], capture_output=True, check=True
+    requires_lines = proc = (
+        subprocess.run(
+            ["rpm", "-q", "-v", "-requires", package], capture_output=True, check=True
+        )
+        .stdout.decode()
+        .splitlines()
     )
-    for line in proc.stdout.decode().splitlines():
+    # ``rpmlib(TildeInVersions)`` appears only for some packages (e.g. ``~`` in
+    # NEVRA) and the bound varies by ``rpm`` version; accept the exact line from
+    # this RPM so GA packages (no such line) and future ``rpm`` strings stay valid.
+    for line in requires_lines:
+        if line.startswith("rpmlib: rpmlib(TildeInVersions)"):
+            valid_requires.append(line)
+    for line in requires_lines:
         assert line in valid_requires
