@@ -1097,6 +1097,14 @@ class SaltPkgInstall:
                     pkgs_to_install.append(f"{_}-{rpm_prev}")
                 ret = self.proc.run(self.pkg_mngr, "clean", "all")
                 self._check_retcode(ret)
+                if major_ver >= 3008:
+                    ret = self.proc.run(
+                        self.pkg_mngr,
+                        "config-manager",
+                        "--enable",
+                        "salt-repo-latest",
+                    )
+                    self._check_retcode(ret)
             else:
                 if "3007" in self.prev_version:
                     ret = self.proc.run(
@@ -1104,6 +1112,17 @@ class SaltPkgInstall:
                         "config-manager",
                         "--enable",
                         "salt-repo-3007-sts",
+                    )
+                    self._check_retcode(ret)
+                elif major_ver >= 3008:
+                    # Default ``salt.repo`` enables v3006 LTS only; that stanza excludes
+                    # ``*3008*``. Published 3008.x RPMs (including pre-releases) are only
+                    # visible when ``salt-repo-latest`` is enabled.
+                    ret = self.proc.run(
+                        self.pkg_mngr,
+                        "config-manager",
+                        "--enable",
+                        "salt-repo-latest",
                     )
                     self._check_retcode(ret)
                 else:
