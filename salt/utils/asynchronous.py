@@ -223,7 +223,7 @@ class SyncWrapper:
     def _wrap(self, key):
         def wrap(*args, **kwargs):
             try:
-                asyncio.get_running_loop()
+                asyncio_loop = asyncio.get_running_loop()
             except RuntimeError:
                 # asyncio.get_running_loop() raises RuntimeError
                 # if there is no running loop, so we can run the method

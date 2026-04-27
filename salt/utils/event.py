@@ -375,16 +375,17 @@ class SaltEvent:
                     exc,
                     exc_info_on_loglevel=logging.DEBUG,
                 )
-        else:
-            if self.subscriber is None:
-                self.subscriber = salt.transport.ipc_publish_client(
-                    self.node, self.opts, io_loop=self.io_loop
-                )
-                self._connect_task = self.io_loop.create_task(self.subscriber.connect())
+        if self.subscriber is None:
+            self.subscriber = salt.transport.ipc_publish_client(
+                self.node,
+                self.opts,
+                io_loop=self.io_loop,
+            )
+            self._connect_task = self.io_loop.create_task(self.subscriber.connect())
 
-            # For the asynchronous case, the connect will be defered to when
-            # set_event_handler() is invoked.
-            self.cpub = True
+        # For the asynchronous case, the connect will be defered to when
+        # set_event_handler() is invoked.
+        self.cpub = True
         return self.cpub
 
     def close_pub(self):

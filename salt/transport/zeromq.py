@@ -464,6 +464,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         if self.opts.get("ipv6") is True and hasattr(zmq, "IPV4ONLY"):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self.clients.setsockopt(zmq.IPV4ONLY, 0)
+
         self.clients.setsockopt(zmq.BACKLOG, self.opts.get("zmq_backlog", 1000))
         self._start_zmq_monitor()
         self.workers = context.socket(zmq.DEALER)
@@ -1423,7 +1424,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             # http://api.zeromq.org/4-1:zmq-setsockopt
             pub_sock.setsockopt(zmq.SNDHWM, self.opts.get("pub_hwm", 1000))
             pub_sock.setsockopt(zmq.RCVHWM, self.opts.get("pub_hwm", 1000))
-        if self.opts["ipv6"] is True and hasattr(zmq, "IPV4ONLY"):
+        if self.opts.get("ipv6") is True and hasattr(zmq, "IPV4ONLY"):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             pub_sock.setsockopt(zmq.IPV4ONLY, 0)
 

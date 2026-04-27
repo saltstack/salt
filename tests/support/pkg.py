@@ -40,6 +40,125 @@ ARTIFACTS_DIR = CODE_DIR / "artifacts" / "pkg"
 log = logging.getLogger(__name__)
 
 
+def _macos_salt_exe_command_v(path_prefix: str):
+    """
+    Resolve ``salt`` using only *path_prefix* in ``PATH`` (bash ``command -v``).
+
+    ``shutil.which`` can still pick a stale or unrelated ``salt`` when the
+    process ``PATH`` is polluted; an isolated lookup matches CI runners more
+    reliably after ``installer`` drops files under ``/opt``.
+    """
+    try:
+        env = os.environ.copy()
+        env["PATH"] = path_prefix
+        proc = subprocess.run(
+            ["/bin/bash", "-lc", "command -v salt"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=20,
+            env=env,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0:
+        return None
+    lines = [ln.strip() for ln in proc.stdout.splitlines() if ln.strip()]
+    if not lines:
+        return None
+    return lines[0]
+
+
+def _macos_prefix_from_salt_exe(salt_exe: str):
+    if not salt_exe:
+        return None
+    try:
+        wp = pathlib.Path(salt_exe).resolve()
+    except OSError:
+        return None
+    if "saltstack" not in str(wp) and "/opt/salt" not in str(wp):
+        return None
+    if wp.parent.name == "bin":
+        return wp.parent.parent
+    return wp.parent
+
+
+def _macos_salt_onedir_prefix():
+    """
+    Return the on-disk Salt onedir prefix on macOS, if installed.
+
+    Newer macOS packages install under ``/opt/saltstack/salt`` (same layout as
+    Linux onedir). Older releases used ``/opt/salt``. Use ``exists()`` so
+    symlinks and executable wrappers are detected the same way as in CI.
+    If layout probes miss (e.g. before ``PATH`` is updated), fall back to
+    ``shutil.which`` with common install locations prepended.
+    """
+    for candidate in (
+        pathlib.Path("/opt/saltstack/salt"),
+        pathlib.Path("/opt/salt"),
+    ):
+        if (candidate / "bin" / "salt").exists():
+            return candidate
+        if (candidate / "salt").exists():
+            return candidate
+    mac_bins = "/opt/saltstack/salt/bin:/opt/salt/bin:/opt/saltstack/salt:/opt/salt"
+    path_for_which = mac_bins + os.pathsep + os.environ.get("PATH", "")
+    prefix = _macos_prefix_from_salt_exe(shutil.which("salt", path=path_for_which))
+    if prefix is not None:
+        return prefix
+    return _macos_prefix_from_salt_exe(_macos_salt_exe_command_v(mac_bins))
+
+
+def pep440_public_equal(reported: str, expected: str) -> bool:
+    """
+    True when *reported* and *expected* match on release/pre/post/dev, ignoring
+    local when one side omits it (``salt --version`` often drops ``+g``).
+    """
+    try:
+        pr = packaging.version.parse(reported)
+        pe = packaging.version.parse(expected)
+    except packaging.version.InvalidVersion:
+        return reported == expected
+
+    def _pub(v):
+        return (v.release, v.pre, v.post, v.dev)
+
+    return _pub(pr) == _pub(pe)
+
+
+def pep440_version_to_rpm_nevra_version(version: str) -> str:
+    """
+    Map a PEP440-style version string to the RPM ``Version`` field spelling.
+
+    Published RPMs use a tilde before pre-release labels (``3008.0~rc1``) while
+    CI and pytest often pass ``3008.0rc1``. :command:`yum` / :command:`tdnf`
+    then cannot resolve ``salt-3008.0rc1``.
+
+    If *version* already contains ``~`` (RPM-shaped), it is returned unchanged.
+    Non-pre-release versions are returned unchanged.
+    """
+    if not version or "~" in version:
+        return version
+    try:
+        parsed = packaging.version.parse(version)
+    except packaging.version.InvalidVersion:
+        return version
+    if parsed.pre is None and parsed.dev is None:
+        return version
+    release = ".".join(str(p) for p in parsed.release)
+    out = release
+    if parsed.pre is not None:
+        pre_l, pre_n = parsed.pre
+        out = f"{out}~{pre_l}{pre_n}"
+    else:
+        out = f"{out}~dev{parsed.dev}"
+    if parsed.post is not None:
+        out = f"{out}.post{parsed.post}"
+    if parsed.local is not None:
+        out = f"{out}+{parsed.local}"
+    return out
+
+
 import pytestshellutils.shell
 import pytestshellutils.utils.processes
 
@@ -221,7 +340,8 @@ class SaltPkgInstall:
                 os.getenv("ProgramFiles"), "Salt Project", "Salt"
             ).resolve()
         elif platform.is_darwin():
-            install_dir = pathlib.Path("/opt", "salt")
+            found = _macos_salt_onedir_prefix()
+            install_dir = found if found is not None else pathlib.Path("/opt", "salt")
         else:
             install_dir = pathlib.Path("/opt", "saltstack", "salt")
         return install_dir
@@ -250,9 +370,14 @@ class SaltPkgInstall:
                     "prev_version must be provided for upgrade tests. "
                     "Use --prev-version option to specify the previous version."
                 )
-            version = self.prev_version
-            parsed = packaging.version.parse(version)
-            version = f"{parsed.major}.{parsed.minor}"
+            if self.use_prev_version:
+                # Post-downgrade integration: ``salt --version`` reports the full
+                # previous release (e.g. 3008.0rc1), not ``major.minor`` only.
+                version = self.prev_version
+            else:
+                version = self.prev_version
+                parsed = packaging.version.parse(version)
+                version = f"{parsed.major}.{parsed.minor}"
         # ensure services stopped on Debian/Ubuntu (minic install for RedHat - non-starting)
         if self.distro_id in ("ubuntu", "debian"):
             self.stop_services()
@@ -271,7 +396,7 @@ class SaltPkgInstall:
                 artifact.name,
             )
             if version:
-                version = version.groups()[0].replace("_", "-")
+                version = version.groups()[0].replace("_", "-").replace("~", "")
                 version = version.split("-")[0]
                 break
         if not version:
@@ -343,7 +468,7 @@ class SaltPkgInstall:
                 elif platform.is_darwin():
                     self.root = pathlib.Path("/opt")
                     if self.file_ext == "pkg":
-                        self.bin_dir = self.root / "salt" / "bin"
+                        self.bin_dir = self.install_dir / "bin"
                         self.run_root = self.bin_dir / "run"
                     else:
                         log.error("Unexpected file extension: %s", self.file_ext)
@@ -460,6 +585,108 @@ class SaltPkgInstall:
         log.debug("binary_paths: %s", self.binary_paths)
         log.debug("install_dir: %s", self.install_dir)
 
+    def _refresh_macos_binary_paths(self):
+        """
+        Re-resolve ``install_dir`` / ``binary_paths`` after a ``.pkg`` install.
+
+        ``__attrs_post_init__`` runs before installers populate ``/opt/...``,
+        so upgrade/downgrade sessions need a second pass once files exist.
+        """
+        if not platform.is_darwin():
+            return
+        # Prepends so :func:`shutil.which` inside prefix detection can see
+        # ``/opt`` layouts before a stale default ``/opt/salt`` mis-seeds
+        # ``$PATH`` from :meth:`update_process_path`.
+        opt_first = [
+            p
+            for p in (
+                "/opt/saltstack/salt/bin",
+                "/opt/saltstack/salt",
+                "/opt/salt/bin",
+                "/opt/salt",
+            )
+            if pathlib.Path(p).exists()
+        ]
+        _old = os.environ.get("PATH", "")
+        if opt_first:
+            os.environ["PATH"] = os.pathsep.join(opt_first) + os.pathsep + _old
+        try:
+            found = _macos_salt_onedir_prefix()
+        finally:
+            os.environ["PATH"] = _old
+        if found is None:
+            return
+        self.install_dir = found
+        self.bin_dir = found / "bin"
+        self.run_root = self.bin_dir / "run"
+        python_bin = self.install_dir / "bin" / "python3"
+        if os.path.exists(self.install_dir / "bin" / "salt"):
+            install_dir = self.install_dir / "bin"
+        else:
+            install_dir = self.install_dir
+        if self.relenv:
+            self.binary_paths = {
+                "salt": [install_dir / "salt"],
+                "api": [install_dir / "salt-api"],
+                "call": [install_dir / "salt-call"],
+                "cloud": [install_dir / "salt-cloud"],
+                "cp": [install_dir / "salt-cp"],
+                "key": [install_dir / "salt-key"],
+                "master": [install_dir / "salt-master"],
+                "minion": [install_dir / "salt-minion"],
+                "proxy": [install_dir / "salt-proxy"],
+                "run": [install_dir / "salt-run"],
+                "ssh": [install_dir / "salt-ssh"],
+                "syndic": [install_dir / "salt-syndic"],
+                "spm": [install_dir / "spm"],
+                "pip": [install_dir / "salt-pip"],
+                "python": [python_bin],
+            }
+        else:
+            self.binary_paths = {
+                "salt": [shutil.which("salt")],
+                "api": [shutil.which("salt-api")],
+                "call": [shutil.which("salt-call")],
+                "cloud": [shutil.which("salt-cloud")],
+                "cp": [shutil.which("salt-cp")],
+                "key": [shutil.which("salt-key")],
+                "master": [shutil.which("salt-master")],
+                "minion": [shutil.which("salt-minion")],
+                "proxy": [shutil.which("salt-proxy")],
+                "run": [shutil.which("salt-run")],
+                "ssh": [shutil.which("salt-ssh")],
+                "syndic": [shutil.which("salt-syndic")],
+                "spm": [shutil.which("spm")],
+                "python": [str(pathlib.Path("/usr/bin/python3"))],
+            }
+            if self.classic:
+                self.binary_paths = {
+                    "salt": [self.bin_dir / "salt"],
+                    "api": [self.bin_dir / "salt-api"],
+                    "call": [self.bin_dir / "salt-call"],
+                    "cloud": [self.bin_dir / "salt-cloud"],
+                    "cp": [self.bin_dir / "salt-cp"],
+                    "key": [self.bin_dir / "salt-key"],
+                    "master": [self.bin_dir / "salt-master"],
+                    "minion": [self.bin_dir / "salt-minion"],
+                    "proxy": [self.bin_dir / "salt-proxy"],
+                    "run": [self.bin_dir / "salt-run"],
+                    "ssh": [self.bin_dir / "salt-ssh"],
+                    "syndic": [self.bin_dir / "salt-syndic"],
+                    "spm": [self.bin_dir / "spm"],
+                    "python": [str(self.bin_dir / "python3")],
+                    "pip": [str(self.bin_dir / "pip3")],
+                }
+            else:
+                self.binary_paths["python"] = [shutil.which("salt"), "shell"]
+                self.binary_paths["pip"] = [self.run_root, "pip"]
+                self.binary_paths["spm"] = [shutil.which("salt-spm")]
+        log.debug(
+            "Refreshed macOS binary_paths (install_dir=%s): %s",
+            self.install_dir,
+            self.binary_paths,
+        )
+
     @staticmethod
     def salt_factories_root_dir(system_service: bool = False) -> pathlib.Path:
         if system_service is False:
@@ -467,7 +694,8 @@ class SaltPkgInstall:
         if platform.is_windows():
             return pathlib.Path("C:\\salt")
         if platform.is_darwin():
-            return pathlib.Path("/opt/salt")
+            found = _macos_salt_onedir_prefix()
+            return found if found is not None else pathlib.Path("/opt/salt")
         return pathlib.Path("/")
 
     def _check_retcode(self, ret):
@@ -591,6 +819,8 @@ class SaltPkgInstall:
                 )
             except subprocess.TimeoutExpired:
                 log.warning("launchctl command timed out")
+
+            self._refresh_macos_binary_paths()
 
         elif upgrade:
             env = os.environ.copy()
@@ -757,8 +987,21 @@ class SaltPkgInstall:
 
     def install(self, upgrade=False, downgrade=False, stop_services=True):
         self._install_pkgs(upgrade=upgrade, downgrade=downgrade)
+        if platform.is_darwin():
+            self._refresh_macos_binary_paths()
+            self.update_process_path()
         if self.distro_id in ("ubuntu", "debian") and stop_services:
             self.stop_services()
+        elif (
+            upgrade
+            and self.pkg_system_service
+            and not platform.is_windows()
+            and not platform.is_darwin()
+        ):
+            # RPM/DEB upgrade replaces on disk while systemd units can keep old
+            # processes until restart; ``salt-call --local test.version`` then
+            # still reports the previous release (see upgrade systemd teardown).
+            self.restart_services()
 
     def stop_services(self):
         """
@@ -847,10 +1090,11 @@ class SaltPkgInstall:
             pkgs_to_install = self.salt_pkgs.copy()
 
             if self.distro_name == "photon":
+                rpm_prev = pep440_version_to_rpm_nevra_version(self.prev_version)
                 orig_pkgs = pkgs_to_install[:]
                 pkgs_to_install = []
                 for _ in orig_pkgs:
-                    pkgs_to_install.append(f"{_}-{self.prev_version}")
+                    pkgs_to_install.append(f"{_}-{rpm_prev}")
                 ret = self.proc.run(self.pkg_mngr, "clean", "all")
                 self._check_retcode(ret)
             else:
@@ -872,6 +1116,16 @@ class SaltPkgInstall:
                     self._check_retcode(ret)
                 ret = self.proc.run(self.pkg_mngr, "clean", "expire-cache")
                 self._check_retcode(ret)
+                # Unversioned ``yum downgrade`` only moves one step among *all* repo
+                # versions, so a downgrade from a 3008 pre-release artifact can jump to
+                # 3006.x if the exact ``--prev-version`` build is not selected. Pin the
+                # RPM set like Photon already does (release suffix is distro-specific).
+                if downgrade:
+                    rpm_prev = pep440_version_to_rpm_nevra_version(self.prev_version)
+                    orig_pkgs = pkgs_to_install[:]
+                    if self.dbg_pkg:
+                        orig_pkgs = [p for p in orig_pkgs if self.dbg_pkg not in p]
+                    pkgs_to_install = [f"{pkg}-{rpm_prev}-*" for pkg in orig_pkgs]
 
             if self.distro_version == "8" and self.classic:
                 # centosstream 8 doesn't downgrade properly using the downgrade command for some reason
@@ -1030,7 +1284,7 @@ class SaltPkgInstall:
                 with salt.utils.files.fopen(batch_file, "w") as fp:
                     fp.write(batch_content)
                 # Now run the batch file
-                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
+                ret = self.proc.run("cmd.exe", "/c", str(batch_file), _timeout=900)
                 self._check_retcode(ret)
 
             log.debug("Removing installed salt-minion service")
@@ -1065,6 +1319,7 @@ class SaltPkgInstall:
 
             ret = self.proc.run("installer", "-pkg", mac_pkg_path, "-target", "/")
             self._check_retcode(ret)
+            self._refresh_macos_binary_paths()
 
     def uninstall(self):
         pkg = self.pkgs[0]
@@ -1228,6 +1483,8 @@ class SaltPkgInstall:
 
     def __enter__(self):
         self.update_process_path()
+        if platform.is_darwin():
+            self._refresh_macos_binary_paths()
 
         if self.no_install:
             return self

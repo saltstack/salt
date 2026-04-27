@@ -1442,6 +1442,42 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                 pass
         super()._handle_signals(signum, sigframe)
 
+    def _post_fork_init(self):
+        """
+        Do anything that needs to be done after the process has been forked
+        """
+        # if we inherit req_server level without our own, reset it
+        if not salt.utils.platform.is_windows():
+            enforce_mworker_niceness = True
+            if self.opts["req_server_niceness"]:
+                if salt.utils.user.get_user() == "root":
+                    log.info(
+                        "%s decrementing inherited ReqServer niceness to 0", self.name
+                    )
+                    os.nice(self.opts["req_server_niceness"] * -1)
+                else:
+                    log.debug(
+                        "%s not root, cannot decrement inherited ReqServer niceness",
+                        self.name,
+                    )
+                    enforce_mworker_niceness = False
+
+            if enforce_mworker_niceness and self.opts["mworker_niceness"]:
+                log.info(
+                    "setting MWorker %s niceness to %d",
+                    self.name,
+                    self.opts["mworker_niceness"],
+                )
+                os.nice(self.opts["mworker_niceness"])
+
+        self.__bind()
+
+    def run(self):
+        """
+        Start a Master Worker
+        """
+        self._post_fork_init()
+
     def __bind(self):
         """
         Bind to the local port.
@@ -1624,37 +1660,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         if self.opts["master_stats"]:
             self._post_stats(start, cmd)
         return ret
-
-    def run(self):
-        """
-        Start a Master Worker
-        """
-        # if we inherit req_server level without our own, reset it
-        if not salt.utils.platform.is_windows():
-            enforce_mworker_niceness = True
-            if self.opts["req_server_niceness"]:
-                if salt.utils.user.get_user() == "root":
-                    log.info(
-                        "%s decrementing inherited ReqServer niceness to 0", self.name
-                    )
-                    os.nice(-1 * self.opts["req_server_niceness"])
-                else:
-                    log.error(
-                        "%s unable to decrement niceness for MWorker, not running as"
-                        " root",
-                        self.name,
-                    )
-                    enforce_mworker_niceness = False
-
-            # else set what we're explicitly asked for
-            if enforce_mworker_niceness and self.opts["mworker_niceness"]:
-                log.info(
-                    "setting %s niceness to %i",
-                    self.name,
-                    self.opts["mworker_niceness"],
-                )
-                os.nice(self.opts["mworker_niceness"])
-        self.__bind()
 
 
 class TransportMethods:

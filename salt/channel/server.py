@@ -1847,6 +1847,8 @@ class MasterPubServerChannel:
             )
             os.nice(self.opts["event_publisher_niceness"])
 
+        import salt.transport.tcp
+
         secrets = kwargs.get("secrets", None)
         if secrets is not None:
             salt.master.SMaster.secrets = secrets
