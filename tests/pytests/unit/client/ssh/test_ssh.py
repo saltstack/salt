@@ -108,7 +108,7 @@ def test_expand_target_ip_address(opts, roster):
         MagicMock(return_value=salt.utils.yaml.safe_load(roster)),
     ):
         client._expand_target()
-    assert opts["tgt"] == user + host
+    assert opts["tgt"] == host
 
 
 def test_expand_target_no_host(opts, tmp_path):
@@ -131,7 +131,7 @@ def test_expand_target_no_host(opts, tmp_path):
     assert opts["tgt"] == user + host
     with patch("salt.roster.get_roster_file", MagicMock(return_value=roster_file)):
         client._expand_target()
-    assert opts["tgt"] == user + host
+    assert opts["tgt"] == host
 
 
 def test_expand_target_dns(opts, roster):
@@ -152,7 +152,7 @@ def test_expand_target_dns(opts, roster):
         MagicMock(return_value=salt.utils.yaml.safe_load(roster)),
     ):
         client._expand_target()
-    assert opts["tgt"] == user + host
+    assert opts["tgt"] == host
 
 
 def test_expand_target_no_user(opts, roster):
@@ -330,42 +330,9 @@ def test_key_deploy_no_permission_denied(opts):
     assert ret == handle_ssh_ret[0][0]
 
 
-@pytest.mark.parametrize("retcode,expected", [("null", None), ('"foo"', "foo")])
-def test_handle_routine_thread_remote_invalid_retcode(
-    opts, target, retcode, expected, caplog
-):
+def test_handle_routine_single_run_invalid_retcode(opts, target, caplog):
     """
-    Ensure that if a remote returns an invalid retcode as part of the return dict,
-    the final exit code is still an integer and set to 1 at least.
-    """
-    host = "localhost"
-    single_ret = (f'{{"{host}": {{"retcode": {retcode}, "return": "foo"}}}}', "", 0)
-    opts["tgt"] = host
-    single = MagicMock(spec=ssh.Single)
-    single.id = host
-    single.run.return_value = single_ret
-    # We mock parse_ret because it handles the JSON parsing
-    import multiprocessing
-
-    with patch("salt.roster.get_roster_file", MagicMock(return_value="")), patch(
-        "salt.client.ssh.Single", autospec=True, return_value=single
-    ), patch(
-        "salt.client.ssh.wrapper.parse_ret",
-        return_value={"retcode": expected, "return": "foo"},
-    ):
-        client = ssh.SSH(opts)
-        que = multiprocessing.Queue()
-        client._handle_routine_thread(que, opts, host, target)
-        ret, exit_code = que.get(timeout=10)
-
-    assert ret == {host: {"retcode": expected, "return": "foo"}}
-    assert exit_code == 1
-    assert f"Got an invalid retcode for host '{host}': '{expected}'" in caplog.text
-
-
-def test_handle_routine_thread_single_run_invalid_retcode(opts, target, caplog):
-    """
-    Ensure that if Single.run() call returns an invalid retcode,
+    Ensure that if Single.run() returns an invalid retcode,
     the final exit code is still an integer and set to 1 at least.
     """
     host = "localhost"
@@ -383,7 +350,7 @@ def test_handle_routine_thread_single_run_invalid_retcode(opts, target, caplog):
     ):
         client = ssh.SSH(opts)
         que = multiprocessing.Queue()
-        client._handle_routine_thread(que, opts, host, target)
+        client.handle_routine(que, opts, host, target)
         ret, exit_code = que.get(timeout=10)
 
     assert exit_code == 1

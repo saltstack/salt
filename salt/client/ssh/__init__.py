@@ -317,6 +317,18 @@ class SSH(MultiprocessingStateMixin):
                 "ssh_timeout", salt.config.DEFAULT_MASTER_OPTS["ssh_timeout"]
             )
             + self.opts.get("timeout", salt.config.DEFAULT_MASTER_OPTS["timeout"]),
+            "keepalive": self.opts.get(
+                "ssh_keepalive",
+                salt.config.DEFAULT_MASTER_OPTS["ssh_keepalive"],
+            ),
+            "keepalive_interval": self.opts.get(
+                "ssh_keepalive_interval",
+                salt.config.DEFAULT_MASTER_OPTS["ssh_keepalive_interval"],
+            ),
+            "keepalive_count_max": self.opts.get(
+                "ssh_keepalive_count_max",
+                salt.config.DEFAULT_MASTER_OPTS["ssh_keepalive_count_max"],
+            ),
             "sudo": self.opts.get(
                 "ssh_sudo", salt.config.DEFAULT_MASTER_OPTS["ssh_sudo"]
             ),
@@ -417,11 +429,7 @@ class SSH(MultiprocessingStateMixin):
                             roster_host = roster_data[host_id]
                         if hostname in [host_id, roster_host]:
                             if hostname != self.opts["tgt"]:
-                                user = self.parse_tgt["user"]
-                                if user:
-                                    self.opts["tgt"] = f"{user}@{hostname}"
-                                else:
-                                    self.opts["tgt"] = hostname
+                                self.opts["tgt"] = hostname
                             self.__parsed_rosters[self.ROSTER_UPDATE_FLAG] = False
                             return
 
@@ -597,45 +605,96 @@ class SSH(MultiprocessingStateMixin):
             return {host: stderr}, retcode
         return {host: stdout}, retcode
 
-    def handle_ssh(self, mine=False, jid=None):
+    def handle_routine(self, que, opts, host, target, mine=False):
+        """
+        Run the routine in a "Thread", put a dict on the queue
+        """
+        opts = copy.deepcopy(opts)
+        single = Single(
+            opts,
+            opts["argv"],
+            host,
+            mods=self.mods,
+            fsclient=self.fsclient,
+            thin=self.thin,
+            mine=mine,
+            **target,
+        )
+        ret = {"id": single.id}
+        stdout = stderr = ""
+        retcode = salt.defaults.exitcodes.EX_OK
+        try:
+            stdout, stderr, retcode = single.run()
+            try:
+                retcode = int(retcode)
+            except (TypeError, ValueError):
+                log.warning("Got an invalid retcode for host '%s': '%s'", host, retcode)
+                retcode = 1
+            ret["ret"] = salt.client.ssh.wrapper.parse_ret(stdout, stderr, retcode)
+        except (
+            salt.client.ssh.wrapper.SSHPermissionDeniedError,
+            salt.client.ssh.wrapper.SSHCommandExecutionError,
+        ) as err:
+            ret["ret"] = err.to_ret()
+            # All caught errors always indicate the retcode is/should be > 0
+            retcode = max(retcode, err.retcode, 1)
+        except salt.client.ssh.wrapper.SSHException as err:
+            ret["ret"] = err.to_ret()
+            if not self.opts.get("raw_shell"):
+                # We only expect valid JSON output from Salt
+                retcode = max(retcode, err.retcode, 1)
+            else:
+                ret["ret"].pop("_error", None)
+        except Exception as err:  # pylint: disable=broad-except
+            log.error(
+                "Error while parsing the command output: %s",
+                err,
+                exc_info_on_loglevel=logging.DEBUG,
+            )
+            ret["ret"] = {
+                "_error": f"Internal error while parsing the command output: {err}",
+                "stdout": stdout,
+                "stderr": stderr,
+                "retcode": retcode,
+                "data": None,
+            }
+            retcode = max(retcode, 1)
+        que.put((ret, retcode))
+
+    def handle_ssh(self, mine=False):
         """
         Spin up the needed threads or processes and execute the subsequent
         routines
         """
-        # Use forked Processes rather than a ThreadPool.  Spawning a
-        # subprocess (via salt.utils.vt.Terminal / subprocess.Popen) from
-        # inside a ThreadPool worker can deadlock on Linux because fork()
-        # inherits locked mutexes from sibling threads.  Forked processes
-        # each get their own copy of the address space and are immune to
-        # that hazard, matching the pre-ThreadPool behaviour.
         que = multiprocessing.Queue()
         running = {}
         target_iter = iter(self.targets)
         returned = set()
         rets = set()
         init = False
-        max_procs = self.opts.get("ssh_max_procs", 25)
-
         while True:
             if not self.targets:
                 log.error("No matching targets found in roster.")
                 break
-
-            if len(running) < max_procs and not init:
+            if len(running) < self.opts.get("ssh_max_procs", 25) and not init:
                 try:
                     host = next(target_iter)
                 except StopIteration:
                     init = True
                     continue
-
                 for default in self.defaults:
                     if default not in self.targets[host]:
                         self.targets[host][default] = self.defaults[default]
                 if "host" not in self.targets[host]:
                     self.targets[host]["host"] = host
-
                 if self.targets[host].get("winrm") and not HAS_WINSHELL:
-                    log_msg = "Please contact sales@saltstack.com for access to the enterprise saltwinshell module."
+                    returned.add(host)
+                    rets.add(host)
+                    log_msg = (
+                        "Please contact sales@saltstack.com for access to the"
+                        " enterprise saltwinshell module."
+                    )
+                    log.debug(log_msg)
                     no_ret = {
                         "fun_args": [],
                         "jid": None,
@@ -644,40 +703,39 @@ class SSH(MultiprocessingStateMixin):
                         "fun": "",
                         "id": host,
                     }
-                    returned.add(host)
-                    rets.add(host)
                     yield {host: no_ret}, 1
                     continue
-
-                routine = Process(
-                    target=self._handle_routine_thread,
-                    args=(que, self.opts, host, self.targets[host], mine, jid),
+                args = (
+                    que,
+                    self.opts,
+                    host,
+                    self.targets[host],
+                    mine,
                 )
+                routine = Process(target=self.handle_routine, args=args)
                 routine.start()
                 running[host] = {"thread": routine}
                 continue
-
             ret = {}
             retcode = salt.defaults.exitcodes.EX_OK
             try:
                 ret, retcode = que.get(False)
-                host_id = next(iter(ret))
-                if host_id not in returned:
-                    returned.add(host_id)
-                    yield ret, retcode
+                if "id" in ret:
+                    returned.add(ret["id"])
+                    yield {ret["id"]: ret["ret"]}, retcode
             except queue.Empty:
                 pass
-
-            for host in list(running):
+            for host in running:
                 if not running[host]["thread"].is_alive():
                     if host not in returned:
+                        # Try to get any returns that came through since we
+                        # last checked
                         try:
                             while True:
                                 ret, retcode = que.get(False)
-                                host_id = next(iter(ret))
-                                if host_id not in returned:
-                                    returned.add(host_id)
-                                    yield ret, retcode
+                                if "id" in ret:
+                                    returned.add(ret["id"])
+                                    yield {ret["id"]: ret["ret"]}, retcode
                         except queue.Empty:
                             pass
 
@@ -686,140 +744,21 @@ class SSH(MultiprocessingStateMixin):
                                 "Target '{}' did not return any data, "
                                 "probably due to an error.".format(host)
                             )
+                            ret = {"id": host, "ret": error}
                             log.error(error)
-                            yield {host: error}, 1
+                            yield {ret["id"]: ret["ret"]}, 1
                     running[host]["thread"].join()
                     rets.add(host)
-
             for host in rets:
-                running.pop(host, None)
-
+                if host in running:
+                    running.pop(host)
             if len(rets) >= len(self.targets):
                 break
-
-            if len(running) >= max_procs or (init and running):
+            # Sleep when limit or all threads started
+            if len(running) >= self.opts.get("ssh_max_procs", 25) or len(
+                self.targets
+            ) >= len(running):
                 time.sleep(0.1)
-
-    def _handle_routine_thread(self, que, opts, host, target, mine=False, jid=None):
-        """
-        Helper for per-host execution. Runs in a forked Process; puts the
-        ``(ret_dict, retcode)`` tuple on *que* when done.
-        """
-        # Register the job in the master's proc directory
-        proc_file = None
-        if jid:
-            proc_dir = os.path.join(opts["cachedir"], "proc")
-            if not os.path.isdir(proc_dir):
-                try:
-                    os.makedirs(proc_dir)
-                except OSError:
-                    pass
-            if os.path.isdir(proc_dir):
-                proc_file = os.path.join(proc_dir, jid)
-                job_load = {
-                    "jid": jid,
-                    "tgt": host,
-                    "tgt_type": "glob",
-                    "id": host,
-                    "fun": opts["argv"][0] if opts.get("argv") else "",
-                    "arg": opts["argv"][1:] if opts.get("argv") else [],
-                    "pid": os.getpid(),
-                    "user": opts.get("user", "root"),
-                    "_stamp": salt.utils.jid.jid_to_time(jid),
-                }
-                try:
-                    with salt.utils.files.fopen(proc_file, "w+b") as fp_:
-                        fp_.write(salt.payload.dumps(job_load))
-                except OSError:
-                    proc_file = None
-        try:
-            single = Single(
-                opts,
-                opts["argv"],
-                host,
-                mods=self.mods,
-                fsclient=self.fsclient,
-                thin=self.thin,
-                mine=mine,
-                **target,
-            )
-            stdout = stderr = ""
-            retcode = salt.defaults.exitcodes.EX_OK
-            try:
-                stdout, stderr, retcode = single.run()
-                try:
-                    retcode = int(retcode)
-                except (TypeError, ValueError):
-                    log.warning(
-                        "Got an invalid retcode for host '%s': '%s'", host, retcode
-                    )
-                    retcode = 1
-                ret = {
-                    single.id: salt.client.ssh.wrapper.parse_ret(
-                        stdout, stderr, retcode
-                    )
-                }
-                if isinstance(ret[single.id], dict):
-                    inner_retcode = ret[single.id].get("retcode")
-                    # Treat any *present* ``retcode`` key as authoritative, including
-                    # JSON ``null`` (``None``). ``dict.get("retcode")`` alone cannot
-                    # distinguish "missing key" from "null retcode", so use membership.
-                    if "retcode" in ret[single.id]:
-                        try:
-                            retcode = int(inner_retcode)
-                        except (TypeError, ValueError):
-                            log.warning(
-                                "Got an invalid retcode for host '%s': '%s'",
-                                single.id,
-                                inner_retcode,
-                            )
-                            retcode = 1
-                    # Many module returns are plain dicts without a retcode key;
-                    # parse_ret() already enforced JSON/shim success using the
-                    # SSH exit code. Preserve that retcode when inner retcode
-                    # is absent.
-                    if retcode == 0 and "_error" in ret[single.id]:
-                        retcode = 1
-                elif retcode == 0:
-                    # If it's not a dict, we can't check for _error, but we should
-                    # at least ensure we didn't get an empty or invalid return
-                    if not ret[single.id]:
-                        retcode = 1
-            except (
-                salt.client.ssh.wrapper.SSHPermissionDeniedError,
-                salt.client.ssh.wrapper.SSHCommandExecutionError,
-            ) as err:
-                ret = {single.id: err.to_ret()}
-                retcode = max(retcode, err.retcode, 1)
-            except salt.client.ssh.wrapper.SSHException as err:
-                ret = {single.id: err.to_ret()}
-                if not self.opts.get("raw_shell"):
-                    retcode = max(retcode, err.retcode, 1)
-                else:
-                    ret[single.id].pop("_error", None)
-            except Exception as err:  # pylint: disable=broad-except
-                log.error(
-                    "Error while parsing the command output: %s",
-                    err,
-                    exc_info_on_loglevel=logging.DEBUG,
-                )
-                ret = {
-                    single.id: {
-                        "_error": f"Internal error while parsing the command output: {err}",
-                        "stdout": stdout,
-                        "stderr": stderr,
-                        "retcode": retcode,
-                        "data": None,
-                    }
-                }
-                retcode = max(retcode, 1)
-        finally:
-            if proc_file and os.path.exists(proc_file):
-                try:
-                    os.remove(proc_file)
-                except OSError:
-                    pass
-        que.put((ret, retcode))
 
     def run_iter(self, mine=False, jid=None):
         """
@@ -862,7 +801,7 @@ class SSH(MultiprocessingStateMixin):
                 jid, job_load
             )
 
-        for ret, retcode in self.handle_ssh(mine=mine, jid=jid):
+        for ret, retcode in self.handle_ssh(mine=mine):
             host = next(iter(ret))
             self.cache_job(jid, host, ret[host], fun)
             if self.event:
@@ -987,7 +926,7 @@ class SSH(MultiprocessingStateMixin):
         outputter = self.opts.get("output", "nested")
         final_exit = salt.defaults.exitcodes.EX_OK
         try:
-            for ret, retcode in self.handle_ssh(jid=jid):
+            for ret, retcode in self.handle_ssh():
                 host = next(iter(ret))
                 if not isinstance(retcode, int):
                     log.warning(
@@ -1102,6 +1041,9 @@ class Single:
         remote_port_forwards=None,
         winrm=False,
         ssh_options=None,
+        keepalive=True,
+        keepalive_interval=60,
+        keepalive_count_max=3,
         **kwargs,
     ):
         # Get mine setting and mine_functions if defined in kwargs (from roster)
@@ -1161,6 +1103,9 @@ class Single:
             "priv": priv,
             "priv_passwd": priv_passwd,
             "timeout": timeout,
+            "keepalive": keepalive,
+            "keepalive_interval": keepalive_interval,
+            "keepalive_count_max": keepalive_count_max,
             "sudo": sudo,
             "tty": tty,
             "mods": self.mods,

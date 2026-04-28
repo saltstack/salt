@@ -90,6 +90,9 @@ class Shell:
         remote_port_forwards=None,
         winrm=False,
         ssh_options=None,
+        keepalive=True,
+        keepalive_interval=None,
+        keepalive_count_max=None,
     ):
         self.opts = opts
         # ssh <ipv6>, but scp [<ipv6>]:/path
@@ -100,6 +103,9 @@ class Shell:
         self.priv = priv
         self.priv_passwd = priv_passwd
         self.timeout = timeout
+        self.keepalive = keepalive
+        self.keepalive_interval = keepalive_interval
+        self.keepalive_count_max = keepalive_count_max
         self.sudo = sudo
         self.tty = tty
         self.mods = mods
@@ -135,6 +141,9 @@ class Shell:
         if self.opts.get("_ssh_version", (0,)) > (4, 9):
             options.append("GSSAPIAuthentication=no")
         options.append(f"ConnectTimeout={self.timeout}")
+        if self.keepalive:
+            options.append(f"ServerAliveInterval={self.keepalive_interval}")
+            options.append(f"ServerAliveCountMax={self.keepalive_count_max}")
         if self.opts.get("ignore_host_keys"):
             options.append("StrictHostKeyChecking=no")
         if self.opts.get("no_host_keys"):
@@ -142,6 +151,9 @@ class Shell:
         known_hosts = self.opts.get("known_hosts_file")
         if known_hosts and os.path.isfile(known_hosts):
             options.append(f"UserKnownHostsFile={known_hosts}")
+        log.debug(
+            "DEBUG_PORT: _key_opts self.port=%r type=%r", self.port, type(self.port)
+        )
         if self.port:
             options.append(f"Port={self.port}")
         if self.priv and self.priv != "agent-forwarding":
@@ -170,6 +182,9 @@ class Shell:
         if self.opts["_ssh_version"] > (4, 9):
             options.append("GSSAPIAuthentication=no")
         options.append(f"ConnectTimeout={self.timeout}")
+        if self.keepalive:
+            options.append(f"ServerAliveInterval={self.keepalive_interval}")
+            options.append(f"ServerAliveCountMax={self.keepalive_count_max}")
         if self.opts.get("ignore_host_keys"):
             options.append("StrictHostKeyChecking=no")
         if self.opts.get("no_host_keys"):
