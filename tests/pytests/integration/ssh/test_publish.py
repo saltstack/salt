@@ -6,6 +6,7 @@ pytestmark = [
 ]
 
 
+@pytest.mark.timeout(300)
 @pytest.mark.parametrize("tgts", (("ssh",), ("regular",), ("ssh", "regular")))
 def test_publish(salt_ssh_cli, salt_minion, tgts):
     if len(tgts) > 1:
@@ -28,6 +29,7 @@ def test_publish(salt_ssh_cli, salt_minion, tgts):
         assert ret.data[id_] is True
 
 
+@pytest.mark.timeout(300)
 def test_publish_with_arg(salt_ssh_cli, salt_minion):
     ret = salt_ssh_cli.run(
         "publish.publish",
@@ -45,6 +47,7 @@ def test_publish_with_arg(salt_ssh_cli, salt_minion):
         assert ret.data[id_]["cheese"] == "spam"
 
 
+@pytest.mark.timeout(300)
 def test_publish_with_yaml_args(salt_ssh_cli, salt_minion):
     args = ["saltines, si", "crackers, nein", "cheese, indeed"]
     test_args = f'["{args[0]}", "{args[1]}", "{args[2]}"]'
@@ -64,6 +67,7 @@ def test_publish_with_yaml_args(salt_ssh_cli, salt_minion):
         assert ret.data[id_]["args"] == args
 
 
+@pytest.mark.timeout(300)
 @pytest.mark.parametrize("tgts", (("ssh",), ("regular",), ("ssh", "regular")))
 def test_full_data(salt_ssh_cli, salt_minion, tgts):
     if len(tgts) > 1:
@@ -88,6 +92,7 @@ def test_full_data(salt_ssh_cli, salt_minion, tgts):
         assert ret.data[id_]["ret"][0] == 6765
 
 
+@pytest.mark.timeout(300)
 def test_full_data_kwarg(salt_ssh_cli, salt_minion):
     ret = salt_ssh_cli.run(
         "publish.full_data",
