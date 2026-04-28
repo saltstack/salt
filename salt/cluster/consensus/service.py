@@ -60,7 +60,11 @@ class RaftService:
         self.loop = loop
         self._peer_pushers = peer_pushers  # addr -> PublishServer
 
-        node_id = opts["id"]
+        # Use the interface address as the Raft node-id so it matches the
+        # keys in cluster_peers and the peer_pushers dict.  opts["id"] is
+        # the hostname which remote masters do not share; the interface
+        # address is the consistent cluster-wide identity.
+        node_id = opts["interface"]
         self._node = Node(node_id)
         self._scheduler = AsyncTimeoutScheduler(loop=loop)
         self._node.register_schedule_timeout(self._scheduler.schedule)
@@ -71,10 +75,8 @@ class RaftService:
         ]
         self._node.peers = peers
 
-        # Pushers keyed by peer node_id for RaftDispatcher reply routing.
-        # At bootstrap time the peer node_id equals the peer's interface
-        # address (opts["cluster_peers"] entry); this can be refined later
-        # when persistent membership data is available.
+        # peer_pushers is keyed by interface address, matching the
+        # callback_node field written into RPC envelopes.
         self._dispatcher = RaftDispatcher(self._node, node_id, peer_pushers)
 
         self._heartbeat_handle = None

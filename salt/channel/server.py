@@ -2012,6 +2012,7 @@ class MasterPubServerChannel:
 
     def _publish_daemon(self, **kwargs):
         """Clean implementation: separate local IPC from cluster peer communication."""
+        import salt.master  # pylint: disable=import-outside-toplevel
         if (
             self.opts.get("event_publisher_niceness")
             and not salt.utils.platform.is_windows()
