@@ -173,7 +173,7 @@ class SecretDict(SecretIterable[dict], MutableMapping[str, Any]):
             secret_value[k] = hide(v)
         super().__init__(secret_value)
 
-    def setdefault(self, key: str, default):
+    def setdefault(self, key, default=None):
         return self._secret_value.setdefault(key, hide(default))
 
     def _display(self) -> dict:
