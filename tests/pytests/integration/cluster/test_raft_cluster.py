@@ -1,0 +1,149 @@
+"""
+Integration tests for Raft consensus over a real three-master cluster.
+
+Uses the same ``cluster_master_1/2/3`` fixtures from conftest.py which
+spin up actual Salt master processes on 127.0.0.1/2/3.
+
+Each master starts with ``cluster_id`` and ``cluster_peers`` set, so
+``MasterPubServerChannel._publish_daemon`` will construct a ``RaftService``
+and begin Raft elections over the real ``cluster_pool_port`` TCP channel.
+
+We observe Raft activity by watching each master's log file for the
+``BECOMING LEADER`` message that ``Node.become_leader`` emits.
+"""
+
+import time
+
+import pytest
+
+import salt.utils.files
+
+pytestmark = [
+    pytest.mark.slow_test,
+]
+
+# How long to wait for an election to complete across real processes.
+_ELECTION_TIMEOUT = 30  # seconds
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _read_log(master_factory):
+    """Return the contents of a master's log file, or empty string."""
+    import os  # pylint: disable=import-outside-toplevel
+
+    log_path = master_factory.config.get("log_file")
+    if not log_path:
+        return ""
+    if not os.path.isabs(log_path):
+        root_dir = master_factory.config.get("root_dir", "")
+        log_path = os.path.join(root_dir, log_path)
+    try:
+        with salt.utils.files.fopen(log_path, encoding="utf-8", errors="replace") as f:
+            return f.read()
+    except OSError:
+        return ""
+
+
+def _count_leaders(masters):
+    """
+    Count how many masters report having become leader by checking logs.
+    Returns ``(leader_count, leader_interfaces)``.
+    """
+    leaders = []
+    for m in masters:
+        log = _read_log(m)
+        if "BECOMING LEADER" in log:
+            leaders.append(m.config["interface"])
+    return len(leaders), leaders
+
+
+def _wait_for_election(masters, timeout=_ELECTION_TIMEOUT):
+    """
+    Poll until exactly one master has become leader, or timeout expires.
+    Returns ``(leader_count, leader_interfaces)``.
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        count, leaders = _count_leaders(masters)
+        if count == 1:
+            return count, leaders
+        time.sleep(0.5)
+    return _count_leaders(masters)
+
+
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
+
+def test_raft_election_three_masters(
+    cluster_master_1, cluster_master_2, cluster_master_3
+):
+    """
+    Three masters with cluster_id + cluster_peers should elect exactly one
+    Raft leader within the election timeout window.
+    """
+    masters = [cluster_master_1, cluster_master_2, cluster_master_3]
+    count, leaders = _wait_for_election(masters)
+    assert count == 1, (
+        f"Expected exactly 1 Raft leader, got {count}: {leaders}. "
+        f"Check that 'BECOMING LEADER' appears in exactly one master log."
+    )
+
+
+def test_raft_service_started_on_all_masters(
+    cluster_master_1, cluster_master_2, cluster_master_3
+):
+    """
+    All three masters should log that their Raft consensus service started.
+    """
+    masters = [cluster_master_1, cluster_master_2, cluster_master_3]
+    # Give services a moment to start
+    time.sleep(5)
+    for m in masters:
+        log = _read_log(m)
+        assert "Raft consensus service started" in log, (
+            f"Master {m.config['interface']} did not log Raft service start. "
+            f"Log tail: {log[-2000:]!r}"
+        )
+
+
+def test_raft_re_election_after_leader_restart(
+    cluster_master_1, cluster_master_2, cluster_master_3
+):
+    """
+    After the leader master is stopped, the remaining two masters should
+    elect a new leader within the election timeout.
+    """
+    masters = [cluster_master_1, cluster_master_2, cluster_master_3]
+    count, leaders = _wait_for_election(masters)
+    assert count == 1, f"No initial leader elected: {leaders}"
+
+    leader_addr = leaders[0]
+    leader_master = next(m for m in masters if m.config["interface"] == leader_addr)
+    survivors = [m for m in masters if m.config["interface"] != leader_addr]
+
+    # Stop the leader
+    leader_master.terminate()
+
+    # Clear BECOMING LEADER from survivor logs so we can detect the new one
+    # (we can't clear the file, but we record how many times it appeared before)
+    before = {
+        m.config["interface"]: _read_log(m).count("BECOMING LEADER") for m in survivors
+    }
+
+    new_count, new_leaders = _wait_for_election(survivors, timeout=_ELECTION_TIMEOUT)
+
+    # At least one survivor must have a new BECOMING LEADER entry
+    after = {
+        m.config["interface"]: _read_log(m).count("BECOMING LEADER") for m in survivors
+    }
+    new_elections = {addr: after[addr] - before[addr] for addr in before}
+    assert any(v > 0 for v in new_elections.values()), (
+        f"No re-election detected after leader {leader_addr} stopped. "
+        f"New election counts: {new_elections}"
+    )
