@@ -47,12 +47,41 @@ def _get_num_fds(pid):
     return len(list(pathlib.Path(f"/proc/{pid}/fd").iterdir()))
 
 
+def _fd_target(pid, fd):
+    """
+    Return the ``readlink`` target of ``/proc/{pid}/fd/{fd}`` or ``None``
+    if the fd is closed. Using the symlink target (rather than just an
+    exists() check) lets callers detect the difference between "fd is
+    still the original pipe" and "fd was closed and later reused for
+    something else" without flapping on fd number reuse.
+    """
+    path = pathlib.Path(f"/proc/{pid}/fd/{fd}")
+    try:
+        return os.readlink(str(path))
+    except (FileNotFoundError, OSError):
+        return None
+
+
 @pytest.mark.skip_unless_on_linux
 def test_subprocess_list_fds():
+    """
+    ``SubprocessList.cleanup`` must close the sentinel pipe that
+    ``multiprocessing.Process.start`` opens, not just drop the process
+    from its internal list.
+
+    We verify this directly against the ``Popen`` sentinel fd -- by
+    watching the ``/proc/<pid>/fd/<sentinel>`` symlink target -- rather
+    than via a global ``/proc/<pid>/fd`` count delta. The count-delta
+    approach is fragile in long-running pytest workers where unrelated
+    activity (GC finalizers reaping zombie children, the salt-factories
+    log server closing sockets, temp-file lifetimes in adjacent
+    fixtures, ...) can asynchronously close fds between two measurements
+    and mask the 2-fd sentinel pipe we just allocated -- which is
+    exactly what produced ``assert 706 == (706 + 2)`` on Debian 11 CI
+    for this test.
+    """
     pid = os.getpid()
     process_list = salt.utils.process.SubprocessList()
-
-    before_num = _get_num_fds(pid)
 
     def target():
         pass
@@ -63,15 +92,33 @@ def test_subprocess_list_fds():
     process_list.add(process)
     time.sleep(0.3)
 
-    num = _get_num_fds(pid)
-    assert num == before_num + 2
+    # The Popen sentinel fd must be open and must point to a pipe.
+    sentinel = process.sentinel
+    sentinel_target = _fd_target(pid, sentinel)
+    assert (
+        sentinel_target is not None
+    ), f"Popen sentinel fd {sentinel} should be open after start()"
+    assert (
+        "pipe:" in sentinel_target
+    ), f"Popen sentinel fd {sentinel} is not a pipe: {sentinel_target!r}"
+
     start = time.time()
-    while time.time() - start < 1:
+    while time.time() - start < 5:
         process_list.cleanup()
         if not process_list.processes:
             break
+        time.sleep(0.05)
     assert len(process_list.processes) == 0
-    assert _get_num_fds(pid) == num - 2
+
+    # After cleanup the original sentinel pipe must be gone. The fd
+    # number may have been reused (highly likely in busy pytest
+    # workers); accept either a closed fd or a reused fd pointing at
+    # something other than the original pipe target.
+    post_target = _fd_target(pid, sentinel)
+    assert post_target != sentinel_target, (
+        f"Popen sentinel fd {sentinel} still points at the same pipe "
+        f"({sentinel_target!r}) after SubprocessList.cleanup()"
+    )
 
 
 async def test_process_manager_run_async():
