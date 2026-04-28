@@ -4,7 +4,6 @@ annotated-types==0.6.0
     # via pydantic
 attrs==22.2.0
     # via
-    #   -c requirements/constraints.txt
     #   -r requirements/static/ci/tools.in
     #   python-tools-scripts
 boto3==1.26.152

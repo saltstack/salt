@@ -13,9 +13,7 @@ apache-libcloud==3.9.0 ; python_full_version >= '3.10'
 async-timeout==5.0.1 ; python_full_version < '3.11'
     # via aiohttp
 attrs==25.4.0
-    # via
-    #   -c requirements/constraints.txt
-    #   aiohttp
+    # via aiohttp
 autocommand==2.2.2
     # via jaraco-text
 backports-tarfile==1.2.0 ; python_full_version < '3.12'

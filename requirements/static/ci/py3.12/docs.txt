@@ -20,7 +20,6 @@ apache-libcloud==3.9.0
     #   -r requirements/base.txt
 attrs==23.2.0
     # via
-    #   -c requirements/constraints.txt
     #   -c requirements/static/ci/py3.12/linux.txt
     #   aiohttp
 autocommand==2.2.2

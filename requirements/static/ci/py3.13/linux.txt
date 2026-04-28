@@ -35,7 +35,6 @@ asn1crypto==1.5.1
     #   oscrypto
 attrs==24.2.0
     # via
-    #   -c requirements/constraints.txt
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   aiohttp
     #   jsonschema

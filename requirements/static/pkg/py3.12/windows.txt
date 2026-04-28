@@ -11,9 +11,7 @@ annotated-doc==0.0.4
 apache-libcloud==3.9.0
     # via -r requirements/base.txt
 attrs==25.4.0
-    # via
-    #   -c requirements/constraints.txt
-    #   aiohttp
+    # via aiohttp
 certifi==2026.2.25
     # via
     #   -r requirements/base.txt

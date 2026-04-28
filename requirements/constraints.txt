@@ -4,12 +4,3 @@
 wheel >= 0.46.3
 setuptools >= 80.10.2
 pip == 25.2
-# jsonschema 4.x pulls in referencing, which uses attrs.field(alias=...); that
-# requires attrs>=22.2. Keep attrs new enough for either jsonschema line.
-attrs >= 22.2.0
-# Salt CI pins jsonschema 3.2.x for Python <3.13; jsonschema 4.x is only
-# resolved for 3.13+ (see static ci/py3.13/*.txt). Cap 3.11/3.12 so optional
-# tools cannot upgrade jsonschema and break attrs/referencing (see attrs note).
-# Note: some third-party tools (e.g. mcp) require jsonschema>=4 on all Python
-# versions; use Python 3.13+ with Salt's compiled reqs, or a separate venv, for those.
-jsonschema < 4; python_version < "3.13"

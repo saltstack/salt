@@ -34,7 +34,6 @@ async-timeout==5.0.1 ; python_full_version < '3.11'
     #   aiohttp
 attrs==25.4.0
     # via
-    #   -c requirements/constraints.txt
     #   -c requirements/static/pkg/py3.9/freebsd.txt
     #   aiohttp
     #   jsonschema
@@ -248,13 +247,9 @@ jmespath==1.1.0
     #   boto3
     #   botocore
 jsonschema==3.2.0 ; python_full_version < '3.13'
-    # via
-    #   -c requirements/constraints.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 jsonschema==4.26.0 ; python_full_version >= '3.13'
-    # via
-    #   -c requirements/constraints.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 jsonschema-specifications==2025.9.1 ; python_full_version >= '3.13'
     # via jsonschema
 junit-xml==1.9

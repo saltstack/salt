@@ -50,7 +50,6 @@ astroid==3.1.0
     # via pylint
 attrs==23.2.0
     # via
-    #   -c requirements/constraints.txt
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -c requirements/static/pkg/py3.11/linux.txt
     #   aiohttp
@@ -292,7 +291,6 @@ jmespath==1.1.0
     #   botocore
 jsonschema==3.2.0
     # via
-    #   -c requirements/constraints.txt
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/common.in
 junit-xml==1.9

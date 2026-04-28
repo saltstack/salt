@@ -9,9 +9,7 @@ aiosignal==1.4.0
 apache-libcloud==3.9.0
     # via -r requirements/base.txt
 attrs==23.2.0
-    # via
-    #   -c requirements/constraints.txt
-    #   aiohttp
+    # via aiohttp
 autocommand==2.2.2
     # via jaraco-text
 certifi==2024.7.4
