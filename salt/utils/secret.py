@@ -6,9 +6,11 @@ mutations stay protected.
 
 from __future__ import annotations
 
+import copy
 import logging
 from collections.abc import Iterable, MutableMapping, MutableSequence
 from typing import Any, ClassVar, Generic, Mapping, TypeVar
+from salt.utils.optsdict import ListProxy
 
 log = logging.getLogger(__name__)
 
@@ -163,8 +165,7 @@ class SecretIterable(Secret[SecretType_co]):
         del self._secret_value[key]
 
     def _display(self):
-        cast = type(self._secret_value)
-        return cast(v._display() if isinstance(v, Secret) else v for v in self)
+        return [v._display() if isinstance(v, Secret) else v for v in self]
 
 
 class SecretDict(SecretIterable[dict], MutableMapping[str, Any]):
@@ -234,8 +235,7 @@ def expose(value: Secret, _seen: set[int] = None) -> Any:
                 _seen = {object_id}
             return {k: expose(v, _seen) for k, v in value.items()}
         else:
-            cast = type(value)
-            return cast(expose(v, _seen) for v in value)
+            return [expose(v, _seen) for v in value]
     return value
 
 
