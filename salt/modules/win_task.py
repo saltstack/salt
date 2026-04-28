@@ -2482,7 +2482,7 @@ def add_trigger(
         if trigger_types[trigger_type] == TASK_TRIGGER_EVENT:
             # Check for required kwargs
             if kwargs.get("subscription", False):
-                trigger.Id = "Event_{}".format(kwargs.get("subscription"))
+                trigger.Id = f"Event_{wargs.get('subscription')}"
                 trigger.Subscription = kwargs.get("subscription")
             else:
                 return 'Required parameter "subscription" not passed'
@@ -2492,12 +2492,12 @@ def add_trigger(
 
         # Daily Trigger Parameters
         elif trigger_types[trigger_type] == TASK_TRIGGER_DAILY:
-            trigger.Id = "Daily__{}".format(start_boundary)
+            trigger.Id = f"Daily__{start_boundary}"
             trigger.DaysInterval = kwargs.get("days_interval", 1)
 
         # Weekly Trigger Parameters
         elif trigger_types[trigger_type] == TASK_TRIGGER_WEEKLY:
-            trigger.Id = "Weekly_{}".format(start_boundary)
+            trigger.Id = f"Weekly_{start_boundary}"
             trigger.WeeksInterval = kwargs.get("weeks_interval", 1)
             if kwargs.get("days_of_week", False):
                 bits_days = 0
@@ -2509,7 +2509,7 @@ def add_trigger(
 
         # Monthly Trigger Parameters
         elif trigger_types[trigger_type] == TASK_TRIGGER_MONTHLY:
-            trigger.Id = "Monthly_{}".format(start_boundary)
+            trigger.Id = f"Monthly_{start_boundary}"
             if kwargs.get("months_of_year", False):
                 bits_months = 0
                 for month in kwargs.get("months_of_year"):
