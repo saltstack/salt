@@ -125,8 +125,7 @@ def dumps(msg, use_bin_type=False):
     """
 
     def ext_type_encoder(obj):
-        if isinstance(obj, salt.utils.secret.Secret):
-            obj = salt.utils.secret.expose(obj)
+        obj = salt.utils.secret.expose(obj)
         if isinstance(obj, int):
             # msgpack can't handle the very long Python longs for jids
             # Convert any very long longs to strings
