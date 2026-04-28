@@ -187,7 +187,7 @@ def get(
     if ret is KeyError:
         raise KeyError(f"Pillar key not found: {key}")
 
-    return salt.utils.secret.serial(ret)
+    return ret
 
 
 def items(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
@@ -273,7 +273,7 @@ def items(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
         pillarenv=pillarenv,
     )
     ret = pillar.compile_pillar()
-    return salt.utils.secret.serial(ret)
+    return ret
 
 
 # Allow pillar.data to also be used to return pillar data
@@ -516,7 +516,7 @@ def item(*args, default=None, delimiter=None, pillarenv=None, saltenv=None):
     except KeyError:
         pass
 
-    return salt.utils.secret.serial(ret)
+    return ret
 
 
 def raw(key=None):
@@ -610,7 +610,7 @@ def ext(external, pillar=None):
 
     ret = pillar_obj.compile_pillar()
 
-    return salt.utils.secret.serial(ret)
+    return ret
 
 
 def keys(key, delimiter=DEFAULT_TARGET_DELIM):
@@ -751,4 +751,4 @@ def filter_by(lookup_dict, pillar, merge=None, default="default", base=None):
         default=default,
         base=base,
     )
-    return salt.utils.secret.serial(ret)
+    return ret
