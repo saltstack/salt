@@ -1207,6 +1207,7 @@ class Pillar:
                 self.opts.get("pillar_merge_lists", False),
             )
 
+        pillar = salt.utils.secret.expose(pillar)
         decrypt_errors = self.decrypt_pillar(pillar)
         if decrypt_errors:
             pillar.setdefault("_errors", []).extend(decrypt_errors)

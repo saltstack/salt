@@ -176,6 +176,9 @@ class SecretDict(SecretIterable[dict], MutableMapping[str, Any]):
         super().__init__({})
         self._secret_value.update({k: hide(v) for k, v in secret_value.items()})
 
+    def setdefault(self, key: str, value: Any) -> Any:
+        return self._secret_value.setdefault(key, hide(value))
+
     def get_secret_value(self):
         return {k: expose(v) for k, v in self._secret_value.items()}
 
@@ -224,7 +227,7 @@ def expose(value: Secret) -> Any:
         return value
     elif isinstance(value, Secret):
         return value.get_secret_value()
-    elif isinstance(value, dict):
+    elif isinstance(value, Mapping):
         return {k: expose(v) for k, v in value.items()}
     elif isinstance(value, Iterable):
         cast = type(value)
