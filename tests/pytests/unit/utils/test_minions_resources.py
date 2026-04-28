@@ -45,6 +45,11 @@ MINION_RESOURCES = {
     }
 }
 
+# Avoid production-sized primary mmap (~256 MiB) for every test; see
+# ``test_resource_registry._TEST_PRIMARY_*``.
+_TEST_PRIMARY_CAPACITY = 4096
+_TEST_PRIMARY_SLOT_SIZE = 128
+
 
 @pytest.fixture(autouse=True)
 def reset_registry_singleton():
@@ -58,6 +63,8 @@ def reset_registry_singleton():
 def opts(master_opts, tmp_path):
     """Master opts pointing at a per-test tmp cachedir."""
     master_opts["cachedir"] = str(tmp_path)
+    master_opts.setdefault("resource_index_primary_capacity", _TEST_PRIMARY_CAPACITY)
+    master_opts.setdefault("resource_index_primary_slot_size", _TEST_PRIMARY_SLOT_SIZE)
     return master_opts
 
 

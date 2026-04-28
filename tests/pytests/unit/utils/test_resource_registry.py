@@ -2,9 +2,17 @@
 Unit tests for :mod:`salt.utils.resource_registry`.
 """
 
+import contextlib
+
 import pytest
 
 import salt.utils.resource_registry as rr
+
+# Production default mmap is ~256 MiB (2**21 slots × 128 B). Unit tests only
+# need a tiny table; keeping this small avoids multi‑GiB churn across many
+# tests (and false CI failures from /tmp exhaustion).
+_TEST_PRIMARY_CAPACITY = 4096
+_TEST_PRIMARY_SLOT_SIZE = 128
 
 
 class _FakeCache:
@@ -22,9 +30,17 @@ class _FakeCache:
 
 @pytest.fixture
 def registry(tmp_path):
-    opts = {"cachedir": str(tmp_path)}
+    opts = {
+        "cachedir": str(tmp_path),
+        "resource_index_primary_capacity": _TEST_PRIMARY_CAPACITY,
+        "resource_index_primary_slot_size": _TEST_PRIMARY_SLOT_SIZE,
+    }
     cache = _FakeCache()
-    return rr.ResourceRegistry(opts, cache=cache)
+    reg = rr.ResourceRegistry(opts, cache=cache)
+    try:
+        yield reg
+    finally:
+        reg.close()
 
 
 # ---------------------------------------------------------------------------
@@ -219,94 +235,108 @@ def test_get_registry_without_cachedir_is_inert():
 
 
 def _make_registry(tmp_path, **overrides):
-    opts = {"cachedir": str(tmp_path)}
+    opts = {
+        "cachedir": str(tmp_path),
+        "resource_index_primary_capacity": _TEST_PRIMARY_CAPACITY,
+        "resource_index_primary_slot_size": _TEST_PRIMARY_SLOT_SIZE,
+    }
     opts.update(overrides)
     return rr.ResourceRegistry(opts, cache=_FakeCache())
 
 
+@contextlib.contextmanager
+def _registry_session(tmp_path, **overrides):
+    """Construct a registry and always ``close()`` so mmap FDs are released."""
+    reg = _make_registry(tmp_path, **overrides)
+    try:
+        yield reg
+    finally:
+        reg.close()
+
+
 def test_maybe_compact_throttled_by_default(tmp_path):
-    reg = _make_registry(tmp_path)
-    # No writes yet, no file either. First call goes through the throttle
-    # (because _last_compact_check starts at 0). Second should be throttled.
-    first, _ = reg.maybe_compact()
-    second, _ = reg.maybe_compact()
-    assert first is False  # no file / nothing above threshold
-    assert second is False  # throttled
+    with _registry_session(tmp_path) as reg:
+        # No writes yet, no file either. First call goes through the throttle
+        # (because _last_compact_check starts at 0). Second should be throttled.
+        first, _ = reg.maybe_compact()
+        second, _ = reg.maybe_compact()
+        assert first is False  # no file / nothing above threshold
+        assert second is False  # throttled
 
 
 def test_maybe_compact_force_check_bypasses_throttle(tmp_path):
-    reg = _make_registry(tmp_path)
-    reg.register_minion("m1", {"ssh": ["a", "b", "c"]})
-    # Force two back-to-back reads; both should run (no side-effect since
-    # nothing is above threshold, but the stats read happens).
-    _, s1 = reg.maybe_compact(force_check=True)
-    _, s2 = reg.maybe_compact(force_check=True)
-    assert s1 is not None
-    assert s2 is not None
+    with _registry_session(tmp_path) as reg:
+        reg.register_minion("m1", {"ssh": ["a", "b", "c"]})
+        # Force two back-to-back reads; both should run (no side-effect since
+        # nothing is above threshold, but the stats read happens).
+        _, s1 = reg.maybe_compact(force_check=True)
+        _, s2 = reg.maybe_compact(force_check=True)
+        assert s1 is not None
+        assert s2 is not None
 
 
 def test_maybe_compact_triggers_on_tombstone_ratio(tmp_path):
     # Very large interval during setup so register_minion's in-line
     # maybe_compact is suppressed; we drive compaction explicitly.
-    reg = _make_registry(
+    with _registry_session(
         tmp_path,
         resource_registry_compact_min_interval=3600,
         resource_registry_compact_tombstone_ratio=0.1,
-    )
-    reg.register_minion("m1", {"ssh": [f"h{i}" for i in range(20)]})
-    reg.register_minion("m1", {"ssh": [f"h{i}" for i in range(0, 20, 4)]})
+    ) as reg:
+        reg.register_minion("m1", {"ssh": [f"h{i}" for i in range(20)]})
+        reg.register_minion("m1", {"ssh": [f"h{i}" for i in range(0, 20, 4)]})
 
-    stats_pre = reg.stats()["primary"]
-    assert stats_pre["deleted"] > 0
+        stats_pre = reg.stats()["primary"]
+        assert stats_pre["deleted"] > 0
 
-    compacted, _ = reg.maybe_compact(force_check=True)
-    assert compacted is True
+        compacted, _ = reg.maybe_compact(force_check=True)
+        assert compacted is True
 
-    stats_post = reg.stats()["primary"]
-    assert stats_post["deleted"] == 0
-    assert reg.has_resource("m1", "ssh", "h0") is True
-    assert reg.has_resource("m1", "ssh", "h3") is False
+        stats_post = reg.stats()["primary"]
+        assert stats_post["deleted"] == 0
+        assert reg.has_resource("m1", "ssh", "h0") is True
+        assert reg.has_resource("m1", "ssh", "h3") is False
 
 
 def test_maybe_compact_triggers_on_load_factor(tmp_path):
-    reg = _make_registry(
+    with _registry_session(
         tmp_path,
         resource_index_primary_capacity=128,
         resource_index_primary_slot_size=32,
         resource_registry_compact_load_factor=0.1,
         # Suppress the in-line compact so the test sees an un-compacted file.
         resource_registry_compact_min_interval=3600,
-    )
-    reg.register_minion("m1", {"ssh": [f"h{i}" for i in range(20)]})
-    compacted, stats = reg.maybe_compact(force_check=True)
-    # Occupied/total = 20/128 = 0.156 which exceeds 0.1.
-    assert compacted is True
+    ) as reg:
+        reg.register_minion("m1", {"ssh": [f"h{i}" for i in range(20)]})
+        compacted, stats = reg.maybe_compact(force_check=True)
+        # Occupied/total = 20/128 = 0.156 which exceeds 0.1.
+        assert compacted is True
 
 
 def test_maybe_compact_no_trigger_when_healthy(tmp_path):
-    reg = _make_registry(
+    with _registry_session(
         tmp_path,
         resource_registry_compact_min_interval=0,
-    )
-    reg.register_minion("m1", {"ssh": ["a", "b"]})
-    compacted, stats = reg.maybe_compact(force_check=True)
-    assert compacted is False
-    assert stats["occupied"] == 2
-    assert stats["deleted"] == 0
+    ) as reg:
+        reg.register_minion("m1", {"ssh": ["a", "b"]})
+        compacted, stats = reg.maybe_compact(force_check=True)
+        assert compacted is False
+        assert stats["occupied"] == 2
+        assert stats["deleted"] == 0
 
 
 def test_register_minion_triggers_auto_compact(tmp_path):
     """register_minion invokes maybe_compact inline; when thresholds are met
     on the second call, the tombstones from the delta must be reclaimed."""
-    reg = _make_registry(
+    with _registry_session(
         tmp_path,
         resource_registry_compact_min_interval=0,
         resource_registry_compact_tombstone_ratio=0.1,
-    )
-    reg.register_minion("m1", {"ssh": [f"h{i}" for i in range(20)]})
-    # The second register_minion deletes 15 entries, tombstone_ratio
-    # becomes 15/5 = 3.0 >> 0.1, and the inline maybe_compact reclaims.
-    reg.register_minion("m1", {"ssh": [f"h{i}" for i in range(0, 20, 4)]})
-    stats = reg.stats()["primary"]
-    assert stats["deleted"] == 0
-    assert stats["occupied"] == 5
+    ) as reg:
+        reg.register_minion("m1", {"ssh": [f"h{i}" for i in range(20)]})
+        # The second register_minion deletes 15 entries, tombstone_ratio
+        # becomes 15/5 = 3.0 >> 0.1, and the inline maybe_compact reclaims.
+        reg.register_minion("m1", {"ssh": [f"h{i}" for i in range(0, 20, 4)]})
+        stats = reg.stats()["primary"]
+        assert stats["deleted"] == 0
+        assert stats["occupied"] == 5

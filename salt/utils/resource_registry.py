@@ -236,6 +236,12 @@ class _ResourceIndexStore:
         self._last_stat_time: float = 0.0
         self._last_version = None
 
+    def close(self):
+        """
+        Release the primary mmap handle (tests and :func:`reset_registry`).
+        """
+        self._primary.close()
+
     # ------------------------------------------------------------------
     # Primary: point ops
     # ------------------------------------------------------------------
@@ -570,6 +576,13 @@ class ResourceRegistry:
         )
         self._last_compact_check = 0.0
 
+    def close(self):
+        """
+        Close the backing mmap so temp dirs can be removed and FDs are not
+        held until CPython GC (important for unit tests and registry resets).
+        """
+        self._store.close()
+
     # ------------------------------------------------------------------
     # Read interface — used by the targeting layer
     # ------------------------------------------------------------------
@@ -896,6 +909,9 @@ class _NullResourceRegistry:
     def maybe_compact(self, force_check=False):
         return False, None
 
+    def close(self):
+        """No-op: null registry holds no mmap or cache handles."""
+
 
 _REGISTRY_LOCK = threading.Lock()
 _REGISTRY_SINGLETON = None
@@ -931,6 +947,15 @@ def get_registry(opts):
     with _REGISTRY_LOCK:
         if _REGISTRY_SINGLETON is not None and _REGISTRY_CACHEDIR == cachedir:
             return _REGISTRY_SINGLETON
+        old = _REGISTRY_SINGLETON
+        if old is not None:
+            try:
+                old.close()
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "resource_registry: error closing previous singleton",
+                    exc_info=True,
+                )
         _REGISTRY_SINGLETON = ResourceRegistry(opts)
         _REGISTRY_CACHEDIR = cachedir
         return _REGISTRY_SINGLETON
@@ -940,8 +965,20 @@ def reset_registry():
     """
     Drop the process-wide singleton. Used by tests that need a fresh
     registry per ``opts['cachedir']`` without relying on tmp_path varying.
+
+    Always closes the previous registry's mmap so handles and disk space
+    are released promptly.
     """
     global _REGISTRY_SINGLETON, _REGISTRY_CACHEDIR  # pylint: disable=global-statement
     with _REGISTRY_LOCK:
+        old = _REGISTRY_SINGLETON
         _REGISTRY_SINGLETON = None
         _REGISTRY_CACHEDIR = None
+    if old is not None:
+        try:
+            old.close()
+        except Exception:  # pylint: disable=broad-except
+            log.debug(
+                "resource_registry: error closing singleton on reset",
+                exc_info=True,
+            )
