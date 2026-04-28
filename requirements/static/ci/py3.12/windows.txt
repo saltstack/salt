@@ -24,7 +24,6 @@ apache-libcloud==3.9.0
     #   -r requirements/base.txt
 attrs==25.4.0
     # via
-    #   -c requirements/constraints.txt
     #   -c requirements/static/pkg/py3.12/windows.txt
     #   aiohttp
     #   jsonschema
@@ -197,9 +196,7 @@ jmespath==1.1.0
     #   boto3
     #   botocore
 jsonschema==3.2.0
-    # via
-    #   -c requirements/constraints.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 junit-xml==1.9
     # via -r requirements/static/ci/common.in
 keyring==5.7.1
