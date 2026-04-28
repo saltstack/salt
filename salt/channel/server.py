@@ -21,6 +21,7 @@ import zlib
 import tornado.ioloop
 
 import salt.cache
+import salt.cluster.consensus.rpc
 import salt.crypt
 import salt.master
 import salt.payload
@@ -1943,42 +1944,8 @@ class MasterPubServerChannel:
         self._discover_event = _discover_event
         self._discover_token = _discover_token
         self._discover_candidates = {}
-
-    def gen_token(self):
-        return "".join(random.choices(string.ascii_letters + string.digits, k=32))
-
-    def discover_peers(self):
-        path = self.master_key.master_pub_path
-        with salt.utils.files.fopen(path, "r") as fp:
-            pub = fp.read()
-
-        self._discover_token = self.gen_token()
-
-        for peer in self.cluster_peers:
-            log.error("Discover cluster from %s", peer)
-            tosign = salt.payload.package(
-                {
-                    "peer_id": self.opts["id"],
-                    "pub": pub,
-                    "token": self._discover_token,
-                }
-            )
-            key = salt.crypt.PrivateKeyString(self.private_key())
-            sig = key.sign(tosign)
-            data = {
-                "sig": sig,
-                "payload": tosign,
-            }
-            with salt.utils.event.get_master_event(
-                self.opts, self.opts["sock_dir"], listen=False
-            ) as event:
-                success = event.fire_event(
-                    data,
-                    salt.utils.event.tagify("discover", "peer", "cluster"),
-                    timeout=30000,  # 30 second timeout
-                )
-                if not success:
-                    log.error("Unable to send aes key event")
+        # Set by service.py once the Raft node is started.
+        self._raft_dispatcher = None
 
     def send_aes_key_event(self):
         log.debug("Sending AES key event")
@@ -2023,6 +1990,8 @@ class MasterPubServerChannel:
         self.opts = state["opts"]
         self.transport = state["transport"]
         self._discover_event = state["_discover_event"]
+        self._raft_dispatcher = None
+        self._raft_service = None
 
     def close(self):
         self.transport.close()
@@ -2154,6 +2123,22 @@ class MasterPubServerChannel:
         """
         try:
             tag, data = salt.utils.event.SaltEvent.unpack(payload)
+            if salt.cluster.consensus.rpc.is_raft_tag(tag):
+                if self._raft_dispatcher is not None:
+                    try:
+                        _, src, rpc_id, rpc_payload = salt.cluster.consensus.rpc.unpack(
+                            payload
+                        )
+                        await self._raft_dispatcher.dispatch(
+                            tag, src, rpc_id, rpc_payload
+                        )
+                    except Exception:  # pylint: disable=broad-except
+                        log.exception("Error dispatching Raft RPC tag %s", tag)
+                else:
+                    log.debug(
+                        "Raft RPC received but dispatcher not initialised: %s", tag
+                    )
+                return
             log.debug("Incomming from peer %s %r", tag, data)
             if tag.startswith("cluster/peer/join-notify"):
                 log.info(
