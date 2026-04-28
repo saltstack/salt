@@ -345,6 +345,8 @@ def test_handle_routine_thread_remote_invalid_retcode(
     single.id = host
     single.run.return_value = single_ret
     # We mock parse_ret because it handles the JSON parsing
+    import multiprocessing
+
     with patch("salt.roster.get_roster_file", MagicMock(return_value="")), patch(
         "salt.client.ssh.Single", autospec=True, return_value=single
     ), patch(
@@ -352,7 +354,9 @@ def test_handle_routine_thread_remote_invalid_retcode(
         return_value={"retcode": expected, "return": "foo"},
     ):
         client = ssh.SSH(opts)
-        ret, exit_code = client._handle_routine_thread(opts, host, target)
+        que = multiprocessing.Queue()
+        client._handle_routine_thread(que, opts, host, target)
+        ret, exit_code = que.get(timeout=10)
 
     assert ret == {host: {"retcode": expected, "return": "foo"}}
     assert exit_code == 1
@@ -372,11 +376,15 @@ def test_handle_routine_thread_single_run_invalid_retcode(opts, target, caplog):
     single.id = host
     single.run.return_value = single_ret
 
+    import multiprocessing
+
     with patch("salt.roster.get_roster_file", MagicMock(return_value="")), patch(
         "salt.client.ssh.Single", autospec=True, return_value=single
     ):
         client = ssh.SSH(opts)
-        ret, exit_code = client._handle_routine_thread(opts, host, target)
+        que = multiprocessing.Queue()
+        client._handle_routine_thread(que, opts, host, target)
+        ret, exit_code = que.get(timeout=10)
 
     assert exit_code == 1
     assert "Got an invalid retcode for host 'localhost': 'None'" in caplog.text

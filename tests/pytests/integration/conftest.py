@@ -101,7 +101,7 @@ def salt_ssh_cli(salt_master, salt_ssh_roster_file, sshd_config_dir, known_hosts
     """
     assert salt_master.is_running()
     return salt_master.salt_ssh_cli(
-        timeout=300,
+        timeout=180,
         roster_file=salt_ssh_roster_file,
         target_host="localhost",
         client_key=str(sshd_config_dir / "client_key"),

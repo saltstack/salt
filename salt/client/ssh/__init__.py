@@ -9,7 +9,6 @@ import getpass
 import hashlib
 import logging
 import multiprocessing
-import multiprocessing.pool
 import os
 import pathlib
 import queue
@@ -603,56 +602,108 @@ class SSH(MultiprocessingStateMixin):
         Spin up the needed threads or processes and execute the subsequent
         routines
         """
-        pool = multiprocessing.pool.ThreadPool(
-            processes=self.opts.get("ssh_max_procs", 25)
-        )
-        results = []
+        # Use forked Processes rather than a ThreadPool.  Spawning a
+        # subprocess (via salt.utils.vt.Terminal / subprocess.Popen) from
+        # inside a ThreadPool worker can deadlock on Linux because fork()
+        # inherits locked mutexes from sibling threads.  Forked processes
+        # each get their own copy of the address space and are immune to
+        # that hazard, matching the pre-ThreadPool behaviour.
+        que = multiprocessing.Queue()
+        running = {}
+        target_iter = iter(self.targets)
+        returned = set()
+        rets = set()
+        init = False
+        max_procs = self.opts.get("ssh_max_procs", 25)
 
-        for host in self.targets:
-            for default in self.defaults:
-                if default not in self.targets[host]:
-                    self.targets[host][default] = self.defaults[default]
-            if "host" not in self.targets[host]:
-                self.targets[host]["host"] = host
+        while True:
+            if not self.targets:
+                log.error("No matching targets found in roster.")
+                break
 
-            if self.targets[host].get("winrm") and not HAS_WINSHELL:
-                log_msg = "Please contact sales@saltstack.com for access to the enterprise saltwinshell module."
-                no_ret = {
-                    "fun_args": [],
-                    "jid": None,
-                    "return": log_msg,
-                    "retcode": 1,
-                    "fun": "",
-                    "id": host,
-                }
-                results.append(
-                    pool.apply_async(lambda h, r: (h, r), args=({host: no_ret}, 1))
+            if len(running) < max_procs and not init:
+                try:
+                    host = next(target_iter)
+                except StopIteration:
+                    init = True
+                    continue
+
+                for default in self.defaults:
+                    if default not in self.targets[host]:
+                        self.targets[host][default] = self.defaults[default]
+                if "host" not in self.targets[host]:
+                    self.targets[host]["host"] = host
+
+                if self.targets[host].get("winrm") and not HAS_WINSHELL:
+                    log_msg = "Please contact sales@saltstack.com for access to the enterprise saltwinshell module."
+                    no_ret = {
+                        "fun_args": [],
+                        "jid": None,
+                        "return": log_msg,
+                        "retcode": 1,
+                        "fun": "",
+                        "id": host,
+                    }
+                    returned.add(host)
+                    rets.add(host)
+                    yield {host: no_ret}, 1
+                    continue
+
+                routine = Process(
+                    target=self._handle_routine_thread,
+                    args=(que, self.opts, host, self.targets[host], mine, jid),
                 )
+                routine.start()
+                running[host] = {"thread": routine}
                 continue
 
-            results.append(
-                pool.apply_async(
-                    self._handle_routine_thread,
-                    args=(self.opts, host, self.targets[host], mine, jid),
-                )
-            )
-
-        pool.close()
-
-        while results:
-            for r in list(results):
-                if r.ready():
-                    ret, retcode = r.get()
+            ret = {}
+            retcode = salt.defaults.exitcodes.EX_OK
+            try:
+                ret, retcode = que.get(False)
+                host_id = next(iter(ret))
+                if host_id not in returned:
+                    returned.add(host_id)
                     yield ret, retcode
-                    results.remove(r)
-            if results:
+            except queue.Empty:
+                pass
+
+            for host in list(running):
+                if not running[host]["thread"].is_alive():
+                    if host not in returned:
+                        try:
+                            while True:
+                                ret, retcode = que.get(False)
+                                host_id = next(iter(ret))
+                                if host_id not in returned:
+                                    returned.add(host_id)
+                                    yield ret, retcode
+                        except queue.Empty:
+                            pass
+
+                        if host not in returned:
+                            error = (
+                                "Target '{}' did not return any data, "
+                                "probably due to an error.".format(host)
+                            )
+                            log.error(error)
+                            yield {host: error}, 1
+                    running[host]["thread"].join()
+                    rets.add(host)
+
+            for host in rets:
+                running.pop(host, None)
+
+            if len(rets) >= len(self.targets):
+                break
+
+            if len(running) >= max_procs or (init and running):
                 time.sleep(0.1)
 
-        pool.join()
-
-    def _handle_routine_thread(self, opts, host, target, mine=False, jid=None):
+    def _handle_routine_thread(self, que, opts, host, target, mine=False, jid=None):
         """
-        Helper for ThreadPool execution
+        Helper for per-host execution. Runs in a forked Process; puts the
+        ``(ret_dict, retcode)`` tuple on *que* when done.
         """
         # Register the job in the master's proc directory
         proc_file = None
@@ -768,7 +819,7 @@ class SSH(MultiprocessingStateMixin):
                     os.remove(proc_file)
                 except OSError:
                     pass
-        return ret, retcode
+        que.put((ret, retcode))
 
     def run_iter(self, mine=False, jid=None):
         """

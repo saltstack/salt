@@ -56,7 +56,6 @@ def test_ssh_mine_get(salt_ssh_cli):
     assert ret.data["localhost"]["args"] == ["itworked"]
 
 
-@pytest.mark.timeout(300)
 @pytest.mark.parametrize("tgts", (("ssh",), ("regular",), ("ssh", "regular")))
 def test_mine_get(salt_ssh_cli, salt_minion, tgts):
     """
