@@ -856,9 +856,51 @@ class ResourceRegistry:
 # rebuild on first read — re-instantiating per request would defeat the O(1)
 # read path.
 
+
+class _NullResourceRegistry:
+    """
+    Read-only stand-in when ``opts['cachedir']`` is unset (minimal master
+    contexts, some unit tests). :class:`CkMinions` always wires the registry;
+    resource targeting then behaves as if no resources were registered.
+    """
+
+    def has_srn(self, resource_type, resource_id):
+        return False
+
+    def get_resource_ids_by_type(self, resource_type):
+        return []
+
+    def get_resources_for_minion(self, minion_id):
+        return {}
+
+    def register_minion(self, minion_id, resources):
+        return (0, 0)
+
+    def stats(self):
+        return {
+            "primary": {
+                "occupied": 0,
+                "deleted": 0,
+                "total": 0,
+                "load_factor": 0.0,
+            },
+            "derived_version": (0, 0),
+            "derived_by_type_count": 0,
+            "derived_by_minion_count": 0,
+            "path": None,
+        }
+
+    def compact(self):
+        return (0, 0)
+
+    def maybe_compact(self, force_check=False):
+        return False, None
+
+
 _REGISTRY_LOCK = threading.Lock()
 _REGISTRY_SINGLETON = None
 _REGISTRY_CACHEDIR = None
+_NULL_REGISTRY_SINGLETON = None
 
 
 def get_registry(opts):
@@ -869,11 +911,21 @@ def get_registry(opts):
     callers get the same instance. If ``opts['cachedir']`` changes between
     calls (primarily a testing concern) the singleton is rebuilt.
 
-    :param dict opts: Salt opts dict. Must contain ``cachedir``.
-    :rtype: ResourceRegistry
+    When ``cachedir`` is missing, returns a shared :class:`_NullResourceRegistry`
+    so callers like :class:`~salt.utils.minions.CkMinions` can construct
+    without a master cache directory (e.g. pillar unit tests).
+
+    :param dict opts: Salt opts dict. Normally includes ``cachedir``.
+    :rtype: ResourceRegistry or _NullResourceRegistry
     """
-    global _REGISTRY_SINGLETON, _REGISTRY_CACHEDIR  # pylint: disable=global-statement
+    global _REGISTRY_SINGLETON, _REGISTRY_CACHEDIR, _NULL_REGISTRY_SINGLETON  # pylint: disable=global-statement
     cachedir = opts.get("cachedir")
+    if not cachedir:
+        if _NULL_REGISTRY_SINGLETON is None:
+            with _REGISTRY_LOCK:
+                if _NULL_REGISTRY_SINGLETON is None:
+                    _NULL_REGISTRY_SINGLETON = _NullResourceRegistry()
+        return _NULL_REGISTRY_SINGLETON
     if _REGISTRY_SINGLETON is not None and _REGISTRY_CACHEDIR == cachedir:
         return _REGISTRY_SINGLETON
     with _REGISTRY_LOCK:
