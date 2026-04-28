@@ -1,4 +1,5 @@
 import base64
+import subprocess
 
 import pytest
 
@@ -96,10 +97,26 @@ def test_prepend_cmd_unquoted_payload():
     """
     Subprocess / ``TimedProc`` path: no outer ``_cmd_exe_cswitch_quoted_argument`` wrap.
     """
-    expected = "cmd.exe /c echo foo"
-    result = win.prepend_cmd("cmd.exe", "echo foo", quote_c_payload=False)
-    assert result == expected
+    # ``python_shell``-style: raw /c tail (``echo`` with internal quotes must not
+    # be re-wrapped by ``list2cmdline``).
+    assert win.prepend_cmd("cmd.exe", "echo foo", quote_c_payload=False) == (
+        "cmd.exe /c echo foo"
+    )
+    # ``runas`` + no ``python_shell``: one path with spaces is one token.
+    spaced_path = r"C:\a b\x.bat"
+    assert win.prepend_cmd(
+        "cmd.exe",
+        spaced_path,
+        quote_c_payload=False,
+        msvc_quote_bare_path_string=True,
+    ) == "cmd.exe /c " + subprocess.list2cmdline([spaced_path])
 
     result = win.prepend_cmd("cmd.exe", ["whoami.exe", "/all"], quote_c_payload=False)
     expected = "cmd.exe /c whoami.exe /all"
     assert result == expected
+
+    # ``|``/``&`` must not be passed as one list2cmdline token (breaks pipes).
+    compound = r'C:\x\p.bat | find /c /v ""'
+    assert win.prepend_cmd("cmd.exe", compound, quote_c_payload=False) == (
+        f"cmd.exe /c {compound}"
+    )

@@ -1,3 +1,4 @@
+import shlex
 import stat
 from textwrap import dedent
 
@@ -9,6 +10,19 @@ pytestmark = [
     pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
 ]
+
+
+def _cmd_path_for_run(path):
+    """
+    Local path for :func:`cmd.run` after POSIX ``shlex`` split: quote so one token.
+    On Windows, use the raw path — :func:`prepend_cmd` with
+    ``msvc_quote_bare_path_string`` already applies ``list2cmdline`` for
+    ``runas``; extra ``"..."`` here would double-wrap and break execution.
+    """
+    s = str(path)
+    if salt.utils.platform.is_windows():
+        return s
+    return shlex.quote(s)
 
 
 @pytest.fixture(scope="module")
@@ -109,6 +123,23 @@ def pipe_script_with_space(pipe_script_contents, state_tree):
     else:
         file_name = "pipe script space.sh"
     with pytest.helpers.temp_file(file_name, pipe_script_contents, state_tree) as f:
+        if not salt.utils.platform.is_windows():
+            current_perms = f.stat().st_mode
+            new_perms = current_perms | stat.S_IXUSR
+            f.chmod(new_perms)
+            f.chmod(0o755)
+        yield f
+
+
+@pytest.fixture
+def pipe_script_with_space_runas(pipe_script_contents, state_tree_for_runas):
+    if salt.utils.platform.is_windows():
+        file_name = "pipe script space.bat"
+    else:
+        file_name = "pipe script space.sh"
+    with pytest.helpers.temp_file(
+        file_name, pipe_script_contents, state_tree_for_runas
+    ) as f:
         if not salt.utils.platform.is_windows():
             current_perms = f.stat().st_mode
             new_perms = current_perms | stat.S_IXUSR
@@ -250,14 +281,13 @@ def test_run_pipe_shell(modules, pipe_script):
 
 
 def test_run_spaces(modules, pipe_script_with_space):
-    cmd = f"{str(pipe_script_with_space)}"
+    cmd = _cmd_path_for_run(pipe_script_with_space)
     result = modules.cmd.run(cmd)
     assert result == "fine"
 
 
-###### FAILING
-def test_run_spaces_runas(modules, pipe_script_with_space, account):
-    cmd = f"{str(pipe_script_with_space)}"
+def test_run_spaces_runas(modules, pipe_script_with_space_runas, account):
+    cmd = _cmd_path_for_run(pipe_script_with_space_runas)
     result = modules.cmd.run(
         cmd,
         runas=account.username,
@@ -266,7 +296,10 @@ def test_run_spaces_runas(modules, pipe_script_with_space, account):
     assert result == "fine"
 
 
+@pytest.mark.skip_unless_on_windows
 def test_script_pipe_spaces(modules, pipe_script_with_space):
+    # ``cmd.script`` treats ``source`` as a path (splitext, cache_file) — not a
+    # shell line, so do not use shell-style quoting.
     cmd = f"{str(pipe_script_with_space)}"
     if salt.utils.platform.is_windows():
         args = '| find /c /v ""'
@@ -276,8 +309,9 @@ def test_script_pipe_spaces(modules, pipe_script_with_space):
     assert result["stdout"] == "1"
 
 
-def test_script_pipe_spaces_runas(modules, pipe_script_with_space, account):
-    cmd = f"{str(pipe_script_with_space)}"
+@pytest.mark.skip_unless_on_windows
+def test_script_pipe_spaces_runas(modules, pipe_script_with_space_runas, account):
+    cmd = f"{str(pipe_script_with_space_runas)}"
     if salt.utils.platform.is_windows():
         args = '| find /c /v ""'
     else:

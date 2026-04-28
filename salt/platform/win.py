@@ -1353,7 +1353,12 @@ def _cmd_exe_cswitch_quoted_argument(payload: str) -> str:
     return '"' + payload.replace('"', '""') + '"'
 
 
-def prepend_cmd(win_shell, cmd, quote_c_payload=True):
+def prepend_cmd(
+    win_shell,
+    cmd,
+    quote_c_payload=True,
+    msvc_quote_bare_path_string=False,
+):
     """
     Prep cmd when shell is cmd.exe. Always use a command string instead of a
     list to satisfy both :class:`subprocess.Popen` and CreateProcess.
@@ -1366,9 +1371,19 @@ def prepend_cmd(win_shell, cmd, quote_c_payload=True):
             in double quotes after ``/c`` and double internal double quotes so
             the whole command is a single argument (required for
             ``CreateProcessWithTokenW`` and :mod:`win_runas <salt.utils.win_runas>`).
-            If ``False``, use ``cmd /c`` plus the raw payload (no outer wrap) so
-            command parsing matches the normal :class:`subprocess` / ``TimedProc``
-            path (e.g. ``set /p`` and special characters).
+            If ``False``, use ``cmd /c`` without the big ``_cmd_exe_cswitch`` wrap
+            (so batch ``%1``/``%2`` match the non-runas path). A *string* without
+            ``&``/``|`` is then either passed raw (so ``echo "a b"`` works with
+            ``python_shell``) or as one :func:`subprocess.list2cmdline` token
+            (see *msvc_quote_bare_path_string*). Compound *strings* use the
+            raw tail so ``cmd`` still parses ``&`` and ``|``. List/tuple payloads
+            use ``list2cmdline`` as above.
+        msvc_quote_bare_path_string: When ``quote_c_payload`` is false and
+            *cmd* is a string, if true and the payload has no ``&``/``|``,
+            wrap the entire string with ``list2cmdline`` so a *single* path
+            with spaces is one token (``runas`` and no ``python_shell``). If
+            false (default), use the string as the raw ``/c`` tail (e.g.
+            ``python_shell`` and ``echo`` with quotes).
 
     Returns:
         A full command line string starting with ``win_shell``.
@@ -1387,7 +1402,16 @@ def prepend_cmd(win_shell, cmd, quote_c_payload=True):
         # and also sidesteps cmd.exe quoting issues with double quotes inside the block.
         args = _maybe_encode_powershell_block(args)
     if not quote_c_payload:
-        return f"{win_shell} /c {args}"
+        if isinstance(cmd, (list, tuple)):
+            c_payload = args
+        else:
+            if ("&" in args) or ("|" in args):
+                c_payload = args
+            elif msvc_quote_bare_path_string:
+                c_payload = subprocess.list2cmdline([args])
+            else:
+                c_payload = args
+        return f"{win_shell} /c {c_payload}"
     return f"{win_shell} /c {_cmd_exe_cswitch_quoted_argument(args)}"
 
 
