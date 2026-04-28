@@ -3279,6 +3279,7 @@ class State:
             low["sfun"] = chunk["fun"]
             low["fun"] = "mod_beacon"
             low["__id__"] = f"beacon_{low['__id__']}"
+            self.dependency_dag.add_chunk(low, self._allow_aggregate(low, {}))
             mod_beacons.append(low)
         ret = self.call_chunks(mod_beacons)
 
