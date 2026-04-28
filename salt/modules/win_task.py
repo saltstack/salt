@@ -2482,7 +2482,7 @@ def add_trigger(
         if trigger_types[trigger_type] == TASK_TRIGGER_EVENT:
             # Check for required kwargs
             if kwargs.get("subscription", False):
-                trigger.Id = f"Event_{wargs.get('subscription')}"
+                trigger.Id = f"Event_{kwargs.get('subscription')}"
                 trigger.Subscription = kwargs.get("subscription")
             else:
                 return 'Required parameter "subscription" not passed'
