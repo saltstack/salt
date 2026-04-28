@@ -205,6 +205,14 @@ def test_missing_cachedir_raises():
         rr.ResourceRegistry({}, cache=_FakeCache())
 
 
+def test_get_registry_without_cachedir_is_inert():
+    """Master helpers may construct CkMinions with partial opts (no cache dir)."""
+    reg = rr.get_registry({})
+    assert reg.has_srn("ssh", "x") is False
+    assert reg.get_resources_for_minion("m") == {}
+    assert reg.register_minion("m", {"ssh": ["a"]}) == (0, 0)
+
+
 # ---------------------------------------------------------------------------
 # maybe_compact — policy-driven automatic compaction
 # ---------------------------------------------------------------------------
