@@ -40,13 +40,17 @@ using these options:
 Monitoring and Management
 =========================
 
-You can check the status of your PKI index or force a manual rebuild using the
-:ref:`PKI runner <all-salt.runners.pki>`:
+Check status or rebuild the minion-key mmap index with the
+:ref:`index runner <all-salt.runners.index>` (name ``pki``):
 
 .. code-block:: bash
 
     # Check index status and load factor
-    salt-run pki.status
+    salt-run index.status name=pki
 
     # Manually rebuild the index from the filesystem
-    salt-run pki.rebuild_index
+    salt-run index.compact name=pki
+
+The legacy :ref:`pki runner <all-salt.runners.pki>` (``salt-run pki.status`` /
+``salt-run pki.rebuild_index``) still works but is deprecated and forwards to
+the same implementation.

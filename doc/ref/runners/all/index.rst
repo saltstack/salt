@@ -20,6 +20,7 @@ runner modules
     fileserver
     git_pillar
     http
+    index
     jobs
     manage
     match

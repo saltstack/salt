@@ -1,7 +1,16 @@
+import warnings
+
 import pytest
 
 import salt.runners.pki
 from tests.support.mock import patch
+
+
+@pytest.fixture(autouse=True)
+def _silence_pki_runner_deprecation():
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=DeprecationWarning)
+        yield
 
 
 @pytest.fixture
