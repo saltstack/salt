@@ -2064,12 +2064,34 @@ class MasterPubServerChannel:
             if self.opts.get("cluster_peers"):
                 self.io_loop.call_later(2.0, self.discover_peers)
 
+        # Start the Raft node when this master is part of a cluster.
+        self._raft_service = None
+        if self.opts.get("cluster_id") and self.opts.get("cluster_peers"):
+            aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
+            try:
+                from salt.cluster.consensus.service import (
+                    RaftService,
+                    build_peer_pushers,
+                )
+
+                peer_pushers = build_peer_pushers(self.opts, self.pushers)
+                self._raft_service = RaftService(self.opts, aio_loop, peer_pushers)
+                self._raft_service.attach(self)
+                aio_loop.call_soon(self._raft_service.start)
+                log.info(
+                    "Raft consensus service started for cluster %r",
+                    self.opts["cluster_id"],
+                )
+            except Exception:  # pylint: disable=broad-except
+                log.exception("Failed to start Raft consensus service")
         # run forever
         try:
             self.io_loop.start()
         except (KeyboardInterrupt, SystemExit):
             pass
         finally:
+            if self._raft_service is not None:
+                self._raft_service.stop()
             self.close()
 
     def private_key(self):
