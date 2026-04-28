@@ -35,6 +35,7 @@ import logging
 
 from salt.cluster.consensus.peer import RaftDispatcher, SaltPeer
 from salt.cluster.consensus.raft import AsyncTimeoutScheduler, Node
+from salt.cluster.consensus.storage import SaltStorage
 
 log = logging.getLogger(__name__)
 
@@ -65,7 +66,8 @@ class RaftService:
         # the hostname which remote masters do not share; the interface
         # address is the consistent cluster-wide identity.
         node_id = opts["interface"]
-        self._node = Node(node_id)
+        storage = SaltStorage(node_id, opts)
+        self._node = Node(node_id, storage=storage)
         self._scheduler = AsyncTimeoutScheduler(loop=loop)
         self._node.register_schedule_timeout(self._scheduler.schedule)
 

@@ -2,20 +2,29 @@
 
 import pytest
 
+import salt.config
 from salt.cluster.consensus.raft import (
     CounterStateMachine,
-    JSONStorage,
     Log,
     LogEntry,
     LogEntryCommitStatus,
     LogEntryType,
 )
+from salt.cluster.consensus.storage import SaltStorage
 
 
 @pytest.fixture
 def status():
     # 3 total nodes: majority is 2.
     return LogEntryCommitStatus(3)
+
+
+@pytest.fixture
+def storage(tmp_path):
+    """SaltStorage backed by a temporary localfs cache directory."""
+    opts = salt.config.master_config("/dev/null")
+    opts["cachedir"] = str(tmp_path)
+    return SaltStorage("test-node", opts)
 
 
 def test_log_entry_commit_status_defaults(status):
@@ -114,18 +123,13 @@ def test_log_truncate_prefix():
     assert log.get_entry(5).cmd == "cmd5"
 
 
-def test_json_storage_snapshot():
-    import tempfile
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        storage = JSONStorage(tmpdir)
-        data = b"snapshot_data"
-        storage.save_snapshot(data, 10, 2)
-
-        loaded = storage.load_snapshot()
-        assert loaded["data"] == data
-        assert loaded["index"] == 10
-        assert loaded["term"] == 2
+def test_salt_storage_snapshot(storage):
+    data = b"snapshot_data"
+    storage.save_snapshot(data, 10, 2)
+    loaded = storage.load_snapshot()
+    assert loaded["data"] == data
+    assert loaded["index"] == 10
+    assert loaded["term"] == 2
 
 
 def test_log_has_entry_no_logs():
@@ -164,29 +168,39 @@ def test_log_entry_cmd_bytes_and_memoryview():
     assert e2 == b"mv"
 
 
-def test_json_storage_state_roundtrip():
-    import tempfile
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        s = JSONStorage(tmpdir)
-        s.save_state(7, "voter-a")
-        assert s.load_state() == {"term": 7, "voted_for": "voter-a"}
-        s.save_state(8, None)
-        assert s.load_state() == {"term": 8, "voted_for": None}
+def test_salt_storage_state_roundtrip(storage):
+    storage.save_state(7, "voter-a")
+    assert storage.load_state() == {"term": 7, "voted_for": "voter-a"}
+    storage.save_state(8, None)
+    assert storage.load_state() == {"term": 8, "voted_for": None}
 
 
-def test_json_storage_log_append_and_reload():
-    import tempfile
+def test_salt_storage_log_append_and_reload(storage):
+    e0 = LogEntry(1, 0, "a", None, LogEntryType.COMMAND)
+    storage.append_log(e0)
+    storage.append_log(LogEntry(1, 1, "b", None, LogEntryType.COMMAND))
+    loaded = storage.load_log()
+    assert len(loaded) == 2
+    assert loaded[0].cmd == "a"
+    assert loaded[1].index == 1
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        s = JSONStorage(tmpdir)
-        e0 = LogEntry(1, 0, "a", None, LogEntryType.COMMAND)
-        s.append_log(e0)
-        s.append_log(LogEntry(1, 1, "b", None, LogEntryType.COMMAND))
-        loaded = s.load_log()
-        assert len(loaded) == 2
-        assert loaded[0].cmd == "a"
-        assert loaded[1].index == 1
+
+def test_salt_storage_defaults_when_empty(storage):
+    assert storage.load_state() == {"term": 0, "voted_for": None}
+    assert storage.load_log() == []
+    assert storage.load_snapshot() is None
+
+
+def test_salt_storage_save_and_reload_log(storage):
+    entries = [
+        LogEntry(1, 0, "x", None, LogEntryType.COMMAND),
+        LogEntry(1, 1, "y", None, LogEntryType.CONFIG),
+    ]
+    storage.save_log(entries)
+    loaded = storage.load_log()
+    assert len(loaded) == 2
+    assert loaded[0].term == 1
+    assert loaded[1].type == LogEntryType.CONFIG
 
 
 def test_counter_state_machine_apply_and_snapshot():
