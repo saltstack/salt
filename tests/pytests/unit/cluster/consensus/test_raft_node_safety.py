@@ -5,10 +5,10 @@ import tempfile
 
 import pytest
 
+import salt.config
 from salt.cluster.consensus.raft import (
     Candidacy,
     CandidacyError,
-    JSONStorage,
     LockingNode,
     ManualPeer,
     Node,
@@ -18,6 +18,14 @@ from salt.cluster.consensus.raft import (
     Peer,
     Vote,
 )
+from salt.cluster.consensus.storage import SaltStorage
+
+
+def _storage(path):
+    """Return a SaltStorage backed by *path* as the cache directory."""
+    opts = salt.config.master_config("/dev/null")
+    opts["cachedir"] = path
+    return SaltStorage("test-node", opts)
 
 
 def test_node_state_errors():
@@ -327,7 +335,7 @@ def test_install_snapshot_safety():
 
 def test_install_snapshot_no_overlap():
     with tempfile.TemporaryDirectory() as tmpdir:
-        storage = JSONStorage(tmpdir)
+        storage = _storage(tmpdir)
         node = Node("1", storage=storage)
         node.register_schedule_timeout(lambda t, c: None)
         node.log.add(1, "cmd0")
@@ -481,7 +489,7 @@ def test_install_snapshot_with_overlap():
     from salt.cluster.consensus.raft import CounterStateMachine
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        storage = JSONStorage(tmpdir)
+        storage = _storage(tmpdir)
         sm = CounterStateMachine()
         node = Node("a", storage=storage, state_machine=sm)
         node.register_schedule_timeout(lambda t, c: None)

@@ -7,6 +7,7 @@ Salt master required.
 """
 
 import asyncio
+import tempfile
 
 from salt.cluster.consensus.peer import RaftDispatcher
 from salt.cluster.consensus.raft.node import NodeState
@@ -20,6 +21,9 @@ from tests.pytests.functional.cluster.consensus.conftest import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+# Shared temporary directory for the test module so SaltStorage can write.
+_TMPDIR = tempfile.mkdtemp(prefix="salt_raft_svc_test_")
+
 
 def _run(coro):
     return asyncio.run(coro)
@@ -31,6 +35,7 @@ def _make_opts(node_id, peers):
         "interface": node_id,
         "cluster_id": "test-cluster",
         "cluster_peers": peers,
+        "cachedir": _TMPDIR,
     }
 
 

@@ -4,17 +4,14 @@ Raft replicated log, persistence interfaces, and state machine hooks.
 ### Maintainability guardrail: logic / side-effect firewall
 
 Classes here define the **side-effect boundaries** the consensus core talks
-to. Implementations such as :class:`JSONStorage` perform I/O; the abstract
-interfaces (:class:`BaseStorage`, :class:`BaseStateMachine`) stay stable so the
-algorithm remains testable without real disks or networks.
+to.  :class:`BaseStorage` and :class:`BaseStateMachine` are abstract so the
+algorithm stays testable without real disks or networks.  The production
+implementation lives in :mod:`salt.cluster.consensus.storage`.
 """
 
 import json
 import logging
-import os
 from typing import NamedTuple
-
-import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -147,157 +144,6 @@ class BaseStorage:
     def load_snapshot(self):
         """Load the latest snapshot. Returns dict with 'data', 'index', 'term'."""
         raise NotImplementedError
-
-
-class JSONStorage(BaseStorage):
-    """
-    JSON-based implementation of BaseStorage.
-
-    Simple and human-readable, but inefficient for large logs as it rewrites
-    the entire file on changes.
-    """
-
-    def __init__(self, path):
-        """Initialize JSON storage at the given path."""
-        self.path = path
-        self.state_path = os.path.join(path, "state.json")
-        self.log_path = os.path.join(path, "log.json")
-        self.snapshot_path = os.path.join(path, "snapshot.json")
-        import threading
-
-        self._lock = threading.RLock()
-        if not os.path.exists(path):
-            os.makedirs(path)
-
-    def save_state(self, term, voted_for):
-        """Save currentTerm and votedFor to state.json."""
-        with self._lock:
-            with salt.utils.files.fopen(self.state_path, "w") as f:
-                json.dump({"term": term, "voted_for": voted_for}, f)
-
-    def load_state(self):
-        """Load state from state.json or return defaults."""
-        with self._lock:
-            if os.path.exists(self.state_path):
-                with salt.utils.files.fopen(self.state_path) as f:
-                    return json.load(f)
-        return {"term": 0, "voted_for": None}
-
-    def save_log(self, entries):
-        """Save all entries to log.json."""
-        with self._lock:
-            with salt.utils.files.fopen(self.log_path, "w") as f:
-                # Always save as tuples for consistency and speed
-                json.dump([e.info() for e in entries], f)
-
-    def append_log(self, entry):
-        """
-        Append a single entry to the log using an O(1) seek-and-overwrite trick.
-
-        Overwrites the closing ']' of the JSON array.
-        """
-        with self._lock:
-            if not os.path.exists(self.log_path) or os.path.getsize(self.log_path) < 2:
-                self.save_log([entry])
-                return
-
-            with salt.utils.files.fopen(self.log_path, "r+b") as f:
-                # Seek to the very end
-                f.seek(0, os.SEEK_END)
-                pos = f.tell()
-
-                # Backtrack to find the closing ']'
-                found = False
-                for offset in range(1, min(10, pos + 1)):
-                    f.seek(pos - offset, os.SEEK_SET)
-                    char = f.read(1)
-                    if char == b"]":
-                        # Found it! Point the file pointer at the ']'
-                        f.seek(pos - offset, os.SEEK_SET)
-                        found = True
-                        break
-
-                if not found:
-                    # Fallback to full rewrite if file is corrupted/unexpected
-                    f.close()
-                    self.save_log(self.load_log() + [entry])
-                    return
-
-                # Check if we need a comma (if the file has more than just '[')
-                # The pointer is currently at the ']'
-                curr_pos = f.tell()
-                is_first = False
-                if curr_pos > 0:
-                    f.seek(curr_pos - 1, os.SEEK_SET)
-                    if f.read(1) == b"[":
-                        is_first = True
-                    f.seek(curr_pos, os.SEEK_SET)  # Restore to ']'
-
-                prefix = b"" if is_first else b","
-                data = prefix + json.dumps(entry.info()).encode("utf-8") + b"]"
-                f.write(data)
-                f.flush()
-                os.fsync(f.fileno())
-                f.truncate()
-
-    def load_log(self):
-        """Load entries from log.json."""
-        with self._lock:
-            if os.path.exists(self.log_path):
-                with salt.utils.files.fopen(self.log_path, encoding="utf-8") as f:
-                    data = json.load(f)
-                    entries = []
-                    for e in data:
-                        if isinstance(e, (list, tuple)):
-                            # New tuple format: (term, index, cmd, node_id, type, client_id, sequence_num)
-                            term = e[0]
-                            idx = e[1]
-                            cmd = e[2]
-                            n_id = e[3] if len(e) > 3 else None
-                            e_type = e[4] if len(e) > 4 else LogEntryType.COMMAND
-                            c_id = e[5] if len(e) > 5 else None
-                            s_num = e[6] if len(e) > 6 else None
-                            entries.append(
-                                LogEntry(term, idx, cmd, n_id, e_type, c_id, s_num)
-                            )
-                        else:
-                            # Legacy dict format
-                            entries.append(
-                                LogEntry(
-                                    e["term"],
-                                    e["index"],
-                                    e["cmd"],
-                                    e.get("node_id"),
-                                    e.get("type", LogEntryType.COMMAND),
-                                    e.get("client_id"),
-                                    e.get("sequence_num"),
-                                )
-                            )
-                    return entries
-            return []
-
-    def save_snapshot(self, data, index, term):
-        """Save snapshot data and metadata to snapshot.json."""
-        import base64
-
-        if not isinstance(data, (bytes, memoryview)):
-            # If it's not bytes, assume it's JSON serializable
-            data = json.dumps(data).encode("utf-8")
-
-        encoded_data = base64.b64encode(data).decode("utf-8")
-        with salt.utils.files.fopen(self.snapshot_path, "w") as f:
-            json.dump({"data": encoded_data, "index": index, "term": term}, f)
-
-    def load_snapshot(self):
-        """Load latest snapshot from snapshot.json."""
-        if os.path.exists(self.snapshot_path):
-            import base64
-
-            with salt.utils.files.fopen(self.snapshot_path) as f:
-                data = json.load(f)
-                data["data"] = base64.b64decode(data["data"])
-                return data
-        return None
 
 
 class Log:

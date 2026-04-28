@@ -4,11 +4,11 @@ import tempfile
 
 import pytest
 
+import salt.config
 from salt.cluster.consensus.raft import (
     Candidacy,
     CandidacyError,
     CounterStateMachine,
-    JSONStorage,
     ManualPeer,
     ManualTimeoutScheduler,
     Node,
@@ -16,6 +16,14 @@ from salt.cluster.consensus.raft import (
     Vote,
     log_generator,
 )
+from salt.cluster.consensus.storage import SaltStorage
+
+
+def _storage(path):
+    """Return a SaltStorage backed by *path* as the cache directory."""
+    opts = salt.config.master_config("/dev/null")
+    opts["cachedir"] = path
+    return SaltStorage("test-node", opts)
 
 
 def create_nodes(number, scheduler):
@@ -636,7 +644,7 @@ def test_leader_state_tracking_and_catchup(scheduler):
 
 def test_snapshotting():
     with tempfile.TemporaryDirectory() as tmpdir:
-        storage = JSONStorage(tmpdir)
+        storage = _storage(tmpdir)
         sm = CounterStateMachine()
         node = Node("a", storage=storage, state_machine=sm, max_log_size=5)
         node.register_schedule_timeout(lambda t, c: None)
@@ -664,12 +672,12 @@ def test_install_snapshot():
     # Leader has snapshotted, follower is far behind
     with tempfile.TemporaryDirectory() as ldir, tempfile.TemporaryDirectory() as fdir:
         l_sm = CounterStateMachine()
-        l_storage = JSONStorage(ldir)
+        l_storage = _storage(ldir)
         leader = Node("leader", storage=l_storage, state_machine=l_sm, max_log_size=5)
         leader.register_schedule_timeout(lambda t, c: None)
 
         f_sm = CounterStateMachine()
-        f_storage = JSONStorage(fdir)
+        f_storage = _storage(fdir)
         follower = Node("follower", storage=f_storage, state_machine=f_sm)
         follower.register_schedule_timeout(lambda t, c: None)
 
@@ -769,7 +777,7 @@ def test_dynamic_membership():
 
 def test_persistence():
     with tempfile.TemporaryDirectory() as tmpdir:
-        storage = JSONStorage(tmpdir)
+        storage = _storage(tmpdir)
         node = Node("a", storage=storage)
         node.term = 5
         node.vote = Vote("b", 5, granted=True)
