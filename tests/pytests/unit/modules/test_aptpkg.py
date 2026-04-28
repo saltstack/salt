@@ -381,7 +381,7 @@ def test_get_repo_deb822_with_true(
     result = aptpkg.get_repo(repo)
 
     assert bool(result)
-    assert result["enabled"] is False
+    assert result["enabled"] is True
 
 
 def test_version(lowpkg_info_var):
