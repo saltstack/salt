@@ -44,7 +44,7 @@ class Secret(Generic[SecretType_co]):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._display()!r})"
 
-    def _display(self) -> str | bytes:
+    def _display(self):
         raise NotImplementedError
 
 
@@ -173,8 +173,9 @@ class SecretIterable(Secret[SecretType_co]):
 
 class SecretDict(SecretIterable[dict], MutableMapping[str, Any]):
     def __init__(self, secret_value: dict):
-        super().__init__({})
-        self._secret_value.update({k: hide(v) for k, v in secret_value.items()})
+        for k, v in secret_value.items():
+            secret_value[k] = hide(v)
+        super().__init__(secret_value)
 
     def setdefault(self, key: str, value: Any) -> Any:
         return self._secret_value.setdefault(key, hide(value))
@@ -190,8 +191,9 @@ class SecretDict(SecretIterable[dict], MutableMapping[str, Any]):
 
 class SecretList(SecretIterable[list], MutableSequence[Any]):
     def __init__(self, secret_value: list):
-        super().__init__([])
-        self._secret_value.extend(hide(item) for item in secret_value)
+        for i, v in enumerate(secret_value):
+            secret_value[i] = hide(v)
+        super().__init__(secret_value)
 
     def insert(self, index: int, value):
         self._secret_value.insert(index, hide(value))
@@ -219,37 +221,51 @@ def hide(value: Any) -> Secret:
         return value
 
 
-def expose(value: Secret) -> Any:
+def expose(value: Secret, _seen: set[int] = None) -> Any:
     """
     If the value is a secret, return the secret value.
     """
-    if isinstance(value, (str, bytes)):
-        return value
-    elif isinstance(value, Secret):
+    if isinstance(value, Secret):
         return value.get_secret_value()
-    elif isinstance(value, Mapping):
-        return {k: expose(v) for k, v in value.items()}
-    elif isinstance(value, Iterable):
-        cast = type(value)
-        return cast(expose(v) for v in value)
-    else:
+    if isinstance(value, (str, bytes, int, float, bool)) or value is None:
         return value
+    if isinstance(value, Iterable):
+        if _seen is None:
+            _seen = set()
+        object_id = id(value)
+        if object_id in _seen:
+            return f"<Recursion on {type(value).__name__} with id={object_id}>"
+        _seen.add(object_id)
+        if isinstance(value, Mapping):
+            if _seen is None:
+                _seen = {object_id}
+            return {k: expose(v, _seen) for k, v in value.items()}
+        else:
+            cast = type(value)
+            return cast(expose(v, _seen) for v in value)
+    return value
 
 
-def serial(value):
+def serial(value, _seen: set[int] = None):
     """
     Keep secrets redacted while serializing the structure to native python types.
     """
     if isinstance(value, (str, bytes)):
         return value
-    elif isinstance(value, Secret):
+    if isinstance(value, Secret):
         return value._display()
-    elif isinstance(value, Mapping):
-        return {k: serial(v) for k, v in value.items()}
-    elif isinstance(value, Iterable):
-        return [serial(v) for v in value]
-    else:
-        return value
+    if isinstance(value, Iterable):
+        if _seen is None:
+            _seen = set()
+        object_id = id(value)
+        if object_id in _seen:
+            return f"<Recursion on {type(value).__name__} with id={object_id}>"
+        _seen.add(object_id)
+        if isinstance(value, Mapping):
+            return {k: serial(v) for k, v in value.items()}
+        else:
+            return [serial(v) for v in value]
+    return value
 
 
 def no_log_mask(state_ret: dict[str, Any]):
@@ -302,9 +318,10 @@ def redact(value, secrets: Secret, known: list[str | bytes] = None) -> str:
                 secret_bytes = secret
             if secret_bytes in value:
                 value = value.replace(secret_bytes, b"*" * len(secret_bytes))
-    elif isinstance(value, dict):
+    elif isinstance(value, Mapping):
         value = {k: redact(v, secrets, known) for k, v in value.items()}
     elif isinstance(value, Iterable):
-        value = [redact(v, secrets, known) for v in value]
+        cast = type(value)
+        value = cast(redact(v, secrets, known) for v in value)
 
     return value

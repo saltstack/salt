@@ -337,6 +337,8 @@ def _obfuscate_inner(var):
     Known collection types trigger recursion.
     In the special case of mapping types, keys are not obfuscated
     """
+    if isinstance(var, salt.utils.secret.Secret):
+        return var
     if isinstance(var, (dict, OrderedDict)):
         return var.__class__((key, _obfuscate_inner(val)) for key, val in var.items())
     elif isinstance(var, (list, set, tuple)):

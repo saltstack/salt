@@ -33,6 +33,7 @@ import salt.utils.functools
 import salt.utils.minion
 import salt.utils.path
 import salt.utils.process
+import salt.utils.secret
 import salt.utils.url
 import salt.wheel
 from salt.exceptions import (
