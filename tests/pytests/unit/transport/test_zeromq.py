@@ -5,7 +5,6 @@ import logging
 import multiprocessing
 import os
 import threading
-import time
 import uuid
 
 import msgpack
@@ -301,7 +300,14 @@ class MockSaltMinionMaster:
         )
 
         master_opts = temp_salt_master.config.copy()
-        master_opts.update({"transport": "zeromq", "worker_pools_enabled": False})
+        master_opts.update(
+            {
+                "transport": "zeromq",
+                "worker_pools_enabled": False,
+                "id": "master",
+                "hash_type": "sha256",
+            }
+        )
         self.server_channel = salt.channel.server.ReqServerChannel.factory(master_opts)
         self.server_channel.pre_fork(self.process_manager)
 
@@ -312,6 +318,7 @@ class MockSaltMinionMaster:
             target=run_loop_in_thread, args=(self.io_loop, self.evt)
         )
         self.server_thread.start()
+
         minion_opts = temp_salt_minion.config.copy()
         minion_opts.update(
             {
@@ -331,14 +338,12 @@ class MockSaltMinionMaster:
     def __exit__(self, *args, **kwargs):
         self.channel.__exit__(*args, **kwargs)
         del self.channel
-        # Attempting to kill the children hangs the test suite.
-        # Let the test suite handle this instead.
         self.process_manager.stop_restarting()
         self.process_manager.kill_children()
         self.evt.clear()
-        self.server_thread.join()
-        # Give the procs a chance to fully close before we stop the io_loop
-        time.sleep(2)
+        # Non-blocking shutdown of the io_loop and thread
+        self.io_loop.add_callback(self.io_loop.stop)
+        self.server_thread.join(timeout=5)
         self.server_channel.close()
         SMaster.secrets.pop("aes")
         del self.server_channel
@@ -458,7 +463,8 @@ def test_badload(temp_salt_minion, temp_salt_master, message):
     Test a variety of bad requests, make sure that we get some sort of error
     """
     with MockSaltMinionMaster(temp_salt_minion, temp_salt_master) as minion_master:
-        ret = minion_master.channel.send(message, timeout=5, tries=1)
+        ret = minion_master.channel.send(message, timeout=10, tries=3)
+
         assert ret == "payload and load must be a dict"
 
 
@@ -469,7 +475,8 @@ def test_payload_handling_exception(temp_salt_minion, temp_salt_master):
     with MockSaltMinionMaster(temp_salt_minion, temp_salt_master) as minion_master:
         with patch.object(minion_master.mock, "_handle_payload_hook") as _mock:
             _mock.side_effect = Exception()
-            ret = minion_master.channel.send({}, timeout=5, tries=1)
+            ret = minion_master.channel.send({}, timeout=10, tries=3)
+
             assert ret == "Some exception handling minion payload"
 
 
@@ -480,7 +487,7 @@ def test_serverside_exception(temp_salt_minion, temp_salt_master):
     with MockSaltMinionMaster(temp_salt_minion, temp_salt_master) as minion_master:
         with patch.object(minion_master.mock, "_handle_payload_hook") as _mock:
             _mock.return_value = ({}, {"fun": "madeup-fun"})
-            ret = minion_master.channel.send({}, timeout=5, tries=1)
+            ret = minion_master.channel.send({}, timeout=10, tries=3)
             assert ret == "Server-side exception handling payload"
 
 

@@ -1180,8 +1180,7 @@ class PoolRoutingChannel:
                 # Standard IPC mode: use unique socket per pool
                 sock_dir = pool_opts.get("sock_dir", "/tmp/salt")
                 os.makedirs(sock_dir, exist_ok=True)
-                master_id = pool_opts.get("id", "master")
-                pool_opts["workers_ipc_name"] = f"workers-{master_id}-{pool_name}.ipc"
+                pool_opts["workers_ipc_name"] = f"workers-{pool_name}.ipc"
                 log.debug(
                     "Pool '%s' RequestServer using IPC socket: %s",
                     pool_name,
@@ -1234,8 +1233,7 @@ class PoolRoutingChannel:
                 port_offset = zlib.adler32(pool_name.encode()) % 1000
                 pool_opts["ret_port"] = base_port + port_offset
             else:
-                master_id = pool_opts.get("id", "master")
-                pool_opts["workers_ipc_name"] = f"workers-{master_id}-{pool_name}.ipc"
+                pool_opts["workers_ipc_name"] = f"workers-{pool_name}.ipc"
 
             try:
                 pool_transport = create_server_transport(pool_opts)
@@ -1298,8 +1296,7 @@ class PoolRoutingChannel:
                 )
             else:
                 # IPC socket: connect to pool's socket
-                master_id = self.opts.get("id", "master")
-                pool_opts["workers_ipc_name"] = f"workers-{master_id}-{pool_name}.ipc"
+                pool_opts["workers_ipc_name"] = f"workers-{pool_name}.ipc"
                 ipc_path = os.path.join(
                     self.opts["sock_dir"], pool_opts["workers_ipc_name"]
                 )
@@ -1737,14 +1734,7 @@ class MasterPubServerChannel:
     @classmethod
     def factory(cls, opts, **kwargs):
         _discover_event = kwargs.get("_discover_event", None)
-        import hashlib
-
         from salt.transport import publish_server
-
-        hash_type = getattr(hashlib, opts["hash_type"])
-        id_hash = hash_type(
-            salt.utils.stringutils.to_bytes(opts.get("id", "master"))
-        ).hexdigest()[:10]
 
         if opts["ipc_mode"] == "tcp":
             pub_host = "127.0.0.1"
@@ -1759,16 +1749,15 @@ class MasterPubServerChannel:
                 pull_port=pull_port,
             )
         else:
-            pub_path = os.path.join(opts["sock_dir"], f"master_event_{id_hash}_pub.ipc")
-            pull_path = os.path.join(
-                opts["sock_dir"], f"master_event_{id_hash}_pull.ipc"
-            )
+            pub_path = os.path.join(opts["sock_dir"], "master_event_pub.ipc")
+            pull_path = os.path.join(opts["sock_dir"], "master_event_pull.ipc")
             transport = publish_server(
                 opts,
                 pub_path=pub_path,
                 pull_path=pull_path,
                 pub_path_perms=0o660,
             )
+
         if _discover_event:
             _discover_event.set()
         return cls(opts, transport)

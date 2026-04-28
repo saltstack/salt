@@ -283,10 +283,12 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         pull_path_perms=0o600,
         pub_path_perms=0o600,
         started=None,
+        secrets=None,
         _shutdown=None,
         ssl=None,
     ):
         self.opts = opts
+        self.secrets = secrets
         self.pub_host = pub_host
         self.pub_port = pub_port
         self.pub_path = pub_path
@@ -346,8 +348,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         publish_payload,
         presence_callback=None,
         remove_presence_callback=None,
-        *args,
-        **kwargs,
+        secrets=None,
+        started=None,
     ):
         """
         Bind to the interface specified in the configuration file

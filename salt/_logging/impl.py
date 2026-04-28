@@ -457,7 +457,8 @@ def set_logging_options_dict(opts):
     except AttributeError:
         pass
     set_logging_options_dict.__options_dict__ = opts
-    set_lowest_log_level_by_opts(opts)
+    if opts is not None:
+        set_lowest_log_level_by_opts(opts)
 
 
 def freeze_logging_options_dict():

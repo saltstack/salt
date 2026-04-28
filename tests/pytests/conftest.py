@@ -25,12 +25,36 @@ from saltfactories.utils import random_string
 import salt.utils.files
 import salt.utils.platform
 from salt.serializers import yaml
-from tests.conftest import FIPS_TESTRUN
+from tests.conftest import CODE_DIR, FIPS_TESTRUN
 from tests.support.helpers import Webserver, get_virtualenv_binary_path
 from tests.support.pytest.helpers import TestAccount
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
+
+
+@pytest.fixture(autouse=True)
+def _ensure_valid_cwd():
+    """
+    Some tests change cwd into a tmp_path that gets cleaned up before the next
+    test runs, leaving cwd pointing at a deleted directory. ``os.getcwd()`` and
+    ``pathlib.Path.cwd()`` then raise ``FileNotFoundError`` and trip up
+    fixtures (notably ``saltfactories``/``pytestshellutils`` ``Subprocess``)
+    that resolve a default cwd at setup time.
+
+    Restoring cwd to ``CODE_DIR`` whenever the current cwd is gone keeps the
+    failure isolated to whichever test caused the deletion instead of
+    cascading into unrelated fixtures.
+    """
+    try:
+        os.getcwd()
+    except (FileNotFoundError, OSError):
+        os.chdir(str(CODE_DIR))
+    yield
+    try:
+        os.getcwd()
+    except (FileNotFoundError, OSError):
+        os.chdir(str(CODE_DIR))
 
 
 @pytest.fixture(scope="session")

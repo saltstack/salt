@@ -51,6 +51,7 @@ def test_event_single(sock_dir):
     """Test a single event is received"""
     with eventpublisher_process(str(sock_dir)):
         with salt.utils.event.MasterEvent(str(sock_dir), listen=True) as me:
+            time.sleep(1)
             me.fire_event({"data": "foo1"}, "evt1")
             evt1 = me.get_event(tag="evt1")
             _assert_got_event(evt1, {"data": "foo1"})
@@ -61,6 +62,7 @@ def test_event_single_no_block(sock_dir):
     """Test a single event is received, no block"""
     with eventpublisher_process(str(sock_dir)):
         with salt.utils.event.MasterEvent(str(sock_dir), listen=True) as me:
+            time.sleep(1)
             start = time.time()
             finish = start + 5
             evt1 = me.get_event(wait=0, tag="evt1", no_block=True)
@@ -79,6 +81,7 @@ def test_event_single_wait_0_no_block_False(sock_dir):
     """Test a single event is received with wait=0 and no_block=False and doesn't spin the while loop"""
     with eventpublisher_process(str(sock_dir)):
         with salt.utils.event.MasterEvent(str(sock_dir), listen=True) as me:
+            time.sleep(1)
             me.fire_event({"data": "foo1"}, "evt1")
             # This is too fast and will be None but assures we're not blocking
             evt1 = me.get_event(wait=0, tag="evt1", no_block=False)
@@ -90,6 +93,7 @@ def test_event_timeout(sock_dir):
     """Test no event is received if the timeout is reached"""
     with eventpublisher_process(str(sock_dir)):
         with salt.utils.event.MasterEvent(str(sock_dir), listen=True) as me:
+            time.sleep(1)
             me.fire_event({"data": "foo1"}, "evt1")
             evt1 = me.get_event(tag="evt1")
             _assert_got_event(evt1, {"data": "foo1"})
@@ -102,6 +106,7 @@ def test_event_no_timeout(sock_dir):
     """Test no wait timeout, we should block forever, until we get one"""
     with eventpublisher_process(str(sock_dir)):
         with salt.utils.event.MasterEvent(str(sock_dir), listen=True) as me:
+            time.sleep(1)
             with eventsender_process({"data": "foo2"}, "evt2", str(sock_dir), 5):
                 evt = me.get_event(tag="evt2", wait=0, no_block=False)
             _assert_got_event(evt, {"data": "foo2"})
@@ -112,6 +117,7 @@ def test_event_matching(sock_dir):
     """Test a startswith match"""
     with eventpublisher_process(str(sock_dir)):
         with salt.utils.event.MasterEvent(str(sock_dir), listen=True) as me:
+            time.sleep(1)
             me.fire_event({"data": "foo1"}, "evt1")
             evt1 = me.get_event(tag="ev")
             _assert_got_event(evt1, {"data": "foo1"})
@@ -122,6 +128,7 @@ def test_event_matching_regex(sock_dir):
     """Test a regex match"""
     with eventpublisher_process(str(sock_dir)):
         with salt.utils.event.MasterEvent(str(sock_dir), listen=True) as me:
+            time.sleep(1)
             me.fire_event({"data": "foo1"}, "evt1")
             evt1 = me.get_event(tag="^ev", match_type="regex")
             _assert_got_event(evt1, {"data": "foo1"})
@@ -132,6 +139,7 @@ def test_event_matching_all(sock_dir):
     """Test an all match"""
     with eventpublisher_process(str(sock_dir)):
         with salt.utils.event.MasterEvent(str(sock_dir), listen=True) as me:
+            time.sleep(1)
             me.fire_event({"data": "foo1"}, "evt1")
             evt1 = me.get_event(tag="")
             _assert_got_event(evt1, {"data": "foo1"})
@@ -142,6 +150,7 @@ def test_event_matching_all_when_tag_is_None(sock_dir):
     """Test event matching all when not passing a tag"""
     with eventpublisher_process(str(sock_dir)):
         with salt.utils.event.MasterEvent(str(sock_dir), listen=True) as me:
+            time.sleep(1)
             me.fire_event({"data": "foo1"}, "evt1")
             evt1 = me.get_event()
             _assert_got_event(evt1, {"data": "foo1"})
@@ -152,6 +161,7 @@ def test_event_not_subscribed(sock_dir):
     """Test get_event drops non-subscribed events"""
     with eventpublisher_process(str(sock_dir)):
         with salt.utils.event.MasterEvent(str(sock_dir), listen=True) as me:
+            time.sleep(1)
             me.fire_event({"data": "foo1"}, "evt1")
             me.fire_event({"data": "foo2"}, "evt2")
             evt2 = me.get_event(tag="evt2")
@@ -165,6 +175,7 @@ def test_event_subscription_cache(sock_dir):
     """Test subscriptions cache a message until requested"""
     with eventpublisher_process(str(sock_dir)):
         with salt.utils.event.MasterEvent(str(sock_dir), listen=True) as me:
+            time.sleep(1)
             me.subscribe("evt1")
             me.fire_event({"data": "foo1"}, "evt1")
             me.fire_event({"data": "foo2"}, "evt2")
@@ -179,6 +190,7 @@ def test_event_subscriptions_cache_regex(sock_dir):
     """Test regex subscriptions cache a message until requested"""
     with eventpublisher_process(str(sock_dir)):
         with salt.utils.event.MasterEvent(str(sock_dir), listen=True) as me:
+            time.sleep(1)
             me.subscribe("e..1$", "regex")
             me.fire_event({"data": "foo1"}, "evt1")
             me.fire_event({"data": "foo2"}, "evt2")
@@ -211,6 +223,7 @@ def test_event_nested_sub_all(sock_dir):
     # Show why not to call get_event(tag='')
     with eventpublisher_process(str(sock_dir)):
         with salt.utils.event.MasterEvent(str(sock_dir), listen=True) as me:
+            time.sleep(1)
             me.fire_event({"data": "foo1"}, "evt1")
             me.fire_event({"data": "foo2"}, "evt2")
             evt2 = me.get_event(tag="")
@@ -224,6 +237,7 @@ def test_event_many(sock_dir):
     """Test a large number of events, one at a time"""
     with eventpublisher_process(str(sock_dir)):
         with salt.utils.event.MasterEvent(str(sock_dir), listen=True) as me:
+            time.sleep(1)
             for i in range(500):
                 me.fire_event({"data": f"{i}"}, "testevents")
                 evt = me.get_event(tag="testevents")
@@ -235,6 +249,7 @@ def test_event_many_backlog(sock_dir):
     """Test a large number of events, send all then recv all"""
     with eventpublisher_process(str(sock_dir)):
         with salt.utils.event.MasterEvent(str(sock_dir), listen=True) as me:
+            time.sleep(1)
             # Must not exceed zmq HWM
             for i in range(500):
                 me.fire_event({"data": f"{i}"}, "testevents")
@@ -250,6 +265,7 @@ def test_send_master_event(sock_dir):
     """Tests that sending an event through fire_master generates expected event"""
     with eventpublisher_process(str(sock_dir)):
         with salt.utils.event.MasterEvent(str(sock_dir), listen=True) as me:
+            time.sleep(1)
             data = {"data": "foo1"}
             me.fire_master(data, "test_master")
 

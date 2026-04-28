@@ -13,6 +13,7 @@ import signal
 import stat
 import sys
 import threading
+import time
 import zlib
 from random import randint
 
@@ -467,7 +468,6 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
 
         # Determine worker URI based on pool configuration
         pool_name = self.opts.get("pool_name", "")
-        master_id = salt.utils.stringutils.to_str(self.opts.get("id", "master"))
         if self.opts.get("ipc_mode", "") == "tcp":
             base_port = self.opts.get("tcp_master_workers", 4515)
             if pool_name:
@@ -479,13 +479,11 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         else:
             if pool_name:
                 self.w_uri = "ipc://{}".format(
-                    os.path.join(
-                        self.opts["sock_dir"], f"workers-{master_id}-{pool_name}.ipc"
-                    )
+                    os.path.join(self.opts["sock_dir"], f"workers-{pool_name}.ipc")
                 )
             else:
                 self.w_uri = "ipc://{}".format(
-                    os.path.join(self.opts["sock_dir"], f"workers-{master_id}.ipc")
+                    os.path.join(self.opts["sock_dir"], "workers.ipc")
                 )
 
         log.info("Setting up the master communication server")
@@ -496,12 +494,10 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         if self.opts.get("ipc_mode", "") != "tcp":
             if pool_name:
                 ipc_path = os.path.join(
-                    self.opts["sock_dir"], f"workers-{master_id}-{pool_name}.ipc"
+                    self.opts["sock_dir"], f"workers-{pool_name}.ipc"
                 )
             else:
-                ipc_path = os.path.join(
-                    self.opts["sock_dir"], f"workers-{master_id}.ipc"
-                )
+                ipc_path = os.path.join(self.opts["sock_dir"], "workers.ipc")
             os.chmod(ipc_path, 0o600)
 
         # Initialize request router for command classification
@@ -559,7 +555,6 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
 
         # Create backend DEALER sockets (one per pool) that preserve envelopes
         self.pool_workers = {}
-        master_id = salt.utils.stringutils.to_str(self.opts.get("id", "master"))
         for pool_name in worker_pools.keys():
             dealer_socket = context.socket(zmq.DEALER)
             dealer_socket.setsockopt(zmq.LINGER, 1)
@@ -571,16 +566,14 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 w_uri = f"tcp://127.0.0.1:{base_port + port_offset}"
             else:
                 w_uri = "ipc://{}".format(
-                    os.path.join(
-                        self.opts["sock_dir"], f"workers-{master_id}-{pool_name}.ipc"
-                    )
+                    os.path.join(self.opts["sock_dir"], f"workers-{pool_name}.ipc")
                 )
 
             log.info("RequestServer pool '%s' workers %s", pool_name, w_uri)
             dealer_socket.bind(w_uri)
             if self.opts.get("ipc_mode", "") != "tcp":
                 ipc_path = os.path.join(
-                    self.opts["sock_dir"], f"workers-{master_id}-{pool_name}.ipc"
+                    self.opts["sock_dir"], f"workers-{pool_name}.ipc"
                 )
                 os.chmod(ipc_path, 0o600)
             self.pool_workers[pool_name] = dealer_socket
@@ -842,8 +835,10 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                     reply = await self.handle_message(None, request)
                     await self._socket.send(self.encode_payload(reply))
                 except zmq.error.Again:
+                    await asyncio.sleep(0)
                     continue
                 except asyncio.exceptions.TimeoutError:
+                    await asyncio.sleep(0)
                     continue
                 except (asyncio.CancelledError, zmq.eventloop.future.CancelledError):
                     break
@@ -1427,7 +1422,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         This method represents the Publish Daemon process. It is intended to be
         run in a thread or process as it creates and runs its own ioloop.
         """
-        print("publish_daemon starting!")
         if started is not None:
             self.started = started
         if secrets is not None:
@@ -1442,10 +1436,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         )
         publisher_task._log_destroy_pending = False
         try:
-            print("publish_daemon running io_loop!")
             io_loop.run_forever()
         finally:
-            print("publish_daemon closing!")
             self.close()
 
     def _get_sockets(self, context, io_loop):
@@ -1479,14 +1471,40 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         # Securely create socket
         with salt.utils.files.set_umask(0o177):
             log.info("Starting the Salt Publisher on %s", self.pub_uri)
-            pub_sock.bind(self.pub_uri)
+            for attempt in range(3):
+                try:
+                    pub_sock.bind(self.pub_uri)
+                    break
+                except zmq.ZMQError as exc:
+                    if exc.errno == errno.EADDRINUSE and attempt < 2:
+                        log.debug(
+                            "Address %s in use, retrying in 1s (attempt %d)",
+                            self.pub_uri,
+                            attempt + 1,
+                        )
+                        time.sleep(1)
+                        continue
+                    raise
             if self.pub_path:
                 os.chmod(  # nosec
                     self.pub_path,
                     self.pub_path_perms,
                 )
             log.info("Starting the Salt Puller on %s", self.pull_uri)
-            pull_sock.bind(self.pull_uri)
+            for attempt in range(3):
+                try:
+                    pull_sock.bind(self.pull_uri)
+                    break
+                except zmq.ZMQError as exc:
+                    if exc.errno == errno.EADDRINUSE and attempt < 2:
+                        log.debug(
+                            "Address %s in use, retrying in 1s (attempt %d)",
+                            self.pull_uri,
+                            attempt + 1,
+                        )
+                        time.sleep(1)
+                        continue
+                    raise
             if self.pull_path:
                 os.chmod(  # nosec
                     self.pull_path,
@@ -1501,7 +1519,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         remove_presence_callback=None,
         io_loop=None,
     ):
-        print("publisher task started!")
         if io_loop is None:
             io_loop = tornado.ioloop.IOLoop.current()
         self.daemon_context = zmq.asyncio.Context()
@@ -1510,7 +1527,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.daemon_pub_sock,
             self.daemon_monitor,
         ) = self._get_sockets(self.daemon_context, io_loop)
-        print("publisher sockets created, setting started event!")
         self.started.set()
         while True:
             try:
@@ -1735,28 +1751,36 @@ class RequestClient(salt.transport.base.RequestClient):
             self.socket = None
         await self.connect()
 
-    async def send(self, load, timeout=60):
+    async def send(self, load, timeout=60, tries=3):
         """
         Return a future which will be completed when the message has a response
         """
         if not self.socket:
             await self.connect()
 
-        future = tornado.concurrent.Future()
-
         message = salt.payload.dumps(load)
+        attempt = 1
+        while attempt <= tries:
+            future = tornado.concurrent.Future()
+            self._queue.put_nowait((future, message))
 
-        self._queue.put_nowait((future, message))
+            current_timeout = timeout
+            if self.opts.get("detect_mode") is True:
+                current_timeout = 1
 
-        if self.opts.get("detect_mode") is True:
-            timeout = 1
+            send_timeout = None
+            if current_timeout is not None:
+                send_timeout = self.io_loop.call_later(
+                    current_timeout, self._timeout_message, future
+                )
 
-        if timeout is not None:
-            send_timeout = self.io_loop.call_later(
-                timeout, self._timeout_message, future
-            )
-
-        return await future
+            try:
+                return await future
+            except SaltReqTimeoutError:
+                if attempt >= tries:
+                    raise
+                log.debug("Message timed out, retrying (attempt %d/%d)", attempt, tries)
+                attempt += 1
 
     def _timeout_message(self, future):
         if not future.done():

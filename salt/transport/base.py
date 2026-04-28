@@ -203,15 +203,15 @@ def ipc_publish_client(node, opts, io_loop):
                 port=int(opts["tcp_pub_port"]),
             )
     else:
-        id_hash = _minion_hash(
-            hash_type=opts["hash_type"],
-            minion_id=opts.get("hash_id", opts.get("id", node)),
-        )
         if node == "master":
             kwargs.update(
-                path=os.path.join(opts["sock_dir"], f"master_event_{id_hash}_pub.ipc"),
+                path=os.path.join(opts["sock_dir"], "master_event_pub.ipc"),
             )
         else:
+            id_hash = _minion_hash(
+                hash_type=opts["hash_type"],
+                minion_id=opts.get("hash_id", opts.get("id", node)),
+            )
             kwargs.update(
                 path=os.path.join(opts["sock_dir"], f"minion_event_{id_hash}_pub.ipc")
             )
@@ -245,21 +245,17 @@ def ipc_publish_server(node, opts):
                 pull_port=int(opts["tcp_pull_port"]),
             )
     else:
-        id_hash = _minion_hash(
-            hash_type=opts["hash_type"],
-            minion_id=opts.get("hash_id", opts.get("id", node)),
-        )
         if node == "master":
             kwargs.update(
-                pub_path=os.path.join(
-                    opts["sock_dir"], f"master_event_{id_hash}_pub.ipc"
-                ),
-                pull_path=os.path.join(
-                    opts["sock_dir"], f"master_event_{id_hash}_pull.ipc"
-                ),
+                pub_path=os.path.join(opts["sock_dir"], "master_event_pub.ipc"),
+                pull_path=os.path.join(opts["sock_dir"], "master_event_pull.ipc"),
                 pub_path_perms=0o660,
             )
         else:
+            id_hash = _minion_hash(
+                hash_type=opts["hash_type"],
+                minion_id=opts.get("hash_id", opts.get("id", node)),
+            )
             pub_path = os.path.join(opts["sock_dir"], f"minion_event_{id_hash}_pub.ipc")
             kwargs.update(
                 pub_path=pub_path,
@@ -267,6 +263,7 @@ def ipc_publish_server(node, opts):
                     opts["sock_dir"], f"minion_event_{id_hash}_pull.ipc"
                 ),
             )
+
     return publish_server(opts, **kwargs)
 
 

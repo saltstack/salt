@@ -14,6 +14,7 @@ from salt.utils.process import Process, clean_proc
 
 @contextmanager
 def eventpublisher_process(sock_dir):
+    started = multiprocessing.Event()
     opts = {
         "sock_dir": sock_dir,
         "interface": "127.0.0.1",
@@ -23,35 +24,23 @@ def eventpublisher_process(sock_dir):
         "hash_type": "sha256",
         "id": "master",
     }
-    import hashlib
-
-    import salt.utils.stringutils
-
-    hash_type = getattr(hashlib, opts["hash_type"])
-    id_hash = hash_type(
-        salt.utils.stringutils.to_bytes(opts.get("id", "master"))
-    ).hexdigest()[:10]
-
     ipc_publisher = salt.transport.publish_server(
         opts,
-        pub_path=os.path.join(opts["sock_dir"], f"master_event_{id_hash}_pub.ipc"),
-        pull_path=os.path.join(opts["sock_dir"], f"master_event_{id_hash}_pull.ipc"),
-        transport="tcp",
+        pub_path=os.path.join(opts["sock_dir"], "master_event_pub.ipc"),
+        pull_path=os.path.join(opts["sock_dir"], "master_event_pull.ipc"),
     )
     proc = Process(
         target=ipc_publisher.publish_daemon,
         args=[
             ipc_publisher.publish_payload,
         ],
+        kwargs={"started": started},
     )
     # proc = salt.utils.event.EventPublisher({"sock_dir": sock_dir})
     proc.start()
     try:
-        if os.environ.get("TRAVIS_PYTHON_VERSION", None) is not None:
-            # Travis is slow
-            time.sleep(10)
-        else:
-            time.sleep(8)
+        if not started.wait(30):
+            raise RuntimeError("Event publisher did not start within 30 seconds")
         yield
     finally:
         clean_proc(proc)

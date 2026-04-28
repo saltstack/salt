@@ -1583,8 +1583,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         pull_path_perms=0o600,
         pub_path_perms=0o600,
         started=None,
-        ssl=None,
         secrets=None,
+        ssl=None,
     ):
         self.opts = opts
         self.secrets = secrets

@@ -37,24 +37,22 @@ except ImportError:
 
 # Juniper interface libraries
 # https://github.com/Juniper/py-junos-eznc
-# Pre-initialize imports to robust placeholders to avoid NameError and TypeError
-class _JunosPlaceholderException(Exception):
+# Pre-initialize imports to placeholders so missing junos-eznc doesn't break
+# module import. Each placeholder is its own Exception subclass — sharing a
+# base would make `except (A, B):` look like duplicate-except to pylint.
+class ConnectClosedError(Exception):
     pass
 
 
-class ConnectClosedError(_JunosPlaceholderException):
+class LockError(Exception):
     pass
 
 
-class LockError(_JunosPlaceholderException):
+class RpcTimeoutError(Exception):
     pass
 
 
-class RpcTimeoutError(_JunosPlaceholderException):
-    pass
-
-
-class UnlockError(_JunosPlaceholderException):
+class UnlockError(Exception):
     pass
 
 

@@ -8,6 +8,7 @@ import collections
 import contextlib
 import copy
 import errno
+import inspect
 import logging
 import multiprocessing
 import os
@@ -1124,7 +1125,14 @@ class MinionManager(MinionBase):
 
     async def handle_event(self, package):
         try:
-            await asyncio.gather(*[_.handle_event(package) for _ in self.minions])
+            await asyncio.gather(
+                *[
+                    task
+                    for minion in self.minions
+                    if (task := minion.handle_event(package))
+                    and inspect.isawaitable(task)
+                ]
+            )
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Error dispatching event. %s", exc)
 

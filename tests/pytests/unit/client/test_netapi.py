@@ -1,7 +1,7 @@
 import logging
 
 import salt.client.netapi
-from tests.support.mock import Mock, patch
+from tests.support.mock import AsyncMock, MagicMock, patch
 
 
 def test_run_log(caplog, master_opts):
@@ -9,9 +9,12 @@ def test_run_log(caplog, master_opts):
     test salt.client.netapi logs correct message
     """
     master_opts["rest_cherrypy"] = {"port": 8000}
-    mock_process = Mock()
+    mock_process = MagicMock()
+    mock_process.run = AsyncMock()
     mock_process.add_process.return_value = True
-    patch_process = patch.object(salt.utils.process, "ProcessManager", mock_process)
+    patch_process = patch(
+        "salt.utils.process.ProcessManager", return_value=mock_process
+    )
     with caplog.at_level(logging.INFO):
         with patch_process:
             netapi = salt.client.netapi.NetapiClient(master_opts)
