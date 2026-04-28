@@ -151,9 +151,6 @@ class Shell:
         known_hosts = self.opts.get("known_hosts_file")
         if known_hosts and os.path.isfile(known_hosts):
             options.append(f"UserKnownHostsFile={known_hosts}")
-        log.debug(
-            "DEBUG_PORT: _key_opts self.port=%r type=%r", self.port, type(self.port)
-        )
         if self.port:
             options.append(f"Port={self.port}")
         if self.priv and self.priv != "agent-forwarding":

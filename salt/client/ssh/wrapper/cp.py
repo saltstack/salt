@@ -52,9 +52,7 @@ def _client():
         # automatically after a command is sent.
         single = salt.client.ssh.Single(__opts__, "", **__salt__.kwargs)
         __context__[ckey] = single.shell
-    return SSHCpClient(
-        __context__["fileclient"].opts, __context__[ckey], __salt__.kwargs["id_"]
-    )
+    return SSHCpClient(__opts__, __context__[ckey], __salt__.kwargs["id_"])
 
 
 def _minion_visible_cache_path(client, path):

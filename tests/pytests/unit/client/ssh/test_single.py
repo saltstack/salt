@@ -78,7 +78,8 @@ def test_single_opts(opts, target, mock_bin_paths):
     expected_cmd = (
         "ssh login1 "
         "-o KbdInteractiveAuthentication=no -o "
-        "PasswordAuthentication=yes -o ConnectTimeout=65 -o Port=22 "
+        "PasswordAuthentication=yes -o ConnectTimeout=65 -o ServerAliveInterval=60 "
+        "-o ServerAliveCountMax=3 -o Port=22 "
         "-o IdentityFile=/etc/salt/pki/master/ssh/salt-ssh.rsa "
         "-o User=root  date +%s"
     )
