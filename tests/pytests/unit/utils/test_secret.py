@@ -55,8 +55,8 @@ def test_wrap_pillar_tree_idempotent():
 
 def test_unwrap_roundtrip():
     raw = {"a": "v", "b": [1, "s", {"c": "d"}]}
-    wrapped = secret.hide(raw)
-    back = secret.expose(wrapped)
+    wrapped = secret.hide(copy.deepcopy(raw))
+    back = secret.expose(copy.deepcopy(wrapped))
     assert back == raw
 
 
@@ -69,40 +69,18 @@ def test_unwrap_blackout_whitelist_for_str_membership():
     assert "test.ping" in plain
 
 
-def test_gather_secret_literals_longest_first():
-    from salt.utils.secret import _gather
-
-    p = secret.hide({"secrets": {"short": "ab", "longer": "abcd"}})
-    lit = _gather(p)
-    assert lit == ["abcd", "ab"]
-
-
-def test_gather_includes_all_string_leaf_values():
-    from salt.utils.secret import _gather
-
-    p = secret.hide({"target-path": "/tmp/pytest-of-root/x", "db_password": "hunter2"})
-    lit = _gather(p)
-    assert "hunter2" in lit
-    assert "/tmp/pytest-of-root/x" in lit
-
-
-def test_redact_known_literals():
-    pillar = secret.hide({"pw": "hunter2"})
-    ret = {
-        "comment": "pw is hunter2 here",
-        "changes": {"out": "hunter2"},
-    }
-    red = secret.redact(ret, pillar)
-    assert "hunter2" not in str(red)
-    # redact replaces known secret substrings with same-length asterisks
-    assert "*" in red["comment"]
-
-
-def test_apply_no_log_mask():
-    ret = {"comment": "x", "changes": {"a": 1}, "result": True}
+def test_apply_no_log_mask_changes():
+    ret = {"comment": "x", "changes": {"a": "asdf", "b": 1}, "result": True}
     secret.no_log_mask(ret)
-    assert ret["comment"] == secret.REDACT_PLACEHOLDER
-    assert ret["changes"] == {secret.REDACT_PLACEHOLDER: secret.REDACT_PLACEHOLDER}
+    assert str(ret["comment"]) == secret.REDACT_PLACEHOLDER
+    assert str(ret["changes"]) == str({"a": secret.REDACT_PLACEHOLDER, "b": 1})
+
+
+def test_apply_no_log_mask_no_changes():
+    ret = {"comment": "x", "changes": None, "result": True}
+    secret.no_log_mask(ret)
+    assert str(ret["comment"]) == secret.REDACT_PLACEHOLDER
+    assert ret["changes"] is None
 
 
 def test_secret_str_redacted_str_and_not_equal_to_plain_str():

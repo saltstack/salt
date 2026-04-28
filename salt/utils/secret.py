@@ -147,10 +147,6 @@ class SecretBytes(Secret[bytes]):
 
 
 class SecretIterable(Secret[SecretType_co]):
-    def get_secret_value(self):
-        cast = type(self._secret_value)
-        return cast(expose(v) for v in self._secret_value)
-
     def __len__(self):
         return len(self._secret_value)
 
@@ -177,11 +173,8 @@ class SecretDict(SecretIterable[dict], MutableMapping[str, Any]):
             secret_value[k] = hide(v)
         super().__init__(secret_value)
 
-    def setdefault(self, key: str, value: Any) -> Any:
-        return self._secret_value.setdefault(key, hide(value))
-
-    def get_secret_value(self):
-        return {k: expose(v) for k, v in self._secret_value.items()}
+    def setdefault(self, key: str, default):
+        return self._secret_value.setdefault(key, hide(default))
 
     def _display(self) -> dict:
         return {
@@ -226,7 +219,7 @@ def expose(value: Secret, _seen: set[int] = None) -> Any:
     If the value is a secret, return the secret value.
     """
     if isinstance(value, Secret):
-        return value.get_secret_value()
+        value = value.get_secret_value()
     if isinstance(value, (str, bytes, int, float, bool)) or value is None:
         return value
     if isinstance(value, Iterable):
@@ -250,10 +243,10 @@ def serial(value, _seen: set[int] = None):
     """
     Keep secrets redacted while serializing the structure to native python types.
     """
-    if isinstance(value, (str, bytes)):
-        return value
     if isinstance(value, Secret):
-        return value._display()
+        value = value._display()
+    if isinstance(value, (str, bytes, int, float, bool)) or value is None:
+        return value
     if isinstance(value, Iterable):
         if _seen is None:
             _seen = set()
@@ -273,55 +266,5 @@ def no_log_mask(state_ret: dict[str, Any]):
     Replace comment and changes in a state return dict when no_log is enabled.
     Mutates ret in place.
     """
-    state_ret["comment"] = REDACT_PLACEHOLDER
-    state_ret["changes"] = {REDACT_PLACEHOLDER: REDACT_PLACEHOLDER}
-
-
-def _gather(obj: Secret) -> list[str | bytes]:
-    """
-    Gather all the secret values from the object from longest to shortest.
-    """
-    secrets = set()
-    if isinstance(obj, SecretDict):
-        for v in obj.values():
-            secrets.update(_gather(v))
-    elif isinstance(obj, SecretIterable):
-        for v in obj:
-            secrets.update(_gather(v))
-    elif isinstance(obj, Secret):
-        secrets.add(obj.get_secret_value())
-
-    return sorted(secrets, key=len, reverse=True)
-
-
-def redact(value, secrets: Secret, known: list[str | bytes] = None) -> str:
-    """
-    If any secrets are found in the value, replace them with the placeholder.
-    """
-    if known is None:
-        known = _gather(secrets)
-
-    # If the value contains a known secret, replace the secret substring with the secret placeholder. value could be any type
-    if isinstance(value, str):
-        for secret in known:
-            if isinstance(secret, bytes):
-                secret_str = secret.decode()
-            else:
-                secret_str = secret
-            if secret_str in value:
-                value = value.replace(secret_str, "*" * len(secret_str))
-    elif isinstance(value, bytes):
-        for secret in known:
-            if isinstance(secret, str):
-                secret_bytes = secret.encode()
-            else:
-                secret_bytes = secret
-            if secret_bytes in value:
-                value = value.replace(secret_bytes, b"*" * len(secret_bytes))
-    elif isinstance(value, Mapping):
-        value = {k: redact(v, secrets, known) for k, v in value.items()}
-    elif isinstance(value, Iterable):
-        cast = type(value)
-        value = cast(redact(v, secrets, known) for v in value)
-
-    return value
+    state_ret["comment"] = hide(state_ret["comment"])
+    state_ret["changes"] = hide(state_ret["changes"])
