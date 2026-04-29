@@ -1,7 +1,7 @@
 """
 Integration test fixtures for Salt Resources.
 
-Spins up a master and a minion whose dummy resources (dummy-01, dummy-02) are
+Spins up a master and a minion whose dummy resources (dummy-01 … dummy-03) are
 declared only in Pillar under ``resources:`` — not in the minion config file.
 All tests in this package run against these two daemons.
 """
@@ -16,7 +16,7 @@ from tests.conftest import FIPS_TESTRUN
 MINION_ID = "resources-minion"
 
 # Dummy resource IDs that the minion manages in every test in this package.
-DUMMY_RESOURCES = ["dummy-01", "dummy-02"]
+DUMMY_RESOURCES = ["dummy-01", "dummy-02", "dummy-03"]
 
 
 @pytest.fixture(scope="package")
@@ -41,6 +41,7 @@ def pillar_tree_dummy_resources(salt_master):
             resource_ids:
               - dummy-01
               - dummy-02
+              - dummy-03
         """
     )
     top_tempfile = salt_master.pillar_tree.base.temp_file("top.sls", top_file)
