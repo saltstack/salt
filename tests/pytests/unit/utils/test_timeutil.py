@@ -1,6 +1,20 @@
+import datetime
+
 import pytest
 
 import salt.utils.timeutil as time
+
+
+def test_utcfromtimestamp_epoch_naive():
+    dt = time.utcfromtimestamp(0)
+    assert dt.tzinfo is None
+    assert dt == datetime.datetime(1970, 1, 1, 0, 0, 0)
+
+
+def test_utcnow_is_naive():
+    dt = time.utcnow()
+    assert dt.tzinfo is None
+    assert isinstance(dt, datetime.datetime)
 
 
 @pytest.mark.parametrize(

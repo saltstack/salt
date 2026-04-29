@@ -9,7 +9,6 @@ Support for APT (Advanced Packaging Tool)
 """
 
 import copy
-import datetime
 import fnmatch
 import logging
 import os
@@ -33,6 +32,7 @@ import salt.utils.pkg
 import salt.utils.pkg.deb
 import salt.utils.stringutils
 import salt.utils.systemd
+import salt.utils.timeutil
 import salt.utils.versions
 import salt.utils.yaml
 from salt.exceptions import (
@@ -3280,7 +3280,7 @@ def list_downloaded(root=None, **kwargs):
                 "path": package_path,
                 "size": os.path.getsize(package_path),
                 "creation_date_time_t": pkg_timestamp,
-                "creation_date_time": datetime.datetime.utcfromtimestamp(
+                "creation_date_time": salt.utils.timeutil.utcfromtimestamp(
                     pkg_timestamp
                 ).isoformat(),
             }

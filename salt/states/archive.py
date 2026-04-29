@@ -20,6 +20,7 @@ import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.tarfileutil
 import salt.utils.url
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
@@ -1597,7 +1598,9 @@ def extracted(
                 if options is None:
                     try:
                         with closing(tarfile.open(cached, "r")) as tar:
-                            tar.extractall(salt.utils.stringutils.to_str(name))  # nosec
+                            salt.utils.tarfileutil.extractall(  # nosec B202
+                                tar, salt.utils.stringutils.to_str(name)
+                            )
                             files = tar.getnames()
                             if trim_output:
                                 files = files[:trim_output]
