@@ -16,7 +16,7 @@ import logging
 import threading
 import time
 
-from salt.cluster.consensus.raft.log import Log, LogEntryType
+from salt.cluster.consensus.raft.log import Log, LogEntryType, MembershipStateMachine
 from salt.cluster.consensus.raft.util import gettimeout
 
 log = logging.getLogger(__name__)
@@ -359,6 +359,7 @@ class Node:
         _leader_beacon_min=50,
         _leader_beacon_max=100,
         state_machine=None,
+        membership_sm=None,
         max_log_size=None,
         voting=True,
         **kwargs,
@@ -376,6 +377,14 @@ class Node:
             getattr(self.storage, "state_machine", None) if storage else None
         )
         self.log = Log(storage=storage, state_machine=sm, max_log_size=max_log_size)
+
+        # Membership state machine: applies CONFIG entries to track the committed
+        # voter/learner sets.  It is the authoritative query store for committed
+        # membership; it does NOT drive on_config_change (that is called directly
+        # from apply_entries so the eager log_add path and commit path stay in sync).
+        if membership_sm is None:
+            membership_sm = MembershipStateMachine()
+        self.membership_sm = membership_sm
 
         self.state = NodeState()
         self._term = 0
@@ -406,6 +415,7 @@ class Node:
 
         self.next_index = {}
         self.match_index = {}
+        self._applied_config_index = -1  # index of the most recently applied CONFIG
 
         if storage:
             st = storage.load_state()
@@ -476,6 +486,18 @@ class Node:
 
     def register_peer_factory(self, factory):
         self._peer_factory = factory
+
+    def register_membership_sm(self, sm):
+        """
+        Replace the membership state machine.
+
+        The SM is the authoritative query store for committed membership
+        (``current_voters()``, ``current_learners()``).  Side-effects on
+        ``Node.peers`` / ``Node.voting`` are driven directly by
+        ``apply_entries`` → ``on_config_change``, not by the SM's
+        ``on_change`` callback, to avoid double-applying eager leader updates.
+        """
+        self.membership_sm = sm
 
     def schedule_timeout(self, delay, callback):
         if not self._schedule_timeout_method:
@@ -678,26 +700,19 @@ class Node:
                             sequence_num=entry.sequence_num,
                         )
                 elif entry.type == LogEntryType.CONFIG:
-                    # Raft §6: always uses the latest configuration in its log
-                    # We only apply it during state machine application if it's still the latest
-                    # To be safe, we check if there are any newer CONFIG entries
-                    is_latest = True
-                    for i in range(new_applied + 1, self.log.index + 1):
-                        e = self.log.get(i)
-                        if e and e.type == LogEntryType.CONFIG:
-                            is_latest = False
-                            break
-                    if is_latest:
-                        voters = (
-                            entry.cmd.get("voters", [])
-                            if isinstance(entry.cmd, dict)
-                            else entry.cmd
-                        )
-                        learners = (
-                            entry.cmd.get("learners", [])
-                            if isinstance(entry.cmd, dict)
-                            else None
-                        )
+                    cmd = entry.cmd
+                    voters = cmd.get("voters", []) if isinstance(cmd, dict) else cmd
+                    learners = cmd.get("learners", []) if isinstance(cmd, dict) else []
+                    # Always update the SM's committed view (query authority).
+                    if self.membership_sm is not None:
+                        self.membership_sm.apply(cmd, index=entry.index)
+                    # Only call on_config_change when this committed entry is
+                    # strictly newer than what the eager log_add path already
+                    # applied.  This prevents an older committed CONFIG from
+                    # clobbering a newer CONFIG that the leader optimistically
+                    # applied to its peer list when it wrote the entry.
+                    if entry.index >= self._applied_config_index:
+                        self._applied_config_index = entry.index
                         self.on_config_change(voters, learners)
             self.log.last_applied = new_applied
 
@@ -915,6 +930,7 @@ class Node:
             if e_type == LogEntryType.CONFIG:
                 voters = e_cmd.get("voters", []) if isinstance(e_cmd, dict) else e_cmd
                 learners = e_cmd.get("learners", []) if isinstance(e_cmd, dict) else []
+                self._applied_config_index = curr_idx
                 self.on_config_change(voters, learners=learners)
 
             curr_idx += 1
@@ -944,6 +960,7 @@ class Node:
         if entry_type == LogEntryType.CONFIG:
             voters = data.get("voters", []) if isinstance(data, dict) else data
             learners = data.get("learners", []) if isinstance(data, dict) else []
+            self._applied_config_index = index
             self.on_config_change(voters, learners=learners)
         for peer in self.peers:
             self.send_append_entries(peer)
@@ -992,7 +1009,7 @@ class Node:
 
     def info(self):
         with self._lock:
-            return {
+            info = {
                 "node_id": self.node_id,
                 "address": self.address,
                 "term": self.term,
@@ -1004,6 +1021,13 @@ class Node:
                 "commit_index": self.log.commit_index,
                 "last_applied": self.log.last_applied,
             }
+            if self.membership_sm is not None:
+                info["membership"] = {
+                    "voters": self.membership_sm.current_voters(),
+                    "learners": self.membership_sm.current_learners(),
+                    "version": self.membership_sm.membership_version,
+                }
+            return info
 
     @property
     def leader_client_address(self):

@@ -204,6 +204,11 @@ class RaftService:
         return self._node
 
     @property
+    def membership(self):
+        """The :class:`~salt.cluster.consensus.raft.log.MembershipStateMachine` for this node."""
+        return self._node.membership_sm
+
+    @property
     def dispatcher(self):
         return self._dispatcher
 
