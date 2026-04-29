@@ -851,6 +851,7 @@ class State:
             # for a single execution. self.jid should not be set there
             # since it's used for other purposes as well.
             _invocation_id = salt.utils.jid.gen_jid(opts)
+
         self._init_kwargs = {
             "opts": opts,
             "pillar_override": pillar_override,
@@ -883,7 +884,7 @@ class State:
         self._pillar_enc = pillar_enc
         log.debug("Gathering pillar data for state run")
         if initial_pillar and not self._pillar_override:
-            self.opts["pillar"] = initial_pillar
+            self.opts["pillar"] = salt.utils.secret.expose(initial_pillar)
         else:
             # Compile pillar data
             self.opts["pillar"] = self._gather_pillar()
@@ -1000,7 +1001,7 @@ class State:
             pillar_override=self._pillar_override,
             pillarenv=self.opts.get("pillarenv"),
         )
-        return pillar.compile_pillar()
+        return salt.utils.secret.expose(pillar.compile_pillar())
 
     def _mod_init(self, low):
         """

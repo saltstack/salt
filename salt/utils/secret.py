@@ -6,11 +6,9 @@ mutations stay protected.
 
 from __future__ import annotations
 
-import copy
 import logging
 from collections.abc import Iterable, MutableMapping, MutableSequence
 from typing import Any, ClassVar, Generic, Mapping, TypeVar
-from salt.utils.optsdict import ListProxy
 
 log = logging.getLogger(__name__)
 
@@ -193,6 +191,14 @@ class SecretList(SecretIterable[list], MutableSequence[Any]):
         self._secret_value.insert(index, hide(value))
 
 
+class SecretTuple(SecretIterable[tuple]):
+    def __init__(self, secret_value: tuple):
+        super().__init__(tuple(hide(v) for v in secret_value))
+
+    def _display(self) -> tuple:
+        return tuple(v._display() if isinstance(v, Secret) else v for v in self)
+
+
 def hide(value: Any) -> Secret:
     """
     Morph a leaf value into a secret-safe container.
@@ -209,6 +215,8 @@ def hide(value: Any) -> Secret:
         return SecretBytes(value)
     elif isinstance(value, dict):
         return SecretDict(value)
+    elif isinstance(value, tuple):
+        return SecretTuple(value)
     elif isinstance(value, Iterable):
         return SecretList(value)
     else:
@@ -221,7 +229,9 @@ def expose(value: Secret, _seen: set[int] = None) -> Any:
     """
     if isinstance(value, Secret):
         value = value.get_secret_value()
-    if isinstance(value, (str, bytes, int, float, bool)) or value is None:
+    if isinstance(value, (str, bytes, int, float, bool)):
+        return value
+    if not value:
         return value
     if isinstance(value, Iterable):
         if _seen is None:
@@ -245,7 +255,9 @@ def serial(value, _seen: set[int] = None):
     """
     if isinstance(value, Secret):
         value = value._display()
-    if isinstance(value, (str, bytes, int, float, bool)) or value is None:
+    if isinstance(value, (str, bytes, int, float, bool)):
+        return value
+    if not value:
         return value
     if isinstance(value, Iterable):
         if _seen is None:

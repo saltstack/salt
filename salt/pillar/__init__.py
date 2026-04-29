@@ -1184,7 +1184,7 @@ class Pillar:
                     continue
                 mopts[key] = val
             mopts["saltversion"] = __version__
-            pillar["master"] = mopts
+            pillar.get_secret_value()["master"] = mopts
         if "pillar" in self.opts and self.opts.get("ssh_merge_pillar", False):
             pillar = merge(
                 self.opts["pillar"],
@@ -1207,7 +1207,6 @@ class Pillar:
                 self.opts.get("pillar_merge_lists", False),
             )
 
-        pillar = salt.utils.secret.expose(pillar)
         decrypt_errors = self.decrypt_pillar(pillar)
         if decrypt_errors:
             pillar.setdefault("_errors", []).extend(decrypt_errors)
@@ -1289,7 +1288,7 @@ class Pillar:
                 if ptr is None:
                     log.debug("Pillar key %s not present", key)
                     continue
-                try:
+                try:  # TODO probably need to get secret value from ptr
                     hash(ptr)
                     immutable = True
                 except TypeError:
@@ -1406,7 +1405,8 @@ class PillarCache(Pillar):
         """
         Return the cached pillar if it exists, or None
         """
-        return self.cache.fetch("pillar", self.pillar_key)
+        pillar = self.cache.fetch("pillar", self.pillar_key)
+        return salt.utils.secret.hide(pillar)
 
     def clear_pillar(self):
         """
@@ -1446,7 +1446,9 @@ class PillarCache(Pillar):
             )
             pillar_data = super().compile_pillar(*args, **kwargs)
 
-            self.cache.store("pillar", self.pillar_key, pillar_data)
+            self.cache.store(
+                "pillar", self.pillar_key, salt.utils.secret.expose(pillar_data)
+            )
 
         # we dont want the pillar_override baked into the cached compile_pillar from above
         if self.pillar_override:

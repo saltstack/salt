@@ -12,7 +12,6 @@ import logging
 import salt.transport.frame
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.msgpack
-import salt.utils.secret
 import salt.utils.stringutils
 from salt.defaults import _Constant
 from salt.exceptions import SaltDeserializationError, SaltReqTimeoutError
@@ -125,7 +124,6 @@ def dumps(msg, use_bin_type=False):
     """
 
     def ext_type_encoder(obj):
-        obj = salt.utils.secret.expose(obj)
         if isinstance(obj, int):
             # msgpack can't handle the very long Python longs for jids
             # Convert any very long longs to strings
@@ -160,7 +158,6 @@ def dumps(msg, use_bin_type=False):
         return obj
 
     try:
-        msg = salt.utils.secret.expose(msg)
         return salt.utils.msgpack.packb(
             msg, default=ext_type_encoder, use_bin_type=use_bin_type
         )
@@ -198,7 +195,6 @@ def dumps(msg, use_bin_type=False):
                 return obj
 
         msg = verylong_encoder(msg, set())
-        msg = salt.utils.secret.expose(msg)
         return salt.utils.msgpack.packb(
             msg, default=ext_type_encoder, use_bin_type=use_bin_type
         )

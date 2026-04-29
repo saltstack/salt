@@ -2120,9 +2120,12 @@ class AESFuncs(TransportMethods):
             clean_cache=load.get("clean_cache"),
         )
         data = pillar.compile_pillar()
+        data = salt.utils.secret.expose(data)
         self.fs_.update_opts()
         if self.opts.get("minion_data_cache", False):
-            self.masterapi.cache.store("grains", load["id"], load["grains"])
+            self.masterapi.cache.store(
+                "grains", load["id"], salt.utils.secret.expose(load["grains"])
+            )
 
             if self.opts.get("minion_data_cache_events") is True:
                 self.event.fire_event(

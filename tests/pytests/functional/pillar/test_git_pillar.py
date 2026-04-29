@@ -3,8 +3,8 @@ from collections import OrderedDict
 import pytest
 
 from salt.pillar.git_pillar import ext_pillar
-from salt.utils.secret import expose
 from salt.utils.immutabletypes import ImmutableDict, ImmutableList
+from salt.utils.secret import expose
 from tests.support.mock import patch
 
 pytestmark = [
