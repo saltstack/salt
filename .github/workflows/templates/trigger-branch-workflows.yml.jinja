@@ -1,7 +1,6 @@
 
 
   <%- set job_name = "trigger-branch-{}-builds".format(workflow_slug) %>
-  <%- set branches = ["3006.x"] %>
 
   <{ job_name }>:
   <%- do conclusion_needs.append(job_name) %>
@@ -10,8 +9,10 @@
     runs-on: ubuntu-22.04
     needs:
       - workflow-requirements
+
     steps:
-    <%- for branch in branches %>
+    <%- for branch in release_branches %>
+
       - name: Trigger <{ branch }> branch
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
