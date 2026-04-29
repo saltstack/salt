@@ -1947,6 +1947,9 @@ class MasterPubServerChannel:
         # Set by service.py once the Raft node is started.
         self._raft_dispatcher = None
 
+    def gen_token(self):
+        return "".join(random.choices(string.ascii_letters + string.digits, k=32))
+
     def send_aes_key_event(self):
         log.debug("Sending AES key event")
         data = {"peer_id": self.opts["id"], "peers": {}}
@@ -2013,6 +2016,7 @@ class MasterPubServerChannel:
     def _publish_daemon(self, **kwargs):
         """Clean implementation: separate local IPC from cluster peer communication."""
         import salt.master  # pylint: disable=import-outside-toplevel
+
         if (
             self.opts.get("event_publisher_niceness")
             and not salt.utils.platform.is_windows()
@@ -2176,6 +2180,10 @@ class MasterPubServerChannel:
                 )
                 with salt.utils.files.fopen(peer_pub, "w") as fp:
                     fp.write(data["pub"])
+                # Tell the Raft service about the new peer so it can be added
+                # as a learner and eventually promoted to voter.
+                if self._raft_service is not None:
+                    self._raft_service.notify_peer_joined(data["join_peer_id"])
             elif tag.startswith("cluster/peer/join-reply"):
                 log.info("Cluster join reply from %s", data["peer_id"])
                 key = salt.crypt.PrivateKeyString(data["cluster_key"])

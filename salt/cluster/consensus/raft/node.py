@@ -360,6 +360,7 @@ class Node:
         _leader_beacon_max=100,
         state_machine=None,
         max_log_size=None,
+        voting=True,
         **kwargs,
     ):
         self.address = address
@@ -367,6 +368,8 @@ class Node:
         self.client_address = kwargs.get("client_address")
         self.peers = peers or []
         self.storage = storage
+        # True if this node participates in quorum; False means learner/observer.
+        self.voting = voting
 
         # Use local variable to avoid property collision
         sm = state_machine or (
@@ -625,15 +628,22 @@ class Node:
             )
             self.next_index[peer_id] = self.match_index[peer_id] + 1
 
-            # Learner promotion logic
+            # Learner promotion: once a learner has caught up to the leader's
+            # log, propose a CONFIG entry to promote it.  The peer stays
+            # non-voting until that entry is *applied* (see apply_entries).
             for p in self.peers:
                 if p.node_id == peer_id and not p.voting:
                     if self.match_index[peer_id] >= self.log.index:
-                        p.voting = True
-                        voters = [self.node_id] + [
-                            px.node_id for px in self.peers if px.voting
+                        voters = (
+                            [self.node_id]
+                            + [px.node_id for px in self.peers if px.voting]
+                            + [peer_id]
+                        )
+                        learners = [
+                            px.node_id
+                            for px in self.peers
+                            if not px.voting and px.node_id != peer_id
                         ]
-                        learners = [px.node_id for px in self.peers if not px.voting]
                         self.log_add(
                             {"voters": voters, "learners": learners},
                             entry_type=LogEntryType.CONFIG,
@@ -734,6 +744,10 @@ class Node:
             if self.state == NodeState.FOLLOWER:
                 now = self.get_now()
                 if now - self.last_followed < self._follower_min * 0.001:
+                    self.schedule_follower_timeout()
+                    return
+                if not self.voting:
+                    # Learner/observer — reset the timer and wait for promotion.
                     self.schedule_follower_timeout()
                     return
                 self.start_pre_vote()
@@ -869,20 +883,31 @@ class Node:
 
         curr_idx = prev_log_index + 1
         for entry in entries:
-            # Handle normalized entry formats
-            e_term = getattr(
-                entry,
-                "term",
-                entry[0] if isinstance(entry, (list, tuple)) else self.term,
-            )
-            e_cmd = getattr(
-                entry, "cmd", entry[2] if isinstance(entry, (list, tuple)) else entry
-            )
-            e_type = getattr(
-                entry,
-                "type",
-                entry[4] if isinstance(entry, (list, tuple)) else LogEntryType.COMMAND,
-            )
+            # Handle normalized entry formats (LogEntry, tuple/list, or _asdict() dict)
+            if isinstance(entry, dict):
+                e_term = entry.get("term", self.term)
+                e_cmd = entry.get("cmd", entry)
+                e_type = entry.get("type", LogEntryType.COMMAND)
+            else:
+                e_term = getattr(
+                    entry,
+                    "term",
+                    entry[0] if isinstance(entry, (list, tuple)) else self.term,
+                )
+                e_cmd = getattr(
+                    entry,
+                    "cmd",
+                    entry[2] if isinstance(entry, (list, tuple)) else entry,
+                )
+                e_type = getattr(
+                    entry,
+                    "type",
+                    (
+                        entry[4]
+                        if isinstance(entry, (list, tuple))
+                        else LogEntryType.COMMAND
+                    ),
+                )
 
             # Use log.add with explicit index to trigger conflict detection and truncation
             self.log.add(e_term, e_cmd, index=curr_idx, entry_type=e_type)
@@ -928,6 +953,12 @@ class Node:
         return self.log_add(data, client_id=client_id, sequence_num=sequence_num)
 
     def on_config_change(self, voters, learners=None):
+        # Update this node's own voting status.
+        if voters and self.node_id in voters:
+            self.voting = True
+        elif learners and self.node_id in learners:
+            self.voting = False
+
         if self._peer_factory:
             new_peers = []
             existing_peers = {p.node_id: p for p in self.peers}
@@ -949,6 +980,15 @@ class Node:
                     else:
                         new_peers.append(self._peer_factory(addr, voting=False))
             self.peers = new_peers
+        else:
+            # No factory — update voting flags on existing peers in-place.
+            voter_set = set(voters or [])
+            learner_set = set(learners or [])
+            for p in self.peers:
+                if p.node_id in voter_set:
+                    p.voting = True
+                elif p.node_id in learner_set:
+                    p.voting = False
 
     def info(self):
         with self._lock:
@@ -957,6 +997,7 @@ class Node:
                 "address": self.address,
                 "term": self.term,
                 "state": str(self.state),
+                "voting": self.voting,
                 "leader": self.leader,
                 "leader_client_address": self.leader_client_address,
                 "last_index": self.log.index,

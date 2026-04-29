@@ -312,13 +312,14 @@ class TestLogReplication:
 
     def test_config_entry_type_replicates(self, cluster):
         """
-        A CONFIG entry replicates to followers.
+        A CONFIG entry replicates to followers with the correct entry type.
 
-        On the leader the entry has ``type == LogEntryType.CONFIG`` (int 1).
-        On followers the whole LogEntry is wrapped as a dict inside ``cmd``
-        (because entries travel over msgpack as dicts); the outer ``type``
-        reverts to 0 (COMMAND) while the *inner* ``cmd['type']`` is 1 (CONFIG).
-        We verify both sides of the transport.
+        On the leader the entry has ``type == LogEntryType.CONFIG`` and
+        ``cmd == {"voters": [...], "learners": []}``.
+
+        On followers the entry is decoded from the wire dict correctly:
+        ``entry.type == LogEntryType.CONFIG`` and ``entry.cmd`` is the
+        voters/learners payload dict.
         """
 
         async def _body():
@@ -334,13 +335,13 @@ class TestLogReplication:
             assert leader_entries
             assert leader_entries[0].type == LogEntryType.CONFIG
 
-            # Followers receive an entry whose cmd dict carries type CONFIG
+            # Followers correctly decode the entry type from the wire format.
             for cn in _followers(cluster):
                 assert len(cn.node.log.entries) >= 1
                 follower_entry = cn.node.log.entries[0]
-                # The inner dict preserves the original type
+                assert follower_entry.type == LogEntryType.CONFIG
                 assert isinstance(follower_entry.cmd, dict)
-                assert follower_entry.cmd.get("type") == LogEntryType.CONFIG
+                assert "voters" in follower_entry.cmd
 
         _run(_body())
 
