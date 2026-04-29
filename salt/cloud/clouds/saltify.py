@@ -1,4 +1,5 @@
 """
+.. _saltify-module:
 
 Saltify Module
 ==============

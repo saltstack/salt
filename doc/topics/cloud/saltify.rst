@@ -1,5 +1,4 @@
 .. _getting-started-with-saltify:
-.. _saltify-module:
 
 ============================
 Getting Started With Saltify
