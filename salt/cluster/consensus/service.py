@@ -14,6 +14,9 @@ Responsibilities
   ``handle_pool_publish`` can route inbound Raft RPCs.
 * Start the Raft election timer and, when elected leader, drive periodic
   heartbeats.
+* Handle dynamic peer joins: when a new master completes the Salt-level
+  cluster join, ``notify_peer_joined`` adds it as a non-voting learner.
+  The leader will automatically promote it to voter once its log catches up.
 
 Threading / concurrency model
 ------------------------------
@@ -35,6 +38,7 @@ import logging
 
 from salt.cluster.consensus.peer import RaftDispatcher, SaltPeer
 from salt.cluster.consensus.raft import AsyncTimeoutScheduler, Node
+from salt.cluster.consensus.raft.node import NodeState
 from salt.cluster.consensus.storage import SaltStorage
 
 log = logging.getLogger(__name__)
@@ -50,7 +54,7 @@ class RaftService:
 
     :param opts:         Salt master opts dict.
     :param loop:         The *asyncio* event loop running in this process.
-    :param peer_pushers: ``dict[peer_addr, PublishServer]`` — the pushers
+    :param peer_pushers: ``dict[peer_addr, PublishServer]`` - the pushers
                          ``_publish_daemon`` already created, keyed by the
                          peer's interface address (``opts["cluster_peers"]``
                          entry).
@@ -59,7 +63,7 @@ class RaftService:
     def __init__(self, opts, loop, peer_pushers):
         self.opts = opts
         self.loop = loop
-        self._peer_pushers = peer_pushers  # addr -> PublishServer
+        self._peer_pushers = dict(peer_pushers)  # addr -> PublishServer (mutable copy)
 
         # Use the interface address as the Raft node-id so it matches the
         # keys in cluster_peers and the peer_pushers dict.  opts["id"] is
@@ -71,17 +75,49 @@ class RaftService:
         self._scheduler = AsyncTimeoutScheduler(loop=loop)
         self._node.register_schedule_timeout(self._scheduler.schedule)
 
-        # Build SaltPeer objects — one per cluster peer.
+        # Build SaltPeer objects - one per cluster peer (all voting at start).
         peers = [
             SaltPeer(addr, pusher, node_id) for addr, pusher in peer_pushers.items()
         ]
         self._node.peers = peers
 
+        # Register a peer factory so Node.on_config_change can create SaltPeers
+        # for addresses that appear in CONFIG entries (covers learner->voter path).
+        self._node.register_peer_factory(self._make_peer)
+
         # peer_pushers is keyed by interface address, matching the
         # callback_node field written into RPC envelopes.
-        self._dispatcher = RaftDispatcher(self._node, node_id, peer_pushers)
+        self._dispatcher = RaftDispatcher(self._node, node_id, self._peer_pushers)
 
         self._heartbeat_handle = None
+
+    # ------------------------------------------------------------------
+    # Peer factory (used by Node.on_config_change)
+    # ------------------------------------------------------------------
+
+    def _make_peer(self, addr, voting=True):
+        """
+        Create a ``SaltPeer`` for *addr*.
+
+        If we already have a pusher for that address (from ``_peer_pushers``)
+        it is reused; otherwise we create a new one using the cluster port.
+        Called by :meth:`Node.on_config_change` when a CONFIG log entry is
+        applied and a previously unknown address appears in the voter list.
+        """
+        import salt.transport.tcp  # pylint: disable=import-outside-toplevel
+
+        pusher = self._peer_pushers.get(addr)
+        if pusher is None:
+            port = self.opts.get("cluster_port", 55596)
+            pusher = salt.transport.tcp.PublishServer(
+                self.opts,
+                pull_host=addr,
+                pull_port=port,
+            )
+            self._peer_pushers[addr] = pusher
+            # Keep the dispatcher's pusher table in sync.
+            self._dispatcher._pushers[addr] = pusher
+        return SaltPeer(addr, pusher, self.opts["interface"], voting=voting)
 
     # ------------------------------------------------------------------
     # Public API
@@ -117,6 +153,50 @@ class RaftService:
             self._heartbeat_handle = None
         log.info("RaftService: stopped node %s", self._node.node_id)
 
+    def notify_peer_joined(self, peer_addr):
+        """
+        Called when a new master completes the Salt cluster join handshake.
+
+        Adds *peer_addr* as a **non-voting learner** in the Raft cluster.
+        If this node is the current leader it immediately starts replicating
+        to the learner; once the learner's log catches up the leader will
+        automatically propose a CONFIG entry promoting it to voter
+        (see :meth:`Node.append_entries_reply`).
+
+        If this node is a follower the learner peer is added to its peer
+        list so it will receive ``AppendEntries`` from whichever node
+        eventually becomes leader.
+
+        :param peer_addr: The joining master's interface address - the same
+                          value used as ``join_peer_id`` in the
+                          ``cluster/peer/join-notify`` envelope.
+        """
+        node_id = self._node.node_id
+        if peer_addr == node_id:
+            # This is the joining node learning about itself - nothing to do
+            # from the peer perspective; our own voting status is controlled
+            # by CONFIG entries from the leader.
+            return
+
+        existing = {p.node_id for p in self._node.peers}
+        if peer_addr in existing:
+            log.debug(
+                "RaftService: peer %s already known, skipping notify_peer_joined",
+                peer_addr,
+            )
+            return
+
+        log.info("RaftService: adding learner peer %s", peer_addr)
+        learner_peer = self._make_peer(peer_addr, voting=False)
+        self._node.peers.append(learner_peer)
+
+        if self._node.state == NodeState.LEADER:
+            # Initialise replication tracking for the new learner.
+            self._node.next_index[peer_addr] = self._node.log.index + 1
+            self._node.match_index[peer_addr] = -1
+            # Kick off replication immediately.
+            self._node.send_append_entries(learner_peer)
+
     @property
     def node(self):
         return self._node
@@ -142,8 +222,6 @@ class RaftService:
         peer to suppress their election timers.
         """
         try:
-            from salt.cluster.consensus.raft.node import NodeState
-
             if self._node.state == NodeState.LEADER:
                 for peer in self._node.peers:
                     try:
