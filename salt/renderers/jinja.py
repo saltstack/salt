@@ -64,7 +64,7 @@ def render(
         salt=_split_module_dicts(),
         grains=__grains__,
         opts=__opts__,
-        pillar=__pillar__,
+        pillar=salt.utils.secret.expose(__pillar__),
         saltenv=saltenv,
         sls=sls,
         context=context,
