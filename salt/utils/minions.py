@@ -413,38 +413,73 @@ class CkMinions:
         Return the minions found by looking via globs
         """
         if minions:
-            matched = {"minions": fnmatch.filter(minions, expr), "missing": []}
+            result_minions = fnmatch.filter(minions, expr)
         else:
-            matched = self.key.glob_match(expr).get(self.key.ACC, [])
+            result_minions = list(self.key.glob_match(expr).get(self.key.ACC, []))
 
-        return {"minions": matched, "missing": []}
+        if (
+            isinstance(expr, str)
+            and expr
+            and not any(c in expr for c in ("*", "?", "["))
+        ):
+            try:
+                if (
+                    expr not in result_minions
+                    and self.registry.resolve_bare_resource_id(expr)
+                ):
+                    result_minions = list(result_minions) + [expr]
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "Glob match: bare resource id resolution failed for %r",
+                    expr,
+                    exc_info=True,
+                )
+
+        return {"minions": result_minions, "missing": []}
 
     def _check_list_minions(
         self, expr, greedy, ignore_missing=False, minions=None
     ):  # pylint: disable=unused-argument
         """
         Return the minions found by looking via a list
+
+        Tokens that are not accepted minion keys but match a registered bare
+        resource id (see :meth:`ResourceRegistry.resolve_bare_resource_id`) are
+        appended so ``salt -L <resource-id>`` resolves like ``T@type:<id>``.
         """
         if isinstance(expr, str):
             expr = [m for m in expr.split(",") if m]
 
         if minions:
-            return {
-                "minions": [x for x in expr if x in minions],
-                "missing": (
-                    [] if ignore_missing else [x for x in expr if x not in minions]
-                ),
-            }
+            matched = [x for x in expr if x in minions]
+            missing = [] if ignore_missing else [x for x in expr if x not in minions]
         else:
             found = self.key.list_match(expr)
-            return {
-                "minions": found.get(self.key.ACC, []),
-                "missing": (
-                    []
-                    if ignore_missing
-                    else [x for x in expr if x not in found.get(self.key.ACC, [])]
-                ),
-            }
+            matched = found.get(self.key.ACC, [])
+            missing = (
+                []
+                if ignore_missing
+                else [x for x in expr if x not in found.get(self.key.ACC, [])]
+            )
+
+        acc = set(matched)
+        extra = []
+        try:
+            for token in expr:
+                if token in acc:
+                    continue
+                if self.registry.resolve_bare_resource_id(token):
+                    extra.append(token)
+                    acc.add(token)
+                    if not ignore_missing and token in missing:
+                        missing.remove(token)
+        except Exception:  # pylint: disable=broad-except
+            log.debug(
+                "List match: bare resource id resolution failed; continuing without extras",
+                exc_info=True,
+            )
+
+        return {"minions": matched + extra, "missing": missing}
 
     def _check_pcre_minions(
         self, expr, greedy, minions=None

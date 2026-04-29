@@ -19,6 +19,7 @@ Configuration (via Pillar)::
         resource_ids:
           - dummy-01
           - dummy-02
+          - dummy-03
 """
 
 import copy
