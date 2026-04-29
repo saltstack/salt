@@ -477,3 +477,22 @@ def test_check_minions_merge_fun_compound_not_affected(ck_with_resources):
             "G@os:Debian", tgt_type="compound", fun="test.ping"
         )
     assert "dummy-01" not in result["minions"]
+
+
+def test_registry_resolve_bare_resource_id(populated_registry):
+    assert populated_registry.resolve_bare_resource_id("dummy-02") == [
+        ("dummy", "dummy-02")
+    ]
+    assert populated_registry.resolve_bare_resource_id("nosuch") == []
+
+
+def test_check_minions_list_includes_bare_registered_resource_id(ck_with_resources):
+    """``salt -L <resource-id>`` must resolve via the resource registry."""
+    result = ck_with_resources.check_minions("dummy-02", tgt_type="list")
+    assert result["minions"] == ["dummy-02"]
+    assert result["missing"] == []
+
+
+def test_check_minions_glob_exact_bare_registered_resource_id(ck_with_resources):
+    result = ck_with_resources.check_minions("dummy-02", tgt_type="glob")
+    assert "dummy-02" in result["minions"]

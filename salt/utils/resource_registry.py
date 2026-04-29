@@ -375,6 +375,15 @@ class _ResourceIndexStore:
         self._ensure_derived_fresh()
         return list(self._by_type.get(resource_type, ()))
 
+    def resource_types(self):
+        """
+        Resource type names present in the derived primary view.
+
+        :rtype: tuple[str, ...]
+        """
+        self._ensure_derived_fresh()
+        return tuple(self._by_type.keys())
+
     def resources_by_minion(self, minion_id):
         """
         Return ``{resource_type: [resource_id, ...]}`` for one minion.
@@ -685,6 +694,31 @@ class ResourceRegistry:
         srn = resource_index_srn_key(resource_type, resource_id)
         return self._store.get(srn) is not None
 
+    def resolve_bare_resource_id(self, resource_id):
+        """
+        Return every ``(resource_type, resource_id)`` pair registered under the
+        bare id ``resource_id``.
+
+        Used for list / exact-glob targeting (``salt -L web-01``) without a
+        ``T@type:`` prefix. Collisions across types return multiple pairs.
+
+        :rtype: list[tuple[str, str]]
+        """
+        if not resource_id or not isinstance(resource_id, str):
+            return []
+        out = []
+        try:
+            for rtype in self._store.resource_types():
+                if resource_id in self._store.rids_by_type(rtype):
+                    out.append((rtype, resource_id))
+        except Exception as exc:  # pylint: disable=broad-except
+            log.warning(
+                "resource_registry: resolve_bare_resource_id(%r) failed: %s",
+                resource_id,
+                exc,
+            )
+        return out
+
     def get_resource_ids_by_type(self, resource_type):
         """
         Return all resource IDs of ``resource_type`` across all managing
@@ -879,6 +913,9 @@ class _NullResourceRegistry:
 
     def has_srn(self, resource_type, resource_id):
         return False
+
+    def resolve_bare_resource_id(self, resource_id):
+        return []
 
     def get_resource_ids_by_type(self, resource_type):
         return []

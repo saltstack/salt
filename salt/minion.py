@@ -4695,9 +4695,13 @@ class Minion(MinionBase):
         For wildcard glob targets (e.g. ``salt '*'``), returns all managed
         resources so that the command also runs against resources.
         For compound T@ targets, returns only the matched resources.
-        For specific-name glob targets (e.g. ``salt 'minion'``), grain, list,
-        pillar, or compound expressions with no T@ terms, returns an empty list
-        — the operator is targeting the minion itself, not its resources.
+        For list targets, returns resources whose bare id appears in the list.
+        For an exact glob with no wildcards, returns a single resource if ``tgt``
+        is a bare id managed by this minion (``salt <resource-id>``).
+        For specific-name glob targets that are not resource ids (e.g.
+        ``salt 'minion'``), grain, pillar, or compound expressions with no T@
+        terms, returns an empty list — the operator is targeting the minion
+        itself, not its resources.
         Internal/plumbing functions (see ``_NO_RESOURCE_FUNS``) are never
         dispatched to resources.
         """
@@ -4733,6 +4737,19 @@ class Minion(MinionBase):
                             targets.append({"id": rid, "type": pattern})
             return targets
 
+        if tgt_type == "list":
+            tokens = (
+                [t.strip() for t in tgt.split(",") if t.strip()]
+                if isinstance(tgt, str)
+                else [str(t).strip() for t in tgt if str(t).strip()]
+            )
+            targets = []
+            for token in tokens:
+                for rtype, rids in resources.items():
+                    if token in rids:
+                        targets.append({"id": token, "type": rtype})
+            return targets
+
         # For glob targets, only dispatch to resources when the pattern
         # contains a wildcard.  A bare name like ``salt 'minion' test.ping``
         # targets the minion itself; it should not implicitly run against its
@@ -4743,6 +4760,9 @@ class Minion(MinionBase):
             and isinstance(tgt, str)
             and not any(c in tgt for c in ("*", "?", "["))
         ):
+            for rtype, rids in resources.items():
+                if tgt in rids:
+                    return [{"id": tgt, "type": rtype}]
             return []
 
         # Wildcard glob — dispatch to all managed resources.

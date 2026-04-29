@@ -57,12 +57,31 @@ def test_resolve_resource_targets_glob_wildcard(minion_with_resources):
 def test_resolve_resource_targets_glob_specific_minion(minion_with_resources):
     """
     A specific name glob (no wildcard characters) must NOT dispatch to
-    resources.  ``salt 'minion' test.ping`` should only run on the minion
-    itself, not on its managed resources.
+    resources when ``tgt`` is not a managed resource id.  ``salt 'minion'``
+    should only run on the minion itself, not on its managed resources.
     """
     load = {"tgt": "minion", "tgt_type": "glob", "fun": "test.ping", "arg": []}
     targets = minion_with_resources._resolve_resource_targets(load)
-    assert targets == [], "specific-name glob must not dispatch to resources"
+    assert targets == [], "non-resource specific-name glob must not dispatch"
+
+
+def test_resolve_resource_targets_glob_exact_managed_resource_id(minion_with_resources):
+    """Exact glob with no wildcards must dispatch when ``tgt`` is a resource id."""
+    load = {"tgt": "dummy-02", "tgt_type": "glob", "fun": "test.ping", "arg": []}
+    targets = minion_with_resources._resolve_resource_targets(load)
+    assert targets == [{"id": "dummy-02", "type": "dummy"}]
+
+
+def test_resolve_resource_targets_list_bare_ids(minion_with_resources):
+    load = {
+        "tgt": "dummy-02,node1",
+        "tgt_type": "list",
+        "fun": "test.ping",
+        "arg": [],
+    }
+    targets = minion_with_resources._resolve_resource_targets(load)
+    ids_types = {(t["id"], t["type"]) for t in targets}
+    assert ids_types == {("dummy-02", "dummy"), ("node1", "ssh")}
 
 
 def test_resolve_resource_targets_compound_T_full_srn(minion_with_resources):
