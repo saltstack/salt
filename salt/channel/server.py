@@ -1947,6 +1947,48 @@ class MasterPubServerChannel:
         # Set by service.py once the Raft node is started.
         self._raft_dispatcher = None
 
+    def _start_raft_as_learner(self, known_peers):
+        """
+        Start ``RaftService`` as a non-voting learner after a dynamic join.
+
+        Called from ``handle_pool_publish`` when ``cluster/peer/join-reply``
+        is received.  At this point ``_publish_daemon`` is inside
+        ``io_loop.start()`` so the asyncio loop is already running.
+
+        :param known_peers: dict ``{peer_id: pub_key_pem}`` from the
+                            ``join-reply`` payload — the addresses of all
+                            existing cluster members.
+        """
+        import salt.utils.asynchronous  # pylint: disable=import-outside-toplevel
+
+        try:
+            from salt.cluster.consensus.service import (  # pylint: disable=import-outside-toplevel
+                RaftService,
+            )
+
+            aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
+            port = self.opts.get("cluster_port", 55596)
+
+            # Build a pusher for every known peer using their interface address.
+            peer_pushers = {}
+            for peer_id in known_peers:
+                if peer_id not in {p.pull_host for p in self.pushers}:
+                    pusher = self.pusher(peer_id, port)
+                    self.pushers.append(pusher)
+                peer_pushers[peer_id] = self.pusher(peer_id, port)
+
+            self._raft_service = RaftService(
+                self.opts, aio_loop, peer_pushers, voting=False
+            )
+            self._raft_service.attach(self)
+            aio_loop.call_soon(self._raft_service.start)
+            log.info(
+                "RaftService started as learner for cluster %r after dynamic join",
+                self.opts["cluster_id"],
+            )
+        except Exception:  # pylint: disable=broad-except
+            log.exception("Failed to start Raft consensus service after join")
+
     def gen_token(self):
         return "".join(random.choices(string.ascii_letters + string.digits, k=32))
 
@@ -2219,6 +2261,11 @@ class MasterPubServerChannel:
                 # Signal the main master process to start the rest of the
                 # master service processeses.
                 event.set()
+                # Start Raft as a non-voting learner now that we have cluster
+                # peers.  We were not started during _publish_daemon init
+                # because cluster_peers was empty at that point.
+                if self._raft_service is None and self.opts.get("cluster_id"):
+                    self._start_raft_as_learner(data.get("peers", {}))
             elif tag.startswith("cluster/peer/join"):
 
                 payload = salt.payload.loads(data["payload"])

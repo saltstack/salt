@@ -60,7 +60,7 @@ class RaftService:
                          entry).
     """
 
-    def __init__(self, opts, loop, peer_pushers):
+    def __init__(self, opts, loop, peer_pushers, voting=True):
         self.opts = opts
         self.loop = loop
         self._peer_pushers = dict(peer_pushers)  # addr -> PublishServer (mutable copy)
@@ -71,7 +71,9 @@ class RaftService:
         # address is the consistent cluster-wide identity.
         node_id = opts["interface"]
         storage = SaltStorage(node_id, opts)
-        self._node = Node(node_id, storage=storage)
+        # voting=False means this node joined dynamically and must wait for a
+        # CONFIG entry from the leader before participating in elections.
+        self._node = Node(node_id, storage=storage, voting=voting)
         self._scheduler = AsyncTimeoutScheduler(loop=loop)
         self._node.register_schedule_timeout(self._scheduler.schedule)
 
@@ -219,10 +221,13 @@ class RaftService:
         Called periodically by the event loop.
 
         If this node is the leader, send an empty AppendEntries to every
-        peer to suppress their election timers.
+        peer to suppress their election timers.  On the *first* heartbeat
+        after winning an election with an empty log, also commit a founding
+        CONFIG entry so the voter set is durably recorded.
         """
         try:
             if self._node.state == NodeState.LEADER:
+                self._maybe_commit_founding_config()
                 for peer in self._node.peers:
                     try:
                         self._node.send_append_entries(peer, entries=[])
@@ -235,6 +240,38 @@ class RaftService:
             log.exception("RaftService: error in heartbeat tick")
         finally:
             self._schedule_heartbeat()
+
+    def _maybe_commit_founding_config(self):
+        """
+        Propose the initial CONFIG entry when this leader has an empty log.
+
+        This records the founding voter set durably so that a node recovering
+        from storage can reconstruct the cluster membership without relying
+        solely on ``opts["cluster_peers"]``.
+
+        No-ops if the log already has any entries (founding entry already
+        written, or leader inherited a non-empty log).
+        """
+        if self._node.log.index >= 0:
+            return
+        from salt.cluster.consensus.raft.log import (
+            LogEntryType,  # pylint: disable=import-outside-toplevel
+        )
+
+        voters = [self._node.node_id] + [
+            p.node_id for p in self._node.peers if getattr(p, "voting", True)
+        ]
+        learners = [
+            p.node_id for p in self._node.peers if not getattr(p, "voting", True)
+        ]
+        log.info("RaftService: committing founding CONFIG entry voters=%s", voters)
+        try:
+            self._node.log_add(
+                {"voters": voters, "learners": learners},
+                entry_type=LogEntryType.CONFIG,
+            )
+        except Exception:  # pylint: disable=broad-except
+            log.exception("RaftService: failed to propose founding CONFIG entry")
 
 
 def build_peer_pushers(opts, pushers_list):
