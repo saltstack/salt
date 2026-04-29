@@ -97,7 +97,7 @@ more-itertools==9.1.0
     #   jaraco-text
 msgpack==1.0.7
     # via -r requirements/base.txt
-multidict==6.7.1
+multidict==6.1.0
     # via
     #   aiohttp
     #   yarl
