@@ -820,3 +820,141 @@ def test_step_down_on_higher_term_vote_reply(node):
     assert node.state == node.state.FOLLOWER
     assert node.term == 2
     assert node.vote is None
+
+
+# ---------------------------------------------------------------------------
+# MembershipStateMachine integration with Node
+# ---------------------------------------------------------------------------
+
+
+class TestNodeMembershipSM:
+    def _make_leader(self, node_id="m1"):
+        node = Node(node_id)
+        node.register_schedule_timeout(lambda t, c: None)
+        node.state.become_follower()
+        node.state.become_candidate()
+        node.state.become_leader()
+        return node
+
+    def test_node_has_membership_sm_by_default(self):
+        from salt.cluster.consensus.raft.log import MembershipStateMachine
+
+        node = Node("m1")
+        assert isinstance(node.membership_sm, MembershipStateMachine)
+
+    def test_info_includes_membership(self):
+        node = self._make_leader()
+        info = node.info()
+        assert "membership" in info
+        assert "voters" in info["membership"]
+        assert "learners" in info["membership"]
+        assert "version" in info["membership"]
+
+    def test_sm_updated_when_config_entry_committed(self):
+        """SM reflects committed membership, not just written."""
+        from salt.cluster.consensus.raft.log import LogEntryType
+
+        node = self._make_leader()
+        node.log_add(
+            {"voters": ["m1", "m2"], "learners": []},
+            entry_type=LogEntryType.CONFIG,
+        )
+        # Not committed yet (no quorum)
+        assert node.membership_sm.membership_version == -1
+
+        # Force commit
+        node.log.commit(0)
+        node.apply_entries()
+
+        assert node.membership_sm.current_voters() == ["m1", "m2"]
+        assert node.membership_sm.membership_version == 0
+
+    def test_sm_records_learner_on_commit(self):
+        from salt.cluster.consensus.raft.log import LogEntryType
+
+        node = self._make_leader()
+        node.log_add(
+            {"voters": ["m1"], "learners": ["m2"]},
+            entry_type=LogEntryType.CONFIG,
+        )
+        node.log.commit(0)
+        node.apply_entries()
+
+        assert node.membership_sm.is_voter("m1")
+        assert node.membership_sm.is_learner("m2")
+        assert not node.membership_sm.is_voter("m2")
+
+    def test_sm_version_advances_with_each_config_commit(self):
+        from salt.cluster.consensus.raft.log import LogEntryType
+
+        node = self._make_leader()
+        node.log_add(
+            {"voters": ["m1"], "learners": ["m2"]}, entry_type=LogEntryType.CONFIG
+        )
+        node.log_add(
+            {"voters": ["m1", "m2"], "learners": []}, entry_type=LogEntryType.CONFIG
+        )
+
+        # Commit only the first
+        node.log.commit(0)
+        node.apply_entries()
+        assert node.membership_sm.membership_version == 0
+        assert not node.membership_sm.is_voter("m2")
+
+        # Commit the second
+        node.log.commit(1)
+        node.apply_entries()
+        assert node.membership_sm.membership_version == 1
+        assert node.membership_sm.is_voter("m2")
+
+    def test_register_membership_sm_replaces_existing(self):
+        from salt.cluster.consensus.raft.log import MembershipStateMachine
+
+        node = self._make_leader()
+        custom_sm = MembershipStateMachine()
+        node.register_membership_sm(custom_sm)
+        assert node.membership_sm is custom_sm
+
+    def test_sm_snapshot_reflects_committed_state_only(self):
+        """get_snapshot on the SM returns committed membership, not uncommitted writes."""
+        from salt.cluster.consensus.raft.log import LogEntryType
+
+        node = self._make_leader()
+        # Write two configs; only commit the first
+        node.log_add(
+            {"voters": ["m1"], "learners": ["m2"]}, entry_type=LogEntryType.CONFIG
+        )
+        node.log_add(
+            {"voters": ["m1", "m2"], "learners": []}, entry_type=LogEntryType.CONFIG
+        )
+        node.log.commit(0)
+        node.apply_entries()
+
+        snap = node.membership_sm.get_snapshot()
+        assert snap["voters"] == ["m1"]
+        assert snap["learners"] == ["m2"]
+        assert snap["version"] == 0
+
+    def test_service_membership_property_exposed(self):
+        """RaftService.membership exposes the node's MembershipStateMachine."""
+        import asyncio
+        import tempfile
+
+        from salt.cluster.consensus.raft.log import MembershipStateMachine
+        from salt.cluster.consensus.service import RaftService
+
+        tmpdir = tempfile.mkdtemp()
+        opts = {
+            "id": "m1-host",
+            "interface": "m1",
+            "cluster_id": "test",
+            "cluster_peers": [],
+            "cachedir": tmpdir,
+        }
+        loop = asyncio.new_event_loop()
+        try:
+            svc = RaftService(opts, loop, {})
+            assert isinstance(svc.membership, MembershipStateMachine)
+            assert svc.membership is svc.node.membership_sm
+        finally:
+            loop.close()

@@ -403,6 +403,118 @@ class BaseStateMachine:
         raise NotImplementedError
 
 
+class MembershipStateMachine(BaseStateMachine):
+    """
+    State machine for Raft cluster membership.
+
+    Applies committed ``CONFIG`` log entries to maintain the authoritative
+    set of voting members and learners.  Snapshot/restore support allows the
+    membership state to survive log compaction.
+
+    The ``on_change`` callback (if set) is called after every successful
+    ``apply`` with ``(voters: list[str], learners: list[str])``.  Nodes use
+    this hook to update their in-memory peer routing tables via
+    ``Node.on_config_change``.
+
+    Sequence
+    --------
+    1. Leader proposes ``CONFIG`` entry ``{voters: [...], learners: [...]}``.
+    2. Entry is replicated and committed.
+    3. ``Node.apply_entries`` calls ``membership_sm.apply(cmd, index=i)``.
+    4. ``MembershipStateMachine`` updates its voter/learner sets and calls
+       ``on_change(voters, learners)``.
+    5. ``Node.on_config_change`` (wired as ``on_change``) updates
+       ``Node.peers`` voting flags and ``Node.voting``.
+    """
+
+    def __init__(self, on_change=None):
+        """
+        :param on_change: Optional ``callable(voters, learners)`` called after
+                          each successful ``apply``.  When set to ``None`` the
+                          SM operates as a pure query store with no side effects.
+        """
+        self._voters = set()
+        self._learners = set()
+        self._membership_version = -1
+        self.on_change = on_change
+
+    # ------------------------------------------------------------------
+    # BaseStateMachine interface
+    # ------------------------------------------------------------------
+
+    def apply(self, cmd, client_id=None, sequence_num=None, index=-1):
+        """
+        Apply a committed CONFIG entry.
+
+        :param cmd:   ``dict`` with keys ``"voters"`` (list[str]) and
+                      optionally ``"learners"`` (list[str]).  Non-dict values
+                      are treated as a plain voter list with no learners.
+        :param index: Raft log index of this entry (used as version stamp).
+        """
+        if isinstance(cmd, dict):
+            voters = list(cmd.get("voters", []))
+            learners = list(cmd.get("learners", []))
+        else:
+            voters = list(cmd) if cmd else []
+            learners = []
+
+        self._voters = set(voters)
+        self._learners = set(learners)
+        self._membership_version = index
+
+        if self.on_change is not None:
+            self.on_change(voters, learners)
+
+    def get_snapshot(self):
+        """Return JSON-serialisable dict of current membership state."""
+        return {
+            "voters": sorted(self._voters),
+            "learners": sorted(self._learners),
+            "version": self._membership_version,
+        }
+
+    def restore_snapshot(self, data):
+        """Restore membership from a snapshot dict (as produced by ``get_snapshot``)."""
+        if isinstance(data, (bytes, bytearray)):
+            data = json.loads(data.decode())
+        if not isinstance(data, dict):
+            return
+        self._voters = set(data.get("voters", []))
+        self._learners = set(data.get("learners", []))
+        self._membership_version = data.get("version", -1)
+
+    # ------------------------------------------------------------------
+    # Query API
+    # ------------------------------------------------------------------
+
+    def current_voters(self):
+        """Return a sorted list of current voting members."""
+        return sorted(self._voters)
+
+    def current_learners(self):
+        """Return a sorted list of current learner (non-voting) members."""
+        return sorted(self._learners)
+
+    def is_voter(self, node_id):
+        """Return True if *node_id* is in the current voter set."""
+        return node_id in self._voters
+
+    def is_learner(self, node_id):
+        """Return True if *node_id* is in the current learner set."""
+        return node_id in self._learners
+
+    @property
+    def membership_version(self):
+        """Log index of the most recently applied CONFIG entry, or -1 if none."""
+        return self._membership_version
+
+    def __repr__(self):
+        return (
+            f"<MembershipStateMachine voters={sorted(self._voters)} "
+            f"learners={sorted(self._learners)} version={self._membership_version}>"
+        )
+
+
 class CounterStateMachine(BaseStateMachine):
     """Simple state machine that counts applied commands with exactly-once logic."""
 

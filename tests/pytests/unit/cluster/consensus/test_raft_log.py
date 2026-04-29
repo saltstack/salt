@@ -228,3 +228,115 @@ def test_log_clear():
     log.clear()
     assert log.entries == []
     assert log.index == -1
+
+
+# ---------------------------------------------------------------------------
+# MembershipStateMachine
+# ---------------------------------------------------------------------------
+
+
+class TestMembershipStateMachine:
+    def test_initial_state_is_empty(self):
+        from salt.cluster.consensus.raft.log import MembershipStateMachine
+
+        sm = MembershipStateMachine()
+        assert sm.current_voters() == []
+        assert sm.current_learners() == []
+        assert sm.membership_version == -1
+
+    def test_apply_sets_voters_and_learners(self):
+        from salt.cluster.consensus.raft.log import MembershipStateMachine
+
+        sm = MembershipStateMachine()
+        sm.apply({"voters": ["m1", "m2"], "learners": ["m3"]}, index=0)
+        assert sm.current_voters() == ["m1", "m2"]
+        assert sm.current_learners() == ["m3"]
+        assert sm.membership_version == 0
+
+    def test_apply_plain_list_treated_as_voters(self):
+        from salt.cluster.consensus.raft.log import MembershipStateMachine
+
+        sm = MembershipStateMachine()
+        sm.apply(["m1", "m2"], index=1)
+        assert sm.current_voters() == ["m1", "m2"]
+        assert sm.current_learners() == []
+
+    def test_apply_overwrites_previous_state(self):
+        from salt.cluster.consensus.raft.log import MembershipStateMachine
+
+        sm = MembershipStateMachine()
+        sm.apply({"voters": ["m1"], "learners": ["m2"]}, index=0)
+        sm.apply({"voters": ["m1", "m2"], "learners": []}, index=1)
+        assert sm.current_voters() == ["m1", "m2"]
+        assert sm.current_learners() == []
+        assert sm.membership_version == 1
+
+    def test_is_voter_and_is_learner(self):
+        from salt.cluster.consensus.raft.log import MembershipStateMachine
+
+        sm = MembershipStateMachine()
+        sm.apply({"voters": ["m1"], "learners": ["m2"]}, index=0)
+        assert sm.is_voter("m1") is True
+        assert sm.is_voter("m2") is False
+        assert sm.is_learner("m2") is True
+        assert sm.is_learner("m1") is False
+        assert sm.is_voter("unknown") is False
+
+    def test_on_change_callback_fires(self):
+        from salt.cluster.consensus.raft.log import MembershipStateMachine
+
+        received = []
+        sm = MembershipStateMachine(on_change=lambda v, l: received.append((v, l)))
+        sm.apply({"voters": ["m1", "m2"], "learners": ["m3"]}, index=0)
+        assert received == [(["m1", "m2"], ["m3"])]
+
+    def test_on_change_callback_not_required(self):
+        from salt.cluster.consensus.raft.log import MembershipStateMachine
+
+        sm = MembershipStateMachine()
+        sm.apply({"voters": ["m1"]}, index=0)
+        assert sm.current_voters() == ["m1"]
+
+    def test_snapshot_roundtrip(self):
+        from salt.cluster.consensus.raft.log import MembershipStateMachine
+
+        sm = MembershipStateMachine()
+        sm.apply({"voters": ["m1", "m2"], "learners": ["m3"]}, index=5)
+
+        snap = sm.get_snapshot()
+        assert snap == {"voters": ["m1", "m2"], "learners": ["m3"], "version": 5}
+
+        sm2 = MembershipStateMachine()
+        sm2.restore_snapshot(snap)
+        assert sm2.current_voters() == ["m1", "m2"]
+        assert sm2.current_learners() == ["m3"]
+        assert sm2.membership_version == 5
+
+    def test_restore_snapshot_from_bytes(self):
+        import json
+
+        from salt.cluster.consensus.raft.log import MembershipStateMachine
+
+        snap = {"voters": ["m1"], "learners": [], "version": 3}
+        sm = MembershipStateMachine()
+        sm.restore_snapshot(json.dumps(snap).encode())
+        assert sm.current_voters() == ["m1"]
+        assert sm.membership_version == 3
+
+    def test_restore_snapshot_ignores_invalid(self):
+        from salt.cluster.consensus.raft.log import MembershipStateMachine
+
+        sm = MembershipStateMachine()
+        sm.apply({"voters": ["m1"]}, index=0)
+        sm.restore_snapshot(None)
+        assert sm.current_voters() == ["m1"]
+
+    def test_repr_includes_key_fields(self):
+        from salt.cluster.consensus.raft.log import MembershipStateMachine
+
+        sm = MembershipStateMachine()
+        sm.apply({"voters": ["m1"], "learners": ["m2"]}, index=2)
+        r = repr(sm)
+        assert "m1" in r
+        assert "m2" in r
+        assert "version=2" in r
