@@ -120,9 +120,9 @@ def publish_server(opts, **kwargs):
         raise Exception(f"Transport type not found: {ttype}")
 
     if not transcls.support_ssl():
-        if "ssl" in kwargs:
+        if kwargs.get("ssl") is not None:
             log.warning("SSL is not supported for transport: %s", ttype)
-            kwargs.pop("ssl")
+        kwargs.pop("ssl", None)
     return transcls(opts, **kwargs)
 
 

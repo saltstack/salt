@@ -978,10 +978,10 @@ class Master(SMaster):
                 kwargs["secrets"] = SMaster.secrets
 
             self.process_manager.add_process(
-                ReqServer,
+                RequestServer,
                 args=(self.opts, self.key, self.master_key),
                 kwargs=kwargs,
-                name="ReqServer",
+                name="RequestServer",
             )
 
             self.process_manager.add_process(
@@ -1316,7 +1316,7 @@ class RequestRouter:
             return ""
 
 
-class ReqServer(salt.utils.process.SignalHandlingProcess):
+class RequestServer(salt.utils.process.SignalHandlingProcess):
     """
     Starts up the master request server, minions send results to this
     interface.
@@ -1330,7 +1330,7 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         :key dict: The user starting the server and the AES key
         :mkey dict: The user starting the server and the RSA key
 
-        :rtype: ReqServer
+        :rtype: RequestServer
         :returns: Request server
         """
         super().__init__(**kwargs)
@@ -1420,7 +1420,7 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
 
     def run(self):
         """
-        Start up the ReqServer
+        Start up the RequestServer
         """
         self.__bind()
         asyncio.run(self.process_manager.run())
@@ -1523,12 +1523,13 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             if self.opts["req_server_niceness"]:
                 if salt.utils.user.get_user() == "root":
                     log.info(
-                        "%s decrementing inherited ReqServer niceness to 0", self.name
+                        "%s decrementing inherited RequestServer niceness to 0",
+                        self.name,
                     )
                     os.nice(self.opts["req_server_niceness"] * -1)
                 else:
                     log.debug(
-                        "%s not root, cannot decrement inherited ReqServer niceness",
+                        "%s not root, cannot decrement inherited RequestServer niceness",
                         self.name,
                     )
                     enforce_mworker_niceness = False

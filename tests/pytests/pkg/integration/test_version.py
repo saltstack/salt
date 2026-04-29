@@ -110,11 +110,6 @@ def test_compare_versions(binary, install_salt):
             stderr=subprocess.PIPE,
         )
         ver_pat = version.split("+", 1)[0] if "+" in version else version
-        # Debian/RPM packages embed `~` in their filenames so pre-release
-        # versions sort before the GA (e.g. ``3008.0~rc1`` < ``3008.0``), but
-        # the binary's ``--version`` output reports the PEP 440 string
-        # without the tilde (``3008.0rc1``). Strip the tilde before matching.
-        ver_pat = ver_pat.replace("~", "")
         ret.stdout.matcher.fnmatch_lines([f"*{ver_pat}*"])
     else:
         if platform.is_windows():

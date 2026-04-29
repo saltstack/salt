@@ -1077,41 +1077,8 @@ class MinionManager(MinionBase):
 
     def _bind(self):
         # start up the event publisher, so we can see events during startup
-        import hashlib
-
-        hash_type = getattr(hashlib, self.opts["hash_type"])
-        id_hash = hash_type(
-            salt.utils.stringutils.to_bytes(self.opts["id"])
-        ).hexdigest()[:10]
-
-        if self.opts["ipc_mode"] == "tcp":
-            pub_host = "127.0.0.1"
-            pub_port = int(self.opts["tcp_pub_port"])
-            pull_host = "127.0.0.1"
-            pull_port = int(self.opts["tcp_pull_port"])
-            self.event_publisher = salt.transport.publish_server(
-                self.opts,
-                pub_host=pub_host,
-                pub_port=pub_port,
-                pull_host=pull_host,
-                pull_port=pull_port,
-            )
-        else:
-            epub_sock_path = os.path.join(
-                self.opts["sock_dir"], f"minion_event_{id_hash}_pub.ipc"
-            )
-            epull_sock_path = os.path.join(
-                self.opts["sock_dir"], f"minion_event_{id_hash}_pull.ipc"
-            )
-            if os.path.exists(epub_sock_path):
-                os.unlink(epub_sock_path)
-            self.event_publisher = salt.transport.publish_server(
-                self.opts,
-                pub_path=epub_sock_path,
-                pull_path=epull_sock_path,
-            )
-
-        salt.utils.asynchronous.aioloop(self.io_loop).create_task(
+        self.event_publisher = salt.transport.ipc_publish_server("minion", self.opts)
+        self.io_loop.create_task(
             self.event_publisher.publisher(
                 self.event_publisher.publish_payload,
                 io_loop=self.io_loop,

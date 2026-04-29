@@ -86,7 +86,7 @@ try:
     import jnpr.junos.op as tables_dir
     import jnpr.junos.utils
     import jxmlease
-    import yamlordereddictloader
+    import yamlloader
     from jnpr.junos import Device
     from jnpr.junos.exception import (
         ConnectClosedError,
@@ -128,7 +128,7 @@ def __virtual__():
         return (
             False,
             "The junos or dependent module could not be loaded: "
-            "junos-eznc or jxmlease or yamlordereddictloader or "
+            "junos-eznc or jxmlease or yamlloader or "
             "proxy could not be loaded.",
         )
 
@@ -1902,7 +1902,7 @@ def get_table(
             try:
                 with salt.utils.files.fopen(file_loc) as fp:
                     ret["table"] = yaml.load(
-                        fp.read(), Loader=yamlordereddictloader.SafeLoader
+                        fp.read(), Loader=yamlloader.ordereddict.SafeLoader
                     )
                     globals().update(FactoryLoader().load(ret["table"]))
             except OSError as err:
