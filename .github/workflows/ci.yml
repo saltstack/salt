@@ -9,6 +9,7 @@ on:
     branches:
       - 3006.x
       - 3007.x
+      - 3008.x
       - master
   pull_request:
     types:
