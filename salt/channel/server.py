@@ -1733,33 +1733,7 @@ class MasterPubServerChannel:
 
     @classmethod
     def factory(cls, opts, **kwargs):
-        _discover_event = kwargs.get("_discover_event", None)
-        from salt.transport import publish_server
-
-        if opts["ipc_mode"] == "tcp":
-            pub_host = "127.0.0.1"
-            pub_port = int(opts["tcp_master_pub_port"])
-            pull_host = "127.0.0.1"
-            pull_port = int(opts["tcp_master_pull_port"])
-            transport = publish_server(
-                opts,
-                pub_host=pub_host,
-                pub_port=pub_port,
-                pull_host=pull_host,
-                pull_port=pull_port,
-            )
-        else:
-            pub_path = os.path.join(opts["sock_dir"], "master_event_pub.ipc")
-            pull_path = os.path.join(opts["sock_dir"], "master_event_pull.ipc")
-            transport = publish_server(
-                opts,
-                pub_path=pub_path,
-                pull_path=pull_path,
-                pub_path_perms=0o660,
-            )
-
-        if _discover_event:
-            _discover_event.set()
+        transport = salt.transport.ipc_publish_server("master", opts)
         return cls(opts, transport)
 
     def __init__(self, opts, transport, presence_events=False):

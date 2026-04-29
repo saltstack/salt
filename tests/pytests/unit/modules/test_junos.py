@@ -2271,8 +2271,7 @@ def test_virtual_proxy_unavailable():
         res = (
             False,
             "The junos or dependent module could not be loaded: "
-            "junos-eznc or jxmlease or yamlloader or "
-            "proxy could not be loaded.",
+            "junos-eznc or jxmlease or proxy could not be loaded.",
         )
         assert junos.__virtual__() == res
 

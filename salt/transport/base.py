@@ -189,9 +189,11 @@ def _minion_hash(hash_type, minion_id):
 
 
 def ipc_publish_client(node, opts, io_loop):
-    kwargs = {"ssl": None}
+    # IPC event bus always uses salt's TCP transport (over Unix sockets when
+    # ipc_mode is "ipc", over loopback TCP when ipc_mode is "tcp"). ZeroMQ is
+    # only used for the master/minion command channel.
+    kwargs = {"transport": "tcp", "ssl": None}
     if opts["ipc_mode"] == "tcp":
-        kwargs.update({"transport": "tcp"})
         if node == "master":
             kwargs.update(
                 host="127.0.0.1",
@@ -227,9 +229,8 @@ def ipc_publish_server(node, opts):
     permissions are also group read/write. This is done to facilitate non root
     users running the salt cli to execute jobs on a master.
     """
-    kwargs = {"ssl": None}
+    kwargs = {"transport": "tcp", "ssl": None}
     if opts["ipc_mode"] == "tcp":
-        kwargs.update({"transport": "tcp"})
         if node == "master":
             kwargs.update(
                 pub_host="127.0.0.1",

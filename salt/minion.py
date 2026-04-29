@@ -1091,15 +1091,21 @@ class MinionManager(MinionBase):
         self.event.set_event_handler(self.handle_event)
 
     async def handle_event(self, package):
+        tasks = []
+        for minion in self.minions:
+            result = minion.handle_event(package)
+            if inspect.isawaitable(result):
+                tasks.append(result)
+            else:
+                log.warning(
+                    "Minion %r handle_event returned non-awaitable %r; "
+                    "skipping. This indicates a regression: handle_event "
+                    "should always be a coroutine.",
+                    minion,
+                    result,
+                )
         try:
-            await asyncio.gather(
-                *[
-                    task
-                    for minion in self.minions
-                    if (task := minion.handle_event(package))
-                    and inspect.isawaitable(task)
-                ]
-            )
+            await asyncio.gather(*tasks)
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Error dispatching event. %s", exc)
 
