@@ -312,7 +312,11 @@ class PublicKey(BaseKey):
     def verify(self, data, signature, algorithm=PKCS1v15_SHA1):
         _padding = self.parse_padding_for_signing(algorithm)
         _hash = self.parse_hash(algorithm)
-        self._enforce_fips(algorithm)
+        if SHA1 in algorithm and fips_enabled():
+            # Verification with a SHA1-based algorithm is not allowed in FIPS
+            # mode. Return False rather than raise -- matches cryptography's
+            # historical "silent False" contract for unsupported algorithms.
+            return False
         try:
             self.key.verify(
                 salt.utils.stringutils.to_bytes(signature),
@@ -321,6 +325,8 @@ class PublicKey(BaseKey):
                 _hash(),
             )
         except cryptography.exceptions.InvalidSignature:
+            return False
+        except cryptography.exceptions.UnsupportedAlgorithm:
             return False
         return True
 

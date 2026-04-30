@@ -692,6 +692,13 @@ class GitPythonMixin:
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 @pytest.mark.skip_if_binaries_missing("sshd")
+@pytest.mark.skip_on_fips_enabled_platform(
+    reason=(
+        "git_pillar over SSH relies on the legacy ssh-rsa SHA1 signing "
+        "algorithm, which is unavailable on FIPS-aware OpenSSH. "
+        "git fetch over SSH cannot complete the handshake."
+    )
+)
 class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
     """
     Test git_pillar with GitPython using SSH authentication

@@ -5,6 +5,7 @@ Base classes for gitfs/git_pillar integration tests
 import errno
 import logging
 import os
+import pathlib
 import shutil
 import subprocess
 import tempfile
@@ -34,17 +35,31 @@ log = logging.getLogger(__name__)
 USERNAME = "gitpillaruser"
 PASSWORD = "saltrules"
 
-FIPS_TESTRUN = os.environ.get("FIPS_TESTRUN", "0") == "1"
-
-# MD5 is not permitted in FIPS mode. The two fingerprints below are the MD5
-# and SHA256 of ``server/files/ssh_host_rsa_key.pub`` respectively; switch
-# based on FIPS_TESTRUN so the known_host setup picks an algorithm the host
-# crypto policy accepts.
-SSHD_HOST_KEY_FINGERPRINT_MD5 = "fd:6f:7f:5d:06:6b:f2:06:0d:26:93:9e:5a:b5:19:46"
-SSHD_HOST_KEY_FINGERPRINT_SHA256 = (
-    "bd:99:ac:a9:76:c5:04:a5:26:30:3e:9e:08:b2:2d:5b"
-    ":9a:e5:e7:11:86:58:8f:de:07:f1:24:5e:99:00:98:97"
+# Path to the static SSH host key the git_pillar.ssh.server state copies into
+# the running sshd's config_dir. We read its public-key blob directly into
+# the known_hosts entry so set_known_host doesn't have to run ``ssh-keyscan``
+# against the test sshd. ``ssh-keyscan -t ssh-rsa`` fails on FIPS-aware
+# OpenSSH builds because the legacy ssh-rsa (SHA1) signing algorithm is
+# excluded from HostKeyAlgorithms and the handshake cannot complete.
+SSHD_HOST_PUBKEY_FILE = (
+    pathlib.Path(RUNTIME_VARS.FILES)
+    / "file"
+    / "base"
+    / "git_pillar"
+    / "ssh"
+    / "server"
+    / "files"
+    / "ssh_host_rsa_key.pub"
 )
+
+
+def _sshd_host_pubkey_blob():
+    """
+    Return the base64-encoded public-key blob from ssh_host_rsa_key.pub.
+    """
+    with salt.utils.files.fopen(SSHD_HOST_PUBKEY_FILE, encoding="utf-8") as fp:
+        return fp.read().strip().split()[1]
+
 
 _OPTS = freeze(
     {
@@ -139,21 +154,21 @@ class Sshd(_Sshd):
             pytest.fail("Failed to apply the 'git_pillar.ssh' state")
 
     def set_known_host(self, salt_call_cli, username):
-        if FIPS_TESTRUN:
-            fingerprint = SSHD_HOST_KEY_FINGERPRINT_SHA256
-            fingerprint_hash_type = "sha256"
-        else:
-            fingerprint = SSHD_HOST_KEY_FINGERPRINT_MD5
-            fingerprint_hash_type = "md5"
+        # Pass ``key`` directly rather than letting set_known_host run
+        # ``ssh-keyscan -t ssh-rsa``. On FIPS-aware OpenSSH builds the legacy
+        # ssh-rsa (SHA1) signing algorithm is dropped from HostKeyAlgorithms
+        # and the keyscan handshake cannot complete -- the static RSA host
+        # key the test serves is fine, only the signature negotiation fails.
+        # Feeding the public key blob directly skips ssh-keyscan entirely.
         ret = salt_call_cli.run(
             "ssh.set_known_host",
             user=username,
             hostname="127.0.0.1",
             port=self.listen_port,
             enc="ssh-rsa",
-            fingerprint=fingerprint,
+            key=_sshd_host_pubkey_blob(),
             hash_known_hosts=False,
-            fingerprint_hash_type=fingerprint_hash_type,
+            fingerprint_hash_type="sha256",
         )
         if ret.returncode != 0:
             pytest.fail("Failed to run 'ssh.set_known_host'")

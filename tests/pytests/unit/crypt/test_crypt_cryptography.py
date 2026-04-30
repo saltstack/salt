@@ -320,9 +320,11 @@ def test_sign_message_with_passphrase(signature, signing_algorithm):
         )
 
 
-def test_verify_signature():
+def test_verify_signature(signature, signing_algorithm):
     with patch("salt.utils.files.fopen", mock_open(read_data=PUBKEY_DATA.encode())):
-        assert salt.crypt.verify_signature("/keydir/keyname.pub", MSG, SIG)
+        assert salt.crypt.verify_signature(
+            "/keydir/keyname.pub", MSG, signature, algorithm=signing_algorithm
+        )
 
 
 def test_loading_encrypted_openssl_format(openssl_encrypted_key, passphrase, tmp_path):

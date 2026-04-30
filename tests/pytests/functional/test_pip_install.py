@@ -1,5 +1,4 @@
 import getpass
-import os
 import shutil
 import subprocess
 import time
@@ -14,27 +13,15 @@ try:
 except ImportError:
     HAS_VIRTUALENV = False
 
-FIPS_TESTRUN = os.environ.get("FIPS_TESTRUN", "0") == "1"
-
 pytestmark = [
     pytest.mark.skipif(HAS_VIRTUALENV is False, reason="virtualenv is not installed"),
+    # ``virtualenv.cli_run`` builds a venv off of the onedir's Python, then
+    # uses pip's vendored urllib3 to install Salt. urllib3 calls
+    # ``SSLContext(ssl_version)`` with a deprecated protocol enum which
+    # fails as ``LIBRARY_HAS_NO_CIPHERS`` against an OpenSSL configured for
+    # FIPS, so the venv's pip cannot run on FIPS-enabled platforms.
+    pytest.mark.skip_on_fips_enabled_platform,
 ]
-
-
-def _fips_master_config():
-    if not FIPS_TESTRUN:
-        return ""
-    return "fips_mode: true\n" "publish_signing_algorithm: PKCS1v15-SHA224\n"
-
-
-def _fips_minion_config():
-    if not FIPS_TESTRUN:
-        return ""
-    return (
-        "fips_mode: true\n"
-        "encryption_algorithm: OAEP-SHA224\n"
-        "signing_algorithm: PKCS1v15-SHA224\n"
-    )
 
 
 if shutil.which("gcc") is None and shutil.which("cc") is None:
@@ -72,7 +59,6 @@ def salt_master(test_venv, tmp_path):
     user = getpass.getuser()
     master_config.write_text(
         f"user: {user}\nroot_dir: {tmp_path}\npki_dir: {tmp_path}/pki/master\ncachedir: {tmp_path}/cache/master\nsock_dir: {tmp_path}/sock/master\n"
-        + _fips_master_config()
     )
 
     master_bin = test_venv / "bin" / "salt-master"
@@ -97,7 +83,6 @@ def salt_minion(test_venv, tmp_path):
     user = getpass.getuser()
     minion_config.write_text(
         f"user: {user}\nmaster: 127.0.0.1\nid: test-minion\nroot_dir: {tmp_path}\npki_dir: {tmp_path}/pki/minion\ncachedir: {tmp_path}/cache/minion\nsock_dir: {tmp_path}/sock/minion\n"
-        + _fips_minion_config()
     )
 
     minion_bin = test_venv / "bin" / "salt-minion"
