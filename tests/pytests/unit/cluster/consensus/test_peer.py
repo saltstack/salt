@@ -338,3 +338,35 @@ class TestRaftDispatcher:
         }
         _run(dispatcher.dispatch(rpc.REQUEST_VOTE, "2", "r", payload))
         # exception caught, no re-raise
+
+
+def test_dispatcher_publish_exception_is_caught():
+    """RaftDispatcher catches publish exceptions without propagating."""
+    import asyncio
+
+    from salt.cluster.consensus import rpc
+    from salt.cluster.consensus.peer import RaftDispatcher
+    from salt.cluster.consensus.raft.node import Node
+    from tests.support.mock import AsyncMock, MagicMock
+
+    node = Node("1")
+    node.register_schedule_timeout(lambda t, c: None)
+    node.become_follower()
+
+    bad_pusher = MagicMock()
+    bad_pusher.publish = AsyncMock(side_effect=RuntimeError("network down"))
+
+    dispatcher = RaftDispatcher(node, "1", {"2": bad_pusher})
+
+    def _run(coro):
+        return asyncio.run(coro)
+
+    payload = {
+        "callback_node": "2",
+        "candidate_id": "2",
+        "term": 1,
+        "last_log_term": 0,
+        "last_log_index": -1,
+    }
+    # Must not raise — exception is caught and logged
+    _run(dispatcher.dispatch(rpc.REQUEST_VOTE, "2", "r", payload))

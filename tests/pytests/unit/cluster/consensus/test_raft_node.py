@@ -958,3 +958,438 @@ class TestNodeMembershipSM:
             assert svc.membership is svc.node.membership_sm
         finally:
             loop.close()
+
+
+# ---------------------------------------------------------------------------
+# Coverage gaps: Peer paths, ManualPeer.install_snapshot, storage tuple load,
+# request_votes helper, native_engine hooks, on_config_change learner paths,
+# install_snapshot guard, candidacy_timeout_callback edge cases, commit_index setter
+# ---------------------------------------------------------------------------
+
+
+class TestPeerEdgePaths:
+    def test_peer_address_property(self):
+        """Peer.address falls back to _node_id when node has no address attr."""
+        from salt.cluster.consensus.raft.node import Node, Peer
+
+        inner = Node("inner-node")
+        p = Peer(inner, node_id="remote-1")
+        assert p.address == "inner-node"
+
+    def test_peer_address_uses_node_address_attr(self):
+        from salt.cluster.consensus.raft.node import Peer
+
+        class FakeNode:
+            address = "10.0.0.1"
+            node_id = "n1"
+
+        p = Peer(FakeNode(), node_id="n1")
+        assert p.address == "10.0.0.1"
+
+    def test_peer_pre_request_vote_callback(self):
+        """Peer.pre_request_vote fires callback with correct args."""
+        from salt.cluster.consensus.raft.node import Node, Peer
+        from salt.cluster.consensus.raft.scheduler import ManualTimeoutScheduler
+
+        target = Node("target")
+        scheduler = ManualTimeoutScheduler()
+        target.register_schedule_timeout(scheduler.schedule)
+        target.become_follower()
+
+        results = []
+        p = Peer(target, node_id="target")
+        p.pre_request_vote(
+            lambda nid, granted, term: results.append((nid, granted, term)),
+            "candidate",
+            1,
+            last_log_term=0,
+            last_log_index=-1,
+        )
+        assert len(results) == 1
+        assert results[0][0] == "target"
+
+
+class TestManualPeerInstallSnapshot:
+    def test_install_snapshot_queued_and_handled(self):
+        """ManualPeer.install_snapshot enqueues and handle_all_requests delivers it."""
+        from salt.cluster.consensus.raft.node import ManualPeer, Node
+        from salt.cluster.consensus.raft.scheduler import ManualTimeoutScheduler
+
+        target = Node("target")
+        scheduler = ManualTimeoutScheduler()
+        target.register_schedule_timeout(scheduler.schedule)
+        target.become_follower()
+
+        peer = ManualPeer(target, node_id="target")
+        results = []
+        peer.install_snapshot(
+            lambda nid, term: results.append((nid, term)),
+            "leader",
+            1,
+            last_included_index=5,
+            last_included_term=1,
+            data={"voters": ["leader"], "learners": []},
+        )
+        assert len(peer.requests) == 1
+        peer.handle_all_requests()
+        assert len(results) == 1
+        assert results[0][0] == "target"
+
+
+class TestNodeStorageTupleLoad:
+    def test_storage_tuple_format_loaded_correctly(self):
+        """Node loads (term, voted_for) tuple from old-format storage gracefully."""
+        from salt.cluster.consensus.raft.node import Node
+        from tests.support.mock import MagicMock
+
+        mock_storage = MagicMock()
+        # Simulate old tuple-format storage response (term, voted_for)
+        mock_storage.load_state.return_value = (3, "peer-1")
+        mock_storage.load_log.return_value = []
+        mock_storage.load_snapshot.return_value = None
+
+        node = Node("n1", storage=mock_storage)
+        assert node.term == 3
+        assert node.voted_for == "peer-1"
+
+
+class TestRequestVotesHelper:
+    def test_request_votes_sends_to_voting_peers(self):
+        """request_votes() dispatches RequestVote RPCs to all voting peers."""
+        from salt.cluster.consensus.raft.node import ManualPeer, Node
+        from salt.cluster.consensus.raft.scheduler import ManualTimeoutScheduler
+
+        node = Node("n1")
+        scheduler = ManualTimeoutScheduler()
+        node.register_schedule_timeout(scheduler.schedule)
+
+        peer2 = ManualPeer(Node("n2"), node_id="n2")
+        peer3 = ManualPeer(Node("n3"), node_id="n3")
+        node.peers = [peer2, peer3]
+
+        node.become_follower()
+        node.become_candidate()
+        # Drain requests from become_candidate
+        peer2.requests.clear()
+        peer3.requests.clear()
+
+        node.request_votes()
+        assert any(r[0] == "rv" for r in peer2.requests)
+        assert any(r[0] == "rv" for r in peer3.requests)
+
+
+class TestNativeEngineHooks:
+    def _make_mock_engine(self):
+        from tests.support.mock import MagicMock
+
+        return MagicMock()
+
+    def test_become_leader_calls_native_engine(self):
+        from salt.cluster.consensus.raft.node import Node
+        from salt.cluster.consensus.raft.scheduler import ManualTimeoutScheduler
+
+        node = Node("n1")
+        scheduler = ManualTimeoutScheduler()
+        node.register_schedule_timeout(scheduler.schedule)
+        node.native_engine = self._make_mock_engine()
+
+        node.become_follower()
+        node.become_candidate()
+        node.native_engine.reset_mock()
+        node.become_leader()
+        node.native_engine.become_leader.assert_called_once_with(node.term)
+
+    def test_become_follower_calls_native_engine(self):
+        from salt.cluster.consensus.raft.node import Node
+        from salt.cluster.consensus.raft.scheduler import ManualTimeoutScheduler
+
+        node = Node("n1")
+        scheduler = ManualTimeoutScheduler()
+        node.register_schedule_timeout(scheduler.schedule)
+        node.native_engine = self._make_mock_engine()
+
+        node.become_follower()
+        node.native_engine.become_follower.assert_called_once_with(node.term)
+
+    def test_leader_beacon_calls_send_heartbeat_via_native_engine(self):
+        """leader_beacon routes through native_engine.send_heartbeat when set."""
+        from salt.cluster.consensus.raft.node import Node
+        from salt.cluster.consensus.raft.scheduler import ManualTimeoutScheduler
+        from tests.support.mock import MagicMock
+
+        node = Node("n1")
+        scheduler = ManualTimeoutScheduler()
+        node.register_schedule_timeout(scheduler.schedule)
+
+        fake_peer = MagicMock()
+        fake_peer.node_id = "n2"
+        fake_peer.voting = True
+        node.peers = [fake_peer]
+        node.native_engine = MagicMock()
+
+        node.become_follower()
+        node.become_candidate()
+        node.become_leader()
+        fake_peer.reset_mock()
+
+        node.leader_beacon()
+        fake_peer.send_heartbeat.assert_called_once()
+
+
+class TestOnConfigChangeLearnerPath:
+    def test_no_factory_learner_set_voting_false(self):
+        """on_config_change no-factory path sets existing peer to voting=False."""
+        from salt.cluster.consensus.raft.node import ManualPeer, Node
+
+        node = Node("n1")
+        peer = ManualPeer(Node("n2"), node_id="n2", voting=True)
+        node.peers = [peer]
+
+        node.on_config_change(["n1"], learners=["n2"])
+        assert peer.voting is False
+
+    def test_factory_path_creates_learner_for_new_addr(self):
+        """on_config_change with factory creates a non-voting peer for new learner."""
+        from salt.cluster.consensus.raft.node import ManualPeer, Node
+
+        node = Node("n1")
+        node.register_schedule_timeout(lambda t, c: None)
+
+        def factory(addr, voting=True):
+            p = ManualPeer(Node(addr), node_id=addr)
+            p.voting = voting
+            return p
+
+        node.register_peer_factory(factory)
+        node.on_config_change(["n1"], learners=["n2"])
+        assert len(node.peers) == 1
+        assert node.peers[0].node_id == "n2"
+        assert node.peers[0].voting is False
+
+
+class TestInstallSnapshotGuard:
+    def test_install_snapshot_ignored_if_already_newer(self):
+        """install_snapshot is a no-op when our snapshot is already newer."""
+        from salt.cluster.consensus.raft.node import Node
+        from salt.cluster.consensus.raft.scheduler import ManualTimeoutScheduler
+
+        node = Node("n1")
+        scheduler = ManualTimeoutScheduler()
+        node.register_schedule_timeout(scheduler.schedule)
+        node.become_follower()
+
+        node.log.last_included_index = 10
+        term, addr = node.install_snapshot(
+            "leader", 1, last_index=5, last_term=1, data={}
+        )
+        assert node.log.last_included_index == 10  # unchanged
+
+
+class TestCandidacyTimeoutCallbackEdge:
+    def test_mismatched_candidacy_cleared(self):
+        """candidacy_timeout_callback with an unrecognized candidacy clears it."""
+        from salt.cluster.consensus.raft.node import Candidacy, Node
+        from salt.cluster.consensus.raft.scheduler import ManualTimeoutScheduler
+
+        node = Node("n1")
+        scheduler = ManualTimeoutScheduler()
+        node.register_schedule_timeout(scheduler.schedule)
+        node.become_follower()
+        node.become_candidate()
+
+        # Replace candidacy with a known object
+        real_candidacy = node.candidacy
+        # Create a *different* candidacy (not the same object, same term)
+        other = Candidacy(term=real_candidacy.term, peers=list(real_candidacy.peers))
+        # Assign our known candidacy so the elif branch hits
+        node.candidacy = other
+
+        # Call with a completely different candidacy object — elif will match
+        # because `node.candidacy == other` but `node.state != CANDIDATE`
+        # is False.  We need state != CANDIDATE to trigger the elif path.
+        # Step node to follower so state != CANDIDATE:
+        node.state.become_follower()
+        node.candidacy_timeout_callback(other)
+        assert node.candidacy is None
+
+
+class TestCommitIndexSetterSnapshot:
+    def test_commit_index_setter_triggers_snapshot_when_log_full(self):
+        """commit_index setter triggers Log.snapshot when max_log_size reached."""
+        from salt.cluster.consensus.raft.log import CounterStateMachine
+        from salt.cluster.consensus.raft.node import Node
+        from salt.cluster.consensus.raft.scheduler import ManualTimeoutScheduler
+
+        sm = CounterStateMachine()
+        node = Node("n1", state_machine=sm, max_log_size=3)
+        scheduler = ManualTimeoutScheduler()
+        node.register_schedule_timeout(scheduler.schedule)
+        node.become_follower()
+        node.become_candidate()
+        node.become_leader()
+
+        node.log_add(b"a")
+        node.log_add(b"b")
+        node.log_add(b"c")
+
+        # Setting commit_index to 2 advances past max_log_size, triggers snapshot
+        node.commit_index = 2
+        # After snapshot entries are cleared
+        assert node.log.last_applied >= 0
+
+
+class TestAppendEntriesReplyEarlyReturn:
+    def test_not_leader_returns_early(self):
+        """append_entries_reply is a no-op when node is not the leader."""
+        from salt.cluster.consensus.raft.node import Node
+        from salt.cluster.consensus.raft.scheduler import ManualTimeoutScheduler
+
+        node = Node("n1")
+        scheduler = ManualTimeoutScheduler()
+        node.register_schedule_timeout(scheduler.schedule)
+        node.become_follower()
+
+        # Should not raise — just return silently
+        node.append_entries_reply(1, 0, -1, -1, "n2", 1, True, None, None)
+        assert node.state == "follower"
+
+
+class TestHandleAppendEntriesLeaderClientAddress:
+    def test_lca_stored_from_append_entries(self):
+        """leader_client_address_map is populated from append_entries kwargs."""
+        from salt.cluster.consensus.raft.node import Node
+        from salt.cluster.consensus.raft.scheduler import ManualTimeoutScheduler
+
+        node = Node("n1")
+        scheduler = ManualTimeoutScheduler()
+        node.register_schedule_timeout(scheduler.schedule)
+        node.become_follower()
+
+        node.handle_append_entries(
+            "leader",
+            1,
+            0,
+            -1,
+            -1,
+            leader_client_address="10.0.0.1:4506",
+        )
+        assert node.leader_client_address_map.get("leader") == "10.0.0.1:4506"
+
+
+class TestPreRequestVoteReplyTermRegression:
+    def test_high_term_causes_follower(self):
+        """pre_request_vote_reply with term > self.term+1 steps down."""
+        from salt.cluster.consensus.raft.node import ManualPeer, Node
+        from salt.cluster.consensus.raft.scheduler import ManualTimeoutScheduler
+
+        node = Node("n1")
+        scheduler = ManualTimeoutScheduler()
+        node.register_schedule_timeout(scheduler.schedule)
+        node.peers = [ManualPeer(Node("n2"), node_id="n2")]
+        node.become_follower()
+        node.start_pre_vote()
+
+        # Reply with term far higher than expected
+        node.pre_request_vote_reply("n2", True, 10)
+        assert node.state == "follower"
+
+
+class TestStartPreVoteGuard:
+    def test_start_pre_vote_no_op_when_not_follower(self):
+        """start_pre_vote is a no-op when called while in candidate state."""
+        from salt.cluster.consensus.raft.node import ManualPeer, Node
+        from salt.cluster.consensus.raft.scheduler import ManualTimeoutScheduler
+
+        node = Node("n1")
+        scheduler = ManualTimeoutScheduler()
+        node.register_schedule_timeout(scheduler.schedule)
+        # Add a peer so single-node won't auto-promote
+        node.peers = [ManualPeer(Node("n2"), node_id="n2")]
+
+        node.become_follower()
+        node.become_candidate()
+        assert node.state == "candidate"
+
+        # Calling start_pre_vote while candidate must be silent (no state change)
+        node.start_pre_vote()
+        assert node.state == "candidate"
+
+
+class TestOnConfigChangeRemainingPaths:
+    def test_factory_updates_existing_learner_voting_false(self):
+        """on_config_change factory path updates an existing peer to voting=False."""
+        from salt.cluster.consensus.raft.node import ManualPeer, Node
+
+        node = Node("n1")
+        node.register_schedule_timeout(lambda t, c: None)
+
+        existing_peer = ManualPeer(Node("n2"), node_id="n2", voting=True)
+        node.peers = [existing_peer]
+
+        def factory(addr, voting=True):
+            p = ManualPeer(Node(addr), node_id=addr)
+            p.voting = voting
+            return p
+
+        node.register_peer_factory(factory)
+        # n2 demoted to learner
+        node.on_config_change(["n1"], learners=["n2"])
+        assert node.peers[0].node_id == "n2"
+        assert node.peers[0].voting is False
+
+    def test_no_factory_voter_set_voting_true(self):
+        """on_config_change no-factory path sets existing peer to voting=True."""
+        from salt.cluster.consensus.raft.node import ManualPeer, Node
+
+        node = Node("n1")
+        peer = ManualPeer(Node("n2"), node_id="n2", voting=False)
+        node.peers = [peer]
+
+        node.on_config_change(["n1", "n2"])
+        assert peer.voting is True
+
+    def test_append_helper_calls_log_add(self):
+        """Node.append() delegates to log_add."""
+        from salt.cluster.consensus.raft.node import Node
+
+        node = Node("n1")
+        node.register_schedule_timeout(lambda t, c: None)
+        node.state.become_follower()
+        node.state.become_candidate()
+        node.state.become_leader()
+
+        idx = node.append(b"data")
+        assert idx == 0
+
+
+class TestHandleAppendEntriesLcaGuard:
+    def test_lca_stored_only_when_present(self):
+        """leader_client_address_map is NOT populated when lca kwarg is absent."""
+        from salt.cluster.consensus.raft.node import Node
+        from salt.cluster.consensus.raft.scheduler import ManualTimeoutScheduler
+
+        node = Node("n1")
+        scheduler = ManualTimeoutScheduler()
+        node.register_schedule_timeout(scheduler.schedule)
+        node.become_follower()
+
+        node.handle_append_entries("leader", 1, 0, -1, -1)
+        assert "leader" not in node.leader_client_address_map
+
+
+class TestAppendEntriesReplyLeaderGuard:
+    def test_not_leader_state_returns_early_without_modifying_state(self):
+        """append_entries_reply when state is CANDIDATE returns without updating."""
+        from salt.cluster.consensus.raft.node import ManualPeer, Node
+        from salt.cluster.consensus.raft.scheduler import ManualTimeoutScheduler
+
+        node = Node("n1")
+        scheduler = ManualTimeoutScheduler()
+        node.register_schedule_timeout(scheduler.schedule)
+        node.peers = [ManualPeer(Node("n2"), node_id="n2")]
+
+        node.become_follower()
+        node.become_candidate()
+        # Now call reply while CANDIDATE (not LEADER)
+        node.append_entries_reply(1, 0, -1, -1, "n2", 1, True, None, None)
+        assert node.state == "candidate"

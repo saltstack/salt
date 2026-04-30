@@ -190,3 +190,28 @@ def test_chaos_partition_and_heal():
     assert nodes[0].log.entries[0].cmd == "replicated_data"
     assert nodes[0].state == nodes[0].state.FOLLOWER
     assert nodes[0].term == new_leader.term
+
+
+def test_chaos_install_snapshot_wrapped():
+    """ChaosPeer.install_snapshot delegates to real peer via _wrap_rpc."""
+    from salt.cluster.consensus.raft.chaos import ChaosController, ChaosPeer
+    from tests.support.mock import MagicMock
+
+    real_peer = MagicMock()
+    real_peer.node_id = "n2"
+    real_peer.address = "n2"
+    real_peer.voting = True
+    real_peer.install_snapshot.return_value = None
+
+    controller = ChaosController()
+    chaos_peer = ChaosPeer(real_peer, controller, "n1")
+
+    chaos_peer.install_snapshot(
+        lambda nid, term: None,
+        "leader",
+        1,
+        last_included_index=5,
+        last_included_term=1,
+        data=b"snap",
+    )
+    real_peer.install_snapshot.assert_called_once()

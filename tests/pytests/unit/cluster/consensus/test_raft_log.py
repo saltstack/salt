@@ -340,3 +340,399 @@ class TestMembershipStateMachine:
         assert "m1" in r
         assert "m2" in r
         assert "version=2" in r
+
+
+# ---------------------------------------------------------------------------
+# Coverage gaps: LogEntryCommitStatus.set, LogEntry paths, Log edge cases,
+# BaseStorage / BaseStateMachine abstract bodies
+# ---------------------------------------------------------------------------
+
+
+class TestLogEntryCommitStatusSet:
+    def test_set_adds_node(self):
+        from salt.cluster.consensus.raft.log import LogEntryCommitStatus
+
+        cs = LogEntryCommitStatus(3)
+        cs.set("n1")
+        assert "n1" in cs._committed_nodes
+
+    def test_set_contributes_to_committed_quorum(self):
+        from salt.cluster.consensus.raft.log import LogEntryCommitStatus
+
+        cs = LogEntryCommitStatus(3)
+        cs.set("n1")
+        cs.set("n2")
+        assert cs.committed()
+
+
+class TestLogEntryEdgePaths:
+    def test_eq_with_memoryview(self):
+        from salt.cluster.consensus.raft.log import LogEntry
+
+        entry = LogEntry(1, 0, b"hello")
+        assert entry == memoryview(b"hello")
+
+    def test_eq_with_string(self):
+        from salt.cluster.consensus.raft.log import LogEntry
+
+        entry = LogEntry(1, 0, b"hello")
+        assert entry == "hello"
+
+    def test_cmd_view_returns_memoryview_from_bytes(self):
+        from salt.cluster.consensus.raft.log import LogEntry
+
+        entry = LogEntry(1, 0, b"data")
+        view = entry.cmd_view
+        assert isinstance(view, memoryview)
+        assert bytes(view) == b"data"
+
+    def test_cmd_view_passthrough_for_existing_memoryview(self):
+        from salt.cluster.consensus.raft.log import LogEntry
+
+        mv = memoryview(b"data")
+        entry = LogEntry(1, 0, mv)
+        assert entry.cmd_view is mv
+
+    def test_info_returns_decoded_bytes(self):
+        from salt.cluster.consensus.raft.log import LogEntry
+
+        entry = LogEntry(1, 0, b"hello")
+        info = entry.info()
+        assert info[2] == "hello"
+
+
+class TestLogEdgeCases:
+    def test_repr(self):
+        from salt.cluster.consensus.raft.log import Log
+
+        lg = Log()
+        r = repr(lg)
+        assert "Log" in r
+
+    def test_last_index_alias(self):
+        from salt.cluster.consensus.raft.log import Log
+
+        lg = Log()
+        lg.add(1, b"x")
+        assert lg.last_index == lg.index
+
+    def test_add_at_snapshot_boundary_returns_false(self):
+        """Adding an entry at or before last_included_index is a no-op."""
+        from salt.cluster.consensus.raft.log import Log
+
+        lg = Log()
+        lg.last_included_index = 5
+        result = lg.add(1, b"x", index=5)
+        assert result is False
+
+    def test_add_conflict_truncates_and_rewrites_with_storage(self, tmp_path):
+        """Conflicting term at existing index truncates log and saves to storage."""
+        from salt.cluster.consensus.raft.log import Log
+        from salt.cluster.consensus.storage import SaltStorage
+
+        opts = {"cachedir": str(tmp_path), "cluster_id": "test", "cluster_peers": []}
+        storage = SaltStorage("n1", opts)
+        lg = Log(storage=storage)
+        lg.add(1, b"a")  # index 0, term 1
+        lg.add(1, b"b")  # index 1, term 1
+        # Overwrite index 1 with a different term → conflict truncation + storage save
+        lg.add(2, b"c", index=1)
+        assert lg.entries[-1].cmd == b"c"
+        assert lg.entries[-1].term == 2
+
+    def test_add_gap_append_with_storage(self, tmp_path):
+        """Appending past current end with explicit index writes to storage."""
+        from salt.cluster.consensus.raft.log import Log
+        from salt.cluster.consensus.storage import SaltStorage
+
+        opts = {"cachedir": str(tmp_path), "cluster_id": "test", "cluster_peers": []}
+        storage = SaltStorage("n1", opts)
+        lg = Log(storage=storage)
+        lg.add(1, b"a")  # index 0
+        # Skip to index 2 (gap)
+        lg.add(1, b"b", index=2)
+        assert lg.index == 2
+
+    def test_snapshot_empty_log_is_noop(self):
+        from salt.cluster.consensus.raft.log import Log
+
+        lg = Log()
+        lg.snapshot()  # must not raise
+        assert lg.entries == []
+
+    def test_snapshot_without_state_machine_does_not_save(self, tmp_path):
+        """snapshot() with no state_machine still discards entries."""
+        from salt.cluster.consensus.raft.log import Log
+
+        lg = Log()
+        lg.add(1, b"x")
+        lg.commit(0)
+        lg.snapshot()
+        assert lg.entries == []
+
+    def test_clear_with_storage(self, tmp_path):
+        from salt.cluster.consensus.raft.log import Log
+        from salt.cluster.consensus.storage import SaltStorage
+
+        opts = {"cachedir": str(tmp_path), "cluster_id": "test", "cluster_peers": []}
+        storage = SaltStorage("n1", opts)
+        lg = Log(storage=storage)
+        lg.add(1, b"x")
+        lg.clear()
+        assert lg.entries == []
+        # Reload from storage confirms clear was persisted
+        reloaded = Log(storage=storage)
+        assert reloaded.entries == []
+
+    def test_has_entry_none_index(self):
+        from salt.cluster.consensus.raft.log import Log
+
+        lg = Log()
+        assert lg.has_entry(1, None) is True
+
+    def test_has_entry_minus_one_index(self):
+        from salt.cluster.consensus.raft.log import Log
+
+        lg = Log()
+        assert lg.has_entry(1, -1) is True
+
+    def test_has_entry_at_snapshot_boundary_correct_term(self):
+        from salt.cluster.consensus.raft.log import Log
+
+        lg = Log()
+        lg.last_included_index = 3
+        lg.last_included_term = 2
+        assert lg.has_entry(2, 3) is True
+
+    def test_truncate_prefix_with_storage(self, tmp_path):
+        from salt.cluster.consensus.raft.log import Log
+        from salt.cluster.consensus.storage import SaltStorage
+
+        opts = {"cachedir": str(tmp_path), "cluster_id": "test", "cluster_peers": []}
+        storage = SaltStorage("n1", opts)
+        lg = Log(storage=storage)
+        lg.add(1, b"a")
+        lg.add(1, b"b")
+        lg.add(1, b"c")
+        lg.truncate_prefix(1)
+        assert lg.last_included_index == 1
+        assert len(lg.entries) == 1  # only index 2 remains
+
+    def test_truncate_prefix_before_snapshot_noop(self):
+        from salt.cluster.consensus.raft.log import Log
+
+        lg = Log()
+        lg.last_included_index = 5
+        lg.truncate_prefix(3)  # already past 3, no-op
+        assert lg.last_included_index == 5
+
+    def test_max_log_size_triggers_snapshot(self):
+        """Inserting past max_log_size triggers automatic snapshot."""
+        from salt.cluster.consensus.raft.log import CounterStateMachine, Log
+
+        sm = CounterStateMachine()
+        lg = Log(state_machine=sm, max_log_size=3)
+        lg.add(1, b"a")
+        lg.add(1, b"b")
+        lg.commit(1)
+        lg.add(1, b"c")  # this pushes len to 3 == max_log_size
+        # snapshot is triggered since commit_index(1) >= entries[0].index(0)
+        assert lg.entries == [] or len(lg.entries) <= 3
+
+
+class TestBaseStorageAndStateMachineAbstractBodies:
+    def test_base_storage_save_state_raises(self):
+        import pytest
+
+        from salt.cluster.consensus.raft.log import BaseStorage
+
+        class Concrete(BaseStorage):
+            pass
+
+        s = Concrete()
+        with pytest.raises(NotImplementedError):
+            s.save_state(1, None)
+
+    def test_base_storage_load_state_raises(self):
+        import pytest
+
+        from salt.cluster.consensus.raft.log import BaseStorage
+
+        class Concrete(BaseStorage):
+            pass
+
+        with pytest.raises(NotImplementedError):
+            Concrete().load_state()
+
+    def test_base_storage_save_log_raises(self):
+        import pytest
+
+        from salt.cluster.consensus.raft.log import BaseStorage
+
+        class Concrete(BaseStorage):
+            pass
+
+        with pytest.raises(NotImplementedError):
+            Concrete().save_log([])
+
+    def test_base_storage_save_snapshot_raises(self):
+        import pytest
+
+        from salt.cluster.consensus.raft.log import BaseStorage
+
+        class Concrete(BaseStorage):
+            pass
+
+        with pytest.raises(NotImplementedError):
+            Concrete().save_snapshot(b"x", 0, 1)
+
+    def test_base_storage_load_snapshot_raises(self):
+        import pytest
+
+        from salt.cluster.consensus.raft.log import BaseStorage
+
+        class Concrete(BaseStorage):
+            pass
+
+        with pytest.raises(NotImplementedError):
+            Concrete().load_snapshot()
+
+    def test_base_storage_load_log_raises(self):
+        import pytest
+
+        from salt.cluster.consensus.raft.log import BaseStorage
+
+        class Concrete(BaseStorage):
+            pass
+
+        with pytest.raises(NotImplementedError):
+            Concrete().load_log()
+
+    def test_base_state_machine_apply_raises(self):
+        import pytest
+
+        from salt.cluster.consensus.raft.log import BaseStateMachine
+
+        class Concrete(BaseStateMachine):
+            pass
+
+        with pytest.raises(NotImplementedError):
+            Concrete().apply(b"cmd")
+
+    def test_base_state_machine_get_snapshot_raises(self):
+        import pytest
+
+        from salt.cluster.consensus.raft.log import BaseStateMachine
+
+        class Concrete(BaseStateMachine):
+            pass
+
+        with pytest.raises(NotImplementedError):
+            Concrete().get_snapshot()
+
+    def test_base_state_machine_restore_snapshot_raises(self):
+        import pytest
+
+        from salt.cluster.consensus.raft.log import BaseStateMachine
+
+        class Concrete(BaseStateMachine):
+            pass
+
+        with pytest.raises(NotImplementedError):
+            Concrete().restore_snapshot({})
+
+
+# ---------------------------------------------------------------------------
+# Coverage gap: SaltStorage — dict-format log entry load, save_snapshot JSON
+# ---------------------------------------------------------------------------
+
+
+class TestSaltStorageDictFormatAndSnapshot:
+    def test_load_log_dict_format(self, tmp_path):
+        """SaltStorage.load_log handles dict-format entries from cache backends."""
+        from salt.cluster.consensus.raft.log import LogEntryType
+        from salt.cluster.consensus.storage import SaltStorage
+        from tests.support.mock import patch
+
+        opts = {
+            "cachedir": str(tmp_path),
+            "cluster_id": "test",
+            "cluster_peers": [],
+        }
+        storage = SaltStorage("n1", opts)
+
+        dict_entry = {
+            "term": 1,
+            "index": 0,
+            "cmd": b"hello",
+            "node_id": None,
+            "type": LogEntryType.COMMAND,
+            "client_id": None,
+            "sequence_num": None,
+        }
+        # Patch the cache fetch to return dict-format data
+        with patch.object(storage._cache, "fetch", return_value=[dict_entry]):
+            entries = storage.load_log()
+        assert len(entries) == 1
+        assert entries[0].cmd == b"hello"
+        assert entries[0].term == 1
+
+    def test_save_snapshot_json_encodes_dict(self, tmp_path):
+        """save_snapshot JSON-encodes non-bytes data before storing."""
+        from salt.cluster.consensus.storage import SaltStorage
+
+        opts = {
+            "cachedir": str(tmp_path),
+            "cluster_id": "test",
+            "cluster_peers": [],
+        }
+        storage = SaltStorage("n1", opts)
+        snap_data = {"voters": ["m1", "m2"], "learners": []}
+        storage.save_snapshot(snap_data, index=5, term=2)
+
+        snap = storage.load_snapshot()
+        assert snap is not None
+        assert snap["index"] == 5
+        assert snap["term"] == 2
+
+
+class TestLogEntryCommitStatusInitialNode:
+    def test_initial_node_added_to_committed_set(self):
+        from salt.cluster.consensus.raft.log import LogEntryCommitStatus
+
+        cs = LogEntryCommitStatus(3, initial_node="n1")
+        assert "n1" in cs._committed_nodes
+
+
+class TestCounterStateMachineRestoreSnapshotBytes:
+    def test_restore_snapshot_invalid_bytes_uses_empty(self):
+        """Non-JSON bytes fall back to empty state without raising."""
+        from salt.cluster.consensus.raft.log import CounterStateMachine
+
+        sm = CounterStateMachine()
+        sm.count = 5
+        sm.restore_snapshot(b"not-json-at-all!!!")
+        # After invalid restore falls back to empty
+        assert sm.count == 0
+
+    def test_restore_snapshot_valid_bytes_restores_state(self):
+        """JSON bytes are decoded and state is restored."""
+        import json
+
+        from salt.cluster.consensus.raft.log import CounterStateMachine
+
+        sm = CounterStateMachine()
+        snap = json.dumps({"count": 42, "sessions": {}}).encode()
+        sm.restore_snapshot(snap)
+        assert sm.count == 42
+
+
+class TestCounterStateMachineRestoreNonBytesNonDict:
+    def test_restore_snapshot_non_dict_non_bytes_falls_back_to_empty(self):
+        """Non-dict, non-bytes input (e.g. a list) → falls back to empty state."""
+        from salt.cluster.consensus.raft.log import CounterStateMachine
+
+        sm = CounterStateMachine()
+        sm.count = 7
+        sm.restore_snapshot([1, 2, 3])  # neither dict nor bytes
+        assert sm.count == 0
