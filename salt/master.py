@@ -3009,6 +3009,9 @@ class ClearFuncs(TransportMethods):
             if "ret_kwargs" in clear_load["kwargs"]:
                 load["ret_kwargs"] = clear_load["kwargs"].get("ret_kwargs")
 
+            if clear_load["kwargs"].get("start_event"):
+                load["start_event"] = True
+
         if "user" in clear_load:
             log.info(
                 "User %s Published command %s with jid %s",

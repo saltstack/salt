@@ -826,6 +826,378 @@ def test_when_other_events_fired_and_start_event_grains_are_set(minion_opts):
 
 
 @pytest.mark.slow_test
+def test_fire_start_event_minimal_payload(minion_opts):
+    """
+    A minimal published job with start_event=True should produce a
+    salt/job/<jid>/start/<minion_id> event whose payload contains the
+    core identifying fields and excludes the function arguments.
+    """
+    minion_opts["id"] = "minion-under-test"
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.tok = MagicMock()
+        minion._fire_master = MagicMock()
+        data = {
+            "jid": "20260429000000000000",
+            "fun": "test.ping",
+            "tgt": "*",
+            "tgt_type": "glob",
+            "user": "root",
+            "arg": ["should-not-leak"],
+        }
+        minion._fire_start_event(data)
+        minion._fire_master.assert_called_once()
+        load, tag = minion._fire_master.call_args[0]
+        assert tag == "salt/job/20260429000000000000/start/{}".format(minion_opts["id"])
+        assert load["id"] == minion_opts["id"]
+        assert load["jid"] == data["jid"]
+        assert load["fun"] == data["fun"]
+        assert load["tgt"] == data["tgt"]
+        assert load["tgt_type"] == data["tgt_type"]
+        assert load["user"] == data["user"]
+        assert "arg" not in load
+        assert "fun_args" not in load
+        assert "master_id" not in load
+        assert "metadata" not in load
+    finally:
+        minion.destroy()
+
+
+@pytest.mark.slow_test
+def test_fire_start_event_includes_master_id_and_metadata(minion_opts):
+    """
+    When the published load carries master_id and metadata, the start
+    event should propagate both.
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.tok = MagicMock()
+        minion._fire_master = MagicMock()
+        data = {
+            "jid": "20260429000000000001",
+            "fun": "test.ping",
+            "tgt": "*",
+            "tgt_type": "glob",
+            "user": "root",
+            "master_id": "master-a",
+            "metadata": {"ticket": "INC-1234"},
+        }
+        minion._fire_start_event(data)
+        load, _tag = minion._fire_master.call_args[0]
+        assert load["master_id"] == "master-a"
+        assert load["metadata"] == {"ticket": "INC-1234"}
+    finally:
+        minion.destroy()
+
+
+@pytest.mark.slow_test
+def test_fire_start_event_swallows_failures(minion_opts):
+    """
+    A failure inside _fire_master must not propagate out of
+    _fire_start_event; firing the start event must never abort job
+    execution.
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.tok = MagicMock()
+        minion._fire_master = MagicMock(side_effect=RuntimeError("transport down"))
+        data = {
+            "jid": "20260429000000000002",
+            "fun": "test.ping",
+            "tgt": "*",
+            "tgt_type": "glob",
+            "user": "root",
+        }
+        minion._fire_start_event(data)
+    finally:
+        minion.destroy()
+
+
+@pytest.mark.slow_test
+def test_fire_start_event_empty_metadata_is_propagated(minion_opts):
+    """
+    An empty metadata dict is still meaningful (caller deliberately sent
+    one) and must be propagated. Distinguishes ``metadata={}`` from a
+    missing key.
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.tok = MagicMock()
+        minion._fire_master = MagicMock()
+        data = {
+            "jid": "20260429000000000010",
+            "fun": "test.ping",
+            "tgt": "*",
+            "tgt_type": "glob",
+            "user": "root",
+            "metadata": {},
+        }
+        minion._fire_start_event(data)
+        load, _tag = minion._fire_master.call_args[0]
+        assert "metadata" in load
+        assert load["metadata"] == {}
+    finally:
+        minion.destroy()
+
+
+@pytest.mark.slow_test
+def test_fire_start_event_omits_falsy_master_id(minion_opts):
+    """
+    A master_id of None or empty string must not appear in the start
+    event load (the gate is truthiness, matching how master_id flows in
+    the publish path).
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.tok = MagicMock()
+        minion._fire_master = MagicMock()
+        for falsy in (None, ""):
+            minion._fire_master.reset_mock()
+            data = {
+                "jid": "20260429000000000011",
+                "fun": "test.ping",
+                "tgt": "*",
+                "tgt_type": "glob",
+                "user": "root",
+                "master_id": falsy,
+            }
+            minion._fire_start_event(data)
+            load, _tag = minion._fire_master.call_args[0]
+            assert "master_id" not in load
+    finally:
+        minion.destroy()
+
+
+@pytest.mark.slow_test
+def test_fire_start_event_multi_fun_passes_list(minion_opts):
+    """
+    For multi-fun jobs, ``data["fun"]`` is a list. The start event
+    should still fire successfully and propagate the list of function
+    names verbatim.
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.tok = MagicMock()
+        minion._fire_master = MagicMock()
+        data = {
+            "jid": "20260429000000000012",
+            "fun": ["test.ping", "test.echo"],
+            "arg": [[], ["hello"]],
+            "tgt": "*",
+            "tgt_type": "glob",
+            "user": "root",
+        }
+        minion._fire_start_event(data)
+        minion._fire_master.assert_called_once()
+        load, _tag = minion._fire_master.call_args[0]
+        assert load["fun"] == ["test.ping", "test.echo"]
+        assert "arg" not in load
+    finally:
+        minion.destroy()
+
+
+def _make_thread_return_minion_mock(tmp_path, opts):
+    """
+    Build a MagicMock that quacks like a Minion well enough for
+    _thread_return to reach (or skip) the start-event gate. Heavy
+    dependencies (executors, returners, the actual function) are
+    short-circuited; only the start-event gating logic is exercised.
+    """
+    proc_dir = tmp_path / "proc"
+    proc_dir.mkdir(exist_ok=True)
+    minion_instance = MagicMock()
+    minion_instance.proc_dir = str(proc_dir)
+    minion_instance.opts = opts
+    minion_instance.executors = {}
+    minion_instance.module_executors = []
+    minion_instance.functions = MagicMock()
+    minion_instance.functions.__contains__.return_value = True
+    minion_instance.functions.pack = {"__context__": {"retcode": 0}}
+    minion_instance._execute_job_function = MagicMock(return_value="ok")
+    minion_instance._return_pub = MagicMock()
+    minion_instance._fire_master = MagicMock()
+    minion_instance._fire_start_event = MagicMock()
+    minion_instance._return_retry_timer = MagicMock(return_value=1)
+    minion_instance.connected = False  # skip _return_pub
+    minion_instance.returners = MagicMock()
+    minion_instance.function_errors = {}
+    return minion_instance
+
+
+@pytest.mark.slow_test
+def test_thread_return_fires_start_event_when_requested(tmp_path, minion_opts):
+    """
+    _thread_return must invoke _fire_start_event exactly once when the
+    published load carries start_event=True.
+    """
+    minion_opts["multiprocessing"] = False
+    minion_opts["id"] = "minion-thread-return"
+    minion_instance = _make_thread_return_minion_mock(tmp_path, minion_opts)
+    data = {
+        "jid": "20260429000000000020",
+        "fun": "test.ping",
+        "arg": [],
+        "tgt": "*",
+        "tgt_type": "glob",
+        "user": "root",
+        "ret": "",
+        "start_event": True,
+    }
+    salt.minion.Minion._thread_return(minion_instance, minion_opts, data)
+    minion_instance._fire_start_event.assert_called_once_with(data)
+
+
+@pytest.mark.slow_test
+def test_thread_return_skips_start_event_when_not_requested(tmp_path, minion_opts):
+    """
+    _thread_return must NOT invoke _fire_start_event when the published
+    load has no start_event key. This is the default behavior for all
+    pre-existing callers and must not regress.
+    """
+    minion_opts["multiprocessing"] = False
+    minion_opts["id"] = "minion-thread-return"
+    minion_instance = _make_thread_return_minion_mock(tmp_path, minion_opts)
+    data = {
+        "jid": "20260429000000000021",
+        "fun": "test.ping",
+        "arg": [],
+        "tgt": "*",
+        "tgt_type": "glob",
+        "user": "root",
+        "ret": "",
+    }
+    salt.minion.Minion._thread_return(minion_instance, minion_opts, data)
+    minion_instance._fire_start_event.assert_not_called()
+
+
+@pytest.mark.slow_test
+def test_thread_return_skips_start_event_when_falsy(tmp_path, minion_opts):
+    """
+    A start_event of False/None/empty string must be treated as
+    opt-out; _fire_start_event should not be invoked.
+    """
+    minion_opts["multiprocessing"] = False
+    minion_opts["id"] = "minion-thread-return"
+    for falsy in (False, None, "", 0):
+        minion_instance = _make_thread_return_minion_mock(tmp_path, minion_opts)
+        data = {
+            "jid": "20260429000000000022",
+            "fun": "test.ping",
+            "arg": [],
+            "tgt": "*",
+            "tgt_type": "glob",
+            "user": "root",
+            "ret": "",
+            "start_event": falsy,
+        }
+        salt.minion.Minion._thread_return(minion_instance, minion_opts, data)
+        assert (
+            minion_instance._fire_start_event.call_count == 0
+        ), f"Unexpectedly fired start event for falsy value {falsy!r}"
+
+
+def _make_thread_multi_return_minion_mock(tmp_path, opts):
+    """
+    Sibling helper for _thread_multi_return tests.
+    """
+    proc_dir = tmp_path / "proc"
+    proc_dir.mkdir(exist_ok=True)
+    minion_instance = MagicMock()
+    minion_instance.proc_dir = str(proc_dir)
+    minion_instance.opts = opts
+    minion_instance.executors = {}
+    minion_instance.module_executors = []
+    minion_instance.functions = MagicMock()
+    minion_instance.functions.__contains__.return_value = True
+    minion_instance.functions.pack = {"__context__": {"retcode": 0}}
+    minion_instance._execute_job_function = MagicMock(return_value="ok")
+    minion_instance._return_pub_multi = MagicMock()
+    minion_instance._fire_master = MagicMock()
+    minion_instance._fire_start_event = MagicMock()
+    minion_instance._return_retry_timer = MagicMock(return_value=1)
+    minion_instance.connected = False
+    minion_instance.returners = MagicMock()
+    minion_instance.function_errors = {}
+    return minion_instance
+
+
+@pytest.mark.slow_test
+def test_thread_multi_return_fires_start_event_once_per_jid(tmp_path, minion_opts):
+    """
+    Multi-fun jobs share a single jid; the start event must fire
+    exactly once for the jid regardless of how many sub-functions are
+    in the load.
+    """
+    minion_opts["multiprocessing"] = False
+    minion_opts["id"] = "minion-multi"
+    minion_instance = _make_thread_multi_return_minion_mock(tmp_path, minion_opts)
+    data = {
+        "jid": "20260429000000000030",
+        "fun": ["test.ping", "test.echo", "test.version"],
+        "arg": [[], ["hello"], []],
+        "tgt": "*",
+        "tgt_type": "glob",
+        "user": "root",
+        "ret": "",
+        "start_event": True,
+    }
+    salt.minion.Minion._thread_multi_return(minion_instance, minion_opts, data)
+    minion_instance._fire_start_event.assert_called_once_with(data)
+
+
+@pytest.mark.slow_test
+def test_thread_multi_return_skips_start_event_when_not_requested(
+    tmp_path, minion_opts
+):
+    """
+    Multi-fun jobs without start_event must not produce a start event,
+    matching the single-fun gating.
+    """
+    minion_opts["multiprocessing"] = False
+    minion_opts["id"] = "minion-multi"
+    minion_instance = _make_thread_multi_return_minion_mock(tmp_path, minion_opts)
+    data = {
+        "jid": "20260429000000000031",
+        "fun": ["test.ping", "test.echo"],
+        "arg": [[], []],
+        "tgt": "*",
+        "tgt_type": "glob",
+        "user": "root",
+        "ret": "",
+    }
+    salt.minion.Minion._thread_multi_return(minion_instance, minion_opts, data)
+    minion_instance._fire_start_event.assert_not_called()
+
+
+@pytest.mark.slow_test
+def test_fire_start_event_missing_jid_does_not_raise(minion_opts):
+    """
+    A malformed payload (missing jid) must not propagate an exception
+    out of _fire_start_event. Job execution must never be aborted by a
+    failure in the start-event helper.
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.tok = MagicMock()
+        minion._fire_master = MagicMock()
+        data = {"fun": "test.ping"}
+        # Should not raise even though "jid" is required and missing.
+        minion._fire_start_event(data)
+        # _fire_master should not have been called because payload
+        # construction failed before reaching it.
+        minion._fire_master.assert_not_called()
+    finally:
+        minion.destroy()
+
+
+@pytest.mark.slow_test
 def test_minion_retry_dns_count(minion_opts):
     """
     Tests that the resolve_dns will retry dns look ups for a maximum of

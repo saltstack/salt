@@ -2235,6 +2235,19 @@ class SaltCMDOptionParser(
             help="Pass metadata into Salt, used to search jobs.",
         )
         self.add_option(
+            "--start-event",
+            dest="start_event",
+            default=False,
+            action="store_true",
+            help=(
+                "Request that targeted minions fire a "
+                "salt/job/<jid>/start/<minion_id> event when they accept the "
+                "published job, before executing the function. Useful for "
+                "callers that want to confirm reachability without waiting "
+                "for the full return."
+            ),
+        )
+        self.add_option(
             "--output-diff",
             dest="state_output_diff",
             action="store_true",

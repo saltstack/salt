@@ -415,6 +415,135 @@ def test_clear_funcs_get_method(clear_funcs):
     assert clear_funcs.get_method("_prep_pub") is None
 
 
+def _stub_clear_funcs_side_effects(clear_funcs):
+    """
+    Replace the event bus and master minion with mocks so _prep_pub can
+    run without touching disk or sockets.
+    """
+    clear_funcs.event = MagicMock()
+    clear_funcs.mminion = MagicMock()
+
+
+def _base_clear_load():
+    return {
+        "fun": "test.ping",
+        "tgt": "*",
+        "tgt_type": "glob",
+        "ret": "",
+        "arg": [],
+        "user": "root",
+    }
+
+
+def test_prep_pub_propagates_start_event(clear_funcs):
+    """
+    When the caller's kwargs include start_event=True, the published
+    load handed to minions must carry start_event=True.
+    """
+    _stub_clear_funcs_side_effects(clear_funcs)
+    clear_load = _base_clear_load()
+    clear_load["kwargs"] = {"start_event": True}
+    load = clear_funcs._prep_pub(
+        minions=["minion-a"],
+        jid="20260429000000000003",
+        clear_load=clear_load,
+        extra={},
+        missing=[],
+    )
+    assert load.get("start_event") is True
+
+
+def test_prep_pub_omits_start_event_when_absent(clear_funcs):
+    """
+    If the caller did not request a start event, the key must not
+    appear in the published load.
+    """
+    _stub_clear_funcs_side_effects(clear_funcs)
+    clear_load = _base_clear_load()
+    clear_load["kwargs"] = {}
+    load = clear_funcs._prep_pub(
+        minions=["minion-a"],
+        jid="20260429000000000004",
+        clear_load=clear_load,
+        extra={},
+        missing=[],
+    )
+    assert "start_event" not in load
+
+
+def test_prep_pub_omits_start_event_when_falsy(clear_funcs):
+    """
+    A falsy start_event value (e.g. False) is treated as opt-out and
+    must not produce a start_event key in the published load.
+    """
+    _stub_clear_funcs_side_effects(clear_funcs)
+    clear_load = _base_clear_load()
+    clear_load["kwargs"] = {"start_event": False}
+    load = clear_funcs._prep_pub(
+        minions=["minion-a"],
+        jid="20260429000000000005",
+        clear_load=clear_load,
+        extra={},
+        missing=[],
+    )
+    assert "start_event" not in load
+
+
+def test_prep_pub_start_event_coexists_with_other_passthrough_kwargs(clear_funcs):
+    """
+    start_event must propagate alongside the other established
+    kwargs-passthrough keys (metadata, ret_config, ret_kwargs,
+    module_executors, executor_opts) without disturbing them.
+    """
+    _stub_clear_funcs_side_effects(clear_funcs)
+    clear_load = _base_clear_load()
+    clear_load["kwargs"] = {
+        "start_event": True,
+        "metadata": {"ticket": "INC-7"},
+        "ret_config": "syslog",
+        "ret_kwargs": {"retries": 2},
+        "module_executors": ["sudo"],
+        "executor_opts": {"sudo_user": "salt"},
+    }
+    load = clear_funcs._prep_pub(
+        minions=["minion-a"],
+        jid="20260429000000000006",
+        clear_load=clear_load,
+        extra={},
+        missing=[],
+    )
+    assert load.get("start_event") is True
+    assert load.get("metadata") == {"ticket": "INC-7"}
+    assert load.get("ret_config") == "syslog"
+    assert load.get("ret_kwargs") == {"retries": 2}
+    assert load.get("module_executors") == ["sudo"]
+    assert load.get("executor_opts") == {"sudo_user": "salt"}
+
+
+def test_prep_pub_start_event_value_is_normalized_to_true(clear_funcs):
+    """
+    The master should never propagate non-boolean truthy values for
+    start_event (e.g. a string from yamlify_arg or accidental dict).
+    The value placed in the published load is always strictly True so
+    minion-side code can rely on the type.
+    """
+    _stub_clear_funcs_side_effects(clear_funcs)
+    for truthy in ("yes", 1, ["any"], {"present": True}):
+        clear_load = _base_clear_load()
+        clear_load["kwargs"] = {"start_event": truthy}
+        load = clear_funcs._prep_pub(
+            minions=["minion-a"],
+            jid="20260429000000000007",
+            clear_load=clear_load,
+            extra={},
+            missing=[],
+        )
+        assert load.get("start_event") is True, (
+            f"start_event was {load.get('start_event')!r} for truthy "
+            f"input {truthy!r}; expected strict True"
+        )
+
+
 @pytest.mark.slow_test
 def test_runner_token_not_authenticated(clear_funcs):
     """

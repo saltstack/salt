@@ -126,6 +126,9 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         if getattr(self.options, "metadata"):
             kwargs["metadata"] = yamlify_arg(getattr(self.options, "metadata"))
 
+        if getattr(self.options, "start_event", False):
+            kwargs["start_event"] = True
+
         # If using eauth and a token hasn't already been loaded into
         # kwargs, prompt the user to enter auth credentials
         if "token" not in kwargs and "key" not in kwargs and self.options.eauth:

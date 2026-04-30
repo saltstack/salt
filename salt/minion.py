@@ -2534,6 +2534,8 @@ class Minion(MinionBase):
             log.info("Starting a new job %s with PID %s", data["jid"], sdata["pid"])
             with salt.utils.files.fopen(fn_, "w+b") as fp_:
                 fp_.write(salt.payload.dumps(sdata))
+            if data.get("start_event"):
+                minion_instance._fire_start_event(data)
             ret = {"success": False}
             function_name = data["fun"]
             function_args = data["arg"]
@@ -2798,6 +2800,9 @@ class Minion(MinionBase):
                 return
             raise
 
+        if data.get("start_event"):
+            minion_instance._fire_start_event(data)
+
         multifunc_ordered = opts.get("multifunc_ordered", False)
         num_funcs = len(data["fun"])
         if multifunc_ordered:
@@ -2886,6 +2891,38 @@ class Minion(MinionBase):
                     minion_instance.returners[f"{returner}.returner"](ret)
                 except Exception as exc:  # pylint: disable=broad-except
                     log.error("The return failed for job %s: %s", data["jid"], exc)
+
+    def _fire_start_event(self, data):
+        """
+        Fire a ``salt/job/<jid>/start/<minion_id>`` event to the master to
+        signal that this minion has accepted the published job and is about
+        to begin executing it.
+
+        Only called when the master propagated ``start_event=True`` from the
+        caller's kwargs into the published load. Failures here must never
+        abort job execution.
+        """
+        try:
+            load = {
+                "id": self.opts["id"],
+                "jid": data["jid"],
+                "fun": data.get("fun"),
+                "tgt": data.get("tgt"),
+                "tgt_type": data.get("tgt_type"),
+                "user": data.get("user"),
+            }
+            if data.get("master_id"):
+                load["master_id"] = data["master_id"]
+            if data.get("metadata") is not None:
+                load["metadata"] = data["metadata"]
+            tag = tagify([data["jid"], "start", self.opts["id"]], "job")
+            self._fire_master(load, tag)
+        except Exception:  # pylint: disable=broad-except
+            log.warning(
+                "Failed to fire start event for job %s",
+                data.get("jid"),
+                exc_info=True,
+            )
 
     def _prepare_return_pub(self, ret, ret_cmd="_return"):
         jid = ret.get("jid", ret.get("__jid__"))
