@@ -770,15 +770,6 @@ class Key:
         for key in invalid_keys:
             sys.stderr.write(f"Unable to accept invalid key for {key}.\n")
 
-        # Update PKI index if enabled
-        if self.opts.get("pki_index_enabled") is True:
-            try:
-                import salt.cache.localfs_key as localfs_key_cache  # pylint: disable=import-outside-toplevel
-
-                localfs_key_cache.rebuild_index(self.opts)
-            except Exception as exc:  # pylint: disable=broad-except
-                log.error("Failed to update PKI index after key operation: %s", exc)
-
         return self.glob_match(match) if match is not None else self.dict_match(matches)
 
     def accept(
@@ -857,14 +848,6 @@ class Key:
             salt.crypt.dropfile(
                 self.opts["cachedir"], self.opts["user"], self.opts["id"]
             )
-        # Update PKI index if enabled
-        if self.opts.get("pki_index_enabled") is True:
-            try:
-                import salt.cache.localfs_key as localfs_key_cache  # pylint: disable=import-outside-toplevel
-
-                localfs_key_cache.rebuild_index(self.opts)
-            except Exception as exc:  # pylint: disable=broad-except
-                log.error("Failed to update PKI index after key operation: %s", exc)
 
         return self.glob_match(match) if match is not None else self.dict_match(matches)
 

@@ -336,6 +336,10 @@ vultr==1.0.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
+xxhash==3.7.0
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   -r requirements/base.txt
 yarl==1.22.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt

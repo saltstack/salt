@@ -731,7 +731,7 @@ blacklisted-functions=posix.umask=salt.utils.files.set_umask or get_umask,
 [3RD-PARTY-IMPORTS]
 
 # Known 3rd-party modules which don' require being gated, separated by a comma
-allowed-3rd-party-modules=msgpack,
+allowed-3rd-party-modules=msgpack,xxhash,
                           tornado,
                           yaml,
                           jinja2,

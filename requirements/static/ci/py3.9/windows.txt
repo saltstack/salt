@@ -583,6 +583,10 @@ xmltodict==1.0.4
     #   -r requirements/base.txt
     #   moto
     #   pywinrm
+xxhash==3.7.0
+    # via
+    #   -c requirements/static/pkg/py3.9/windows.txt
+    #   -r requirements/base.txt
 yamllint==1.32.0
     # via -r requirements/static/ci/windows.in
 yarl==1.22.0

@@ -675,6 +675,10 @@ xmldiff==2.6.3
     # via -r requirements/static/ci/common.in
 xmltodict==0.13.0
     # via moto
+xxhash==3.7.0
+    # via
+    #   -c requirements/static/pkg/py3.9/linux.txt
+    #   -r requirements/base.txt
 yamllint==1.32.0
     # via -r requirements/static/ci/linux.in
 yamlloader==1.6.0

@@ -174,6 +174,8 @@ virtualenv==21.2.0
     # via -r requirements/base.txt
 vultr==1.0.1
     # via -r requirements/base.txt
+xxhash==3.7.0
+    # via -r requirements/base.txt
 yarl==1.20.1
     # via aiohttp
 zc-lockfile==3.0.post1

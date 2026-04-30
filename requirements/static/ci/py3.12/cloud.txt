@@ -215,10 +215,6 @@ iniconfig==2.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   pytest
-invoke==2.2.1
-    # via
-    #   -c requirements/static/ci/py3.12/linux.txt
-    #   paramiko
 jaraco-collections==4.1.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -267,7 +263,7 @@ junit-xml==1.9
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
-junos-eznc==2.7.6
+junos-eznc==2.6.7
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
@@ -296,7 +292,7 @@ looseversion==1.3.0
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   -r requirements/base.txt
-lxml==6.0.2
+lxml==4.9.2
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   junos-eznc
@@ -339,19 +335,21 @@ msgpack==1.0.7
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.1.0
+multidict==6.0.4
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   aiohttp
     #   yarl
-ncclient==0.7.0
+ncclient==0.6.13
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
-    #   -r requirements/static/ci/common.in
     #   junos-eznc
 netaddr==0.8.0
-    # via -r requirements/static/ci/cloud.in
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/static/ci/cloud.in
+    #   junos-eznc
 oauthlib==3.3.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -366,7 +364,7 @@ packaging==24.0
     #   -c requirements/static/pkg/py3.12/linux.txt
     #   -r requirements/base.txt
     #   pytest
-paramiko==4.0.0
+paramiko==3.4.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/static/ci/common.in
@@ -568,7 +566,6 @@ pyyaml==6.0.1
     #   kubernetes
     #   pytest-salt-factories
     #   responses
-    #   yamlloader
     #   yamlordereddictloader
 pyzmq==25.1.2
     # via
@@ -646,6 +643,7 @@ six==1.16.0
     #   junos-eznc
     #   kazoo
     #   kubernetes
+    #   ncclient
     #   profitbricks
     #   python-dateutil
     #   pyvmomi
@@ -769,14 +767,15 @@ xmltodict==0.13.0
     #   -c requirements/static/ci/py3.12/linux.txt
     #   moto
     #   pywinrm
-yamlloader==1.6.0
+xxhash==3.7.0
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   -c requirements/static/pkg/py3.12/linux.txt
+    #   -r requirements/base.txt
+yamlordereddictloader==0.4.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   junos-eznc
-yamlordereddictloader==0.4.2
-    # via
-    #   -c requirements/static/ci/py3.12/linux.txt
-    #   -r requirements/static/ci/common.in
 yarl==1.20.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt

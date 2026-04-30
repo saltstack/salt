@@ -208,6 +208,8 @@ wmi==1.5.1 ; sys_platform == 'win32'
     # via -r requirements/base.txt
 xmltodict==1.0.4 ; sys_platform == 'win32'
     # via -r requirements/base.txt
+xxhash==3.7.0
+    # via -r requirements/base.txt
 yarl==1.20.1
     # via aiohttp
 zc-lockfile==3.0.post1

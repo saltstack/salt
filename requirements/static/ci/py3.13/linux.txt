@@ -598,6 +598,10 @@ xmldiff==2.7.0
     # via -r requirements/static/ci/common.in
 xmltodict==0.14.2
     # via moto
+xxhash==3.7.0
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   -r requirements/base.txt
 yamllint==1.35.1
     # via -r requirements/static/ci/linux.in
 yamlordereddictloader==0.4.2

@@ -776,6 +776,11 @@ xmltodict==0.13.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   moto
+xxhash==3.7.0
+    # via
+    #   -c requirements/static/ci/py3.11/linux.txt
+    #   -c requirements/static/pkg/py3.11/linux.txt
+    #   -r requirements/base.txt
 yamllint==1.32.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt

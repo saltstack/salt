@@ -203,6 +203,8 @@ wmi==1.5.1
     # via -r requirements/base.txt
 xmltodict==1.0.4
     # via -r requirements/base.txt
+xxhash==3.7.0
+    # via -r requirements/base.txt
 yarl==1.23.0
     # via aiohttp
 zc-lockfile==4.0
