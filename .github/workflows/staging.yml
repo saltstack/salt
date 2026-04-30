@@ -22,10 +22,6 @@ on:
         type: boolean
         default: false
         description: Sign RPM Packages
-      skip-test-pypi-publish:
-        type: boolean
-        default: false
-        description: Skip publishing the source package to Test PyPi(For example, CVE releases)
       skip-salt-test-suite:
         type: boolean
         default: false
@@ -605,47 +601,6 @@ jobs:
         run: |
           tree -a artifacts/release
 
-  publish-pypi:
-    name: Publish to PyPi(test)
-    if: ${{ !cancelled() && inputs.skip-test-pypi-publish != true && github.event.repository.fork != true }}
-    needs:
-      - prepare-workflow
-      - upload-release-artifacts
-      - build-ci-deps
-    environment: staging
-    runs-on:
-      - ubuntu-22.04
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-        with:
-          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-
-      - name: Setup GnuPG
-        run: |
-          sudo install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/gpg
-          GNUPGHOME="$(mktemp -d -p /run/gpg)"
-          echo "GNUPGHOME=${GNUPGHOME}" >> "$GITHUB_ENV"
-          cat <<EOF > "${GNUPGHOME}/gpg.conf"
-          batch
-          no-tty
-          pinentry-mode loopback
-          EOF
-
-      - name: Download PyPi Artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: pypi-artifacts
-          path: artifacts/release
-
-      - name: Publish to Test PyPi
-        env:
-          TWINE_PASSWORD: "${{ secrets.PYPI_TEST_PASSWORD }}"
-        run: |
-          tools pkg pypi-upload --test artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
-
   draft-release:
     name: Draft Github Release
     if: ${{ !cancelled() && (needs.test.result == 'success' || needs.test.result == 'skipped') &&
@@ -684,7 +639,7 @@ jobs:
       - build-salt-onedir
       - build-pkgs-src
       - upload-release-artifacts
-      - publish-pypi
+      - build-ci-deps
       - test-packages
       - test
     steps:
