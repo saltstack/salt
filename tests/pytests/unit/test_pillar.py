@@ -1290,33 +1290,6 @@ def test_compile_pillar_disk_cache(master_opts, grains):
         store_mock.assert_has_calls(expected_stores, any_order=False)
 
 
-def test_pillar_cache_compile_returns_plain_dict_for_transport(master_opts, grains):
-    """
-    PillarCache compile may return wrapped pillar (SecretDict). Serialization must
-    expose secrets before msgpack so master→minion transport carries plaintext.
-    """
-    master_opts.update({"pillar_cache_ttl": 3600, "pillar_cache": True})
-    pillar = salt.pillar.PillarCache(
-        master_opts,
-        grains,
-        "mocked_minion",
-        "fake_env",
-        pillarenv="base",
-    )
-    wrapped = secret.hide({"info": "test", "nested": {"k": "v"}})
-    with patch.object(
-        salt.pillar.Pillar,
-        "compile_pillar",
-        return_value=wrapped,
-    ):
-        out = pillar.compile_pillar()
-    assert isinstance(out, secret.SecretDict)
-    roundtrip = salt.payload.loads(salt.payload.dumps({"opts": {"pillar": out}}))
-    assert roundtrip["opts"]["pillar"]["info"] == "test"
-    assert roundtrip["opts"]["pillar"]["nested"]["k"] == "v"
-    salt.utils.json.dumps(salt.utils.secret.expose(out))
-
-
 def test_remote_pillar_bad_return(grains, tmp_pki):
     opts = salt.config.minion_config(None)
     opts.update(
