@@ -1759,33 +1759,11 @@ class TCPPublishServer(PublishServer):
 
 class _TCPPubServerPublisher:
     """
-    Salt IPC message client
+    Client half of the local publish channel used for the Salt event bus.
 
-    Create an IPC client to send messages to an IPC server
-
-    An example of a very simple IPCMessageClient connecting to an IPCServer. This
-    example assumes an already running IPCMessage server.
-
-    IMPORTANT: The below example also assumes a running IOLoop process.
-
-    # Import Tornado libs
-    import tornado.ioloop
-
-    # Import Salt libs
-    import salt.config
-    import salt.transport.ipc
-
-    io_loop = tornado.ioloop.IOLoop.current()
-
-    ipc_server_socket_path = '/var/run/ipc_server.ipc'
-
-    ipc_client = salt.transport.ipc.IPCMessageClient(ipc_server_socket_path, io_loop=io_loop)
-
-    # Connect to the server
-    ipc_client.connect()
-
-    # Send some data
-    ipc_client.send('Hello world')
+    Master and minion code should use :func:`salt.transport.base.ipc_publish_client`
+    (which selects this implementation with ``transport="tcp"``), not import this
+    class directly.
     """
 
     async_methods = [

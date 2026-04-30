@@ -57,8 +57,8 @@ class MockPub:
 
 class MockSubscriber:
     """
-    Mock salt.transport.ipc IPCMessageSubscriber in order to inject events into
-    salt.utils.Event
+    Mock the event bus publish client subscriber in order to inject events into
+    salt.utils.event.Event
     """
 
     calls = 0

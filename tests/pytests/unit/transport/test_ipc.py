@@ -1,14 +1,9 @@
 import hashlib
 
 import pytest
-import tornado.iostream
-from pytestshellutils.utils import ports
 
-import salt.config
 import salt.transport
-import salt.transport.ipc
-import salt.utils.asynchronous
-import salt.utils.platform
+import salt.utils.stringutils
 
 pytestmark = [
     pytest.mark.core_test,
@@ -26,31 +21,6 @@ def sock_dir(tmp_path):
 def minion_config(sock_dir, minion_opts):
     minion_opts["sock_dir"] = sock_dir
     yield minion_opts
-
-
-def test_ipc_connect_in_async_methods():
-    "The connect method is in IPCMessageSubscriber's async_methods property"
-    assert "connect" in salt.transport.ipc.IPCMessageSubscriber.async_methods
-
-
-async def test_ipc_connect_sync_wrapped(io_loop, tmp_path):
-    """
-    Ensure IPCMessageSubscriber.connect gets wrapped by
-    salt.utils.asynchronous.SyncWrapper.
-    """
-    if salt.utils.platform.is_windows():
-        socket_path = ports.get_unused_localhost_port()
-    else:
-        socket_path = str(tmp_path / "noexist.ipc")
-    subscriber = salt.utils.asynchronous.SyncWrapper(
-        salt.transport.ipc.IPCMessageSubscriber,
-        args=(socket_path,),
-        kwargs={"io_loop": io_loop},
-        loop_kwarg="io_loop",
-    )
-    with pytest.raises(tornado.iostream.StreamClosedError):
-        # Don't `await subscriber.connect()`, that's the purpose of the SyncWrapper
-        subscriber.connect()
 
 
 @pytest.fixture
