@@ -902,7 +902,6 @@ def subdict_match(
         # XXX: A lot of this logic is here because of supporting PY2 and PY3,
         # now that we only support PY3 we should probably re-visit what's going
         # on here.
-        target = salt.utils.secret.expose(target)
         try:
             target = str(target).lower()
         except UnicodeDecodeError:

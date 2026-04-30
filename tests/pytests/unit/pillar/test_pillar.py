@@ -7,7 +7,7 @@ import pytest
 import salt.loader
 import salt.pillar
 import salt.utils.cache
-import salt.utils.secret as secret
+import salt.utils.secret
 from tests.support.mock import MagicMock, patch
 
 
@@ -158,7 +158,7 @@ def test_pillar_get_cache_disk(temp_salt_minion, caplog):
         )
         fresh_pillar = pillar.compile_pillar()
         assert "Unpack failed: incomplete input" not in caplog.messages
-        assert salt.utils.secret.expose(fresh_pillar) == {}
+        assert fresh_pillar.get_secret_value() == {}
 
 
 def test_pillar_fetch_pillar_override_skipped(temp_salt_minion, caplog):

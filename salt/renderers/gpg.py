@@ -354,6 +354,7 @@ from subprocess import PIPE, Popen
 import salt.syspaths
 import salt.utils.cache
 import salt.utils.path
+import salt.utils.secret
 import salt.utils.stringio
 import salt.utils.stringutils
 import salt.utils.versions
@@ -488,6 +489,8 @@ def _decrypt_object(obj, translate_newlines=False, encoding=None):
     or bytes and it contains a valid GPG header, decrypt it,
     otherwise keep going until a string is found.
     """
+    if isinstance(obj, salt.utils.secret.Secret):
+        obj = obj.get_secret_value()
     if salt.utils.stringio.is_readable(obj):
         return _decrypt_object(obj.getvalue(), translate_newlines)
     if isinstance(obj, (str, bytes)):

@@ -1288,7 +1288,9 @@ class Pillar:
                 if ptr is None:
                     log.debug("Pillar key %s not present", key)
                     continue
-                try:  # TODO probably need to get secret value from ptr
+                if isinstance(ptr, salt.utils.secret.Secret):
+                    ptr = ptr.get_secret_value()
+                try:
                     hash(ptr)
                     immutable = True
                 except TypeError:
@@ -1405,8 +1407,7 @@ class PillarCache(Pillar):
         """
         Return the cached pillar if it exists, or None
         """
-        pillar = self.cache.fetch("pillar", self.pillar_key)
-        return salt.utils.secret.hide(pillar)
+        return self.cache.fetch("pillar", self.pillar_key)
 
     def clear_pillar(self):
         """

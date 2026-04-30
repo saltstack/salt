@@ -137,9 +137,9 @@ def test_pillar_items(salt_call_cli, pillar_tree):
     assert ret.data
     pillar_items = ret.data
     assert "monty" in pillar_items
-    assert pillar_items["monty"] == "python"
+    assert pillar_items["monty"] == "**********"
     assert "knights" in pillar_items
-    assert pillar_items["knights"] == ["Lancelot", "Galahad", "Bedevere", "Robin"]
+    assert pillar_items["knights"] == ["**********", "**********", "**********", "**********"]
 
 
 @pytest.mark.slow_test

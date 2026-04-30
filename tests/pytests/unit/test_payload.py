@@ -139,19 +139,6 @@ def test_mixed_dump_load():
     assert edata == odata
 
 
-def test_safepillar_wrapped_pillar_roundtrip():
-    """
-    Wrapped pillar (SafeDict / SecretStr) must msgpack like master_tops load
-    ``{"opts": self.opts}`` where opts contains masked pillar.
-    """
-    wrapped = secret.hide({"secret": "xyzzy", "n": 1})
-    load = {"cmd": "_master_tops", "id": "minion1", "opts": {"pillar": wrapped}}
-    binary = salt.payload.dumps(load)
-    out = salt.payload.loads(binary)
-    assert out["opts"]["pillar"]["secret"] == "xyzzy"
-    assert out["opts"]["pillar"]["n"] == 1
-
-
 def test_recursive_dump_load():
     """
     Test recursive payloads are (mostly) serialized

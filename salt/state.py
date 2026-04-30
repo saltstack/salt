@@ -1001,7 +1001,8 @@ class State:
             pillar_override=self._pillar_override,
             pillarenv=self.opts.get("pillarenv"),
         )
-        return salt.utils.secret.expose(pillar.compile_pillar())
+        compiled = pillar.compile_pillar()
+        return salt.utils.secret.expose(compiled)
 
     def _mod_init(self, low):
         """
