@@ -7,6 +7,8 @@ import psutil
 import pytest
 from pytestskipmarkers.utils import platform
 
+from tests.support.pkg import pep440_public_equal
+
 log = logging.getLogger(__name__)
 
 
@@ -102,16 +104,15 @@ def salt_test_upgrade(
     ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
 
-    installed_minion_version = packaging.version.parse(ret.data)
-    assert installed_minion_version == packaging.version.parse(
-        install_salt.artifact_version
-    )
+    assert pep440_public_equal(
+        str(ret.data), install_salt.artifact_version
+    ), f"minion test.version {ret.data!r} vs artifact {install_salt.artifact_version!r}"
 
     ret = install_salt.proc.run(bin_file, "--version")
     assert ret.returncode == 0
-    assert packaging.version.parse(
-        ret.stdout.strip().split()[1]
-    ) == packaging.version.parse(install_salt.artifact_version)
+    assert pep440_public_equal(
+        ret.stdout.strip().split()[1], install_salt.artifact_version
+    ), f"salt --version vs artifact {install_salt.artifact_version!r}"
 
     new_minion_pids = _get_running_named_salt_pid(process_minion_name)
     new_master_pids = _get_running_named_salt_pid(process_master_name)
@@ -134,23 +135,33 @@ def salt_test_upgrade(
 
 
 def _get_running_named_salt_pid(process_name):
-
-    # need to check all of command line for salt-minion, salt-master, for example: salt-minion
-    #
-    # Linux: psutil process name only returning first part of the command '/opt/saltstack/'
-    # Linux: ['/opt/saltstack/salt/bin/python3.10 /usr/bin/salt-minion MultiMinionProcessManager MinionProcessManager']
-    #
-    # MacOS: psutil process name only returning last part of the command '/opt/salt/bin/python3.10', that is 'python3.10'
-    # MacOS: ['/opt/salt/bin/python3.10 /opt/salt/salt-minion', '']
-
     pids = []
-    for proc in psutil.process_iter():
+    if not platform.is_windows():
+        import subprocess
+
         try:
-            cmdl_strg = " ".join(str(element) for element in proc.cmdline())
-        except (psutil.ZombieProcess, psutil.NoSuchProcess, psutil.AccessDenied):
-            continue
-        if process_name in cmdl_strg:
-            pids.append(proc.pid)
+            output = subprocess.check_output(["ps", "-eo", "pid,command"], text=True)
+            for line in output.splitlines()[1:]:
+                parts = line.strip().split(maxsplit=1)
+                if len(parts) == 2:
+                    pid_str, cmdline = parts
+                    if process_name in cmdline:
+                        try:
+                            pids.append(int(pid_str))
+                        except ValueError:
+                            pass
+        except subprocess.CalledProcessError:
+            pass
+    else:
+        for proc in psutil.process_iter():
+            try:
+                name = proc.name()
+                if "salt" in name or "python" in name or process_name in name:
+                    cmdl_strg = " ".join(str(element) for element in proc.cmdline())
+                    if process_name in cmdl_strg:
+                        pids.append(proc.pid)
+            except (psutil.ZombieProcess, psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
 
     return pids
 
