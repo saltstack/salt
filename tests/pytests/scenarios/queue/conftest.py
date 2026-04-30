@@ -2,6 +2,7 @@ import pytest
 from saltfactories.utils import random_string
 
 import salt.client
+from tests.conftest import FIPS_TESTRUN
 
 
 @pytest.fixture(
@@ -16,17 +17,25 @@ import salt.client
 )
 def minion_config_overrides(request):
     multiprocessing, process_count_max = request.param
-    return {
+    overrides = {
         "process_count_max": process_count_max,
         "return_retry_tries": 1,
         "multiprocessing": multiprocessing,
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": ("PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"),
     }
+    return overrides
 
 
 @pytest.fixture(scope="module")
 def salt_master(salt_master_factory):
     config_overrides = {
         "open_mode": True,
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
     factory = salt_master_factory.salt_master_daemon(
         random_string("master-"),
