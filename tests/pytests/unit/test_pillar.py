@@ -18,7 +18,7 @@ import salt.config
 import salt.exceptions
 import salt.fileclient
 import salt.utils.json
-import salt.utils.secret as secret
+import salt.utils.secret
 import salt.utils.stringutils
 from salt.utils.files import fopen
 from tests.support.mock import ANY, MagicMock, call, patch
