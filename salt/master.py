@@ -2434,7 +2434,7 @@ class AESFuncs(TransportMethods):
                 log.trace(
                     "Master function call %s took %s seconds", func, time.time() - start
                 )
-            except Exception:  # pylint: disable=broad-except
+            except Exception as e:  # pylint: disable=broad-except
                 ret = ""
                 log.error("Error in function %s:\n", func, exc_info=True)
         else:

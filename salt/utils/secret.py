@@ -167,9 +167,12 @@ class SecretIterable(Secret[SecretType_co]):
 
 
 class SecretDict(SecretIterable[dict], MutableMapping[str, Any]):
-    def __init__(self, secret_value: dict):
+    def __init__(self, secret_value: dict, exclude: tuple[str, ...] = ()):
         for k, v in secret_value.items():
-            secret_value[k] = hide(v)
+            if k in exclude:
+                secret_value[k] = v
+            else:
+                secret_value[k] = hide(v)
         super().__init__(secret_value)
 
     def setdefault(self, key, default=None):
@@ -199,11 +202,12 @@ class SecretTuple(SecretIterable[tuple]):
         return tuple(v._display() if isinstance(v, Secret) else v for v in self)
 
 
-def hide(value: Any) -> Secret:
+def hide(value: Any, exclude: tuple[str, ...] = ()) -> Secret:
     """
     Morph a leaf value into a secret-safe container.
     Args:
         value: The value to morph.
+        exclude: A list of keys to exclude from redaction.
     Returns:
         The morphed value.
     """
@@ -214,7 +218,7 @@ def hide(value: Any) -> Secret:
     elif isinstance(value, bytes):
         return SecretBytes(value)
     elif isinstance(value, dict):
-        return SecretDict(value)
+        return SecretDict(value, exclude=exclude)
     elif isinstance(value, tuple):
         return SecretTuple(value)
     elif isinstance(value, Iterable):

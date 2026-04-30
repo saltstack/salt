@@ -13,7 +13,6 @@ import zmq
 import salt.exceptions
 import salt.payload
 import salt.utils.msgpack
-import salt.utils.secret as secret
 from salt.defaults import _Constant
 from salt.utils import immutabletypes
 

@@ -284,7 +284,10 @@ class AsyncRemotePillar(RemotePillarMixin):
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
-        return salt.utils.secret.hide(ret_pillar)
+        ret_pillar = salt.utils.secret.hide(
+            ret_pillar, exclude=("master", "ext_pillar_opts")
+        )
+        return ret_pillar
 
     def destroy(self):
         if self._closing:
@@ -375,7 +378,10 @@ class RemotePillar(RemotePillarMixin):
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
-        return salt.utils.secret.hide(ret_pillar)
+        ret_pillar = salt.utils.secret.hide(
+            ret_pillar, exclude=("master", "ext_pillar_opts")
+        )
+        return ret_pillar
 
     def destroy(self):
         if hasattr(self, "_closing") and self._closing:

@@ -206,7 +206,9 @@ class Schedule:
         """
         schedule = {}
         if include_pillar:
-            pillar_schedule = salt.utils.secret.expose(self.opts.get("pillar", {}).get("schedule", {}))
+            pillar_schedule = salt.utils.secret.expose(
+                self.opts.get("pillar", {}).get("schedule", {})
+            )
             if not isinstance(pillar_schedule, dict):
                 raise ValueError("Schedule must be of type dict.")
             schedule.update(pillar_schedule)
