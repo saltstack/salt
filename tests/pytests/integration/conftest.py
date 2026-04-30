@@ -28,9 +28,9 @@ def salt_minion(salt_master, salt_minion_factory):
     """
     assert salt_master.is_running()
     with salt_minion_factory.started():
-        # Sync All
+        # saltenv=base skips HighState top env discovery in each sync (avoids long master RPC during salt-call).
         salt_call_cli = salt_minion_factory.salt_call_cli()
-        ret = salt_call_cli.run("saltutil.sync_all", _timeout=120)
+        ret = salt_call_cli.run("saltutil.sync_all", saltenv="base", _timeout=120)
         assert ret.returncode == 0, ret
         yield salt_minion_factory
 
@@ -42,9 +42,8 @@ def salt_sub_minion(salt_master, salt_sub_minion_factory):
     """
     assert salt_master.is_running()
     with salt_sub_minion_factory.started():
-        # Sync All
         salt_call_cli = salt_sub_minion_factory.salt_call_cli()
-        ret = salt_call_cli.run("saltutil.sync_all", _timeout=120)
+        ret = salt_call_cli.run("saltutil.sync_all", saltenv="base", _timeout=120)
         assert ret.returncode == 0, ret
         yield salt_sub_minion_factory
 
