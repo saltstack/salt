@@ -3259,6 +3259,23 @@ def _hw_data(osdata):
         return {}
 
     grains = {}
+
+    # For Xen para-virtualized guests read UUID from /sys/hypervisor/uuid
+    if osdata["kernel"] == "Linux" and os.path.exists("/sys/hypervisor/uuid"):
+        try:
+            with salt.utils.files.fopen("/sys/hypervisor/uuid", "r") as ifile:
+                hypervisor_uuid = salt.utils.stringutils.to_unicode(
+                    ifile.read().strip(), errors="replace"
+                )
+                # Normalize to lowercase to match DMI format
+                grains["uuid"] = hypervisor_uuid.lower()
+                log.debug(
+                    "Read UUID from /sys/hypervisor/uuid for para-virtualized guest: %s",
+                    grains["uuid"],
+                )
+        except OSError as err:
+            log.debug("Unable to read /sys/hypervisor/uuid: %s", err)
+
     if osdata["kernel"] == "Linux" and os.path.exists("/sys/class/dmi/id"):
         # On many Linux distributions basic firmware information is available via sysfs
         # requires CONFIG_DMIID to be enabled in the Linux kernel configuration
@@ -3273,6 +3290,9 @@ def _hw_data(osdata):
             "serialnumber": "product_serial",
         }
         for key, fw_file in sysfs_firmware_info.items():
+            # Skip UUID if already read from /sys/hypervisor/uuid (Xen PV guests)
+            if key == "uuid" and "uuid" in grains:
+                continue
             contents_file = os.path.join("/sys/class/dmi/id", fw_file)
             if os.path.exists(contents_file):
                 try:

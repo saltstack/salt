@@ -3560,6 +3560,26 @@ def test__hw_data_linux_unicode_error():
         assert core._hw_data({"kernel": "Linux"}) == {}
 
 
+@pytest.mark.skip_unless_on_linux
+def test__hw_data_xen_pv_uuid():
+    hypervisor_uuid = "12345678-1234-1234-1234-123456789ABC"
+    expected_uuid = "12345678-1234-1234-1234-123456789abc"
+
+    def _exists_side_effect(path):
+        if path == "/sys/hypervisor/uuid":
+            return True
+        return False
+
+    with patch("os.path.exists", side_effect=_exists_side_effect), patch(
+        "salt.utils.platform.is_proxy", return_value=False
+    ), patch("salt.utils.path.which_bin", return_value=None), patch(
+        "salt.utils.files.fopen",
+        mock_open(read_data=hypervisor_uuid),
+    ):
+        result = core._hw_data({"kernel": "Linux"})
+        assert result.get("uuid") == expected_uuid
+
+
 @pytest.mark.skip_unless_on_windows
 def test_kernelparams_return_windows():
     """
