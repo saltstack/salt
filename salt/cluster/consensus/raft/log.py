@@ -176,7 +176,7 @@ class Log:
                 if self.state_machine:
                     self.state_machine.restore_snapshot(snapshot["data"])
             state = self.storage.load_state()
-            self._term = state.get("term", 0)
+            self._term = state.get("term", 0) if isinstance(state, dict) else state[0]
 
         self._update_cached_index()
 

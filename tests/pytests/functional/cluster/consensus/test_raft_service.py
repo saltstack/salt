@@ -447,3 +447,79 @@ class TestDynamicJoinerAsLearner:
             ), "Learner must not start election"
 
         _run(_body())
+
+
+# ---------------------------------------------------------------------------
+# Coverage gaps: heartbeat exception path, founding config exception path
+# ---------------------------------------------------------------------------
+
+
+class TestHeartbeatExceptionPaths:
+    def test_heartbeat_tick_catches_send_error(self):
+        """_heartbeat_tick swallows exceptions from send_append_entries."""
+        from tests.support.mock import MagicMock
+
+        opts = _make_opts("m1", ["m2"])
+        loop = asyncio.new_event_loop()
+        try:
+            pushers = _make_pushers(["m2"])
+            svc = RaftService(opts, loop, pushers)
+            svc._node.become_follower()
+            svc._node.become_candidate()
+            svc._node.become_leader()
+
+            bad_peer = MagicMock()
+            bad_peer.node_id = "m2"
+            bad_peer.voting = True
+            bad_peer.append_entries.side_effect = RuntimeError("network error")
+            svc._node.peers = [bad_peer]
+
+            # Must not raise
+            svc._heartbeat_tick()
+        finally:
+            loop.close()
+
+    def test_heartbeat_tick_outer_exception_still_reschedules(self):
+        """_heartbeat_tick reschedules even when an outer exception fires."""
+        import asyncio
+
+        opts = _make_opts("m1", [])
+        loop = asyncio.new_event_loop()
+        try:
+            svc = RaftService(opts, loop, {})
+            svc._node.become_follower()
+            svc._node.become_candidate()
+            svc._node.become_leader()
+
+            # Patch _maybe_commit_founding_config to raise
+            original = svc._maybe_commit_founding_config
+
+            def boom():
+                raise RuntimeError("founding config exploded")
+
+            svc._maybe_commit_founding_config = boom
+            # Must not propagate
+            svc._heartbeat_tick()
+            svc._maybe_commit_founding_config = original
+        finally:
+            loop.close()
+
+
+class TestMaybeCommitFoundingConfigExceptionPath:
+    def test_exception_in_log_add_is_caught(self):
+        """_maybe_commit_founding_config catches log_add exceptions."""
+        from tests.support.mock import patch
+
+        opts = _make_opts("m1", [])
+        loop = asyncio.new_event_loop()
+        try:
+            svc = RaftService(opts, loop, {})
+            svc._node.become_follower()
+            svc._node.become_candidate()
+            svc._node.become_leader()
+
+            with patch.object(svc._node, "log_add", side_effect=RuntimeError("boom")):
+                # Must not raise
+                svc._maybe_commit_founding_config()
+        finally:
+            loop.close()
