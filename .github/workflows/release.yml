@@ -9,7 +9,7 @@ on:
         required: true
         description: >
           The Salt version to get from staging to publish the release.
-          (DO NOT prefix the version with a v, ie, 3006.0 NOT v3006.0).
+          Good: 3006.0, 3008.0rc1. Bad: v3006.0, 3008.0-rc1, 3008.0~rc1.
       skip-salt-pkg-download-test-suite:
         type: boolean
         default: false
