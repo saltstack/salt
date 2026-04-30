@@ -408,6 +408,7 @@ pyyaml==6.0.1
     #   responses
     #   yamllint
     #   yamlloader
+    #   yamlordereddictloader
 pyzmq==25.1.2
     # via
     #   -c requirements/static/pkg/py3.12/darwin.txt
@@ -535,6 +536,8 @@ yamllint==1.32.0
     # via -r requirements/static/ci/darwin.in
 yamlloader==1.6.0
     # via junos-eznc
+yamlordereddictloader==0.4.2
+    # via -r requirements/static/ci/common.in
 yarl==1.20.1
     # via
     #   -c requirements/static/pkg/py3.12/darwin.txt

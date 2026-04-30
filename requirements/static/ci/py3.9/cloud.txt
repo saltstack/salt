@@ -633,6 +633,7 @@ pyyaml==6.0.1
     #   pytest-salt-factories
     #   responses
     #   yamlloader
+    #   yamlordereddictloader
 pyzmq==25.1.2
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -856,6 +857,10 @@ yamlloader==1.6.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   junos-eznc
+yamlordereddictloader==0.4.2
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   -r requirements/static/ci/common.in
 yarl==1.22.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt

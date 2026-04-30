@@ -763,6 +763,7 @@ xmltodict==0.14.2
 yamlordereddictloader==0.4.2
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
+    #   -r requirements/static/ci/common.in
     #   junos-eznc
 yarl==1.22.0
     # via

@@ -528,6 +528,7 @@ pyyaml==6.0.1
     #   responses
     #   yamllint
     #   yamlloader
+    #   yamlordereddictloader
 pyzmq==27.1.0
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.txt
@@ -716,6 +717,8 @@ yamllint==1.32.0
     # via -r requirements/static/ci/freebsd.in
 yamlloader==1.6.0 ; sys_platform != 'win32'
     # via junos-eznc
+yamlordereddictloader==0.4.2 ; sys_platform != 'win32'
+    # via -r requirements/static/ci/common.in
 yarl==1.22.0 ; python_full_version < '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.txt

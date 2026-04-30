@@ -579,7 +579,9 @@ xmltodict==1.0.4
 yamllint==1.35.1
     # via -r requirements/static/ci/freebsd.in
 yamlordereddictloader==0.4.2 ; sys_platform != 'win32'
-    # via junos-eznc
+    # via
+    #   -r requirements/static/ci/common.in
+    #   junos-eznc
 yarl==1.22.0
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.txt
