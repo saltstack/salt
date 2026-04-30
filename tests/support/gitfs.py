@@ -34,6 +34,18 @@ log = logging.getLogger(__name__)
 USERNAME = "gitpillaruser"
 PASSWORD = "saltrules"
 
+FIPS_TESTRUN = os.environ.get("FIPS_TESTRUN", "0") == "1"
+
+# MD5 is not permitted in FIPS mode. The two fingerprints below are the MD5
+# and SHA256 of ``server/files/ssh_host_rsa_key.pub`` respectively; switch
+# based on FIPS_TESTRUN so the known_host setup picks an algorithm the host
+# crypto policy accepts.
+SSHD_HOST_KEY_FINGERPRINT_MD5 = "fd:6f:7f:5d:06:6b:f2:06:0d:26:93:9e:5a:b5:19:46"
+SSHD_HOST_KEY_FINGERPRINT_SHA256 = (
+    "bd:99:ac:a9:76:c5:04:a5:26:30:3e:9e:08:b2:2d:5b"
+    ":9a:e5:e7:11:86:58:8f:de:07:f1:24:5e:99:00:98:97"
+)
+
 _OPTS = freeze(
     {
         "__role": "minion",
@@ -127,15 +139,21 @@ class Sshd(_Sshd):
             pytest.fail("Failed to apply the 'git_pillar.ssh' state")
 
     def set_known_host(self, salt_call_cli, username):
+        if FIPS_TESTRUN:
+            fingerprint = SSHD_HOST_KEY_FINGERPRINT_SHA256
+            fingerprint_hash_type = "sha256"
+        else:
+            fingerprint = SSHD_HOST_KEY_FINGERPRINT_MD5
+            fingerprint_hash_type = "md5"
         ret = salt_call_cli.run(
             "ssh.set_known_host",
             user=username,
             hostname="127.0.0.1",
             port=self.listen_port,
             enc="ssh-rsa",
-            fingerprint="fd:6f:7f:5d:06:6b:f2:06:0d:26:93:9e:5a:b5:19:46",
+            fingerprint=fingerprint,
             hash_known_hosts=False,
-            fingerprint_hash_type="md5",
+            fingerprint_hash_type=fingerprint_hash_type,
         )
         if ret.returncode != 0:
             pytest.fail("Failed to run 'ssh.set_known_host'")
