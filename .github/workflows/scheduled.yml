@@ -516,7 +516,7 @@ jobs:
 
   build-pkgs-src:
     name: Build Source Packages
-    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' && github.workflow != 'Stage Release' }}
     needs:
       - prepare-workflow
       - build-source-tarball
