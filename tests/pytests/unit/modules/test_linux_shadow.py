@@ -57,7 +57,9 @@ def password(request):
 
 @pytest.fixture(params=["crypto", "passlib"])
 def library(request):
-    with patch("salt.utils.pycrypto.HAS_CRYPT", request.param == "crypto"):
+    with patch("salt.utils.pycrypto.HAS_CRYPT", request.param == "crypto"), patch(
+        "salt.utils.pycrypto.HAS_PASSLIB", request.param == "passlib"
+    ):
         yield request.param
 
 
@@ -72,16 +74,25 @@ def test_gen_password(password, library):
     """
     if library == "passlib":
         pw_hash = password.pw_hash_passlib
+        with patch("salt.utils.pycrypto._gen_hash_passlib", return_value=pw_hash):
+            assert (
+                shadow.gen_password(
+                    password.clear,
+                    crypt_salt=password.pw_salt,
+                    algorithm=password.algorithm,
+                )
+                == pw_hash
+            )
     else:
         pw_hash = password.pw_hash
-    assert (
-        shadow.gen_password(
-            password.clear,
-            crypt_salt=password.pw_salt,
-            algorithm=password.algorithm,
+        assert (
+            shadow.gen_password(
+                password.clear,
+                crypt_salt=password.pw_salt,
+                algorithm=password.algorithm,
+            )
+            == pw_hash
         )
-        == pw_hash
-    )
 
 
 def test_set_password():

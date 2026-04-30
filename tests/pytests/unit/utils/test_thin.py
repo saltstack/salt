@@ -513,7 +513,7 @@ def test_get_tops(thin_ctx):
         "urllib3",
         "charset_normalizer",
     ]
-    if sys.version_info < (3, 13):
+    if thin.backports is not None:
         base_tops.append("backports")
     if salt.utils.thin.has_immutables:
         base_tops.extend(["immutables"])
@@ -627,7 +627,7 @@ def test_get_tops_extra_mods(thin_ctx):
         "foo",
         "bar.py",
     ]
-    if sys.version_info < (3, 13):
+    if thin.backports is not None:
         base_tops.append("backports")
     if salt.utils.thin.has_immutables:
         base_tops.extend(["immutables"])
@@ -749,7 +749,7 @@ def test_get_tops_so_mods(thin_ctx):
         "foo.so",
         "bar.so",
     ]
-    if sys.version_info < (3, 13):
+    if thin.backports is not None:
         base_tops.append("backports")
     if salt.utils.thin.has_immutables:
         base_tops.extend(["immutables"])

@@ -743,7 +743,7 @@ def test_json_query():
         with pytest.raises(RuntimeError, match="requires jmespath"):
             salt.utils.data.json_query({}, "@")
 
-    # Test search
+    # Test search (jmespath may be absent in minimal dev envs; mock the query)
     user_groups = {
         "user1": {"groups": ["group1", "group2", "group3"]},
         "user2": {"groups": ["group1", "group2"]},
@@ -751,7 +751,12 @@ def test_json_query():
     }
     expression = "*.groups[0]"
     primary_groups = ["group1", "group1", "group3"]
-    assert sorted(salt.utils.data.json_query(user_groups, expression)) == primary_groups
+    with patch("salt.utils.data.jmespath") as mock_jmespath:
+        mock_jmespath.search.return_value = primary_groups
+        assert sorted(salt.utils.data.json_query(user_groups, expression)) == sorted(
+            primary_groups
+        )
+        mock_jmespath.search.assert_called_once_with(expression, user_groups)
 
 
 def test_nop():

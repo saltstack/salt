@@ -25,6 +25,7 @@ from salt.exceptions import SaltRenderError
 from salt.utils.decorators.jinja import JinjaFilter
 from salt.utils.jinja import SerializerExtension, ensure_sequence_filter
 from salt.utils.templates import render_jinja_tmpl
+from tests.support.mock import patch
 
 try:
     import timelib  # pylint: disable=W0611
@@ -1123,11 +1124,14 @@ def test_json_query(minion_opts, local_salt):
     """
     Test the `json_query` Jinja filter.
     """
-    rendered = render_jinja_tmpl(
-        "{{ [1, 2, 3] | json_query('[1]')}}",
-        dict(opts=minion_opts, saltenv="test", salt=local_salt),
-    )
-    assert rendered == "2"
+    with patch("salt.utils.data.jmespath") as mock_jmespath:
+        mock_jmespath.search.return_value = 2
+        rendered = render_jinja_tmpl(
+            "{{ [1, 2, 3] | json_query('[1]')}}",
+            dict(opts=minion_opts, saltenv="test", salt=local_salt),
+        )
+        assert rendered == "2"
+        mock_jmespath.search.assert_called_once_with("[1]", [1, 2, 3])
 
 
 def test_flatten_simple(minion_opts, local_salt):

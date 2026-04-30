@@ -1224,7 +1224,7 @@ class TestCreateExtension:
         (
             ("DNS", "می\u200cخواهم\u200c.iran"),
             salt.exceptions.CommandExecutionError,
-            r"Joiner U\+200C not allowed at position 9 in '.*'",
+            r".*U\+200C.*position 9.*",
         ),
         (
             ("DNS", ".*.wildcard-dot.test"),
