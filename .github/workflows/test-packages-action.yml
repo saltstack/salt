@@ -138,6 +138,8 @@ jobs:
           docker pull ${{ matrix.container }}
 
       - name: "Create container ${{ matrix.container }}"
+        env:
+          FIPS_TESTRUN: ${{ matrix.fips && '1' || '0' }}
         run: |
           tools container create ${{ matrix.container }} --name ${{ github.run_id }}_salt-test-pkg
 
@@ -155,6 +157,12 @@ jobs:
         run: |
           docker exec ${{ github.run_id }}_salt-test-pkg \
             sh -c "for f in /etc/yum.repos.d/photon*.repo; do [ -e \"\$f\" ] && sed -i -E 's/packages(-prod)?\.(vmware|broadcom)\.com\/photon/packages.broadcom.com\/photon/g' \"\$f\"; done && tdnf makecache"
+
+      - name: Install FIPS provider
+        if: ${{ matrix.fips && startsWith(matrix.slug, 'photonos-') }}
+        run: |
+          docker exec ${{ github.run_id }}_salt-test-pkg \
+            tdnf install -y openssl-fips-provider
 
       - name: Decompress .nox Directory
         run: |
