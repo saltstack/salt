@@ -843,7 +843,11 @@ def salt_factories_config():
     """
     Return a dictionary with the keyworkd arguments for FactoriesManager
     """
-    if os.environ.get("JENKINS_URL") or os.environ.get("CI"):
+    if (
+        os.environ.get("JENKINS_URL")
+        or os.environ.get("CI")
+        or os.environ.get("ONEDIR_TESTRUN") == "1"
+    ):
         start_timeout = 120
     else:
         start_timeout = 60
