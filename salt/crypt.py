@@ -93,6 +93,7 @@ def fips_enabled():
         import cryptography.hazmat.backends.openssl.backend
 
         return cryptography.hazmat.backends.openssl.backend._fips_enabled
+    return False
 
 
 def clean_key(key):
@@ -230,6 +231,17 @@ class BaseKey:
             raise Exception("Invalid hashing algorithm")
         return getattr(hashes, _hash)
 
+    @staticmethod
+    def _enforce_fips(algorithm):
+        # Newer cryptography/OpenSSL bundles in the salt onedir no longer
+        # reject SHA1-based RSA OAEP/PKCS1v15 at the library layer the way
+        # older versions did. Enforce FIPS policy at salt's boundary so the
+        # FIPS-mode contract is honored regardless of the upstream stack.
+        if SHA1 in algorithm and fips_enabled():
+            raise UnsupportedAlgorithm(
+                f"Algorithm {algorithm} uses SHA1 which is not allowed in FIPS mode"
+            )
+
 
 class PrivateKey(BaseKey):
 
@@ -247,6 +259,7 @@ class PrivateKey(BaseKey):
     def sign(self, data, algorithm=PKCS1v15_SHA1):
         _padding = self.parse_padding_for_signing(algorithm)
         _hash = self.parse_hash(algorithm)
+        self._enforce_fips(algorithm)
         try:
             return self.key.sign(
                 salt.utils.stringutils.to_bytes(data), _padding(), _hash()
@@ -257,6 +270,7 @@ class PrivateKey(BaseKey):
     def decrypt(self, data, algorithm=OAEP_SHA1):
         _padding = self.parse_padding_for_encryption(algorithm)
         _hash = self.parse_hash(algorithm)
+        self._enforce_fips(algorithm)
         try:
             return self.key.decrypt(
                 data,
@@ -281,6 +295,7 @@ class PublicKey(BaseKey):
     def encrypt(self, data, algorithm=OAEP_SHA1):
         _padding = self.parse_padding_for_encryption(algorithm)
         _hash = self.parse_hash(algorithm)
+        self._enforce_fips(algorithm)
         bdata = salt.utils.stringutils.to_bytes(data)
         try:
             return self.key.encrypt(
@@ -297,6 +312,7 @@ class PublicKey(BaseKey):
     def verify(self, data, signature, algorithm=PKCS1v15_SHA1):
         _padding = self.parse_padding_for_signing(algorithm)
         _hash = self.parse_hash(algorithm)
+        self._enforce_fips(algorithm)
         try:
             self.key.verify(
                 salt.utils.stringutils.to_bytes(signature),
@@ -529,12 +545,12 @@ class MasterKeys(dict):
             )
         try:
             key = PrivateKey(path, passphrase)
+        except InvalidKeyError as e:
+            message = f"Unable to read key: {path}; key contains unsupported algorithm"
         except ValueError as e:
             message = f"Unable to read key: {path}; file may be corrupt"
         except TypeError as e:
             message = f"Unable to read key: {path}; passphrase may be incorrect"
-        except InvalidKeyError as e:
-            message = f"Unable to read key: {path}; key contains unsupported algorithm"
         except cryptography.exceptions.UnsupportedAlgorithm as e:
             message = f"Unable to read key: {path}; key contains unsupported algorithm"
         else:
