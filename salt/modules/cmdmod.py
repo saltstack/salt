@@ -28,6 +28,7 @@ import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
 import salt.utils.powershell
+import salt.utils.secret
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.timed_subprocess
@@ -157,7 +158,7 @@ def _render_cmd(cmd, cwd, template, saltenv=None, pillarenv=None, pillar_overrid
         pillarenv = pillarenv or __opts__["pillarenv"]
         kwargs["pillar"] = _gather_pillar(pillarenv, pillar_override)
     else:
-        kwargs["pillar"] = __pillar__
+        kwargs["pillar"] = salt.utils.secret.expose(__pillar__)
     kwargs["grains"] = __grains__
     kwargs["opts"] = __opts__
     kwargs["saltenv"] = saltenv
@@ -244,7 +245,7 @@ def _gather_pillar(pillarenv, pillar_override):
     ret = pillar.compile_pillar()
     if pillar_override and isinstance(pillar_override, dict):
         ret.update(pillar_override)
-    return ret
+    return salt.utils.secret.expose(ret)
 
 
 def _check_avail(cmd):

@@ -1091,7 +1091,8 @@ class Schedule:
                     and "whens" in self.opts["pillar"]
                     and i in self.opts["pillar"]["whens"]
                 ):
-                    if not isinstance(self.opts["pillar"]["whens"], dict):
+                    whens = salt.utils.secret.expose(self.opts["pillar"]["whens"])
+                    if not isinstance(whens, dict):
                         data["_error"] = (
                             'Pillar item "whens" '
                             "must be a dict. "
@@ -1099,7 +1100,7 @@ class Schedule:
                         )
                         log.error(data["_error"])
                         return
-                    when_ = self.opts["pillar"]["whens"][i]
+                    when_ = whens[i]
                 elif (
                     "grains" in self.opts
                     and "whens" in self.opts["grains"]
@@ -1113,7 +1114,7 @@ class Schedule:
                         )
                         log.error(data["_error"])
                         return
-                    when_ = self.opts["grains"]["whens"][i]
+                    when_ = whens[i]
                 else:
                     when_ = i
 

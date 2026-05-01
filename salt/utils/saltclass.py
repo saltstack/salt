@@ -8,6 +8,7 @@ from collections import OrderedDict
 from jinja2 import Environment, FileSystemLoader
 
 import salt.utils.path
+import salt.utils.secret
 import salt.utils.yaml
 
 log = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ def render_jinja(_file, salt_data):
             "__opts__": salt_data["__opts__"],
             "__salt__": salt_data["__salt__"],
             "__grains__": salt_data["__grains__"],
-            "__pillar__": salt_data["__pillar__"],
+            "__pillar__": salt.utils.secret.expose(salt_data["__pillar__"]),
             "minion_id": salt_data["minion_id"],
         }
     )

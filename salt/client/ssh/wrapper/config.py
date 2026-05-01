@@ -12,6 +12,7 @@ import salt.syspaths as syspaths
 import salt.utils.data
 import salt.utils.files
 import salt.utils.sdb as sdb
+import salt.utils.secret
 
 log = logging.getLogger(__name__)
 
@@ -191,10 +192,10 @@ def option(
                 return __grains__[value]
         if not omit_pillar:
             if value in __pillar__:
-                return __pillar__[value]
+                return salt.utils.secret.expose(__pillar__[value])
         if not omit_master:
             if value in __pillar__.get("master", {}):
-                return __pillar__["master"][value]
+                return salt.utils.secret.expose(__pillar__["master"][value])
         if value in DEFAULTS:
             return DEFAULTS[value]
 
@@ -205,8 +206,8 @@ def option(
         # takes precedence
         ret = {}
         for omit, data in (
-            (omit_master, __pillar__.get("master", {})),
-            (omit_pillar, __pillar__),
+            (omit_master, salt.utils.secret.expose(__pillar__.get("master", {}))),
+            (omit_pillar, salt.utils.secret.expose(__pillar__)),
             (omit_grains, __grains__),
             (omit_opts, __opts__),
         ):
@@ -241,7 +242,7 @@ def merge(value, default="", omit_opts=False, omit_master=False, omit_pillar=Fal
                 return ret
     if not omit_master:
         if value in __pillar__.get("master", {}):
-            tmp = __pillar__["master"][value]
+            tmp = salt.utils.secret.expose(__pillar__["master"][value])
             if ret is None:
                 ret = tmp
                 if isinstance(ret, str):
@@ -253,7 +254,7 @@ def merge(value, default="", omit_opts=False, omit_master=False, omit_pillar=Fal
                 ret = list(ret) + list(tmp)
     if not omit_pillar:
         if value in __pillar__:
-            tmp = __pillar__[value]
+            tmp = salt.utils.secret.expose(__pillar__[value])
             if ret is None:
                 ret = tmp
                 if isinstance(ret, str):
@@ -435,14 +436,17 @@ def get(
 
         if not omit_pillar:
             ret = salt.utils.data.traverse_dict_and_list(
-                __pillar__, key, "_|-", delimiter=delimiter
+                salt.utils.secret.expose(__pillar__), key, "_|-", delimiter=delimiter
             )
             if ret != "_|-":
                 return sdb.sdb_get(ret, __opts__)
 
         if not omit_master:
             ret = salt.utils.data.traverse_dict_and_list(
-                __pillar__.get("master", {}), key, "_|-", delimiter=delimiter
+                salt.utils.secret.expose(__pillar__.get("master", {})),
+                key,
+                "_|-",
+                delimiter=delimiter,
             )
             if ret != "_|-":
                 return sdb.sdb_get(ret, __opts__)
@@ -465,10 +469,16 @@ def get(
 
         data = copy.copy(DEFAULTS)
         data = salt.utils.dictupdate.merge(
-            data, __pillar__.get("master", {}), strategy=merge, merge_lists=merge_lists
+            data,
+            salt.utils.secret.expose(__pillar__.get("master", {})),
+            strategy=merge,
+            merge_lists=merge_lists,
         )
         data = salt.utils.dictupdate.merge(
-            data, __pillar__, strategy=merge, merge_lists=merge_lists
+            data,
+            salt.utils.secret.expose(__pillar__),
+            strategy=merge,
+            merge_lists=merge_lists,
         )
         data = salt.utils.dictupdate.merge(
             data, __grains__, strategy=merge, merge_lists=merge_lists
@@ -497,7 +507,7 @@ def dot_vals(value):
         salt '*' config.dot_vals host
     """
     ret = {}
-    for key, val in __pillar__.get("master", {}).items():
+    for key, val in salt.utils.secret.expose(__pillar__.get("master", {})).items():
         if key.startswith(f"{value}."):
             ret[key] = val
     for key, val in __opts__.items():

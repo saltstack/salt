@@ -28,7 +28,7 @@ import site
 import time
 import traceback
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
-from typing import Any, Union
+from typing import Any, Mapping, Union
 
 import salt.channel.client
 import salt.fileclient
@@ -1444,7 +1444,7 @@ class State:
             # Use mutate_key if available (OptsDict), otherwise mutate in place (plain dict)
             if hasattr(self.opts, "mutate_key"):
                 self.opts.mutate_key("pillar", new_pillar)
-            elif "pillar" in self.opts and isinstance(self.opts["pillar"], dict):
+            elif "pillar" in self.opts and isinstance(self.opts["pillar"], Mapping):
                 self.opts["pillar"].clear()
                 self.opts["pillar"].update(new_pillar)
             else:

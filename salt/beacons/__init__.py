@@ -9,6 +9,7 @@ import sys
 
 import salt.utils.event
 import salt.utils.minion
+import salt.utils.secret
 
 log = logging.getLogger(__name__)
 
@@ -299,7 +300,9 @@ class Beacon:
         """
         beacons = {}
         if include_pillar:
-            pillar_beacons = self.opts.get("pillar", {}).get("beacons", {})
+            pillar_beacons = salt.utils.secret.expose(
+                self.opts.get("pillar", {}).get("beacons", {})
+            )
             if not isinstance(pillar_beacons, dict):
                 raise ValueError("Beacons must be of type dict.")
             beacons.update(pillar_beacons)

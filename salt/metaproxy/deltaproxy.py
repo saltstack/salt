@@ -42,6 +42,7 @@ import salt.utils.network
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.schedule
+import salt.utils.secret
 import salt.utils.ssdp
 import salt.utils.user
 import salt.utils.zeromq
@@ -95,9 +96,9 @@ async def post_master_init(self, master):
         raise SaltSystemExit(code=-1, msg=errmsg)
 
     if "proxy" not in self.opts:
-        self.opts["proxy"] = self.opts["pillar"]["proxy"]
+        self.opts["proxy"] = salt.utils.secret.expose(self.opts["pillar"]["proxy"])
 
-    pillar = copy.deepcopy(self.opts["pillar"])
+    pillar = copy.deepcopy(salt.utils.secret.expose(self.opts["pillar"]))
     pillar.pop("master", None)
     self.opts = salt.utils.dictupdate.merge(
         self.opts,
@@ -110,10 +111,14 @@ async def post_master_init(self, master):
         # Even when not required, some details such as mine configuration
         # should be merged anyway whenever possible.
         if "mine_interval" in self.opts["pillar"]:
-            self.opts["mine_interval"] = self.opts["pillar"]["mine_interval"]
+            self.opts["mine_interval"] = salt.utils.secret.expose(
+                self.opts["pillar"]["mine_interval"]
+            )
         if "mine_functions" in self.opts["pillar"]:
             general_proxy_mines = self.opts.get("mine_functions", [])
-            specific_proxy_mines = self.opts["pillar"]["mine_functions"]
+            specific_proxy_mines = salt.utils.secret.expose(
+                self.opts["pillar"]["mine_functions"]
+            )
             try:
                 self.opts["mine_functions"] = general_proxy_mines + specific_proxy_mines
             except TypeError as terr:

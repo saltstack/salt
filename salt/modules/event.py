@@ -14,6 +14,7 @@ import salt.crypt
 import salt.payload
 import salt.utils.event
 import salt.utils.network
+import salt.utils.secret
 
 __proxyenabled__ = ["*"]
 log = logging.getLogger(__name__)
@@ -201,9 +202,11 @@ def send(
 
     if with_pillar:
         if isinstance(with_pillar, list):
-            data_dict["pillar"] = _dict_subset(with_pillar, __pillar__)
+            data_dict["pillar"] = _dict_subset(
+                with_pillar, salt.utils.secret.expose(__pillar__)
+            )
         else:
-            data_dict["pillar"] = __pillar__.value()
+            data_dict["pillar"] = salt.utils.secret.expose(__pillar__.value())
 
     if with_env_opts:
         data_dict["saltenv"] = __opts__.get("saltenv", "base")

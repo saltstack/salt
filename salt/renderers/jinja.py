@@ -7,6 +7,7 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 import logging
 from io import StringIO
 
+import salt.utils.secret
 import salt.utils.templates
 from salt.exceptions import SaltRenderError
 from salt.loader.context import NamedLoaderContext

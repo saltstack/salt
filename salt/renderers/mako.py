@@ -12,6 +12,7 @@ To install Mako, do the following:
 
 import io
 
+import salt.utils.secret
 import salt.utils.templates
 from salt.exceptions import SaltRenderError
 
@@ -29,7 +30,7 @@ def render(template_file, saltenv="base", sls="", context=None, tmplpath=None, *
         salt=__salt__,
         grains=__grains__,
         opts=__opts__,
-        pillar=__pillar__,
+        pillar=salt.utils.secret.expose(__pillar__),
         saltenv=saltenv,
         sls=sls,
         context=context,

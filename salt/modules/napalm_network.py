@@ -24,6 +24,7 @@ import time
 
 import salt.utils.files
 import salt.utils.napalm
+import salt.utils.secret
 import salt.utils.templates
 import salt.utils.versions
 
@@ -715,7 +716,7 @@ def cli(*commands, cli_kwargs=None, **kwargs):  # pylint: disable=unused-argumen
     textfsm_parse = (
         kwargs.get("textfsm_parse")
         or __opts__.get("napalm_cli_textfsm_parse")
-        or __pillar__.get("napalm_cli_textfsm_parse", False)
+        or salt.utils.secret.expose(__pillar__.get("napalm_cli_textfsm_parse", False))
     )
     if not textfsm_parse:
         # No TextFSM parsing required, return raw commands.
@@ -730,31 +731,35 @@ def cli(*commands, cli_kwargs=None, **kwargs):  # pylint: disable=unused-argumen
     textfsm_path = (
         kwargs.get("textfsm_path")
         or __opts__.get("textfsm_path")
-        or __pillar__.get("textfsm_path")
+        or salt.utils.secret.expose(__pillar__.get("textfsm_path"))
     )
     log.debug("textfsm_path: %s", textfsm_path)
     textfsm_template_dict = (
         kwargs.get("textfsm_template_dict")
         or __opts__.get("napalm_cli_textfsm_template_dict")
-        or __pillar__.get("napalm_cli_textfsm_template_dict", {})
+        or salt.utils.secret.expose(
+            __pillar__.get("napalm_cli_textfsm_template_dict", {})
+        )
     )
     log.debug("TextFSM command-template mapping: %s", textfsm_template_dict)
     index_file = (
         kwargs.get("index_file")
         or __opts__.get("textfsm_index_file")
-        or __pillar__.get("textfsm_index_file")
+        or salt.utils.secret.expose(__pillar__.get("textfsm_index_file"))
     )
     log.debug("index_file: %s", index_file)
     platform_grain_name = (
         kwargs.get("platform_grain_name")
         or __opts__.get("textfsm_platform_grain")
-        or __pillar__.get("textfsm_platform_grain", "os")
+        or salt.utils.secret.expose(__pillar__.get("textfsm_platform_grain", "os"))
     )
     log.debug("platform_grain_name: %s", platform_grain_name)
     platform_column_name = (
         kwargs.get("platform_column_name")
         or __opts__.get("textfsm_platform_column_name")
-        or __pillar__.get("textfsm_platform_column_name", "Platform")
+        or salt.utils.secret.expose(
+            __pillar__.get("textfsm_platform_column_name", "Platform")
+        )
     )
     log.debug("platform_column_name: %s", platform_column_name)
     saltenv = kwargs.get("saltenv", "base")

@@ -32,6 +32,7 @@ import salt.utils.lazy
 
 # Lazy import: salt.utils.optsdict imported only when creating loaders
 import salt.utils.platform
+import salt.utils.secret
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.utils.decorators import Depends
@@ -714,7 +715,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             pillar = opts.get("pillar", {})
             if isinstance(pillar, salt.loader.context.NamedLoaderContext):
                 pillar = pillar.value()
-            self.pack["__pillar__"] = pillar
+            self.pack["__pillar__"] = salt.utils.secret.expose(pillar)
 
         # Preserve OptsDict type if present, otherwise create new dict
         if isinstance(opts, salt.utils.optsdict.OptsDict):

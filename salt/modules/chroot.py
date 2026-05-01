@@ -19,6 +19,7 @@ import salt.defaults.exitcodes
 import salt.exceptions
 import salt.utils.args
 import salt.utils.files
+import salt.utils.secret
 
 __func_alias__ = {"apply_": "apply"}
 
@@ -247,7 +248,7 @@ def _create_and_execute_salt_state(root, chunks, file_refs, test, hash_type):
             client,
             chunks,
             file_refs,
-            __pillar__.value(),
+            salt.utils.secret.expose(__pillar__.value()),
             root,
         )
     trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, hash_type)
@@ -309,7 +310,7 @@ def sls(root, mods, saltenv="base", test=None, exclude=None, **kwargs):
     """
     # Get a copy of the pillar data, to avoid overwriting the current
     # pillar, instead the one delegated
-    pillar = copy.deepcopy(__pillar__.value())
+    pillar = copy.deepcopy(salt.utils.secret.expose(__pillar__.value()))
     pillar.update(kwargs.get("pillar", {}))
 
     # Clone the options data and apply some default values. May not be
@@ -385,7 +386,7 @@ def highstate(root, **kwargs):
     """
     # Get a copy of the pillar data, to avoid overwriting the current
     # pillar, instead the one delegated
-    pillar = copy.deepcopy(__pillar__.value())
+    pillar = copy.deepcopy(salt.utils.secret.expose(__pillar__.value()))
     pillar.update(kwargs.get("pillar", {}))
 
     # Clone the options data and apply some default values. May not be

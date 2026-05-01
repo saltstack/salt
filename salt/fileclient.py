@@ -30,6 +30,7 @@ import salt.utils.hashutils
 import salt.utils.http
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.secret
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
@@ -628,7 +629,7 @@ class Client:
                     if "s3." + key in self.opts:
                         return self.opts["s3." + key]
                     try:
-                        return self.opts["pillar"]["s3"][key]
+                        return salt.utils.secret.expose(self.opts["pillar"]["s3"][key])
                     except (KeyError, TypeError):
                         return default
 
@@ -687,7 +688,7 @@ class Client:
                     if key in self.opts:
                         return self.opts[key]
                     try:
-                        return self.opts["pillar"][key]
+                        return salt.utils.secret.expose(self.opts["pillar"][key])
                     except (KeyError, TypeError):
                         return default
 

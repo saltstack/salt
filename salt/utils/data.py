@@ -15,7 +15,6 @@ from collections import OrderedDict
 from collections.abc import Mapping, MutableMapping, Sequence
 
 import salt.utils.dictupdate
-import salt.utils.secret
 import salt.utils.stringutils
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM

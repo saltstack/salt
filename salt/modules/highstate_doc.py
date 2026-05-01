@@ -229,6 +229,7 @@ import logging
 import re
 
 import salt.utils.files
+import salt.utils.secret
 import salt.utils.stringutils
 import salt.utils.templates as tpl
 import salt.utils.yaml
@@ -461,7 +462,7 @@ def render(
         "config": config,
         "lowstates": lowstates,
         "salt": __salt__,
-        "pillar": __pillar__,
+        "pillar": salt.utils.secret.expose(__pillar__),
         "grains": __grains__,
         "opts": __opts__,
         "kwargs": kwargs,
