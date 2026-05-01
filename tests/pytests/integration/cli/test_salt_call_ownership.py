@@ -8,6 +8,7 @@ from saltfactories.utils import random_string
 
 import salt.utils.files
 import salt.utils.user
+from tests.conftest import FIPS_TESTRUN
 
 
 @pytest.fixture(scope="module")
@@ -52,6 +53,9 @@ def non_root_minion(salt_master, salt_factories):
 
     config_overrides = {
         "user": non_root_user,
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": ("PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"),
     }
 
     factory = salt_master.salt_minion_daemon(
