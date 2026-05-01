@@ -1231,7 +1231,10 @@ class SaltPkgInstall:
             self._check_retcode(ret)
             pref_file = pathlib.Path("/etc", "apt", "preferences.d", "salt-pin-1001")
             pref_file.parent.mkdir(exist_ok=True)
-            pin = self.prev_version
+            # Published debs use a tilde before pre-release labels (e.g.
+            # ``3008.0~rc1``) while CI passes PEP440 (``3008.0rc1``). Apt's
+            # version pin requires an exact match, so map to the deb spelling.
+            pin = pep440_version_to_rpm_nevra_version(self.prev_version)
             with salt.utils.files.fopen(pref_file, "w") as fp:
                 fp.write(
                     f"Package: salt-*\n" f"Pin: version {pin}\n" f"Pin-Priority: 1001"
