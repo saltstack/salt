@@ -169,6 +169,34 @@ def test_run_runas_with_windows():
                         cmdmod._run("foo", "bar", runas="baz")
 
 
+def test_run_windows_preserves_cmd_string_quoting():
+    """
+    On Windows, shlex_split must NOT be called on the command string so that
+    Windows-style argument quoting (e.g. MYPROPERTY="C:\\path with space") is
+    preserved when the string is handed directly to CreateProcess.
+    Regression test for issue #68950.
+    """
+    mock_proc = MockTimedProc(stdout=b"", stderr=b"")
+    with patch("salt.utils.platform.is_windows", MagicMock(return_value=True)), patch(
+        "salt.utils.path.which",
+        MagicMock(return_value="C:\\Windows\\system32\\cmd.exe"),
+    ), patch(
+        "salt.utils.timed_subprocess.TimedProc", MagicMock(return_value=mock_proc)
+    ), patch(
+        "salt.utils.args.shlex_split"
+    ) as mock_shlex:
+        try:
+            cmdmod._run(
+                '"msiexec" /I "C:\\pkg.msi" MYPROPERTY="C:\\some file.txt"',
+                cwd="C:\\",
+                shell="C:\\Windows\\system32\\cmd.exe",
+                python_shell=False,
+            )
+        except Exception:  # pylint: disable=broad-except
+            pass
+        mock_shlex.assert_not_called()
+
+
 def test_run_with_tuple():
     """
     Tests return when cmd is a tuple

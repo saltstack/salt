@@ -301,6 +301,58 @@ def test_pkg_install_existing_with_version():
         assert expected == result
 
 
+def test_pkg_install_msiexec_quoted_property():
+    """
+    Test that msiexec extra_install_flags with Windows-style property=value quoting
+    (e.g. MYPROPERTY="C:\\path with space") are preserved as-is when passed to
+    cmd.run_all (regression test for issue #68950).
+    """
+    ret__get_package_info = {
+        "0.11.29": {
+            "uninstaller": "{GUID}",
+            "reboot": False,
+            "msiexec": True,
+            "installer": "https://example.com/pkg.msi",
+            "uninstall_flags": "/X {GUID} /qn",
+            "locale": "en_US",
+            "install_flags": "/qn /norestart",
+            "full_name": "NSClient++ (x64)",
+        }
+    }
+
+    mock_cmd_run_all = MagicMock(return_value={"retcode": 0})
+    with patch.object(
+        salt.utils.data, "is_true", MagicMock(return_value=True)
+    ), patch.object(
+        win_pkg, "_get_package_info", MagicMock(return_value=ret__get_package_info)
+    ), patch.dict(
+        win_pkg.__salt__,
+        {
+            "pkg_resource.parse_targets": MagicMock(
+                return_value=[{"nsclient": "0.11.29"}, None]
+            ),
+            "cp.is_cached": MagicMock(
+                return_value="C:\\ProgramData\\Salt\\cache\\pkg.msi"
+            ),
+            "cmd.run_all": mock_cmd_run_all,
+        },
+    ):
+        win_pkg.install(
+            name="nsclient",
+            version="0.11.29",
+            extra_install_flags='MYPROPERTY="C:\\some file.txt"',
+        )
+        call_cmd = mock_cmd_run_all.call_args[0][0]
+        # The property=value pair must keep its inner quotes so msiexec can parse it
+        assert (
+            'MYPROPERTY="C:\\some file.txt"' in call_cmd
+        ), f"Expected inner-quoted property in cmd, got: {call_cmd!r}"
+        # Outer-quoted form produced by shlex_split + list2cmdline must not appear
+        assert (
+            '"MYPROPERTY=C:\\some file.txt"' not in call_cmd
+        ), f"Outer-quoted property found in cmd (shlex_split regression): {call_cmd!r}"
+
+
 def test_pkg_install_name():
     """
     test pkg.install name extra_install_flags
