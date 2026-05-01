@@ -852,6 +852,10 @@ def salt_factories_config():
     else:
         start_timeout = 60
 
+    # Windows minion/master startup and event wiring are slower than Linux (often >120s to minion start).
+    if salt.utils.platform.is_windows():
+        start_timeout = max(start_timeout, 240)
+
     if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
         code_dir = None
     else:

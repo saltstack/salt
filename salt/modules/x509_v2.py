@@ -1972,10 +1972,13 @@ def sign_remote_certificate(
 
 
 def _query_remote(ca_server, signing_policy, kwargs, get_signing_policy_only=False):
+    # Default publish.publish timeout is 5s; remote signing can exceed that on
+    # slow or heavily loaded CI hosts (e.g. ARM builders).
     result = __salt__["publish.publish"](
         ca_server,
         "x509.sign_remote_certificate",
         arg=[signing_policy, kwargs, get_signing_policy_only],
+        timeout=60,
     )
 
     if not result:

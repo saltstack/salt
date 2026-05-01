@@ -1417,9 +1417,13 @@ def remove(path, force=False):
     if not path.is_absolute():
         raise SaltInvocationError(f"File path must be absolute: {path}")
 
-    # Does the file/folder exists
-    if not path.exists() and not path.is_symlink():
+    # Use lstat so dangling symlinks are visible (exists()/is_symlink() alone can miss them).
+    try:
+        st = os.lstat(path)
+    except FileNotFoundError:
         raise CommandExecutionError(f"Path not found: {path}")
+    except OSError as exc:
+        raise CommandExecutionError(f"Could not stat '{path}': {exc}")
 
     # Remove ReadOnly Attribute
     file_attributes = win32api.GetFileAttributes(str(path))
@@ -1428,26 +1432,27 @@ def remove(path, force=False):
         win32api.SetFileAttributes(str(path), win32con.FILE_ATTRIBUTE_NORMAL)
 
     try:
-        if path.is_file() or path.is_symlink():
-            # A file and a symlinked file are removed the same way
+        if (
+            stat.S_ISLNK(st.st_mode)
+            or stat.S_ISREG(st.st_mode)
+            or stat.S_ISFIFO(st.st_mode)
+        ):
             path.unlink()
-        else:
-            # Twangboy: This is for troubleshooting
-            is_dir = os.path.isdir(path)
-            exists = os.path.exists(path)
+            return True
+        if stat.S_ISDIR(st.st_mode):
             # This is a directory, list its contents and remove them recursively
             for child in path.iterdir():
-                # If it's a normal directory, recurse to remove its contents
                 remove(str(child), force)
-            # rmdir will work now because the directory is empty
             path.rmdir()
+            return True
+        # Block/char device, etc.
+        path.unlink()
+        return True
     except OSError as exc:
         if force:
             # Reset attributes to the original if delete fails.
             win32api.SetFileAttributes(str(path), file_attributes)
         raise CommandExecutionError(f"Could not remove '{path}': {exc}")
-
-    return True
 
 
 def symlink(src, link, force=False, atomic=False, follow_symlinks=True):

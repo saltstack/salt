@@ -110,22 +110,33 @@ def test_list_available_packages(pip, pip_version, tmp_path):
 @pytest.mark.parametrize(
     "pip_version",
     (
-        "pip==9.0.3",
-        "pip<20.0",
-        "pip<21.0",
+        pytest.param(
+            "pip==9.0.3",
+            marks=pytest.mark.skipif(
+                sys.version_info >= (3, 10),
+                reason="'pip==9.0.3' is not available on Py >= 3.10",
+            ),
+        ),
+        pytest.param(
+            "pip<20.0",
+            marks=pytest.mark.skipif(
+                sys.version_info >= (3, 12),
+                reason="pip 19.x requires stdlib distutils, removed in Python 3.12",
+            ),
+        ),
+        pytest.param(
+            "pip<21.0",
+            marks=pytest.mark.skipif(
+                sys.version_info >= (3, 12),
+                reason="pip 20.x requires stdlib distutils, removed in Python 3.12",
+            ),
+        ),
         "pip>=21.0",
     ),
 )
 def test_list_available_packages_with_index_url(pip, pip_version, tmp_path):
     if sys.version_info < (3, 6) and pip_version == "pip>=21.0":
         pytest.skip(f"{pip_version} is not available on Py3.5")
-    if sys.version_info >= (3, 10) and pip_version == "pip==9.0.3":
-        pytest.skip(f"{pip_version} is not available on Py3.10")
-    if sys.version_info >= (3, 12) and pip_version in ("pip<20.0", "pip<21.0"):
-        pytest.skip(
-            f"{pip_version} depends on the removed 'distutils' stdlib module on"
-            " Py >= 3.12"
-        )
     with VirtualEnv(venv_dir=tmp_path, pip_requirement=pip_version) as virtualenv:
         virtualenv.install("-U", pip_version)
         package_name = "pep8"

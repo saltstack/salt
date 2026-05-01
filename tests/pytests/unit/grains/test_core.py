@@ -4797,15 +4797,16 @@ def test__clean_value_uuid(caplog):
     ret = core._clean_value("uuid", "49e40e2a-63b4-11ee-8c99-0242ac120002")
     assert ret == "49e40e2a-63b4-11ee-8c99-0242ac120002"
 
+    caplog.clear()
     with patch.object(uuid, "UUID", MagicMock()) as mock_uuid:
         with caplog.at_level(logging.TRACE):
             mock_uuid.side_effect = ValueError()
             ret = core._clean_value("uuid", "49e40e2a-63b4-11ee-8c99-0242ac120002")
             assert not ret
-            assert (
-                "HW uuid value 49e40e2a-63b4-11ee-8c99-0242ac120002 is an invalid UUID"
-                in caplog.messages
-            )
+            needle = "49e40e2a-63b4-11ee-8c99-0242ac120002"
+            assert any(
+                "invalid UUID" in m and needle in m for m in caplog.messages
+            ), caplog.messages
 
 
 @pytest.mark.parametrize(

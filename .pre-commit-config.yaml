@@ -2034,8 +2034,10 @@ repos:
           - --
         additional_dependencies:
           - nox==2022.11.21
-          - setuptools<58.0
-          - pip>=20.2.4,<21.2
+          # Pip/setuptools pins must run on the hook interpreter (Python 3.12+ in CI):
+          # pip 20.x still imports distutils, removed from the stdlib in 3.12.
+          - setuptools>=65.6.3,<66
+          - pip>=23.3.2,<24.0
 
   - repo: local
     hooks:
@@ -2050,6 +2052,6 @@ repos:
           - --
         additional_dependencies:
           - nox==2022.11.21
-          - setuptools<58.0
-          - pip>=20.2.4,<21.2
+          - setuptools>=65.6.3,<66
+          - pip>=23.3.2,<24.0
   # <---- Pre-Commit -------------------------------------------------------------------------------------------------

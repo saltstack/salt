@@ -1612,27 +1612,23 @@ class VirtualEnv:
 
     @pip_requirement.default
     def _default_pip_requirement(self):
-        if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
-            if sys.version_info >= (3, 12):
-                # pip <23.2 vendors pkg_resources that depends on the removed
-                # ``pkgutil.ImpImporter`` on Python 3.12+.
-                return "pip>=23.2,<25.0"
-            return "pip>=22.3.1,<23.0"
         if sys.version_info >= (3, 12):
+            # pip <23.2 vendors pkg_resources that depends on the removed
+            # ``pkgutil.ImpImporter`` on Python 3.12+.
             return "pip>=23.2,<25.0"
+        if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
+            return "pip>=22.3.1,<23.0"
         return "pip>=20.2.4,<21.2"
 
     @setuptools_requirement.default
     def _default_setuptools_requirement(self):
+        if sys.version_info >= (3, 12):
+            # setuptools dropped support for Python 3.12 in versions older
+            # than 68.1; require a version that supports Python 3.12.
+            return "setuptools>=68.1.0"
         if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
-            if sys.version_info >= (3, 12):
-                # setuptools <68 dropped support for Python 3.12 only in 68.1+;
-                # require a version that supports Python 3.12.
-                return "setuptools>=68.1.0"
             # https://github.com/pypa/setuptools/commit/137ab9d684075f772c322f455b0dd1f992ddcd8f
             return "setuptools>=65.6.3,<66"
-        if sys.version_info >= (3, 12):
-            return "setuptools>=68.1.0"
         return "setuptools!=50.*,!=51.*,!=52.*,<59"
 
     @venv_dir.default
@@ -1771,6 +1767,10 @@ class VirtualEnv:
         ]
         if self.system_site_packages:
             cmd.append("--system-site-packages")
+        # Embedded seed wheels can ship pip that breaks on CPython 3.12 (e.g. pkgutil.ImpImporter).
+        # Fetching seeds avoids running legacy pip before our install() pin can apply.
+        if sys.version_info >= (3, 12):
+            cmd.append("--download")
         cmd.append(str(self.venv_dir))
         self.run(*cmd, cwd=str(self.venv_dir.parent))
         self.install(

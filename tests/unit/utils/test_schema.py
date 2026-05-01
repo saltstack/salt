@@ -726,7 +726,11 @@ class ConfigTestCase(TestCase):
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": "the item"}, TestConf.serialize())
-        self.assertIn("is too short", excinfo.exception.message)
+        _msg = excinfo.exception.message
+        self.assertTrue(
+            "is too short" in _msg or "non-empty" in _msg.lower(),
+            msg=_msg,
+        )
 
         class TestConf(schema.Schema):
             item = schema.StringItem(
@@ -1553,7 +1557,11 @@ class ConfigTestCase(TestCase):
                 TestConf.serialize(),
                 format_checker=jsonschema.FormatChecker(),
             )
-        self.assertIn("is too short", excinfo.exception.message)
+        _msg = excinfo.exception.message
+        self.assertTrue(
+            "is too short" in _msg or "non-empty" in _msg.lower(),
+            msg=_msg,
+        )
 
         class TestConf(schema.Schema):
             item = schema.ArrayItem(

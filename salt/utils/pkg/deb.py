@@ -550,7 +550,11 @@ class SourcesList:
         if os.path.isdir(partsdir):
             for file in os.listdir(partsdir):
                 if file.endswith(".sources") or file.endswith(".list"):
-                    self.load(os.path.join(partsdir, file))
+                    path = os.path.join(partsdir, file)
+                    # Ignore subdirectories (e.g. mistaken "something.list" dirs);
+                    # APT only reads regular files here.
+                    if os.path.isfile(path):
+                        self.load(path)
 
     def __iter__(self):
         """

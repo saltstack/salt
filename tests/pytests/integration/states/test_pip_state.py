@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 
 import pytest
 
@@ -34,13 +35,28 @@ def _extra_requirements():
 @pytest.mark.parametrize(
     "pip_contraint",
     [
-        # Latest pip 18
-        "<19.0",
-        # Latest pip 19
-        "<20.0",
-        # Latest pip 20
-        "<21.0",
-        # Latest pip
+        pytest.param(
+            "<19.0",
+            marks=pytest.mark.skipif(
+                sys.version_info >= (3, 12),
+                reason="pip 18.x is incompatible with Python 3.12 (removed pkgutil.ImpImporter)",
+            ),
+        ),
+        pytest.param(
+            "<20.0",
+            marks=pytest.mark.skipif(
+                sys.version_info >= (3, 12),
+                reason="pip 19.x is incompatible with Python 3.12 (removed pkgutil.ImpImporter)",
+            ),
+        ),
+        pytest.param(
+            "<21.0",
+            marks=pytest.mark.skipif(
+                sys.version_info >= (3, 12),
+                reason="pip 20.x is incompatible with Python 3.12 (removed pkgutil.ImpImporter)",
+            ),
+        ),
+        # Latest pip (unchanged)
         None,
     ],
 )

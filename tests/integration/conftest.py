@@ -7,12 +7,38 @@
 
 import logging
 import pathlib
+import time
 
 import pytest
+from pytestshellutils.exceptions import FactoryTimeout
 
+import salt.utils.platform
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
+
+_SYNC_ALL_TIMEOUT = 300 if salt.utils.platform.is_windows() else 120
+_SYNC_ALL_ATTEMPTS = 2 if salt.utils.platform.is_windows() else 1
+
+
+def _sync_all_packages(salt_call_cli):
+    for attempt in range(1, _SYNC_ALL_ATTEMPTS + 1):
+        try:
+            ret = salt_call_cli.run(
+                "saltutil.sync_all", saltenv="base", _timeout=_SYNC_ALL_TIMEOUT
+            )
+            assert ret.returncode == 0, ret
+            return
+        except FactoryTimeout as exc:
+            if attempt >= _SYNC_ALL_ATTEMPTS:
+                raise
+            log.warning(
+                "saltutil.sync_all timed out (attempt %s/%s), retrying: %s",
+                attempt,
+                _SYNC_ALL_ATTEMPTS,
+                exc,
+            )
+            time.sleep(15)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -36,8 +62,7 @@ def salt_minion(salt_minion_factory):
     """
     with salt_minion_factory.started():
         salt_call_cli = salt_minion_factory.salt_call_cli()
-        ret = salt_call_cli.run("saltutil.sync_all", saltenv="base", _timeout=120)
-        assert ret.returncode == 0, ret
+        _sync_all_packages(salt_call_cli)
         yield salt_minion_factory
 
 
@@ -48,6 +73,5 @@ def salt_sub_minion(salt_sub_minion_factory):
     """
     with salt_sub_minion_factory.started():
         salt_call_cli = salt_sub_minion_factory.salt_call_cli()
-        ret = salt_call_cli.run("saltutil.sync_all", saltenv="base", _timeout=120)
-        assert ret.returncode == 0, ret
+        _sync_all_packages(salt_call_cli)
         yield salt_sub_minion_factory

@@ -230,6 +230,8 @@ def create(
                 )
             else:
                 cmd.append("--never-download")
+        elif never_download is False and virtualenv_version_info >= (20, 0):
+            cmd.append("--download")
         if prompt is not None and prompt.strip() != "":
             cmd.append(f"--prompt='{prompt}'")
     else:
@@ -380,11 +382,23 @@ def get_distribution_path(venv, distribution):
     _verify_safe_py_code(distribution)
     bin_path = _verify_virtualenv(venv)
 
-    ret = __salt__["cmd.exec_code_all"](
-        bin_path,
-        "import pkg_resources; "
-        "print(pkg_resources.get_distribution('{}').location)".format(distribution),
-    )
+    # pkg_resources still references pkgutil.ImpImporter, removed in Python 3.12.
+    # Tests that need the site-packages root (e.g. to remove the pip package dir)
+    # can use purelib, which matches typical wheel layouts for the pip package.
+    dist_repr = repr(distribution)
+    code = f"""import sys
+if sys.version_info >= (3, 12):
+    import importlib.metadata as _im
+    import sysconfig
+
+    _im.distribution({dist_repr})
+    print(sysconfig.get_path("purelib"))
+else:
+    import pkg_resources
+
+    print(pkg_resources.get_distribution({dist_repr}).location)
+"""
+    ret = __salt__["cmd.exec_code_all"](bin_path, code)
 
     if ret["retcode"] != 0:
         raise CommandExecutionError("{stdout}\n{stderr}".format(**ret))

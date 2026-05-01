@@ -210,7 +210,8 @@ def test_config_validate():
             ssh_schemas.RosterEntryConfig.serialize(),
             format_checker=jsonschema.FormatChecker(),
         )
-    assert "is too short" in excinfo.value.message
+    _msg = excinfo.value.message
+    assert "is too short" in _msg or "non-empty" in _msg.lower(), _msg
 
     with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
         jsonschema.validate(
