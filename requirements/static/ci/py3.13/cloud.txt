@@ -409,6 +409,10 @@ psutil==6.1.0
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
+py-cpuinfo==9.0.0
+    # via
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   pytest-benchmark
 pyasn1==0.6.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
@@ -467,6 +471,7 @@ pytest==8.3.3
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/pytest.txt
+    #   pytest-benchmark
     #   pytest-custom-exit-code
     #   pytest-helpers-namespace
     #   pytest-salt-factories
@@ -475,6 +480,10 @@ pytest==8.3.3
     #   pytest-subtests
     #   pytest-system-statistics
     #   pytest-timeout
+pytest-benchmark==5.2.3
+    # via
+    #   -c requirements/static/ci/py3.13/linux.txt
+    #   -r requirements/pytest.txt
 pytest-custom-exit-code==0.3.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt

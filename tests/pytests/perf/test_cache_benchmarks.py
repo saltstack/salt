@@ -27,8 +27,6 @@ import tempfile
 
 import pytest
 
-pytest.importorskip("pytest_benchmark", reason="pytest-benchmark not installed")
-
 import salt.cache.localfs as localfs
 import salt.cache.mmap_cache as mmap_cache
 
