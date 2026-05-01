@@ -2405,7 +2405,12 @@ def remove(name=None, pkgs=None, **kwargs):
     # Check for changes in the registry
     difference = salt.utils.data.compare_dicts(old, new)
     found_chgs = all(name in difference for name in changed)
-    end_t = time.time() + 3  # give it 3 seconds to catch up.
+    # Some Windows uninstallers (e.g. Chocolatey-driven Notepad++) return retcode=0
+    # before the Add/Remove Programs registry entry is fully cleared. The default
+    # 3-second wait was racing the state-level ``pkg.list_pkgs`` post-check on CI
+    # runners, so ``pkg.removed`` reported a false failure. Give the registry up
+    # to 30 seconds to catch up; quick removes still exit on ``found_chgs``.
+    end_t = time.time() + 30
     while not found_chgs and time.time() < end_t:
         time.sleep(0.5)
         new = list_pkgs(saltenv=saltenv, refresh=False)
