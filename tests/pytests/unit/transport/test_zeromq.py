@@ -2154,7 +2154,11 @@ async def test_request_server_continue_on_errors(io_loop):
     def stop():
         server._event.set()
 
-    io_loop.call_later(0.1, stop)
+    async def stop_after_delay():
+        await asyncio.sleep(0.15)
+        stop()
+
+    asyncio.get_running_loop().create_task(stop_after_delay())
 
     await server.request_handler()
 
@@ -2178,7 +2182,11 @@ async def test_request_server_continue_on_errors_log_info(io_loop, caplog):
     def stop():
         server._event.set()
 
-    io_loop.call_later(0.1, stop)
+    async def stop_after_delay():
+        await asyncio.sleep(0.15)
+        stop()
+
+    asyncio.get_running_loop().create_task(stop_after_delay())
 
     with caplog.at_level(logging.INFO):
         await server.request_handler()
@@ -2204,7 +2212,11 @@ async def test_request_server_continue_on_errors_log_debug(io_loop, caplog):
     def stop():
         server._event.set()
 
-    io_loop.call_later(0.1, stop)
+    async def stop_after_delay():
+        await asyncio.sleep(0.15)
+        stop()
+
+    asyncio.get_running_loop().create_task(stop_after_delay())
 
     with caplog.at_level(logging.DEBUG):
         await server.request_handler()

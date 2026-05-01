@@ -24,9 +24,12 @@ def _sync_all_packages(salt_call_cli):
     """Run saltutil.sync_all; retry on Windows when salt-call times out (ZMQ / auth flakes)."""
     for attempt in range(1, _SYNC_ALL_ATTEMPTS + 1):
         try:
-            ret = salt_call_cli.run(
-                "saltutil.sync_all", saltenv="base", _timeout=_SYNC_ALL_TIMEOUT
-            )
+            # saltenv=base avoids slow top-file env discovery on Windows onedir CI only.
+            # On Linux, passing saltenv can leave saltutil.sync_all stuck for sub-minion fixtures.
+            kwargs = {"_timeout": _SYNC_ALL_TIMEOUT}
+            if salt.utils.platform.is_windows():
+                kwargs["saltenv"] = "base"
+            ret = salt_call_cli.run("saltutil.sync_all", **kwargs)
             assert ret.returncode == 0, ret
             return
         except FactoryTimeout as exc:
@@ -57,7 +60,6 @@ def salt_minion(salt_master, salt_minion_factory):
     """
     assert salt_master.is_running()
     with salt_minion_factory.started():
-        # saltenv=base skips HighState top env discovery in each sync (avoids long master RPC during salt-call).
         salt_call_cli = salt_minion_factory.salt_call_cli()
         _sync_all_packages(salt_call_cli)
         yield salt_minion_factory

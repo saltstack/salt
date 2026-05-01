@@ -82,12 +82,11 @@ def run():
                 ]
             }
 
-    # Import required for all OS'es
-    for import_name in [
-        "jinja2",
-        "telnetlib",
-        "yaml",
-    ]:
+    # Import required for all OS'es (telnetlib was removed from the stdlib in Python 3.13)
+    core_libs = ["jinja2", "yaml"]
+    if sys.version_info < (3, 13):
+        core_libs.insert(1, "telnetlib")
+    for import_name in core_libs:
         try:
             importlib.import_module(import_name)
             config[import_name] = {

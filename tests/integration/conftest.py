@@ -24,9 +24,10 @@ _SYNC_ALL_ATTEMPTS = 2 if salt.utils.platform.is_windows() else 1
 def _sync_all_packages(salt_call_cli):
     for attempt in range(1, _SYNC_ALL_ATTEMPTS + 1):
         try:
-            ret = salt_call_cli.run(
-                "saltutil.sync_all", saltenv="base", _timeout=_SYNC_ALL_TIMEOUT
-            )
+            kwargs = {"_timeout": _SYNC_ALL_TIMEOUT}
+            if salt.utils.platform.is_windows():
+                kwargs["saltenv"] = "base"
+            ret = salt_call_cli.run("saltutil.sync_all", **kwargs)
             assert ret.returncode == 0, ret
             return
         except FactoryTimeout as exc:

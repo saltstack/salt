@@ -885,9 +885,10 @@ def installed(
             )
         # If we fail, then just send False, and we'll try again in the next function call
         except Exception as exc:  # pylint: disable=broad-except
-            logger.exception(
+            logger.warning(
                 "Pre-caching of PIP packages during states.pip.installed failed by exception from pip.list: %s",
                 exc,
+                exc_info=True,
             )
             pip_list = False
 

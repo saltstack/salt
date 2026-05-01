@@ -852,8 +852,11 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                     reply = await self.handle_message(None, request)
                     await self._socket.send(self.encode_payload(reply))
                 except zmq.error.Again:
+                    # Yield so the event loop can run other callbacks (e.g. test timers).
+                    await asyncio.sleep(0)
                     continue
                 except asyncio.exceptions.TimeoutError:
+                    await asyncio.sleep(0)
                     continue
                 except (asyncio.CancelledError, zmq.eventloop.future.CancelledError):
                     break
@@ -863,6 +866,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                         exc,
                         exc_info_on_loglevel=logging.DEBUG,
                     )
+                    await asyncio.sleep(0)
                     continue
         finally:
             log.trace("RequestServer.request_handler exiting")
