@@ -1,5 +1,5 @@
 """
-Salt runner for PKI index management.
+Salt runner for PKI key management utilities.
 
 .. versionadded:: 3009.0
 """
@@ -9,76 +9,93 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def rebuild_index(dry_run=False):
+def migrate_to_mmap(dry_run=False):
     """
-    Rebuild the PKI mmap index from filesystem.
+    Migrate PKI keys from the legacy filesystem layout into the mmap_key backend.
 
-    With dry_run=True, shows what would be rebuilt without making changes.
+    Scans ``pki_dir`` for existing accepted/pending/rejected/denied keys and
+    loads them into the mmap_key index+heap files.  Safe to run repeatedly —
+    already-present keys are overwritten in-place.
+
+    With ``dry_run=True``, counts the keys that *would* be migrated without
+    writing anything.
 
     CLI Examples:
 
     .. code-block:: bash
 
-        # Rebuild the index
-        salt-run pki.rebuild_index
+        # Preview what would be migrated
+        salt-run pki.migrate_to_mmap dry_run=True
 
-        # Check status without rebuilding (dry-run)
-        salt-run pki.rebuild_index dry_run=True
+        # Perform the migration
+        salt-run pki.migrate_to_mmap
     """
-    from salt.cache import localfs_key  # pylint: disable=import-outside-toplevel
+    import os  # pylint: disable=import-outside-toplevel
 
-    stats_before = localfs_key.get_index_stats(__opts__)
+    pki_dir = __opts__.get("pki_dir", "")
+
+    state_dirs = {
+        "minions": "accepted",
+        "minions_pre": "pending",
+        "minions_rejected": "rejected",
+    }
+
+    counts = {"accepted": 0, "pending": 0, "rejected": 0, "denied": 0}
+
+    for dir_name, state in state_dirs.items():
+        dir_path = os.path.join(pki_dir, dir_name)
+        if not os.path.isdir(dir_path):
+            continue
+        try:
+            with os.scandir(dir_path) as it:
+                for entry in it:
+                    if not entry.is_file() or entry.is_symlink():
+                        continue
+                    if not entry.name.startswith("."):
+                        counts[state] += 1
+        except OSError as exc:
+            log.error("pki.migrate_to_mmap: cannot scan %s: %s", dir_path, exc)
+
+    denied_path = os.path.join(pki_dir, "minions_denied")
+    if os.path.isdir(denied_path):
+        try:
+            with os.scandir(denied_path) as it:
+                for entry in it:
+                    if entry.is_file() and not entry.is_symlink():
+                        counts["denied"] += 1
+        except OSError as exc:
+            log.error("pki.migrate_to_mmap: cannot scan %s: %s", denied_path, exc)
+
+    total = sum(counts.values())
 
     if dry_run:
-        if not stats_before:
-            return "PKI index does not exist or is not accessible."
-
-        pct_tombstones = (
-            (
-                stats_before["deleted"]
-                / (stats_before["occupied"] + stats_before["deleted"])
-                * 100
-            )
-            if (stats_before["occupied"] + stats_before["deleted"]) > 0
-            else 0
-        )
-
         return (
-            f"PKI Index Status:\n"
-            f"  Total slots: {stats_before['total']:,}\n"
-            f"  Occupied: {stats_before['occupied']:,}\n"
-            f"  Deleted (tombstones): {stats_before['deleted']:,}\n"
-            f"  Empty: {stats_before['empty']:,}\n"
-            f"  Load factor: {stats_before['load_factor']:.1%}\n"
-            f"  Tombstone ratio: {pct_tombstones:.1f}%\n"
-            f"\n"
-            f"Rebuild recommended: {'Yes' if pct_tombstones > 25 else 'No'}"
+            f"PKI migration dry-run (no changes written):\n"
+            f"  Accepted: {counts['accepted']:,}\n"
+            f"  Pending:  {counts['pending']:,}\n"
+            f"  Rejected: {counts['rejected']:,}\n"
+            f"  Denied:   {counts['denied']:,}\n"
+            f"  Total:    {total:,}"
         )
 
-    # Perform rebuild
-    log.info("Starting PKI index rebuild")
-    result = localfs_key.rebuild_index(__opts__)
+    from salt.cache import mmap_key  # pylint: disable=import-outside-toplevel
 
-    if not result:
-        return "PKI index rebuild failed. Check logs for details."
+    mmap_key.__opts__ = __opts__
+    result = mmap_key.rebuild_from_localfs(__opts__)
 
-    stats_after = localfs_key.get_index_stats(__opts__)
-
-    if stats_before and stats_after:
-        tombstones_removed = stats_before["deleted"]
-        return (
-            f"PKI index rebuilt successfully.\n"
-            f"  Keys: {stats_after['occupied']:,}\n"
-            f"  Tombstones removed: {tombstones_removed:,}\n"
-            f"  Load factor: {stats_after['load_factor']:.1%}"
-        )
-    else:
-        return "PKI index rebuilt successfully."
+    return (
+        f"PKI keys migrated to mmap_key backend successfully.\n"
+        f"  Accepted: {result['accepted']:,}\n"
+        f"  Pending:  {result['pending']:,}\n"
+        f"  Rejected: {result['rejected']:,}\n"
+        f"  Denied:   {result['denied']:,}\n"
+        f"  Total:    {sum(result.values()):,}"
+    )
 
 
 def status():
     """
-    Show PKI index statistics.
+    Show PKI key counts from the filesystem layout.
 
     CLI Example:
 
@@ -86,5 +103,4 @@ def status():
 
         salt-run pki.status
     """
-    # Just call rebuild_index with dry_run=True
-    return rebuild_index(dry_run=True)
+    return migrate_to_mmap(dry_run=True)

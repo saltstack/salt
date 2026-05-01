@@ -8,82 +8,89 @@ from tests.support.mock import patch
 def opts(tmp_path):
     pki_dir = tmp_path / "pki"
     pki_dir.mkdir()
-    # Create directories
-    for subdir in ["minions", "minions_pre", "minions_rejected"]:
+    for subdir in ["minions", "minions_pre", "minions_rejected", "minions_denied"]:
         (pki_dir / subdir).mkdir()
-
     return {
         "pki_dir": str(pki_dir),
         "sock_dir": str(tmp_path / "sock"),
         "cachedir": str(tmp_path / "cache"),
-        "pki_index_enabled": True,
-        "pki_index_size": 100,
-        "pki_index_slot_size": 64,
     }
 
 
-def test_status_empty_index(opts):
-    """Test status when index is empty (no keys)"""
+def _patch_opts(opts):
     if not hasattr(salt.runners.pki, "__opts__"):
         salt.runners.pki.__opts__ = {}
-    with patch.dict(salt.runners.pki.__opts__, opts):
+    return patch.dict(salt.runners.pki.__opts__, opts)
+
+
+def test_status_empty(opts):
+    """status() on an empty pki_dir reports zero keys."""
+    with _patch_opts(opts):
         result = salt.runners.pki.status()
-        # Empty index should show 0 occupied keys
-        assert "Occupied: 0" in result
-        assert "PKI Index Status" in result
+    assert "Total:    0" in result
+    assert "dry-run" in result.lower()
 
 
-def test_rebuild_index(opts, tmp_path):
-    """Test rebuilding index from filesystem"""
+def test_status_counts_keys(opts, tmp_path):
+    """status() counts keys in each state directory."""
     pki_dir = tmp_path / "pki"
+    (pki_dir / "minions" / "minion1").write_text("pub1")
+    (pki_dir / "minions" / "minion2").write_text("pub2")
+    (pki_dir / "minions_pre" / "minion3").write_text("pub3")
+    (pki_dir / "minions_rejected" / "minion4").write_text("pub4")
 
-    # Create some keys
-    (pki_dir / "minions" / "minion1").write_text("fake_key_1")
-    (pki_dir / "minions" / "minion2").write_text("fake_key_2")
-    (pki_dir / "minions_pre" / "minion3").write_text("fake_key_3")
+    with _patch_opts(opts):
+        result = salt.runners.pki.status()
 
-    if not hasattr(salt.runners.pki, "__opts__"):
-        salt.runners.pki.__opts__ = {}
-    with patch.dict(salt.runners.pki.__opts__, {**opts, "pki_index_enabled": True}):
-        result = salt.runners.pki.rebuild_index()
-        assert "successfully" in result
-        assert "3" in result  # Should show 3 keys
+    assert "Accepted: 2" in result
+    assert "Pending:  1" in result
+    assert "Rejected: 1" in result
+    assert "Total:    4" in result
 
 
-def test_rebuild_index_dry_run(opts, tmp_path):
-    """Test dry-run shows stats without modifying index"""
+def test_migrate_dry_run(opts, tmp_path):
+    """migrate_to_mmap(dry_run=True) counts keys without writing mmap files."""
     pki_dir = tmp_path / "pki"
+    (pki_dir / "minions" / "minion1").write_text("pub1")
+    (pki_dir / "minions" / "minion2").write_text("pub2")
 
-    # Create some keys
-    (pki_dir / "minions" / "minion1").write_text("fake_key_1")
-    (pki_dir / "minions" / "minion2").write_text("fake_key_2")
+    with _patch_opts(opts):
+        result = salt.runners.pki.migrate_to_mmap(dry_run=True)
 
-    if not hasattr(salt.runners.pki, "__opts__"):
-        salt.runners.pki.__opts__ = {}
-    with patch.dict(salt.runners.pki.__opts__, opts):
-        # First rebuild to create index
-        salt.runners.pki.rebuild_index()
+    assert "dry-run" in result.lower()
+    assert "Accepted: 2" in result
+    assert "Total:    2" in result
 
-        # Now dry-run
-        result = salt.runners.pki.rebuild_index(dry_run=True)
-        assert "PKI Index Status" in result
-        assert "Occupied" in result
-        assert "Tombstone" in result
+    # No mmap index files should have been written
+    import os
+
+    mmap_files = [
+        f
+        for f in os.listdir(opts["pki_dir"])
+        if f.endswith(".idx") or f.endswith(".heap")
+    ]
+    assert mmap_files == []
 
 
-def test_status_command(opts, tmp_path):
-    """Test status command is alias for dry-run"""
+def test_status_is_dry_run_alias(opts, tmp_path):
+    """status() produces the same output as migrate_to_mmap(dry_run=True)."""
     pki_dir = tmp_path / "pki"
-    (pki_dir / "minions" / "minion1").write_text("fake_key_1")
+    (pki_dir / "minions" / "minion1").write_text("pub1")
 
-    if not hasattr(salt.runners.pki, "__opts__"):
-        salt.runners.pki.__opts__ = {}
-    with patch.dict(salt.runners.pki.__opts__, opts):
-        # Build index first
-        salt.runners.pki.rebuild_index()
+    with _patch_opts(opts):
+        assert salt.runners.pki.status() == salt.runners.pki.migrate_to_mmap(
+            dry_run=True
+        )
 
-        # Status should give same output as dry-run
-        status_result = salt.runners.pki.status()
-        dry_run_result = salt.runners.pki.rebuild_index(dry_run=True)
 
-        assert status_result == dry_run_result
+def test_status_ignores_dotfiles(opts, tmp_path):
+    """Hidden files (e.g. .key_cache) are not counted."""
+    pki_dir = tmp_path / "pki"
+    (pki_dir / "minions" / ".key_cache").write_text("ignore me")
+    (pki_dir / "minions" / "real_minion").write_text("pub")
+
+    with _patch_opts(opts):
+        result = salt.runners.pki.status()
+
+    assert "Accepted: 1" in result
+    assert "Total:    1" in result
