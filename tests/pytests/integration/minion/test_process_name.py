@@ -2,6 +2,25 @@
 Test process name behavior with multiprocessing enabled and disabled.
 """
 
+from tests.conftest import FIPS_TESTRUN
+
+
+def _master_fips_overrides():
+    return {
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
+    }
+
+
+def _minion_fips_overrides():
+    return {
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": ("PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"),
+    }
+
 
 def test_process_name_no_pollution_when_multiprocessing_disabled(
     salt_master_factory,
@@ -15,12 +34,15 @@ def test_process_name_no_pollution_when_multiprocessing_disabled(
     "Minion._thread_return" with each job execution.
     """
     # Create a fresh master for this test
-    master = salt_master_factory.salt_master_daemon("test-process-name-master")
+    master = salt_master_factory.salt_master_daemon(
+        "test-process-name-master",
+        overrides=_master_fips_overrides(),
+    )
 
     # Create a fresh minion with multiprocessing=False
     minion = master.salt_minion_daemon(
         "test-process-name-minion-no-mp",
-        overrides={"multiprocessing": False},
+        overrides={"multiprocessing": False, **_minion_fips_overrides()},
     )
 
     cli = master.salt_cli()
@@ -69,12 +91,15 @@ def test_process_name_normal_when_multiprocessing_enabled(
     so the main minion process name should remain clean.
     """
     # Create a fresh master for this test
-    master = salt_master_factory.salt_master_daemon("test-process-name-master-mp")
+    master = salt_master_factory.salt_master_daemon(
+        "test-process-name-master-mp",
+        overrides=_master_fips_overrides(),
+    )
 
     # Create a fresh minion with multiprocessing=True
     minion = master.salt_minion_daemon(
         "test-process-name-minion-with-mp",
-        overrides={"multiprocessing": True},
+        overrides={"multiprocessing": True, **_minion_fips_overrides()},
     )
 
     cli = master.salt_cli()
@@ -122,11 +147,15 @@ def test_process_name_includes_minion_process_manager(
     process title even when running in MainProcess (e.g., with --disable-keepalive).
     """
     # Create a fresh master for this test
-    master = salt_master_factory.salt_master_daemon("test-process-name-master-pm")
+    master = salt_master_factory.salt_master_daemon(
+        "test-process-name-master-pm",
+        overrides=_master_fips_overrides(),
+    )
 
     # Create a fresh minion
     minion = master.salt_minion_daemon(
         "test-process-name-minion-pm",
+        overrides=_minion_fips_overrides(),
     )
 
     cli = master.salt_cli()

@@ -6,11 +6,22 @@ executed after minion start.
 
 import pytest
 
+from tests.conftest import FIPS_TESTRUN
+
+
+def _fips_overrides():
+    return {
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": ("PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"),
+    }
+
 
 @pytest.fixture
 def salt_minion_startup_states_empty_string(salt_master, salt_minion_id):
     config_overrides = {
         "startup_states": "",
+        **_fips_overrides(),
     }
     factory = salt_master.salt_minion_daemon(
         f"{salt_minion_id}-empty-string",
@@ -24,6 +35,7 @@ def salt_minion_startup_states_empty_string(salt_master, salt_minion_id):
 def salt_minion_startup_states_highstate(salt_master, salt_minion_id):
     config_overrides = {
         "startup_states": "highstate",
+        **_fips_overrides(),
     }
     factory = salt_master.salt_minion_daemon(
         f"{salt_minion_id}-highstate",
@@ -35,7 +47,11 @@ def salt_minion_startup_states_highstate(salt_master, salt_minion_id):
 
 @pytest.fixture
 def salt_minion_startup_states_sls(salt_master, salt_minion_id):
-    config_overrides = {"startup_states": "sls", "sls_list": ["example-sls"]}
+    config_overrides = {
+        "startup_states": "sls",
+        "sls_list": ["example-sls"],
+        **_fips_overrides(),
+    }
     factory = salt_master.salt_minion_daemon(
         f"{salt_minion_id}-sls",
         overrides=config_overrides,
@@ -46,7 +62,11 @@ def salt_minion_startup_states_sls(salt_master, salt_minion_id):
 
 @pytest.fixture
 def salt_minion_startup_states_top(salt_master, salt_minion_id):
-    config_overrides = {"startup_states": "top", "top_file": "example-top.sls"}
+    config_overrides = {
+        "startup_states": "top",
+        "top_file": "example-top.sls",
+        **_fips_overrides(),
+    }
     factory = salt_master.salt_minion_daemon(
         f"{salt_minion_id}-top",
         overrides=config_overrides,
