@@ -69,6 +69,8 @@ env:
   PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   RAISE_DEPRECATIONS_RUNTIME_ERRORS: ${{ inputs.raise-deprecations-runtime-errors }}
+  # Line-buffer Python on the runner; docker exec still passes this into the test container explicitly.
+  PYTHONUNBUFFERED: "1"
 
 jobs:
 
@@ -234,7 +236,7 @@ jobs:
 
       - name: Decompress .nox Directory
         run: |
-          docker exec ${{ github.run_id}}_salt-test python3 -m nox --force-color -e decompress-dependencies -- linux ${{ matrix.arch }}
+          docker exec -e PYTHONUNBUFFERED=1 ${{ github.run_id}}_salt-test python3 -m nox --force-color -e decompress-dependencies -- linux ${{ matrix.arch }}
 
       - name: Create relenv toolchain symlink
         run: |
@@ -313,14 +315,14 @@ jobs:
         id: run-fast-changed-tests
         if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' }}
         run: |
-          docker exec ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+          docker exec -e PYTHONUNBUFFERED=1 ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --core-tests --slow-tests --suppress-no-test-exit-code --from-filenames=testrun-changed-files.txt
 
       - name: Run Fast Tests
         id: run-fast-tests
         if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] }}
         run: |
-          docker exec ${{ github.run_id}}_salt-test \
+          docker exec -e PYTHONUNBUFFERED=1 ${{ github.run_id}}_salt-test \
             python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code
 
@@ -328,7 +330,7 @@ jobs:
         id: run-slow-tests
         if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] }}
         run: |
-          docker exec ${{ github.run_id}}_salt-test \
+          docker exec -e PYTHONUNBUFFERED=1 ${{ github.run_id}}_salt-test \
             python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code --no-fast-tests --slow-tests
 
@@ -336,7 +338,7 @@ jobs:
         id: run-core-tests
         if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] }}
         run: |
-          docker exec ${{ github.run_id}}_salt-test \
+          docker exec -e PYTHONUNBUFFERED=1 ${{ github.run_id}}_salt-test \
             python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code --no-fast-tests --core-tests
 
@@ -344,7 +346,7 @@ jobs:
         id: run-flaky-tests
         if: ${{ !cancelled() && fromJSON(inputs.testrun)['selected_tests']['flaky'] }}
         run: |
-          docker exec ${{ github.run_id}}_salt-test \
+          docker exec -e PYTHONUNBUFFERED=1 ${{ github.run_id}}_salt-test \
             python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code --no-fast-tests --flaky-jail
 
@@ -352,23 +354,32 @@ jobs:
         id: run-full-tests
         if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] == 'full' }}
         run: |
-          docker exec ${{ github.run_id}}_salt-test \
+          docker exec -e PYTHONUNBUFFERED=1 ${{ github.run_id}}_salt-test \
             python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --slow-tests --core-tests --test-group-count=${{ matrix.test-group-count || 1 }} --test-group=${{ matrix.test-group || 1 }}
 
-      - name: Stop Container
+      - name: Sync filesystem in test container
+        if: always()
         run: |
-          docker container stop ${{ github.run_id}}_salt-test
+          docker exec ${{ github.run_id}}_salt-test sync 2>/dev/null || true
+
+      - name: Stop Container
+        if: always()
+        run: |
+          docker container stop ${{ github.run_id}}_salt-test || true
 
       - name: Remove Container
+        if: always()
         run: |
-          docker container rm ${{ github.run_id}}_salt-test
+          docker container rm ${{ github.run_id}}_salt-test || true
 
       - name: Remove Container Image
+        if: always()
         run: |
-          docker image rm ${{ matrix.container }}
+          docker image rm ${{ matrix.container }} || true
 
       - name: Fix file ownership
+        if: always()
         run: |
           sudo chown -R "$(id -un)" .
 
@@ -379,6 +390,7 @@ jobs:
           # Delete the salt onedir, we won't need it anymore and it will prevent
           # from it showing in the tree command below
           sudo rm -rf artifacts/salt*
+          sync || true
           tree -a artifacts
 
       - name: Combine Code Coverage
@@ -586,7 +598,7 @@ jobs:
 
       - name: Decompress .nox Directory
         run: |
-          docker exec ${{ github.run_id}}_salt-test python3 -m nox --force-color -e decompress-dependencies -- linux ${{ matrix.arch }}
+          docker exec -e PYTHONUNBUFFERED=1 ${{ github.run_id}}_salt-test python3 -m nox --force-color -e decompress-dependencies -- linux ${{ matrix.arch }}
 
       - name: Create relenv toolchain symlink
         run: |
@@ -665,14 +677,14 @@ jobs:
         id: run-fast-changed-tests
         if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' }}
         run: |
-          docker exec ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
+          docker exec -e PYTHONUNBUFFERED=1 ${{ github.run_id}}_salt-test python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --core-tests --slow-tests --suppress-no-test-exit-code --from-filenames=testrun-changed-files.txt
 
       - name: Run Fast Tests
         id: run-fast-tests
         if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] }}
         run: |
-          docker exec ${{ github.run_id}}_salt-test \
+          docker exec -e PYTHONUNBUFFERED=1 ${{ github.run_id}}_salt-test \
             python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code
 
@@ -680,7 +692,7 @@ jobs:
         id: run-slow-tests
         if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] }}
         run: |
-          docker exec ${{ github.run_id}}_salt-test \
+          docker exec -e PYTHONUNBUFFERED=1 ${{ github.run_id}}_salt-test \
             python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code --no-fast-tests --slow-tests
 
@@ -688,7 +700,7 @@ jobs:
         id: run-core-tests
         if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] }}
         run: |
-          docker exec ${{ github.run_id}}_salt-test \
+          docker exec -e PYTHONUNBUFFERED=1 ${{ github.run_id}}_salt-test \
             python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code --no-fast-tests --core-tests
 
@@ -696,7 +708,7 @@ jobs:
         id: run-flaky-tests
         if: ${{ !cancelled() && fromJSON(inputs.testrun)['selected_tests']['flaky'] }}
         run: |
-          docker exec ${{ github.run_id}}_salt-test \
+          docker exec -e PYTHONUNBUFFERED=1 ${{ github.run_id}}_salt-test \
             python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --suppress-no-test-exit-code --no-fast-tests --flaky-jail
 
@@ -704,23 +716,32 @@ jobs:
         id: run-full-tests
         if: ${{ !cancelled() && fromJSON(inputs.testrun)['type'] == 'full' }}
         run: |
-          docker exec ${{ github.run_id}}_salt-test \
+          docker exec -e PYTHONUNBUFFERED=1 ${{ github.run_id}}_salt-test \
             python3 -m nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.tests-chunk }} -- \
             --slow-tests --core-tests --test-group-count=${{ matrix.test-group-count || 1 }} --test-group=${{ matrix.test-group || 1 }}
 
-      - name: Stop Container
+      - name: Sync filesystem in test container
+        if: always()
         run: |
-          docker container stop ${{ github.run_id}}_salt-test
+          docker exec ${{ github.run_id}}_salt-test sync 2>/dev/null || true
+
+      - name: Stop Container
+        if: always()
+        run: |
+          docker container stop ${{ github.run_id}}_salt-test || true
 
       - name: Remove Container
+        if: always()
         run: |
-          docker container rm ${{ github.run_id}}_salt-test
+          docker container rm ${{ github.run_id}}_salt-test || true
 
       - name: Remove Container Image
+        if: always()
         run: |
-          docker image rm ${{ matrix.container }}
+          docker image rm ${{ matrix.container }} || true
 
       - name: Fix file ownership
+        if: always()
         run: |
           sudo chown -R "$(id -un)" .
 
@@ -731,6 +752,7 @@ jobs:
           # Delete the salt onedir, we won't need it anymore and it will prevent
           # from it showing in the tree command below
           sudo rm -rf artifacts/salt*
+          sync || true
           tree -a artifacts
 
       - name: Combine Code Coverage
@@ -1002,6 +1024,7 @@ jobs:
 
 
       - name: Fix file ownership
+        if: always()
         run: |
           sudo chown -R "$(id -un)" .
 
@@ -1012,6 +1035,7 @@ jobs:
           # Delete the salt onedir, we won't need it anymore and it will prevent
           # from it showing in the tree command below
           rm -rf artifacts/salt*
+          sync || true
           tree -a artifacts
 
       - name: Combine Code Coverage
@@ -1310,6 +1334,7 @@ jobs:
           # Delete the salt onedir, we won't need it anymore and it will prevent
           # from it showing in the tree command below
           rm -rf artifacts/salt*
+          sync || true
 
       - name: Combine Code Coverage
         if: ${{ !cancelled() && !inputs.skip-code-coverage }}

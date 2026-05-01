@@ -27,8 +27,15 @@ class TestsHttpClient:
         return AsyncHTTPClient(self.io_loop)
 
     async def fetch(self, path, **kwargs):
-        if "headers" not in kwargs and self.headers:
-            kwargs["headers"] = self.headers.copy()
+        # Always merge default headers with per-request headers so callers cannot
+        # accidentally drop X-Auth-Token (or other defaults) by passing headers=...
+        merged = dict(self.headers or {})
+        if "headers" in kwargs:
+            extra = kwargs.pop("headers")
+            if extra:
+                merged.update(dict(extra))
+        if merged:
+            kwargs["headers"] = merged
         try:
             response = await self.client.fetch(f"{self.address}{path}", **kwargs)
             return self._decode_body(response)

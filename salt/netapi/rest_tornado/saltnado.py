@@ -474,10 +474,10 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
         The token used for the request
         """
         # find the token (cookie or headers)
-        if AUTH_TOKEN_HEADER in self.request.headers:
-            return self.request.headers[AUTH_TOKEN_HEADER]
-        else:
-            return self.get_cookie(AUTH_COOKIE_NAME)
+        val = self.request.headers.get(AUTH_TOKEN_HEADER)
+        if val:
+            return val
+        return self.get_cookie(AUTH_COOKIE_NAME)
 
     def _verify_auth(self):
         """

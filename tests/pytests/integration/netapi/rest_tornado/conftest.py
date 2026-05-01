@@ -30,6 +30,7 @@ def app(app_urls, load_auth, client_config, minion_config, salt_sub_minion):
 @pytest.fixture
 def client_headers(auth_token, content_type_map):
     return {
+        "Accept": content_type_map["json"],
         "Content-Type": content_type_map["json"],
         saltnado.AUTH_TOKEN_HEADER: auth_token["token"],
     }
