@@ -12,6 +12,7 @@ import salt.fileserver.gitfs
 import salt.payload
 import salt.pillar.git_pillar
 import salt.runners.winrepo
+import salt.syspaths
 import salt.utils.args
 import salt.utils.gitfs
 import salt.utils.master
@@ -466,3 +467,125 @@ def flush(bank, key=None, cachedir=None):
     except TypeError:
         cache = salt.cache.Cache(__opts__)
     return cache.flush(bank, key)
+
+
+def migrate(
+    src_driver="localfs",
+    dst_driver="mmap_cache",
+    bank=None,
+    cachedir=None,
+    dry_run=False,
+):
+    """
+    Migrate cache data from one backend driver to another.
+
+    By default migrates from ``localfs`` to ``mmap_cache``, which is the
+    typical upgrade path when switching the ``cache`` option in
+    ``/etc/salt/master``.
+
+    src_driver
+        Source cache driver name (default: ``localfs``).
+
+    dst_driver
+        Destination cache driver name (default: ``mmap_cache``).
+
+    bank
+        Restrict migration to a specific bank (and all its sub-banks).
+        If omitted, all banks under ``cachedir`` are migrated.
+
+    cachedir
+        Cache root directory.  Defaults to ``opts['cachedir']``.
+
+    dry_run
+        If ``True``, scan and count entries without writing anything.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        # Preview what would be migrated
+        salt-run cache.migrate dry_run=True
+
+        # Migrate everything from localfs to mmap_cache
+        salt-run cache.migrate
+
+        # Migrate a single bank
+        salt-run cache.migrate bank=minions/alpha
+
+        # Migrate between other driver pairs
+        salt-run cache.migrate src_driver=localfs dst_driver=mmap_cache
+    """
+    if cachedir is None:
+        cachedir = __opts__.get("cachedir", salt.syspaths.CACHE_DIR)
+
+    src_opts = dict(__opts__)
+    src_opts["cache"] = src_driver
+    dst_opts = dict(__opts__)
+    dst_opts["cache"] = dst_driver
+
+    src_cache = salt.cache.Cache(src_opts, cachedir=cachedir)
+    dst_cache = salt.cache.Cache(dst_opts, cachedir=cachedir)
+
+    def _walk(root_bank):
+        """Yield (bank, key) pairs for all entries under root_bank."""
+        try:
+            entries = src_cache.list(root_bank) or []
+        except Exception:  # pylint: disable=broad-except
+            entries = []
+
+        for name in entries:
+            try:
+                is_key = src_cache.contains(root_bank, name)
+            except Exception:  # pylint: disable=broad-except
+                is_key = False
+
+            if is_key:
+                yield root_bank, name
+            else:
+                # name is a sub-bank directory — recurse
+                sub = f"{root_bank}/{name}" if root_bank else name
+                yield from _walk(sub)
+
+    # list("") returns top-level bank names (directories), not keys.
+    # _walk recurses into each one to find all keys.
+    if bank:
+        banks = [bank]
+    else:
+        try:
+            banks = src_cache.list("") or []
+        except Exception:  # pylint: disable=broad-except
+            banks = []
+
+    total = 0
+    errors = 0
+    bank_counts: dict = {}
+
+    for root in banks:
+        for b, k in _walk(root):
+            total += 1
+            bank_counts[b] = bank_counts.get(b, 0) + 1
+            if not dry_run:
+                try:
+                    data = src_cache.fetch(b, k)
+                    if data != {}:
+                        dst_cache.store(b, k, data)
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.error("cache.migrate: error copying %s/%s: %s", b, k, exc)
+                    errors += 1
+
+    action = "Would migrate" if dry_run else "Migrated"
+    lines = [
+        f"{action} {total:,} entr{'y' if total == 1 else 'ies'} "
+        f"from {src_driver!r} → {dst_driver!r}",
+        f"  cachedir: {cachedir}",
+    ]
+    if bank_counts:
+        lines.append("  Banks:")
+        for b, count in sorted(bank_counts.items()):
+            lines.append(f"    {b}: {count:,}")
+    if errors:
+        lines.append(f"  Errors: {errors:,} (check logs for details)")
+    if dry_run:
+        lines.append("  (dry-run — no data written)")
+
+    return "\n".join(lines)
