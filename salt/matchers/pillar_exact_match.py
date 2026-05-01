@@ -5,6 +5,7 @@ This is the default pillar exact matcher.
 import logging
 
 import salt.utils.data
+import salt.utils.secret
 
 log = logging.getLogger(__name__)
 
@@ -31,6 +32,7 @@ def match(tgt, delimiter=":", opts=None, minion_id=None):
     else:
         pillar = {}
 
+    pillar = salt.utils.secret.expose(pillar)
     return salt.utils.data.subdict_match(
         pillar, tgt, delimiter=delimiter, exact_match=True
     )

@@ -20,6 +20,7 @@ import logging
 import os
 
 import salt.utils.files
+import salt.utils.secret
 
 try:
     import textfsm
@@ -442,8 +443,8 @@ def index(
         log.error(ret["comment"])
         return ret
     textfsm_cachedir = os.path.dirname(textfsm_cachedir_ret[0])  # first item
-    index_file = __opts__.get("textfsm_index_file") or __pillar__.get(
-        "textfsm_index_file", "index"
+    index_file = __opts__.get("textfsm_index_file") or salt.utils.secret.expose(
+        __pillar__.get("textfsm_index_file", "index")
     )
     index_file_path = os.path.join(textfsm_cachedir, index_file)
     log.debug("Using the cached index file: %s", index_file_path)

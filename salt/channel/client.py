@@ -18,6 +18,7 @@ import salt.payload
 import salt.transport.frame
 import salt.utils.event
 import salt.utils.files
+import salt.utils.secret
 import salt.utils.stringutils
 import salt.utils.verify
 from salt.utils.asynchronous import SyncWrapper, aioloop
@@ -70,7 +71,7 @@ class AsyncReqChannel:
         if "transport" in opts:
             ttype = opts["transport"]
         elif "transport" in opts.get("pillar", {}).get("master", {}):
-            ttype = opts["pillar"]["master"]["transport"]
+            ttype = salt.utils.secret.expose(opts["pillar"]["master"]["transport"])
 
         if "master_uri" not in opts and "master_uri" in kwargs:
             opts["master_uri"] = kwargs["master_uri"]
@@ -383,7 +384,7 @@ class AsyncPubChannel:
         if "transport" in opts:
             ttype = opts["transport"]
         elif "transport" in opts.get("pillar", {}).get("master", {}):
-            ttype = opts["pillar"]["master"]["transport"]
+            ttype = salt.utils.secret.expose(opts["pillar"]["master"]["transport"])
 
         if "master_uri" not in opts and "master_uri" in kwargs:
             opts["master_uri"] = kwargs["master_uri"]

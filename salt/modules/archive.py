@@ -23,6 +23,7 @@ import salt.utils.decorators.path
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.secret
 import salt.utils.stringutils
 import salt.utils.templates
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -1328,7 +1329,7 @@ def _render_filenames(filenames, zip_file, saltenv, template):
 
     kwargs = {}
     kwargs["salt"] = __salt__
-    kwargs["pillar"] = __pillar__
+    kwargs["pillar"] = salt.utils.secret.expose(__pillar__)
     kwargs["grains"] = __grains__
     kwargs["opts"] = __opts__
     kwargs["saltenv"] = saltenv

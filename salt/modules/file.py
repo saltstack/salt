@@ -40,6 +40,7 @@ import salt.utils.http
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.secret
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
@@ -4722,7 +4723,7 @@ def apply_template_on_contents(contents, template, context, defaults, saltenv):
             context=context_dict,
             saltenv=saltenv,
             grains=__opts__["grains"],
-            pillar=__pillar__,
+            pillar=salt.utils.secret.expose(__pillar__),
             salt=__salt__,
             opts=__opts__,
         )["data"]
@@ -5051,7 +5052,7 @@ def get_managed(
                     saltenv=saltenv,
                     context=context_dict,
                     salt=__salt__,
-                    pillar=__pillar__,
+                    pillar=salt.utils.secret.expose(__pillar__),
                     grains=__opts__["grains"],
                     opts=__opts__,
                     **kwargs,

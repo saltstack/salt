@@ -93,7 +93,11 @@ def get_salt_vars():
     # pylint: disable=invalid-name,unused-variable,possibly-unused-variable
     def JINJA(x, **y):
         return jinja2.Template(x).render(
-            grains=__grains__, salt=__salt__, opts=__opts__, pillar=__pillar__, **y
+            grains=__grains__,
+            salt=__salt__,
+            opts=__opts__,
+            pillar=salt.utils.secret.expose(__pillar__),
+            **y
         )
 
     # pylint: enable=invalid-name,unused-variable,possibly-unused-variable

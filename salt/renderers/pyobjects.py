@@ -323,6 +323,7 @@ import re
 
 import salt.loader
 import salt.utils.files
+import salt.utils.secret
 from salt.fileclient import get_file_client
 from salt.utils.pyobjects import Map, Registry, SaltObject, StateFactory
 
@@ -370,7 +371,7 @@ def load_states():
 
     # Ensure pillar is set if needed
     if "pillar" not in __opts__ and __pillar__:
-        pillar = __pillar__.value()
+        pillar = salt.utils.secret.expose(__pillar__.value())
         __opts__["pillar"] = pillar
 
     lazy_utils = salt.loader.utils(__opts__)
@@ -449,7 +450,7 @@ def render(template, saltenv="base", sls="", salt_data=True, context=None, **kwa
                 "config": __salt__["config.get"],
                 # the "dunder" formats are still available for direct use
                 "__salt__": __salt__,
-                "__pillar__": __pillar__,
+                "__pillar__": salt.utils.secret.expose(__pillar__),
                 "__grains__": __grains__,
                 "__opts__": __opts__,
                 "__sls__": sls,

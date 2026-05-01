@@ -20,6 +20,7 @@ import salt.utils.atomicfile
 import salt.utils.files
 import salt.utils.minions
 import salt.utils.platform
+import salt.utils.secret
 import salt.utils.stringutils
 import salt.utils.verify
 from salt.exceptions import SaltException

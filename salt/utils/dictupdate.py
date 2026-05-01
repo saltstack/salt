@@ -9,6 +9,7 @@ from collections import OrderedDict
 from collections.abc import Mapping
 
 import salt.utils.data
+import salt.utils.secret
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltInvocationError
 from salt.utils.decorators.jinja import jinja_filter
@@ -55,7 +56,9 @@ def update(dest, upd, recursive_update=True, merge_lists=False, strict=False):
             if isinstance(dest_subkey, Mapping) and isinstance(val, Mapping):
                 ret = update(dest_subkey, val, merge_lists=merge_lists)
                 dest[key] = ret
-            elif isinstance(dest_subkey, list) and isinstance(val, list):
+            elif isinstance(
+                dest_subkey, (list, salt.utils.secret.SecretList)
+            ) and isinstance(val, (list, salt.utils.secret.SecretList)):
                 if merge_lists:
                     merged = copy.deepcopy(dest_subkey)
                     merged.extend([x for x in val if x not in merged])

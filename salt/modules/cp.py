@@ -18,6 +18,7 @@ import salt.utils.files
 import salt.utils.functools
 import salt.utils.gzip_util
 import salt.utils.path
+import salt.utils.secret
 import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import CommandExecutionError
@@ -199,7 +200,7 @@ def _render_filenames(path, dest, saltenv, template, **kw):
         pillarenv = kw.get("pillarenv", __opts__.get("pillarenv"))
         kwargs["pillar"] = _gather_pillar(pillarenv, kw.get("pillar"))
     else:
-        kwargs["pillar"] = __pillar__
+        kwargs["pillar"] = salt.utils.secret.expose(__pillar__)
     kwargs["grains"] = __grains__
     kwargs["opts"] = __opts__
     kwargs["saltenv"] = saltenv
@@ -332,7 +333,7 @@ def get_template(path, dest, template="jinja", saltenv=None, makedirs=False, **k
     if "salt" not in kwargs:
         kwargs["salt"] = __salt__
     if "pillar" not in kwargs:
-        kwargs["pillar"] = __pillar__
+        kwargs["pillar"] = salt.utils.secret.expose(__pillar__)
     if "grains" not in kwargs:
         kwargs["grains"] = __grains__
     if "opts" not in kwargs:

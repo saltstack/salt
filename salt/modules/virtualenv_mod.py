@@ -14,6 +14,7 @@ import sys
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.secret
 import salt.utils.verify
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -174,7 +175,9 @@ def create(
            - VIRTUALENV_ALWAYS_COPY: 1
     """
     if venv_bin is None:
-        venv_bin = __pillar__.get("venv_bin") or __opts__.get("venv_bin")
+        venv_bin = salt.utils.secret.expose(__pillar__.get("venv_bin")) or __opts__.get(
+            "venv_bin"
+        )
 
     if venv_bin == "venv":
         cmd = [sys.executable, "-m", "venv"]

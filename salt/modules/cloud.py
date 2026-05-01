@@ -7,6 +7,7 @@ import logging
 import os
 
 import salt.utils.data
+import salt.utils.secret
 from salt.exceptions import SaltCloudConfigError
 
 try:
@@ -41,7 +42,7 @@ def _get_client():
     """
     client = salt.cloud.CloudClient(
         os.path.join(os.path.dirname(__opts__["conf_file"]), "cloud"),
-        pillars=copy.deepcopy(__pillar__.get("cloud", {})),
+        pillars=copy.deepcopy(salt.utils.secret.expose(__pillar__.get("cloud", {}))),
     )
     return client
 

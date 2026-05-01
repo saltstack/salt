@@ -989,7 +989,9 @@ class SMinion(MinionBase):
             cache_sls = os.path.join(pdir, "cache.sls")
             with salt.utils.files.fopen(cache_sls, "wb") as fp_:
                 salt.utils.yaml.safe_dump(
-                    self.opts["pillar"], fp_, encoding=SLS_ENCODING
+                    salt.utils.secret.expose(self.opts["pillar"]),
+                    fp_,
+                    encoding=SLS_ENCODING,
                 )
                 os.chmod(cache_sls, 0o600)
 
@@ -2469,7 +2471,9 @@ class Minion(MinionBase):
         minion_blackout_violation = False
         if self.connected and self.opts["pillar"].get("minion_blackout", False):
             whitelist = salt.utils.secret.expose(
-                self.opts["pillar"].get("minion_blackout_whitelist", [])
+                salt.utils.secret.expose(
+                    self.opts["pillar"].get("minion_blackout_whitelist", [])
+                )
             )
             # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
             if (
@@ -3318,7 +3322,9 @@ class Minion(MinionBase):
                     "One or more masters may be down!"
                 )
             else:
-                current_schedule = self.opts["pillar"].get("schedule", {})
+                current_schedule = salt.utils.secret.expose(
+                    self.opts["pillar"].get("schedule", {})
+                )
                 new_schedule = new_pillar.get("schedule", {})
                 new_pillar["schedule"] = self.pillar_schedule_refresh(
                     current_schedule, new_schedule
@@ -5020,7 +5026,7 @@ class SProxyMinion(SMinion):
             raise SaltSystemExit(code=salt.defaults.exitcodes.EX_GENERIC, msg=errmsg)
 
         if "proxy" not in self.opts:
-            self.opts["proxy"] = self.opts["pillar"]["proxy"]
+            self.opts["proxy"] = salt.utils.secret.expose(self.opts["pillar"]["proxy"])
 
         # Then load the proxy module
         self.proxy = salt.loader.proxy(self.opts)

@@ -134,7 +134,7 @@ def get(
         else merge_nested_lists
     )
     pillar_dict = (
-        __pillar__
+        salt.utils.secret.expose(__pillar__)
         if all(x is None for x in (saltenv, pillarenv))
         else items(saltenv=saltenv, pillarenv=pillarenv)
     )
@@ -273,7 +273,7 @@ def items(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
         pillarenv=pillarenv,
     )
     ret = pillar.compile_pillar()
-    return ret
+    return salt.utils.secret.serial(ret)
 
 
 # Allow pillar.data to also be used to return pillar data
@@ -540,11 +540,11 @@ def raw(key=None):
         salt '*' pillar.raw key='roles'
     """
     if key:
-        ret = __pillar__.get(key, {})
+        ret = salt.utils.secret.expose(__pillar__.get(key, {}))
     else:
-        ret = dict(__pillar__)
+        ret = dict(salt.utils.secret.expose(__pillar__))
 
-    return salt.utils.secret.expose(ret)
+    return ret
 
 
 def ext(external, pillar=None):
@@ -638,7 +638,7 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM):
     if ret is KeyError:
         raise KeyError(f"Pillar key not found: {key}")
 
-    if not isinstance(ret, dict):
+    if not isinstance(ret, Mapping):
         raise ValueError(f"Pillar value in key {key} is not a dict")
 
     return list(ret)
@@ -748,7 +748,7 @@ def filter_by(lookup_dict, pillar, merge=None, default="default", base=None):
     ret = salt.utils.data.filter_by(
         lookup_dict=lookup_dict,
         lookup=pillar,
-        traverse=__pillar__,
+        traverse=salt.utils.secret.expose(__pillar__),
         merge=merge,
         default=default,
         base=base,
