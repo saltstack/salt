@@ -6,6 +6,7 @@ pkg/arch/*.tar.xz
 *.sw[a-p]
 doc/_build
 doc/doc-archive.tar.gz
+doc/man-archive.tar.xz
 dist
 MANIFEST
 *~
