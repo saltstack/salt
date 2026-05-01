@@ -270,3 +270,35 @@ def test_cmd_run_encoded_cmd_runas(shell, account, cmd, expected, encoded_cmd):
         password=account.password,
     )
     assert ret == expected
+
+
+@pytest.mark.parametrize(
+    "command, expected_stdout",
+    [
+        # LF line endings, as produced by a YAML block scalar (|)
+        (
+            "powershell -NoProfile -ExecutionPolicy Bypass -Command {\n    Write-Output test\n}\n",
+            "test",
+        ),
+        # CRLF line endings
+        (
+            "powershell -NoProfile -ExecutionPolicy Bypass -Command {\r\n    Write-Output test\r\n}\r\n",
+            "test",
+        ),
+    ],
+)
+def test_powershell_multiline_block_no_clixml(command, expected_stdout):
+    """
+    A multiline ``powershell -Command { }`` block run via cmd.run_all with
+    python_shell=True must execute correctly and must not leave CLIXML noise
+    in stderr.
+
+    Without special handling, cmd.exe treats newlines as command separators so
+    only the first line reaches PowerShell, producing a 'Missing closing }'
+    error. Salt collapses the newlines and converts ``-Command { block }`` to
+    ``-EncodedCommand`` so the script block executes and stderr is clean.
+    """
+    result = cmdmod.run_all(command, python_shell=True)
+    assert result["retcode"] == 0
+    assert result["stdout"] == expected_stdout
+    assert "CLIXML" not in result["stderr"]

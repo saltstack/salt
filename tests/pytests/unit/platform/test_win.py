@@ -1,3 +1,5 @@
+import base64
+
 import pytest
 
 import salt.utils.platform
@@ -44,3 +46,46 @@ def test_prepend_cmd(command, expected):
     win_shell = "cmd.exe"
     result = win.prepend_cmd(win_shell, command)
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    "command, expected_block_content",
+    [
+        # LF line endings
+        (
+            "powershell -Command {\n    Write-Host 'test'\n}\n",
+            "     Write-Host 'test' ",
+        ),
+        # CRLF line endings
+        (
+            "powershell -Command {\r\n    Write-Host 'test'\r\n}\r\n",
+            "     Write-Host 'test' ",
+        ),
+        # Flags before -Command
+        (
+            "powershell -NoProfile -ExecutionPolicy Bypass -Command {\n    Write-Host 'test'\n}\n",
+            "     Write-Host 'test' ",
+        ),
+    ],
+)
+def test_prepend_cmd_powershell_block_encoded(command, expected_block_content):
+    """
+    Multiline PowerShell -Command { } blocks must be converted to -EncodedCommand
+    so that the script block executes (rather than being returned as a ScriptBlock
+    object) when PowerShell's stdout is piped to a subprocess.
+    """
+    win_shell = "cmd.exe"
+    result = win.prepend_cmd(win_shell, command)
+
+    prefix = "cmd.exe /c "
+    assert result.startswith(prefix)
+    inner = result[len(prefix) :]
+
+    # The -EncodedCommand flag must be present and -Command must not be
+    assert "-EncodedCommand " in inner
+    assert "-Command" not in inner
+
+    # Decode and verify the script block content
+    encoded = inner.split("-EncodedCommand ", 1)[1].strip()
+    decoded = base64.b64decode(encoded).decode("utf-16-le")
+    assert decoded == expected_block_content

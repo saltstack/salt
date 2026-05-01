@@ -9,10 +9,12 @@ Much of what is here was adapted from the following:
     http://stackoverflow.com/questions/29566330
 """
 
+import base64
 import collections
 import ctypes
 import logging
 import os
+import re
 import subprocess
 from ctypes import wintypes
 
@@ -1350,7 +1352,38 @@ def prepend_cmd(win_shell, cmd):
     if isinstance(cmd, (list, tuple)):
         args = subprocess.list2cmdline(cmd)
     else:
-        args = cmd
+        # cmd.exe treats newlines as command separators even within a command-line
+        # string, so a multiline command passed via the command line only executes
+        # its first line. Collapse CRLF/LF to a single space so the entire command
+        # reaches the target process (e.g. a PowerShell -Command script block).
+        args = cmd.replace("\r\n", " ").replace("\n", " ")
+        # When PowerShell's stdout is piped (non-interactive), the -Command { block }
+        # form evaluates the script block as an expression and returns the ScriptBlock
+        # object instead of executing it. Converting to -EncodedCommand avoids this
+        # and also sidesteps cmd.exe quoting issues with double quotes inside the block.
+        args = _maybe_encode_powershell_block(args)
     new_cmd = f"{win_shell} /c {args}"
 
     return new_cmd
+
+
+# Matches: powershell[-Command { block }] when the block is the last argument.
+# The executable name check prevents false positives on non-PowerShell commands.
+_PS_BLOCK_RE = re.compile(r"-Command\s+\{(.*)\}\s*$", re.IGNORECASE | re.DOTALL)
+_PS_EXE_RE = re.compile(r"(?:^|[\\/])(?:powershell|pwsh)(?:\.exe)?\b", re.IGNORECASE)
+
+
+def _maybe_encode_powershell_block(cmd):
+    """
+    If *cmd* is a PowerShell invocation that uses ``-Command { block }`` syntax,
+    replace it with ``-EncodedCommand <base64>`` so the script block is executed
+    rather than returned as a ScriptBlock object when stdout is not a console.
+    """
+    if not _PS_EXE_RE.search(cmd):
+        return cmd
+    m = _PS_BLOCK_RE.search(cmd)
+    if not m:
+        return cmd
+    content = m.group(1)
+    encoded = base64.b64encode(content.encode("utf-16-le")).decode("ascii")
+    return cmd[: m.start()] + f"-EncodedCommand {encoded}"
