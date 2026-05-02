@@ -61,6 +61,25 @@ def _get_crypticle(opts, key_string, key_size=192, serial=0):
         return salt.crypt.Crypticle(opts, key_string, key_size, serial)
 
 
+def _cluster_is_ready(opts):
+    """
+    Return ``True`` if this master may serve minion/CLI requests.
+
+    For non-cluster masters this is always ``True``.  For cluster members it
+    returns ``True`` only after the Raft ``MembershipStateMachine`` has
+    committed a CONFIG entry listing this node as a voter and
+    ``SMaster.secrets["cluster_ready"]["event"]`` has been set.
+    """
+    if not opts.get("cluster_id"):
+        return True
+    import salt.master  # pylint: disable=import-outside-toplevel
+
+    entry = salt.master.SMaster.secrets.get("cluster_ready")
+    if entry is None:
+        return False
+    return entry["event"].is_set()
+
+
 def cluster_pub_matches_fingerprint(opts, cluster_pub):
     """
     Verify a received cluster public key against a pinned fingerprint.
@@ -379,6 +398,14 @@ class ReqServerChannel:
                 if self.opts.get("master_stats", False):
                     await self.payload_handler({"cmd": "_auth", "_start": start})
                 return ret
+
+            # Block non-_auth requests until this node is a committed Raft voter.
+            if not _cluster_is_ready(self.opts):
+                log.debug(
+                    "Cluster not ready yet — deferring request from %s",
+                    payload.get("load", {}).get("id", "unknown"),
+                )
+                return {"enc": "clear", "load": {"ret": False, "cluster_retry": True}}
 
             # Take the payload_handler function that was registered when we created the channel
             # and call it, returning control to the caller until it completes
@@ -1579,6 +1606,11 @@ class PoolRoutingChannel:
                 list(self.worker_pools.keys()),
             )
 
+            # Block non-_auth requests until this node is a committed Raft voter.
+            if cmd != "_auth" and not _cluster_is_ready(self.opts):
+                log.debug("Cluster not ready yet — deferring %s request", cmd)
+                return {"enc": "clear", "load": {"ret": False, "cluster_retry": True}}
+
             if pool_name not in self.pool_clients:
                 if (
                     payload.get("enc") == "clear"
@@ -1889,8 +1921,6 @@ class MasterPubServerChannel:
 
     @classmethod
     def factory(cls, opts, **kwargs):
-        _discover_event = kwargs.get("_discover_event", None)
-
         if opts.get("cluster_id"):
             # Cluster mode: Use TCP-based transport for peer communication while
             # preserving normal local IPC behavior for internal processes.
@@ -1925,15 +1955,13 @@ class MasterPubServerChannel:
         else:
             transport = salt.transport.ipc_publish_server("master", opts)
 
-        return cls(opts, transport, _discover_event=_discover_event)
+        return cls(opts, transport)
 
     def __init__(
         self,
         opts,
         transport,
         presence_events=False,
-        _discover_event=None,
-        _discover_token=None,
     ):
         self.opts = opts
         self.transport = transport
@@ -1941,8 +1969,8 @@ class MasterPubServerChannel:
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.peer_keys = {}
         self.cluster_peers = self.opts["cluster_peers"]
-        self._discover_event = _discover_event
-        self._discover_token = _discover_token
+        self._discover_event = None
+        self._discover_token = None
         self._discover_candidates = {}
         # Set by service.py once the Raft node is started.
         self._raft_dispatcher = None
@@ -2028,13 +2056,12 @@ class MasterPubServerChannel:
         return {
             "opts": self.opts,
             "transport": self.transport,
-            "_discover_event": self._discover_event,
         }
 
     def __setstate__(self, state):
         self.opts = state["opts"]
         self.transport = state["transport"]
-        self._discover_event = state["_discover_event"]
+        self._discover_event = None
         self._raft_dispatcher = None
         self._raft_service = None
 
@@ -2108,9 +2135,6 @@ class MasterPubServerChannel:
             )
             self.pool_puller.start()
 
-            if self.opts.get("cluster_peers"):
-                self.io_loop.call_later(2.0, self.discover_peers)
-
         # Start the Raft node when this master is part of a cluster.
         self._raft_service = None
         if self.opts.get("cluster_id") and self.opts.get("cluster_peers"):
@@ -2122,7 +2146,12 @@ class MasterPubServerChannel:
                 )
 
                 peer_pushers = build_peer_pushers(self.opts, self.pushers)
-                self._raft_service = RaftService(self.opts, aio_loop, peer_pushers)
+                self._raft_service = RaftService(
+                    self.opts,
+                    aio_loop,
+                    peer_pushers,
+                    on_ready=self._signal_cluster_ready,
+                )
                 self._raft_service.attach(self)
                 aio_loop.call_soon(self._raft_service.start)
                 log.info(
@@ -2140,6 +2169,21 @@ class MasterPubServerChannel:
             if self._raft_service is not None:
                 self._raft_service.stop()
             self.close()
+
+    def _signal_cluster_ready(self):
+        """
+        Set the ``cluster_ready`` event in ``SMaster.secrets`` so that request
+        workers know this node is a committed Raft voter and may serve traffic.
+
+        Called exactly once by ``RaftService._on_membership_change`` when the
+        founding or promotion CONFIG entry commits with this node in the voter set.
+        """
+        import salt.master  # pylint: disable=import-outside-toplevel
+
+        entry = salt.master.SMaster.secrets.get("cluster_ready")
+        if entry is not None:
+            log.info("MasterPubServerChannel: cluster ready — opening request gate")
+            entry["event"].set()
 
     def private_key(self):
         """
@@ -2260,12 +2304,8 @@ class MasterPubServerChannel:
                 self._discover_event = None
                 # Signal the main master process to start the rest of the
                 # master service processeses.
-                event.set()
-                # Start Raft as a non-voting learner now that we have cluster
-                # peers.  We were not started during _publish_daemon init
-                # because cluster_peers was empty at that point.
-                if self._raft_service is None and self.opts.get("cluster_id"):
-                    self._start_raft_as_learner(data.get("peers", {}))
+                if event is not None:
+                    event.set()
             elif tag.startswith("cluster/peer/join"):
 
                 payload = salt.payload.loads(data["payload"])
