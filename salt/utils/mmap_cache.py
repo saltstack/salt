@@ -59,6 +59,25 @@ _LENGTH_SIZE = 4
 _MTIME_SIZE = 8
 _FIXED_OVERHEAD = 1 + _OFFSET_SIZE + _LENGTH_SIZE + _MTIME_SIZE  # 21 bytes
 
+# Heap segmentation
+# -----------------
+# The 8-byte OFFSET field encodes both the segment ID and the within-segment
+# byte offset in a single uint64:
+#
+#   bits 63-48 : segment ID  (uint16, 0-65535)
+#   bits 47- 0 : byte offset within that segment (uint48, up to ~281 TB)
+#
+# Segment 0 is the original ".heap" file; subsequent segments are named
+# ".heap.1", ".heap.2", etc.  Existing on-disk offsets that were written
+# before segmentation have zero in the top 16 bits, so they are read as
+# segment 0 — fully backward-compatible.
+_SEG_ID_SHIFT = 48  # segment ID sits in the top 16 bits
+_SEG_OFF_MASK = (1 << 48) - 1  # bottom 48 bits = within-segment offset
+
+# Default segment size cap: 1 GiB.  When the active segment reaches this
+# limit the next append rolls to a new segment.
+DEFAULT_MAX_SEGMENT_BYTES = 1 * 1024 * 1024 * 1024  # 1 GiB
+
 # Per-entry heap record format when verify_checksums=True (the default):
 #   [XXH3-64: 8 bytes LE][VALUE: length bytes]
 # The LENGTH field in the index slot always records the value length only;
@@ -139,6 +158,7 @@ class MmapCache:
         heap_path=None,
         staleness_check_interval=0.25,
         verify_checksums=True,
+        max_segment_bytes=DEFAULT_MAX_SEGMENT_BYTES,
     ):
         self.path = os.path.realpath(path)
         self.size = size
@@ -154,12 +174,15 @@ class MmapCache:
         self.roster_path = self.path + ".roster"
 
         self.verify_checksums = verify_checksums
+        self.max_segment_bytes = max_segment_bytes
 
         self._mm = None  # index mmap (ACCESS_READ or ACCESS_WRITE)
-        self._heap_mm = None  # heap mmap for reads (ACCESS_READ)
-        self._heap_fd = None  # read fd kept alive while _heap_mm is active
-        self._heap_mm_stale = False  # True after append; triggers lazy re-open
+        # Per-segment read mmaps: list indexed by segment_id.
+        # Each entry is (mmap_obj | None, fd | None, size).
+        self._seg_mms: list = []  # [(mm, fd, size), ...]
+        self._seg_mm_stale: list = []  # [bool, ...] — True after write to seg
         self._cache_id = None
+        # Size of the *active* (last) heap segment — used for append decisions.
         self._heap_size = 0
         self._roster_cache = None  # cached list of slot indices
         self._roster_mtime = None  # mtime of roster when last read
@@ -179,6 +202,30 @@ class MmapCache:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    # ------------------------------------------------------------------
+    # Segment helpers
+    # ------------------------------------------------------------------
+
+    def _segment_path(self, seg_id):
+        """Return the filesystem path for heap segment *seg_id*."""
+        if seg_id == 0:
+            return self.heap_path
+        return f"{self.heap_path}.{seg_id}"
+
+    def _active_segment_id(self):
+        """Return the ID of the segment that should receive the next append."""
+        return max(0, len(self._seg_mms) - 1)
+
+    def _pack_offset(self, seg_id, seg_offset):
+        """Pack segment ID and within-segment offset into a single uint64."""
+        return (seg_id << _SEG_ID_SHIFT) | (seg_offset & _SEG_OFF_MASK)
+
+    def _unpack_offset(self, packed):
+        """Unpack a packed offset into (seg_id, seg_offset)."""
+        seg_id = packed >> _SEG_ID_SHIFT
+        seg_offset = packed & _SEG_OFF_MASK
+        return int(seg_id), int(seg_offset)
 
     @property
     def _lock_path(self):
@@ -275,7 +322,7 @@ class MmapCache:
         return True
 
     def _init_heap_file(self):
-        """Create an empty heap file if it does not exist."""
+        """Create segment-0 heap file if it does not exist."""
         if os.path.exists(self.heap_path):
             return True
         try:
@@ -287,6 +334,54 @@ class MmapCache:
             log.error("Failed to initialize heap file: %s", exc)
             return False
         return True
+
+    def _discover_segments(self):
+        """
+        Scan the filesystem for all segment files and populate ``_seg_mms``.
+
+        Segments are named ``<heap_path>`` (seg 0), ``<heap_path>.1``,
+        ``<heap_path>.2``, …  Scanning stops at the first gap.
+
+        Returns the number of segments found (≥ 1 if segment-0 exists).
+        """
+        self._close_seg_mmaps()
+        seg_id = 0
+        while True:
+            p = self._segment_path(seg_id)
+            if not os.path.exists(p):
+                break
+            try:
+                sz = os.path.getsize(p)
+            except OSError:
+                sz = 0
+            self._seg_mms.append([None, None, sz])  # [mm, fd, size]
+            self._seg_mm_stale.append(False)
+            seg_id += 1
+        # Ensure at least one entry (segment 0) so active_segment_id() works.
+        if not self._seg_mms:
+            self._seg_mms.append([None, None, 0])
+            self._seg_mm_stale.append(False)
+        self._heap_size = self._seg_mms[-1][2]
+        return len(self._seg_mms)
+
+    def _close_seg_mmaps(self):
+        """Close all open segment mmaps and file descriptors."""
+        for entry in self._seg_mms:
+            mm, fd, _ = entry
+            if mm is not None:
+                try:
+                    mm.close()
+                except (BufferError, OSError):
+                    pass
+                entry[0] = None
+            if fd is not None:
+                try:
+                    fd.close()
+                except OSError:
+                    pass
+                entry[1] = None
+        self._seg_mms = []
+        self._seg_mm_stale = []
 
     # ------------------------------------------------------------------
     # Roster helpers — packed uint32 array of live slot indices
@@ -564,13 +659,8 @@ class MmapCache:
                 self._mm[0] = _HEADER_MAGIC
                 self._mm.flush()
 
-            try:
-                self._heap_size = os.path.getsize(self.heap_path)
-            except OSError:
-                self._heap_size = 0
-
-            self._heap_mm_stale = False
-            self._open_heap_mmap()
+            self._discover_segments()
+            self._open_all_seg_mmaps()
 
             if write:
                 self._roster_recover()
@@ -585,7 +675,7 @@ class MmapCache:
 
     def _close_mmaps_and_fds(self):
         """
-        Close mmaps, heap fd, and roster write fd — but NOT the lock fd.
+        Close mmaps, heap fds, and roster write fd — but NOT the lock fd.
 
         Used by ``atomic_rebuild``, which holds the lock across a ``close``
         and must not close the lock fd while the lock is still held.
@@ -596,18 +686,7 @@ class MmapCache:
             except (BufferError, OSError):
                 pass
             self._mm = None
-        if self._heap_mm:
-            try:
-                self._heap_mm.close()
-            except (BufferError, OSError):
-                pass
-            self._heap_mm = None
-        if self._heap_fd is not None:
-            try:
-                self._heap_fd.close()
-            except OSError:
-                pass
-            self._heap_fd = None
+        self._close_seg_mmaps()
         if self._roster_wfd is not None:
             try:
                 self._roster_wfd.close()
@@ -630,44 +709,63 @@ class MmapCache:
 
     def _open_heap_mmap(self):
         """
-        (Re-)open a read-only mmap of the heap file.
+        (Re-)open read-only mmaps for all heap segments.
 
-        Called after the index mmap is successfully opened and whenever the
-        heap grows due to a ``put()`` that appends.  A zero-length heap is
-        left un-mmapped (``_heap_mm`` stays ``None``); ``_read_from_heap``
-        falls back to file I/O in that case.
+        Segments with zero size are left un-mmapped; reads fall back to
+        file I/O.  Called after the index mmap is established and after
+        any write that grows a segment.
         """
-        # Close any stale heap mmap
-        if self._heap_mm:
-            try:
-                self._heap_mm.close()
-            except (BufferError, OSError):
-                pass
-            self._heap_mm = None
-        if self._heap_fd is not None:
-            try:
-                self._heap_fd.close()
-            except OSError:
-                pass
-            self._heap_fd = None
+        for seg_id, entry in enumerate(self._seg_mms):
+            if not self._seg_mm_stale[seg_id]:
+                continue  # still fresh
 
-        if not self._heap_size:
-            return  # nothing to map
-
-        try:
-            fd = salt.utils.files.fopen(  # pylint: disable=resource-leakage
-                self.heap_path, "rb"
-            )
-            self._heap_fd = fd
-            self._heap_mm = mmap.mmap(fd.fileno(), 0, access=mmap.ACCESS_READ)
-        except OSError as exc:
-            log.warning("Could not mmap heap %s: %s", self.heap_path, exc)
-            if self._heap_fd is not None:
+            mm, fd, _ = entry
+            if mm is not None:
                 try:
-                    self._heap_fd.close()
+                    mm.close()
+                except (BufferError, OSError):
+                    pass
+                entry[0] = None
+            if fd is not None:
+                try:
+                    fd.close()
                 except OSError:
                     pass
-                self._heap_fd = None
+                entry[1] = None
+
+            p = self._segment_path(seg_id)
+            try:
+                sz = os.path.getsize(p)
+            except OSError:
+                sz = 0
+            entry[2] = sz
+            if seg_id == self._active_segment_id():
+                self._heap_size = sz
+
+            if sz > 0:
+                try:
+                    fd_obj = salt.utils.files.fopen(  # pylint: disable=resource-leakage
+                        p, "rb"
+                    )
+                    mm_obj = mmap.mmap(fd_obj.fileno(), 0, access=mmap.ACCESS_READ)
+                    entry[0] = mm_obj
+                    entry[1] = fd_obj
+                except OSError as exc:
+                    log.warning("Could not mmap heap segment %s: %s", p, exc)
+                    if entry[1] is not None:
+                        try:
+                            entry[1].close()
+                        except OSError:
+                            pass
+                        entry[1] = None
+
+            self._seg_mm_stale[seg_id] = False
+
+    def _open_all_seg_mmaps(self):
+        """Open mmaps for all segments unconditionally (used during open())."""
+        for seg_id, entry in enumerate(self._seg_mms):
+            self._seg_mm_stale[seg_id] = True  # force refresh
+        self._open_heap_mmap()
 
     # ------------------------------------------------------------------
     # Header accessors
@@ -764,65 +862,105 @@ class MmapCache:
 
     def _append_to_heap(self, value_bytes):
         """
-        Append *value_bytes* to the heap file.  Returns the byte offset at
-        which the record was written (pointing at the CRC prefix when
-        ``verify_checksums`` is enabled).  Must be called under the write lock.
+        Append *value_bytes* to the active heap segment.
 
-        When ``verify_checksums=True`` the on-disk layout is::
+        Returns a packed uint64 encoding (segment_id, within-segment offset)
+        which is stored verbatim in the index OFFSET field.
 
-            [CRC32: 4 bytes LE][VALUE: len(value_bytes) bytes]
+        If the active segment would exceed ``max_segment_bytes`` after the
+        append, a new segment is rolled and the record is written there.
 
-        The LENGTH field in the index slot always records ``len(value_bytes)``
-        only; the CRC prefix is transparent to callers.
+        Zero-length values still return a packed offset (segment 0, offset 0)
+        without writing any bytes — the LENGTH field in the index is 0, so
+        callers know to return ``True`` (presence-only) without reading the heap.
         """
-        heap_offset = self._heap_size
-        if not value_bytes:
-            # Zero-length values use length=0 in the index pointer and are
-            # returned as True by get(); no heap record is needed.
-            return heap_offset
         if self.verify_checksums:
-            digest = xxhash.xxh3_64_intdigest(value_bytes)
-            record = struct.pack(_CRC_FMT, digest) + value_bytes
+            digest = xxhash.xxh3_64_intdigest(value_bytes) if value_bytes else 0
+            record = struct.pack(_CRC_FMT, digest) + value_bytes if value_bytes else b""
         else:
             record = value_bytes
-        with salt.utils.files.fopen(self.heap_path, "ab") as f:
-            f.write(record)
-            f.flush()
+
+        if not record:
+            # Zero-length entry — no heap write needed.
+            seg_id = self._active_segment_id()
+            return self._pack_offset(seg_id, self._heap_size)
+
+        seg_id = self._active_segment_id()
+        if self._heap_size + len(record) > self.max_segment_bytes:
+            # Roll to a new segment.
+            seg_id += 1
+            new_path = self._segment_path(seg_id)
+            try:
+                with salt.utils.files.fopen(new_path, "wb") as _f:
+                    pass
+            except OSError as exc:
+                log.error("Failed to create heap segment %s: %s", new_path, exc)
+                # Fall back to the existing segment.
+                seg_id -= 1
+            else:
+                self._seg_mms.append([None, None, 0])
+                self._seg_mm_stale.append(True)
+                self._heap_size = 0
+                log.info("Heap rolled to new segment %d for %s", seg_id, self.heap_path)
+
+        seg_path = self._segment_path(seg_id)
+        seg_offset = self._heap_size
+
+        try:
+            with salt.utils.files.fopen(seg_path, "ab") as f:
+                f.write(record)
+                f.flush()
+        except OSError as exc:
+            log.error("Error appending to heap segment %s: %s", seg_path, exc)
+            return self._pack_offset(seg_id, seg_offset)
+
         self._heap_size += len(record)
-        self._heap_mm_stale = True
-        return heap_offset
+        self._seg_mm_stale[seg_id] = True
+        if seg_id < len(self._seg_mms):
+            self._seg_mms[seg_id][2] = self._heap_size
 
-    def _read_from_heap(self, heap_offset, length):
+        return self._pack_offset(seg_id, seg_offset)
+
+    def _read_from_heap(self, packed_offset, length):
         """
-        Return *length* value bytes from the heap file at *heap_offset*.
+        Return *length* value bytes from the heap segment encoded in
+        *packed_offset*.
 
-        When ``verify_checksums=True`` reads ``length + 4`` bytes, verifies
-        the CRC32 prefix, and returns ``None`` on mismatch (logging an error).
+        *packed_offset* is a uint64 whose top 16 bits are the segment ID and
+        whose bottom 48 bits are the byte offset within that segment.
+
+        When ``verify_checksums=True`` reads ``length + _CRC_SIZE`` bytes,
+        verifies the XXH3-64 prefix, and returns ``None`` on mismatch.
 
         Uses the resident read-only mmap when available (zero-copy slice).
-        Falls back to file I/O when the mmap is unavailable.
+        Falls back to file I/O when the mmap is unavailable or stale.
         """
-        if self._heap_mm_stale:
+        seg_id, seg_offset = self._unpack_offset(packed_offset)
+
+        # Refresh stale mmaps for this segment before reading.
+        if seg_id < len(self._seg_mm_stale) and self._seg_mm_stale[seg_id]:
+            self._seg_mm_stale[seg_id] = True  # will be refreshed by _open_heap_mmap
             self._open_heap_mmap()
-            self._heap_mm_stale = False
 
         read_len = length + _CRC_SIZE if self.verify_checksums else length
 
-        if self._heap_mm is not None:
-            try:
-                raw = bytes(self._heap_mm[heap_offset : heap_offset + read_len])
-            except (ValueError, OSError):
-                raw = None
-        else:
-            raw = None
+        raw = None
+        if seg_id < len(self._seg_mms):
+            mm = self._seg_mms[seg_id][0]
+            if mm is not None:
+                try:
+                    raw = bytes(mm[seg_offset : seg_offset + read_len])
+                except (ValueError, OSError):
+                    raw = None
 
         if raw is None:
+            seg_path = self._segment_path(seg_id)
             try:
-                with salt.utils.files.fopen(self.heap_path, "rb") as f:
-                    f.seek(heap_offset)
+                with salt.utils.files.fopen(seg_path, "rb") as f:
+                    f.seek(seg_offset)
                     raw = f.read(read_len)
             except OSError as exc:
-                log.error("Error reading heap %s: %s", self.heap_path, exc)
+                log.error("Error reading heap segment %s: %s", seg_path, exc)
                 return None
 
         if not self.verify_checksums:
@@ -830,8 +968,10 @@ class MmapCache:
 
         if len(raw) < _CRC_SIZE:
             log.error(
-                "Heap record at offset %d in %s is truncated (%d bytes, expected %d)",
-                heap_offset,
+                "Heap record at seg=%d offset=%d in %s is truncated "
+                "(%d bytes, expected %d)",
+                seg_id,
+                seg_offset,
                 self.heap_path,
                 len(raw),
                 read_len,
@@ -843,9 +983,10 @@ class MmapCache:
         computed_digest = xxhash.xxh3_64_intdigest(value)
         if stored_digest != computed_digest:
             log.error(
-                "Checksum mismatch for heap record at offset %d in %s "
+                "Checksum mismatch for heap record at seg=%d offset=%d in %s "
                 "(stored 0x%016x, computed 0x%016x) — entry is corrupt",
-                heap_offset,
+                seg_id,
+                seg_offset,
                 self.heap_path,
                 stored_digest,
                 computed_digest,
@@ -854,36 +995,33 @@ class MmapCache:
 
         return value
 
-    def _overwrite_in_heap(self, heap_offset, value_bytes):
+    def _overwrite_in_heap(self, packed_offset, value_bytes):
         """
-        Overwrite bytes in-place in the heap file.
+        Overwrite bytes in-place in the heap segment encoded in *packed_offset*.
 
         When ``verify_checksums=True`` rewrites the CRC prefix as well so the
         stored checksum stays consistent with the (possibly shorter) value.
-        The CRC is computed over *value_bytes* before any null padding so that
-        it agrees with what ``_read_from_heap`` sees (which reads exactly
-        ``length`` bytes as stored in the index, not the padded region).
         """
+        seg_id, seg_offset = self._unpack_offset(packed_offset)
+        seg_path = self._segment_path(seg_id)
+
         if self.verify_checksums:
-            # Identify the true (unpadded) value: strip trailing nulls that
-            # were added by the caller's .ljust() call so that the CRC is
-            # over the actual content.
             true_value = value_bytes.rstrip(b"\x00")
             digest = xxhash.xxh3_64_intdigest(true_value)
             record = struct.pack(_CRC_FMT, digest) + value_bytes
         else:
             record = value_bytes
         try:
-            with salt.utils.files.fopen(self.heap_path, "r+b") as f:
-                f.seek(heap_offset)
+            with salt.utils.files.fopen(seg_path, "r+b") as f:
+                f.seek(seg_offset)
                 f.write(record)
                 f.flush()
         except OSError as exc:
-            log.error("Error overwriting heap %s: %s", self.heap_path, exc)
+            log.error("Error overwriting heap segment %s: %s", seg_path, exc)
             return False
-        # The read-only mmap may have cached stale pages; force re-open on
-        # the next read so CRC verification sees the freshly written bytes.
-        self._heap_mm_stale = True
+        # Force mmap refresh on next read.
+        if seg_id < len(self._seg_mm_stale):
+            self._seg_mm_stale[seg_id] = True
         return True
 
     # ------------------------------------------------------------------
@@ -1253,7 +1391,9 @@ class MmapCache:
 
         tmp_dir = os.path.dirname(self.path)
         tmp_idx_fd, tmp_idx_path = tempfile.mkstemp(dir=tmp_dir, prefix=".mmcache_idx_")
-        tmp_heap_path = tmp_idx_path + ".heap"
+        # Rebuild always starts with a single segment; further rolls happen
+        # naturally if max_segment_bytes is exceeded during the write loop.
+        tmp_heap_base = tmp_idx_path + ".heap"
         tmp_roster_path = tmp_idx_path + ".roster"
 
         try:
@@ -1272,12 +1412,18 @@ class MmapCache:
                         os.fsync(f.fileno())
                     tmp_idx_fd = -1
 
-                    heap_pos = 0
+                    # seg_id and seg_pos track the current temporary segment.
+                    tmp_seg_id = 0
+                    tmp_seg_pos = 0  # bytes written to current tmp segment
+                    tmp_heap_segs = [tmp_heap_base]  # paths of tmp heap segments
                     occupied_count = 0
                     hwm = 0
                     roster_entries = []
 
-                    with salt.utils.files.fopen(tmp_heap_path, "wb") as heap_f:
+                    heap_f = salt.utils.files.fopen(  # pylint: disable=resource-leakage
+                        tmp_heap_base, "wb"
+                    )
+                    try:
                         with salt.utils.files.fopen(tmp_idx_path, "r+b") as idx_f:
                             mm = mmap.mmap(idx_f.fileno(), 0, access=mmap.ACCESS_WRITE)
                             try:
@@ -1319,7 +1465,6 @@ class MmapCache:
                                         s = ((h - 1 + i) % data_size) + 1
                                         s_off = s * self.slot_size
                                         if mm[s_off] != OCCUPIED:
-                                            record_offset = heap_pos
                                             if val_bytes:
                                                 if self.verify_checksums:
                                                     digest = xxhash.xxh3_64_intdigest(
@@ -1331,7 +1476,33 @@ class MmapCache:
                                                     )
                                                 else:
                                                     record = val_bytes
+                                                # Roll segment if needed.
+                                                if (
+                                                    tmp_seg_pos + len(record)
+                                                    > self.max_segment_bytes
+                                                ):
+                                                    heap_f.flush()
+                                                    os.fsync(heap_f.fileno())
+                                                    heap_f.close()
+                                                    tmp_seg_id += 1
+                                                    tmp_seg_pos = 0
+                                                    new_seg_path = (
+                                                        f"{tmp_heap_base}.{tmp_seg_id}"
+                                                    )
+                                                    tmp_heap_segs.append(new_seg_path)
+                                                    heap_f = salt.utils.files.fopen(
+                                                        new_seg_path, "wb"
+                                                    )
+                                                record_offset = self._pack_offset(
+                                                    tmp_seg_id, tmp_seg_pos
+                                                )
                                                 heap_f.write(record)
+                                                tmp_seg_pos += len(record)
+                                            else:
+                                                record_offset = self._pack_offset(
+                                                    tmp_seg_id, tmp_seg_pos
+                                                )
+
                                             key_field = key_bytes.ljust(
                                                 self.key_size, b"\x00"
                                             )
@@ -1340,7 +1511,10 @@ class MmapCache:
                                             ] = key_field
                                             base = s_off + self._offset_off
                                             struct.pack_into(
-                                                _OFFSET_FMT, mm, base, record_offset
+                                                _OFFSET_FMT,
+                                                mm,
+                                                base,
+                                                record_offset,
                                             )
                                             struct.pack_into(
                                                 _LENGTH_FMT,
@@ -1355,8 +1529,6 @@ class MmapCache:
                                                 mtime_ns,
                                             )
                                             mm[s_off] = OCCUPIED
-                                            if val_bytes:
-                                                heap_pos += len(record)
                                             occupied_count += 1
                                             if s > hwm:
                                                 hwm = s
@@ -1364,7 +1536,10 @@ class MmapCache:
                                             break
 
                                 struct.pack_into(
-                                    _OFFSET_FMT, mm, _HDR_OCCUPIED_OFF, occupied_count
+                                    _OFFSET_FMT,
+                                    mm,
+                                    _HDR_OCCUPIED_OFF,
+                                    occupied_count,
                                 )
                                 struct.pack_into(_OFFSET_FMT, mm, _HDR_DELETED_OFF, 0)
                                 struct.pack_into(_OFFSET_FMT, mm, _HDR_HWM_OFF, hwm)
@@ -1374,6 +1549,11 @@ class MmapCache:
                                 mm.flush()
                             finally:
                                 mm.close()
+                    finally:
+                        try:
+                            heap_f.close()
+                        except OSError:
+                            pass
 
                     # Write roster
                     with salt.utils.files.fopen(tmp_roster_path, "wb") as rf:
@@ -1384,17 +1564,41 @@ class MmapCache:
                         rf.flush()
                         os.fsync(rf.fileno())
 
+                    # Remove old extra segments (seg ≥ 1) before swapping.
+                    old_extra = 1
+                    while True:
+                        old_p = self._segment_path(old_extra)
+                        if not os.path.exists(old_p):
+                            break
+                        try:
+                            os.remove(old_p)
+                        except OSError as exc:
+                            log.warning(
+                                "Could not remove old heap segment %s: %s",
+                                old_p,
+                                exc,
+                            )
+                        old_extra += 1
+
                     # Close mmaps but keep the lock fd — still inside _lock().
                     self._close_mmaps_and_fds()
-                    # Swap order: heap → index → roster
-                    os.replace(tmp_heap_path, self.heap_path)
+
+                    # Swap order: heap segments → index → roster.
+                    # Extra segments get their final names before the pivot.
+                    for tmp_seg_path in tmp_heap_segs[1:]:
+                        seg_num = int(tmp_seg_path.split(".")[-1])
+                        final_seg_path = self._segment_path(seg_num)
+                        os.replace(tmp_seg_path, final_seg_path)
+                    os.replace(tmp_heap_base, self.heap_path)
                     os.replace(tmp_idx_path, self.path)
                     os.replace(tmp_roster_path, self.roster_path)
                     return True
 
         except OSError as exc:
             log.error("Error rebuilding mmap cache %s: %s", self.path, exc)
-            for p in (tmp_heap_path, tmp_idx_path, tmp_roster_path):
+            for p in [tmp_heap_base, tmp_idx_path, tmp_roster_path] + [
+                f"{tmp_heap_base}.{i}" for i in range(1, tmp_seg_id + 1)
+            ]:
                 try:
                     if os.path.exists(p):
                         os.remove(p)

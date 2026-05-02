@@ -546,8 +546,9 @@ def migrate(
                 sub = f"{root_bank}/{name}" if root_bank else name
                 yield from _walk(sub)
 
-    # list("") returns top-level bank names (directories), not keys.
-    # _walk recurses into each one to find all keys.
+    # list("") returns top-level bank names for localfs-style drivers.
+    # Drivers like mmap_cache have no root-level index, so list("") returns [].
+    # In that case fall back to scanning the cachedir on disk.
     if bank:
         banks = [bank]
     else:
@@ -555,6 +556,13 @@ def migrate(
             banks = src_cache.list("") or []
         except Exception:  # pylint: disable=broad-except
             banks = []
+        if not banks and os.path.isdir(cachedir):
+            banks = [
+                name
+                for name in os.listdir(cachedir)
+                if os.path.isdir(os.path.join(cachedir, name))
+                and not name.startswith(".")
+            ]
 
     total = 0
     errors = 0
