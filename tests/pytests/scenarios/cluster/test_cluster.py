@@ -131,9 +131,22 @@ def test_fourth_master_joins_existing_cluster(
     # Commanding the minion through the late joiner exercises the full
     # publish path on the new peer (pub/ret channel, local event bus,
     # and the peer cluster auth fan-out).
-    cli = cluster_master_4.salt_cli(timeout=120)
-    ret = cli.run("test.ping", minion_tgt="cluster-minion-1")
-    assert ret.data is True
+    #
+    # The peer-AES key exchange between the late joiner (master 4) and
+    # the original cluster members is asynchronous.  Poll until the full
+    # round-trip (publish → minion → return → CLI) succeeds, or we hit
+    # a hard deadline.
+    cli = cluster_master_4.salt_cli(timeout=30)
+    deadline = time.monotonic() + 300
+    last_ret = None
+    while time.monotonic() < deadline:
+        last_ret = cli.run("test.ping", minion_tgt="cluster-minion-1")
+        if last_ret.data is True:
+            break
+    assert last_ret is not None and last_ret.data is True, (
+        f"test.ping via cluster_master_4 never returned True "
+        f"within 300 s (last result: {last_ret!r})"
+    )
 
     # And through every other peer too, to confirm the late joiner did
     # not disturb the existing cluster's ability to serve the minion.

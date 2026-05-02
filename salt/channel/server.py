@@ -2577,9 +2577,25 @@ class MasterPubServerChannel:
                 if task.get_name() == self.opts["id"]:
                     log.error("Unable to forward event to local ipc bus")
                 else:
+                    peer = task.get_name()
                     log.warning(
-                        "Unable to forward event to cluster peer %s", task.get_name()
+                        "Unable to forward event to cluster peer %s; "
+                        "resetting pusher for reconnect",
+                        peer,
                     )
+                    # Reset the broken pub_sock so the next publish attempt
+                    # triggers a fresh TCP connection rather than reusing a
+                    # dead stream.
+                    for pusher in self.pushers:
+                        if pusher.pull_host == peer and pusher.pub_sock is not None:
+                            try:
+                                pusher.pub_sock.close()
+                            except Exception:  # pylint: disable=broad-except
+                                pass
+                            pusher.pub_sock = None
+                    # Schedule an AES-key re-announcement so the peer
+                    # learns our key after it reconnects.
+                    self.io_loop.call_later(2.0, self.send_aes_key_event)
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
                     "Unhandled error sending task %s", task.get_name(), exc_info=True
