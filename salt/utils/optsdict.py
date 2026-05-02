@@ -600,13 +600,6 @@ class OptsDict(dict):
             if is_mutation and key not in self._local:
                 # First mutation - record it
                 self._tracker.record_mutation(key, original_value, value)
-                log.debug(
-                    "OptsDict[%s]: First mutation of key '%s' (original type: %s, new type: %s)",
-                    self._name,
-                    key,
-                    type(original_value).__name__,
-                    type(value).__name__,
-                )
             elif key in self._local:
                 # Subsequent mutation of already-local key
                 self._tracker.record_mutation(key, original_value, value)

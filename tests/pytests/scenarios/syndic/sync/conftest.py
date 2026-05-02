@@ -94,6 +94,13 @@ def syndic(master, salt_factories):
         minion_overrides=minion_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
+    # salt-factories starts the syndic's internal master/minion via
+    # before_start callbacks but never registers after_terminate callbacks to
+    # stop them.  Without this, the internal master's child processes
+    # (FileServerUpdate, Maintenance, …) survive the syndic's termination and
+    # keep the CI job alive until the hard timeout.
+    factory.after_terminate(factory.minion.terminate)
+    factory.after_terminate(factory.master.terminate)
     with factory.started(start_timeout=180):
         yield factory
 
