@@ -561,6 +561,38 @@ def list_pkgs(
     return ret
 
 
+def _uninstall_string_is_orphan(uninstall_string):
+    """
+    Return True if ``uninstall_string`` references an absolute executable
+    path that no longer exists on disk, indicating the underlying program
+    has been uninstalled but its Add/Remove Programs registry key was left
+    behind. NSIS-style installers (e.g. Notepad++) commonly delete their
+    own ``uninstall.exe`` without removing the registry key, producing
+    these orphan entries.
+
+    Returns False (i.e. not orphan) when ``uninstall_string`` is empty,
+    not absolute (e.g. ``MsiExec.exe /X{...}``), or points to a file that
+    does exist. Conservative on parse failures: any unexpected shape is
+    treated as not-orphan so legitimate entries are not hidden.
+    """
+    if not uninstall_string:
+        return False
+    s = str(uninstall_string).strip()
+    if not s:
+        return False
+    if s.startswith('"'):
+        end = s.find('"', 1)
+        if end == -1:
+            return False
+        exe = s[1:end]
+    else:
+        exe = s.split(" ", 1)[0]
+    exe = os.path.expandvars(exe)
+    if not os.path.isabs(exe):
+        return False
+    return not os.path.isfile(exe)
+
+
 def _get_reg_software(include_components=True, include_updates=True):
     """
     This searches the uninstall keys in the registry to find a match in the sub
@@ -662,6 +694,12 @@ def _get_reg_software(include_components=True, include_updates=True):
         We want to display these in case we're trying to install software that
         will set the `NoRemove` option.
 
+        Also skip entries whose ``UninstallString`` references an absolute
+        executable path that no longer exists on disk: some NSIS-style
+        uninstallers (e.g. Notepad++) delete their own ``uninstall.exe``
+        without removing the corresponding registry key, leaving an orphan
+        that ``pkg.list_pkgs`` would otherwise report as installed forever.
+
         Returns:
             bool: True if the package needs to be skipped, otherwise False
         """
@@ -688,6 +726,14 @@ def _get_reg_software(include_components=True, include_updates=True):
             vname="UninstallString",
             use_32bit_registry=use_32bit_registry,
         ):
+            return True
+        uninstall_string = __utils__["reg.read_value"](
+            hive=hive,
+            key=f"{key}\\{sub_key}",
+            vname="UninstallString",
+            use_32bit_registry=use_32bit_registry,
+        )["vdata"]
+        if _uninstall_string_is_orphan(uninstall_string):
             return True
         return False
 
@@ -2405,12 +2451,7 @@ def remove(name=None, pkgs=None, **kwargs):
     # Check for changes in the registry
     difference = salt.utils.data.compare_dicts(old, new)
     found_chgs = all(name in difference for name in changed)
-    # Some Windows uninstallers (e.g. Chocolatey-driven Notepad++) return retcode=0
-    # before the Add/Remove Programs registry entry is fully cleared. The default
-    # 3-second wait was racing the state-level ``pkg.list_pkgs`` post-check on CI
-    # runners, so ``pkg.removed`` reported a false failure. Give the registry up
-    # to 30 seconds to catch up; quick removes still exit on ``found_chgs``.
-    end_t = time.time() + 30
+    end_t = time.time() + 3  # give it 3 seconds to catch up.
     while not found_chgs and time.time() < end_t:
         time.sleep(0.5)
         new = list_pkgs(saltenv=saltenv, refresh=False)
