@@ -564,7 +564,7 @@ class TestBaseStorageAndStateMachineAbstractBodies:
         def load_log(self):
             raise NotImplementedError
 
-        def save_snapshot(self, data, last_index, last_term):
+        def save_snapshot(self, data, index, term):
             raise NotImplementedError
 
         def load_snapshot(self):
@@ -600,7 +600,7 @@ class TestBaseStorageAndStateMachineAbstractBodies:
             def load_log(self):
                 pass
 
-            def save_snapshot(self, data, last_index, last_term):
+            def save_snapshot(self, data, index, term):
                 pass
 
             def load_snapshot(self):
@@ -627,7 +627,7 @@ class TestBaseStorageAndStateMachineAbstractBodies:
             def load_log(self):
                 pass
 
-            def save_snapshot(self, data, last_index, last_term):
+            def save_snapshot(self, data, index, term):
                 pass
 
             def load_snapshot(self):
@@ -654,7 +654,7 @@ class TestBaseStorageAndStateMachineAbstractBodies:
             def load_log(self):
                 pass
 
-            def save_snapshot(self, data, last_index, last_term):
+            def save_snapshot(self, data, index, term):
                 pass
 
             def load_snapshot(self):
@@ -681,7 +681,7 @@ class TestBaseStorageAndStateMachineAbstractBodies:
             def load_log(self):
                 pass
 
-            def save_snapshot(self, data, last_index, last_term):
+            def save_snapshot(self, data, index, term):
                 raise NotImplementedError
 
             def load_snapshot(self):
@@ -708,7 +708,7 @@ class TestBaseStorageAndStateMachineAbstractBodies:
             def load_log(self):
                 pass
 
-            def save_snapshot(self, data, last_index, last_term):
+            def save_snapshot(self, data, index, term):
                 pass
 
             def load_snapshot(self):
@@ -735,7 +735,7 @@ class TestBaseStorageAndStateMachineAbstractBodies:
             def load_log(self):
                 raise NotImplementedError
 
-            def save_snapshot(self, data, last_index, last_term):
+            def save_snapshot(self, data, index, term):
                 pass
 
             def load_snapshot(self):
