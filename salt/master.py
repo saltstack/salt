@@ -891,6 +891,16 @@ class Master(SMaster):
 
             ipc_publisher.send_aes_key_event()
 
+            # If this master has no cluster private key yet, it has not
+            # completed a join handshake and needs to run the discover→join
+            # protocol so existing peers add it as a Raft learner.
+            if self.opts.get("cluster_id") and self.opts.get("cluster_peers"):
+                if not ipc_publisher._has_joined_cluster():
+                    log.info("No cluster join sentinel — running cluster discover/join")
+                    join_event = multiprocessing.Event()
+                    ipc_publisher._discover_event = join_event
+                    ipc_publisher.discover_peers()
+
             pub_channels = []
             log.info("Creating master publisher process")
             for _, opts in iter_transport_opts(self.opts):

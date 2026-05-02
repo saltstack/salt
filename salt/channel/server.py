@@ -1975,6 +1975,48 @@ class MasterPubServerChannel:
         # Set by service.py once the Raft node is started.
         self._raft_dispatcher = None
 
+    def _start_raft_as_founding_voter(self):
+        """
+        Start Raft as a voting founding member.
+
+        Called by a timer in ``_publish_daemon`` when no ``join-reply`` was
+        received within ``cluster_join_timeout`` seconds.  This indicates that
+        the node is part of a brand-new cluster where all peers are starting
+        simultaneously and none have sent a join-reply yet.
+        """
+        if self._raft_service is not None:
+            return  # already started by a join-reply race
+
+        log.info(
+            "No join-reply received — starting Raft as founding voter for cluster %r",
+            self.opts["cluster_id"],
+        )
+        try:
+            import salt.utils.asynchronous  # pylint: disable=import-outside-toplevel
+            from salt.cluster.consensus.service import (  # pylint: disable=import-outside-toplevel
+                RaftService,
+                build_peer_pushers,
+            )
+
+            aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
+            peer_pushers = build_peer_pushers(self.opts, self.pushers)
+            self._raft_service = RaftService(
+                self.opts,
+                aio_loop,
+                peer_pushers,
+                on_ready=self._signal_cluster_ready,
+            )
+            self._raft_service.attach(self)
+            self._raft_service.start()
+            # Write the join sentinel so future restarts skip discover/join.
+            self._mark_joined_cluster()
+            log.info(
+                "Raft consensus service started as founding voter for cluster %r",
+                self.opts["cluster_id"],
+            )
+        except Exception:  # pylint: disable=broad-except
+            log.exception("Failed to start Raft as founding voter")
+
     def _start_raft_as_learner(self, known_peers):
         """
         Start ``RaftService`` as a non-voting learner after a dynamic join.
@@ -1987,6 +2029,9 @@ class MasterPubServerChannel:
                             ``join-reply`` payload — the addresses of all
                             existing cluster members.
         """
+        if self._raft_service is not None:
+            return
+
         import salt.utils.asynchronous  # pylint: disable=import-outside-toplevel
 
         try:
@@ -1997,16 +2042,22 @@ class MasterPubServerChannel:
             aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
             port = self.opts.get("cluster_port", 55596)
 
-            # Build a pusher for every known peer using their interface address.
-            peer_pushers = {}
+            # One pusher per remote host.  Do not use ``build_peer_pushers`` here:
+            # discover-reply appends duplicate hosts to ``opts["cluster_peers"]`` and
+            # extra pushers, which would mis-align a plain zip with the static opts list.
+            peer_pushers = {p.pull_host: p for p in self.pushers}
             for peer_id in known_peers:
-                if peer_id not in {p.pull_host for p in self.pushers}:
+                if peer_id not in peer_pushers:
                     pusher = self.pusher(peer_id, port)
                     self.pushers.append(pusher)
-                peer_pushers[peer_id] = self.pusher(peer_id, port)
+                    peer_pushers[peer_id] = pusher
 
             self._raft_service = RaftService(
-                self.opts, aio_loop, peer_pushers, voting=False
+                self.opts,
+                aio_loop,
+                peer_pushers,
+                voting=False,
+                on_ready=self._signal_cluster_ready,
             )
             self._raft_service.attach(self)
             aio_loop.call_soon(self._raft_service.start)
@@ -2019,6 +2070,68 @@ class MasterPubServerChannel:
 
     def gen_token(self):
         return "".join(random.choices(string.ascii_letters + string.digits, k=32))
+
+    def _join_sentinel_path(self):
+        """Return the path to the per-master join sentinel file."""
+        return pathlib.Path(self.opts["cachedir"]) / ".cluster_joined"
+
+    def _has_joined_cluster(self):
+        """
+        Return True if this master has previously completed the cluster join
+        handshake.  The sentinel is written in the master's private cachedir
+        (not the shared cluster_pki_dir) so it is unique per master instance.
+        """
+        return self._join_sentinel_path().exists()
+
+    def _mark_joined_cluster(self):
+        """Write the join sentinel to signal that this master has joined."""
+        sentinel = self._join_sentinel_path()
+        try:
+            sentinel.touch()
+        except OSError as exc:
+            log.warning("Could not write cluster join sentinel %s: %s", sentinel, exc)
+
+    def discover_peers(self):
+        """
+        Send a ``cluster/peer/discover`` event to each configured peer.
+
+        Called during master startup when this node has no Raft history (term=0,
+        empty log), meaning it is joining an existing cluster for the first time.
+        Existing peers will reply with ``cluster/peer/discover-reply``, which
+        triggers the full join handshake and eventually ``cluster/peer/join-reply``
+        received by ``handle_pool_publish``.
+        """
+        path = self.master_key.master_pub_path
+        with salt.utils.files.fopen(path, "r") as fp:
+            pub = fp.read()
+
+        self._discover_token = self.gen_token()
+
+        for peer in self.cluster_peers:
+            log.info("Sending cluster discover to peer %s", peer)
+            tosign = salt.payload.package(
+                {
+                    "peer_id": self.opts["id"],
+                    "pub": pub,
+                    "token": self._discover_token,
+                }
+            )
+            key = salt.crypt.PrivateKeyString(self.private_key())
+            sig = key.sign(tosign)
+            data = {
+                "sig": sig,
+                "payload": tosign,
+            }
+            with salt.utils.event.get_master_event(
+                self.opts, self.opts["sock_dir"], listen=False
+            ) as event:
+                success = event.fire_event(
+                    data,
+                    salt.utils.event.tagify("discover", "peer", "cluster"),
+                    timeout=30000,
+                )
+                if not success:
+                    log.error("Unable to send cluster discover event to %s", peer)
 
     def send_aes_key_event(self):
         log.debug("Sending AES key event")
@@ -2117,14 +2230,13 @@ class MasterPubServerChannel:
         # Cluster-specific peer communication (separate from local IPC)
         if self.opts.get("cluster_id"):
             self.tcp_master_pool_port = self.opts.get("cluster_port", 55596)
-            self.auth_errors = {}
+            self.auth_errors = collections.defaultdict(collections.deque)
             self.peer_map = {}
 
             for peer in self.opts.get("cluster_peers", []):
                 host, port = peer.rsplit(":", 1) if ":" in peer else (peer, 55596)
                 pusher = self.pusher(host, int(port))
                 self.pushers.append(pusher)
-                self.auth_errors[host] = collections.deque()
 
             # Set up the cluster pool puller for incoming peer events
             self.pool_puller = salt.transport.tcp.TCPPuller(
@@ -2136,30 +2248,48 @@ class MasterPubServerChannel:
             self.pool_puller.start()
 
         # Start the Raft node when this master is part of a cluster.
+        # A node without a cluster private key hasn't completed the join
+        # handshake yet — defer Raft startup to _start_raft_as_learner, which
+        # is called from handle_pool_publish when join-reply arrives.
         self._raft_service = None
         if self.opts.get("cluster_id") and self.opts.get("cluster_peers"):
-            aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
-            try:
-                from salt.cluster.consensus.service import (
-                    RaftService,
-                    build_peer_pushers,
-                )
+            _is_new_node = not self._has_joined_cluster()
 
-                peer_pushers = build_peer_pushers(self.opts, self.pushers)
-                self._raft_service = RaftService(
-                    self.opts,
-                    aio_loop,
-                    peer_pushers,
-                    on_ready=self._signal_cluster_ready,
-                )
-                self._raft_service.attach(self)
-                aio_loop.call_soon(self._raft_service.start)
+            if not _is_new_node:
+                aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
+                try:
+                    from salt.cluster.consensus.service import (
+                        RaftService,
+                        build_peer_pushers,
+                    )
+
+                    peer_pushers = build_peer_pushers(self.opts, self.pushers)
+                    self._raft_service = RaftService(
+                        self.opts,
+                        aio_loop,
+                        peer_pushers,
+                        on_ready=self._signal_cluster_ready,
+                    )
+                    self._raft_service.attach(self)
+                    aio_loop.call_soon(self._raft_service.start)
+                    log.info(
+                        "Raft consensus service started for cluster %r",
+                        self.opts["cluster_id"],
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    log.exception("Failed to start Raft consensus service")
+            else:
                 log.info(
-                    "Raft consensus service started for cluster %r",
+                    "New node joining cluster %r — waiting for join-reply to start Raft",
                     self.opts["cluster_id"],
                 )
-            except Exception:  # pylint: disable=broad-except
-                log.exception("Failed to start Raft consensus service")
+                # If no join-reply arrives within the timeout, this is most
+                # likely a founding cluster member and we start Raft as a voter.
+                _join_timeout = self.opts.get("cluster_join_timeout", 5)
+                aio_loop_deferred = salt.utils.asynchronous.aioloop(self.io_loop)
+                aio_loop_deferred.call_later(
+                    _join_timeout, self._start_raft_as_founding_voter
+                )
         # run forever
         try:
             self.io_loop.start()
@@ -2254,54 +2384,60 @@ class MasterPubServerChannel:
                 return
             log.debug("Incomming from peer %s %r", tag, data)
             if tag.startswith("cluster/peer/join-notify"):
+                # join-notify is encrypted with the shared cluster AES key.
+                try:
+                    crypticle = salt.crypt.Crypticle(
+                        self.opts,
+                        salt.master.SMaster.secrets["cluster_aes"]["secret"].value,
+                    )
+                    notify = crypticle.loads(data)
+                except Exception:  # pylint: disable=broad-except
+                    log.exception("Failed to decrypt join-notify")
+                    return
                 log.info(
                     "Cluster join notify from %s for %s",
-                    data["peer_id"],
-                    data["join_peer_id"],
+                    notify["peer_id"],
+                    notify["join_peer_id"],
                 )
                 peer_pub = (
                     pathlib.Path(self.opts["cluster_pki_dir"])
                     / "peers"
-                    / f"{data['join_peer_id']}.pub"
+                    / f"{notify['join_peer_id']}.pub"
                 )
-                with salt.utils.files.fopen(peer_pub, "w") as fp:
-                    fp.write(data["pub"])
+                # Match ``cluster/peer/join``: only create the file when missing.
+                # Peer pubs are often mode 0400; reopening for write raises
+                # ``PermissionError`` on peers that already received the key.
+                if not peer_pub.exists():
+                    with salt.utils.files.fopen(peer_pub, "w") as fp:
+                        fp.write(notify["pub"])
+                elif (
+                    peer_pub.read_text(encoding="utf-8").strip()
+                    != notify["pub"].strip()
+                ):
+                    log.warning(
+                        "Cluster join-notify: peer %s pub on disk does not "
+                        "match wire copy; keeping disk file.",
+                        notify["join_peer_id"],
+                    )
                 # Tell the Raft service about the new peer so it can be added
                 # as a learner and eventually promoted to voter.
                 if self._raft_service is not None:
-                    self._raft_service.notify_peer_joined(data["join_peer_id"])
+                    self._raft_service.notify_peer_joined(notify["join_peer_id"])
             elif tag.startswith("cluster/peer/join-reply"):
-                log.info("Cluster join reply from %s", data["peer_id"])
-                key = salt.crypt.PrivateKeyString(data["cluster_key"])
-                key.write_private(self.opts["cluster_pki_dir"], "cluster")
-                key.write_public(self.opts["cluster_pki_dir"], "cluster")
-                for peer in data["peers"]:
-                    log.error("Populate peer key %s", peer)
-                    pub = (
-                        pathlib.Path(self.opts["cluster_pki_dir"])
-                        / "peers"
-                        / f"{peer}.pub"
-                    )
-                    pub.write_text(data["peers"][peer])
-                # XXX Initial pass just to get things working. This should be
-                # able to be paged. We should also have the joining minion
-                # request the keys it needs based on hashed values.
-                for kind in data["minions"]:
-                    for minion in (
-                        pathlib.Path(self.opts["cluster_pki_dir"]) / kind
-                    ).glob("*"):
-                        if minion.name[:-4] not in data["minions"][kind]:
-                            minion.unlink()
-                    for minion in data["minions"][kind]:
-                        log.error("Populate minion key %s", minion)
-                        pub = (
-                            pathlib.Path(self.opts["cluster_pki_dir"])
-                            / kind
-                            / f"{minion}"
-                        )
-                        pub.write_text(data["minions"][kind][minion])
+                # The join-reply carries a signed, packed inner payload.
+                inner = salt.payload.loads(data["payload"])
+                log.info("Cluster join reply from %s", inner.get("peer_id", "unknown"))
+                # cluster_key is NOT sent over the wire; both sides have access to
+                # it via the shared cluster_pki_dir.  Only the AES session key is
+                # encrypted and delivered here so the joiner can adopt the cluster
+                # session without a restart.
                 event = self._discover_event
                 self._discover_event = None
+                # Write the join sentinel so future restarts skip discover/join.
+                self._mark_joined_cluster()
+                # Start Raft as a non-voting learner now that we have peer keys.
+                known_peers = {p: inner["peers"][p] for p in inner.get("peers", {})}
+                self._start_raft_as_learner(known_peers)
                 # Signal the main master process to start the rest of the
                 # master service processeses.
                 if event is not None:
@@ -2368,14 +2504,15 @@ class MasterPubServerChannel:
 
                 self.cluster_peers.append(payload["peer_id"])
                 self.pushers.append(self.pusher(payload["peer_id"]))
-                self.auth_errors[payload["peer_id"]] = collections.deque()
 
                 for pusher in self.pushers:
                     # XXX Send new peer id and public key to other nodes
                     # XXX This needs to be able to be validated by receiveing peers
                     # XXX Send other nodes pub (and aes?) keys to new node
+                    # Use the cluster-wide AES key so all members can decrypt.
                     crypticle = salt.crypt.Crypticle(
-                        self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
+                        self.opts,
+                        salt.master.SMaster.secrets["cluster_aes"]["secret"].value,
                     )
                     event_data = salt.utils.event.SaltEvent.pack(
                         salt.utils.event.tagify("join-notify", "peer", "cluster"),
@@ -2410,12 +2547,6 @@ class MasterPubServerChannel:
                     if isinstance(payload["token"], str)
                     else payload["token"]
                 )
-                cluster_key_val = self.cluster_key() or ""
-                cluster_key_bytes = (
-                    cluster_key_val.encode()
-                    if isinstance(cluster_key_val, str)
-                    else cluster_key_val
-                )
                 aes_secret = salt.master.SMaster.secrets["aes"]["secret"].value
                 if isinstance(aes_secret, str):
                     aes_secret = aes_secret.encode()
@@ -2423,19 +2554,16 @@ class MasterPubServerChannel:
                 # join-reply payload still needs to carry the other peers'
                 # public keys and the minion keys so a joiner without access
                 # to a shared cluster_pki_dir can populate it from the wire.
-                # The consumer at ``cluster/peer/join-reply`` also needs to
-                # be reworked to unpack this signed envelope before that
-                # path can be exercised.
-                tosign = salt.payload.package(
-                    {
-                        "return_token": payload["token"],
-                        "peer_id": self.opts["id"],
-                        "cluster_key": joiner_pub.encrypt(
-                            token_bytes + cluster_key_bytes
-                        ),
-                        "aes": joiner_pub.encrypt(token_bytes + aes_secret),
-                    }
-                )
+                # The cluster private key PEM is too large for direct RSA
+                # encryption; for now we rely on the shared cluster_pki_dir so
+                # the joiner already has the cluster key before this reply lands.
+                inner_payload = {
+                    "return_token": payload["token"],
+                    "peer_id": self.opts["id"],
+                    "aes": joiner_pub.encrypt(token_bytes + aes_secret),
+                    "peers": {},
+                }
+                tosign = salt.payload.package(inner_payload)
                 sig = salt.crypt.PrivateKeyString(self.private_key()).sign(tosign)
                 event_data = salt.utils.event.SaltEvent.pack(
                     salt.utils.event.tagify("join-reply", "peer", "cluster"),
