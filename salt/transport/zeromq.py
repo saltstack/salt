@@ -848,15 +848,20 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         try:
             while not self._event.is_set():
                 try:
-                    request = await asyncio.wait_for(self._socket.recv(), 0.3)
+                    # Use poll + recv instead of asyncio.wait_for(recv(), timeout).
+                    # Python 3.12 rewrote wait_for to use asyncio.timeout() which
+                    # cancels the task via _must_cancel after data has already been
+                    # consumed from the ZMQ socket.  On a REP socket this leaves the
+                    # FSM in a "received request / expecting send" state permanently,
+                    # deadlocking the worker.  poll() never consumes data, so a
+                    # timeout here is always safe.
+                    events = await self._socket.poll(timeout=300)
+                    if not events:
+                        continue
+                    request = await self._socket.recv()
                     reply = await self.handle_message(None, request)
                     await self._socket.send(self.encode_payload(reply))
                 except zmq.error.Again:
-                    # Yield so the event loop can run other callbacks (e.g. test timers).
-                    await asyncio.sleep(0)
-                    continue
-                except asyncio.exceptions.TimeoutError:
-                    await asyncio.sleep(0)
                     continue
                 except (asyncio.CancelledError, zmq.eventloop.future.CancelledError):
                     break

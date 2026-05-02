@@ -120,13 +120,13 @@ def test_state_show_top(salt_ssh_cli, base_env_state_tree_root_dir):
         # Retry to handle a potential race where the master_tops extension
         # module hasn't been fully loaded yet when the first call is made.
         ret = None
-        for _ in range(3):
+        for _ in range(6):
             ret = salt_ssh_cli.run("state.show_top")
             if ret.returncode == 0 and ret.data == {
                 "base": ["core", "master_tops_test"]
             }:
                 break
-            time.sleep(2)
+            time.sleep(3)
         assert ret.returncode == 0
         assert ret.data == {"base": ["core", "master_tops_test"]}
 

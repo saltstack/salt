@@ -660,19 +660,13 @@ def _discover_saltexts(allowlist=None, blocklist=None):
     blocklist = blocklist or []
 
     for entry_point in salt.utils.entrypoints.iter_entry_points("salt.loader"):
-        try:
-            # We could get this via entry_point.dist._path.name, but that is hacky
-            dist_name = next(
-                iter(
-                    file.parent.name
-                    for file in entry_point.dist.files or []
-                    if file.parent.suffix == ".dist-info"
-                )
-            )
-        except StopIteration:
-            # This can happen if dist.files is None (e.g. editable install)
-            # Fallback to dist.name
-            dist_name = entry_point.dist.name
+        # Use the standard dist.name API which returns the canonical
+        # distribution name (e.g. "salt-ext-ssh-test").  The previous
+        # file-based extraction returned the full .dist-info directory
+        # name (e.g. "salt_ext_ssh_test-1.0.dist-info") which broke
+        # allowlist/blocklist matching and tarball path generation on
+        # Python 3.12+ where dist.files is always populated.
+        dist_name = entry_point.dist.name
 
         if allowlist is not None and dist_name not in allowlist:
             log.debug(
