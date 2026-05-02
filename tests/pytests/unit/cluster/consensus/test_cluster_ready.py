@@ -10,8 +10,6 @@ Covers:
 import asyncio
 import multiprocessing
 
-import pytest
-
 from tests.support.mock import MagicMock, patch
 
 
