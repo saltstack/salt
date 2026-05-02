@@ -283,6 +283,43 @@ def test_unknown_bank_fetch_raises(module, pki_dir):
 
 
 # ---------------------------------------------------------------------------
+# minion_id validity enforcement
+# ---------------------------------------------------------------------------
+
+
+def test_store_invalid_minion_id_raises(module, pki_dir):
+    with pytest.raises(SaltCacheError, match="not a valid minion_id"):
+        module.store("keys", "foo/bar/..", _accepted(), pki_dir)
+
+
+def test_fetch_invalid_minion_id_raises(module, pki_dir):
+    with pytest.raises(SaltCacheError, match="not a valid minion_id"):
+        module.fetch("keys", "../../etc/passwd", pki_dir)
+
+
+def test_updated_invalid_minion_id_raises(module, pki_dir):
+    with pytest.raises(SaltCacheError, match="not a valid minion_id"):
+        module.updated("keys", "bad\\id", pki_dir)
+
+
+def test_flush_invalid_minion_id_raises(module, pki_dir):
+    with pytest.raises(SaltCacheError, match="not a valid minion_id"):
+        module.flush_("keys", key="bad\x00id", cachedir=pki_dir)
+
+
+def test_contains_invalid_minion_id_raises(module, pki_dir):
+    with pytest.raises(SaltCacheError, match="not a valid minion_id"):
+        module.contains("keys", "foo/bar", pki_dir)
+
+
+def test_master_keys_not_validated(module, pki_dir):
+    """master_keys bank does not enforce minion_id rules (file names like master.pem are OK)."""
+    module.store("master_keys", "master.pem", "PEMDATA", pki_dir)
+    result = module.fetch("master_keys", "master.pem", pki_dir)
+    assert "PEMDATA" in result
+
+
+# ---------------------------------------------------------------------------
 # rebuild_from_localfs
 # ---------------------------------------------------------------------------
 

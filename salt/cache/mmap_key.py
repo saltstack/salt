@@ -49,10 +49,11 @@ import salt.utils.mmap_cache
 import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import SaltCacheError
+from salt.utils.verify import valid_id
 
 log = logging.getLogger(__name__)
 
-__func_alias__ = {"list_": "list"}
+__func_alias__ = {"list_": "list", "flush_": "flush"}
 
 # State byte encoding for the keys bank heap prefix
 _STATE_ACCEPTED = 0x01
@@ -158,6 +159,12 @@ def _decode_key_entry(raw):
 # ---------------------------------------------------------------------------
 
 
+def _check_id(bank, key):
+    """Raise SaltCacheError when *key* is not a valid minion_id for key banks."""
+    if bank in ("keys", "denied_keys") and not valid_id(__opts__, key):
+        raise SaltCacheError(f"mmap_key: {key!r} is not a valid minion_id")
+
+
 def store(bank, key, data, cachedir, **kwargs):
     """
     Store *data* for *bank*/*key*.
@@ -166,6 +173,7 @@ def store(bank, key, data, cachedir, **kwargs):
     ``denied_keys`` bank expects a list; the first element is stored.
     ``master_keys`` bank expects a raw string or bytes.
     """
+    _check_id(bank, key)
     cache = _get_cache(bank, cachedir)
 
     if bank == "keys":
@@ -200,6 +208,7 @@ def fetch(bank, key, cachedir, **kwargs):
     ``denied_keys`` returns a list of one pub key string, or ``{}``.
     ``master_keys`` returns the raw PEM string, or ``{}``.
     """
+    _check_id(bank, key)
     cache = _get_cache(bank, cachedir)
     raw = cache.get(key, default=None)
 
@@ -227,6 +236,7 @@ def updated(bank, key, cachedir, **kwargs):
     Return the Unix timestamp (int) of the last write for *bank*/*key*,
     or ``None`` if not found.
     """
+    _check_id(bank, key)
     cache = _get_cache(bank, cachedir)
     mtime = cache.get_mtime(key)
     return int(mtime) if mtime is not None else None
@@ -239,6 +249,9 @@ def flush_(bank, key=None, cachedir=None, **kwargs):
     if cachedir is None:
         cachedir = __opts__.get("pki_dir", "")
 
+    if key is not None:
+        _check_id(bank, key)
+
     cache = _get_cache(bank, cachedir)
 
     if key is None:
@@ -249,8 +262,18 @@ def flush_(bank, key=None, cachedir=None, **kwargs):
             c.close()
         index_name = _BANK_INDEX_NAME.get(bank)
         if index_name:
-            for suffix in ("", ".heap", ".lock", ".roster"):
-                p = os.path.join(cachedir, index_name + suffix)
+            base = os.path.join(cachedir, index_name)
+            # Collect all files to remove: fixed suffixes plus any numbered
+            # heap segments (.heap.1, .heap.2, …).
+            paths_to_remove = [base + s for s in ("", ".heap", ".lock", ".roster")]
+            seg_id = 1
+            while True:
+                seg = f"{base}.heap.{seg_id}"
+                if not os.path.exists(seg):
+                    break
+                paths_to_remove.append(seg)
+                seg_id += 1
+            for p in paths_to_remove:
                 try:
                     if os.path.exists(p):
                         os.remove(p)
@@ -273,6 +296,8 @@ def contains(bank, key, cachedir, **kwargs):
     """
     Return ``True`` if *bank* contains *key*.
     """
+    if key is not None:
+        _check_id(bank, key)
     if key is None:
         # Bank-level existence check: does the index file exist?
         index_name = _BANK_INDEX_NAME.get(bank)
