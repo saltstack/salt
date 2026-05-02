@@ -23,17 +23,12 @@ Scenario
 
 import asyncio
 import multiprocessing
-import tempfile
 
-from salt.cluster.consensus.raft.node import NodeState
-from salt.cluster.consensus.raft.scheduler import ManualTimeoutScheduler
 from salt.cluster.consensus.service import RaftService
 from tests.pytests.functional.cluster.consensus.conftest import FakePusher
 from tests.pytests.functional.cluster.consensus.test_raft_scenarios import (
     ServiceCluster,
-    _patch_make_peer,
 )
-from tests.support.mock import patch
 
 
 def _run(coro):
@@ -238,10 +233,12 @@ class TestClusterReadyIntegration:
         CONFIG commits.
         """
         import salt.master
-        from salt.channel.server import MasterPubServerChannel
 
         event = multiprocessing.Event()
         orig_secrets = salt.master.SMaster.secrets.copy()
+
+        def _set_ready():
+            salt.master.SMaster.secrets["cluster_ready"]["event"].set()
 
         try:
             salt.master.SMaster.secrets["cluster_ready"] = {"event": event}
@@ -253,9 +250,7 @@ class TestClusterReadyIntegration:
                 opts,
                 loop,
                 {"m2": FakePusher(), "m3": FakePusher()},
-                on_ready=lambda: salt.master.SMaster.secrets["cluster_ready"][
-                    "event"
-                ].set(),
+                on_ready=_set_ready,
             )
 
             # Simulate receiving a founding CONFIG that lists m1 as a voter.
