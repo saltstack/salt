@@ -523,3 +523,75 @@ class TestMaybeCommitFoundingConfigExceptionPath:
                 svc._maybe_commit_founding_config()
         finally:
             loop.close()
+
+
+# ---------------------------------------------------------------------------
+# on_ready / cluster-ready gate
+# ---------------------------------------------------------------------------
+
+
+class TestOnReady:
+    """on_ready fires when this node appears in the committed voter set."""
+
+    def _make_svc(self, node_id="m1", peers=("m2",), on_ready=None):
+        opts = _make_opts(node_id, list(peers))
+        loop = asyncio.new_event_loop()
+        pushers = _make_pushers(peers)
+        svc = RaftService(opts, loop, pushers, on_ready=on_ready)
+        return svc, loop
+
+    def test_on_ready_fires_when_node_becomes_voter(self):
+        fired = []
+        svc, loop = self._make_svc(on_ready=lambda: fired.append(True))
+        try:
+            svc._on_membership_change(["m1", "m2"], [])
+            assert fired == [True]
+        finally:
+            loop.close()
+
+    def test_on_ready_not_fired_when_node_absent(self):
+        fired = []
+        svc, loop = self._make_svc(on_ready=lambda: fired.append(True))
+        try:
+            svc._on_membership_change(["m2", "m3"], [])
+            assert fired == []
+        finally:
+            loop.close()
+
+    def test_on_ready_fires_only_once(self):
+        fired = []
+        svc, loop = self._make_svc(on_ready=lambda: fired.append(True))
+        try:
+            svc._on_membership_change(["m1", "m2"], [])
+            svc._on_membership_change(["m1", "m2"], [])
+            assert len(fired) == 1
+        finally:
+            loop.close()
+
+    def test_on_ready_none_is_safe(self):
+        svc, loop = self._make_svc(on_ready=None)
+        try:
+            # Must not raise
+            svc._on_membership_change(["m1", "m2"], [])
+        finally:
+            loop.close()
+
+    def test_on_ready_wired_to_membership_sm(self):
+        """MembershipStateMachine.apply triggers on_ready via on_change hook."""
+        fired = []
+        svc, loop = self._make_svc(on_ready=lambda: fired.append(True))
+        try:
+            svc._node.membership_sm.apply({"voters": ["m1", "m2"], "learners": []})
+            assert fired == [True]
+        finally:
+            loop.close()
+
+    def test_on_ready_not_fired_for_learner_only_entry(self):
+        """Node appearing only as a learner does not trigger readiness."""
+        fired = []
+        svc, loop = self._make_svc(on_ready=lambda: fired.append(True))
+        try:
+            svc._node.membership_sm.apply({"voters": ["m2"], "learners": ["m1"]})
+            assert fired == []
+        finally:
+            loop.close()

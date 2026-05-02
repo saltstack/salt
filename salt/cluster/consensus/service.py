@@ -60,10 +60,11 @@ class RaftService:
                          entry).
     """
 
-    def __init__(self, opts, loop, peer_pushers, voting=True):
+    def __init__(self, opts, loop, peer_pushers, voting=True, on_ready=None):
         self.opts = opts
         self.loop = loop
         self._peer_pushers = dict(peer_pushers)  # addr -> PublishServer (mutable copy)
+        self._on_ready = on_ready
 
         # Use the interface address as the Raft node-id so it matches the
         # keys in cluster_peers and the peer_pushers dict.  opts["id"] is
@@ -76,6 +77,10 @@ class RaftService:
         self._node = Node(node_id, storage=storage, voting=voting)
         self._scheduler = AsyncTimeoutScheduler(loop=loop)
         self._node.register_schedule_timeout(self._scheduler.schedule)
+
+        # Wire the membership SM's on_change so we can fire on_ready once
+        # this node appears in the committed voter set.
+        self._node.membership_sm.on_change = self._on_membership_change
 
         # Build SaltPeer objects - one per cluster peer (all voting at start).
         peers = [
@@ -92,6 +97,29 @@ class RaftService:
         self._dispatcher = RaftDispatcher(self._node, node_id, self._peer_pushers)
 
         self._heartbeat_handle = None
+
+    # ------------------------------------------------------------------
+    # Membership change / readiness
+    # ------------------------------------------------------------------
+
+    def _on_membership_change(self, voters, learners):
+        """
+        Called by ``MembershipStateMachine`` after every committed CONFIG entry.
+
+        Fires ``on_ready`` (once) when this node's address first appears in the
+        committed voter set, signalling that it is a full participant and may
+        begin serving minion/CLI traffic.
+        """
+        if self._on_ready is None:
+            return
+        node_id = self._node.node_id
+        if node_id in voters:
+            log.info(
+                "RaftService: node %s is now a committed voter — marking cluster ready",
+                node_id,
+            )
+            self._on_ready()
+            self._on_ready = None  # fire only once
 
     # ------------------------------------------------------------------
     # Peer factory (used by Node.on_config_change)
@@ -235,7 +263,14 @@ class RaftService:
                 self._maybe_commit_founding_config()
                 for peer in self._node.peers:
                     try:
-                        self._node.send_append_entries(peer, entries=[])
+                        ni = self._node.next_index.get(
+                            peer.node_id, self._node.log.index + 1
+                        )
+                        # Send a heartbeat (empty) only when the peer is
+                        # caught up.  If it's behind, include the entries so
+                        # it can advance — important for lagging learners.
+                        entries = [] if ni > self._node.log.index else None
+                        self._node.send_append_entries(peer, entries=entries)
                     except Exception:  # pylint: disable=broad-except
                         log.exception(
                             "RaftService: error sending heartbeat to %s",

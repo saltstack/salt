@@ -205,6 +205,11 @@ class SMaster:
 
     def populate_secrets(self):
         if self.opts["cluster_id"]:
+            # Gate that request workers check before serving minion/CLI traffic.
+            # Cleared on start; set by RaftService once this node is a committed voter.
+            SMaster.secrets["cluster_ready"] = {
+                "event": multiprocessing.Event(),
+            }
             # Setup the secrets here because the PubServerChannel may need
             # them as well.
             SMaster.secrets["cluster_aes"] = {
@@ -821,6 +826,13 @@ class Master(SMaster):
                 finally:
                     del new_opts
 
+        if self.opts.get("cluster_id") and not self.opts.get("cluster_peers"):
+            critical_errors.append(
+                "cluster_id is set but cluster_peers is empty. "
+                "Every cluster member must have at least one peer configured. "
+                "Dynamic peer discovery is not supported."
+            )
+
         if errors or critical_errors:
             for error in errors:
                 log.error(error)
@@ -867,26 +879,15 @@ class Master(SMaster):
             # Since there are children having their own ProcessManager we should wait for kill more time.
             self.process_manager = salt.utils.process.ProcessManager(wait_for_kill=5)
 
-            event = multiprocessing.Event()
-
             log.info("Creating master event publisher process")
             ipc_publisher = salt.channel.server.MasterPubServerChannel.factory(
                 self.opts,
-                _discover_event=event,
             )
             ipc_publisher.pre_fork(self.process_manager)
             if not ipc_publisher.transport.started.wait(30):
                 raise salt.exceptions.SaltMasterError(
                     "IPC publish server did not start within 30 seconds. Something went wrong."
                 )
-
-            if self.opts.get("cluster_id", None):
-                if (
-                    self.opts.get("cluster_peers", [])
-                    and not ipc_publisher.cluster_key()
-                ):
-                    ipc_publisher.discover_peers()
-                    event.wait(timeout=30)
 
             ipc_publisher.send_aes_key_event()
 
