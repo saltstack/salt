@@ -926,6 +926,57 @@ def test_state_non_base_environment(state, state_tree_prod, tmp_path):
 @pytest.mark.skip_on_windows(
     reason="Skipped until parallel states can be fixed on Windows"
 )
+@pytest.mark.timeout(60)
+def test_parallel_file_managed_from_master(state, state_tree, tmp_path):
+    """
+    Regression test for parallel file.managed states whose source is
+    served by the master file server.
+
+    Before the fork-safety fix in salt.fileclient.RemoteClient, two or
+    more forked children would inherit and race the parent's ZeroMQ REQ
+    socket on cp.hash_file, causing the asyncio loop in each child to
+    spin indefinitely (~98% CPU, never completing).  With the fix, every
+    forked child drops the inherited channel via os.register_at_fork()
+    and lazily opens a fresh one, so concurrent salt:// hash lookups
+    proceed normally.
+
+    The timeout marker is the key assertion -- without the fix the run
+    hangs.
+    """
+    dest1 = tmp_path / "dest_one.txt"
+    dest2 = tmp_path / "dest_two.txt"
+
+    sls_contents = textwrap.dedent(
+        f"""
+        managed_one:
+          file.managed:
+            - name: {dest1}
+            - source: salt://parallel_fork/source_one.txt
+            - parallel: True
+
+        managed_two:
+          file.managed:
+            - name: {dest2}
+            - source: salt://parallel_fork/source_two.txt
+            - parallel: True
+        """
+    )
+    with pytest.helpers.temp_file(
+        "parallel_fork/source_one.txt", "contents-one\n", state_tree
+    ), pytest.helpers.temp_file(
+        "parallel_fork/source_two.txt", "contents-two\n", state_tree
+    ), pytest.helpers.temp_file(
+        "parallel_fork.sls", sls_contents, state_tree
+    ):
+        ret = state.sls("parallel_fork", __pub_jid="1")
+
+    for state_return in ret:
+        assert state_return.result is True, state_return.comment
+
+
+@pytest.mark.skip_on_windows(
+    reason="Skipped until parallel states can be fixed on Windows"
+)
 def test_parallel_state_with_long_tag(state, state_tree):
     """
     This tests the case where the state being executed has a long ID dec or

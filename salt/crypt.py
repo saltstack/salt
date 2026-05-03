@@ -609,10 +609,35 @@ class AsyncAuth:
     # mapping of key -> creds
     creds_map = {}
 
+    _atfork_registered = False
+
+    @classmethod
+    def _register_atfork(cls):
+        # AsyncAuth singletons are bound to a specific tornado IOLoop
+        # whose state cannot be safely shared across a fork().  Drop the
+        # singleton map in the child so a fresh AsyncAuth (with a fresh
+        # io_loop) is created on next use.  creds_map is intentionally
+        # preserved -- AES creds remain valid in the child and reusing
+        # them avoids a re-auth roundtrip on the first master RPC after
+        # fork.
+        if cls._atfork_registered or not hasattr(os, "register_at_fork"):
+            return
+        os.register_at_fork(after_in_child=cls._after_fork_in_child)
+        cls._atfork_registered = True
+
+    @classmethod
+    def _after_fork_in_child(cls):
+        try:
+            cls.instance_map = weakref.WeakKeyDictionary()
+        except Exception:  # pylint: disable=broad-except
+            # Never let an at-fork handler raise.
+            pass
+
     def __new__(cls, opts, io_loop=None):
         """
         Only create one instance of AsyncAuth per __key()
         """
+        cls._register_atfork()
         # do we have any mapping for this io_loop
         io_loop = io_loop or salt.ext.tornado.ioloop.IOLoop.current()
         if io_loop not in AsyncAuth.instance_map:
@@ -1407,10 +1432,22 @@ class SAuth(AsyncAuth):
     # This class is only a singleton per minion/master pair
     instances = weakref.WeakValueDictionary()
 
+    # SAuth tracks atfork registration independently from AsyncAuth
+    # because it has its own singleton map that needs clearing.
+    _atfork_registered = False
+
+    @classmethod
+    def _after_fork_in_child(cls):
+        try:
+            cls.instances = weakref.WeakValueDictionary()
+        except Exception:  # pylint: disable=broad-except
+            pass
+
     def __new__(cls, opts, io_loop=None):
         """
         Only create one instance of SAuth per __key()
         """
+        cls._register_atfork()
         key = cls.__key(opts)
         auth = SAuth.instances.get(key)
         if auth is None:
