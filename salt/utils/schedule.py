@@ -206,9 +206,7 @@ class Schedule:
         """
         schedule = {}
         if include_pillar:
-            pillar_schedule = salt.utils.secret.expose(
-                self.opts.get("pillar", {}).get("schedule", {})
-            )
+            pillar_schedule = self.opts.get("pillar", {}).get("schedule", {})
             if not isinstance(pillar_schedule, dict):
                 raise ValueError("Schedule must be of type dict.")
             schedule.update(pillar_schedule)
@@ -1091,8 +1089,8 @@ class Schedule:
                     and "whens" in self.opts["pillar"]
                     and i in self.opts["pillar"]["whens"]
                 ):
-                    whens = salt.utils.secret.expose(self.opts["pillar"]["whens"])
-                    if not isinstance(whens, dict):
+                    whens = self.opts["pillar"]["whens"]
+                    if not isinstance(whens, Mapping):
                         data["_error"] = (
                             'Pillar item "whens" '
                             "must be a dict. "

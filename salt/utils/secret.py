@@ -30,16 +30,25 @@ class Secret(Generic[SecretType_co]):
         return self._secret_value
 
     def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, self.__class__)
-            and self.get_secret_value() == other.get_secret_value()
-        )
+        return self.get_secret_value() == other
+
+    def __instancecheck__(self, instance: Any) -> bool:
+        return isinstance(instance, self.__class__) or isinstance(instance, self.get_secret_value().__class__)
 
     def __hash__(self) -> int:
         return hash(self.get_secret_value())
 
     def __str__(self) -> str:
         return str(self._display())
+
+    def __contains__(self, item: Any) -> bool:
+        return item in self._secret_value
+
+    def __bool__(self) -> bool:
+        return bool(self._secret_value)
+
+    def __len__(self) -> int:
+        return len(self._secret_value)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._display()!r})"
@@ -107,9 +116,6 @@ class SecretStr(Secret[str]):
 
     _error_kind: ClassVar[str] = "string_type"
 
-    def __len__(self) -> int:
-        return len(self._secret_value)
-
     def _display(self) -> str:
         return REDACT_PLACEHOLDER if self._secret_value else ""
 
@@ -139,16 +145,13 @@ class SecretBytes(Secret[bytes]):
 
     _error_kind: ClassVar[str] = "bytes_type"
 
-    def __len__(self) -> int:
-        return len(self._secret_value)
-
     def _display(self) -> bytes:
         return REDACT_PLACEHOLDER.encode() if self._secret_value else b""
 
 
 class SecretIterable(Secret[SecretType_co]):
-    def __len__(self):
-        return len(self._secret_value)
+    def __contains__(self, item: Any) -> bool:
+        return item in self._secret_value
 
     def __iter__(self):
         return iter(self._secret_value)
@@ -168,12 +171,17 @@ class SecretIterable(Secret[SecretType_co]):
 
 class SecretDict(SecretIterable[dict], MutableMapping[str, Any]):
     def __init__(self, secret_value: dict, exclude: tuple[str, ...] = ()):
+        self._exclude = exclude
         for k, v in secret_value.items():
-            if k in exclude:
-                secret_value[k] = v
-            else:
+            if k not in exclude:
                 secret_value[k] = hide(v)
         super().__init__(secret_value)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        if key in self._exclude:
+            self._secret_value[key] = value
+        else:
+            self._secret_value[key] = hide(value)
 
     def setdefault(self, key, default=None):
         return self._secret_value.setdefault(key, hide(default))

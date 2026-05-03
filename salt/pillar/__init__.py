@@ -286,7 +286,7 @@ class AsyncRemotePillar(RemotePillarMixin):
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
         ret_pillar = salt.utils.secret.hide(
-            ret_pillar, exclude=("master", "ext_pillar_opts")
+            ret_pillar, exclude=("master", "ext_pillar_opts", "schedule")
         )
         return ret_pillar
 

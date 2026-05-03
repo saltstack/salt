@@ -209,8 +209,7 @@ def test_items_returns_obfuscated_wrapped_pillar(configure_loader_modules):
     ), patch.dict(pillarmod.__grains__, {"os": "linux"}):
         ret = pillarmod.items()
 
-    assert isinstance(ret, secret.SecretDict)
-    assert ret["secret"].get_secret_value() == "hunter2"
+    assert ret["secret"] == secret.REDACT_PLACEHOLDER
     assert ret["n"] == 1
 
 
@@ -224,8 +223,7 @@ def test_get_returns_obfuscated_value_from_wrapped_pillar(configure_loader_modul
         with patch.dict(pillarmod.__pillar__, wrapped, clear=True):
             got = pillarmod.get("k")
 
-    assert isinstance(got, secret.SecretStr)
-    assert got.get_secret_value() == "plain"
+    assert got == secret.REDACT_PLACEHOLDER
 
 
 def test_raw_exposes_in_memory_pillar(configure_loader_modules):

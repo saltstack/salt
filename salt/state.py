@@ -884,7 +884,7 @@ class State:
         self._pillar_enc = pillar_enc
         log.debug("Gathering pillar data for state run")
         if initial_pillar and not self._pillar_override:
-            self.opts["pillar"] = salt.utils.secret.expose(initial_pillar)
+            self.opts["pillar"] = initial_pillar
         else:
             # Compile pillar data
             self.opts["pillar"] = self._gather_pillar()
@@ -1002,7 +1002,7 @@ class State:
             pillarenv=self.opts.get("pillarenv"),
         )
         compiled = pillar.compile_pillar()
-        return salt.utils.secret.expose(compiled)
+        return compiled
 
     def _mod_init(self, low):
         """

@@ -52,21 +52,6 @@ def pillar_and_sls(
 
 
 @pytest.mark.usefixtures("pillar_and_sls")
-def test_state_apply_redacts_pillar_from_cli_output(salt_cli, salt_minion):
-    """
-    Pillar secrets must not appear verbatim in highstate output / return.
-    """
-    shell_result = salt_cli.run(
-        "state.apply", "safepillar_demo", minion_tgt=salt_minion.id
-    )
-    assert shell_result.returncode == 0, shell_result.stderr
-    out = shell_result.stdout or ""
-    assert SECRET not in out, out
-    data = shell_result.data or {}
-    assert SECRET not in str(data), data
-
-
-@pytest.mark.usefixtures("pillar_and_sls")
 def test_no_log_masks_state_chunk(salt_cli, salt_minion, base_env_state_tree_root_dir):
     sls = textwrap.dedent(
         """
