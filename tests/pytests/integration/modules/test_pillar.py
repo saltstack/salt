@@ -206,7 +206,7 @@ def test_pillar_get_integer_key(salt_call_cli, pillar_tree):
     assert ret.data
     pillar_get = ret.data
     assert "code" in pillar_get
-    assert salt.utils.secret.REDACT_PLACEHOLDER in pillar_get["code"]
+    assert "luggage" in pillar_get["code"]
 
     ret = salt_call_cli.run("pillar.raw")
     assert ret.returncode == 0

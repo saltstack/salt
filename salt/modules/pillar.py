@@ -134,7 +134,7 @@ def get(
         else merge_nested_lists
     )
     pillar_dict = (
-        salt.utils.secret.expose(__pillar__)
+        __pillar__
         if all(x is None for x in (saltenv, pillarenv))
         else items(saltenv=saltenv, pillarenv=pillarenv)
     )
@@ -187,7 +187,7 @@ def get(
     if ret is KeyError:
         raise KeyError(f"Pillar key not found: {key}")
 
-    return ret
+    return salt.utils.secret.serial(ret)
 
 
 def items(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
@@ -518,7 +518,7 @@ def item(*args, default=None, delimiter=None, pillarenv=None, saltenv=None):
     except KeyError:
         pass
 
-    return ret
+    return salt.utils.secret.serial(ret)
 
 
 def raw(key=None):
