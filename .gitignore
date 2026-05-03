@@ -92,6 +92,7 @@ tests/unit/templates/roots
 # Pycharm
 .idea
 venv/
+venv311/
 .venv/
 
 # VS Code
