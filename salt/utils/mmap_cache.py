@@ -290,10 +290,18 @@ class MmapCache:
                 yield
 
     def _get_cache_id(self):
+        """
+        Return a value that changes whenever another process may have modified
+        the on-disk index (so we drop stale mmaps and re-open).
+
+        Inode alone is insufficient: concurrent writers keep the same inode
+        while mutating the file, which would otherwise leave this process with
+        a permanently stale ``mmap`` view of the index.
+        """
         try:
             st = os.stat(self.path)
             if st.st_ino:
-                return st.st_ino
+                return (st.st_ino, st.st_mtime_ns, st.st_size)
             return (st.st_mtime, st.st_ctime, st.st_size)
         except OSError:
             return None
@@ -1395,6 +1403,9 @@ class MmapCache:
         # naturally if max_segment_bytes is exceeded during the write loop.
         tmp_heap_base = tmp_idx_path + ".heap"
         tmp_roster_path = tmp_idx_path + ".roster"
+        # Used in ``except`` cleanup; must exist even if we fail before the
+        # inner loop assigns the working segment counter.
+        tmp_seg_id = 0
 
         try:
             with self._thread_lock:

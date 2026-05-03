@@ -10,7 +10,7 @@ These tests target branches that the happy-path suite cannot reach:
 - delete() OSError
 - atomic_rebuild() OSError + temp-file cleanup
 - atomic_rebuild() finally-guard when os.fdopen raises before consuming fd
-- close() with _heap_mm open
+- close() with segment heap mmaps open
 - _lock() without fcntl (fallback yield)
 - get_stats() when cache file is absent
 - _get_cache_id() st_ino == 0 fallback
@@ -147,26 +147,29 @@ def test_open_heap_getsize_oserror_is_swallowed(cache_path):
 
 
 # ---------------------------------------------------------------------------
-# close() with _heap_mm set
+# close() with segment heap mmaps set
 # ---------------------------------------------------------------------------
 
 
-def test_close_clears_heap_mm(cache_path):
+def test_close_clears_seg_heap_mm(cache_path):
     c = MmapCache(cache_path, size=_SIZE, slot_size=_SLOT_SIZE, key_size=_KEY_SIZE)
     fake_mm = MagicMock()
-    c._heap_mm = fake_mm
+    c._seg_mms = [[fake_mm, None, 0]]
+    c._seg_mm_stale = [False]
     c.close()
     fake_mm.close.assert_called_once()
-    assert c._heap_mm is None
+    assert c._seg_mms == []
+    assert c._seg_mm_stale == []
 
 
-def test_close_heap_mm_buffererror_is_swallowed(cache_path):
+def test_close_seg_heap_mm_buffererror_is_swallowed(cache_path):
     c = MmapCache(cache_path, size=_SIZE, slot_size=_SLOT_SIZE, key_size=_KEY_SIZE)
     fake_mm = MagicMock()
     fake_mm.close.side_effect = BufferError("still in use")
-    c._heap_mm = fake_mm
+    c._seg_mms = [[fake_mm, None, 0]]
+    c._seg_mm_stale = [False]
     c.close()  # must not raise
-    assert c._heap_mm is None
+    assert c._seg_mms == []
 
 
 # ---------------------------------------------------------------------------
