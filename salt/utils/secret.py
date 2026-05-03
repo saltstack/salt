@@ -282,5 +282,5 @@ def no_log_mask(state_ret: dict[str, Any]):
     Replace comment and changes in a state return dict when no_log is enabled.
     Mutates ret in place.
     """
-    state_ret["comment"] = hide(state_ret["comment"])
-    state_ret["changes"] = hide(state_ret["changes"])
+    state_ret["comment"] = serial(hide(state_ret["comment"]))
+    state_ret["changes"] = serial(hide(state_ret["changes"]))
