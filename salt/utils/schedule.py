@@ -1114,7 +1114,7 @@ class Schedule:
                         )
                         log.error(data["_error"])
                         return
-                    when_ = whens[i]
+                    when_ = self.opts["grains"]["whens"][i]
                 else:
                     when_ = i
 
