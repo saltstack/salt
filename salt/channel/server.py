@@ -2279,17 +2279,41 @@ class MasterPubServerChannel:
                 except Exception:  # pylint: disable=broad-except
                     log.exception("Failed to start Raft consensus service")
             else:
-                log.info(
-                    "New node joining cluster %r — waiting for join-reply to start Raft",
-                    self.opts["cluster_id"],
+                # Deterministic bootstrap: only the lowest interface address
+                # in the configured cluster bootstraps as the founding
+                # voter.  Every other master comes up as a learner via the
+                # join-reply path.  This eliminates the race where several
+                # masters' timers expire before they can exchange
+                # join-replies and each one bootstraps its own single-member
+                # cluster, leaving the cluster with multiple disjoint
+                # leaders or — when join-replies land first — zero voters.
+                bootstrap_pool = sorted(
+                    {self.opts["interface"], *self.opts.get("cluster_peers", [])}
                 )
-                # If no join-reply arrives within the timeout, this is most
-                # likely a founding cluster member and we start Raft as a voter.
-                _join_timeout = self.opts.get("cluster_join_timeout", 5)
                 aio_loop_deferred = salt.utils.asynchronous.aioloop(self.io_loop)
-                aio_loop_deferred.call_later(
-                    _join_timeout, self._start_raft_as_founding_voter
-                )
+                if bootstrap_pool and bootstrap_pool[0] == self.opts["interface"]:
+                    log.info(
+                        "New node bootstrapping cluster %r as designated founder",
+                        self.opts["cluster_id"],
+                    )
+                    # The founder is the lowest-IP master and never runs
+                    # discover (see ``salt.master.Master.start``), so no
+                    # inbound join-reply can race this start-up.  Still
+                    # delay by ``cluster_join_timeout`` before starting
+                    # Raft so peer masters have time to bring up their
+                    # cluster pool pullers — the very first ``pre-vote``
+                    # the founder fires must reach at least one peer to
+                    # form quorum, otherwise the node never re-arms its
+                    # election timer.
+                    _join_timeout = self.opts.get("cluster_join_timeout", 5)
+                    aio_loop_deferred.call_later(
+                        _join_timeout, self._start_raft_as_founding_voter
+                    )
+                else:
+                    log.info(
+                        "New node joining cluster %r — waiting for join-reply to start Raft as learner",
+                        self.opts["cluster_id"],
+                    )
         # run forever
         try:
             self.io_loop.start()
