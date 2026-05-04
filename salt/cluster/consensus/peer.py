@@ -30,6 +30,31 @@ from salt.cluster.consensus.raft.node import Peer
 log = logging.getLogger(__name__)
 
 
+def _is_blocking_publisher(pusher):
+    """
+    Return True when *pusher* is a real ``salt.transport`` ``PublishServer``
+    whose ``publish`` is async-declared but synchronous under the hood
+    (``SyncWrapper.send``).  Test fakes / mocks live in other modules and
+    provide a truly async ``publish``, which can be awaited directly.
+    """
+    module = getattr(pusher.__class__, "__module__", "") or ""
+    return module.startswith("salt.transport")
+
+
+def _blocking_publish(pusher, raw):
+    """
+    Synchronous send wrapper used by :meth:`SaltPeer._send` via
+    ``loop.run_in_executor``.
+
+    Mirrors ``PublishServer.publish`` (lazy connect + ``pub_sock.send``) but
+    runs in a worker thread so a slow or failing TCP connect cannot stall
+    the asyncio event loop driving the rest of Raft.
+    """
+    if getattr(pusher, "pub_sock", None) is None:
+        pusher.connect()
+    pusher.pub_sock.send(raw)
+
+
 class SaltPeer(Peer):
     """
     A ``Peer`` that sends Raft RPCs over the cluster pool channel.
@@ -63,7 +88,19 @@ class SaltPeer(Peer):
         rpc_id = rpc_id or str(uuid.uuid4())
         raw = rpc.pack(tag, self._local_id, rpc_id, payload)
         try:
-            await self._pusher.publish(raw)
+            if _is_blocking_publisher(self._pusher):
+                # Real ``salt.transport`` ``PublishServer``: ``publish`` is
+                # declared async but its body invokes synchronous
+                # ``SyncWrapper.send``.  Awaiting it directly stalls the
+                # asyncio event loop while the underlying TCP connect
+                # retries — so one unreachable peer would starve heartbeats
+                # to every other peer on the same loop.  Offload to the
+                # default executor.
+                loop = asyncio.get_running_loop()
+                await loop.run_in_executor(None, _blocking_publish, self._pusher, raw)
+            else:
+                # Test fakes / mocks provide a truly async ``publish``.
+                await self._pusher.publish(raw)
         except Exception:  # pylint: disable=broad-except
             log.exception("SaltPeer: failed to send %s to %s", tag, self._node_id)
 
