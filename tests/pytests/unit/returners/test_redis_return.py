@@ -402,3 +402,95 @@ def test_returner_still_writes_all_four_keys():
     pipeline.set.assert_called_once()
     pipeline.sadd.assert_called_once_with("minions", "minion-1")
     pipeline.execute.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# get_fun: reads from ret:<jid> hash, not from non-existent <minion>:<jid>
+# ---------------------------------------------------------------------------
+
+
+def test_get_fun_reads_data_from_ret_hash():
+    """
+    Headline regression: ``get_fun`` must read the per-minion return
+    payload from ``HGET ret:<jid> <minion>``. Before the fix it did
+    ``GET <minion>:<jid>`` -- a key the module never writes -- and
+    therefore always returned ``{}``.
+    """
+    serv = MagicMock(name="redis_serv")
+    serv.smembers.return_value = ["minion-1", "minion-2"]
+    # <minion>:<fun> pointers exist for both minions.
+    pointer_table = {
+        "minion-1:test.ping": "20240101",
+        "minion-2:test.ping": "20240102",
+    }
+    serv.get.side_effect = pointer_table.get
+    # ret:<jid> hash holds the per-minion JSON-encoded return data.
+    return_table = {
+        ("ret:20240101", "minion-1"): '{"jid": "20240101", "return": "ok-1"}',
+        ("ret:20240102", "minion-2"): '{"jid": "20240102", "return": "ok-2"}',
+    }
+    serv.hget.side_effect = lambda hashkey, field: return_table.get((hashkey, field))
+
+    with patch.object(redis_return, "_get_serv", return_value=serv):
+        result = redis_return.get_fun("test.ping")
+
+    assert result == {
+        "minion-1": {"jid": "20240101", "return": "ok-1"},
+        "minion-2": {"jid": "20240102", "return": "ok-2"},
+    }
+    # And the production code must NOT have called the broken
+    # ``serv.get("<minion>:<jid>")`` form for either minion.
+    assert all(
+        call.args[0] not in {"minion-1:20240101", "minion-2:20240102"}
+        for call in serv.get.call_args_list
+    ), "get_fun queried the non-existent <minion>:<jid> key; this is the bug"
+
+
+def test_get_fun_skips_minions_with_no_recent_jid():
+    """
+    Minion is in the ``minions`` set but has never run the requested
+    fun -> ``<minion>:<fun>`` returns None. Skip without consulting
+    ``ret:<jid>`` and without raising.
+    """
+    serv = MagicMock(name="redis_serv")
+    serv.smembers.return_value = ["minion-1"]
+    serv.get.return_value = None  # no pointer for this (minion, fun)
+
+    with patch.object(redis_return, "_get_serv", return_value=serv):
+        result = redis_return.get_fun("test.ping")
+
+    assert result == {}
+    serv.hget.assert_not_called()
+
+
+def test_get_fun_handles_missing_hash_field():
+    """
+    The pointer says the latest jid is X, but the ``ret:X`` hash no
+    longer holds a field for this minion (e.g. it expired). Skip
+    cleanly.
+    """
+    serv = MagicMock(name="redis_serv")
+    serv.smembers.return_value = ["minion-1"]
+    serv.get.return_value = "20240101"
+    serv.hget.return_value = None  # field absent
+
+    with patch.object(redis_return, "_get_serv", return_value=serv):
+        result = redis_return.get_fun("test.ping")
+
+    assert result == {}
+
+
+def test_get_fun_no_minions_returns_empty():
+    """
+    No minions in the ``minions`` set -> empty dict. Pins backwards
+    compatibility for fresh installs.
+    """
+    serv = MagicMock(name="redis_serv")
+    serv.smembers.return_value = []
+
+    with patch.object(redis_return, "_get_serv", return_value=serv):
+        result = redis_return.get_fun("test.ping")
+
+    assert result == {}
+    serv.get.assert_not_called()
+    serv.hget.assert_not_called()
