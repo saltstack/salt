@@ -472,6 +472,8 @@ requests-oauthlib==2.0.0
     # via kubernetes
 responses==0.23.1
     # via moto
+rfc3339-validator==0.1.4
+    # via -r requirements/static/ci/common.in
 rfc3987==1.3.8
     # via -r requirements/static/ci/common.in
 rpm-vercmp==0.1.2 ; sys_platform == 'linux'
@@ -501,6 +503,7 @@ six==1.16.0
     #   kubernetes
     #   python-dateutil
     #   pyvmomi
+    #   rfc3339-validator
     #   textfsm
     #   transitions
     #   vcert

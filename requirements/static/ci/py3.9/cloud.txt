@@ -669,6 +669,10 @@ responses==0.24.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   moto
+rfc3339-validator==0.1.4
+    # via
+    #   -c requirements/static/ci/py3.9/linux.txt
+    #   -r requirements/static/ci/common.in
 rfc3987==1.3.8
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
@@ -718,6 +722,7 @@ six==1.16.0
     #   python-dateutil
     #   pyvmomi
     #   pywinrm
+    #   rfc3339-validator
     #   textfsm
     #   transitions
     #   vcert

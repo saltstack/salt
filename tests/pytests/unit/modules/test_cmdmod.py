@@ -178,7 +178,11 @@ def test_run_with_tuple():
         with patch("salt.utils.platform.is_windows", MagicMock(return_value=False)):
             with patch("os.path.isfile", mock_true):
                 with patch("os.access", mock_true):
-                    cmdmod._run(("echo", "foo"), python_shell=True, cwd="/")
+                    # Python 3.13's ntpath.isabs rejects ``/`` (and ``\``) on
+                    # Windows; patch around it so this test exercises the
+                    # tuple-cmd path regardless of host platform.
+                    with patch("os.path.isabs", mock_true):
+                        cmdmod._run(("echo", "foo"), python_shell=True, cwd="/")
 
 
 def test_run_user_not_available():
@@ -256,13 +260,17 @@ def test_run_no_vt_os_error():
         with patch("salt.utils.platform.is_windows", MagicMock(return_value=False)):
             with patch("os.path.isfile", MagicMock(return_value=True)):
                 with patch("os.access", MagicMock(return_value=True)):
-                    with patch(
-                        "salt.utils.timed_subprocess.TimedProc",
-                        MagicMock(side_effect=OSError(expected_error)),
-                    ):
-                        with pytest.raises(CommandExecutionError) as error:
-                            cmdmod.run("foo", cwd="/")
-                        assert error.value.args[0].endswith(expected_error)
+                    # Python 3.13's ntpath.isabs rejects ``/`` on Windows; patch
+                    # so the cwd validation does not preempt the OSError path
+                    # we are exercising.
+                    with patch("os.path.isabs", MagicMock(return_value=True)):
+                        with patch(
+                            "salt.utils.timed_subprocess.TimedProc",
+                            MagicMock(side_effect=OSError(expected_error)),
+                        ):
+                            with pytest.raises(CommandExecutionError) as error:
+                                cmdmod.run("foo", cwd="/")
+                            assert error.value.args[0].endswith(expected_error)
 
 
 def test_run_no_vt_io_error():
@@ -274,13 +282,17 @@ def test_run_no_vt_io_error():
         with patch("salt.utils.platform.is_windows", MagicMock(return_value=False)):
             with patch("os.path.isfile", MagicMock(return_value=True)):
                 with patch("os.access", MagicMock(return_value=True)):
-                    with patch(
-                        "salt.utils.timed_subprocess.TimedProc",
-                        MagicMock(side_effect=IOError(expected_error)),
-                    ):
-                        with pytest.raises(CommandExecutionError) as error:
-                            cmdmod.run("foo", cwd="/")
-                        assert error.value.args[0].endswith(expected_error)
+                    # Python 3.13's ntpath.isabs rejects ``/`` on Windows; patch
+                    # so the cwd validation does not preempt the IOError path
+                    # we are exercising.
+                    with patch("os.path.isabs", MagicMock(return_value=True)):
+                        with patch(
+                            "salt.utils.timed_subprocess.TimedProc",
+                            MagicMock(side_effect=IOError(expected_error)),
+                        ):
+                            with pytest.raises(CommandExecutionError) as error:
+                                cmdmod.run("foo", cwd="/")
+                            assert error.value.args[0].endswith(expected_error)
 
 
 @pytest.mark.skip(reason="Test breaks unittests runs")
