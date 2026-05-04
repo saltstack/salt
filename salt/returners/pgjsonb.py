@@ -172,6 +172,7 @@ import salt.utils.job
 
 try:
     import psycopg2
+    import psycopg2.errors
     import psycopg2.extras
 
     HAS_PG = True
@@ -345,11 +346,13 @@ def save_load(jid, load, minions=None):
             cur.execute(
                 PG_SAVE_LOAD_SQL, {"jid": jid, "load": psycopg2.extras.Json(load)}
             )
-        except psycopg2.IntegrityError:
-            # https://github.com/saltstack/salt/issues/22171
-            # Without this try/except we get tons of duplicate entry errors
-            # which result in job returns not being stored properly
-            pass
+        except psycopg2.errors.UniqueViolation:
+            # PG >= 9.5 uses ON CONFLICT (see _get_serv) and never reaches
+            # this branch. On PG < 9.5 the same jid may legitimately be
+            # written twice (see #22171); tolerate that one case. Other
+            # integrity errors (FK, NOT NULL, CHECK) are real bugs and are
+            # left to propagate.
+            log.warning("save_load: duplicate jid %s ignored (PG < 9.5)", jid)
 
 
 def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
