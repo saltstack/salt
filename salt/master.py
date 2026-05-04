@@ -894,8 +894,22 @@ class Master(SMaster):
             # If this master has no cluster private key yet, it has not
             # completed a join handshake and needs to run the discover→join
             # protocol so existing peers add it as a Raft learner.
+            #
+            # The designated founder (lowest interface address among
+            # ``{self} ∪ cluster_peers``) skips discover entirely — it
+            # bootstraps the cluster as the founding voter and waits for
+            # everyone else to join.  Letting it discover would race the
+            # founding-voter timer in ``_publish_daemon`` and risk turning
+            # the founder itself into a learner via an inbound join-reply,
+            # leaving the cluster with zero voters.
             if self.opts.get("cluster_id") and self.opts.get("cluster_peers"):
-                if not ipc_publisher._has_joined_cluster():
+                bootstrap_pool = sorted(
+                    {self.opts["interface"], *self.opts.get("cluster_peers", [])}
+                )
+                is_founder = (
+                    bool(bootstrap_pool) and bootstrap_pool[0] == self.opts["interface"]
+                )
+                if not ipc_publisher._has_joined_cluster() and not is_founder:
                     log.info("No cluster join sentinel — running cluster discover/join")
                     join_event = multiprocessing.Event()
                     ipc_publisher._discover_event = join_event
