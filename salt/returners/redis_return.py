@@ -278,7 +278,12 @@ def get_fun(fun):
             continue
         if not jid:
             continue
-        data = serv.get(f"{minion}:{jid}")
+        # The return data lives as a field of the ``ret:<jid>`` hash
+        # (written by ``returner`` via ``hset``), not under a
+        # ``<minion>:<jid>`` key (no such key is ever written by this
+        # module). Reading the hash field is what ``get_jid`` already
+        # does.
+        data = serv.hget(f"ret:{jid}", minion)
         if data:
             ret[minion] = salt.utils.json.loads(data)
     return ret
