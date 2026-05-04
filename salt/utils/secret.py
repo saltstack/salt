@@ -33,7 +33,9 @@ class Secret(Generic[SecretType_co]):
         return self.get_secret_value() == other
 
     def __instancecheck__(self, instance: Any) -> bool:
-        return isinstance(instance, self.__class__) or isinstance(instance, self.get_secret_value().__class__)
+        return isinstance(instance, self.__class__) or isinstance(
+            instance, self.get_secret_value().__class__
+        )
 
     def __hash__(self) -> int:
         return hash(self.get_secret_value())

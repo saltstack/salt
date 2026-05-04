@@ -24,6 +24,7 @@ import threading
 import time
 import weakref
 from collections import OrderedDict
+from typing import Mapping
 
 import salt.config
 import salt.defaults.exitcodes
