@@ -110,6 +110,16 @@ def _min_slot_size(key_size):
     return max(_FIXED_OVERHEAD + key_size, _HDR_MIN_SLOT_SIZE)
 
 
+def _fsync_fd_maybe(fd):
+    """Best-effort fdatasync helper for cross-process visibility."""
+    if fd is None:
+        return
+    try:
+        os.fsync(fd)
+    except OSError:
+        pass
+
+
 class MmapCache:
     """
     A memory-mapped hash table backed by an index file, a heap file, and a
@@ -292,6 +302,20 @@ class MmapCache:
             else:
                 yield
 
+    def _flush_index_mm(self):
+        """Flush index mmap and sync the backing file (ordering vs heap/roster)."""
+        if self._mm is None:
+            return
+        try:
+            self._mm.flush()
+            try:
+                idx_fd = self._mm.fileno()
+            except AttributeError:
+                idx_fd = None
+            _fsync_fd_maybe(idx_fd)
+        except OSError:
+            pass
+
     def _get_cache_id(self):
         """
         Return a value that changes whenever another process may have modified
@@ -432,6 +456,7 @@ class MmapCache:
             byte_offset = wfd.seek(0, 2)  # seek to end to get current size
             wfd.write(struct.pack(_ROSTER_ENTRY_FMT, slot))
             wfd.flush()
+            _fsync_fd_maybe(wfd.fileno())
             self._roster_slot_offsets[slot] = byte_offset
         except OSError as exc:
             log.error("Error appending to roster %s: %s", self.roster_path, exc)
@@ -468,6 +493,7 @@ class MmapCache:
                     wfd.seek(byte_offset)
                     wfd.write(tombstone)
                     wfd.flush()
+                    _fsync_fd_maybe(wfd.fileno())
                     # seek back to end so next append lands correctly
                     wfd.seek(0, 2)
                     self._roster_invalidate()
@@ -496,6 +522,7 @@ class MmapCache:
                 f.seek(idx)
                 f.write(tombstone)
                 f.flush()
+                _fsync_fd_maybe(f.fileno())
         except OSError as exc:
             log.error("Error tombstoning roster %s: %s", self.roster_path, exc)
         self._roster_invalidate()
@@ -546,7 +573,7 @@ class MmapCache:
         # Correct header if it drifted too
         if len(slots) != occupied:
             struct.pack_into(_OFFSET_FMT, self._mm, _HDR_OCCUPIED_OFF, len(slots))
-            self._mm.flush()
+            self._flush_index_mm()
 
         data = struct.pack(f"<{len(slots)}I", *slots) if slots else b""
         try:
@@ -670,7 +697,7 @@ class MmapCache:
             # Stamp header magic on a fresh file
             if write and self._mm[0] != _HEADER_MAGIC:
                 self._mm[0] = _HEADER_MAGIC
-                self._mm.flush()
+                self._flush_index_mm()
 
             self._discover_segments()
             self._open_all_seg_mmaps()
@@ -924,6 +951,7 @@ class MmapCache:
             with salt.utils.files.fopen(seg_path, "ab") as f:
                 f.write(record)
                 f.flush()
+                _fsync_fd_maybe(f.fileno())
         except OSError as exc:
             log.error("Error appending to heap segment %s: %s", seg_path, exc)
             return self._pack_offset(seg_id, seg_offset)
@@ -1030,6 +1058,7 @@ class MmapCache:
                 f.seek(seg_offset)
                 f.write(record)
                 f.flush()
+                _fsync_fd_maybe(f.fileno())
         except OSError as exc:
             log.error("Error overwriting heap segment %s: %s", seg_path, exc)
             return False
@@ -1053,10 +1082,10 @@ class MmapCache:
         region, the heap bytes are overwritten in-place.  Otherwise the new
         value is appended to the heap and the index pointer is updated.
 
-        Thread-safe: acquires ``_thread_lock`` (RLock) before ``fcntl.flock``
-        so that within-process threads are serialised in addition to the
-        cross-process advisory lock.  ``open()`` and ``_heap_size`` update are
-        also inside the thread lock to prevent TOCTOU races on ``_heap_size``.
+        Thread-safe: acquires ``_thread_lock`` (RLock) then the cross-process
+        ``fcntl.flock`` **before** ``open(write=True)`` maps the index.  Mapping
+        prior to the flock would let another writer mutate the file while this
+        process holds a stale mmap (multiprocess data loss).
         """
         key_bytes = salt.utils.stringutils.to_bytes(key)[: self.key_size]
         if value is None:
@@ -1070,9 +1099,9 @@ class MmapCache:
 
         try:
             with self._thread_lock:
-                if not self.open(write=True):
-                    return False
                 with self._lock():
+                    if not self.open(write=True):
+                        return False
                     slot, found = self._find_slot(key_bytes)
                     if slot is None:
                         log.error("Mmap cache index is full!")
@@ -1102,7 +1131,7 @@ class MmapCache:
                                 s_offset + self._mtime_off,
                                 mtime_ns,
                             )
-                            self._mm.flush()
+                            self._flush_index_mm()
                             return True
                         # Larger value — append and update pointer; roster unchanged
                         new_heap_off = self._append_to_heap(val_bytes)
@@ -1111,7 +1140,7 @@ class MmapCache:
                         )
                         self._mm[s_offset] = OCCUPIED
                         self._update_header(new_hwm=slot)
-                        self._mm.flush()
+                        self._flush_index_mm()
                         return True
 
                     # New key — append to heap, write slot, update roster
@@ -1131,7 +1160,7 @@ class MmapCache:
                     # index flush and roster append cannot produce divergence
                     # (Item 3 fix — see _roster_recover for open-time repair).
                     self._roster_append(slot)
-                    self._mm.flush()
+                    self._flush_index_mm()
                     return True
 
         except OSError as exc:
@@ -1226,9 +1255,9 @@ class MmapCache:
 
         try:
             with self._thread_lock:
-                if not self.open(write=True):
-                    return False
                 with self._lock():
+                    if not self.open(write=True):
+                        return False
                     h = self._hash(key_bytes)
                     data_size = self.size - 1
                     for i in range(data_size):
@@ -1246,7 +1275,7 @@ class MmapCache:
                         self._mm[offset] = DELETED
                         self._update_header(occupied_delta=-1, deleted_delta=1)
                         self._roster_remove(slot)
-                        self._mm.flush()
+                        self._flush_index_mm()
                         return True
                 return False
         except OSError as exc:
@@ -1564,6 +1593,7 @@ class MmapCache:
                                 heap_f.flush()
                                 os.fsync(heap_f.fileno())
                                 mm.flush()
+                                _fsync_fd_maybe(idx_f.fileno())
                             finally:
                                 mm.close()
                     finally:
