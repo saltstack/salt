@@ -120,7 +120,7 @@ def get(
     unmask
         If set to ``True``, the pillar data will be unmasked.
 
-        .. versionadded:: 3008.0.0
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -199,7 +199,9 @@ def get(
         return salt.utils.secret.serial(ret)
 
 
-def items(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None, unmask=False):
+def items(
+    *args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None, unmask=False
+):
     """
     Calls the master for a fresh pillar and generates the pillar data on the
     fly
@@ -247,7 +249,7 @@ def items(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None, unm
     unmask
         If set to ``True``, the pillar data will be unmasked.
 
-        .. versionadded:: 3008.0.0
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -510,7 +512,7 @@ def item(
     unmask
         If set to ``True``, the pillar data will be unmasked.
 
-        .. versionadded:: 3008.0.0
+        .. versionadded:: 3008.0
 
     CLI Examples:
 

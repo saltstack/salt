@@ -97,7 +97,7 @@ def get_salt_vars():
             salt=__salt__,
             opts=__opts__,
             pillar=salt.utils.secret.expose(__pillar__),
-            **y
+            **y,
         )
 
     # pylint: enable=invalid-name,unused-variable,possibly-unused-variable

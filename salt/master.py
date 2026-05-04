@@ -51,8 +51,8 @@ import salt.utils.master
 import salt.utils.minions
 import salt.utils.platform
 import salt.utils.process
-import salt.utils.secret
 import salt.utils.schedule
+import salt.utils.secret
 import salt.utils.ssdp
 import salt.utils.stringutils
 import salt.utils.user
