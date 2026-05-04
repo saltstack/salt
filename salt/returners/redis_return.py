@@ -218,7 +218,11 @@ def returner(ret):
     minion, jid = ret["id"], ret["jid"]
     pipeline.hset(f"ret:{jid}", minion, salt.utils.json.dumps(ret))
     pipeline.expire(f"ret:{jid}", _get_ttl())
-    pipeline.set("{}:{}".format(minion, ret["fun"]), jid)
+    # Apply the same TTL to the ``<minion>:<fun>`` last-jid pointer.
+    # Without ``ex=`` the key was written with no expiry and never
+    # cleaned up, so any (minion, fun) pair that stopped running stuck
+    # in Redis indefinitely.
+    pipeline.set("{}:{}".format(minion, ret["fun"]), jid, ex=_get_ttl())
     pipeline.sadd("minions", minion)
     pipeline.execute()
 
