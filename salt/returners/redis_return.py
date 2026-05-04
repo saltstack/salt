@@ -286,7 +286,13 @@ def get_jids():
     """
     serv = _get_serv(ret=None)
     ret = {}
-    for s in serv.mget(serv.keys("load:*")):
+    # ``SCAN`` walks the keyspace incrementally and never blocks the
+    # Redis server, unlike ``KEYS``. Order is not guaranteed but the
+    # returner does not rely on it.
+    load_keys = list(serv.scan_iter(match="load:*"))
+    if not load_keys:
+        return ret
+    for s in serv.mget(load_keys):
         if s is None:
             continue
         load = salt.utils.json.loads(s)
@@ -313,14 +319,18 @@ def clean_old_jobs():
     do manually cleaning here.
     """
     serv = _get_serv(ret=None)
-    ret_jids = serv.keys("ret:*")
-    living_jids = set(serv.keys("load:*"))
+    # ``SCAN`` walks the keyspace incrementally; ``KEYS`` blocks the
+    # Redis server until it has scanned every key. ``clean_old_jobs``
+    # is invoked from the master scheduler, so the cumulative load of
+    # blocking the server twice (``ret:*`` and ``load:*``) on every
+    # tick is avoided here.
+    living_jids = set(serv.scan_iter(match="load:*"))
     to_remove = []
-    for ret_key in ret_jids:
+    for ret_key in serv.scan_iter(match="ret:*"):
         load_key = ret_key.replace("ret:", "load:", 1)
         if load_key not in living_jids:
             to_remove.append(ret_key)
-    if len(to_remove) != 0:
+    if to_remove:
         serv.delete(*to_remove)
         log.debug("clean old jobs: %s", to_remove)
 
