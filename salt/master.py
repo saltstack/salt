@@ -55,6 +55,7 @@ import salt.utils.master
 import salt.utils.minions
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.secret
 import salt.utils.schedule
 import salt.utils.ssdp
 import salt.utils.stringutils
@@ -2135,7 +2136,7 @@ class AESFuncs(TransportMethods):
                     {"Minion data cache refresh": load["id"]},
                     tagify(load["id"], "refresh", "minion"),
                 )
-        return data
+        return salt.utils.secret.expose(data)
 
     def _minion_event(self, load):
         """

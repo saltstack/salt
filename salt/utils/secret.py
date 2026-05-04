@@ -191,17 +191,11 @@ class SecretDict(SecretIterable[dict], MutableMapping[str, Any]):
 
 
 class SecretList(SecretIterable[list], MutableSequence[Any]):
-    def __init__(self, secret_value: list):
-        super().__init__(secret_value)
-
     def insert(self, index: int, value):
         self._secret_value.insert(index, hide(value))
 
 
 class SecretTuple(SecretIterable[tuple]):
-    def __init__(self, secret_value: tuple):
-        super().__init__(tuple(hide(v) for v in secret_value))
-
     def _display(self) -> tuple:
         return tuple(v._display() if isinstance(v, Secret) else v for v in self)
 
