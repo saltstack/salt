@@ -47,7 +47,7 @@ def __virtual__():
 
 
 class Listener:
-    def __init__(self, host=None, port=None, channels=None, tag=None):
+    def __init__(self, host=None, port=None, channels=None, tag=None, password=None):
         if host is None:
             host = "localhost"
         if port is None:
@@ -58,7 +58,9 @@ class Listener:
             tag = "salt/engine/redis_sentinel"
         super().__init__()
         self.tag = tag
-        self.redis = redis.StrictRedis(host=host, port=port, decode_responses=True)
+        self.redis = redis.StrictRedis(
+            host=host, port=port, password=password, decode_responses=True
+        )
         self.pubsub = self.redis.pubsub()
         self.pubsub.psubscribe(channels)
         self.fire_master = salt.utils.event.get_master_event(
@@ -98,12 +100,24 @@ class Listener:
             self.work(item)
 
 
-def start(hosts, channels, tag=None):
+def start(hosts, channels, tag=None, password=None):
     if tag is None:
         tag = "salt/engine/redis_sentinel"
     with salt.client.LocalClient() as local:
-        ips = local.cmd(
-            hosts["matching"], "network.ip_addrs", [hosts["interface"]]
-        ).values()
-    client = Listener(host=ips.pop()[0], port=hosts["port"], channels=channels, tag=tag)
+        # ``.values()`` returns a Python 3 ``dict_values`` view; wrap in
+        # ``list`` so ``.pop()`` is available. Without the wrapper the
+        # engine raises ``AttributeError`` the first time it starts and
+        # has therefore never actually run on Python 3.
+        ips = list(
+            local.cmd(
+                hosts["matching"], "network.ip_addrs", [hosts["interface"]]
+            ).values()
+        )
+    client = Listener(
+        host=ips.pop()[0],
+        port=hosts["port"],
+        channels=channels,
+        tag=tag,
+        password=password,
+    )
     client.run()
