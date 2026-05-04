@@ -731,7 +731,7 @@ def get_master_ip(host=None, port=None, password=None):
 
         salt '*' redis.get_master_ip
     """
-    server = _connect(host, port, password)
+    server = _connect(host=host, port=port, password=password)
     srv_info = server.info()
     ret = (srv_info.get("master_host", ""), srv_info.get("master_port", ""))
     return dict(list(zip(("master_host", "master_port"), ret)))

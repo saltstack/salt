@@ -9,7 +9,7 @@ from datetime import datetime
 import pytest
 
 import salt.modules.redismod as redismod
-from tests.support.mock import MagicMock
+from tests.support.mock import MagicMock, patch
 
 
 class Mockredis:
@@ -481,3 +481,123 @@ def test_zrange():
     Test to get a range of values from a sorted set in Redis by index
     """
     assert redismod.zrange("key", "start", "stop") == "A"
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for the get_master_ip positional-args bug.
+#
+# get_master_ip used to forward its arguments to _connect positionally:
+#
+#     server = _connect(host, port, password)
+#
+# but _connect's positional signature is (host, port, db, password). The
+# password value therefore landed in the db slot, while the actual password
+# parameter of _connect fell through to config.option("redis.password").
+# The fix passes arguments by keyword.
+# ---------------------------------------------------------------------------
+
+
+def _fake_redis_server(master_host="10.0.0.5", master_port="6379"):
+    """Build a MagicMock that quacks like the redis client _connect returns."""
+    server = MagicMock()
+    server.info.return_value = {
+        "master_host": master_host,
+        "master_port": master_port,
+    }
+    return server
+
+
+def test_get_master_ip_passes_password_as_keyword():
+    """
+    get_master_ip must forward the password to _connect as a keyword
+    argument, not as a positional argument that would land in _connect's
+    `db` slot.
+    """
+    server = _fake_redis_server()
+    with patch.object(redismod, "_connect", return_value=server) as mock_connect:
+        result = redismod.get_master_ip(host="redis-1", port=6379, password="my-secret")
+
+    mock_connect.assert_called_once_with(
+        host="redis-1", port=6379, password="my-secret"
+    )
+    assert result == {"master_host": "10.0.0.5", "master_port": "6379"}
+
+
+def test_get_master_ip_does_not_send_password_as_db():
+    """
+    Tight regression check: the password value must never appear in
+    _connect's positional args nor in its `db` keyword slot.
+    """
+    server = _fake_redis_server(master_host="x", master_port="y")
+    with patch.object(redismod, "_connect", return_value=server) as mock_connect:
+        redismod.get_master_ip(host="h", port=1234, password="MY_SECRET")
+
+    call = mock_connect.call_args
+    assert "MY_SECRET" not in call.args, (
+        "password leaked into _connect positional args; " "this is the original bug."
+    )
+    assert call.kwargs.get("db") != "MY_SECRET", (
+        "password leaked into _connect's db keyword; " "this is the original bug."
+    )
+    assert call.kwargs.get("password") == "MY_SECRET"
+
+
+def test_get_master_ip_no_args_passes_none_to_connect():
+    """
+    With no explicit arguments, _connect must receive None for each
+    parameter so that _connect itself can resolve the values from
+    config.option(...). The fix must not change this behaviour.
+    """
+    server = _fake_redis_server(master_host="", master_port="")
+    with patch.object(redismod, "_connect", return_value=server) as mock_connect:
+        result = redismod.get_master_ip()
+
+    mock_connect.assert_called_once_with(host=None, port=None, password=None)
+    assert result == {"master_host": "", "master_port": ""}
+
+
+def test_get_master_ip_returns_dict_with_info_fields_missing():
+    """
+    If the Redis INFO response does not include master_host/master_port
+    (e.g. when querying a master that has no master), the function still
+    returns a dict with both keys present, defaulted to "". The fix to
+    the positional-args bug must not regress this.
+    """
+    server = MagicMock()
+    server.info.return_value = {}  # no master_host, no master_port
+    with patch.object(redismod, "_connect", return_value=server):
+        result = redismod.get_master_ip(host="h", port=1, password="p")
+
+    assert result == {"master_host": "", "master_port": ""}
+
+
+def test_get_master_ip_with_only_password_kwarg_routes_password_correctly():
+    """
+    The most common real-world failure pattern of the original bug:
+    operator passes ``password=...`` and relies on host/port defaults
+    coming from config. The password must still arrive at _connect via
+    the password keyword, not via the db slot.
+    """
+    server = _fake_redis_server()
+    with patch.object(redismod, "_connect", return_value=server) as mock_connect:
+        redismod.get_master_ip(password="only-password")
+
+    mock_connect.assert_called_once_with(host=None, port=None, password="only-password")
+
+
+def test_get_master_ip_called_positionally_routes_password_correctly():
+    """
+    The public function signature accepts positional arguments. Even
+    when callers use the positional style, password must end up in
+    _connect's password keyword, not its db slot. This guards against
+    a regression where someone might re-introduce positional forwarding
+    to _connect ('it worked when called positionally so it must be
+    fine').
+    """
+    server = _fake_redis_server()
+    with patch.object(redismod, "_connect", return_value=server) as mock_connect:
+        redismod.get_master_ip("redis-1", 6379, "my-secret")
+
+    mock_connect.assert_called_once_with(
+        host="redis-1", port=6379, password="my-secret"
+    )
