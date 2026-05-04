@@ -158,12 +158,7 @@ def test_pillar_items(salt_call_cli, pillar_tree):
     assert "monty" in pillar_items
     assert pillar_items["monty"] == salt.utils.secret.REDACT_PLACEHOLDER
     assert "knights" in pillar_items
-    assert pillar_items["knights"] == [
-        salt.utils.secret.REDACT_PLACEHOLDER,
-        salt.utils.secret.REDACT_PLACEHOLDER,
-        salt.utils.secret.REDACT_PLACEHOLDER,
-        salt.utils.secret.REDACT_PLACEHOLDER,
-    ]
+    assert pillar_items["knights"] == ["Lancelot", "Galahad", "Bedevere", "Robin"]
 
 
 @pytest.mark.slow_test
@@ -199,7 +194,7 @@ def test_pillar_get_integer_key(salt_call_cli, pillar_tree):
     assert ret.data
     pillar_items = ret.data
     assert "12345" in pillar_items
-    assert pillar_items["12345"] == {"code": [salt.utils.secret.REDACT_PLACEHOLDER]}
+    assert pillar_items["12345"] == {"code": ["luggage"]}
 
     ret = salt_call_cli.run("pillar.get", key="12345")
     assert ret.returncode == 0

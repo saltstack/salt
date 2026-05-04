@@ -9,7 +9,6 @@ import copy
 import logging
 
 import salt.utils.msgpack
-import salt.utils.secret
 import salt.utils.versions
 from salt.serializers import DeserializationError, SerializationError
 
@@ -31,7 +30,6 @@ elif salt.utils.versions.reqs.msgpack >= "1.0.0":
 
     def _serialize(obj, **options):
         try:
-            obj = salt.utils.secret.expose(obj)
             return salt.utils.msgpack.dumps(obj, **options)
         except Exception as error:  # pylint: disable=broad-except
             raise SerializationError(error)
@@ -48,7 +46,6 @@ elif salt.utils.versions.reqs.msgpack >= "0.2.0":
 
     def _serialize(obj, **options):
         try:
-            obj = salt.utils.secret.expose(obj)
             return salt.utils.msgpack.dumps(obj, **options)
         except Exception as error:  # pylint: disable=broad-except
             raise SerializationError(error)
@@ -83,7 +80,6 @@ else:  # msgpack.version < 0.2.0
 
     def _serialize(obj, **options):
         try:
-            obj = salt.utils.secret.expose(obj)
             obj = _encoder(obj)
             return salt.utils.msgpack.dumps(obj, **options)
         except Exception as error:  # pylint: disable=broad-except

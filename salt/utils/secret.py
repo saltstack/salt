@@ -231,7 +231,7 @@ def hide(value: Any, exclude: tuple[str, ...] = ()) -> Secret:
         return value
 
 
-def expose(value: Secret) -> Any:
+def expose(value: Secret, _seen: set[int] = None) -> Any:
     """
     If the value is a secret, return the secret value.
     """
@@ -242,14 +242,22 @@ def expose(value: Secret) -> Any:
     if not value:
         return value
     if isinstance(value, Iterable):
-        if isinstance(value, Mapping):
-            return {k: expose(v) for k, v in value.items()}
-        else:
-            return [expose(v) for v in value]
+        if _seen is None:
+            _seen = set()
+        if id(value) in _seen:
+            return value
+        _seen.add(id(value))
+        try:
+            if isinstance(value, Mapping):
+                return {k: expose(v, _seen) for k, v in value.items()}
+            else:
+                return [expose(v, _seen) for v in value]
+        finally:
+            _seen.discard(id(value))
     return value
 
 
-def serial(value):
+def serial(value, _seen: set[int] = None):
     """
     Keep secrets redacted while serializing the structure to native python types.
     """
@@ -260,10 +268,18 @@ def serial(value):
     if not value:
         return value
     if isinstance(value, Iterable):
-        if isinstance(value, Mapping):
-            return {k: serial(v) for k, v in value.items()}
-        else:
-            return [serial(v) for v in value]
+        if _seen is None:
+            _seen = set()
+        if id(value) in _seen:
+            return value
+        _seen.add(id(value))
+        try:
+            if isinstance(value, Mapping):
+                return {k: serial(v, _seen) for k, v in value.items()}
+            else:
+                return [serial(v, _seen) for v in value]
+        finally:
+            _seen.discard(id(value))
     return value
 
 

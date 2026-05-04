@@ -190,7 +190,7 @@ import salt.utils.dictupdate as dictupdate
 import salt.utils.http
 import salt.utils.path
 import salt.utils.pbm
-import salt.utils.secret
+import salt.utils.timeutil
 import salt.utils.vmware
 import salt.utils.vsan
 from salt.config.schemas.esxcluster import (
@@ -333,7 +333,7 @@ def get_proxy_type():
         salt '*' vsphere.get_proxy_type
     """
     if __pillar__.get("proxy", {}).get("proxytype"):
-        return salt.utils.secret.expose(__pillar__["proxy"]["proxytype"])
+        return __pillar__["proxy"]["proxytype"]
     if __opts__.get("proxy", {}).get("proxytype"):
         return __opts__["proxy"]["proxytype"]
     return "<undefined>"

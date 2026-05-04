@@ -11,7 +11,6 @@ import sys
 import time
 import traceback
 from collections import OrderedDict
-from typing import Mapping
 
 import salt.cache
 import salt.channel.client
@@ -36,7 +35,16 @@ from salt.version import __version__
 
 log = logging.getLogger(__name__)
 
-PILLAR_SECRET_EXCLUDE = ("master", "ext_pillar_opts", "schedule", "_errors")
+PILLAR_SECRET_EXCLUDE = (
+    "_errors",
+    "beacons",
+    "ext_pillar_opts",
+    "master",
+    "mine_functions",
+    "mine_interval",
+    "proxy",
+    "schedule",
+)
 
 
 def get_pillar(
@@ -200,7 +208,7 @@ class RemotePillarMixin:
         return extra_data
 
     def validate_return(self, data):
-        if not isinstance(data, Mapping):
+        if not isinstance(data, dict):
             msg = "Got a bad pillar from master, type {}, expecting dict: {}".format(
                 type(data).__name__, data
             )
@@ -236,11 +244,11 @@ class AsyncRemotePillar(RemotePillarMixin):
         if pillarenv is not None:
             self.opts["pillarenv"] = pillarenv
         self.pillar_override = pillar_override or {}
-        if not isinstance(self.pillar_override, Mapping):
+        if not isinstance(self.pillar_override, dict):
             self.pillar_override = {}
             log.error("Pillar data must be a dictionary")
         self.extra_minion_data = extra_minion_data or {}
-        if not isinstance(self.extra_minion_data, Mapping):
+        if not isinstance(self.extra_minion_data, dict):
             self.extra_minion_data = {}
             log.error("Extra minion data must be a dictionary")
         salt.utils.dictupdate.update(
@@ -330,11 +338,11 @@ class RemotePillar(RemotePillarMixin):
         if pillarenv is not None:
             self.opts["pillarenv"] = pillarenv
         self.pillar_override = pillar_override or {}
-        if not isinstance(self.pillar_override, Mapping):
+        if not isinstance(self.pillar_override, dict):
             self.pillar_override = {}
             log.error("Pillar data must be a dictionary")
         self.extra_minion_data = extra_minion_data or {}
-        if not isinstance(self.extra_minion_data, Mapping):
+        if not isinstance(self.extra_minion_data, dict):
             self.extra_minion_data = {}
             log.error("Extra minion data must be a dictionary")
         salt.utils.dictupdate.update(
@@ -425,7 +433,7 @@ class Pillar:
         self.fileclient = salt.fileclient.get_file_client(self.opts, False)
         self.avail = self.__gather_avail()
         pillar_data = self.opts.get("pillar", {})
-        if not isinstance(pillar_data, Mapping):
+        if not isinstance(pillar_data, dict):
             pillar_data = {}
         else:
             # Ensure we have a plain dict and not a proxy into opts
@@ -494,11 +502,11 @@ class Pillar:
                     loader._dict._refresh_file_mapping()
         self.ignored_pillars = {}
         self.pillar_override = pillar_override or {}
-        if not isinstance(self.pillar_override, Mapping):
+        if not isinstance(self.pillar_override, dict):
             self.pillar_override = {}
             log.error("Pillar data must be a dictionary")
         self.extra_minion_data = extra_minion_data or {}
-        if not isinstance(self.extra_minion_data, Mapping):
+        if not isinstance(self.extra_minion_data, dict):
             self.extra_minion_data = {}
             log.error("Extra minion data must be a dictionary")
         self._closing = False
@@ -511,7 +519,7 @@ class Pillar:
         prevent an on-demand pillare from being rendered when it should not be
         allowed.
         """
-        if not isinstance(self.ext, Mapping):
+        if not isinstance(self.ext, dict):
             log.error("On-demand pillar %s is not formatted as a dictionary", self.ext)
             self.ext = None
             return False
@@ -712,7 +720,7 @@ class Pillar:
                         orders[saltenv][tgt] = 0
                         ignore_missing = False
                         for comp in ctop[saltenv][tgt]:
-                            if isinstance(comp, Mapping):
+                            if isinstance(comp, dict):
                                 if "match" in comp:
                                     matches.append(comp)
                                 if "order" in comp:
@@ -867,7 +875,7 @@ class Pillar:
         mods[sls] = state
         nstate = None
         if state:
-            if not isinstance(state, Mapping):
+            if not isinstance(state, dict):
                 msg = f"SLS '{sls}' does not render to a dictionary"
                 log.error(msg)
                 errors.append(msg)
@@ -884,7 +892,7 @@ class Pillar:
                         # render included state(s)
                         include_states = []
                         for sub_sls in state.pop("include"):
-                            if isinstance(sub_sls, Mapping):
+                            if isinstance(sub_sls, dict):
                                 sub_sls, v = next(iter(sub_sls.items()))
                                 defaults = v.get("defaults", {})
                                 key = v.get("key", None)
@@ -998,7 +1006,7 @@ class Pillar:
                     errors += err
 
                 if pstate is not None:
-                    if not isinstance(pstate, Mapping):
+                    if not isinstance(pstate, dict):
                         log.error(
                             "The rendered pillar sls file, '%s' state did "
                             "not return the expected data format. This is "
@@ -1025,7 +1033,7 @@ class Pillar:
         ext = None
         args = salt.utils.args.get_function_argspec(self.ext_pillars[key]).args
 
-        if isinstance(val, Mapping):
+        if isinstance(val, dict):
             if ("extra_minion_data" in args) and self.extra_minion_data:
                 ext = self.ext_pillars[key](
                     self.minion_id,
@@ -1101,7 +1109,7 @@ class Pillar:
             )
 
         for run in self.opts["ext_pillar"]:
-            if not isinstance(run, Mapping):
+            if not isinstance(run, dict):
                 errors.append('The "ext_pillar" option is malformed')
                 log.critical(errors[-1])
                 return {}, errors
@@ -1230,7 +1238,7 @@ class Pillar:
                 if "__pillar__" in loader.pack:
                     if loader.pack["__pillar__"] is self.pillar_data:
                         continue
-                    if isinstance(loader.pack["__pillar__"], Mapping):
+                    if isinstance(loader.pack["__pillar__"], dict):
                         loader.pack["__pillar__"].clear()
                         loader.pack["__pillar__"].update(self.pillar_data)
                     else:
@@ -1248,12 +1256,12 @@ class Pillar:
         if hasattr(context, "value"):
             context = context.value()
 
-        if isinstance(context, Mapping) and "matchers" in context:
+        if isinstance(context, dict) and "matchers" in context:
             m = context["matchers"]
             if hasattr(m, "pack"):
                 if "__pillar__" in m.pack:
                     if m.pack["__pillar__"] is not self.pillar_data:
-                        if isinstance(m.pack["__pillar__"], Mapping):
+                        if isinstance(m.pack["__pillar__"], dict):
                             m.pack["__pillar__"].clear()
                             m.pack["__pillar__"].update(self.pillar_data)
                         else:
@@ -1264,7 +1272,7 @@ class Pillar:
         if hasattr(self.rend, "pack"):
             if "__pillar__" in self.rend.pack:
                 if self.rend.pack["__pillar__"] is not self.pillar_data:
-                    if isinstance(self.rend.pack["__pillar__"], Mapping):
+                    if isinstance(self.rend.pack["__pillar__"], dict):
                         self.rend.pack["__pillar__"].clear()
                         self.rend.pack["__pillar__"].update(self.pillar_data)
                     else:
@@ -1279,7 +1287,7 @@ class Pillar:
         errors = []
         if self.opts.get("decrypt_pillar"):
             decrypt_pillar = self.opts["decrypt_pillar"]
-            if not isinstance(decrypt_pillar, Mapping):
+            if not isinstance(decrypt_pillar, dict):
                 decrypt_pillar = salt.utils.data.repack_dictlist(
                     self.opts["decrypt_pillar"]
                 )

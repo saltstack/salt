@@ -265,7 +265,7 @@ def test_pillar_opts_in_dunder_pillar(temp_salt_minion):
     # The loader pack should also contain the master opts
     pack_pillar = pillar.functions.pack["__pillar__"]
     assert "master" in pack_pillar
-    assert pack_pillar["master"]["master_key"].get_secret_value() == "master_secret"
+    assert pack_pillar["master"]["master_key"] == "master_secret"
 
 
 def test_ssh_merge_pillar_in_dunder_pillar(temp_salt_minion):

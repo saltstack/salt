@@ -36,7 +36,6 @@ better to always use a named configuration profile, as shown above.
 
 import logging
 
-import salt.utils.secret
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 try:
@@ -72,7 +71,7 @@ def get_conn(opts, profile=None, host=None, port=None):
     Return a conn object for accessing memcached
     """
     if not (host and port):
-        opts_pillar = salt.utils.secret.expose(opts.get("pillar", {}))
+        opts_pillar = opts.get("pillar", {})
         opts_master = opts_pillar.get("master", {})
 
         opts_merged = {}

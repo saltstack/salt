@@ -42,17 +42,15 @@ Arbitrary Data:
 
 .. versionadded:: 3008
 
-On the minion, compiled pillar is stored using :mod:`salt.utils.safepillar`
+On the minion, compiled pillar is stored using :mod:`salt.utils.secret`
 containers: string and bytes leaves are wrapped with Pydantic ``SecretStr`` and
-``SecretBytes``, and mappings/lists use ``SafeDict`` / ``SafeList`` so later
+``SecretBytes``, and mappings/lists use ``SecretDict`` / ``SecretList`` so later
 in-place updates stay wrapped. State returns and minion logs redact known pillar
 literals where possible. States may set ``no_log: true`` (runtime keyword, not
 passed to the state function) to mask that state's ``comment`` and ``changes``
-in output. Custom code that assumes ``isinstance(value, str)`` for pillar
-values may need to use ``get_secret_value()`` on secret types or compare with
-``SecretStr``.
+in output.
 
-The execution functions ``pillar.items`` and ``pillar.get`` are exceptions: they
+The execution functions ``pillar.raw`` and ``pillar.get`` are exceptions: they
 return plain Python strings, bytes, dicts, and lists (unwrapped) because the
 operator explicitly asked for pillar data. Other code paths use wrapped
 in-memory pillar unless they call those functions.

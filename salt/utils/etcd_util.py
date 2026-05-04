@@ -79,7 +79,6 @@ always use a named configuration profile, as shown above.
 import logging
 
 import salt.utils.msgpack
-import salt.utils.secret
 import salt.utils.versions
 from salt.exceptions import SaltException
 
@@ -957,7 +956,7 @@ class EtcdClientV3(EtcdBase):
 
 
 def _get_etcd_opts(opts, profile=None):
-    opts_pillar = salt.utils.secret.expose(opts.get("pillar", {}))
+    opts_pillar = opts.get("pillar", {})
     opts_master = opts_pillar.get("master", {})
 
     opts_merged = {}

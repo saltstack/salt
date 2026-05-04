@@ -31,6 +31,7 @@ def get(
     delimiter=DEFAULT_TARGET_DELIM,
     pillarenv=None,
     saltenv=None,
+    unmask=False,
 ):
     """
     .. versionadded:: 0.14.0
@@ -116,6 +117,11 @@ def get(
 
         .. versionadded:: 2017.7.0
 
+    unmask
+        If set to ``True``, the pillar data will be unmasked.
+
+        .. versionadded:: 3008.0.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -187,7 +193,10 @@ def get(
     if ret is KeyError:
         raise KeyError(f"Pillar key not found: {key}")
 
-    return salt.utils.secret.serial(ret)
+    if unmask:
+        return salt.utils.secret.expose(ret)
+    else:
+        return salt.utils.secret.serial(ret)
 
 
 def items(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
@@ -235,6 +244,11 @@ def items(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
         Included only for compatibility with
         :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
 
+    unmask
+        If set to ``True``, the pillar data will be unmasked.
+
+        .. versionadded:: 3008.0.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -273,7 +287,10 @@ def items(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
         pillarenv=pillarenv,
     )
     ret = pillar.compile_pillar()
-    return salt.utils.secret.serial(ret)
+    if unmask:
+        return salt.utils.secret.expose(ret)
+    else:
+        return salt.utils.secret.serial(ret)
 
 
 # Allow pillar.data to also be used to return pillar data
@@ -443,7 +460,9 @@ def ls(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
     )
 
 
-def item(*args, default=None, delimiter=None, pillarenv=None, saltenv=None):
+def item(
+    *args, default=None, delimiter=None, pillarenv=None, saltenv=None, unmask=False
+):
     """
     .. versionadded:: 0.16.2
 
@@ -488,6 +507,11 @@ def item(*args, default=None, delimiter=None, pillarenv=None, saltenv=None):
 
         .. versionadded:: 2017.7.6,2018.3.1
 
+    unmask
+        If set to ``True``, the pillar data will be unmasked.
+
+        .. versionadded:: 3008.0.0
+
     CLI Examples:
 
     .. code-block:: bash
@@ -518,7 +542,10 @@ def item(*args, default=None, delimiter=None, pillarenv=None, saltenv=None):
     except KeyError:
         pass
 
-    return salt.utils.secret.serial(ret)
+    if unmask:
+        return salt.utils.secret.expose(ret)
+    else:
+        return salt.utils.secret.serial(ret)
 
 
 def raw(key=None):
@@ -612,7 +639,7 @@ def ext(external, pillar=None):
 
     ret = pillar_obj.compile_pillar()
 
-    return ret
+    return salt.utils.secret.serial(ret)
 
 
 def keys(key, delimiter=DEFAULT_TARGET_DELIM):
