@@ -54,14 +54,14 @@ jobs:
       FULL_TESTRUN_SLUGS: ${{ vars.FULL_TESTRUN_SLUGS }}
       PR_TESTRUN_SLUGS: ${{ vars.PR_TESTRUN_SLUGS }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0  # Full clone to also get the tags to get the right salt version
 
       - name: Get Changed Files
         if: ${{ github.event_name == 'pull_request'}}
         id: changed-files
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
         with:
           token: ${{ github.token }}
           list-files: json
@@ -140,7 +140,7 @@ jobs:
                 - *pkg_tests_added_modified
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.11"
 
@@ -222,7 +222,7 @@ jobs:
 
       - name: Upload testrun-changed-files.txt
         if: ${{ fromJSON(steps.workflow-config.outputs.config)['testrun']['type'] != 'full' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: testrun-changed-files.txt
           path: testrun-changed-files.txt
@@ -272,10 +272,10 @@ jobs:
     needs:
       - prepare-workflow
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.11"
 
@@ -336,7 +336,7 @@ jobs:
           tools docs man
 
       - name: Upload MAN Pages Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: man-pages-${{ needs.prepare-workflow.outputs.salt-version }}
           path: doc/man/
@@ -388,7 +388,7 @@ jobs:
           git format-patch --keep-subject --binary --stdout HEAD^ > salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
 
       - name: Upload Changes Diff Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
@@ -416,10 +416,10 @@ jobs:
       - build-docs
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.11"
 
@@ -435,7 +435,7 @@ jobs:
           salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
 
       - name: Download Man Pages Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs-man.tar.xz
 
@@ -590,7 +590,7 @@ jobs:
     steps:
       - name: Get workflow information
         id: get-workflow-info
-        uses: im-open/workflow-conclusion@v2
+        uses: im-open/workflow-conclusion@fce18569e28a9f2ed1feca1e6d4251e6a7365fdc # v2
 
       - name: Set Pipeline Exit Status
         shell: bash
