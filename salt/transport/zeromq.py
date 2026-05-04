@@ -363,10 +363,17 @@ class PublishClient(salt.transport.base.PublishClient):
             if events:
                 return await self._socket.recv()
         elif timeout:
-            try:
-                return await asyncio.wait_for(self._socket.recv(), timeout=timeout)
-            except asyncio.exceptions.TimeoutError:
-                log.trace("PublishClient recieve timedout: %d", timeout)
+            # Use poll + recv instead of asyncio.wait_for(recv(), timeout).
+            # Python 3.12 rewrote wait_for to use asyncio.timeout() which
+            # cancels the task via _must_cancel after data has already been
+            # consumed from the ZMQ socket.  On a SUB socket this drops the
+            # received publish on the floor and subsequent recv calls miss
+            # new messages.  poll() never consumes data, so a timeout here
+            # is always safe.
+            events = await self._socket.poll(timeout=int(timeout * 1000))
+            if events:
+                return await self._socket.recv()
+            log.trace("PublishClient recieve timedout: %s", timeout)
         else:
             return await self._socket.recv()
 

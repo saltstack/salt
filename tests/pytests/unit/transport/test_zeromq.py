@@ -2145,6 +2145,12 @@ async def test_request_server_continue_on_errors(io_loop):
         def __init__(self):
             self.calls = 0
 
+        async def poll(self, timeout=None):
+            # Yield once so the surrounding test loop can schedule
+            # stop_after_delay; the real poll always yields too.
+            await asyncio.sleep(0)
+            return [self]
+
         async def recv(self):
             self.calls += 1
             raise zmq.error.Again()
@@ -2172,6 +2178,12 @@ async def test_request_server_continue_on_errors_log_info(io_loop, caplog):
     class Socket:
         def __init__(self):
             self.calls = 0
+
+        async def poll(self, timeout=None):
+            # Yield once so the surrounding test loop can schedule
+            # stop_after_delay; the real poll always yields too.
+            await asyncio.sleep(0)
+            return [self]
 
         async def recv(self):
             self.calls += 1
@@ -2202,6 +2214,12 @@ async def test_request_server_continue_on_errors_log_debug(io_loop, caplog):
     class Socket:
         def __init__(self):
             self.calls = 0
+
+        async def poll(self, timeout=None):
+            # Yield once so the surrounding test loop can schedule
+            # stop_after_delay; the real poll always yields too.
+            await asyncio.sleep(0)
+            return [self]
 
         async def recv(self):
             self.calls += 1

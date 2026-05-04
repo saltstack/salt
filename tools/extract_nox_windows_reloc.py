@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=resource-leakage,3rd-party-module-not-gated
 """
 Extract nox.windows.amd64.tar.gz into REPO_ROOT, remapping CI symlink targets
 (D:\\a\\salt\\salt, //?/D:/...) to the local repo so Windows tar/git tar does not fail.
@@ -70,9 +71,7 @@ def fix_nox_windows(repo: pathlib.Path) -> None:
                 for line in fp:
                     key, val = (_.strip() for _ in line.split("=", 1))
                     values[key] = val
-            values["home"] = str(
-                repo.joinpath("artifacts", "salt", scripts_dir_name)
-            )
+            values["home"] = str(repo.joinpath("artifacts", "salt", scripts_dir_name))
             values["base-prefix"] = str(repo.joinpath("artifacts", "salt"))
             values["base-exec-prefix"] = str(repo.joinpath("artifacts", "salt"))
             values["base-executable"] = str(

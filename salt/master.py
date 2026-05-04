@@ -1366,7 +1366,7 @@ class RequestServer(salt.utils.process.SignalHandlingProcess):
                         name=name,
                     )
 
-        self.process_manager.run()
+        asyncio.run(self.process_manager.run())
 
     def run(self):
         """

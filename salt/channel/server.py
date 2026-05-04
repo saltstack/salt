@@ -1638,9 +1638,10 @@ class PoolRoutingChannel:
         # Close event manager
         if self.event is not None:
             try:
-                self.event.close()
+                self.event.destroy()
             except Exception as exc:  # pylint: disable=broad-except
                 log.error("Error closing event manager: %s", exc)
+            self.event = None
 
         # Close external transport
         if hasattr(self.transport, "close"):

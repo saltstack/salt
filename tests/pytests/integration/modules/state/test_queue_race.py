@@ -1,3 +1,4 @@
+import copy
 import logging
 import os
 import pathlib
@@ -18,15 +19,22 @@ log = logging.getLogger(__name__)
 def configured_minion(salt_minion):
     """
     Configures the minion to have process_count_max=1 and no background noise.
+
+    On teardown the original config is fully restored.  The fixture used to
+    only restore ``process_count_max`` and leave ``mine_interval=0`` and an
+    empty ``schedule`` behind, which made the minion run ``mine.update``
+    every loop iteration and starve the io_loop with fresh AsyncAuth +
+    4096-bit RSA key loads.  Subsequent tests then saw their publishes
+    silently dropped while the loop was busy doing crypto.
     """
     if salt_minion.is_running():
         salt_minion.terminate()
 
     config_file = pathlib.Path(salt_minion.config_file)
     with salt.utils.files.fopen(config_file) as f:
-        config = yaml.safe_load(f)
+        original_config = yaml.safe_load(f)
 
-    original_max = config.get("process_count_max")
+    config = copy.deepcopy(original_config)
     config["process_count_max"] = 1
     config["mine_interval"] = 0
     config["schedule"] = {}  # Disable all scheduled jobs
@@ -35,15 +43,16 @@ def configured_minion(salt_minion):
         yaml.safe_dump(config, f)
 
     salt_minion.start()
-    yield salt_minion
-
-    # Teardown
-    if salt_minion.is_running():
-        salt_minion.terminate()
-    config["process_count_max"] = original_max
-    with salt.utils.files.fopen(config_file, "w") as f:
-        yaml.safe_dump(config, f)
-    salt_minion.start()
+    try:
+        yield salt_minion
+    finally:
+        # Teardown: restore the original config in full so we do not leak
+        # mine_interval=0 / empty schedule state into subsequent tests.
+        if salt_minion.is_running():
+            salt_minion.terminate()
+        with salt.utils.files.fopen(config_file, "w") as f:
+            yaml.safe_dump(original_config, f)
+        salt_minion.start()
 
 
 @pytest.fixture(scope="module")
