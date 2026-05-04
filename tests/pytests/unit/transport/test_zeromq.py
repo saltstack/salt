@@ -1734,6 +1734,40 @@ async def test_client_send_recv_on_cancelled_error(minion_opts):
         client.close()
 
 
+def test_async_req_message_client_close_never_connected(minion_opts):
+    """
+    close() must not hang when connect() was never called (#68637).
+    """
+    client = salt.transport.zeromq.AsyncReqMessageClient(
+        minion_opts, "tcp://127.0.0.1:4506"
+    )
+    client.close()
+    assert client._closed is True
+    assert client.socket is None
+
+
+def test_async_req_message_client_close_idempotent(minion_opts):
+    client = salt.transport.zeromq.AsyncReqMessageClient(
+        minion_opts, "tcp://127.0.0.1:4506"
+    )
+    client.close()
+    client.close()
+    assert client._closed is True
+
+
+async def test_async_req_message_client_graceful_close_idle(minion_opts):
+    """
+    With connect() only, close() must run graceful shutdown (Tornado Queue path).
+    """
+    client = salt.transport.zeromq.AsyncReqMessageClient(
+        minion_opts, "tcp://127.0.0.1:4506"
+    )
+    client.connect()
+    client.close()
+    assert client._closed is True
+    assert client.socket is None
+
+
 def test_pub_client_init(minion_opts, io_loop):
     minion_opts["id"] = "minion"
     minion_opts["__role"] = "syndic"
