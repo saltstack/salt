@@ -30,7 +30,6 @@ import salt.utils.hashutils
 import salt.utils.http
 import salt.utils.path
 import salt.utils.platform
-import salt.utils.secret
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
@@ -629,7 +628,7 @@ class Client:
                     if "s3." + key in self.opts:
                         return self.opts["s3." + key]
                     try:
-                        return salt.utils.secret.expose(self.opts["pillar"]["s3"][key])
+                        return self.opts["pillar"]["s3"][key]
                     except (KeyError, TypeError):
                         return default
 
@@ -688,7 +687,7 @@ class Client:
                     if key in self.opts:
                         return self.opts[key]
                     try:
-                        return salt.utils.secret.expose(self.opts["pillar"][key])
+                        return self.opts["pillar"][key]
                     except (KeyError, TypeError):
                         return default
 
@@ -1487,11 +1486,7 @@ class RemoteClient(Client):
         """
         Return the metadata derived from the master_tops system
         """
-        load = {
-            "cmd": "_master_tops",
-            "id": self.opts["id"],
-            "opts": salt.utils.secret.serial(self.opts),
-        }
+        load = {"cmd": "_master_tops", "id": self.opts["id"], "opts": self.opts}
         return self._channel_send(
             load,
         )

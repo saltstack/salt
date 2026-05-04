@@ -6,7 +6,6 @@ import traceback
 import warnings
 from abc import ABC, abstractmethod
 
-import salt.utils.secret
 import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
@@ -26,7 +25,7 @@ def request_server(opts, **kwargs):
     if "transport" in opts:
         ttype = opts["transport"]
     elif "transport" in opts.get("pillar", {}).get("master", {}):
-        ttype = salt.utils.secret.expose(opts["pillar"]["master"]["transport"])
+        ttype = opts["pillar"]["master"]["transport"]
 
     if ttype == "zeromq":
         import salt.transport.zeromq
@@ -53,7 +52,7 @@ def request_client(opts, io_loop):
     if "transport" in opts:
         ttype = opts["transport"]
     elif "transport" in opts.get("pillar", {}).get("master", {}):
-        ttype = salt.utils.secret.expose(opts["pillar"]["master"]["transport"])
+        ttype = opts["pillar"]["master"]["transport"]
 
     if ttype == "zeromq":
         import salt.transport.zeromq
@@ -83,7 +82,7 @@ def publish_server(opts, **kwargs):
     elif "transport" in opts:
         ttype = opts["transport"]
     elif "transport" in opts.get("pillar", {}).get("master", {}):
-        ttype = salt.utils.secret.expose(opts["pillar"]["master"]["transport"])
+        ttype = opts["pillar"]["master"]["transport"]
 
     if "pub_host" not in kwargs and "pub_path" not in kwargs:
         kwargs["pub_host"] = opts["interface"]
@@ -138,7 +137,7 @@ def publish_client(
     elif "transport" in opts:
         ttype = opts["transport"]
     elif "transport" in opts.get("pillar", {}).get("master", {}):
-        ttype = salt.utils.secret.expose(opts["pillar"]["master"]["transport"])
+        ttype = opts["pillar"]["master"]["transport"]
 
     ssl_opts = None
     if "ssl" in kwargs:

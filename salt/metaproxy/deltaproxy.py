@@ -42,7 +42,6 @@ import salt.utils.network
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.schedule
-import salt.utils.secret
 import salt.utils.ssdp
 import salt.utils.user
 import salt.utils.zeromq
@@ -96,9 +95,9 @@ async def post_master_init(self, master):
         raise SaltSystemExit(code=-1, msg=errmsg)
 
     if "proxy" not in self.opts:
-        self.opts["proxy"] = salt.utils.secret.expose(self.opts["pillar"]["proxy"])
+        self.opts["proxy"] = self.opts["pillar"]["proxy"]
 
-    pillar = copy.deepcopy(salt.utils.secret.expose(self.opts["pillar"]))
+    pillar = copy.deepcopy(self.opts["pillar"])
     pillar.pop("master", None)
     self.opts = salt.utils.dictupdate.merge(
         self.opts,
@@ -111,14 +110,10 @@ async def post_master_init(self, master):
         # Even when not required, some details such as mine configuration
         # should be merged anyway whenever possible.
         if "mine_interval" in self.opts["pillar"]:
-            self.opts["mine_interval"] = salt.utils.secret.expose(
-                self.opts["pillar"]["mine_interval"]
-            )
+            self.opts["mine_interval"] = self.opts["pillar"]["mine_interval"]
         if "mine_functions" in self.opts["pillar"]:
             general_proxy_mines = self.opts.get("mine_functions", [])
-            specific_proxy_mines = salt.utils.secret.expose(
-                self.opts["pillar"]["mine_functions"]
-            )
+            specific_proxy_mines = self.opts["pillar"]["mine_functions"]
             try:
                 self.opts["mine_functions"] = general_proxy_mines + specific_proxy_mines
             except TypeError as terr:
@@ -661,8 +656,8 @@ def thread_return(cls, minion_instance, opts, data):
             if minion_instance.connected and minion_instance.opts["pillar"].get(
                 "minion_blackout", False
             ):
-                whitelist = salt.utils.secret.expose(
-                    minion_instance.opts["pillar"].get("minion_blackout_whitelist", [])
+                whitelist = minion_instance.opts["pillar"].get(
+                    "minion_blackout_whitelist", []
                 )
                 # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
                 if (
@@ -672,7 +667,9 @@ def thread_return(cls, minion_instance, opts, data):
                     minion_blackout_violation = True
             # use minion_blackout_whitelist from grains if it exists
             if minion_instance.opts["grains"].get("minion_blackout", False):
-                minion_instance.opts["grains"].get("minion_blackout_whitelist", [])
+                whitelist = minion_instance.opts["grains"].get(
+                    "minion_blackout_whitelist", []
+                )
                 if (
                     function_name != "saltutil.refresh_pillar"
                     and function_name not in whitelist
@@ -903,8 +900,8 @@ def thread_multi_return(cls, minion_instance, opts, data):
             if minion_instance.connected and minion_instance.opts["pillar"].get(
                 "minion_blackout", False
             ):
-                whitelist = salt.utils.secret.expose(
-                    minion_instance.opts["pillar"].get("minion_blackout_whitelist", [])
+                whitelist = minion_instance.opts["pillar"].get(
+                    "minion_blackout_whitelist", []
                 )
                 # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
                 if (

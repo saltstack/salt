@@ -2126,12 +2126,9 @@ class AESFuncs(TransportMethods):
             clean_cache=load.get("clean_cache"),
         )
         data = pillar.compile_pillar()
-        data = salt.utils.secret.expose(data)
         self.fs_.update_opts()
         if self.opts.get("minion_data_cache", False):
-            self.masterapi.cache.store(
-                "grains", load["id"], salt.utils.secret.expose(load["grains"])
-            )
+            self.masterapi.cache.store("grains", load["id"], load["grains"])
 
             if self.opts.get("minion_data_cache_events") is True:
                 self.event.fire_event(
@@ -2440,7 +2437,7 @@ class AESFuncs(TransportMethods):
                 log.trace(
                     "Master function call %s took %s seconds", func, time.time() - start
                 )
-            except Exception as e:  # pylint: disable=broad-except
+            except Exception:  # pylint: disable=broad-except
                 ret = ""
                 log.error("Error in function %s:\n", func, exc_info=True)
         else:

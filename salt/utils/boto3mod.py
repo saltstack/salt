@@ -75,7 +75,7 @@ def _option(value):
     """
     if value in __opts__:
         return __opts__[value]
-    master_opts = salt.utils.secret.expose(__pillar__.get("master", {}))
+    master_opts = __pillar__.get("master", {})
     if value in master_opts:
         return master_opts[value]
     if value in __pillar__:

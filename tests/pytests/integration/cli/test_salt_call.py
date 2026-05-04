@@ -458,12 +458,7 @@ def test_pillar_items_masterless(salt_minion, salt_call_cli):
         ret = salt_call_cli.run("--local", "pillar.items")
         assert ret.returncode == 0
         assert "knights" in ret.data
-        assert ret.data["knights"] == [
-            salt.utils.secret.REDACT_PLACEHOLDER,
-            salt.utils.secret.REDACT_PLACEHOLDER,
-            salt.utils.secret.REDACT_PLACEHOLDER,
-            salt.utils.secret.REDACT_PLACEHOLDER,
-        ]
+        assert ret.data["knights"] == ["Lancelot", "Galahad", "Bedevere", "Robin"]
         assert "monty" in ret.data
         assert ret.data["monty"] == salt.utils.secret.REDACT_PLACEHOLDER
 

@@ -195,7 +195,7 @@ def option(
                 return salt.utils.secret.expose(__pillar__[value])
         if not omit_master:
             if value in __pillar__.get("master", {}):
-                return salt.utils.secret.expose(__pillar__["master"][value])
+                return __pillar__["master"][value]
         if value in DEFAULTS:
             return DEFAULTS[value]
 
@@ -206,7 +206,7 @@ def option(
         # takes precedence
         ret = {}
         for omit, data in (
-            (omit_master, salt.utils.secret.expose(__pillar__.get("master", {}))),
+            (omit_master, __pillar__.get("master", {})),
             (omit_pillar, salt.utils.secret.expose(__pillar__)),
             (omit_grains, __grains__),
             (omit_opts, __opts__),
@@ -242,7 +242,7 @@ def merge(value, default="", omit_opts=False, omit_master=False, omit_pillar=Fal
                 return ret
     if not omit_master:
         if value in __pillar__.get("master", {}):
-            tmp = salt.utils.secret.expose(__pillar__["master"][value])
+            tmp = __pillar__["master"][value]
             if ret is None:
                 ret = tmp
                 if isinstance(ret, str):
@@ -443,7 +443,7 @@ def get(
 
         if not omit_master:
             ret = salt.utils.data.traverse_dict_and_list(
-                salt.utils.secret.expose(__pillar__.get("master", {})),
+                __pillar__.get("master", {}),
                 key,
                 "_|-",
                 delimiter=delimiter,
@@ -470,7 +470,7 @@ def get(
         data = copy.copy(DEFAULTS)
         data = salt.utils.dictupdate.merge(
             data,
-            salt.utils.secret.expose(__pillar__.get("master", {})),
+            __pillar__.get("master", {}),
             strategy=merge,
             merge_lists=merge_lists,
         )
@@ -507,7 +507,7 @@ def dot_vals(value):
         salt '*' config.dot_vals host
     """
     ret = {}
-    for key, val in salt.utils.secret.expose(__pillar__.get("master", {})).items():
+    for key, val in __pillar__.get("master", {}).items():
         if key.startswith(f"{value}."):
             ret[key] = val
     for key, val in __opts__.items():

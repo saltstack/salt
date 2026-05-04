@@ -23,7 +23,6 @@ import salt.loader
 import salt.loader.context
 import salt.loader.lazy
 import salt.utils.files
-import salt.utils.secret
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
 from tests.support.mock import MagicMock, patch
@@ -331,8 +330,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
                 func_globals["__grains__"].value(), self.opts.get("grains", {})
             )
             self.assertEqual(
-                func_globals["__pillar__"].value(),
-                salt.utils.secret.expose(self.opts.get("pillar", {})),
+                func_globals["__pillar__"].value(), self.opts.get("pillar", {})
             )
             # the opts passed into modules is at least a subset of the whole opts
             for key, val in func_globals["__opts__"].items():
