@@ -11,6 +11,11 @@ import pytest
 import salt.modules.redismod as redismod
 from tests.support.mock import MagicMock, patch
 
+# Capture the real ``_connect`` reference before the loader fixture replaces
+# it with a MagicMock. The tests for ``_connect`` itself need the real
+# implementation; everything else uses the mocked one.
+_REAL_CONNECT = redismod._connect
+
 
 class Mockredis:
     """
@@ -601,3 +606,145 @@ def test_get_master_ip_called_positionally_routes_password_correctly():
     mock_connect.assert_called_once_with(
         host="redis-1", port=6379, password="my-secret"
     )
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for the _connect "if not db" bug.
+#
+# _connect used the truthy check ``if not db`` to decide whether to fall
+# back to ``config.option("redis.db")``. That predicate is also true for
+# ``db=0`` -- the default Redis database index, and a perfectly valid
+# explicit value. As a result, callers who explicitly targeted db 0 had
+# their argument silently replaced by the configured value.
+#
+# The fix uses ``if db is None`` so that only the absent-argument case
+# triggers the fall-back. The other arguments (host/port/password) keep
+# their truthy-check semantics on purpose: empty string and 0 are not
+# legitimate values for a hostname or port, and "" is not a meaningful
+# password override.
+# ---------------------------------------------------------------------------
+
+
+def _connect_test_env(config_options):
+    """
+    Build the (config_option_mock, fake_strict_redis, fake_redis_module)
+    triple used by every _connect test. Mocking redis.StrictRedis lets us
+    assert exactly which (host, port, db, password) tuple _connect built;
+    wrapping config.option in a MagicMock lets us assert which keys it
+    queried (and which it skipped).
+    """
+    config_option_mock = MagicMock(
+        side_effect=lambda key, *args, **kwargs: config_options.get(key)
+    )
+    fake_strict_redis = MagicMock(name="StrictRedis")
+    fake_redis_module = MagicMock(name="redis_module", StrictRedis=fake_strict_redis)
+    return config_option_mock, fake_strict_redis, fake_redis_module
+
+
+def test_connect_passes_db_zero_through():
+    """
+    The headline regression test: when the caller explicitly passes
+    ``db=0``, _connect must hand 0 to StrictRedis verbatim and must NOT
+    consult ``config.option("redis.db")``.
+    """
+    config_option_mock, fake_strict_redis, fake_redis_module = _connect_test_env(
+        {
+            "redis.host": "config-host",
+            "redis.port": 6380,
+            "redis.db": "5",
+            "redis.password": "config-pass",
+        }
+    )
+
+    with patch.object(
+        redismod, "__salt__", {"config.option": config_option_mock}, create=True
+    ), patch.object(redismod, "redis", fake_redis_module):
+        _REAL_CONNECT(host="h", port=6379, db=0, password="p")
+
+    # StrictRedis is called positionally: (host, port, db, password).
+    call = fake_strict_redis.call_args
+    assert (
+        call.args[2] == 0
+    ), f"db=0 was replaced (got {call.args[2]!r}); this is the bug"
+
+    queried_keys = [c.args[0] for c in config_option_mock.call_args_list]
+    assert "redis.db" not in queried_keys, (
+        "_connect queried config.option('redis.db') even though the caller "
+        "supplied db=0; this is the bug"
+    )
+
+
+def test_connect_falls_back_to_config_when_db_is_none():
+    """
+    With db=None (the default), _connect must read redis.db from config
+    and pass the resulting value to StrictRedis.
+    """
+    config_option_mock, fake_strict_redis, fake_redis_module = _connect_test_env(
+        {
+            "redis.host": "config-host",
+            "redis.port": 6380,
+            "redis.db": "7",
+            "redis.password": "config-pass",
+        }
+    )
+
+    with patch.object(
+        redismod, "__salt__", {"config.option": config_option_mock}, create=True
+    ), patch.object(redismod, "redis", fake_redis_module):
+        _REAL_CONNECT()
+
+    call = fake_strict_redis.call_args
+    assert call.args == ("config-host", 6380, "7", "config-pass")
+
+    queried_keys = [c.args[0] for c in config_option_mock.call_args_list]
+    assert "redis.db" in queried_keys
+
+
+def test_connect_passes_explicit_nonzero_db_through():
+    """
+    Sanity check: an explicit non-zero db value is honoured. This already
+    worked before the fix (because the truthy check passed for non-zero),
+    but the test pins the behaviour so future refactors do not regress it.
+    """
+    config_option_mock, fake_strict_redis, fake_redis_module = _connect_test_env(
+        {"redis.db": "should-not-be-used"}
+    )
+
+    with patch.object(
+        redismod, "__salt__", {"config.option": config_option_mock}, create=True
+    ), patch.object(redismod, "redis", fake_redis_module):
+        _REAL_CONNECT(host="h", port=6379, db=5, password="p")
+
+    call = fake_strict_redis.call_args
+    assert call.args[2] == 5
+
+    queried_keys = [c.args[0] for c in config_option_mock.call_args_list]
+    assert "redis.db" not in queried_keys
+
+
+def test_connect_other_args_keep_truthy_fallback_semantics():
+    """
+    The fix narrows the fall-back predicate only for ``db``. The host,
+    port and password arguments keep their existing truthy-check
+    semantics on purpose -- empty string is not a legitimate hostname,
+    0 is not a legitimate port, and "" is not a meaningful password
+    override. This test pins that scope so the fix does not silently
+    widen.
+    """
+    config_option_mock, fake_strict_redis, fake_redis_module = _connect_test_env(
+        {
+            "redis.host": "config-host",
+            "redis.port": 6380,
+            "redis.password": "config-pass",
+        }
+    )
+
+    with patch.object(
+        redismod, "__salt__", {"config.option": config_option_mock}, create=True
+    ), patch.object(redismod, "redis", fake_redis_module):
+        _REAL_CONNECT(host="", port=None, db=2, password=None)
+
+    call = fake_strict_redis.call_args
+    # host="" -> falls back; port=None -> falls back; db=2 -> kept;
+    # password=None -> falls back.
+    assert call.args == ("config-host", 6380, 2, "config-pass")
