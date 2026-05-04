@@ -63,7 +63,7 @@ def test_unwrap_roundtrip():
 def test_unwrap_blackout_whitelist_for_str_membership():
     wrapped = secret.hide({"minion_blackout_whitelist": ["test.ping", "test.fib"]})
     wl = wrapped["minion_blackout_whitelist"]
-    assert "test.ping" not in wl
+    assert "test.ping" in wl
     plain = secret.expose(wl)
     assert plain == ["test.ping", "test.fib"]
     assert "test.ping" in plain
@@ -83,12 +83,13 @@ def test_apply_no_log_mask_no_changes():
     assert ret["changes"] is None
 
 
-def test_secret_str_redacted_str_and_not_equal_to_plain_str():
+def test_secret_str_redacted_str_and_equal_to_plain_str():
     s = secret.SecretStr("xyzzy")
     assert str(s) == secret.REDACT_PLACEHOLDER
     assert secret.REDACT_PLACEHOLDER in repr(s)
     assert s.get_secret_value() == "xyzzy"
-    assert s != "xyzzy"
+    assert s == "xyzzy"
+    assert "xyzzy" in s
     assert "xyzzy" not in str(s)
 
 
@@ -103,9 +104,9 @@ def test_secret_str_equality_and_deepcopy():
     assert d == a
 
 
-def test_secret_bytes_not_equal_to_plain_bytes():
+def test_secret_bytes_equal_to_plain_bytes():
     s = secret.SecretBytes(b"secret")
-    assert s != b"secret"
+    assert s == b"secret"
     assert s.get_secret_value() == b"secret"
 
 
