@@ -7,8 +7,8 @@ mutations stay protected.
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable, MutableMapping, MutableSequence
-from typing import Any, ClassVar, Generic, Mapping, TypeVar
+from collections.abc import Iterable, Mapping, MutableMapping, MutableSequence
+from typing import Any, ClassVar, Generic, TypeVar
 
 log = logging.getLogger(__name__)
 
