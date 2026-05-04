@@ -10,6 +10,7 @@ import time
 import pytest
 
 import salt.cache.mmap_cache as mmap_cache
+from tests.support.mock import patch
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -201,6 +202,21 @@ def test_contains_bank_existence_check(cachedir):
 # ---------------------------------------------------------------------------
 # Cross-instance reads (two MmapCache objects on the same files)
 # ---------------------------------------------------------------------------
+
+
+def test_mmap_opts_change_rebuilds_registered_cache(cachedir):
+    """
+    If ``__opts__`` mmap tuning changes after a ``MmapCache`` was registered,
+    the driver must drop the stale handle (and backing files) instead of
+    reusing it — otherwise stores see the old table dimensions.
+    """
+    mmap_cache.store("bank", "first", {"v": 1}, cachedir=cachedir)
+    with patch.dict(
+        mmap_cache.__opts__,
+        {"mmap_cache_size": 2000},
+    ):
+        mmap_cache.store("bank", "second", {"v": 2}, cachedir=cachedir)
+        assert mmap_cache.fetch("bank", "second", cachedir=cachedir) == {"v": 2}
 
 
 def test_two_instances_share_data(cachedir):

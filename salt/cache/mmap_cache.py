@@ -54,13 +54,67 @@ log = logging.getLogger(__name__)
 
 __func_alias__ = {"list_": "list", "flush_": "flush"}
 
-# Module-level registry: (cachedir, bank) → MmapCache instance
+# Module-level registry: (cachedir, bank) → (tuning_tuple, MmapCache).
+# When ``__opts__`` mmap tuning changes (e.g. tests patch opts after an early
+# cache miss vs hit), evict and rebuild so we never reuse an ``MmapCache``
+# sized for stale configuration over the same bank directory.
 _caches = {}
 
 # Default tuning knobs (overridable via opts)
 _DEFAULT_SIZE = 1_000_000
 _DEFAULT_SLOT_SIZE = 96
 _DEFAULT_KEY_SIZE = 64
+
+
+def _mmap_tuning_tuple():
+    """Return the effective mmap index tuning from ``__opts__``."""
+    return (
+        __opts__.get("mmap_cache_size", _DEFAULT_SIZE),
+        __opts__.get("mmap_cache_slot_size", _DEFAULT_SLOT_SIZE),
+        __opts__.get("mmap_cache_key_size", _DEFAULT_KEY_SIZE),
+    )
+
+
+def _unlink_mmap_bank_files(index_path, *, strict_remove=False):
+    """
+    Remove mmap cache files for one bank (index + heap segments + roster + lock).
+
+    ``strict_remove=False`` (default): log and continue on ``OSError`` — used when
+    evicting a stale registry entry after ``__opts__`` tuning changes.
+
+    ``strict_remove=True``: propagate ``OSError`` — used by ``flush_``.
+
+    Returns ``True`` if at least one file was present and removed.
+    """
+
+    removed = False
+
+    def _rm(path):
+        nonlocal removed
+        if not os.path.exists(path):
+            return
+        try:
+            os.remove(path)
+            removed = True
+        except OSError as exc:
+            if strict_remove:
+                raise SaltCacheError(
+                    f'Error removing cache file "{path}": {exc}'
+                ) from exc
+            log.warning("Could not remove mmap cache file %s", path, exc_info=True)
+
+    seg = 0
+    while True:
+        heap_p = index_path + ".heap" if seg == 0 else index_path + ".heap." + str(seg)
+        if not os.path.exists(heap_p):
+            break
+        _rm(heap_p)
+        seg += 1
+
+    for tail in (".roster", ".lock"):
+        _rm(index_path + tail)
+    _rm(index_path)
+    return removed
 
 
 def __cachedir(kwargs=None):
@@ -89,22 +143,33 @@ def _get_cache(bank, cachedir):
     *cachedir*.
     """
     key = (cachedir, bank)
-    if key not in _caches:
-        bank_dir = salt.utils.path.join(cachedir, os.path.normpath(bank))
-        os.makedirs(bank_dir, exist_ok=True)
-        index_path = os.path.join(bank_dir, ".mmap_cache.idx")
+    tuning = _mmap_tuning_tuple()
+    entry = _caches.get(key)
+    if entry is not None:
+        old_tuning, cache_obj = entry
+        if old_tuning == tuning:
+            return cache_obj
+        index_path = cache_obj.path
+        try:
+            cache_obj.close()
+        except (BufferError, OSError):
+            pass
+        del _caches[key]
+        _unlink_mmap_bank_files(index_path)
 
-        size = __opts__.get("mmap_cache_size", _DEFAULT_SIZE)
-        slot_size = __opts__.get("mmap_cache_slot_size", _DEFAULT_SLOT_SIZE)
-        key_size = __opts__.get("mmap_cache_key_size", _DEFAULT_KEY_SIZE)
+    bank_dir = salt.utils.path.join(cachedir, os.path.normpath(bank))
+    os.makedirs(bank_dir, exist_ok=True)
+    index_path = os.path.join(bank_dir, ".mmap_cache.idx")
 
-        _caches[key] = salt.utils.mmap_cache.MmapCache(
-            path=index_path,
-            size=size,
-            slot_size=slot_size,
-            key_size=key_size,
-        )
-    return _caches[key]
+    size, slot_size, key_size = tuning
+    cache_obj = salt.utils.mmap_cache.MmapCache(
+        path=index_path,
+        size=size,
+        slot_size=slot_size,
+        key_size=key_size,
+    )
+    _caches[key] = (tuning, cache_obj)
+    return cache_obj
 
 
 def store(bank, key, data, cachedir, **kwargs):
@@ -178,9 +243,9 @@ def flush_(bank, key=None, cachedir=None, **kwargs):
     if key is None:
         # Flush entire bank: evict from registry, remove files from disk.
         cache_key = (cachedir, bank)
-        cache = _caches.pop(cache_key, None)
-        if cache is not None:
-            cache.close()
+        entry = _caches.pop(cache_key, None)
+        if entry is not None:
+            entry[1].close()
 
         bank_dir = salt.utils.path.join(cachedir, os.path.normpath(bank))
         if not os.path.isdir(bank_dir):
@@ -189,15 +254,8 @@ def flush_(bank, key=None, cachedir=None, **kwargs):
         # Remove just the mmap files, leave the directory structure intact
         # so that sub-banks are not inadvertently destroyed.
         removed = False
-        for suffix in ("", ".heap", ".lock"):
-            p = os.path.join(bank_dir, ".mmap_cache.idx" + suffix)
-            if os.path.exists(p):
-                try:
-                    os.remove(p)
-                    removed = True
-                except OSError as exc:
-                    raise SaltCacheError(f'Error removing cache file "{p}": {exc}')
-        return removed
+        index_base = os.path.join(bank_dir, ".mmap_cache.idx")
+        return _unlink_mmap_bank_files(index_base, strict_remove=True)
 
     cache = _get_cache(bank, cachedir)
     deleted = cache.delete(key)

@@ -97,7 +97,7 @@ def localfs_dir(tmp_path):
 
 
 @pytest.fixture
-def mmap_dir(tmp_path):
+def mmap_dir(tmp_path, configure_loader_modules):
     d = str(tmp_path / "mmap")
     os.makedirs(d)
     mmap_cache._caches.clear()
@@ -284,7 +284,7 @@ def test_localfs_bulk_store_and_scan(benchmark, localfs_dir):
     benchmark(run)
 
 
-def test_mmap_bulk_store_and_scan(benchmark, tmp_path):
+def test_mmap_bulk_store_and_scan(benchmark, tmp_path, configure_loader_modules):
     def run():
         d = str(tmp_path / f"mmap_bulk_{run.counter}")
         run.counter += 1
