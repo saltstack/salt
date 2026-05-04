@@ -1,0 +1,36 @@
+# MmapCache / mmap_cache driver / mmap_key — regression smoke list.
+# These nodeids have failed on CI (Ubuntu unit zeromq 4, functional Arm64, etc.)
+# or exercise the same failure modes (multiprocess visibility, multi-put/list).
+#
+# Run from repo root:
+#   tests/pytests/run-mmapcache-smoke-tests.sh
+# Or:
+#   python -m pytest $(grep -v '^#' tests/pytests/mmapcache-smoke-tests.txt | grep -v '^$') --benchmark-disable --tb=short
+
+# --- Job 74182710689 (unit): index mmap vs closed fd (put update / delete / concurrency) ---
+tests/pytests/unit/utils/test_mmap_cache.py::test_put_update
+tests/pytests/unit/utils/test_mmap_cache.py::test_read_open_then_write_reopens_writable_mmap
+tests/pytests/unit/utils/test_mmap_cache.py::test_delete
+tests/pytests/unit/utils/test_mmap_cache_enterprise.py::test_concurrent_puts_no_data_loss
+tests/pytests/unit/utils/test_mmap_cache_segments.py::TestThreadSafetySegments::test_concurrent_puts_across_segment_boundary
+
+# --- Functional: multiprocess + near-capacity puts (third-write / visibility) ---
+tests/pytests/functional/utils/test_mmap_cache.py::TestMultiProcess::test_concurrent_writers_no_data_loss
+tests/pytests/functional/utils/test_mmap_cache.py::TestMultiProcess::test_writer_and_reader_concurrent
+tests/pytests/functional/utils/test_mmap_cache.py::TestLargeDataset::test_fill_to_near_capacity
+
+# --- Functional: salt cache driver / salt-key parity (list after multiple stores) ---
+tests/pytests/functional/cache/test_mmap_cache_driver.py::TestCacheDriverCRUD::test_list_keys
+tests/pytests/functional/cache/test_mmap_key.py::test_list
+tests/pytests/functional/cache/test_mmap_key.py::test_many_minions
+
+# --- Perf: mmap half of benchmarks (integration sessions need configure_loader_modules on module) ---
+tests/pytests/perf/test_cache_benchmarks.py::test_mmap_store_small
+tests/pytests/perf/test_cache_benchmarks.py::test_mmap_store_large
+tests/pytests/perf/test_cache_benchmarks.py::test_mmap_fetch_warm
+tests/pytests/perf/test_cache_benchmarks.py::test_mmap_fetch_large
+tests/pytests/perf/test_cache_benchmarks.py::test_mmap_updated
+tests/pytests/perf/test_cache_benchmarks.py::test_mmap_list
+tests/pytests/perf/test_cache_benchmarks.py::test_mmap_flush_key
+tests/pytests/perf/test_cache_benchmarks.py::test_mmap_sequential_append
+tests/pytests/perf/test_cache_benchmarks.py::test_mmap_bulk_store_and_scan

@@ -74,6 +74,11 @@ _OPTS = {
     "mmap_cache_key_size": 64,
 }
 
+# When this module runs inside a full integration session, ``mmap_cache`` may
+# already have ``__opts__`` from the live master harness (tiny mmap tables).
+# Force loader-module wiring so benchmarks always see *_OPTS above.
+pytestmark = pytest.mark.usefixtures("configure_loader_modules")
+
 
 @pytest.fixture
 def configure_loader_modules():

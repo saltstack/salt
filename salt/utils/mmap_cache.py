@@ -187,6 +187,10 @@ class MmapCache:
         self.max_segment_bytes = max_segment_bytes
 
         self._mm = None  # index mmap (ACCESS_READ or ACCESS_WRITE)
+        # Keep the index file object open for the mmap lifetime so flush/fsync
+        # on the mmap fd stays valid after mapping (closing the file first
+        # yields EBADF on some platforms).
+        self._index_fp = None
         # True iff ``_mm`` was created with ACCESS_WRITE; read-only mmaps must
         # not be reused when ``open(write=True)`` sees an unchanged cache id.
         self._mm_writable = False
@@ -308,10 +312,15 @@ class MmapCache:
             return
         try:
             self._mm.flush()
-            try:
-                idx_fd = self._mm.fileno()
-            except AttributeError:
-                idx_fd = None
+            # Prefer the kept-open file object from ``open()`` — its fd must stay
+            # valid for the mmap lifetime (see ``self._index_fp``).
+            if self._index_fp is not None:
+                idx_fd = self._index_fp.fileno()
+            else:
+                try:
+                    idx_fd = self._mm.fileno()
+                except AttributeError:
+                    idx_fd = None
             _fsync_fd_maybe(idx_fd)
         except OSError:
             pass
@@ -676,8 +685,12 @@ class MmapCache:
             access = mmap.ACCESS_READ
 
         try:
-            with salt.utils.files.fopen(self.path, mode) as f:
-                fd = f.fileno()
+            # Intentionally long-lived: closed in _close_mmaps_and_fds after mmap
+            idx_fp = salt.utils.files.fopen(  # pylint: disable=resource-leakage
+                self.path, mode
+            )
+            try:
+                fd = idx_fp.fileno()
                 self._cache_id = self._get_cache_id()
                 st = os.fstat(fd)
                 expected = self.size * self.slot_size
@@ -693,6 +706,14 @@ class MmapCache:
                     return False
                 self._mm = mmap.mmap(fd, 0, access=access)
                 self._mm_writable = access == mmap.ACCESS_WRITE
+                self._index_fp = idx_fp
+                idx_fp = None
+            finally:
+                if idx_fp is not None:
+                    try:
+                        idx_fp.close()
+                    except OSError:
+                        pass
 
             # Stamp header magic on a fresh file
             if write and self._mm[0] != _HEADER_MAGIC:
@@ -727,6 +748,12 @@ class MmapCache:
                 pass
             self._mm = None
             self._mm_writable = False
+        if self._index_fp is not None:
+            try:
+                self._index_fp.close()
+            except OSError:
+                pass
+            self._index_fp = None
         self._close_seg_mmaps()
         if self._roster_wfd is not None:
             try:
