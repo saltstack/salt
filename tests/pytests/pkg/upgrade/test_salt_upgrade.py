@@ -7,6 +7,8 @@ import psutil
 import pytest
 from pytestskipmarkers.utils import platform
 
+from tests.support.pkg import pep440_public_equal
+
 log = logging.getLogger(__name__)
 
 
@@ -102,16 +104,15 @@ def salt_test_upgrade(
     ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
 
-    installed_minion_version = packaging.version.parse(ret.data)
-    assert installed_minion_version == packaging.version.parse(
-        install_salt.artifact_version
-    )
+    assert pep440_public_equal(
+        str(ret.data), install_salt.artifact_version
+    ), f"minion test.version {ret.data!r} vs artifact {install_salt.artifact_version!r}"
 
     ret = install_salt.proc.run(bin_file, "--version")
     assert ret.returncode == 0
-    assert packaging.version.parse(
-        ret.stdout.strip().split()[1]
-    ) == packaging.version.parse(install_salt.artifact_version)
+    assert pep440_public_equal(
+        ret.stdout.strip().split()[1], install_salt.artifact_version
+    ), f"salt --version vs artifact {install_salt.artifact_version!r}"
 
     new_minion_pids = _get_running_named_salt_pid(process_minion_name)
     new_master_pids = _get_running_named_salt_pid(process_master_name)
@@ -134,23 +135,33 @@ def salt_test_upgrade(
 
 
 def _get_running_named_salt_pid(process_name):
-
-    # need to check all of command line for salt-minion, salt-master, for example: salt-minion
-    #
-    # Linux: psutil process name only returning first part of the command '/opt/saltstack/'
-    # Linux: ['/opt/saltstack/salt/bin/python3.10 /usr/bin/salt-minion MultiMinionProcessManager MinionProcessManager']
-    #
-    # MacOS: psutil process name only returning last part of the command '/opt/salt/bin/python3.10', that is 'python3.10'
-    # MacOS: ['/opt/salt/bin/python3.10 /opt/salt/salt-minion', '']
-
     pids = []
-    for proc in psutil.process_iter():
+    if not platform.is_windows():
+        import subprocess
+
         try:
-            cmdl_strg = " ".join(str(element) for element in proc.cmdline())
-        except (psutil.ZombieProcess, psutil.NoSuchProcess, psutil.AccessDenied):
-            continue
-        if process_name in cmdl_strg:
-            pids.append(proc.pid)
+            output = subprocess.check_output(["ps", "-eo", "pid,command"], text=True)
+            for line in output.splitlines()[1:]:
+                parts = line.strip().split(maxsplit=1)
+                if len(parts) == 2:
+                    pid_str, cmdline = parts
+                    if process_name in cmdline:
+                        try:
+                            pids.append(int(pid_str))
+                        except ValueError:
+                            pass
+        except subprocess.CalledProcessError:
+            pass
+    else:
+        for proc in psutil.process_iter():
+            try:
+                name = proc.name()
+                if "salt" in name or "python" in name or process_name in name:
+                    cmdl_strg = " ".join(str(element) for element in proc.cmdline())
+                    if process_name in cmdl_strg:
+                        pids.append(proc.pid)
+            except (psutil.ZombieProcess, psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
 
     return pids
 
@@ -202,19 +213,26 @@ def test_salt_upgrade(
 
     original_py_version = install_salt.package_python_version()
 
-    # Test pip install before an upgrade
-    try:
-        dep = "PyGithub==1.56.0"
-        install = salt_call_cli.run("--local", "pip.install", dep)
-        assert install.returncode == 0
-
-        # Verify we can use the module dependent on the installed package
-        repo = "https://github.com/saltstack/salt.git"
+    # Pre-upgrade pip probe is informational. The salt loader can fail to surface
+    # a freshly pip-installed module on environments where the github execution
+    # module ships disabled, so swallowing AssertionError here used to skip the
+    # whole test and silently mask upgrade regressions. Track success and gate
+    # only the post-upgrade re-probe on it; the upgrade itself runs unconditionally.
+    repo = "https://github.com/saltstack/salt.git"
+    pip_pretest_ok = False
+    dep = "PyGithub==1.56.0"
+    install = salt_call_cli.run("--local", "pip.install", dep)
+    if install.returncode == 0:
         use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
-        assert "Authentication information could" in use_lib.stderr
-    except AssertionError as e:
-        # Skip if pip operations fail due to environment issues (permissions, relenv, etc.)
-        pytest.skip(f"Pip installation test failed: {e}")
+        if "Authentication information could" in use_lib.stderr:
+            pip_pretest_ok = True
+        else:
+            log.info(
+                "Pre-upgrade pip probe: github module unavailable after install: %s",
+                use_lib.stderr,
+            )
+    else:
+        log.info("Pre-upgrade pip install of %s failed: %s", dep, install.stderr)
 
     # perform Salt package upgrade test
     salt_test_upgrade(salt_call_cli, install_salt, salt_master, salt_minion)
@@ -233,11 +251,7 @@ def test_salt_upgrade(
         )
 
     new_py_version = install_salt.package_python_version()
-    if new_py_version == original_py_version:
-        try:
-            # test pip install after an upgrade
-            use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
-            assert "Authentication information could" in use_lib.stderr
-        except AssertionError as e:
-            # Skip if pip operations fail due to environment issues
-            pytest.skip(f"Post-upgrade pip test failed: {e}")
+    if pip_pretest_ok and new_py_version == original_py_version:
+        # test pip install survived the upgrade
+        use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
+        assert "Authentication information could" in use_lib.stderr

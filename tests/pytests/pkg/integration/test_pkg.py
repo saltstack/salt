@@ -22,8 +22,8 @@ def pkg_name(salt_call_cli, grains):
         return "putty"
     elif grains["os_family"] == "RedHat":
         if grains["os"] == "VMware Photon OS":
-            return "snoopy"
-        elif grains["osfinger"] == "Amazon Linux-2023":
+            return "bc"
+        if grains["osfinger"] == "Amazon Linux-2023":
             return "dnf-utils"
         return "units"
     elif grains["os_family"] == "Debian":

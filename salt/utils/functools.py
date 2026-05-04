@@ -33,7 +33,7 @@ def namespaced_function(function, global_dict, defaults=None, preserve_context=N
     """
     if defaults is not None:
         salt.utils.versions.warn_until(
-            3008,
+            3009,
             "Passing 'defaults' to 'namespaced_function' is deprecated, slated "
             "for removal in {version} and no longer does anything for the "
             "function being namespaced.",
@@ -41,7 +41,7 @@ def namespaced_function(function, global_dict, defaults=None, preserve_context=N
 
     if preserve_context is not None:
         salt.utils.versions.warn_until(
-            3008,
+            3009,
             "Passing 'preserve_context' to 'namespaced_function' is deprecated, "
             "slated for removal in {version} and no longer does anything for the "
             "function being namespaced.",

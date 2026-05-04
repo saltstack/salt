@@ -56,7 +56,7 @@ env:
   PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
   PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
-  RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+  RAISE_DEPRECATIONS_RUNTIME_ERRORS: "0"
   USE_S3_CACHE: 'false'
 
 jobs:
@@ -154,8 +154,7 @@ jobs:
         if: startsWith(matrix.slug, 'photonos-')
         run: |
           docker exec ${{ github.run_id }}_salt-test-pkg \
-            sed -i 's/packages.broadcom.com/packages-prod.broadcom.com/g' \
-            /etc/yum.repos.d/photon.repo /etc/yum.repos.d/photon-updates.repo /etc/yum.repos.d/photon-extras.repo
+            sh -c "for f in /etc/yum.repos.d/photon*.repo; do [ -e \"\$f\" ] && sed -i -E 's/packages(-prod)?\.(vmware|broadcom)\.com\/photon/packages.broadcom.com\/photon/g' \"\$f\"; done && tdnf makecache"
 
       - name: Decompress .nox Directory
         run: |

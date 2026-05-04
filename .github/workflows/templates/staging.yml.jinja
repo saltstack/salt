@@ -24,7 +24,14 @@ on:
         required: true
         description: >
           The Salt version to set prior to building packages and staging the release.
-          (DO NOT prefix the version with a v, ie, 3006.0 NOT v3006.0).
+          DO NOT prefix the version with a "v" (use 3006.0, not v3006.0).
+          For prereleases use the PEP 440 form WITHOUT a hyphen
+          (use 3008.0rc1, not 3008.0-rc1).
+          The Python sdist/wheel and the GitHub tag/release will use this
+          string verbatim (e.g. "salt-3008.0rc1.tar.gz" / "v3008.0rc1").
+          The RPM "Version:" and the Debian changelog stanza substitute
+          "rc" for "~rc" so prereleases sort before the GA version
+          (e.g. "3008.0~rc1" < "3008.0").
       sign-windows-packages:
         type: boolean
         default: false

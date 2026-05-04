@@ -14,6 +14,5 @@ auth modules
     file
     ldap
     pam
-    pki
     rest
     sharedsecret
