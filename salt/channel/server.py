@@ -80,6 +80,21 @@ def _cluster_is_ready(opts):
     return entry["event"].is_set()
 
 
+def _transport_has_builtin_router(transport):
+    """
+    Return ``True`` when *transport*'s ``pre_fork`` already starts a process
+    that accepts external connections and dispatches them to pool workers.
+
+    ZeroMQ's ``pre_fork`` adds ``zmq_device_pooled`` for that purpose, so
+    :class:`PoolRoutingChannel` does not need to spawn its own router.
+    Other transports (TCP, WebSockets) bind the external socket but rely on
+    a separate process to serve it — :class:`PoolRoutingChannel.pre_fork`
+    spawns ``_run_pool_router`` for that case.
+    """
+    module = getattr(transport.__class__, "__module__", "") or ""
+    return module.startswith("salt.transport.zeromq")
+
+
 def cluster_pub_matches_fingerprint(opts, cluster_pub):
     """
     Verify a received cluster public key against a pinned fingerprint.
@@ -1323,9 +1338,50 @@ class PoolRoutingChannel:
                 )
                 raise
 
+        # Transports without a built-in pooled router (e.g. ``salt.transport.tcp``)
+        # leave the bound external socket without an ``accept`` loop because
+        # MWorker's ``post_fork`` only sets up its IPC pool socket.  ZeroMQ
+        # avoids this with ``zmq_device_pooled``; TCP/WS need an equivalent
+        # router process here.  The forked process inherits the already-bound
+        # socket from ``self.transport.pre_fork`` above.
+        if not _transport_has_builtin_router(self.transport):
+            process_manager.add_process(
+                self._run_pool_router,
+                kwargs={"secrets": kwargs.get("secrets")},
+                name="PoolRouter",
+            )
+
         log.info(
             "PoolRoutingChannel pre_fork complete for %d pools", len(self.worker_pools)
         )
+
+    def _run_pool_router(self, secrets=None):
+        """
+        Routing-process entry point for transports without a built-in router.
+
+        Inherits the bound external socket from ``pre_fork``, runs an asyncio
+        event loop, and dispatches incoming requests to pool MWorkers via the
+        per-pool IPC RequestClients set up by :meth:`post_fork` (no
+        ``pool_name`` branch).
+        """
+        if secrets is not None:
+            import salt.master  # pylint: disable=import-outside-toplevel
+
+            salt.master.SMaster.secrets = secrets
+
+        io_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(io_loop)
+        try:
+            self.post_fork(self.handle_and_route_message, io_loop)
+            io_loop.run_forever()
+        except (KeyboardInterrupt, SystemExit):
+            pass
+        finally:
+            try:
+                io_loop.stop()
+            except Exception:  # pylint: disable=broad-except
+                pass
+            io_loop.close()
 
     def post_fork(self, payload_handler, io_loop, **kwargs):
         """

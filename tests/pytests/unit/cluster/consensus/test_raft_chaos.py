@@ -2,13 +2,8 @@
 
 import time
 
-from salt.cluster.consensus.raft import (
-    ChaosController,
-    ChaosPeer,
-    ManualPeer,
-    ManualTimeoutScheduler,
-    Node,
-)
+from salt.cluster.consensus.raft import ManualPeer, ManualTimeoutScheduler, Node
+from tests.support.raft_chaos import ChaosController, ChaosPeer
 
 
 def _handle_all(nodes):
@@ -194,8 +189,8 @@ def test_chaos_partition_and_heal():
 
 def test_chaos_install_snapshot_wrapped():
     """ChaosPeer.install_snapshot delegates to real peer via _wrap_rpc."""
-    from salt.cluster.consensus.raft.chaos import ChaosController, ChaosPeer
     from tests.support.mock import MagicMock
+    from tests.support.raft_chaos import ChaosController, ChaosPeer
 
     real_peer = MagicMock()
     real_peer.node_id = "n2"
