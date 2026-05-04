@@ -199,7 +199,7 @@ def get(
         return salt.utils.secret.serial(ret)
 
 
-def items(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
+def items(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None, unmask=False):
     """
     Calls the master for a fresh pillar and generates the pillar data on the
     fly
