@@ -36,6 +36,8 @@ from salt.version import __version__
 
 log = logging.getLogger(__name__)
 
+PILLAR_SECRET_EXCLUDE = ("master", "ext_pillar_opts", "schedule", "_errors")
+
 
 def get_pillar(
     opts,
@@ -285,9 +287,7 @@ class AsyncRemotePillar(RemotePillarMixin):
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
-        ret_pillar = salt.utils.secret.hide(
-            ret_pillar, exclude=("master", "ext_pillar_opts", "schedule")
-        )
+        ret_pillar = salt.utils.secret.hide(ret_pillar, exclude=PILLAR_SECRET_EXCLUDE)
         return ret_pillar
 
     def destroy(self):
@@ -379,9 +379,7 @@ class RemotePillar(RemotePillarMixin):
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
-        ret_pillar = salt.utils.secret.hide(
-            ret_pillar, exclude=("master", "ext_pillar_opts")
-        )
+        ret_pillar = salt.utils.secret.hide(ret_pillar, exclude=PILLAR_SECRET_EXCLUDE)
         return ret_pillar
 
     def destroy(self):
@@ -433,7 +431,9 @@ class Pillar:
             # Ensure we have a plain dict and not a proxy into opts
             pillar_data = dict(pillar_data)
 
-        self.pillar_data = salt.utils.secret.hide(pillar_data)
+        self.pillar_data = salt.utils.secret.hide(
+            pillar_data, exclude=PILLAR_SECRET_EXCLUDE
+        )
 
         if opts.get("file_client", "") == "local" and not opts.get(
             "use_master_when_local", False
@@ -1203,7 +1203,7 @@ class Pillar:
         if errors:
             for error in errors:
                 log.critical("Pillar render error: %s", error)
-            pillar["_errors"] = errors
+            pillar.get_secret_value()["_errors"] = errors
 
         if self.pillar_override:
             pillar = merge(

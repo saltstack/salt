@@ -35,7 +35,6 @@ import salt.utils.json
 import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.process
-import salt.utils.secret
 import salt.utils.state
 import salt.utils.stringutils
 import salt.utils.tarfileutil
@@ -120,11 +119,7 @@ def _get_pillar_errors(kwargs, pillar=None):
     :param pillar: pillar
     :return: None or a list of error messages
     """
-    return (
-        None
-        if kwargs.get("force")
-        else salt.utils.secret.expose((pillar or __pillar__).get("_errors"))
-    )
+    return None if kwargs.get("force") else (pillar or __pillar__).get("_errors")
 
 
 def _wait(jid, max_queue=0):
@@ -568,7 +563,7 @@ def _check_queue(queue, kwargs):
 
 def _get_initial_pillar(opts):
     return (
-        salt.utils.secret.expose(__pillar__.value())
+        __pillar__.value()
         if __opts__.get("__cli", None) == "salt-call"
         and opts["pillarenv"] == __opts__["pillarenv"]
         else None

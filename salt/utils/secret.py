@@ -44,13 +44,13 @@ class Secret(Generic[SecretType_co]):
         return str(self._display())
 
     def __contains__(self, item: Any) -> bool:
-        return item in self._secret_value
+        return item in self.get_secret_value()
 
     def __bool__(self) -> bool:
-        return bool(self._secret_value)
+        return bool(self.get_secret_value())
 
     def __len__(self) -> int:
-        return len(self._secret_value)
+        return len(self.get_secret_value())
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._display()!r})"
@@ -152,20 +152,17 @@ class SecretBytes(Secret[bytes]):
 
 
 class SecretIterable(Secret[SecretType_co]):
-    def __contains__(self, item: Any) -> bool:
-        return item in self._secret_value
-
-    def __iter__(self):
-        return iter(self._secret_value)
-
     def __getitem__(self, key):
-        return self._secret_value[key]
+        return hide(self._secret_value[key])
 
     def __setitem__(self, key, value):
-        self._secret_value[key] = hide(value)
+        self._secret_value[key] = value
 
     def __delitem__(self, key):
         del self._secret_value[key]
+
+    def __iter__(self):
+        return iter(self._secret_value)
 
     def _display(self):
         return [v._display() if isinstance(v, Secret) else v for v in self]
@@ -174,19 +171,18 @@ class SecretIterable(Secret[SecretType_co]):
 class SecretDict(SecretIterable[dict], MutableMapping[str, Any]):
     def __init__(self, secret_value: dict, exclude: tuple[str, ...] = ()):
         self._exclude = exclude
-        for k, v in secret_value.items():
-            if k not in exclude:
-                secret_value[k] = hide(v)
         super().__init__(secret_value)
 
     def __setitem__(self, key: str, value: Any) -> None:
+        self._secret_value[key] = value
+
+    def __getitem__(self, key: str):
         if key in self._exclude:
-            self._secret_value[key] = value
-        else:
-            self._secret_value[key] = hide(value)
+            return self._secret_value[key]
+        return hide(self._secret_value[key], exclude=self._exclude)
 
     def setdefault(self, key, default=None):
-        return self._secret_value.setdefault(key, hide(default))
+        return self._secret_value.setdefault(key, default)
 
     def _display(self) -> dict:
         return {
@@ -196,8 +192,6 @@ class SecretDict(SecretIterable[dict], MutableMapping[str, Any]):
 
 class SecretList(SecretIterable[list], MutableSequence[Any]):
     def __init__(self, secret_value: list):
-        for i, v in enumerate(secret_value):
-            secret_value[i] = hide(v)
         super().__init__(secret_value)
 
     def insert(self, index: int, value):
@@ -237,7 +231,7 @@ def hide(value: Any, exclude: tuple[str, ...] = ()) -> Secret:
         return value
 
 
-def expose(value: Secret, _seen: set[int] = None) -> Any:
+def expose(value: Secret) -> Any:
     """
     If the value is a secret, return the secret value.
     """
@@ -248,22 +242,14 @@ def expose(value: Secret, _seen: set[int] = None) -> Any:
     if not value:
         return value
     if isinstance(value, Iterable):
-        if _seen is None:
-            _seen = set()
-        object_id = id(value)
-        if object_id in _seen:
-            return f"<Recursion on {type(value).__name__} with id={object_id}>"
-        _seen.add(object_id)
         if isinstance(value, Mapping):
-            if _seen is None:
-                _seen = {object_id}
-            return {k: expose(v, _seen) for k, v in value.items()}
+            return {k: expose(v) for k, v in value.items()}
         else:
-            return [expose(v, _seen) for v in value]
+            return [expose(v) for v in value]
     return value
 
 
-def serial(value, _seen: set[int] = None):
+def serial(value):
     """
     Keep secrets redacted while serializing the structure to native python types.
     """
@@ -274,12 +260,6 @@ def serial(value, _seen: set[int] = None):
     if not value:
         return value
     if isinstance(value, Iterable):
-        if _seen is None:
-            _seen = set()
-        object_id = id(value)
-        if object_id in _seen:
-            return f"<Recursion on {type(value).__name__} with id={object_id}>"
-        _seen.add(object_id)
         if isinstance(value, Mapping):
             return {k: serial(v) for k, v in value.items()}
         else:
