@@ -48,7 +48,10 @@ def _connect(host=None, port=None, db=None, password=None):
         host = __salt__["config.option"]("redis.host")
     if not port:
         port = __salt__["config.option"]("redis.port")
-    if not db:
+    if db is None:
+        # Use ``is None`` rather than ``not db`` because ``0`` is the default
+        # Redis database index and a perfectly valid explicit value: the
+        # truthy check would silently replace it with the config value.
         db = __salt__["config.option"]("redis.db")
     if not password:
         password = __salt__["config.option"]("redis.password")
