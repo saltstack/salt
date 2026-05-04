@@ -331,3 +331,74 @@ def test_clean_old_jobs_no_orphans_no_delete():
         redis_return.clean_old_jobs()
 
     serv.delete.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# returner(): TTL on the {minion}:{fun} last-jid pointer
+# ---------------------------------------------------------------------------
+
+
+def _returner_pipeline_mock(ttl=3600):
+    """
+    Mock the ``serv.pipeline()`` returned by the returner so each
+    call recorded on the pipeline is observable. ``_get_ttl()`` is
+    patched to return a deterministic value so the test can match it
+    exactly.
+    """
+    pipeline = MagicMock(name="pipeline")
+    serv = MagicMock(name="redis_serv")
+    serv.pipeline.return_value = pipeline
+    return serv, pipeline
+
+
+def test_returner_sets_ttl_on_minion_fun_pointer():
+    """
+    Headline regression: ``<minion>:<fun>`` key must be written with
+    ``ex=_get_ttl()`` so it expires on the same schedule as the rest
+    of the returner data. Before the fix it was written with no TTL
+    and accumulated forever.
+    """
+    serv, pipeline = _returner_pipeline_mock()
+    ret = {"id": "minion-1", "jid": "20240101", "fun": "test.ping"}
+
+    with patch.object(redis_return, "_get_serv", return_value=serv), patch.object(
+        redis_return, "_get_ttl", return_value=3600
+    ):
+        redis_return.returner(ret)
+
+    # Find the set() call that targets the <minion>:<fun> pointer.
+    set_calls = [
+        call
+        for call in pipeline.set.call_args_list
+        if call.args and call.args[0] == "minion-1:test.ping"
+    ]
+    assert len(set_calls) == 1, (
+        f"expected exactly one set('minion-1:test.ping', ...); "
+        f"got {pipeline.set.call_args_list}"
+    )
+    set_call = set_calls[0]
+    assert set_call.kwargs.get("ex") == 3600, (
+        f"<minion>:<fun> pointer must be set with ex=_get_ttl(); "
+        f"got kwargs={set_call.kwargs!r}"
+    )
+
+
+def test_returner_still_writes_all_four_keys():
+    """
+    Sanity: the TTL fix must not change which keys the returner
+    writes. The four canonical operations (hset, expire, set, sadd)
+    must all still appear on the pipeline.
+    """
+    serv, pipeline = _returner_pipeline_mock()
+    ret = {"id": "minion-1", "jid": "20240101", "fun": "test.ping"}
+
+    with patch.object(redis_return, "_get_serv", return_value=serv), patch.object(
+        redis_return, "_get_ttl", return_value=3600
+    ):
+        redis_return.returner(ret)
+
+    pipeline.hset.assert_called_once()
+    pipeline.expire.assert_called_once()
+    pipeline.set.assert_called_once()
+    pipeline.sadd.assert_called_once_with("minions", "minion-1")
+    pipeline.execute.assert_called_once()
