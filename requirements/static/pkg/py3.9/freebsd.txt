@@ -37,7 +37,7 @@ cherrypy==18.8.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
-clr-loader==0.2.10 ; python_full_version < '3.13' and sys_platform == 'win32'
+clr-loader==0.2.10 ; sys_platform == 'win32'
     # via pythonnet
 croniter==2.0.5 ; sys_platform != 'win32'
     # via -r requirements/base.txt
@@ -167,7 +167,9 @@ python-gnupg==0.5.2
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
-pythonnet==3.0.5 ; python_full_version < '3.13' and sys_platform == 'win32'
+pythonnet==3.0.5 ; python_full_version < '3.10' and sys_platform == 'win32'
+    # via -r requirements/base.txt
+pythonnet==3.1.0rc0 ; python_full_version >= '3.10' and sys_platform == 'win32'
     # via -r requirements/base.txt
 pytz==2024.1
     # via

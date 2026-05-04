@@ -66,6 +66,7 @@ cffi==2.0.0
     #   -c requirements/static/pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
+    #   clr-loader
     #   cryptography
     #   pynacl
     #   pyzmq
@@ -87,6 +88,10 @@ cherrypy==18.10.0
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/freebsd.in
+clr-loader==0.2.10 ; sys_platform == 'win32'
+    # via
+    #   -c requirements/static/pkg/py3.13/freebsd.txt
+    #   pythonnet
 clustershell==1.9.2
     # via -r requirements/static/ci/common.in
 colorama==0.4.6 ; sys_platform == 'win32'
@@ -411,6 +416,10 @@ python-gnupg==0.5.3
     #   -c requirements/static/pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
+pythonnet==3.1.0rc0 ; sys_platform == 'win32'
+    # via
+    #   -c requirements/static/pkg/py3.13/freebsd.txt
+    #   -r requirements/base.txt
 pytz==2024.2 ; sys_platform != 'win32'
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.txt

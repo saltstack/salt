@@ -64,12 +64,14 @@ if IS_WINDOWS:
             # pylint: enable=unused-import
             from System.Net import NetworkInformation
             from System.Net.NetworkInformation import NetworkInterfaceComponent
-        except RuntimeError:
-            # In some environments, using the Relenv OneDir package, we can't
-            # load pythonnet. Uninstalling and reinstalling pythonnet fixes the
-            # issue, but it is a manual step. Until we figure it out, we are
-            # just going to fall back to WMI. I was able to reproduce a failing
-            # system using Windows 10 Home Edition
+        except (ImportError, RuntimeError):
+            # ImportError: pythonnet may be absent (e.g. Python versions for
+            # which upstream has no released wheel yet).
+            # RuntimeError: in some environments, using the Relenv OneDir
+            # package, we can't load pythonnet. Uninstalling and reinstalling
+            # pythonnet fixes the issue, but it is a manual step. Until we
+            # figure it out, we are just going to fall back to WMI. I was
+            # able to reproduce a failing system using Windows 10 Home Edition.
             log.debug("Failed to load pythonnet. Falling back to WMI")
             USE_WMI = True
             import wmi

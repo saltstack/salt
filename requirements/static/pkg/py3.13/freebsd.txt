@@ -17,6 +17,7 @@ certifi==2024.8.30
 cffi==2.0.0
     # via
     #   -r requirements/base.txt
+    #   clr-loader
     #   cryptography
     #   pyzmq
 charset-normalizer==3.4.0
@@ -30,6 +31,8 @@ cherrypy==18.10.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
+clr-loader==0.2.10 ; sys_platform == 'win32'
+    # via pythonnet
 croniter==3.0.3 ; sys_platform != 'win32'
     # via -r requirements/base.txt
 cryptography==47.0.0
@@ -149,6 +152,8 @@ python-gnupg==0.5.3
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
+pythonnet==3.1.0rc0 ; sys_platform == 'win32'
+    # via -r requirements/base.txt
 pytz==2024.2 ; sys_platform != 'win32'
     # via croniter
 pywin32==311 ; sys_platform == 'win32'

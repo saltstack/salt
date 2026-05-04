@@ -819,14 +819,16 @@ def onedir_dependencies(
         install_args.append(
             "--only-binary=maturin,apache-libcloud,pymssql,cassandra-driver,hatchling,cmake,ninja"
         )
+        # CMake 4.x removed support for cmake_minimum_required(VERSION < 3.5).
+        # pyzmq's bundled libzmq still declares an older floor; set the policy
+        # version minimum so nested CMake projects keep configuring. Affects
+        # both macOS (runner CMake) and Linux source-package builds (the
+        # cmake wheel pulled in by --only-binary now ships CMake 4.x).
+        env["CMAKE_POLICY_VERSION_MINIMUM"] = "3.5"
 
     # Cryptography needs openssl dir set to link to the proper openssl libs.
     if platform == "macos":
         env["OPENSSL_DIR"] = f"{dest}"
-        # CMake 4.x removed support for cmake_minimum_required(VERSION < 3.5).
-        # pyzmq's bundled libzmq still declares an older floor; set the policy
-        # version minimum so nested CMake projects keep configuring.
-        env["CMAKE_POLICY_VERSION_MINIMUM"] = "3.5"
 
     if platform == "linux":
         # This installs the ppbt package. We'll remove it after installing all
