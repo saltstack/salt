@@ -217,3 +217,117 @@ def test_get_serv_cluster_mode_password_none_keeps_unauthenticated_path(
 
     fake_redis_cluster.assert_called_once()
     assert fake_redis_cluster.call_args.kwargs.get("password") is None
+
+
+# ---------------------------------------------------------------------------
+# get_jids / clean_old_jobs: SCAN replaces blocking KEYS
+# ---------------------------------------------------------------------------
+
+
+def _serv_with_scan(scan_data, mget_data=None):
+    """
+    Build a ``serv`` mock whose ``scan_iter(match=...)`` returns the
+    keys for a given pattern, plus a ``keys(...)`` that raises -- so
+    the test fails loudly if the production code falls back to ``KEYS``.
+    """
+    serv = MagicMock(name="redis_serv")
+
+    def fake_scan_iter(match=None, **kwargs):
+        return iter(scan_data.get(match, []))
+
+    def fake_keys(*args, **kwargs):
+        raise AssertionError(
+            "production code called serv.keys(...); it must use "
+            "scan_iter() instead to avoid blocking the Redis server"
+        )
+
+    serv.scan_iter.side_effect = fake_scan_iter
+    serv.keys.side_effect = fake_keys
+    if mget_data is not None:
+        serv.mget.return_value = mget_data
+    return serv
+
+
+def test_get_jids_uses_scan_iter_not_keys():
+    """
+    Headline regression: ``get_jids`` must walk the keyspace with
+    ``SCAN``, not the blocking ``KEYS load:*``.
+    """
+    serv = _serv_with_scan(
+        scan_data={"load:*": ["load:20240101", "load:20240102"]},
+        mget_data=[None, None],  # contents don't matter for this test
+    )
+    with patch.object(redis_return, "_get_serv", return_value=serv):
+        redis_return.get_jids()
+
+    # scan_iter was called with the right pattern at least once.
+    matches = [call.kwargs.get("match") for call in serv.scan_iter.call_args_list]
+    assert "load:*" in matches
+
+
+def test_get_jids_handles_no_jobs():
+    """
+    With no ``load:*`` keys in Redis, ``get_jids`` must return an empty
+    dict (and must not call ``mget`` with an empty list, which some
+    Redis clients reject). Pins the behaviour after the SCAN switch.
+    """
+    serv = _serv_with_scan(scan_data={"load:*": []})
+    with patch.object(redis_return, "_get_serv", return_value=serv):
+        result = redis_return.get_jids()
+
+    assert result == {}
+    serv.mget.assert_not_called()
+
+
+def test_clean_old_jobs_uses_scan_iter_not_keys():
+    """
+    Headline regression: ``clean_old_jobs`` must enumerate both
+    ``ret:*`` and ``load:*`` via ``SCAN``. Both calls were blocking
+    ``KEYS`` before the fix.
+    """
+    serv = _serv_with_scan(
+        scan_data={
+            "ret:*": ["ret:20240101", "ret:20240102"],
+            "load:*": ["load:20240102"],  # 20240101 is orphan
+        }
+    )
+    with patch.object(redis_return, "_get_serv", return_value=serv):
+        redis_return.clean_old_jobs()
+
+    matches = [call.kwargs.get("match") for call in serv.scan_iter.call_args_list]
+    assert "ret:*" in matches
+    assert "load:*" in matches
+
+
+def test_clean_old_jobs_removes_only_orphan_ret_keys():
+    """
+    End-to-end behaviour after the SCAN switch: ``ret:<jid>`` keys
+    whose ``load:<jid>`` counterpart no longer exists must be deleted.
+    Active jobs (``ret`` with a matching ``load``) must be left alone.
+    """
+    serv = _serv_with_scan(
+        scan_data={
+            "ret:*": ["ret:dead-jid", "ret:alive-jid"],
+            "load:*": ["load:alive-jid"],
+        }
+    )
+    with patch.object(redis_return, "_get_serv", return_value=serv):
+        redis_return.clean_old_jobs()
+
+    serv.delete.assert_called_once()
+    deleted = set(serv.delete.call_args.args)
+    assert deleted == {"ret:dead-jid"}
+
+
+def test_clean_old_jobs_no_orphans_no_delete():
+    """No orphan keys -> no delete call. Pins backward compatibility."""
+    serv = _serv_with_scan(
+        scan_data={
+            "ret:*": ["ret:alive"],
+            "load:*": ["load:alive"],
+        }
+    )
+    with patch.object(redis_return, "_get_serv", return_value=serv):
+        redis_return.clean_old_jobs()
+
+    serv.delete.assert_not_called()
