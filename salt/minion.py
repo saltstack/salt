@@ -1675,6 +1675,11 @@ class Minion(MinionBase):
             )
             self.opts["pillar"] = await async_pillar.compile_pillar()
             async_pillar.destroy()
+            # _setup_core uses _load_modules only — unlike gen_modules it does not
+            # run _discover_resources().  tune_in schedules _register_resources_with_master
+            # right after connect; without this, the master registry gets {} until an
+            # async pillar refresh completes (easy to miss with saltutil.sync_all).
+            self.opts["resources"] = self._discover_resources()
 
         if not self.ready:
             self._setup_core()
@@ -1687,6 +1692,7 @@ class Minion(MinionBase):
                 self.function_errors,
                 self.executors,
             ) = self._load_modules()
+            self.opts["resources"] = self._discover_resources()
             if hasattr(self, "schedule"):
                 self.schedule.functions = self.functions
                 self.schedule.returners = self.returners

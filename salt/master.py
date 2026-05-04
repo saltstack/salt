@@ -2046,17 +2046,20 @@ class AESFuncs(TransportMethods):
         load = self.__verify_load(load, ("id", "resources"))
         if load is False:
             return {}
-        if self.opts.get("minion_data_cache", True):
-            n_put, n_del = salt.utils.minions.update_resource_index(
-                self.opts, load["id"], load["resources"]
-            )
-            log.debug(
-                "Registered resources for minion '%s': %s (put=%d, deleted=%d)",
-                load["id"],
-                list(load["resources"].keys()),
-                n_put,
-                n_del,
-            )
+        # The mmap resource registry is independent of minion pillar/grains disk
+        # cache (:conf_master:`minion_data_cache`). Registration must always run
+        # when minions report inventory; otherwise bare-id / T@ targeting breaks
+        # silently while still returning success to the minion.
+        n_put, n_del = salt.utils.minions.update_resource_index(
+            self.opts, load["id"], load["resources"]
+        )
+        log.debug(
+            "Registered resources for minion '%s': %s (put=%d, deleted=%d)",
+            load["id"],
+            list(load["resources"].keys()),
+            n_put,
+            n_del,
+        )
         return True
 
     def _file_recv(self, load):

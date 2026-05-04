@@ -8,7 +8,6 @@ import logging
 import re
 
 import salt.cache
-import salt.key
 import salt.payload
 import salt.roster
 import salt.transport
@@ -16,6 +15,7 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.network
 import salt.utils.resource_registry
+import salt.utils.resources
 import salt.utils.stringutils
 import salt.utils.versions
 from salt._compat import ipaddress
@@ -385,6 +385,10 @@ class CkMinions:
     """
 
     def __init__(self, opts):
+        import salt.key  # noqa: PLC0415 — module-level import pulls ``salt.key`` → ``masterapi``
+
+        # → ``minion`` before ``salt.config`` finishes loading (mixed trees).
+
         self.opts = opts
         self.cache = salt.cache.factory(opts)
         self.key = salt.key.get_key(opts)
@@ -415,7 +419,11 @@ class CkMinions:
         if minions:
             result_minions = fnmatch.filter(minions, expr)
         else:
-            result_minions = list(self.key.glob_match(expr).get(self.key.ACC, []))
+            if hasattr(self.key, "glob_match"):
+                result_minions = list(self.key.glob_match(expr).get(self.key.ACC, []))
+            else:
+                # Salt 3007 ``Key`` API — ``name_match`` / legacy layouts without ``glob_match``.
+                result_minions = fnmatch.filter(list(self._pki_minions()), expr)
 
         if (
             isinstance(expr, str)
@@ -423,9 +431,11 @@ class CkMinions:
             and not any(c in expr for c in ("*", "?", "["))
         ):
             try:
-                if (
-                    expr not in result_minions
-                    and self.registry.resolve_bare_resource_id(expr)
+                if expr not in result_minions and (
+                    self.registry.resolve_bare_resource_id(expr)
+                    or salt.utils.resources.bare_resource_id_in_minion_data_cache(
+                        self.opts, expr, cache=self.cache
+                    )
                 ):
                     result_minions = list(result_minions) + [expr]
             except Exception:  # pylint: disable=broad-except
@@ -454,13 +464,18 @@ class CkMinions:
             matched = [x for x in expr if x in minions]
             missing = [] if ignore_missing else [x for x in expr if x not in minions]
         else:
-            found = self.key.list_match(expr)
-            matched = found.get(self.key.ACC, [])
-            missing = (
-                []
-                if ignore_missing
-                else [x for x in expr if x not in found.get(self.key.ACC, [])]
-            )
+            if hasattr(self.key, "list_match"):
+                found = self.key.list_match(expr)
+                matched = found.get(self.key.ACC, [])
+                missing = (
+                    []
+                    if ignore_missing
+                    else [x for x in expr if x not in found.get(self.key.ACC, [])]
+                )
+            else:
+                pk = self._pki_minions()
+                matched = [x for x in expr if x in pk]
+                missing = [] if ignore_missing else [x for x in expr if x not in pk]
 
         acc = set(matched)
         extra = []
@@ -468,7 +483,11 @@ class CkMinions:
             for token in expr:
                 if token in acc:
                     continue
-                if self.registry.resolve_bare_resource_id(token):
+                if self.registry.resolve_bare_resource_id(
+                    token
+                ) or salt.utils.resources.bare_resource_id_in_minion_data_cache(
+                    self.opts, token, cache=self.cache
+                ):
                     extra.append(token)
                     acc.add(token)
                     if not ignore_missing and token in missing:
