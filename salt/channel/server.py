@@ -2062,7 +2062,7 @@ class MasterPubServerChannel:
             self._raft_service.attach(self)
             aio_loop.call_soon(self._raft_service.start)
             log.info(
-                "RaftService started as learner for cluster %r after dynamic join",
+                "Raft consensus service started as learner for cluster %r after dynamic join",
                 self.opts["cluster_id"],
             )
         except Exception:  # pylint: disable=broad-except
