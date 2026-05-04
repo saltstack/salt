@@ -8,7 +8,6 @@ The core is synchronous and callback-oriented; use asyncio in callers
 (see ``salt.cluster.consensus`` package docstring).
 """
 
-from salt.cluster.consensus.raft.chaos import ChaosController, ChaosPeer
 from salt.cluster.consensus.raft.log import (
     BaseStateMachine,
     BaseStorage,
@@ -53,8 +52,6 @@ __all__ = (
     "BaseStorage",
     "Candidacy",
     "CandidacyError",
-    "ChaosController",
-    "ChaosPeer",
     "CounterStateMachine",
     "LockingNode",
     "Log",
