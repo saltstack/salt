@@ -804,7 +804,11 @@ def onedir_dependencies(
         "-v",
         "--use-pep517",
         "--no-cache-dir",
-        "--only-binary=maturin,apache-libcloud,pymssql,hatchling",
+        # cmake and ninja are build tools (used to drive other builds); they
+        # are never linked into runtime artifacts. Force wheels for them so
+        # --no-binary :all: below does not trigger a CMake source build,
+        # which fails under the relenv toolchain (missing pid_t/mode_t/etc).
+        "--only-binary=maturin,apache-libcloud,pymssql,hatchling,cmake,ninja",
     ]
     if platform == "windows":
         python_bin = env_scripts_dir / "python"
@@ -813,12 +817,16 @@ def onedir_dependencies(
         python_bin = env_scripts_dir / "python3"
         install_args.append("--no-binary=:all:")
         install_args.append(
-            "--only-binary=maturin,apache-libcloud,pymssql,cassandra-driver,hatchling"
+            "--only-binary=maturin,apache-libcloud,pymssql,cassandra-driver,hatchling,cmake,ninja"
         )
 
     # Cryptography needs openssl dir set to link to the proper openssl libs.
     if platform == "macos":
         env["OPENSSL_DIR"] = f"{dest}"
+        # CMake 4.x removed support for cmake_minimum_required(VERSION < 3.5).
+        # pyzmq's bundled libzmq still declares an older floor; set the policy
+        # version minimum so nested CMake projects keep configuring.
+        env["CMAKE_POLICY_VERSION_MINIMUM"] = "3.5"
 
     if platform == "linux":
         # This installs the ppbt package. We'll remove it after installing all
