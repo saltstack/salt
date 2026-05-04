@@ -3,6 +3,11 @@ Tests for resource-aware targeting in :mod:`salt.utils.minions`.
 
 Covers:
 
+* End-to-end bare-ID targeting — :func:`update_resource_index` then
+  :meth:`CkMinions.check_minions` (mirrors master ``_register_resources`` +
+  ``salt <resource-id>`` glob/list).
+* Concurrent registration vs targeting checks (multi-worker regression guard).
+
 * :func:`salt.utils.minions.resource_index_srn_key` — canonical SRN keys.
 * :func:`salt.utils.minions._build_resource_index` /
   :func:`salt.utils.minions._coerce_resource_index_schema` — pure utilities
@@ -19,6 +24,8 @@ The registry is an mmap-backed singleton shared per-process. Tests use
 per-``cachedir`` instance.
 """
 
+import threading
+
 import pytest
 
 import salt.utils.minions
@@ -31,7 +38,7 @@ from salt.utils.minions import (
     resource_index_srn_key,
     update_resource_index,
 )
-from tests.support.mock import patch
+from tests.support.mock import MagicMock, patch
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -496,3 +503,115 @@ def test_check_minions_list_includes_bare_registered_resource_id(ck_with_resourc
 def test_check_minions_glob_exact_bare_registered_resource_id(ck_with_resources):
     result = ck_with_resources.check_minions("dummy-02", tgt_type="glob")
     assert "dummy-02" in result["minions"]
+
+
+def test_check_glob_minions_bare_resource_from_pillar_cache_empty_registry(opts):
+    """Bare glob matches cached pillar ``resources`` when mmap registry is cold."""
+    opts["minion_data_cache"] = True
+    fake_cache = MagicMock()
+
+    def fetch_side_effect(bank, mid):
+        if bank == "pillar" and mid == "m2":
+            return {"resources": {"dummy": {"resource_ids": ["m2-dummy2"]}}}
+        return {}
+
+    fake_cache.list.side_effect = lambda bank: ["m2"]
+    fake_cache.fetch.side_effect = fetch_side_effect
+
+    with patch("salt.cache.factory", return_value=fake_cache):
+        ck = salt.utils.minions.CkMinions(opts)
+        result = ck._check_glob_minions("m2-dummy2", greedy=True)
+    assert "m2-dummy2" in result["minions"]
+
+
+def test_check_glob_minions_bare_resource_from_grains_cache_empty_registry(opts):
+    opts["minion_data_cache"] = True
+    fake_cache = MagicMock()
+
+    def fetch_side_effect(bank, mid):
+        if bank == "grains" and mid == "m2":
+            return {"salt_resources": {"dummy": ["m2-dummy2"]}}
+        return {}
+
+    fake_cache.list.side_effect = lambda bank: ["m2"]
+    fake_cache.fetch.side_effect = fetch_side_effect
+
+    with patch("salt.cache.factory", return_value=fake_cache):
+        ck = salt.utils.minions.CkMinions(opts)
+        result = ck._check_glob_minions("m2-dummy2", greedy=True)
+    assert "m2-dummy2" in result["minions"]
+
+
+def test_check_list_minions_bare_resource_from_cache_empty_registry(opts):
+    opts["minion_data_cache"] = True
+    fake_cache = MagicMock()
+    fake_cache.list.side_effect = lambda bank: ["m2"]
+
+    def fetch_side_effect(bank, mid):
+        if bank == "pillar" and mid == "m2":
+            return {"resources": {"dummy": {"resource_ids": ["m2-dummy2"]}}}
+        return {}
+
+    fake_cache.fetch.side_effect = fetch_side_effect
+
+    with patch("salt.cache.factory", return_value=fake_cache):
+        ck = salt.utils.minions.CkMinions(opts)
+        result = ck._check_list_minions("m2-dummy2", greedy=True)
+    assert result["minions"] == ["m2-dummy2"]
+    assert result["missing"] == []
+
+
+# ---------------------------------------------------------------------------
+# Bare resource ID targeting — master path + concurrency
+# ---------------------------------------------------------------------------
+
+
+def test_update_resource_index_then_check_minions_glob_bare_id(opts):
+    """
+    Full stack path used by the master after ``_register_resources``: registry
+    mmap populated via :func:`update_resource_index`, then glob targeting must
+    include the bare resource token (e.g. ``salt m2-dummy2 test.ping``).
+    """
+    update_resource_index(opts, "minion-2", {"dummy": ["m2-dummy2", "m2-dummy1"]})
+    ck = salt.utils.minions.CkMinions(opts)
+    got = ck.check_minions("m2-dummy2", tgt_type="glob", fun="test.ping")
+    assert "m2-dummy2" in got["minions"]
+
+
+def test_update_resource_index_then_check_minions_list_bare_id(opts):
+    """``salt -L m2-dummy2`` resolves when the id is registered."""
+    update_resource_index(opts, "minion-2", {"dummy": ["m2-dummy2"]})
+    ck = salt.utils.minions.CkMinions(opts)
+    got = ck.check_minions("m2-dummy2", tgt_type="list")
+    assert got["minions"] == ["m2-dummy2"]
+    assert got["missing"] == []
+
+
+def test_concurrent_update_resource_index_and_check_minions_glob(opts):
+    """
+    Several threads alternating writes (as master workers do) with readers that
+    evaluate bare-ID glob targets must not raise (mmap ``ACCESS_READ`` vs
+    ``ACCESS_WRITE`` races previously blew up here).
+    """
+    errs = []
+    lock = threading.Lock()
+
+    def worker(tag):
+        try:
+            for i in range(40):
+                mid = f"minion-{tag}-{i % 4}"
+                rid = f"res-{tag}-{i}"
+                update_resource_index(opts, mid, {"dummy": [rid]})
+                ck = salt.utils.minions.CkMinions(opts)
+                ck.check_minions(rid, tgt_type="glob", fun="test.ping")
+                ck.check_minions(rid, tgt_type="list")
+        except Exception as exc:  # pylint: disable=broad-except
+            with lock:
+                errs.append(exc)
+
+    threads = [threading.Thread(target=worker, args=(t,)) for t in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert not errs, errs

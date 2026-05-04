@@ -3,6 +3,7 @@ Unit tests for :mod:`salt.utils.resource_registry`.
 """
 
 import contextlib
+import threading
 
 import pytest
 
@@ -340,3 +341,39 @@ def test_register_minion_triggers_auto_compact(tmp_path):
         stats = reg.stats()["primary"]
         assert stats["deleted"] == 0
         assert stats["occupied"] == 5
+
+
+def test_concurrent_register_minion_and_mmap_derived_reads(registry):
+    """
+    Writers (:meth:`register_minion`) and readers (derived views / bare-id
+    resolution) run concurrently on the mmap primary — must stay crash-free.
+    """
+    errs = []
+    lock = threading.Lock()
+
+    def writer():
+        try:
+            for i in range(60):
+                registry.register_minion(f"w{i % 6}", {"dummy": [f"id-{i}", "anchor"]})
+        except Exception as exc:  # pylint: disable=broad-except
+            with lock:
+                errs.append(exc)
+
+    def reader():
+        try:
+            for _ in range(120):
+                registry.resolve_bare_resource_id("anchor")
+                registry.get_resource_ids_by_type("dummy")
+                registry.get_resources_for_minion("w0")
+        except Exception as exc:  # pylint: disable=broad-except
+            with lock:
+                errs.append(exc)
+
+    tw = threading.Thread(target=writer)
+    tr = threading.Thread(target=reader)
+    tw.start()
+    tr.start()
+    tw.join()
+    tr.join()
+    assert not errs, errs
+    assert registry.resolve_bare_resource_id("anchor")

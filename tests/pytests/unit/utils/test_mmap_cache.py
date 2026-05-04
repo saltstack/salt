@@ -1,4 +1,5 @@
 import os
+import threading
 import time
 import zlib
 
@@ -17,6 +18,50 @@ def test_mmap_cache_put_get(cache_path):
     assert cache.put("key1", "val1") is True
     assert cache.get("key1") == "val1"
     assert cache.get("key2") is None
+    cache.close()
+
+
+def test_mmap_cache_write_after_read_only_open(cache_path):
+    """Writers must not reuse an ACCESS_READ mmap opened by a prior ``open(write=False)``."""
+    cache = salt.utils.mmap_cache.MmapCache(cache_path, size=100, slot_size=64)
+    assert cache.put("k1", "v1") is True
+    cache.close()
+
+    assert cache.open(write=False) is True
+    assert cache.get("k1") == "v1"
+
+    assert cache.put("k2", "v2") is True
+    assert cache.get("k2") == "v2"
+    cache.close()
+
+
+def test_mmap_cache_concurrent_list_and_put(cache_path):
+    """Concurrent ``list_items`` vs ``put`` must not leave a readonly mmap active for writers."""
+    cache = salt.utils.mmap_cache.MmapCache(cache_path, size=2000, slot_size=64)
+    assert cache.put("seed", "x") is True
+    cache.close()
+    errs = []
+
+    def reader():
+        try:
+            for _ in range(20):
+                cache.list_items()
+        except Exception as exc:  # pylint: disable=broad-except
+            errs.append(exc)
+
+    def writer():
+        try:
+            for i in range(100):
+                assert cache.put(f"w{i}", "y"), i
+        except Exception as exc:  # pylint: disable=broad-except
+            errs.append(exc)
+
+    threads = [threading.Thread(target=reader), threading.Thread(target=writer)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert not errs, errs
     cache.close()
 
 

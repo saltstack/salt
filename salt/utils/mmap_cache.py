@@ -3,6 +3,7 @@ import errno
 import logging
 import mmap
 import os
+import threading
 import time
 import zlib
 
@@ -164,6 +165,8 @@ class MmapCache:
         self.size = size
         self.slot_size = slot_size
         self._mm = None
+        self._mm_write = False
+        self._mmap_sync = threading.RLock()
         self._cache_id = None
         #: How often we're willing to ``os.stat`` the file to detect an
         #: atomic-swap compaction. Set to 0 to stat on every ``open()``.
@@ -305,9 +308,11 @@ class MmapCache:
 
     def open(self, write=False):
         """
-        Open the memory-mapped file.
-        Readers (write=False) do not use any locks.
-        Writers (write=True) use file initialization if needed.
+        Open the memory-mapped file (serialized with :meth:`close` via
+        ``_mmap_sync``). Hot accessors wrap their full scan or mutation while
+        holding that lock so another thread cannot replace ``self._mm`` mid-use.
+
+        Writers (``write=True``) use file initialization if needed.
 
         Already-open readers pay at most one ``os.stat`` per
         ``self._staleness_check_interval`` seconds to detect an atomic-swap
@@ -315,22 +320,30 @@ class MmapCache:
         call ``open()`` every op therefore do not amortise to one syscall
         per operation.
         """
+        with self._mmap_sync:
+            return self._open_impl(write)
+
+    def _open_impl(self, write=False):
         if self._mm:
-            # Check for staleness (Atomic Swap detection).
-            now = time.monotonic()
-            interval = self._staleness_check_interval
-            if (
-                interval
-                and self._last_staleness_check is not None
-                and (now - self._last_staleness_check) < interval
-            ):
-                return True
-            self._last_staleness_check = now
-            current_id = self._get_cache_id()
-            if current_id != self._cache_id:
+            # A prior ``open(write=False)`` leaves ``ACCESS_READ``; writers must reopen ``r+b``.
+            if write and not self._mm_write:
                 self.close()
-            else:
-                return True
+            if self._mm:
+                # Check for staleness (Atomic Swap detection).
+                now = time.monotonic()
+                interval = self._staleness_check_interval
+                if (
+                    interval
+                    and self._last_staleness_check is not None
+                    and (now - self._last_staleness_check) < interval
+                ):
+                    return True
+                self._last_staleness_check = now
+                current_id = self._get_cache_id()
+                if current_id != self._cache_id:
+                    self.close()
+                else:
+                    return True
 
         if write:
             if not self._init_file():
@@ -369,6 +382,7 @@ class MmapCache:
 
                 # Use 0 for length to map the whole file
                 self._mm = mmap.mmap(fd, 0, access=access)
+                self._mm_write = write
             return True
         except OSError as exc:
             if not write and exc.errno == errno.ENOENT:
@@ -381,17 +395,19 @@ class MmapCache:
         """
         Close the memory-mapped file.
         """
-        if self._mm:
-            try:
-                self._mm.close()
-            except (BufferError, OSError):
-                # Handle cases where buffers might still be in use
-                pass
-            self._mm = None
-        self._cache_id = None
-        # Next ``open()`` must not inherit a pre-close timestamp or the first
-        # post-open throttle window can be wrong for a freshly mapped file.
-        self._last_staleness_check = None
+        with self._mmap_sync:
+            if self._mm:
+                try:
+                    self._mm.close()
+                except (BufferError, OSError):
+                    # Handle cases where buffers might still be in use
+                    pass
+                self._mm = None
+            self._mm_write = False
+            self._cache_id = None
+            # Next ``open()`` must not inherit a pre-close timestamp or the first
+            # post-open throttle window can be wrong for a freshly mapped file.
+            self._last_staleness_check = None
 
     def _hash(self, key_bytes):
         """
@@ -406,37 +422,161 @@ class MmapCache:
         If value is provided, we store it alongside the key.
         Note: The total size of (key + value) must fit in slot_size - 1.
         """
-        if not self.open(write=True):
-            return False
+        with self._mmap_sync:
+            if not self._open_impl(write=True):
+                return False
 
-        key_bytes = salt.utils.stringutils.to_bytes(key)
-        val_bytes = salt.utils.stringutils.to_bytes(value) if value is not None else b""
+            key_bytes = salt.utils.stringutils.to_bytes(key)
+            val_bytes = (
+                salt.utils.stringutils.to_bytes(value) if value is not None else b""
+            )
 
-        # We store: [STATUS][KEY][NULL][VALUE][NULL...]
-        # For simplicity in this generic version, let's just store the key and value separated by null
-        # or just the key if it's a set.
+            # We store: [STATUS][KEY][NULL][VALUE][NULL...]
+            # For simplicity in this generic version, let's just store the key and value separated by null
+            # or just the key if it's a set.
 
-        data = key_bytes
-        if value is not None:
-            data += b"\x00" + val_bytes
+            data = key_bytes
+            if value is not None:
+                data += b"\x00" + val_bytes
 
-        if len(data) > self.slot_size - 1:
-            log.warning("Data too long for mmap cache slot: %s", key)
-            return False
+            if len(data) > self.slot_size - 1:
+                log.warning("Data too long for mmap cache slot: %s", key)
+                return False
 
-        h = self._hash(key_bytes)
-        # Use file locking for multi-process safety on writes
-        try:
-            with self._lock():
-                for i in range(self.size):
-                    slot = (h + i) % self.size
-                    offset = slot * self.slot_size
-                    status = self._mm[offset]
+            h = self._hash(key_bytes)
+            # Use file locking for multi-process safety on writes
+            try:
+                with self._lock():
+                    for i in range(self.size):
+                        slot = (h + i) % self.size
+                        offset = slot * self.slot_size
+                        status = self._mm[offset]
 
-                    if status == OCCUPIED:
-                        # Check if it's the same key
+                        if status == OCCUPIED:
+                            # Check if it's the same key
+                            existing_data = self._mm[
+                                offset + 1 : offset + self.slot_size
+                            ]
+                            # Key is everything before first null
+                            null_pos = existing_data.find(b"\x00")
+                            existing_key = (
+                                existing_data[:null_pos]
+                                if null_pos != -1
+                                else existing_data.rstrip(b"\x00")
+                            )
+
+                            if existing_key == key_bytes:
+                                # Update value if needed
+                                self._mm[offset + 1 : offset + 1 + len(data)] = data
+                                if len(data) < self.slot_size - 1:
+                                    self._mm[offset + 1 + len(data)] = 0
+                                self._mm.flush()
+                                self._touch_mtime()
+                                return True
+                            continue
+
+                        # Found an empty or deleted slot.
+                        # Write data FIRST, then flip status byte to ensure reader safety.
+                        self._mm[offset + 1 : offset + 1 + len(data)] = data
+                        if len(data) < self.slot_size - 1:
+                            self._mm[offset + 1 + len(data)] = 0
+                        self._mm[offset] = OCCUPIED
+                        self._mm.flush()
+                        self._touch_mtime()
+                        return True
+
+                log.error("Mmap cache is full!")
+                return False
+            except OSError as exc:
+                log.error("Error writing to mmap cache %s: %s", self.path, exc)
+                return False
+
+    def get(self, key, default=None):
+        """
+        Retrieve a value for a key. Returns default if not found.
+        If it was stored as a set (value=None), returns the key itself to indicate presence.
+        """
+        with self._mmap_sync:
+            if not self._open_impl(write=False):
+                return default
+
+            key_bytes = salt.utils.stringutils.to_bytes(key)
+            h = self._hash(key_bytes)
+
+            for i in range(self.size):
+                slot = (h + i) % self.size
+                offset = slot * self.slot_size
+                status = self._mm[offset]
+
+                if status == EMPTY:
+                    return default
+
+                if status == DELETED:
+                    continue
+
+                # Occupied, check key
+                existing_data = self._mm[offset + 1 : offset + self.slot_size]
+                null_pos = existing_data.find(b"\x00")
+                existing_key = (
+                    existing_data[:null_pos]
+                    if null_pos != -1
+                    else existing_data.rstrip(b"\x00")
+                )
+
+                if existing_key == key_bytes:
+                    # If there's no data after the key, it was stored as a set
+                    if (
+                        len(existing_data) <= len(key_bytes) + 1
+                        or existing_data[len(key_bytes)] == 0
+                        and (
+                            len(existing_data) == len(key_bytes) + 1
+                            or existing_data[len(key_bytes) + 1] == 0
+                        )
+                    ):
+                        # This is getting complicated, let's simplify.
+                        # If stored as set, we have [KEY][\x00][\x00...]
+                        # If stored as kv, we have [KEY][\x00][VALUE][\x00...]
+                        if null_pos != -1:
+                            if (
+                                null_pos == len(existing_data) - 1
+                                or existing_data[null_pos + 1] == 0
+                            ):
+                                return True
+                        else:
+                            return True
+
+                    value_part = existing_data[null_pos + 1 :]
+                    val_null_pos = value_part.find(b"\x00")
+                    if val_null_pos != -1:
+                        value_part = value_part[:val_null_pos]
+                    return salt.utils.stringutils.to_unicode(value_part)
+            return default
+
+    def delete(self, key):
+        """
+        Remove a key from the cache.
+        """
+        with self._mmap_sync:
+            if not self._open_impl(write=True):
+                return False
+
+            key_bytes = salt.utils.stringutils.to_bytes(key)
+            h = self._hash(key_bytes)
+
+            try:
+                with self._lock():
+                    for i in range(self.size):
+                        slot = (h + i) % self.size
+                        offset = slot * self.slot_size
+                        status = self._mm[offset]
+
+                        if status == EMPTY:
+                            return False
+
+                        if status == DELETED:
+                            continue
+
                         existing_data = self._mm[offset + 1 : offset + self.slot_size]
-                        # Key is everything before first null
                         null_pos = existing_data.find(b"\x00")
                         existing_key = (
                             existing_data[:null_pos]
@@ -445,131 +585,14 @@ class MmapCache:
                         )
 
                         if existing_key == key_bytes:
-                            # Update value if needed
-                            self._mm[offset + 1 : offset + 1 + len(data)] = data
-                            if len(data) < self.slot_size - 1:
-                                self._mm[offset + 1 + len(data)] = 0
+                            self._mm[offset] = DELETED
                             self._mm.flush()
                             self._touch_mtime()
                             return True
-                        continue
-
-                    # Found an empty or deleted slot.
-                    # Write data FIRST, then flip status byte to ensure reader safety.
-                    self._mm[offset + 1 : offset + 1 + len(data)] = data
-                    if len(data) < self.slot_size - 1:
-                        self._mm[offset + 1 + len(data)] = 0
-                    self._mm[offset] = OCCUPIED
-                    self._mm.flush()
-                    self._touch_mtime()
-                    return True
-
-            log.error("Mmap cache is full!")
-            return False
-        except OSError as exc:
-            log.error("Error writing to mmap cache %s: %s", self.path, exc)
-            return False
-
-    def get(self, key, default=None):
-        """
-        Retrieve a value for a key. Returns default if not found.
-        If it was stored as a set (value=None), returns the key itself to indicate presence.
-        """
-        if not self.open(write=False):
-            return default
-
-        key_bytes = salt.utils.stringutils.to_bytes(key)
-        h = self._hash(key_bytes)
-
-        for i in range(self.size):
-            slot = (h + i) % self.size
-            offset = slot * self.slot_size
-            status = self._mm[offset]
-
-            if status == EMPTY:
-                return default
-
-            if status == DELETED:
-                continue
-
-            # Occupied, check key
-            existing_data = self._mm[offset + 1 : offset + self.slot_size]
-            null_pos = existing_data.find(b"\x00")
-            existing_key = (
-                existing_data[:null_pos]
-                if null_pos != -1
-                else existing_data.rstrip(b"\x00")
-            )
-
-            if existing_key == key_bytes:
-                # If there's no data after the key, it was stored as a set
-                if (
-                    len(existing_data) <= len(key_bytes) + 1
-                    or existing_data[len(key_bytes)] == 0
-                    and (
-                        len(existing_data) == len(key_bytes) + 1
-                        or existing_data[len(key_bytes) + 1] == 0
-                    )
-                ):
-                    # This is getting complicated, let's simplify.
-                    # If stored as set, we have [KEY][\x00][\x00...]
-                    # If stored as kv, we have [KEY][\x00][VALUE][\x00...]
-                    if null_pos != -1:
-                        if (
-                            null_pos == len(existing_data) - 1
-                            or existing_data[null_pos + 1] == 0
-                        ):
-                            return True
-                    else:
-                        return True
-
-                value_part = existing_data[null_pos + 1 :]
-                val_null_pos = value_part.find(b"\x00")
-                if val_null_pos != -1:
-                    value_part = value_part[:val_null_pos]
-                return salt.utils.stringutils.to_unicode(value_part)
-        return default
-
-    def delete(self, key):
-        """
-        Remove a key from the cache.
-        """
-        if not self.open(write=True):
-            return False
-
-        key_bytes = salt.utils.stringutils.to_bytes(key)
-        h = self._hash(key_bytes)
-
-        try:
-            with self._lock():
-                for i in range(self.size):
-                    slot = (h + i) % self.size
-                    offset = slot * self.slot_size
-                    status = self._mm[offset]
-
-                    if status == EMPTY:
-                        return False
-
-                    if status == DELETED:
-                        continue
-
-                    existing_data = self._mm[offset + 1 : offset + self.slot_size]
-                    null_pos = existing_data.find(b"\x00")
-                    existing_key = (
-                        existing_data[:null_pos]
-                        if null_pos != -1
-                        else existing_data.rstrip(b"\x00")
-                    )
-
-                    if existing_key == key_bytes:
-                        self._mm[offset] = DELETED
-                        self._mm.flush()
-                        self._touch_mtime()
-                        return True
-            return False
-        except OSError as exc:
-            log.error("Error deleting from mmap cache %s: %s", self.path, exc)
-            return False
+                return False
+            except OSError as exc:
+                log.error("Error deleting from mmap cache %s: %s", self.path, exc)
+                return False
 
     def contains(self, key):
         """
@@ -589,80 +612,85 @@ class MmapCache:
         Return all (key, value) pairs in the cache.
         If it's a set, value will be True.
         """
-        if not self.open(write=False):
-            return []
+        with self._mmap_sync:
+            if not self._open_impl(write=False):
+                return []
 
-        ret = []
-        mm = self._mm
-        slot_size = self.slot_size
+            ret = []
+            mm = self._mm
+            slot_size = self.slot_size
 
-        for slot in range(self.size):
-            offset = slot * slot_size
-            if mm[offset] == OCCUPIED:
-                # Get the slot data.
-                # mm[offset:offset+slot_size] is relatively fast.
-                slot_data = mm[offset + 1 : offset + slot_size]
+            for slot in range(self.size):
+                offset = slot * slot_size
+                if mm[offset] == OCCUPIED:
+                    # Get the slot data.
+                    # mm[offset:offset+slot_size] is relatively fast.
+                    slot_data = mm[offset + 1 : offset + slot_size]
 
-                # Use C-based find for speed
-                null_pos = slot_data.find(b"\x00")
+                    # Use C-based find for speed
+                    null_pos = slot_data.find(b"\x00")
 
-                if null_pos == -1:
-                    key_bytes = slot_data
-                    value = True
-                else:
-                    key_bytes = slot_data[:null_pos]
+                    if null_pos == -1:
+                        key_bytes = slot_data
+                        value = True
+                    else:
+                        key_bytes = slot_data[:null_pos]
 
-                    value = True
-                    # Check if there is data after the null
-                    if null_pos < len(slot_data) - 1 and slot_data[null_pos + 1] != 0:
-                        val_data = slot_data[null_pos + 1 :]
-                        val_null_pos = val_data.find(b"\x00")
-                        if val_null_pos == -1:
-                            value_bytes = val_data
-                        else:
-                            value_bytes = val_data[:val_null_pos]
+                        value = True
+                        # Check if there is data after the null
+                        if (
+                            null_pos < len(slot_data) - 1
+                            and slot_data[null_pos + 1] != 0
+                        ):
+                            val_data = slot_data[null_pos + 1 :]
+                            val_null_pos = val_data.find(b"\x00")
+                            if val_null_pos == -1:
+                                value_bytes = val_data
+                            else:
+                                value_bytes = val_data[:val_null_pos]
 
-                        if value_bytes:
-                            value = salt.utils.stringutils.to_unicode(value_bytes)
+                            if value_bytes:
+                                value = salt.utils.stringutils.to_unicode(value_bytes)
 
-                ret.append((salt.utils.stringutils.to_unicode(key_bytes), value))
-        return ret
+                    ret.append((salt.utils.stringutils.to_unicode(key_bytes), value))
+            return ret
 
     def get_stats(self):
         """
         Return statistics about the cache state.
         Returns dict with: {occupied, deleted, empty, total, load_factor}
         """
-        if not self.open(write=False):
-            return {
-                "occupied": 0,
-                "deleted": 0,
-                "empty": 0,
-                "total": self.size,
-                "load_factor": 0.0,
-            }
+        with self._mmap_sync:
+            if not self._open_impl(write=False):
+                return {
+                    "occupied": 0,
+                    "deleted": 0,
+                    "empty": 0,
+                    "total": self.size,
+                    "load_factor": 0.0,
+                }
 
-        counts = {"occupied": 0, "deleted": 0, "empty": 0}
-        mm = self._mm
-        slot_size = self.slot_size
+            counts = {"occupied": 0, "deleted": 0, "empty": 0}
+            mm = self._mm
+            slot_size = self.slot_size
 
-        for slot in range(self.size):
-            offset = slot * slot_size
-            status = mm[offset]
-            if status == OCCUPIED:
-                counts["occupied"] += 1
-            elif status == DELETED:
-                counts["deleted"] += 1
-            else:  # EMPTY
-                counts["empty"] += 1
+            for slot in range(self.size):
+                offset = slot * slot_size
+                status = mm[offset]
+                if status == OCCUPIED:
+                    counts["occupied"] += 1
+                elif status == DELETED:
+                    counts["deleted"] += 1
+                else:  # EMPTY
+                    counts["empty"] += 1
 
-        counts["total"] = self.size
-        counts["load_factor"] = (
-            (counts["occupied"] + counts["deleted"]) / self.size
-            if self.size > 0
-            else 0.0
-        )
-        return counts
+            counts["total"] = self.size
+            counts["load_factor"] = (
+                (counts["occupied"] + counts["deleted"]) / self.size
+                if self.size > 0
+                else 0.0
+            )
+            return counts
 
     def _normalize_iterator(self, iterator):
         """
@@ -745,9 +773,9 @@ class MmapCache:
                         mm.close()
                     os.fsync(f.fileno())
 
-                self.close()
                 os.replace(tmp_path, self.path)
-                return True
+            self.close()
+            return True
         except OSError as exc:
             log.error("Error rebuilding mmap cache %s: %s", self.path, exc)
             if os.path.exists(tmp_path):

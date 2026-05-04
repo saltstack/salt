@@ -1390,6 +1390,38 @@ def test_on_demand_not_allowed(not_allowed_funcs, tmp_path, caplog):
     )
 
 
+def test_register_resources_updates_resource_index_when_minion_data_cache_disabled(
+    master_opts,
+    tmp_path,
+):
+    """
+    Resource mmap registration must not depend on minion pillar/grains caching.
+
+    Regression: ``minion_data_cache: False`` skipped ``update_resource_index``
+    entirely while still returning success to the minion.
+    """
+    import salt.utils.resource_registry
+
+    salt.utils.resource_registry.reset_registry()
+    opts = master_opts.copy()
+    opts["cachedir"] = str(tmp_path)
+    opts["minion_data_cache"] = False
+    opts.setdefault("resource_index_primary_capacity", 4096)
+    opts.setdefault("resource_index_primary_slot_size", 128)
+
+    aes_funcs = salt.master.AESFuncs(opts)
+    try:
+        load = {"id": "minion-2", "resources": {"dummy": ["m2-dummy2"]}}
+        with patch(
+            "salt.utils.minions.update_resource_index", return_value=(1, 0)
+        ) as ur:
+            aes_funcs._register_resources(load)
+        ur.assert_called_once_with(opts, "minion-2", {"dummy": ["m2-dummy2"]})
+    finally:
+        aes_funcs.destroy()
+        salt.utils.resource_registry.reset_registry()
+
+
 async def test_collect__auth_to_master_stats():
     """
     Check if master stats is collecting _auth calls while not calling neither _handle_aes nor _handle_clear

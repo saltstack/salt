@@ -26,6 +26,10 @@ Pipfile.lock
 /.?env/
 /bin/
 /etc/
+# Allow repo-local Salt dev configs (parent must be un-ignored first).
+!/etc/
+!/etc/salt/
+!/etc/salt/**
 /include/
 /lib/
 /lib64/
