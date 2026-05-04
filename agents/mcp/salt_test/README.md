@@ -221,7 +221,7 @@ Once configured, you can ask Claude:
 
 The Salt repository requires **two** virtual environments:
 - **venv310 (Python 3.10)**: For running tests on 3006.x and 3007.x branches
-- **venv311 (Python 3.11)**: For running tests on master branch AND pre-commit hooks
+- **venv312 (Python 3.12)**: For running tests on master branch AND pre-commit hooks
 
 **Setup venv310 (Python 3.10) - For Testing:**
 ```bash
@@ -248,20 +248,20 @@ pip install -e .
 deactivate
 ```
 
-**Setup venv311 (Python 3.11) - For Master Branch Testing & Pre-commit:**
+**Setup venv312 (Python 3.12) - For Master Branch Testing & Pre-commit:**
 ```bash
-python3.11 -m venv venv311
-source venv311/bin/activate
+python3.12 -m venv venv312
+source venv312/bin/activate
 pip install --upgrade pip setuptools wheel
 
 # Install platform-specific dependencies (choose your OS):
-pip install -r requirements/static/pkg/py3.11/linux.txt      # Linux
-pip install -r requirements/static/pkg/py3.11/darwin.txt     # macOS
-pip install -r requirements/static/pkg/py3.11/windows.txt    # Windows
+pip install -r requirements/static/pkg/py3.12/linux.txt      # Linux
+pip install -r requirements/static/pkg/py3.12/darwin.txt     # macOS
+pip install -r requirements/static/pkg/py3.12/windows.txt    # Windows
 
 # Install pytest and tools requirements:
 pip install -r requirements/pytest.txt
-pip install -r requirements/static/ci/py3.11/tools.txt
+pip install -r requirements/static/ci/py3.12/tools.txt
 
 # Install pre-commit and python-tools-scripts:
 pip install pre-commit python-tools-scripts
@@ -277,12 +277,12 @@ deactivate
 
 **Environment Usage:**
 - **venv310**: For running tests on 3006.x/3007.x branches, pytest, tools commands
-- **venv311**: For running tests on master branch, pre-commit hooks, code formatting, linting
+- **venv312**: For running tests on master branch, pre-commit hooks, code formatting, linting
 
 **Verify setup:**
 ```bash
-./venv310/bin/python -c "import salt.version; print(salt.version.__version__)"
-./venv310/bin/pytest tests/pytests/unit/test_loader.py -v
+./venv312/bin/python -c "import salt.version; print(salt.version.__version__)"
+./venv312/bin/pytest tests/pytests/unit/test_loader.py -v
 ./venv310/bin/python -m tools --help
 ```
 

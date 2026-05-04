@@ -6,7 +6,7 @@ _repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "${_repo_root}"
 
 _py="${PYTHON:-python3}"
-for _cand in "${_repo_root}/venv311/bin/python" "${_repo_root}/.venv/bin/python"; do
+for _cand in "${_repo_root}/venv312/bin/python" "${_repo_root}/venv311/bin/python" "${_repo_root}/.venv/bin/python"; do
   if [[ -x "${_cand}" ]]; then
     _py="${_cand}"
     break

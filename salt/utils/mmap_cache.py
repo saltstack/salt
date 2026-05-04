@@ -342,6 +342,20 @@ class MmapCache:
         except OSError:
             return None
 
+    def _sync_cache_id_after_local_write(self):
+        """
+        Refresh :py:attr:`_cache_id` after this process flushes index changes.
+
+        Each ``put``/``delete`` updates the backing file's metadata; if we leave
+        :py:attr:`_cache_id` stale, the next :meth:`open` assumes another writer
+        invalidated our mmap and tears it down. Constant close/reopen cycles
+        provoked ``EBADF`` from the mmap on Python 3.12 (Salt CI mmap perf tests).
+
+        External writers remain visible: their writes change ``stat()`` results,
+        so :meth:`open` still detects mismatch and rebuilds.
+        """
+        self._cache_id = self._get_cache_id()
+
     def _init_index_file(self):
         """Create the index file filled with zeros if it does not exist."""
         if os.path.exists(self.path):
@@ -725,6 +739,7 @@ class MmapCache:
 
             if write:
                 self._roster_recover()
+                self._sync_cache_id_after_local_write()
 
             return True
         except OSError as exc:
@@ -1159,6 +1174,7 @@ class MmapCache:
                                 mtime_ns,
                             )
                             self._flush_index_mm()
+                            self._sync_cache_id_after_local_write()
                             return True
                         # Larger value — append and update pointer; roster unchanged
                         new_heap_off = self._append_to_heap(val_bytes)
@@ -1168,6 +1184,7 @@ class MmapCache:
                         self._mm[s_offset] = OCCUPIED
                         self._update_header(new_hwm=slot)
                         self._flush_index_mm()
+                        self._sync_cache_id_after_local_write()
                         return True
 
                     # New key — append to heap, write slot, update roster
@@ -1188,6 +1205,7 @@ class MmapCache:
                     # (Item 3 fix — see _roster_recover for open-time repair).
                     self._roster_append(slot)
                     self._flush_index_mm()
+                    self._sync_cache_id_after_local_write()
                     return True
 
         except OSError as exc:
@@ -1303,6 +1321,7 @@ class MmapCache:
                         self._update_header(occupied_delta=-1, deleted_delta=1)
                         self._roster_remove(slot)
                         self._flush_index_mm()
+                        self._sync_cache_id_after_local_write()
                         return True
                 return False
         except OSError as exc:

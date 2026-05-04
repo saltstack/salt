@@ -186,7 +186,7 @@ def __virtual__():
 
 **Two environments required:**
 - **venv310**: Testing 3006.x/3007.x branches
-- **venv311**: Testing master branch + pre-commit
+- **venv312**: Testing master branch + pre-commit
 
 ```bash
 # venv310
@@ -196,15 +196,15 @@ pip install -r requirements/static/pkg/py3.10/linux.txt  # or darwin.txt/windows
 pip install -r requirements/pytest.txt -r requirements/static/ci/py3.10/tools.txt
 pip install pre-commit python-tools-scripts && pip install -e . && deactivate
 
-# venv311
-python3.11 -m venv venv311 && source venv311/bin/activate
+# venv312
+python3.12 -m venv venv312 && source venv312/bin/activate
 pip install --upgrade pip setuptools wheel
 pip install -r requirements/static/pkg/py3.11/linux.txt  # or darwin.txt/windows.txt
 pip install -r requirements/pytest.txt -r requirements/static/ci/py3.11/tools.txt
 pip install pre-commit python-tools-scripts && pip install -e . && pre-commit install && deactivate
 ```
 
-**Always use full paths:** `./venv310/bin/pytest`
+**Always use full paths:** `./venv312/bin/pytest` (master); `./venv310/bin/pytest` (3006.x/3007.x)
 
 **See [agents/docs/development-setup.md](agents/docs/development-setup.md) for complete setup.**
 
@@ -239,7 +239,7 @@ nox -e test-3 -- tests/pytests/unit/test_loader.py
 nox -e test-3 -- --lf  # Last failed
 
 # Direct (faster)
-./venv310/bin/pytest tests/pytests/unit/test_foo.py -v
+./venv312/bin/pytest tests/pytests/unit/test_foo.py -v
 ```
 
 **See [agents/docs/testing.md](agents/docs/testing.md) for complete guide.**
@@ -293,7 +293,7 @@ __salt__["file.file_exists"](path)
 
 **Essential guides in `agents/docs/`:**
 
-- **[agents/docs/development-setup.md](agents/docs/development-setup.md)** - venv310/venv311 setup, dependencies
+- **[agents/docs/development-setup.md](agents/docs/development-setup.md)** - venv310/venv312 setup, dependencies
 - **[agents/docs/architecture.md](agents/docs/architecture.md)** - Complete architecture, module types, loader
 - **[agents/docs/module-templates.md](agents/docs/module-templates.md)** - Complete templates, all patterns
 - **[agents/docs/testing.md](agents/docs/testing.md)** - Test templates, mocking, running tests

@@ -214,7 +214,7 @@ See [agents/mcp/salt_test/README.md](../mcp/salt_test/README.md) for details.
 
 1. **Always clean artifacts** before downloading new ones
 2. **Use exact CI container images** for reproduction
-3. **Note Python version** - use venv310 for 3006.x/3007.x, venv311 for master
+3. **Note Python version** - use venv310 for 3006.x/3007.x, venv312 for master
 4. **Check run logs** in GitHub Actions for exact command that failed
 5. **Test locally first** before pushing to avoid CI churn
 6. **Keep commits small** for easier review and debugging

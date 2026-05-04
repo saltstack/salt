@@ -31,3 +31,15 @@ tests/pytests/functional/runners/test_cache_migrate.py
 
 # --- Perf (localfs vs mmap_cache benchmarks) ---
 tests/pytests/perf/test_cache_benchmarks.py
+
+# --- Explicit CI regression (Ubuntu 22.04 Arm64 unit / Python 3.12 mmap write path) ---
+# Placed after whole-module entries so pytest does not narrow collection (module+node adjacency quirk).
+tests/pytests/unit/cache/test_cache_backends.py::test_updated_changes_after_overwrite[mmap_cache]
+tests/pytests/unit/cache/test_cache_backends.py::test_flush_entire_bank[mmap_cache]
+tests/pytests/unit/cache/test_cache_backends.py::test_list_returns_stored_keys[mmap_cache]
+tests/pytests/unit/cache/test_mmap_cache.py::test_flush_entire_bank
+tests/pytests/unit/cache/test_mmap_cache.py::test_list_returns_keys
+tests/pytests/unit/cache/test_mmap_cache.py::test_nested_bank_list
+tests/pytests/unit/cache/test_mmap_key.py::test_list_returns_all_keys
+tests/pytests/unit/cache/test_mmap_key.py::test_flush_bank_removes_all_keys
+tests/pytests/unit/cache/test_mmap_key.py::test_rebuild_from_localfs

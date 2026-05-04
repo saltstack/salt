@@ -245,8 +245,8 @@ salt.modules.systemd_service.restart("nginx")
 If pre-commit hooks don't run on commit:
 
 ```bash
-# Ensure you're in venv311
-source venv311/bin/activate
+# Ensure you're in venv312
+source venv312/bin/activate
 
 # Install hooks
 pre-commit install
