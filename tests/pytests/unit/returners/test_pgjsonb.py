@@ -79,3 +79,53 @@ def test_save_load_with_bytes():
         with patch.object(psycopg2.extras, "Json") as json_mock:
             pgjsonb.save_load(load["jid"], load)
             json_mock.assert_called_with(decoded_load)
+
+
+def test_prep_jid_returns_passed_jid_unchanged():
+    """``prep_jid(passed_jid=X)`` returns X verbatim."""
+    assert pgjsonb.prep_jid(passed_jid="20260504000000000001") == "20260504000000000001"
+
+
+def test_prep_jid_generates_a_valid_jid_when_none_passed():
+    """With no ``passed_jid``, ``prep_jid`` returns Salt's default
+    20-character all-digit jid."""
+    out = pgjsonb.prep_jid()
+    assert isinstance(out, str)
+    assert out.isdigit()
+    assert len(out) == 20
+
+
+def test_get_jids_returns_one_formatted_entry_per_row():
+    """``get_jids`` reads ``(jid, load)`` rows from the ``jids`` table
+    and returns ``{jid: format_jid_instance(jid, load)}``."""
+    rows = [
+        (
+            "20260504000000000001",
+            {"fun": "test.ping", "tgt": "*", "user": "root", "arg": []},
+        ),
+        (
+            "20260504000000000002",
+            {
+                "fun": "state.apply",
+                "tgt": "minion-1",
+                "user": "salt",
+                "arg": ["highstate"],
+            },
+        ),
+    ]
+    cur = MagicMock()
+    cur.fetchall.return_value = rows
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cur
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        result = pgjsonb.get_jids()
+
+    assert set(result) == {"20260504000000000001", "20260504000000000002"}
+    assert result["20260504000000000001"]["Function"] == "test.ping"
+    assert result["20260504000000000001"]["Target"] == "*"
+    assert result["20260504000000000001"]["User"] == "root"
+    assert result["20260504000000000002"]["Function"] == "state.apply"
+    assert result["20260504000000000002"]["Target"] == "minion-1"
+    assert result["20260504000000000002"]["Arguments"] == ["highstate"]
+    assert result["20260504000000000002"]["User"] == "salt"
