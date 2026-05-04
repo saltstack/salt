@@ -46,6 +46,22 @@ def test_put_update(cache):
     assert cache.get("key1") == "val2"
 
 
+def test_read_open_then_write_reopens_writable_mmap(cache_path):
+    """
+    Read-only ``open(write=False)`` must not leave a mmap that ``put`` reuses
+    when the on-disk id is unchanged (regression guard for cache-id logic).
+    """
+    c = MmapCache(cache_path, size=_SIZE, slot_size=_SLOT_SIZE, key_size=_KEY_SIZE)
+    try:
+        assert c.put("k", "v1") is True
+        assert c.open(write=False) is True
+        assert c.get("k") == "v1"
+        assert c.put("k", "v2") is True
+        assert c.get("k") == "v2"
+    finally:
+        c.close()
+
+
 def test_delete(cache):
     cache.put("key1", "val1")
     assert cache.contains("key1") is True

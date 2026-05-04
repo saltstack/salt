@@ -177,6 +177,9 @@ class MmapCache:
         self.max_segment_bytes = max_segment_bytes
 
         self._mm = None  # index mmap (ACCESS_READ or ACCESS_WRITE)
+        # True iff ``_mm`` was created with ACCESS_WRITE; read-only mmaps must
+        # not be reused when ``open(write=True)`` sees an unchanged cache id.
+        self._mm_writable = False
         # Per-segment read mmaps: list indexed by segment_id.
         # Each entry is (mmap_obj | None, fd | None, size).
         self._seg_mms: list = []  # [(mm, fd, size), ...]
@@ -626,7 +629,8 @@ class MmapCache:
         """
         if self._mm:
             current_id = self._get_cache_id()
-            if current_id != self._cache_id:
+            need_writable = write and not self._mm_writable
+            if current_id != self._cache_id or need_writable:
                 self.close()
             else:
                 return True
@@ -661,6 +665,7 @@ class MmapCache:
                     )
                     return False
                 self._mm = mmap.mmap(fd, 0, access=access)
+                self._mm_writable = access == mmap.ACCESS_WRITE
 
             # Stamp header magic on a fresh file
             if write and self._mm[0] != _HEADER_MAGIC:
@@ -694,6 +699,7 @@ class MmapCache:
             except (BufferError, OSError):
                 pass
             self._mm = None
+            self._mm_writable = False
         self._close_seg_mmaps()
         if self._roster_wfd is not None:
             try:
