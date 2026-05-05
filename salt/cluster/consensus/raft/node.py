@@ -787,6 +787,15 @@ class Node:
                     last_log_term,
                     last_log_index,
                 )
+        # Re-arm the follower timeout so a fresh attempt fires if no peer
+        # replies (e.g. peers not yet up at startup).  Without this, an
+        # isolated voter is stuck after a single failed pre-vote attempt
+        # — once a peer comes online no append-entries arrive to wake it
+        # up because nobody is leader yet.  If the pre-vote *does* elect,
+        # the candidate path immediately moves us out of FOLLOWER state
+        # and follower_timeout_callback short-circuits, so this re-arm
+        # is harmless on the success path.
+        self.schedule_follower_timeout()
 
     @lock
     def pre_request_vote_reply(self, peer_id, granted, term):

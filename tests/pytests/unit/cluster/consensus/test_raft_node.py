@@ -316,7 +316,11 @@ def test_node_follower_timeout_reschedule(nodes, scheduler):
 
     assert node.state._state == node.state.FOLLOWER
     assert hasattr(node, "_pre_candidacy") and node._pre_candidacy
-    assert node._follower_timeout is None
+    # After start_pre_vote, the follower timeout is re-armed so the
+    # pre-vote retries if no peer replies (e.g. peers not yet up).
+    # Without this re-arm an isolated voter would be stuck after a
+    # single failed attempt.
+    assert node._follower_timeout is not None
 
 
 def test_node_become_leader_when_not_candidate(node, scheduler):
