@@ -18,6 +18,27 @@ pytestmark = [
 ]
 
 
+def _zmq_teardown_rep(stream=None, rep_socket=None, ctx=None):
+    """Close REP ``ZMQStream`` / socket, optionally ``Context.term()`` (reduces pyzmq ``__del__`` noise)."""
+    if stream is not None:
+        try:
+            if not stream.closed():
+                stream.close()
+        except Exception:  # pylint: disable=broad-except
+            pass
+    if rep_socket is not None:
+        try:
+            if not rep_socket.closed:
+                rep_socket.close(0)
+        except Exception:  # pylint: disable=broad-except
+            pass
+    if ctx is not None:
+        try:
+            ctx.term()
+        except Exception:  # pylint: disable=broad-except
+            pass
+
+
 @pytest.fixture
 def port():
     return pytestshellutils.utils.ports.get_unused_localhost_port()
@@ -71,7 +92,7 @@ async def test_request_channel_issue_64627(io_loop, request_client, minion_opts,
         assert request_client.message_client.socket is None
 
     finally:
-        stream.close()
+        _zmq_teardown_rep(stream=stream, rep_socket=socket, ctx=ctx)
 
 
 async def test_request_channel_issue_65265(io_loop, request_client, minion_opts, port):
@@ -79,78 +100,103 @@ async def test_request_channel_issue_65265(io_loop, request_client, minion_opts,
     minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
 
     ctx = zmq.Context()
-    socket = ctx.socket(zmq.REP)
-    socket.bind(minion_opts["master_uri"])
-    stream = zmq.eventloop.zmqstream.ZMQStream(socket, io_loop=io_loop)
-
     try:
-        send_complete = salt.ext.tornado.locks.Event()
+        socket = ctx.socket(zmq.REP)
+        socket.bind(minion_opts["master_uri"])
+        stream = zmq.eventloop.zmqstream.ZMQStream(socket, io_loop=io_loop)
+
+        try:
+            send_complete = salt.ext.tornado.locks.Event()
+
+            @salt.ext.tornado.gen.coroutine
+            def no_handler(stream, msg):
+                """
+                The server never responds.
+                """
+                stream.close()
+
+            stream.on_recv_stream(no_handler)
+
+            @salt.ext.tornado.gen.coroutine
+            def send_request():
+                """
+                The request will timeout becuse the server does not respond.
+                """
+                ret = None
+                with pytest.raises(salt.exceptions.SaltReqTimeoutError):
+                    yield request_client.send("foo", timeout=3)
+                send_complete.set()
+                return ret
+
+            io_loop.spawn_callback(send_request)
+
+            await send_complete.wait()
+
+        finally:
+            _zmq_teardown_rep(stream=stream, rep_socket=socket)
+
+        # Create a new server, the old socket has been closed.
 
         @salt.ext.tornado.gen.coroutine
-        def no_handler(stream, msg):
+        def req_handler(stream, msg):
             """
-            The server never responds.
+            The server responds
             """
-            stream.close()
+            stream.send(salt.payload.dumps("bar"))
 
-        stream.on_recv_stream(no_handler)
+        socket = ctx.socket(zmq.REP)
+        socket.bind(minion_opts["master_uri"])
+        stream = zmq.eventloop.zmqstream.ZMQStream(socket, io_loop=io_loop)
+        try:
+            stream.on_recv_stream(req_handler)
+            await salt.ext.tornado.gen.sleep(1)
 
-        @salt.ext.tornado.gen.coroutine
-        def send_request():
-            """
-            The request will timeout becuse the server does not respond.
-            """
-            ret = None
-            with pytest.raises(salt.exceptions.SaltReqTimeoutError):
-                yield request_client.send("foo", timeout=3)
-            send_complete.set()
-            return ret
-
-        io_loop.spawn_callback(send_request)
-
-        await send_complete.wait()
-
+            ret = await request_client.send("foo", timeout=1)
+            assert ret == "bar"
+        finally:
+            _zmq_teardown_rep(stream=stream, rep_socket=socket)
     finally:
-        stream.close()
-
-    # Create a new server, the old socket has been closed.
-
-    @salt.ext.tornado.gen.coroutine
-    def req_handler(stream, msg):
-        """
-        The server responds
-        """
-        stream.send(salt.payload.dumps("bar"))
-
-    socket = ctx.socket(zmq.REP)
-    socket.bind(minion_opts["master_uri"])
-    stream = zmq.eventloop.zmqstream.ZMQStream(socket, io_loop=io_loop)
-    try:
-        stream.on_recv_stream(req_handler)
-        await salt.ext.tornado.gen.sleep(1)
-
-        ret = await request_client.send("foo", timeout=1)
-        assert ret == "bar"
-    finally:
-        stream.close()
+        _zmq_teardown_rep(ctx=ctx)
 
 
 async def test_request_client_send_recv_socket_closed(
     io_loop, request_client, minion_opts, port, caplog
 ):
+    """
+    REQ shutdown records coroutine teardown while the socket repr shows closed.
+
+    Graceful teardown (#68637) delivers a queue sentinel so ``_send_recv`` often
+    exits without hitting the periodic ``socket.poll(0, POLLOUT)`` path—the
+    trace line ``Send socket closed while polling.`` is not guaranteed. Assert
+    the stable ``Send and receive coroutine ending`` message instead.
+    """
     minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
     ctx = zmq.Context()
     socket = ctx.socket(zmq.REP)
     socket.bind(minion_opts["master_uri"])
     stream = zmq.eventloop.zmqstream.ZMQStream(socket, io_loop=io_loop)
 
-    request_client.connect()
-    socket = request_client.message_client.socket
-    with caplog.at_level(logging.TRACE):
-        request_client.close()
-        await salt.ext.tornado.gen.sleep(0.5)
-        assert "Send socket closed while polling." in caplog.messages
-        assert f"Send and receive coroutine ending {socket}" in caplog.messages
+    try:
+        request_client.connect()
+
+        with caplog.at_level(logging.TRACE):
+            request_client.close()
+            for _ in range(300):
+                if request_client.message_client.socket is None:
+                    break
+                await salt.ext.tornado.gen.sleep(0.01)
+            else:
+                pytest.fail(
+                    "REQ message client socket not cleared after RequestClient.close() "
+                    "(deferred teardown on running IOLoop; see #68637)"
+                )
+
+            assert any(
+                "Send and receive coroutine ending" in msg and "closed" in msg
+                for msg in caplog.messages
+            ), caplog.messages
+    finally:
+        _zmq_teardown_rep(stream=stream, rep_socket=socket, ctx=ctx)
 
 
 def test_request_client_send_recv_loop_closed(minion_opts, port, caplog):
@@ -188,7 +234,7 @@ def test_request_client_send_recv_loop_closed(minion_opts, port, caplog):
             assert f"Send and receive coroutine ending {socket}" in caplog.messages
         finally:
             request_client.close()
-            serve_socket.close()
+            _zmq_teardown_rep(rep_socket=serve_socket, ctx=ctx)
 
 
 @pytest.mark.parametrize(
@@ -234,7 +280,7 @@ async def test_request_client_send_msg_socket_closed(
                 assert f"Send and receive coroutine ending {socket}" in caplog.messages
             finally:
                 request_client.close()
-                serve_socket.close()
+                _zmq_teardown_rep(rep_socket=serve_socket, ctx=ctx)
 
 
 async def test_request_client_send_msg_loop_closed(
@@ -265,7 +311,7 @@ async def test_request_client_send_msg_loop_closed(
                 assert f"Send and receive coroutine ending {socket}" in caplog.messages
             finally:
                 request_client.close()
-                serve_socket.close()
+                _zmq_teardown_rep(rep_socket=serve_socket, ctx=ctx)
 
 
 async def test_request_client_recv_poll_loop_closed(
@@ -298,7 +344,7 @@ async def test_request_client_recv_poll_loop_closed(
             assert f"Send and receive coroutine ending {socket}" in caplog.messages
         finally:
             request_client.close()
-            serve_socket.close()
+            _zmq_teardown_rep(rep_socket=serve_socket, ctx=ctx)
 
 
 async def test_request_client_recv_poll_socket_closed(
@@ -332,7 +378,7 @@ async def test_request_client_recv_poll_socket_closed(
                 assert f"Send and receive coroutine ending {socket}" in caplog.messages
             finally:
                 request_client.close()
-                serve_socket.close()
+                _zmq_teardown_rep(rep_socket=serve_socket, ctx=ctx)
 
 
 async def test_request_client_recv_loop_closed(
@@ -371,18 +417,9 @@ async def test_request_client_recv_loop_closed(
                 assert "Loop closed while receiving." in caplog.messages
                 assert f"Send and receive coroutine ending {socket}" in caplog.messages
             finally:
-                # 1. Close the stream first
-                # This unregisters the FD from the IOLoop selector
-                if not stream.closed():
-                    stream.close()
-
-                # 2. Now close the client and the raw socket
+                _zmq_teardown_rep(stream=stream, rep_socket=serve_socket)
                 request_client.close()
-                if not serve_socket.closed:
-                    serve_socket.close()
-
-                # 3. Terminate the context last
-                ctx.term()
+                _zmq_teardown_rep(ctx=ctx)
 
 
 async def test_request_client_recv_socket_closed(
@@ -421,15 +458,6 @@ async def test_request_client_recv_socket_closed(
                 assert "Receive socket closed while receiving." in caplog.messages
                 assert f"Send and receive coroutine ending {socket}" in caplog.messages
             finally:
-                # 1. Close the stream first
-                # This unregisters the FD from the IOLoop selector
-                if not stream.closed():
-                    stream.close()
-
-                # 2. Now close the client and the raw socket
+                _zmq_teardown_rep(stream=stream, rep_socket=serve_socket)
                 request_client.close()
-                if not serve_socket.closed:
-                    serve_socket.close()
-
-                # 3. Terminate the context last
-                ctx.term()
+                _zmq_teardown_rep(ctx=ctx)
