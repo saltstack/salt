@@ -461,9 +461,21 @@ def _purge_jobs(timestamp):
     """
     with _get_serv() as cursor:
         try:
+            # Purge a jids row only when every salt_returns row for that jid
+            # is older than the cutoff. The previous predicate
+            # ("delete from jids where jid in (select distinct jid from
+            # salt_returns where alter_time < %s)") fired as soon as ONE
+            # old return existed, leaving recent returns from the same jid
+            # orphaned in salt_returns once the parent was deleted -- a
+            # data-integrity bug for any long-running job whose minions
+            # answer at staggered times.
             sql = (
-                "delete from jids where jid in (select distinct jid from salt_returns"
-                " where alter_time < %s)"
+                "delete from jids j where exists ("
+                "  select 1 from salt_returns r where r.jid = j.jid"
+                ") and not exists ("
+                "  select 1 from salt_returns r"
+                "  where r.jid = j.jid and r.alter_time >= %s"
+                ")"
             )
             cursor.execute(sql, (timestamp,))
             cursor.execute("COMMIT")
@@ -520,11 +532,18 @@ def _archive_jobs(timestamp):
                 raise
 
         try:
+            # Mirror the predicate used in _purge_jobs: archive a jids row
+            # only when every salt_returns row for that jid is older than
+            # the cutoff. Otherwise the archive ends up holding parent
+            # rows whose recent salt_returns rows were left behind in the
+            # source table.
             sql = (
-                "insert into {} select * from {} where jid in (select distinct jid from"
-                " salt_returns where alter_time < %s)".format(
-                    target_tables["jids"], "jids"
-                )
+                "insert into {target} select * from jids j where exists ("
+                "  select 1 from salt_returns r where r.jid = j.jid"
+                ") and not exists ("
+                "  select 1 from salt_returns r"
+                "  where r.jid = j.jid and r.alter_time >= %s"
+                ")".format(target=target_tables["jids"])
             )
             cursor.execute(sql, (timestamp,))
             cursor.execute("COMMIT")

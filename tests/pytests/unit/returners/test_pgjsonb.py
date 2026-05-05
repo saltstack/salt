@@ -140,3 +140,59 @@ def test__get_serv_logs_via_salt_logger_and_reraises_on_yield_error(caplog):
 
     fake_cursor.execute.assert_any_call("ROLLBACK")
     assert any("_get_serv" in r.message for r in caplog.records)
+
+
+def _capture_jids_predicate(executed_calls, marker):
+    """Return the parameterised SQL string from the first call whose text
+    contains ``marker`` (e.g. ``"delete from jids"`` or ``"insert into"``)."""
+    for call_ in executed_calls:
+        if not call_.args:
+            continue
+        sql = call_.args[0]
+        if isinstance(sql, str) and marker in sql:
+            return sql
+    raise AssertionError(
+        f"no execute call contained {marker!r}; "
+        f"saw: {[c.args for c in executed_calls]}"
+    )
+
+
+def test__purge_jobs_keeps_jids_with_any_recent_salt_returns_row():
+    """Regression for the orphan-returns bug: ``_purge_jobs`` must delete
+    a jids row only when every salt_returns row for that jid is older
+    than the cutoff. The previous predicate fired as soon as one old
+    return existed, which left recent returns from the same jid orphaned
+    in salt_returns once the parent was deleted."""
+    cursor = MagicMock()
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cursor
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        pgjsonb._purge_jobs("2026-01-01")
+
+    sql = _capture_jids_predicate(cursor.execute.call_args_list, "delete from jids")
+    # Antijoin: keep the row if any recent salt_returns row exists for it.
+    assert "not exists" in sql.lower()
+    assert "alter_time >= %s" in sql
+    # Defence against regressing to the old predicate.
+    assert "alter_time < %s" not in sql
+
+
+def test__archive_jobs_keeps_jids_with_any_recent_salt_returns_row():
+    """Mirror of the purge test for the archive path. The archive INSERT
+    into ``jids_archive`` must use the same antijoin predicate so that it
+    does not pick up parent rows whose recent returns were left behind in
+    the source table."""
+    cursor = MagicMock()
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cursor
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        pgjsonb._archive_jobs("2026-01-01")
+
+    sql = _capture_jids_predicate(
+        cursor.execute.call_args_list, "insert into jids_archive"
+    )
+    assert "not exists" in sql.lower()
+    assert "alter_time >= %s" in sql
+    assert "alter_time < %s" not in sql
