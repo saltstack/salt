@@ -682,15 +682,12 @@ class PoolRoutingChannel:
         (pathlib.Path(self.opts["cachedir"]) / "sessions").mkdir(exist_ok=True)
         self.sessions = {}
 
-        # Same key cache / minion bookkeeping as ReqServerChannel so clear-text
-        # _auth can run inline when IPC pool clients are not yet connected
-        # (functional tests and bootstrap scenarios).
-        self.cache = salt.cache.Cache(opts, driver=self.opts["keys.cache_driver"])
-        if self.opts["con_cache"]:
-            self.cache_cli = CacheCli(self.opts)
-        else:
-            self.cache_cli = False
-            self.ckminions = salt.utils.minions.CkMinions(self.opts)
+        # Defer CacheCli/CkMinions construction: ``salt.cache.Cache`` holds locks and
+        # breaks pickling ``PoolRoutingChannel`` into ``MWorker`` on Windows (spawn).
+        # Workers delegate to per-pool ``ReqServerChannel`` and never need this state.
+        self.cache = None
+        self.cache_cli = False
+        self.ckminions = None
 
         # Build routing table for command-based routing
         self._build_routing_table()
@@ -699,6 +696,17 @@ class PoolRoutingChannel:
             "PoolRoutingChannel initialized with pools: %s",
             list(worker_pools.keys()),
         )
+
+    def _ensure_auth_support(self):
+        """Lazily init key-cache state needed for inline clear-text ``_auth`` only."""
+        if self.cache is not None:
+            return
+        self.cache = salt.cache.Cache(self.opts, driver=self.opts["keys.cache_driver"])
+        if self.opts["con_cache"]:
+            self.cache_cli = CacheCli(self.opts)
+        else:
+            self.cache_cli = False
+            self.ckminions = salt.utils.minions.CkMinions(self.opts)
 
     def _build_routing_table(self):
         """
@@ -905,6 +913,9 @@ class PoolRoutingChannel:
 
         self.io_loop = io_loop
 
+        # Routing process only (not pool workers): needs cache-backed auth helpers.
+        self._ensure_auth_support()
+
         # Setup master infrastructure (same as ReqServerChannel)
         if (
             self.opts.get("pub_server_niceness")
@@ -1002,6 +1013,7 @@ class PoolRoutingChannel:
         Run clear-text ``_auth`` the same way :meth:`ReqServerChannel.handle_message`
         does, without forwarding to a worker pool (no IPC client yet).
         """
+        self._ensure_auth_support()
         proxy = self._req_channel_auth_delegate()
         try:
             payload = ReqServerChannel._decode_payload(proxy, payload, version)
@@ -1097,6 +1109,15 @@ class PoolRoutingChannel:
             )
             return "bad load"
 
+        # Clear-text ``_auth`` is handled locally like legacy ReqServerChannel so
+        # bootstrap sign-in does not rely on pool IPC (flaky on Windows with pooled routing).
+        if (
+            payload.get("enc") == "clear"
+            and isinstance(payload.get("load"), dict)
+            and payload["load"].get("cmd") == "_auth"
+        ):
+            return await self._handle_clear_auth_local(payload, version)
+
         try:
             # Simple command-based routing from our routing table
             load = payload.get("load", {})
@@ -1165,12 +1186,6 @@ class PoolRoutingChannel:
                 return {"enc": "clear", "load": {"ret": False, "cluster_retry": True}}
 
             if pool_name not in self.pool_clients:
-                if (
-                    payload.get("enc") == "clear"
-                    and isinstance(payload.get("load"), dict)
-                    and payload["load"].get("cmd") == "_auth"
-                ):
-                    return await self._handle_clear_auth_local(payload, version)
                 log.error(
                     "No client available for pool '%s'. Available: %s",
                     pool_name,

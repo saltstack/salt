@@ -26,6 +26,7 @@ def salt_master_factory(salt_factories):
                         "sys.doc",
                         "pillar.items",
                         "runner.test.arg",
+                        "_auth",
                         "auth",
                     ],
                 },
