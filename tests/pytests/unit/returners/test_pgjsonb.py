@@ -470,3 +470,35 @@ def test__archive_jobs_keeps_jids_with_any_recent_salt_returns_row():
     assert "not exists" in sql.lower()
     assert "alter_time >= %s" in sql
     assert "alter_time < %s" not in sql
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test_get_fun_returns_one_full_ret_per_minion_with_postgres_compatible_sql():
+    """``get_fun`` builds a per-minion last-execution dict.
+
+    The previous SQL used MySQL-style backtick quoting (``MAX(`jid`)``),
+    which raises a syntax error on PostgreSQL where the function lives.
+    Verify both the produced mapping and that the issued SQL is free of
+    backticks so the fix does not regress through future copy-paste from
+    the mysql returner.
+    """
+    rows = [
+        ("minion-1", "20260505000000000001", {"return": "ok-1", "fun": "test.ping"}),
+        ("minion-2", "20260505000000000002", {"return": "ok-2", "fun": "test.ping"}),
+    ]
+    cur = MagicMock()
+    cur.fetchall.return_value = rows
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cur
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        result = pgjsonb.get_fun("test.ping")
+
+    assert result == {
+        "minion-1": {"return": "ok-1", "fun": "test.ping"},
+        "minion-2": {"return": "ok-2", "fun": "test.ping"},
+    }
+    issued_sql = cur.execute.call_args.args[0]
+    assert (
+        "`" not in issued_sql
+    ), "MySQL-style backtick quoting in pgjsonb SQL — invalid on PostgreSQL"
