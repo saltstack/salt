@@ -681,7 +681,13 @@ class MmapCache:
             current_id = self._get_cache_id()
             need_writable = write and not self._mm_writable
             if current_id != self._cache_id or need_writable:
-                self.close()
+                # Preserve the persistent lock fd: ``put`` / ``delete`` /
+                # ``atomic_rebuild`` call ``open(write=True)`` *while holding*
+                # the cross-process flock on ``_lock_fd``. Closing that fd
+                # releases the flock as a side effect, letting another writer
+                # race the rest of this operation. Use the underscore helper
+                # so only mmaps and data fds are reset.
+                self._close_mmaps_and_fds()
             else:
                 return True
 
@@ -746,15 +752,20 @@ class MmapCache:
             if not write and exc.errno == errno.ENOENT:
                 return False
             log.error("Failed to mmap index file %s: %s", self.path, exc)
-            self.close()
+            # Same flock-preservation rule as the reopen branch above:
+            # writers reach this except clause while still holding _lock_fd.
+            self._close_mmaps_and_fds()
             return False
 
     def _close_mmaps_and_fds(self):
         """
         Close mmaps, heap fds, and roster write fd — but NOT the lock fd.
 
-        Used by ``atomic_rebuild``, which holds the lock across a ``close``
-        and must not close the lock fd while the lock is still held.
+        Used by ``open()`` (when staleness or read→write upgrade forces a
+        re-map) and ``atomic_rebuild``. Both code paths call this **while the
+        cross-process flock is held**: closing the lock fd would release that
+        flock as a side effect (POSIX flock is keyed to the open file
+        description), letting another writer race the rest of the operation.
         """
         if self._mm:
             try:
@@ -943,6 +954,51 @@ class MmapCache:
     # Heap I/O
     # ------------------------------------------------------------------
 
+    def _refresh_heap_state_under_lock(self):
+        """
+        Re-stat heap segments so ``self._heap_size`` and the segment list
+        reflect the on-disk state.
+
+        Must be called while holding the cross-process flock. We rely on this
+        before recording a heap offset because a concurrent writer in another
+        process can grow the heap (or roll a new segment) between our
+        ``open(write=True)`` call and our actual append. The ``_cache_id``
+        gate in ``open()`` only inspects the **index file**'s mtime/size, and
+        on Linux mmap+msync mtime updates are best-effort: a fast
+        write/release/acquire sequence between two writers can leave us with
+        a stale ``self._heap_size`` while the index ``cache_id`` looks
+        unchanged. Recording an offset from a stale ``self._heap_size``
+        causes two slots to point at the same heap location — silent data
+        corruption.
+        """
+        # Pick up any segments other processes have rolled.
+        seg_id = len(self._seg_mms)
+        while True:
+            p = self._segment_path(seg_id)
+            if not os.path.exists(p):
+                break
+            try:
+                sz = os.path.getsize(p)
+            except OSError:
+                sz = 0
+            self._seg_mms.append([None, None, sz])
+            self._seg_mm_stale.append(True)
+            seg_id += 1
+
+        # Refresh the size of the active (last) segment.
+        if not self._seg_mms:
+            self._seg_mms.append([None, None, 0])
+            self._seg_mm_stale.append(True)
+        active = len(self._seg_mms) - 1
+        try:
+            sz = os.path.getsize(self._segment_path(active))
+        except OSError:
+            sz = self._seg_mms[active][2]
+        if sz != self._seg_mms[active][2]:
+            self._seg_mms[active][2] = sz
+            self._seg_mm_stale[active] = True
+        self._heap_size = sz
+
     def _append_to_heap(self, value_bytes):
         """
         Append *value_bytes* to the active heap segment.
@@ -962,6 +1018,9 @@ class MmapCache:
             record = struct.pack(_CRC_FMT, digest) + value_bytes if value_bytes else b""
         else:
             record = value_bytes
+
+        # Always re-stat under the flock — see _refresh_heap_state_under_lock.
+        self._refresh_heap_state_under_lock()
 
         if not record:
             # Zero-length entry — no heap write needed.
