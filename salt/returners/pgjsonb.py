@@ -301,8 +301,15 @@ def returner(ret):
             )
     except salt.exceptions.SaltMasterError:
         log.critical(
-            "Could not store return with pgjsonb returner. PostgreSQL server"
-            " unavailable."
+            "pgjsonb: PostgreSQL unavailable, dropping return for jid=%s id=%s",
+            ret.get("jid"),
+            ret.get("id"),
+        )
+    except psycopg2.DatabaseError:
+        log.exception(
+            "pgjsonb: failed to store return for jid=%s id=%s",
+            ret.get("jid"),
+            ret.get("id"),
         )
 
 
@@ -313,15 +320,23 @@ def event_return(events):
     Requires that configuration be enabled via 'event_return'
     option in master config.
     """
-    with _get_serv(events, commit=True) as cur:
-        for event in events:
-            tag = event.get("tag", "")
-            data = event.get("data", "")
-            sql = """INSERT INTO salt_events (tag, data, master_id, alter_time)
-                     VALUES (%s, %s, %s, to_timestamp(%s))"""
-            cur.execute(
-                sql, (tag, psycopg2.extras.Json(data), __opts__["id"], time.time())
-            )
+    try:
+        with _get_serv(commit=True) as cur:
+            for event in events:
+                tag = event.get("tag", "")
+                data = event.get("data", "")
+                sql = """INSERT INTO salt_events (tag, data, master_id, alter_time)
+                         VALUES (%s, %s, %s, to_timestamp(%s))"""
+                cur.execute(
+                    sql,
+                    (tag, psycopg2.extras.Json(data), __opts__["id"], time.time()),
+                )
+    except salt.exceptions.SaltMasterError:
+        log.critical(
+            "pgjsonb: PostgreSQL unavailable, dropping %d event(s)", len(events)
+        )
+    except psycopg2.DatabaseError:
+        log.exception("pgjsonb: failed to store %d event(s)", len(events))
 
 
 def save_load(jid, load, minions=None):
