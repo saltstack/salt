@@ -27,10 +27,6 @@ import salt.utils.url
 from salt.exceptions import SaltClientError
 from salt.template import compile_template
 
-# Even though dictupdate is imported, invoking salt.utils.dictupdate.merge here
-# causes an UnboundLocalError. This should be investigated and fixed, but until
-# then, leave the import directly below this comment intact.
-from salt.utils.dictupdate import merge
 from salt.version import __version__
 
 log = logging.getLogger(__name__)
@@ -944,7 +940,7 @@ class Pillar:
                                     ):
                                         include_states.append(nstate)
                                     else:
-                                        state = merge(
+                                        state = salt.utils.dictupdate.merge(
                                             state,
                                             nstate,
                                             self.merge_strategy,
@@ -963,7 +959,7 @@ class Pillar:
                                 if state is None:
                                     state = s
                                 else:
-                                    state = merge(
+                                    state = salt.utils.dictupdate.merge(
                                         state,
                                         s,
                                         self.merge_strategy,
@@ -1016,7 +1012,7 @@ class Pillar:
                             ", ".join([f"'{e}'" for e in errors]),
                         )
                         continue
-                    pillar = merge(
+                    pillar = salt.utils.dictupdate.merge(
                         pillar,
                         pstate,
                         self.merge_strategy,
@@ -1077,15 +1073,15 @@ class Pillar:
             # the git ext_pillar() func is run, but only for masterless.
             if self.ext and "git" in self.ext and self.opts.get("__role") != "minion":
                 # Avoid circular import
-                import salt.pillar.git_pillar
-                import salt.utils.gitfs
+                import salt.pillar.git_pillar as git_pillar
+                import salt.utils.gitfs as gitfs
 
-                git_pillar = salt.utils.gitfs.GitPillar(
+                git_pillar = gitfs.GitPillar(
                     self.opts,
                     self.ext["git"],
-                    per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                    per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY,
-                    global_only=salt.pillar.git_pillar.GLOBAL_ONLY,
+                    per_remote_overrides=git_pillar.PER_REMOTE_OVERRIDES,
+                    per_remote_only=git_pillar.PER_REMOTE_ONLY,
+                    global_only=git_pillar.GLOBAL_ONLY,
                 )
                 git_pillar.fetch_remotes()
         except TypeError:
@@ -1100,8 +1096,8 @@ class Pillar:
         ext = None
         # Bring in CLI pillar data
         if self.pillar_override:
-            pillar = merge(
-                pillar,
+            pillar = salt.utils.dictupdate.merge(
+                salt.utils.secret.expose(pillar),
                 self.pillar_override,
                 self.merge_strategy,
                 self.opts.get("renderer", "yaml"),
@@ -1138,8 +1134,8 @@ class Pillar:
                         "".join(traceback.format_tb(sys.exc_info()[2])),
                     )
             if ext:
-                pillar = merge(
-                    pillar,
+                pillar = salt.utils.dictupdate.merge(
+                    salt.utils.secret.expose(pillar),
                     ext,
                     self.merge_strategy,
                     self.opts.get("renderer", "yaml"),
@@ -1167,7 +1163,7 @@ class Pillar:
                 )
                 matches = self.top_matches(top, reload=True)
                 pillar, errors = self.render_pillar(matches, errors=errors)
-                pillar = merge(
+                pillar = salt.utils.dictupdate.merge(
                     self.pillar_data,
                     pillar,
                     self.merge_strategy,
@@ -1201,7 +1197,7 @@ class Pillar:
             mopts["saltversion"] = __version__
             pillar.get_secret_value()["master"] = mopts
         if "pillar" in self.opts and self.opts.get("ssh_merge_pillar", False):
-            pillar = merge(
+            pillar = salt.utils.dictupdate.merge(
                 self.opts["pillar"],
                 pillar,
                 self.merge_strategy,
@@ -1214,7 +1210,7 @@ class Pillar:
             pillar.get_secret_value()["_errors"] = errors
 
         if self.pillar_override:
-            pillar = merge(
+            pillar = salt.utils.dictupdate.merge(
                 pillar,
                 self.pillar_override,
                 self.merge_strategy,
@@ -1468,7 +1464,7 @@ class PillarCache(Pillar):
 
         # we dont want the pillar_override baked into the cached compile_pillar from above
         if self.pillar_override:
-            pillar_data = merge(
+            pillar_data = salt.utils.dictupdate.merge(
                 pillar_data,
                 self.pillar_override,
                 self.merge_strategy,
