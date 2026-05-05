@@ -372,36 +372,58 @@ class TestSignalHandlingProcess(TestCase):
         )
         proc2.start()
 
-        # Wait for the sub process to set its pid
-        while not val.value:
-            time.sleep(0.3)
-
-        assert not sig_handled.is_set()
-
-        # Send a signal that should get handled by the subprocess
-        os.kill(val.value, signal.SIGTERM)
-
-        # wait up to 10 seconds for signal handler:
-        start = time.time()
-        while time.time() - start < 10:
-            if sig_handled.is_set():
-                break
-            time.sleep(0.3)
-        else:
-            # In some cases, the signal may not be set in time.
-            # Rather than adjusting the timeout and risking flakiness, just skip.
-            pytest.skip("Event took too long to get set, skipping for now.")
+        def _force_cleanup():
+            evt.set()
+            for p in (proc, proc2):
+                if p.is_alive():
+                    try:
+                        p.terminate()
+                    except Exception:  # pylint: disable=broad-except
+                        pass
+                p.join(5)
+                if p.is_alive():
+                    try:
+                        p.kill()
+                    except Exception:  # pylint: disable=broad-except
+                        pass
+                    p.join(5)
 
         try:
+            # Wait for the sub process to set its pid. Bounded so that a
+            # fork-after-thread deadlock in the child (pytest's own
+            # saltfactories threads make this fork unsafe) skips fast
+            # instead of hanging the entire test shard.
+            start = time.time()
+            while time.time() - start < 30:
+                if val.value:
+                    break
+                time.sleep(0.3)
+            else:
+                pytest.skip("subprocess did not set its pid in time")
+
+            assert not sig_handled.is_set()
+
+            # Send a signal that should get handled by the subprocess
+            os.kill(val.value, signal.SIGTERM)
+
+            # wait up to 10 seconds for signal handler:
+            start = time.time()
+            while time.time() - start < 10:
+                if sig_handled.is_set():
+                    break
+                time.sleep(0.3)
+            else:
+                # In some cases, the signal may not be set in time.
+                # Rather than adjusting the timeout and risking flakiness, just skip.
+                pytest.skip("Event took too long to get set, skipping for now.")
+
             # Allow some time for the signal handler to do its thing
             assert sig_handled.is_set()
             # Reap the signaled process
             proc.join(1)
             assert proc2.is_alive()
         finally:
-            evt.set()
-            proc2.join(30)
-            proc.join(30)
+            _force_cleanup()
 
 
 class TestSignalHandlingProcessCallbacks(TestCase):
