@@ -2128,14 +2128,24 @@ class MasterPubServerChannel:
         return "".join(random.choices(string.ascii_letters + string.digits, k=32))
 
     def _join_sentinel_path(self):
-        """Return the path to the per-master join sentinel file."""
-        return pathlib.Path(self.opts["cachedir"]) / ".cluster_joined"
+        """
+        Return the path to the per-master join sentinel file.
+
+        The filename is namespaced by the master's interface address so that
+        deployments which share ``cachedir`` between cluster members (and the
+        cluster integration tests, which point every master at the same
+        ``cluster_cache_path``) keep distinct sentinels — without that, the
+        first master to join writes ``.cluster_joined`` and every later
+        master sees it on startup, takes the "rejoining" path, and skips
+        the deterministic founding-voter election.
+        """
+        interface = self.opts.get("interface") or "unknown"
+        return pathlib.Path(self.opts["cachedir"]) / f".cluster_joined.{interface}"
 
     def _has_joined_cluster(self):
         """
         Return True if this master has previously completed the cluster join
-        handshake.  The sentinel is written in the master's private cachedir
-        (not the shared cluster_pki_dir) so it is unique per master instance.
+        handshake.  The sentinel is per-master (see :meth:`_join_sentinel_path`).
         """
         return self._join_sentinel_path().exists()
 
@@ -2584,6 +2594,22 @@ class MasterPubServerChannel:
 
                 self.cluster_peers.append(payload["peer_id"])
                 self.pushers.append(self.pusher(payload["peer_id"]))
+
+                # Add the joining peer to our own Raft state as a learner.
+                # The join-notify broadcast below tells *other* peers about
+                # the new node, but the receiver of the join request never
+                # sees its own broadcast — without this call the leader
+                # learned about its peers via cluster_peers but never began
+                # replicating to a freshly joined master, so promotion to
+                # voter (and the joiner's gate opening) stalled.
+                if self._raft_service is not None:
+                    try:
+                        self._raft_service.notify_peer_joined(payload["peer_id"])
+                    except Exception:  # pylint: disable=broad-except
+                        log.exception(
+                            "RaftService.notify_peer_joined failed for %s",
+                            payload["peer_id"],
+                        )
 
                 for pusher in self.pushers:
                     # XXX Send new peer id and public key to other nodes
