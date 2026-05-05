@@ -952,6 +952,7 @@ class SaltPkgInstall:
             self._check_retcode(ret)
 
         elif distro_name in ["debian", "ubuntu"]:
+            self.proc.run("dpkg", "--configure", "-a")
             ret = self.proc.run(self.pkg_mngr, "install", "curl", "-y")
             self._check_retcode(ret)
             ret = self.proc.run(self.pkg_mngr, "install", "apt-transport-https", "-y")

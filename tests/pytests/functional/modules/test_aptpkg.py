@@ -239,12 +239,13 @@ def test_del_repo(build_repo_file):
     is returned when it no longer exists.
     """
     test_repos = get_repos_from_file(build_repo_file)
-    for test_repo in test_repos:
-        ret = aptpkg.del_repo(repo=test_repo)
-        assert f"Repo '{test_repo}' has been removed"
-        with pytest.raises(salt.exceptions.CommandExecutionError) as exc:
+    with patch("salt.modules.aptpkg.refresh_db"):
+        for test_repo in test_repos:
             ret = aptpkg.del_repo(repo=test_repo)
-        assert f"Repo {test_repo} doesn't exist" in exc.value.message
+            assert f"Repo '{test_repo}' has been removed"
+            with pytest.raises(salt.exceptions.CommandExecutionError) as exc:
+                ret = aptpkg.del_repo(repo=test_repo)
+            assert f"Repo {test_repo} doesn't exist" in exc.value.message
 
 
 @pytest.mark.skipif(
