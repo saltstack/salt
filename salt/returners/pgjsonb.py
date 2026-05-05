@@ -397,13 +397,13 @@ def get_fun(fun):
     """
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = """SELECT s.id,s.jid, s.full_ret
-                FROM salt_returns s
-                JOIN ( SELECT MAX(`jid`) as jid
-                    from salt_returns GROUP BY fun, id) max
-                ON s.jid = max.jid
-                WHERE s.fun = %s
-                """
+        sql = """SELECT s.id, s.jid, s.full_ret
+                 FROM salt_returns s
+                 JOIN (SELECT MAX(jid) AS jid
+                       FROM salt_returns GROUP BY fun, id) max
+                 ON s.jid = max.jid
+                 WHERE s.fun = %s
+                 """
 
         cur.execute(sql, (fun,))
         data = cur.fetchall()
