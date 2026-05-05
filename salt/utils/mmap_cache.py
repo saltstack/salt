@@ -157,6 +157,13 @@ class MmapCache:
     * ``list`` / ``list_items``: O(occupied) — independent of table size
     * ``get_stats`` occupied+deleted counters: O(1) from header
     * ``atomic_rebuild``: O(items) to repopulate
+
+    **Key length**
+
+    Keys are encoded to bytes and silently truncated to ``key_size`` bytes —
+    two logical keys that share the same first ``key_size`` bytes will collide
+    on the same slot. Callers that may use long or user-supplied keys must
+    either size ``key_size`` accordingly or pre-hash the keys themselves.
     """
 
     def __init__(
