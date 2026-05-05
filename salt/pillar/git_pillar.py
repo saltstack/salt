@@ -393,6 +393,7 @@ import logging
 
 import salt.utils.dictupdate
 import salt.utils.gitfs
+import salt.utils.secret
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import FileserverConfigError
@@ -514,7 +515,7 @@ def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
         local_pillar = Pillar(opts, __grains__, minion_id, env)
         ret = salt.utils.dictupdate.merge(
             ret,
-            local_pillar.compile_pillar(ext=False),
+            salt.utils.secret.expose(local_pillar.compile_pillar(ext=False)),
             strategy=merge_strategy,
             merge_lists=merge_lists,
         )

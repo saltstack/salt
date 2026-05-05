@@ -3413,7 +3413,7 @@ def managed(
             list_contents = []
             for nextp in contents_pillar:
                 nextc = __salt__["pillar.get"](
-                    nextp, __NOT_FOUND, delimiter=contents_delimiter
+                    nextp, __NOT_FOUND, delimiter=contents_delimiter, unmask=True
                 )
                 if nextc is __NOT_FOUND:
                     return _error(ret, f"Pillar {nextp} does not exist")
@@ -3421,7 +3421,7 @@ def managed(
             use_contents = os.linesep.join(list_contents)
         else:
             use_contents = __salt__["pillar.get"](
-                contents_pillar, __NOT_FOUND, delimiter=contents_delimiter
+                contents_pillar, __NOT_FOUND, delimiter=contents_delimiter, unmask=True
             )
             if use_contents is __NOT_FOUND:
                 return _error(ret, f"Pillar {contents_pillar} does not exist")

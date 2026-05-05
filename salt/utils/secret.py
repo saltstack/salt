@@ -37,6 +37,11 @@ class Secret(Generic[SecretType_co]):
             instance, self.get_secret_value().__class__
         )
 
+    def __issubclasscheck__(self, subclass: Any) -> bool:
+        return issubclass(subclass, self.__class__) or issubclass(
+            subclass, self.get_secret_value().__class__
+        )
+
     def __hash__(self) -> int:
         return hash(self.get_secret_value())
 
@@ -180,6 +185,12 @@ class SecretDict(SecretIterable[dict], MutableMapping[str, Any]):
         if key in self._exclude:
             return self._secret_value[key]
         return hide(self._secret_value[key], exclude=self._exclude)
+
+    def get(self, key, default=None):
+        return hide(self._secret_value.get(key, default))
+
+    def update(self, *args, **kwargs):
+        self._secret_value.update(*args, **kwargs)
 
     def setdefault(self, key, default=None):
         return self._secret_value.setdefault(key, default)

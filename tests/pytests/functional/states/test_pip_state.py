@@ -208,8 +208,8 @@ def test_issue_2028_pip_installed_state(
     venv_dir = tmp_path / "issue-2028-pip-installed"
 
     sls_contents = """
-    {%- set virtualenv_base = salt['pillar.get']('venv_dir') %}
-    {%- set python_executable = salt['pillar.get']('python_executable') %}
+    {%- set virtualenv_base = salt['pillar.get']('venv_dir', unmask=True) %}
+    {%- set python_executable = salt['pillar.get']('python_executable', unmask=True) %}
 
     {{ virtualenv_base }}:
       virtualenv.managed:

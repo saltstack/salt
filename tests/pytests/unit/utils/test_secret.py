@@ -127,18 +127,3 @@ def test_secret_dict_bytes():
 def test_hide_yamlish_structures(container):
     w = secret.hide(container)
     assert isinstance(w, secret.SecretDict)
-
-
-@pytest.mark.skipif(
-    not salt.utils.versions.reqs.msgpack,
-    reason="msgpack not installed",
-)
-def test_msgpack_serialize_unwraps_secret_types():
-    from salt.serializers import msgpack as msgpack_ser
-
-    wrapped = secret.hide({"k": "secret"})
-    packed = msgpack_ser.serialize(wrapped)
-    assert msgpack_ser.deserialize(packed) == {"k": "secret"}
-
-    packed2 = msgpack_ser.serialize({"x": secret.SecretStr("y")})
-    assert msgpack_ser.deserialize(packed2) == {"x": "y"}

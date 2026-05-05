@@ -30,6 +30,7 @@ import salt.utils.hashutils
 import salt.utils.http
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.secret
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
@@ -1486,7 +1487,7 @@ class RemoteClient(Client):
         """
         Return the metadata derived from the master_tops system
         """
-        load = {"cmd": "_master_tops", "id": self.opts["id"], "opts": self.opts}
+        load = {"cmd": "_master_tops", "id": self.opts["id"], "opts": salt.utils.secret.expose(self.opts)}
         return self._channel_send(
             load,
         )
