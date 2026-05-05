@@ -74,7 +74,23 @@ class RaftService:
         storage = SaltStorage(node_id, opts)
         # voting=False means this node joined dynamically and must wait for a
         # CONFIG entry from the leader before participating in elections.
-        self._node = Node(node_id, storage=storage, voting=voting)
+        #
+        # The default Node election window of 150–300 ms is too tight for
+        # multi-process Salt masters running over real sockets — a single
+        # delayed heartbeat in CI can cause a follower to step up and fight
+        # the existing leader for the term.  At ``_HEARTBEAT_INTERVAL`` =
+        # 50 ms the rule of thumb is election ≥ 10× heartbeat, so default
+        # to 750–1500 ms here.  ``cluster_election_min`` /
+        # ``cluster_election_max`` opts let deployments tune further.
+        election_min = opts.get("cluster_election_min", 750)
+        election_max = opts.get("cluster_election_max", 1500)
+        self._node = Node(
+            node_id,
+            storage=storage,
+            voting=voting,
+            _follower_min=election_min,
+            _follower_max=election_max,
+        )
         self._scheduler = AsyncTimeoutScheduler(loop=loop)
         self._node.register_schedule_timeout(self._scheduler.schedule)
 

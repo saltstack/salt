@@ -38,6 +38,11 @@ def _make_opts(node_id, peers):
         "cluster_id": "test-cluster",
         "cluster_peers": peers,
         "cachedir": _TMPDIR,
+        # Use the legacy tight election window so in-process functional
+        # tests stay fast (real cluster masters override the defaults via
+        # opts to ride out CI heartbeat jitter).
+        "cluster_election_min": 150,
+        "cluster_election_max": 300,
     }
 
 

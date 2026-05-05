@@ -12,6 +12,7 @@ We observe Raft activity by watching each master's log file for the
 ``BECOMING LEADER`` message that ``Node.become_leader`` emits.
 """
 
+import re
 import time
 
 import pytest
@@ -48,16 +49,43 @@ def _read_log(master_factory):
         return ""
 
 
+_BECOMING_RE = re.compile(
+    r"Node \S+ BECOMING (LEADER|FOLLOWER|CANDIDATE) for term (\d+)"
+)
+
+
+def _current_leader(masters):
+    """
+    Return the *current* leader (or None) by reading each master's log
+    and finding whichever node most recently logged ``BECOMING LEADER``
+    for the highest term it ever reached without subsequently stepping
+    down to FOLLOWER at a still-higher term.
+
+    Counting every historical ``BECOMING LEADER`` line conflates Raft's
+    safety property (≤ 1 leader at any moment) with liveness churn
+    (leadership can legitimately move between terms in noisy CI), so we
+    inspect the most recent state instead.
+    """
+    last_state = {}  # node -> (term, state)
+    for m in masters:
+        node_state = None
+        node_term = -1
+        for match in _BECOMING_RE.finditer(_read_log(m)):
+            state, term = match.group(1), int(match.group(2))
+            if term >= node_term:
+                node_term, node_state = term, state
+        last_state[m.config["interface"]] = (node_term, node_state)
+    leaders = [addr for addr, (_, state) in last_state.items() if state == "LEADER"]
+    return leaders
+
+
 def _count_leaders(masters):
     """
-    Count how many masters report having become leader by checking logs.
-    Returns ``(leader_count, leader_interfaces)``.
+    Count how many masters are *currently* the leader.  See
+    :func:`_current_leader`; an alias kept for backward compatibility
+    with the existing assertion messages.
     """
-    leaders = []
-    for m in masters:
-        log = _read_log(m)
-        if "BECOMING LEADER" in log:
-            leaders.append(m.config["interface"])
+    leaders = _current_leader(masters)
     return len(leaders), leaders
 
 
