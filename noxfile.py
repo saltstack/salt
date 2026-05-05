@@ -292,6 +292,18 @@ def _install_requirements(
     env = os.environ.copy()
     env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
 
+    if onedir and IS_LINUX:
+        # bcrypt's PyPI wheels are tagged manylinux_2_28+ on the cpXY-abi3
+        # variants pip prefers on a modern build host, but the resulting
+        # ``_bcrypt.abi3.so`` then fails to load on older-glibc test hosts
+        # (e.g. Amazon Linux 2 with GLIBC 2.26). Source-compile bcrypt
+        # against the relenv toolchain so the resulting binary is portable
+        # across every Linux test slug. ``RELENV_BUILDENV=1`` makes the
+        # source build use ppbt's portable GCC + low-GLIBC sysroot (no
+        # effect on packages still installed as wheels).
+        env["PIP_NO_BINARY"] = "bcrypt"
+        env["RELENV_BUILDENV"] = "1"
+
     requirements_file = _get_pip_requirements_file(
         session, requirements_type=requirements_type
     )
