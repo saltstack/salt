@@ -21,6 +21,7 @@ import sys
 import pytest
 
 import salt.client
+import salt.utils.files
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -29,7 +30,7 @@ pytestmark = [
 
 
 def _linux_vmrss_kb() -> int:
-    with open("/proc/self/status", encoding="ascii") as fh:
+    with salt.utils.files.fopen("/proc/self/status", encoding="ascii") as fh:
         for line in fh:
             if line.startswith("VmRSS:"):
                 return int(line.split()[1])
@@ -71,6 +72,7 @@ def test_localclient_pub_churn_bounded_rss_under_live_master(
     lc = salt.client.LocalClient(mopts=dict(client_config))
 
     def _one_iteration():
+        # Broad catch: publish path may raise varied errors; funnel to pytest.fail.
         try:
             ret = lc.pub(
                 salt_minion.id,
@@ -79,7 +81,7 @@ def test_localclient_pub_churn_bounded_rss_under_live_master(
                 timeout=30,
                 tgt_type="list",
             )
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             pytest.fail(f"LocalClient.pub against live master failed: {exc!r}")
 
         assert isinstance(ret, dict)
