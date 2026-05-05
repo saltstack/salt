@@ -1,5 +1,6 @@
 import pathlib
 import shutil
+import textwrap
 import threading
 import time
 
@@ -119,8 +120,10 @@ def test_state_show_top(salt_ssh_cli, base_env_state_tree_root_dir):
     ), pytest.helpers.temp_file("core.sls", core_state, base_env_state_tree_root_dir):
         # Retry to handle a potential race where the master_tops extension
         # module hasn't been fully loaded yet when the first call is made.
+        # 60s wins on slow ARM64 / FIPS runners where the master takes
+        # longer to discover ``master_tops_test`` from extension_modules.
         ret = None
-        for _ in range(6):
+        for _ in range(20):
             ret = salt_ssh_cli.run("state.show_top")
             if ret.returncode == 0 and ret.data == {
                 "base": ["core", "master_tops_test"]
@@ -243,9 +246,44 @@ def test_state_run_request(salt_ssh_cli):
 
 @pytest.mark.timeout(300, func_only=True)
 def test_state_running(
-    salt_master, salt_ssh_cli, salt_ssh_roster_file, sshd_config_dir
+    salt_master,
+    salt_ssh_cli,
+    salt_ssh_roster_file,
+    sshd_config_dir,
+    base_env_state_tree_root_dir,
+    tmp_path,
 ):
-    results = []
+    """
+    Validate that ``state.running`` reports the salt-ssh ``state.pkg``
+    function while a background ``state.sls`` invocation is mid-flight,
+    and stops reporting it once the background run finishes.
+
+    The race that previously caused this to flake: the foreground polled
+    ``state.running`` blindly, hoping to land inside the (variable-length)
+    salt-ssh setup + sleep window. To make it deterministic, the SLS now
+    writes a ``started`` marker file before the sleep step. The test
+    blocks on that marker before polling, so by the time we look,
+    ``state.pkg`` is guaranteed to be live in the remote ``proc/`` cache.
+    """
+    started_marker = tmp_path / "state_running_started.marker"
+    if started_marker.exists():
+        started_marker.unlink()
+
+    sls_name = "running_signaled"
+    sls_contents = textwrap.dedent(
+        f"""
+        sync_marker:
+          file.managed:
+            - name: {started_marker.as_posix()}
+            - contents: started
+
+        sleep_running:
+          module.run:
+            - name: test.sleep
+            - length: 60
+        """
+    ).lstrip()
+
     background_cli = salt_master.salt_ssh_cli(
         timeout=180,
         roster_file=salt_ssh_roster_file,
@@ -253,35 +291,69 @@ def test_state_running(
         client_key=str(sshd_config_dir / "client_key"),
     )
 
-    def _run_state():
-        results.append(background_cli.run("state.sls", "running"))
+    results = []
 
-    thread = threading.Thread(target=_run_state)
-    thread.start()
+    def _run_state():
+        results.append(background_cli.run("state.sls", sls_name))
 
     expected = 'The function "state.pkg" is running as'
-    try:
-        end_time = time.time() + 120
+
+    with pytest.helpers.temp_file(
+        f"{sls_name}.sls", sls_contents, base_env_state_tree_root_dir
+    ):
+        thread = threading.Thread(target=_run_state)
+        thread.start()
+        try:
+            # Wait deterministically for the background SLS to reach the
+            # ``test.sleep`` step. salt-ssh thin / venv setup time is
+            # bounded by ``timeout=180`` on ``background_cli``; if we do
+            # not see the marker by then either salt-ssh failed entirely
+            # or the runner is too slow for the test to be meaningful.
+            marker_deadline = time.time() + 180
+            while time.time() < marker_deadline:
+                if started_marker.exists():
+                    break
+                if not thread.is_alive():
+                    # salt-ssh exited without writing the marker; fall
+                    # through to the existing ``Failed to return clean
+                    # data`` recovery path below.
+                    break
+                time.sleep(0.5)
+
+            if not started_marker.exists():
+                if results and "Failed to return clean data" in str(results[0].data):
+                    pytest.skip("Background state run failed, skipping")
+                pytest.fail(
+                    "Background state.sls did not reach test.sleep step; "
+                    "marker file was never written"
+                )
+
+            # The marker exists, so salt-ssh is currently mid-execution
+            # and ``state.pkg`` should be visible in ``state.running``
+            # output until the 60s sleep finishes. A small retry budget
+            # absorbs the latency of a single salt-ssh round trip.
+            end_time = time.time() + 30
+            while time.time() < end_time:
+                ret = salt_ssh_cli.run("state.running")
+                output = (
+                    " ".join(ret.data) if isinstance(ret.data, list) else str(ret.data)
+                )
+                if expected in output:
+                    break
+                time.sleep(1)
+            else:
+                pytest.fail(f"Did not find '{expected}' in state.running output")
+        finally:
+            thread.join(timeout=180)
+
+        # Wait for state.pkg to drop out of state.running output now that
+        # the background run has finished.
+        end_time = time.time() + 60
         while time.time() < end_time:
             ret = salt_ssh_cli.run("state.running")
-            # The wrapper returns a list of strings
             output = " ".join(ret.data) if isinstance(ret.data, list) else str(ret.data)
-            if expected in output:
+            if expected not in output:
                 break
             time.sleep(1)
         else:
-            if results and "Failed to return clean data" in str(results[0].data):
-                pytest.skip("Background state run failed, skipping")
-            pytest.fail(f"Did not find '{expected}' in state.running output")
-    finally:
-        thread.join(timeout=180)
-
-    end_time = time.time() + 120
-    while time.time() < end_time:
-        ret = salt_ssh_cli.run("state.running")
-        output = " ".join(ret.data) if isinstance(ret.data, list) else str(ret.data)
-        if expected not in output:
-            break
-        time.sleep(1)
-    else:
-        pytest.fail("state.pkg is still reported as running")
+            pytest.fail("state.pkg is still reported as running")
