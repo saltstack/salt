@@ -23,6 +23,7 @@ import sys
 import pytest
 
 import salt.channel.client
+import salt.utils.files
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -31,7 +32,7 @@ pytestmark = [
 
 
 def _linux_vmrss_kb() -> int:
-    with open("/proc/self/status", encoding="ascii") as fh:
+    with salt.utils.files.fopen("/proc/self/status", encoding="ascii") as fh:
         for line in fh:
             if line.startswith("VmRSS:"):
                 return int(line.split()[1])
@@ -83,6 +84,7 @@ def test_reqchannel_factory_churn_bounded_rss_growth(tmp_path):
         # path we need — without send(), which waits for a REP and can deadlock
         # SyncWrapper's worker thread against pytest-timeout when the broker
         # does not behave like a Salt master REQ worker.
+        # Broad catch: ReqChannel may raise many concrete types; funnel to pytest.fail.
         try:
             with salt.channel.client.ReqChannel.factory(
                 opts,
@@ -90,7 +92,7 @@ def test_reqchannel_factory_churn_bounded_rss_growth(tmp_path):
                 master_uri=master_uri,
             ) as chan:
                 chan.connect()
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             pytest.fail("ReqChannel churn iteration failed unexpectedly")
 
     def _burn(n: int):
