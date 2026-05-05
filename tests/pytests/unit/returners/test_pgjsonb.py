@@ -2,6 +2,8 @@
 Unit tests for the PGJsonb returner (pgjsonb).
 """
 
+import logging
+
 import pytest
 
 import salt.returners.pgjsonb as pgjsonb
@@ -148,3 +150,62 @@ def test_save_load_uses_plain_insert_on_pre_pg_95():
 
     sql = cur.execute.call_args.args[0]
     assert "ON CONFLICT" not in sql
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test__purge_jobs_logs_via_salt_logger_and_reraises_on_db_error(caplog):
+    """When the DELETE inside ``_purge_jobs`` fails, the error must reach
+    Salt's logger (not stderr), the transaction is rolled back, and the
+    original ``DatabaseError`` is re-raised."""
+    cursor = MagicMock()
+    cursor.execute.side_effect = [psycopg2.DatabaseError("boom"), None]
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cursor
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        with caplog.at_level(logging.ERROR, logger="salt.returners.pgjsonb"):
+            with pytest.raises(psycopg2.DatabaseError):
+                pgjsonb._purge_jobs("2026-01-01")
+
+    cursor.execute.assert_any_call("ROLLBACK")
+    assert any("failed to purge jids" in r.message for r in caplog.records)
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test__archive_jobs_logs_via_salt_logger_and_reraises_on_db_error(caplog):
+    """When the CREATE TABLE inside ``_archive_jobs`` fails, the error
+    reaches Salt's logger, the transaction is rolled back, and the
+    original ``DatabaseError`` is re-raised."""
+    cursor = MagicMock()
+    cursor.execute.side_effect = [psycopg2.DatabaseError("boom"), None]
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cursor
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        with caplog.at_level(logging.ERROR, logger="salt.returners.pgjsonb"):
+            with pytest.raises(psycopg2.DatabaseError):
+                pgjsonb._archive_jobs("2026-01-01")
+
+    cursor.execute.assert_any_call("ROLLBACK")
+    assert any("failed to create archive table" in r.message for r in caplog.records)
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test__get_serv_logs_via_salt_logger_and_reraises_on_yield_error(caplog):
+    """When the caller of ``_get_serv()`` raises a DatabaseError inside
+    the ``with`` block, ``_get_serv`` must log via Salt's logger,
+    issue ROLLBACK on the connection, and re-raise."""
+    fake_conn = MagicMock()
+    fake_conn.server_version = 90500
+    fake_cursor = MagicMock()
+    fake_conn.cursor.return_value = fake_cursor
+
+    with patch.object(pgjsonb, "_get_options", return_value={}):
+        with patch("psycopg2.connect", return_value=fake_conn):
+            with caplog.at_level(logging.ERROR, logger="salt.returners.pgjsonb"):
+                with pytest.raises(psycopg2.DatabaseError):
+                    with pgjsonb._get_serv():
+                        raise psycopg2.DatabaseError("boom")
+
+    fake_cursor.execute.assert_any_call("ROLLBACK")
+    assert any("_get_serv" in r.message for r in caplog.records)
