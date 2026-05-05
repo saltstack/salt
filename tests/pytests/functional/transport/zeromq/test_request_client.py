@@ -36,6 +36,9 @@ def request_client(io_loop, minion_opts, port):
 async def test_request_channel_issue_64627(io_loop, request_client, minion_opts, port):
     """
     Validate socket is preserved until request channel is explicitly closed.
+
+    When ``AsyncReqMessageClient.close()`` runs on an active ``IOLoop``, teardown is
+    scheduled on the loop (#68637); yield until ``socket`` is cleared before asserting.
     """
     minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
 
@@ -56,6 +59,15 @@ async def test_request_channel_issue_64627(io_loop, request_client, minion_opts,
         rep = await request_client.send(b"foo")
         assert req_socket is request_client.message_client.socket
         request_client.close()
+        for _ in range(300):
+            if request_client.message_client.socket is None:
+                break
+            await salt.ext.tornado.gen.sleep(0.01)
+        else:
+            pytest.fail(
+                "REQ message client socket not cleared after RequestClient.close() "
+                "(deferred teardown on running IOLoop; see #68637)"
+            )
         assert request_client.message_client.socket is None
 
     finally:
