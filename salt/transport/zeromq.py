@@ -573,7 +573,20 @@ class AsyncReqMessageClient:
     def close(self):
         """
         Stop the send/recv coroutine and close ZMQ resources. Safe to call more
-        than once. Uses a final IOLoop run to unwind Queue.get() waiters.
+        than once.
+
+        When no I/O loop iteration is active, uses ``run_sync`` around the graceful
+        shutdown coroutine (LocalClient/SyncWrapper and similar).
+
+        When the owning ``io_loop`` is already running—including on the master
+        event loop thread while short-lived REQ clients are torn down—you cannot
+        call ``run_sync``. In that case the shutdown future is queued with
+        ``add_callback`` / ``add_future``. If ``close()`` is invoked from another
+        thread while the loop is running, we block until shutdown completes.
+
+        Note: Callers executing on the I/O loop thread who need fully synchronous
+        teardown must ``yield`` soon after ``close()`` so the loop can run the
+        completion callback before reusing REQ resources aggressively.
         """
         if self._closed:
             return
@@ -582,17 +595,89 @@ class AsyncReqMessageClient:
             self._close_zmq_only()
             return
         self._send_recv_exit_future = salt.ext.tornado.concurrent.Future()
-        try:
 
-            def run_shutdown():
-                return self._graceful_shutdown_coro()
-
-            self.io_loop.run_sync(run_shutdown, timeout=30)
-        except Exception:  # pylint: disable=broad-except
-            log.debug("Graceful REQ message client shutdown failed", exc_info=True)
-        finally:
+        def finalize():
             self._send_recv_exit_future = None
             self._close_zmq_only()
+
+        def run_shutdown():
+            return self._graceful_shutdown_coro()
+
+        # _running and _thread_ident are upstream Tornado internals (mirrored in
+        # salt.ext.tornado). Prefer them for a fast path before run_sync; if a
+        # Tornado upgrade breaks this, re-check this branch and the RuntimeError
+        # "already running" fallback below.
+        try:
+            if not getattr(self.io_loop, "_running", False):
+                self.io_loop.run_sync(run_shutdown, timeout=30)
+                finalize()
+                return
+        except RuntimeError as exc:
+            if "already running" not in str(exc).lower():
+                log.debug(
+                    "REQ client shutdown: run_sync aborted: %s",
+                    exc,
+                    exc_info=True,
+                )
+                finalize()
+                return
+        except salt.ext.tornado.ioloop.TimeoutError:
+            log.debug("Graceful REQ message client shutdown timed out during run_sync")
+            finalize()
+            return
+        except Exception:  # pylint: disable=broad-except
+            log.debug(
+                "Graceful REQ message client shutdown failed during run_sync",
+                exc_info=True,
+            )
+            finalize()
+            return
+
+        try:
+            shutdown_future = salt.ext.tornado.gen.convert_yielded(
+                self._graceful_shutdown_coro()
+            )
+        except Exception:  # pylint: disable=broad-except
+            log.debug(
+                "Could not schedule REQ shutdown coroutine while loop is running",
+                exc_info=True,
+            )
+            finalize()
+            return
+
+        ioloop_thread = getattr(self.io_loop, "_thread_ident", None)
+        same_thread = ioloop_thread == threading.get_ident()
+        done_evt = threading.Event()
+
+        def on_done(future):
+            try:
+                future.result()
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "Graceful REQ message client shutdown failed during async teardown",
+                    exc_info=True,
+                )
+            finally:
+                finalize()
+                done_evt.set()
+
+        def schedule():
+            self.io_loop.add_future(shutdown_future, on_done)
+
+        try:
+            self.io_loop.add_callback(schedule)
+        except Exception:  # pylint: disable=broad-except
+            log.debug(
+                "Graceful REQ message client shutdown failed scheduling callback",
+                exc_info=True,
+            )
+            finalize()
+            return
+
+        if same_thread:
+            return
+
+        done_evt.wait(timeout=30)
 
     @salt.ext.tornado.gen.coroutine
     def _graceful_shutdown_coro(self):
