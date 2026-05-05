@@ -29,6 +29,16 @@ config. These are the defaults:
     returner.pgjsonb.db: 'salt'
     returner.pgjsonb.port: 5432
 
+An optional ``connect_timeout`` (in seconds) caps how long ``psycopg2.connect``
+will wait for a database connection. When unset, ``libpq``'s default applies
+(no application-level timeout, only the system TCP timeout). Setting it is
+recommended on masters that talk to PostgreSQL through HAProxy or Sentinel
+to keep a stalled connect attempt from blocking the master event loop.
+
+.. code-block:: yaml
+
+    returner.pgjsonb.connect_timeout: 5
+
 SSL is optional. The defaults are set to None. If you do not want to use SSL,
 either exclude these options or set them to None.
 
@@ -213,6 +223,7 @@ def _get_options(ret=None):
         "pass": "pass",
         "db": "db",
         "port": "port",
+        "connect_timeout": "connect_timeout",
         "sslmode": "sslmode",
         "sslcert": "sslcert",
         "sslkey": "sslkey",
@@ -231,6 +242,9 @@ def _get_options(ret=None):
     # Ensure port is an int
     if "port" in _options:
         _options["port"] = int(_options["port"])
+    # Coerce connect_timeout when set: pillar / env may deliver it as a string.
+    if _options.get("connect_timeout") is not None:
+        _options["connect_timeout"] = int(_options["connect_timeout"])
     return _options
 
 
@@ -248,14 +262,19 @@ def _get_serv(ret=None, commit=False):
             for k, v in _options.items()
             if k in ["sslmode", "sslcert", "sslkey", "sslrootcert", "sslcrl"]
         }
-        conn = psycopg2.connect(
-            host=_options.get("host"),
-            port=_options.get("port"),
-            dbname=_options.get("db"),
-            user=_options.get("user"),
-            password=_options.get("pass"),
+        connect_kwargs = {
+            "host": _options.get("host"),
+            "port": _options.get("port"),
+            "dbname": _options.get("db"),
+            "user": _options.get("user"),
+            "password": _options.get("pass"),
             **ssl_options,
-        )
+        }
+        # Only pass connect_timeout when configured; omitting it preserves
+        # libpq's default behaviour for existing deployments.
+        if _options.get("connect_timeout") is not None:
+            connect_kwargs["connect_timeout"] = _options["connect_timeout"]
+        conn = psycopg2.connect(**connect_kwargs)
     except psycopg2.OperationalError as exc:
         raise salt.exceptions.SaltMasterError(
             f"pgjsonb returner could not connect to database: {exc}"
