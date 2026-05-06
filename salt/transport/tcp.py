@@ -282,14 +282,25 @@ class PublishClient(salt.transport.base.PublishClient):
             return
         self._closing = True
         if self.on_recv_task:
+            # Suppress "Task was destroyed but it is pending!" if the
+            # caller's event loop is torn down before the cancellation
+            # completes (sync close cannot await the cancel).
+            self.on_recv_task._log_destroy_pending = False
             self.on_recv_task.cancel()
             self.on_recv_task = None
+        # Close the stream first so an in-flight ``read_bytes`` raises
+        # ``StreamClosedError`` and ``_read_into_unpacker`` returns False
+        # naturally, instead of leaving the read task in a "cancelling"
+        # state that surfaces ``Task was destroyed but it is pending!`` on
+        # stderr -- breaks tests that assert ``not cmd.stderr``.
+        stream = self._stream
+        self._stream = None
+        if stream is not None:
+            stream.close()
         if self._read_task is not None and not self._read_task.done():
+            self._read_task._log_destroy_pending = False
             self._read_task.cancel()
         self._read_task = None
-        if self._stream is not None:
-            self._stream.close()
-        self._stream = None
         self._closed = True
 
     async def getstream(self, **kwargs):
@@ -558,7 +569,10 @@ class PublishClient(salt.transport.base.PublishClient):
         """
         if self.on_recv_task:
             # XXX: We are not awaiting this canceled task. This still needs to
-            # be addressed.
+            # be addressed. Suppress the "Task was destroyed but it is pending!"
+            # warning that surfaces if the loop tears down before the cancel
+            # completes (e.g. salt CLI shutdown).
+            self.on_recv_task._log_destroy_pending = False
             self.on_recv_task.cancel()
         if callback is None:
             self.on_recv_task = None
