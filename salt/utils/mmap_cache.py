@@ -8,11 +8,20 @@ import tempfile
 import threading
 import time
 
-import xxhash
-
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
+
+# ``xxhash`` is the runtime hash for slot probing and value checksums, but it
+# is a C extension that the salt-ssh thin payload, the Windows pkg test
+# harness, and various salt-call entry points do not bundle. Importing this
+# module from those contexts (via ``salt.utils.minions`` →
+# ``salt.utils.resource_registry`` → here) must not raise, so the import is
+# deferred to first ``MmapCache`` instantiation. The 6 ``xxhash.<call>`` sites
+# in this module reference the module-level ``xxhash`` global, which
+# :func:`_ensure_xxhash` populates the first time someone constructs an
+# ``MmapCache``.
+xxhash = None
 
 try:
     import fcntl
@@ -25,6 +34,22 @@ except ImportError:
     msvcrt = None
 
 log = logging.getLogger(__name__)
+
+
+def _ensure_xxhash():
+    """
+    Resolve the deferred ``xxhash`` import on first ``MmapCache`` use.
+
+    Raises ``ImportError`` with a clear message when ``xxhash`` isn't
+    installed in this environment — surfaces only when something actually
+    constructs an :class:`MmapCache`, never on bare ``import``.
+    """
+    global xxhash
+    if xxhash is None:
+        import xxhash as _xxhash_mod  # pylint: disable=import-outside-toplevel
+
+        xxhash = _xxhash_mod
+
 
 # Status constants for data slots
 EMPTY = 0
@@ -177,6 +202,7 @@ class MmapCache:
         verify_checksums=True,
         max_segment_bytes=DEFAULT_MAX_SEGMENT_BYTES,
     ):
+        _ensure_xxhash()
         self.path = os.path.realpath(path)
         self.size = size
         self.key_size = key_size
@@ -694,17 +720,22 @@ class MmapCache:
         """
         if self._mm:
             # Check for staleness (Atomic Swap detection).
+            need_writable = write and not self._mm_writable
             now = time.monotonic()
             interval = self._staleness_check_interval
+            # Only throttle if the existing mapping already satisfies the
+            # caller. A read-only mmap can never service a write — we must
+            # always tear it down and reopen ACCESS_WRITE, regardless of how
+            # recently we last stat()ed.
             if (
-                interval
+                not need_writable
+                and interval
                 and self._last_staleness_check is not None
                 and (now - self._last_staleness_check) < interval
             ):
                 return True
             self._last_staleness_check = now
             current_id = self._get_cache_id()
-            need_writable = write and not self._mm_writable
             if current_id != self._cache_id or need_writable:
                 # Preserve the persistent lock fd: ``put`` / ``delete`` /
                 # ``atomic_rebuild`` call ``open(write=True)`` *while holding*
