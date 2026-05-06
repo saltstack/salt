@@ -70,21 +70,34 @@ def _install_signal_handlers(client):
         signal.signal(signal.SIGTERM, functools.partial(_handle_signals, client))
 
 
+def _pin_multiprocessing_fork():
+    """
+    Python 3.14 changed the Linux default ``multiprocessing`` start method
+    from ``fork`` to ``forkserver``. Forkserver pickles the target callable
+    across to a fresh interpreter, which breaks every salt daemon that
+    relies on dynamically loaded modules (e.g. proxy minions register
+    their callables under namespaces like
+    ``dummy_proxy_one.salt.loaded.int.metaproxy.deltaproxy`` that the
+    fresh child cannot import). It also makes the master spawn its
+    ``multiprocessing.resource_tracker`` before ``check_user()`` drops
+    privileges, leaving a root-owned child under the salt user's pid.
+
+    Pin every salt daemon entry point to ``fork`` to keep Py3.13 semantics.
+    Idempotent and a no-op on Windows.
+    """
+    if sys.platform == "win32":
+        return
+    import multiprocessing
+
+    if multiprocessing.get_start_method(allow_none=True) is None:
+        multiprocessing.set_start_method("fork")
+
+
 def salt_master():
     """
     Start the salt master.
     """
-    # Python 3.14 changed the Linux default multiprocessing start method
-    # from "fork" to "forkserver". The forkserver bootstrap launches the
-    # multiprocessing.resource_tracker before the master drops privileges
-    # in check_user(), leaving a root-owned child process under the salt
-    # master pid. Pin to "fork" so resource_tracker is forked lazily after
-    # privilege drop and inherits the configured user.
-    if sys.platform != "win32":
-        import multiprocessing
-
-        if multiprocessing.get_start_method(allow_none=True) is None:
-            multiprocessing.set_start_method("fork")
+    _pin_multiprocessing_fork()
 
     import salt.cli.daemons
 
@@ -172,6 +185,8 @@ def salt_minion():
     Start the salt minion in a subprocess.
     Auto restart minion on error.
     """
+    _pin_multiprocessing_fork()
+
     import signal
 
     import salt.utils.debug
@@ -341,6 +356,8 @@ def salt_proxy():
     """
     Start a proxy minion.
     """
+    _pin_multiprocessing_fork()
+
     import multiprocessing
 
     import salt.cli.daemons
@@ -400,6 +417,8 @@ def salt_syndic():
     """
     Start the salt syndic.
     """
+    _pin_multiprocessing_fork()
+
     import salt.utils.process
 
     salt.utils.process.notify_systemd()
@@ -445,6 +464,8 @@ def salt_call():
     Directly call a salt command in the modules, does not require a running
     salt minion to run.
     """
+    _pin_multiprocessing_fork()
+
     import salt.cli.call
 
     if "" in sys.path:
@@ -517,6 +538,8 @@ def salt_api():
     """
     The main function for salt-api
     """
+    _pin_multiprocessing_fork()
+
     import salt.utils.process
 
     salt.utils.process.notify_systemd()
