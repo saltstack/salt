@@ -29,7 +29,8 @@ def _get_module_name(tree, filename: str) -> str:
     for assign in assignments:
         try:
             if assign.targets[0].id == "__virtualname__":
-                module_name = assign.value.s
+                # ast.Constant.value replaces the removed ast.Str.s in Python 3.14.
+                module_name = assign.value.value
         except AttributeError:
             pass
     return module_name

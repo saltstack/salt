@@ -951,6 +951,15 @@ class Process(multiprocessing.Process):
             self.register_after_fork_method(function, *args, **kwargs)
         for function, args, kwargs in state["finalize_methods"]:
             self.register_finalize_method(function, *args, **kwargs)
+        # _INTERNAL_PROCESS_FINALIZE_FUNCTION_LIST lives at module scope and
+        # is populated in the parent (e.g. by gitfs registering its lock
+        # cleanup). Under fork the child inherits it via memory copy, but
+        # forkserver/spawn give us a fresh interpreter where the list is
+        # empty -- breaking SIGTERM-triggered cleanup hooks. Re-seed it
+        # from the pickled parent state so cleanup_finalize_process has
+        # something to iterate.
+        for function, args, kwargs in state.get("internal_finalize_functions", []):
+            register_cleanup_finalize_function(function, *args, **kwargs)
 
     def __getstate__(self):
         """
@@ -967,6 +976,9 @@ class Process(multiprocessing.Process):
             "after_fork_methods": self._after_fork_methods,
             "finalize_methods": self._finalize_methods,
             "logging_config": self.__logging_config__,
+            "internal_finalize_functions": list(
+                _INTERNAL_PROCESS_FINALIZE_FUNCTION_LIST
+            ),
         }
 
     def __decorate_run(self, run_func):  # pylint: disable=unused-private-member
