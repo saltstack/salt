@@ -570,6 +570,17 @@ class AsyncReqMessageClient:
             self.context.term()
             self.context = None
 
+    def close_future(self):
+        """
+        Return a ``Future`` that completes after ZMQ resources are released.
+
+        Coroutine callers on the owning I/O loop thread should ``yield`` this future
+        (via ``salt.ext.tornado.gen.convert_yielded``) before allocating another
+        client on that loop—``close()`` schedules teardown asynchronously in that case.
+        """
+        self._initiate_async_req_close()
+        return self._close_completed_future
+
     def close(self):
         """
         Stop the send/recv coroutine and close ZMQ resources. Safe to call more
@@ -584,24 +595,52 @@ class AsyncReqMessageClient:
         ``add_callback`` / ``add_future``. If ``close()`` is invoked from another
         thread while the loop is running, we block until shutdown completes.
 
-        Note: Callers executing on the I/O loop thread who need fully synchronous
-        teardown must ``yield`` soon after ``close()`` so the loop can run the
-        completion callback before reusing REQ resources aggressively.
+        On the owning I/O loop thread, prefer ``yield``-ing ``close_future()`` instead
+        of ``close()`` when you recreate clients immediately afterward.
         """
-        if self._closed:
-            return
-        self._closed = True
-        if self.socket is None:
-            self._close_zmq_only()
-            return
-        self._send_recv_exit_future = salt.ext.tornado.concurrent.Future()
+        cross_thread_evt = self._initiate_async_req_close()
+        if cross_thread_evt is not None:
+            cross_thread_evt.wait(timeout=30)
+
+    def _mark_teardown_finished(self):
+        fut = getattr(self, "_close_completed_future", None)
+        if fut is not None and not fut.done():
+            fut.set_result(None)
+
+    def _initiate_async_req_close(self):
+        """
+        Start teardown once.
+
+        Sets ``self._close_completed_future`` and returns ``None``, or an
+        ``threading.Event`` that unblocks after ``finalize()`` when the caller needs
+        to wait from a non-I/O-loop thread.
+        """
+        if getattr(self, "_close_completed_future", None) is not None:
+            return None
+
+        self._close_completed_future = salt.ext.tornado.concurrent.Future()
+        cross_thread_evt = None
 
         def finalize():
             self._send_recv_exit_future = None
             self._close_zmq_only()
+            self._mark_teardown_finished()
+            if cross_thread_evt is not None:
+                cross_thread_evt.set()
 
         def run_shutdown():
             return self._graceful_shutdown_coro()
+
+        if self._closed:
+            finalize()
+            return None
+
+        self._closed = True
+        if self.socket is None:
+            finalize()
+            return None
+
+        self._send_recv_exit_future = salt.ext.tornado.concurrent.Future()
 
         # _running and _thread_ident are upstream Tornado internals (mirrored in
         # salt.ext.tornado). Prefer them for a fast path before run_sync; if a
@@ -611,7 +650,7 @@ class AsyncReqMessageClient:
             if not getattr(self.io_loop, "_running", False):
                 self.io_loop.run_sync(run_shutdown, timeout=30)
                 finalize()
-                return
+                return None
         except RuntimeError as exc:
             if "already running" not in str(exc).lower():
                 log.debug(
@@ -620,18 +659,18 @@ class AsyncReqMessageClient:
                     exc_info=True,
                 )
                 finalize()
-                return
+                return None
         except salt.ext.tornado.ioloop.TimeoutError:
             log.debug("Graceful REQ message client shutdown timed out during run_sync")
             finalize()
-            return
+            return None
         except Exception:  # pylint: disable=broad-except
             log.debug(
                 "Graceful REQ message client shutdown failed during run_sync",
                 exc_info=True,
             )
             finalize()
-            return
+            return None
 
         try:
             shutdown_future = salt.ext.tornado.gen.convert_yielded(
@@ -643,11 +682,11 @@ class AsyncReqMessageClient:
                 exc_info=True,
             )
             finalize()
-            return
+            return None
 
         ioloop_thread = getattr(self.io_loop, "_thread_ident", None)
         same_thread = ioloop_thread == threading.get_ident()
-        done_evt = threading.Event()
+        cross_thread_evt = None if same_thread else threading.Event()
 
         def on_done(future):
             try:
@@ -659,7 +698,6 @@ class AsyncReqMessageClient:
                 )
             finally:
                 finalize()
-                done_evt.set()
 
         def schedule():
             self.io_loop.add_future(shutdown_future, on_done)
@@ -672,12 +710,9 @@ class AsyncReqMessageClient:
                 exc_info=True,
             )
             finalize()
-            return
+            return None
 
-        if same_thread:
-            return
-
-        done_evt.wait(timeout=30)
+        return cross_thread_evt
 
     @salt.ext.tornado.gen.coroutine
     def _graceful_shutdown_coro(self):
@@ -703,6 +738,8 @@ class AsyncReqMessageClient:
 
         self._queue.put_nowait((future, message))
 
+        send_timeout = None
+
         if callback is not None:
 
             def handle_future(future):
@@ -719,7 +756,11 @@ class AsyncReqMessageClient:
                 timeout, self._timeout_message, future
             )
 
-        recv = yield future
+        try:
+            recv = yield future
+        finally:
+            if send_timeout is not None:
+                self.io_loop.remove_timeout(send_timeout)
 
         raise salt.ext.tornado.gen.Return(recv)
 
@@ -1182,6 +1223,11 @@ class RequestClient(salt.transport.base.RequestClient):
         yield self.connect()
         ret = yield self.message_client.send(load, timeout=timeout)
         raise salt.ext.tornado.gen.Return(ret)
+
+    def close_future(self):
+        fut = self.message_client.close_future()
+        self._closing = True
+        return fut
 
     def close(self):
         if self._closing:
