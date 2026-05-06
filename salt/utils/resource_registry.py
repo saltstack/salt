@@ -235,6 +235,14 @@ class _ResourceIndexStore:
         # operation. See :meth:`_current_version`.
         self._last_stat_time: float = 0.0
         self._last_version = None
+        # Local-write generation counter. ``MmapCache`` mutations don't bump
+        # the backing file's mtime (writes go through ``mmap.flush()`` which
+        # is not guaranteed to update file metadata), so the ``stat()``-based
+        # ``content_version`` alone misses intra-process writes. Bumping a
+        # local counter on every ``put``/``delete`` and folding it into the
+        # version tuple guarantees the next ``_ensure_derived_fresh`` call
+        # rebuilds. Cross-process detection still rides on the file stat.
+        self._write_generation: int = 0
 
     def close(self):
         """
@@ -260,15 +268,17 @@ class _ResourceIndexStore:
         """
         Insert or update a single primary entry. O(1) amortised.
 
-        Cross-process visibility is provided by :meth:`MmapCache._touch_mtime`,
-        which bumps the file's mtime on every successful write — other
-        workers then observe a fresh ``content_version`` and rebuild their
-        derived views.
+        Cross-process visibility: after the underlying ``MmapCache.put``
+        flushes via ``mmap.flush()`` — which on Linux does **not** advance
+        the backing file's ``st_mtime``/``st_size`` — we explicitly bump the
+        file's mtime via :func:`os.utime`. Other master workers stat() the
+        file on their throttled staleness check and rebuild their derived
+        view when they see the new mtime.
 
-        Same-process visibility: the throttled stat cache in
-        :meth:`_current_version` is invalidated locally so the *next* read
-        is guaranteed to pick up this write without waiting for the
-        throttle window to expire.
+        Same-process visibility: in addition to the mtime bump, we
+        increment :py:attr:`_write_generation` and invalidate the
+        throttled stat cache so the next :meth:`_current_version` call
+        always returns a fresh tuple.
 
         :returns: ``True`` on success.
         """
@@ -276,6 +286,7 @@ class _ResourceIndexStore:
         ok = self._primary.put(srn_key, blob)
         if ok:
             self._invalidate_version_cache()
+            self._touch_primary_mtime()
         return ok
 
     def delete(self, srn_key):
@@ -286,17 +297,41 @@ class _ResourceIndexStore:
         ok = self._primary.delete(srn_key)
         if ok:
             self._invalidate_version_cache()
+            self._touch_primary_mtime()
         return ok
+
+    def _touch_primary_mtime(self):
+        """
+        Force ``st_mtime_ns`` on the primary index to advance so other
+        master workers' throttled ``stat()`` picks up our write.
+
+        ``mmap.flush()`` (used by :class:`MmapCache` after every mutation)
+        is implemented via ``msync`` on Linux and is not guaranteed to
+        update the backing file's metadata; an explicit ``utime`` is the
+        cheapest reliable cross-process change signal.
+        """
+        try:
+            os.utime(self._path, None)
+        except OSError:
+            # File may not exist yet on the very first put if MmapCache
+            # creates it lazily; the next put will succeed.
+            pass
 
     def _invalidate_version_cache(self):
         """
-        Force the next :meth:`_current_version` call to re-stat the file.
+        Force the next :meth:`_current_version` call to re-stat the file
+        and produce a tuple distinct from any prior cached version.
 
         Called after this process writes so it sees its own writes
         immediately; other processes rely on the throttled stat cycle.
         """
         self._last_version = None
         self._last_stat_time = 0.0
+        # Bump the local generation so even a stat() that returns identical
+        # ``(st_ino, st_mtime_ns, st_size)`` produces a different version
+        # tuple — needed because ``mmap.flush()`` doesn't always advance the
+        # backing file's mtime.
+        self._write_generation += 1
 
     # ------------------------------------------------------------------
     # Primary: bulk / write-path
@@ -332,8 +367,8 @@ class _ResourceIndexStore:
 
     def compact(self):
         """
-        Rebuild the primary into a fresh file using the sorted-placement
-        algorithm (``O(N log N)``), then atomically swap via ``os.replace``.
+        Rebuild the primary into a fresh index+heap pair via
+        :meth:`MmapCache.atomic_rebuild`, then atomically swap.
 
         Readers with an existing mmap keep their pre-swap view until they
         next call a method that triggers a staleness check. New readers
@@ -347,7 +382,7 @@ class _ResourceIndexStore:
         # or ``True`` for set-member entries. ``atomic_rebuild`` handles
         # both shapes via :func:`MmapCache._normalize_iterator`.
         items = self._primary.list_items()
-        ok = self._primary.atomic_rebuild(items, strategy="sorted")
+        ok = self._primary.atomic_rebuild(items)
         if not ok:
             log.error("resource_registry: atomic_rebuild failed for %s", self._path)
             return before, before
@@ -419,12 +454,14 @@ class _ResourceIndexStore:
         most once per ``STALENESS_CHECK_INTERVAL`` to keep hot read paths
         cheap.
 
-        ``content_version`` is ``(st_ino, st_mtime_ns)`` — sensitive to both
-        atomic swaps (compactions) and in-place writes (puts/deletes from
-        any process), because writers call
-        :meth:`MmapCache._touch_mtime` on every successful mutation.
+        ``content_version`` is ``(stat_tuple, write_generation)`` where
+        ``stat_tuple`` is ``(st_ino, st_mtime_ns, st_size)`` — sensitive
+        to atomic swaps (new inode) and most cross-process writes (new
+        mtime/size). ``write_generation`` is bumped on every local
+        ``put``/``delete``, covering the case where ``mmap.flush()`` does
+        not advance the backing file's mtime within stat() resolution.
 
-        ``None`` means the file doesn't exist yet (no writes happened).
+        ``stat_tuple`` is ``None`` until the file exists.
         """
         now = time.monotonic()
         if (
@@ -433,9 +470,10 @@ class _ResourceIndexStore:
         ):
             return self._last_version
         try:
-            version = self._primary.get_content_version()
+            stat_tuple = self._primary._get_cache_id()
         except OSError:
-            version = None
+            stat_tuple = None
+        version = (stat_tuple, self._write_generation)
         self._last_version = version
         self._last_stat_time = now
         return version
@@ -445,21 +483,20 @@ class _ResourceIndexStore:
         Rebuild the derived ``by_type`` / ``by_minion`` views if the primary
         has changed since the last rebuild.
 
-        Freshness is driven by a single signal: the primary's
-        ``content_version`` tuple ``(st_ino, st_mtime_ns)``. It changes on:
-
-        * :meth:`compact` — new inode via ``os.replace``; and
-        * any writer's :meth:`put` / :meth:`delete` — same inode, new mtime
-          (see :meth:`MmapCache._touch_mtime`).
+        Freshness is driven by :meth:`_current_version`, which combines
+        the file ``stat()`` tuple (cross-process detection: new inode on
+        compaction, advancing mtime/size on most external writes) with a
+        local write generation counter (intra-process detection that does
+        not depend on ``mmap.flush()`` advancing file mtime).
 
         Uses double-checked locking so the common case is a single
         throttled stat() comparison.
         """
         current = self._current_version()
-        if current is not None and current == self._derived_version:
+        if current == self._derived_version:
             return
         with self._derived_lock:
-            if current is not None and current == self._derived_version:
+            if current == self._derived_version:
                 return
             self._rebuild_derived(current)
 

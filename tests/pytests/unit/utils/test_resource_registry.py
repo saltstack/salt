@@ -303,7 +303,6 @@ def test_maybe_compact_triggers_on_load_factor(tmp_path):
     with _registry_session(
         tmp_path,
         resource_index_primary_capacity=128,
-        resource_index_primary_slot_size=32,
         resource_registry_compact_load_factor=0.1,
         # Suppress the in-line compact so the test sees an un-compacted file.
         resource_registry_compact_min_interval=3600,

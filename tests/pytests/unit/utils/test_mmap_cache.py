@@ -49,9 +49,7 @@ def test_put_update(cache):
 
 def test_mmap_cache_write_after_read_only_open(cache_path):
     """Writers must not reuse an ACCESS_READ mmap opened by a prior ``open(write=False)``."""
-    cache = MmapCache(
-        cache_path, size=_SIZE, slot_size=_SLOT_SIZE, key_size=_KEY_SIZE
-    )
+    cache = MmapCache(cache_path, size=_SIZE, slot_size=_SLOT_SIZE, key_size=_KEY_SIZE)
     assert cache.put("k1", "v1") is True
     cache.close()
 
@@ -65,9 +63,7 @@ def test_mmap_cache_write_after_read_only_open(cache_path):
 
 def test_mmap_cache_concurrent_list_and_put(cache_path):
     """Concurrent ``list_items`` vs ``put`` must not leave a readonly mmap active for writers."""
-    cache = MmapCache(
-        cache_path, size=2000, slot_size=_SLOT_SIZE, key_size=_KEY_SIZE
-    )
+    cache = MmapCache(cache_path, size=2000, slot_size=_SLOT_SIZE, key_size=_KEY_SIZE)
     assert cache.put("seed", "x") is True
     cache.close()
     errs = []
