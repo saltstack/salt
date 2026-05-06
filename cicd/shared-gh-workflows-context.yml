@@ -4,7 +4,7 @@
 # Tool versions
 nox_version: "2022.8.7"
 python_version: "3.14.4"
-relenv_version: "0.22.9"
+relenv_version: "0.22.10"
 release_branches:
   - "3006.x"
   - "3007.x"
