@@ -804,9 +804,23 @@ def _run(
                 try:
                     proc = salt.utils.timed_subprocess.TimedProc(cmd, **new_kwargs)
                 except OSError as exc:
+                    # Drop ``env`` and ``stdin`` from the debug context.
+                    # ``env`` is the run environment and routinely
+                    # carries credentials passed in via
+                    # ``cmd.run env={'DB_PASSWORD': '...'}``; ``stdin``
+                    # is the data piped to the command and is also a
+                    # common place for callers to put a password. The
+                    # error message ends up in minion/master logs *and*
+                    # in event-bus return data visible to the API
+                    # caller, so leaking either one is a wide-channel
+                    # exposure of a secret on what is typically a
+                    # routine ENOENT (binary not found).
+                    safe_kwargs = {
+                        k: v for k, v in new_kwargs.items() if k not in ("env", "stdin")
+                    }
                     msg = "Unable to run command '{}' with the context '{}', reason: {}".format(
                         cmd if output_loglevel is not None else "REDACTED",
-                        new_kwargs,
+                        safe_kwargs,
                         exc,
                     )
                     raise CommandExecutionError(msg)
