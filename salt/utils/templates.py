@@ -199,7 +199,9 @@ def wrap_tmpl_func(render_str):
                 try:
                     if tmplpath is not None:
                         tmplsrc = os.path.join(tmplpath, tmplsrc)
-                    with codecs.open(tmplsrc, "r", SLS_ENCODING) as _tmplsrc:
+                    with salt.utils.files.fopen(
+                        tmplsrc, encoding=SLS_ENCODING
+                    ) as _tmplsrc:
                         tmplstr = _tmplsrc.read()
                 except (UnicodeDecodeError, ValueError, OSError) as exc:
                     if salt.utils.files.is_binary(tmplsrc):

@@ -120,12 +120,26 @@ from salt.utils.versions import Version
 HAS_SSL = False
 X509_EXT_ENABLED = True
 HAS_CRYPTOGRAPHY = False
+HAS_X509_EXTENSION_API = False
 try:
     import OpenSSL
 
     HAS_SSL = True
     OpenSSL_version = Version(OpenSSL.__dict__.get("__version__", "0.0"))
 except ImportError:
+    pass
+
+try:
+    # pylint: disable=unused-import
+    from OpenSSL.crypto import X509Extension  # noqa: F401
+
+    # pylint: enable=unused-import
+
+    HAS_X509_EXTENSION_API = True
+except ImportError:
+    # pyOpenSSL >= 25 removed X509Extension and the X509.add_extensions /
+    # X509Req.add_extensions methods this module relies on. Use the
+    # ``x509_v2`` modules (cryptography-based) for new deployments.
     pass
 
 try:
@@ -149,28 +163,34 @@ def __virtual__():
     Only load this module if the ca config options are set
     """
     global X509_EXT_ENABLED
-    if HAS_SSL and OpenSSL_version >= Version("0.10"):
-        if OpenSSL_version < Version("0.14"):
-            X509_EXT_ENABLED = False
-            log.debug(
-                "You should upgrade pyOpenSSL to at least 0.14.1 to "
-                "enable the use of X509 extensions in the tls module"
-            )
-        elif OpenSSL_version <= Version("0.15"):
-            log.debug(
-                "You should upgrade pyOpenSSL to at least 0.15.1 to "
-                "enable the full use of X509 extensions in the tls module"
-            )
-        # NOTE: Not having configured a cert path should not prevent this
-        # module from loading as it provides methods to configure the path.
-        return True
-    else:
+    if not HAS_SSL or OpenSSL_version < Version("0.10"):
         X509_EXT_ENABLED = False
         return (
             False,
             "PyOpenSSL version 0.10 or later must be installed "
             "before this module can be used.",
         )
+    if not HAS_X509_EXTENSION_API:
+        X509_EXT_ENABLED = False
+        return (
+            False,
+            "The tls module requires the X509Extension API removed in "
+            "pyOpenSSL 25. Use the x509_v2 modules instead.",
+        )
+    if OpenSSL_version < Version("0.14"):
+        X509_EXT_ENABLED = False
+        log.debug(
+            "You should upgrade pyOpenSSL to at least 0.14.1 to "
+            "enable the use of X509 extensions in the tls module"
+        )
+    elif OpenSSL_version <= Version("0.15"):
+        log.debug(
+            "You should upgrade pyOpenSSL to at least 0.15.1 to "
+            "enable the full use of X509 extensions in the tls module"
+        )
+    # NOTE: Not having configured a cert path should not prevent this
+    # module from loading as it provides methods to configure the path.
+    return True
 
 
 def _microtime():

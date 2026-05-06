@@ -1166,7 +1166,24 @@ def salt_onedir(
             content,
         )
 
-        # 4. Write the updated file back
+        # 4. Rewrite BUNDLE_SHA256 with sha256 of every wheel in embed_dir.
+        # virtualenv's _verify_bundled_wheel raises RuntimeError when a wheel
+        # named in BUNDLE_SUPPORT has no entry here, so the dict must track
+        # the wheels we actually copied in (including the salt-patched pip,
+        # whose sha is build-specific and must be computed from the file).
+        sha_lines = []
+        for wheel_path in sorted(embed_dir.glob("*.whl"), key=lambda p: p.name):
+            digest = hashlib.sha256(wheel_path.read_bytes()).hexdigest()
+            sha_lines.append(f'    "{wheel_path.name}": "{digest}",')
+        new_bundle_sha = "BUNDLE_SHA256 = {\n" + "\n".join(sha_lines) + "\n}"
+        content = re.sub(
+            r"BUNDLE_SHA256\s*=\s*\{[^}]*\}",
+            lambda _m: new_bundle_sha,
+            content,
+            count=1,
+        )
+
+        # 5. Write the updated file back
         init_file.write_text(content)
         log.debug("Updated %s with:", init_file.name)
         log.debug(

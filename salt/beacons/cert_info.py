@@ -21,6 +21,11 @@ try:
 except ImportError:
     HAS_OPENSSL = False
 
+# pyOpenSSL >= 25 removed X509.get_extension / X509.get_extension_count
+# (and X509Extension as a whole). This beacon iterates extensions via the
+# removed API, so refuse to load when those attributes are gone.
+HAS_X509_EXTENSION_API = HAS_OPENSSL and hasattr(crypto.X509(), "get_extension")
+
 log = logging.getLogger(__name__)
 
 DEFAULT_NOTIFY_DAYS = 45
@@ -31,6 +36,10 @@ __virtualname__ = "cert_info"
 def __virtual__():
     if HAS_OPENSSL is False:
         err_msg = "OpenSSL library is missing."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
+    if not HAS_X509_EXTENSION_API:
+        err_msg = "pyOpenSSL >= 25 removed the X509Extension API used by this beacon."
         log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
         return False, err_msg
 
