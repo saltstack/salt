@@ -1951,8 +1951,33 @@ class Logout(LowDataAdapter):
 
     def POST(self):  # pylint: disable=arguments-differ
         """
-        Destroy the currently active session and expire the session cookie
+        Destroy the currently active session, expire the session cookie,
+        and revoke the underlying Salt eauth token so the bearer
+        credential cannot be re-used until ``token_expire`` has elapsed.
         """
+        # Revoke the Salt eauth token. ``cherrypy.lib.sessions.expire()``
+        # below only clears the browser cookie and the server-side
+        # CherryPy session; the Salt token in the configured
+        # ``eauth_tokens`` backend (localfs/redis/etc.) outlives both by
+        # ``token_expire`` (12h by default), and any party that has
+        # observed the token value can keep using it as a bearer
+        # credential until then.
+        salt_token = cherrypy.session.get("token")
+        if salt_token:
+            try:
+                salt.auth.LoadAuth(self.opts).rm_token(salt_token)
+            except Exception:  # pylint: disable=broad-except
+                # If the token backend is unreachable (e.g. Redis down)
+                # finish the logout from the client's point of view
+                # anyway -- the cookie still gets expired below. The
+                # operator sees the failure in the master log and can
+                # investigate.
+                logger.exception(
+                    "Logout: failed to revoke Salt eauth token; "
+                    "the cookie has been expired but the token may "
+                    "still be valid in the eauth_tokens backend until "
+                    "its expiry."
+                )
         cherrypy.lib.sessions.expire()  # set client-side to expire
         cherrypy.session.regenerate()  # replace server-side with new
 
