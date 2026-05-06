@@ -7,6 +7,10 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 from setuptools import build_meta as _orig
+from setuptools.build_meta import build_editable as setuptools_build_editable
+from setuptools.build_meta import (
+    prepare_metadata_for_build_editable as setuptools_prepare_metadata,
+)
 
 # PEP 517 hooks
 prepare_metadata_for_build_wheel = _orig.prepare_metadata_for_build_wheel
@@ -14,6 +18,18 @@ build_wheel = _orig.build_wheel
 build_sdist = _orig.build_sdist
 get_requires_for_build_wheel = _orig.get_requires_for_build_wheel
 get_requires_for_build_sdist = _orig.get_requires_for_build_sdist
+
+
+def build_editable(wheel_directory, config_settings=None, metadata_directory=None):
+    # Delegate to the actual setuptools implementation
+    return setuptools_build_editable(
+        wheel_directory, config_settings, metadata_directory
+    )
+
+
+def prepare_metadata_for_build_editable(metadata_directory, config_settings=None):
+    # Delegate to setuptools to get the metadata
+    return setuptools_prepare_metadata(metadata_directory, config_settings)
 
 
 def _parse_requirements_file(requirements_file):
