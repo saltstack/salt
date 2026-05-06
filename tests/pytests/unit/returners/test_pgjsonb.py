@@ -110,3 +110,35 @@ def test_get_fun_returns_one_full_ret_per_minion_with_postgres_compatible_sql():
     assert (
         "`" not in issued_sql
     ), "MySQL-style backtick quoting in pgjsonb SQL — invalid on PostgreSQL"
+
+
+def test_get_fun_orders_by_alter_time_desc_not_max_jid():
+    """``get_fun`` must determine "latest execution per minion" from
+    ``alter_time`` rather than from a lexicographic ordering of jids.
+
+    The previous SQL used ``MAX(jid)``, which works only when jids are
+    timestamp-formatted strings of equal length (Salt's default
+    ``YYYYMMDDHHMMSSffffff`` and the ``nano`` variant). Deployments that
+    override ``master_job_cache.gen_jid`` (custom prep_jid emitting UUIDs,
+    snowflake ids, or any non-sortable scheme), or that hold rows written
+    under different jid formats from a past config change, get a
+    silently wrong answer with ``MAX(jid)`` -- the lexicographic max is
+    not the time-latest.
+
+    Pin the algorithm: order by ``alter_time DESC`` (which Postgres
+    populates via ``DEFAULT NOW()``), and guard against regression to
+    the ``MAX(jid)`` form.
+    """
+    cur = MagicMock()
+    cur.fetchall.return_value = []
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cur
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        pgjsonb.get_fun("test.ping")
+
+    sql = cur.execute.call_args.args[0].lower()
+    assert "alter_time" in sql
+    assert "order by" in sql
+    assert "desc" in sql
+    assert "max(jid)" not in sql
