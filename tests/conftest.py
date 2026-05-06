@@ -28,6 +28,43 @@ if os.environ.get("ONEDIR_TESTRUN", "0") == "0":
     sys.path.insert(0, str(CODE_DIR))
 
 
+def _patch_psutil_pidfd_open_einval() -> None:
+    """
+    psutil 7.x calls ``os.pidfd_open(pid, 0)`` to wait for a process.
+    On some Linux kernels (e.g. systemd-managed daemons whose pid was
+    already reaped, or arm64 6.x boxes) ``pidfd_open`` returns ``EINVAL``
+    instead of ``ESRCH`` for a non-existent pid. psutil's
+    ``wait_pid_pidfd_open`` only falls back to the legacy ``waitpid`` path
+    for ``ESRCH``/``EMFILE``/``ENFILE``/``ENODEV`` -- ``EINVAL`` propagates
+    out of fixture teardown and shows up as ``ERROR at teardown of <test>``
+    even when the test itself was skipped or passed. Treat ``EINVAL`` the
+    same as ``ESRCH``.
+    """
+    try:
+        import errno as _errno
+
+        from psutil import _psposix
+    except ImportError:
+        return
+    if getattr(_psposix.wait_pid_pidfd_open, "_salt_einval_wrap", False):
+        return
+    original = _psposix.wait_pid_pidfd_open
+
+    def wrapper(pid, timeout=None):
+        try:
+            return original(pid, timeout)
+        except OSError as exc:
+            if exc.errno == _errno.EINVAL:
+                return _psposix.wait_pid_posix(pid, timeout)
+            raise
+
+    wrapper._salt_einval_wrap = True
+    _psposix.wait_pid_pidfd_open = wrapper
+
+
+_patch_psutil_pidfd_open_einval()
+
+
 def _remove_redundant_salt_utils_vault_py() -> None:
     """
     Onedir artifacts may contain both ``salt/utils/vault.py`` (legacy) and the
