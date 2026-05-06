@@ -392,15 +392,27 @@ class CkMinions:
         self.opts = opts
         self.cache = salt.cache.factory(opts)
         self.key = salt.key.get_key(opts)
-        # Process-wide singleton — shared with every other CkMinions /
-        # AESFuncs collaborator in this process, so the derived-view cache
-        # and the mmap handle are reused.
-        self.registry = salt.utils.resource_registry.get_registry(opts)
+        # ``self.registry`` is a lazy property — see :py:meth:`registry`.
+        # Eager instantiation forced :class:`MmapCache` (and thus ``xxhash``)
+        # to load at every ``CkMinions(opts)`` site, including paths that
+        # never target resources (e.g. master startup on a minion-only Salt
+        # install where ``xxhash`` is not bundled in the same site-packages
+        # the daemon resolves at runtime).
         # TODO: this is actually an *auth* check
         if self.opts.get("transport", "zeromq") in salt.transport.TRANSPORTS:
             self.acc = "minions"
         else:
             self.acc = "accepted"
+
+    @property
+    def registry(self):
+        """
+        Process-wide singleton :class:`ResourceRegistry`, materialised on
+        first access. Shared with every other ``CkMinions`` /
+        ``AESFuncs`` collaborator in this process, so the derived-view
+        cache and the mmap handle are reused.
+        """
+        return salt.utils.resource_registry.get_registry(self.opts)
 
     def _check_nodegroup_minions(self, expr, greedy):  # pylint: disable=unused-argument
         """
