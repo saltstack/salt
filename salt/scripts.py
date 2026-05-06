@@ -74,6 +74,18 @@ def salt_master():
     """
     Start the salt master.
     """
+    # Python 3.14 changed the Linux default multiprocessing start method
+    # from "fork" to "forkserver". The forkserver bootstrap launches the
+    # multiprocessing.resource_tracker before the master drops privileges
+    # in check_user(), leaving a root-owned child process under the salt
+    # master pid. Pin to "fork" so resource_tracker is forked lazily after
+    # privilege drop and inherits the configured user.
+    if sys.platform != "win32":
+        import multiprocessing
+
+        if multiprocessing.get_start_method(allow_none=True) is None:
+            multiprocessing.set_start_method("fork")
+
     import salt.cli.daemons
 
     # Fix for setuptools generated scripts, so that it will

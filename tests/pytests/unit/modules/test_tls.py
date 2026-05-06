@@ -12,6 +12,10 @@ log = logging.getLogger(__name__)
 
 pytestmark = [
     SKIP_INITIAL_PHOTONOS_FAILURES,
+    pytest.mark.skipif(
+        not tls.HAS_X509_EXTENSION_API,
+        reason="pyOpenSSL X509Extension API was removed in pyOpenSSL 25",
+    ),
 ]
 
 

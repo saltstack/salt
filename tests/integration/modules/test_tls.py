@@ -7,6 +7,8 @@
 import os
 import tempfile
 
+import pytest
+
 # Salt Libs
 import salt.modules.cmdmod as cmd
 import salt.modules.file as file
@@ -21,6 +23,10 @@ from tests.support.mock import MagicMock
 from tests.support.runtests import RUNTIME_VARS
 
 
+@pytest.mark.skipif(
+    not tls.HAS_X509_EXTENSION_API,
+    reason="pyOpenSSL X509Extension API was removed in pyOpenSSL 25",
+)
 class TLSModuleTest(ModuleCase, LoaderModuleMockMixin):
     """
     Tests for salt.modules.tls

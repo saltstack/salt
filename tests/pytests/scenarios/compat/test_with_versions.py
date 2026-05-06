@@ -60,7 +60,6 @@ def artifacts_path(minion_id, tmp_path):
     yield tmp_path / minion_id
 
 
-@pytest.mark.skip_if_binaries_missing("docker")
 @pytest.fixture(scope="function")
 def salt_minion(
     minion_id,
@@ -174,7 +173,6 @@ def test_highstate(salt_cli, salt_minion, package_name):
     assert package_name in state_return["changes"], state_return
 
 
-@pytest.mark.skip_on_fips_enabled_platform
 @pytest.fixture
 def cp_file_source():
     source = pathlib.Path(RUNTIME_VARS.BASE_FILES) / "cheese"
