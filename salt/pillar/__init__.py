@@ -26,7 +26,6 @@ import salt.utils.secret
 import salt.utils.url
 from salt.exceptions import SaltClientError
 from salt.template import compile_template
-
 from salt.version import __version__
 
 log = logging.getLogger(__name__)

@@ -206,7 +206,9 @@ class Schedule:
         """
         schedule = {}
         if include_pillar:
-            pillar_schedule = salt.utils.secret.expose(self.opts.get("pillar", {}).get("schedule", {}))
+            pillar_schedule = salt.utils.secret.expose(
+                self.opts.get("pillar", {}).get("schedule", {})
+            )
             if not isinstance(pillar_schedule, dict):
                 raise ValueError("Schedule must be of type dict.")
             schedule.update(pillar_schedule)
@@ -780,9 +782,9 @@ class Schedule:
 
             minion_blackout_violation = False
             if self.opts.get("pillar", {}).get("minion_blackout", False):
-                whitelist = salt.utils.secret.expose(self.opts.get("pillar", {}).get(
-                    "minion_blackout_whitelist", []
-                ))
+                whitelist = salt.utils.secret.expose(
+                    self.opts.get("pillar", {}).get("minion_blackout_whitelist", [])
+                )
                 # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
                 if func != "saltutil.refresh_pillar" and func not in whitelist:
                     minion_blackout_violation = True

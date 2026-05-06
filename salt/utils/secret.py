@@ -195,6 +195,15 @@ class SecretDict(SecretIterable[dict], MutableMapping[str, Any]):
     def setdefault(self, key, default=None):
         return self._secret_value.setdefault(key, default)
 
+    def copy(self):
+        return SecretDict(self.get_secret_value().copy())
+
+    def __copy__(self):
+        return self.copy()
+
+    def __deepcopy__(self, memo):
+        return SecretDict(copy.deepcopy(self.get_secret_value(), memo))
+
     def _display(self) -> dict:
         return {
             k: v._display() if isinstance(v, Secret) else v for k, v in self.items()
