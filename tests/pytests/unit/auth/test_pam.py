@@ -53,12 +53,25 @@ def test_if_sys_executable_is_used_to_call_pam_auth(mock_pam):
     class Ret:
         returncode = 0
 
+    # Python 3.14 made pathlib.Path.exists() call os.path.exists internally,
+    # so a global os.path.exists patch returning False also breaks the
+    # ``pyexe.exists()`` guard inside ``authenticate()``. Narrow the patch to
+    # only short-circuit the ``/usr/bin/python3`` lookup.
+    import os
+
+    real_exists = os.path.exists
+
+    def fake_exists(path):
+        if str(path) == "/usr/bin/python3":
+            return False
+        return real_exists(path)
+
     with patch(
         "salt.auth.pam.subprocess.run", return_value=Ret
     ) as run_mock, tempfile.NamedTemporaryFile() as f, patch(
         "salt.auth.pam.sys.executable", f.name
     ), patch(
-        "os.path.exists", return_value=False
+        "os.path.exists", side_effect=fake_exists
     ):
         assert salt.auth.pam.auth(
             username="fnord", password="fnord", service="login", encoding="utf-8"

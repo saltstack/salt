@@ -20,6 +20,10 @@ class Process(salt.utils.process.SignalHandlingProcess):
         pass
 
 
+def _noop_target():
+    """Module-level target so the test works under spawn/forkserver too."""
+
+
 @pytest.fixture
 def process_manager():
     _process_manager = salt.utils.process.ProcessManager(wait_for_kill=5)
@@ -83,10 +87,7 @@ def test_subprocess_list_fds():
     pid = os.getpid()
     process_list = salt.utils.process.SubprocessList()
 
-    def target():
-        pass
-
-    process = salt.utils.process.SignalHandlingProcess(target=target)
+    process = salt.utils.process.SignalHandlingProcess(target=_noop_target)
     process.start()
 
     process_list.add(process)

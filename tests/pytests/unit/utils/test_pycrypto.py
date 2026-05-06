@@ -10,6 +10,22 @@ import salt.utils.pycrypto
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import patch
 
+# bcrypt 5.x removed silent password truncation and now raises ValueError on
+# passwords longer than 72 bytes. passlib (1.7.4, last released 2020) probes
+# the bcrypt backend at init time with a >72-byte secret to detect a known
+# wrap bug, which now blows up. Skip the bcrypt-backed test in that case.
+_PASSLIB_BCRYPT_BROKEN = False
+try:
+    import bcrypt as _bcrypt
+
+    from salt.utils.versions import Version as _Version
+
+    if _Version(_bcrypt.__version__) >= _Version("5.0.0"):
+        _PASSLIB_BCRYPT_BROKEN = True
+except ImportError:
+    pass
+
+
 passwd = "test_password"
 invalid_salt = "thissaltistoolong" * 10
 expecteds = {
@@ -94,7 +110,14 @@ def test_gen_hash_crypt_default_algorithm():
     [
         ("sha512", expecteds["sha512"]),
         ("sha256", expecteds["sha256"]),
-        ("blowfish", expecteds["blowfish"]),
+        pytest.param(
+            "blowfish",
+            expecteds["blowfish"],
+            marks=pytest.mark.skipif(
+                _PASSLIB_BCRYPT_BROKEN,
+                reason="passlib<=1.7.4 cannot probe bcrypt>=5.0 (72-byte limit)",
+            ),
+        ),
         pytest.param(
             "md5", expecteds["md5"], marks=pytest.mark.skip_on_fips_enabled_platform
         ),
