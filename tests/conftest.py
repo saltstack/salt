@@ -28,6 +28,35 @@ if os.environ.get("ONEDIR_TESTRUN", "0") == "0":
     sys.path.insert(0, str(CODE_DIR))
 
 
+def _pin_multiprocessing_fork_for_tests() -> None:
+    """
+    Python 3.14 changed the Linux default ``multiprocessing`` start method
+    from ``fork`` to ``forkserver``. Forkserver spawns a fresh interpreter
+    and pickles the target callable across; that breaks tests that pass
+    ``TestCase`` staticmethods or other non-importable callables to
+    ``multiprocessing.Process`` (the child fails with ``ModuleNotFoundError:
+    No module named 'tests'`` because pytest's dynamic ``tests/`` import
+    path is not propagated to the fresh interpreter when running under
+    ``ONEDIR_TESTRUN``). Pin the test session to ``fork`` so we keep
+    Py3.13 semantics for the test suite while production daemons get the
+    same pinning via ``salt/scripts.py``.
+    """
+    if sys.platform == "win32":
+        return
+    try:
+        import multiprocessing as _mp
+    except ImportError:
+        return
+    if _mp.get_start_method(allow_none=True) is None:
+        try:
+            _mp.set_start_method("fork")
+        except (RuntimeError, ValueError):
+            pass
+
+
+_pin_multiprocessing_fork_for_tests()
+
+
 def _patch_psutil_pidfd_open_einval() -> None:
     """
     psutil 7.x calls ``os.pidfd_open(pid, 0)`` to wait for a process.
