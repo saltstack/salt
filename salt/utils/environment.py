@@ -4,8 +4,6 @@ Environment utilities.
 
 import os
 
-import salt.utils.secret
-
 
 def get_module_environment(env=None, function=None):
     """
@@ -49,7 +47,7 @@ def get_module_environment(env=None, function=None):
         env = {}
     for env_src in [
         env.get("__opts__", {}),
-        salt.utils.secret.expose(env.get("__pillar__", {})),
+        env.get("__pillar__", {}),
     ]:
         fname = env.get("__file__", "")
         physical_name = os.path.basename(fname).split(".")[0]
