@@ -86,6 +86,7 @@ class AsyncReqChannel:
         "_uncrypted_transfer",
         "send",
         "connect",
+        "close_async",
     ]
     close_methods = [
         "close",
@@ -360,6 +361,20 @@ class AsyncReqChannel:
                     _try += 1
                     continue
         raise salt.ext.tornado.gen.Return(ret)
+
+    @salt.ext.tornado.gen.coroutine
+    def close_async(self):
+        """
+        Close the REQ channel and yield until teardown finishes on the owning I/O loop.
+
+        Call this from coroutines before allocating a replacement channel on the same
+        loop—``close()`` schedules transport teardown asynchronously and may return
+        before FDs disappear.
+        """
+        if not self._closing:
+            log.debug("Closing %s instance", self.__class__.__name__)
+            self._closing = True
+        yield self.transport.close_future()
 
     def close(self):
         """

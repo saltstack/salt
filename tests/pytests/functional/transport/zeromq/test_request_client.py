@@ -13,9 +13,46 @@ import salt.transport.zeromq
 log = logging.getLogger(__name__)
 
 
+_REQ_DRAIN_POLLS = 300
+_REQ_DRAIN_SLEEP_S = 0.01
+_REQ_DRAIN_TIMEOUT_S = 10
+
+
 pytestmark = [
     pytest.mark.windows_whitelisted,
 ]
+
+
+def _sync_finalize_req_client(cli, io_loop):
+    """
+    Explicit REQ close plus bounded wait for AsyncReqMessageClient teardown.
+
+    When close() is deferred onto the loop (#68637), dropping the REQ client immediately
+    can leave Zeromq sockets until GC and trigger noisy ``Socket.__del__`` tracebacks at
+    process exit unless we drain ``message_client.socket is None``.
+    """
+
+    @salt.ext.tornado.gen.coroutine
+    def _runner():
+        cli.close()
+        for _ in range(_REQ_DRAIN_POLLS):
+            if cli.message_client.socket is None:
+                break
+            yield salt.ext.tornado.gen.sleep(_REQ_DRAIN_SLEEP_S)
+
+    try:
+        io_loop.run_sync(_runner, timeout=_REQ_DRAIN_TIMEOUT_S)
+    except Exception:  # pylint: disable=broad-except
+        log.debug("REQ client teardown drain aborted during cleanup", exc_info=True)
+
+
+async def async_finalize_req_client(cli):
+    """Async equivalent of :func:`_sync_finalize_req_client`."""
+    cli.close()
+    for _ in range(_REQ_DRAIN_POLLS):
+        if cli.message_client.socket is None:
+            break
+        await salt.ext.tornado.gen.sleep(_REQ_DRAIN_SLEEP_S)
 
 
 def _zmq_teardown_rep(stream=None, rep_socket=None, ctx=None):
@@ -51,7 +88,7 @@ def request_client(io_loop, minion_opts, port):
     try:
         yield client
     finally:
-        client.close()
+        _sync_finalize_req_client(client, io_loop)
 
 
 async def test_request_channel_issue_64627(io_loop, request_client, minion_opts, port):
@@ -92,6 +129,7 @@ async def test_request_channel_issue_64627(io_loop, request_client, minion_opts,
         assert request_client.message_client.socket is None
 
     finally:
+        await async_finalize_req_client(request_client)
         _zmq_teardown_rep(stream=stream, rep_socket=socket, ctx=ctx)
 
 
@@ -133,6 +171,7 @@ async def test_request_channel_issue_65265(io_loop, request_client, minion_opts,
             await send_complete.wait()
 
         finally:
+            await async_finalize_req_client(request_client)
             _zmq_teardown_rep(stream=stream, rep_socket=socket)
 
         # Create a new server, the old socket has been closed.
@@ -154,6 +193,7 @@ async def test_request_channel_issue_65265(io_loop, request_client, minion_opts,
             ret = await request_client.send("foo", timeout=1)
             assert ret == "bar"
         finally:
+            await async_finalize_req_client(request_client)
             _zmq_teardown_rep(stream=stream, rep_socket=socket)
     finally:
         _zmq_teardown_rep(ctx=ctx)
@@ -196,6 +236,7 @@ async def test_request_client_send_recv_socket_closed(
                 for msg in caplog.messages
             ), caplog.messages
     finally:
+        await async_finalize_req_client(request_client)
         _zmq_teardown_rep(stream=stream, rep_socket=socket, ctx=ctx)
 
 
@@ -233,7 +274,7 @@ def test_request_client_send_recv_loop_closed(minion_opts, port, caplog):
             assert "Loop closed while polling send socket." in caplog.messages
             assert f"Send and receive coroutine ending {socket}" in caplog.messages
         finally:
-            request_client.close()
+            _sync_finalize_req_client(request_client, io_loop)
             _zmq_teardown_rep(rep_socket=serve_socket, ctx=ctx)
 
 
@@ -279,7 +320,7 @@ async def test_request_client_send_msg_socket_closed(
                 )
                 assert f"Send and receive coroutine ending {socket}" in caplog.messages
             finally:
-                request_client.close()
+                await async_finalize_req_client(request_client)
                 _zmq_teardown_rep(rep_socket=serve_socket, ctx=ctx)
 
 
@@ -310,7 +351,7 @@ async def test_request_client_send_msg_loop_closed(
                 assert "Loop closed while sending." in caplog.messages
                 assert f"Send and receive coroutine ending {socket}" in caplog.messages
             finally:
-                request_client.close()
+                await async_finalize_req_client(request_client)
                 _zmq_teardown_rep(rep_socket=serve_socket, ctx=ctx)
 
 
@@ -343,7 +384,7 @@ async def test_request_client_recv_poll_loop_closed(
             assert "Loop closed while polling receive socket." in caplog.messages
             assert f"Send and receive coroutine ending {socket}" in caplog.messages
         finally:
-            request_client.close()
+            await async_finalize_req_client(request_client)
             _zmq_teardown_rep(rep_socket=serve_socket, ctx=ctx)
 
 
@@ -377,7 +418,7 @@ async def test_request_client_recv_poll_socket_closed(
                 assert "Receive socket closed while polling." in caplog.messages
                 assert f"Send and receive coroutine ending {socket}" in caplog.messages
             finally:
-                request_client.close()
+                await async_finalize_req_client(request_client)
                 _zmq_teardown_rep(rep_socket=serve_socket, ctx=ctx)
 
 
@@ -417,9 +458,8 @@ async def test_request_client_recv_loop_closed(
                 assert "Loop closed while receiving." in caplog.messages
                 assert f"Send and receive coroutine ending {socket}" in caplog.messages
             finally:
-                _zmq_teardown_rep(stream=stream, rep_socket=serve_socket)
-                request_client.close()
-                _zmq_teardown_rep(ctx=ctx)
+                await async_finalize_req_client(request_client)
+                _zmq_teardown_rep(stream=stream, rep_socket=serve_socket, ctx=ctx)
 
 
 async def test_request_client_recv_socket_closed(
@@ -458,6 +498,5 @@ async def test_request_client_recv_socket_closed(
                 assert "Receive socket closed while receiving." in caplog.messages
                 assert f"Send and receive coroutine ending {socket}" in caplog.messages
             finally:
-                _zmq_teardown_rep(stream=stream, rep_socket=serve_socket)
-                request_client.close()
-                _zmq_teardown_rep(ctx=ctx)
+                await async_finalize_req_client(request_client)
+                _zmq_teardown_rep(stream=stream, rep_socket=serve_socket, ctx=ctx)
