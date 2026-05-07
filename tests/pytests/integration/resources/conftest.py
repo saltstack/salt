@@ -14,24 +14,33 @@ import pytest
 from tests.conftest import FIPS_TESTRUN
 
 MINION_ID = "resources-minion"
+MINION_ID_2 = "resources-minion-2"
 
 # Dummy resource IDs that the minion manages in every test in this package.
 DUMMY_RESOURCES = ["dummy-01", "dummy-02", "dummy-03"]
+# Disjoint resource set for the optional second minion. Tests that don't
+# request ``salt_minion_2`` never see these.
+DUMMY_RESOURCES_2 = ["dummy-04", "dummy-05"]
 
 
 @pytest.fixture(scope="package")
 def pillar_tree_dummy_resources(salt_master):
     """
-    Pillar declaring ``resources.dummy.resource_ids`` for the test minion.
+    Pillar declaring ``resources.dummy.resource_ids`` for both potential
+    test minions. The top file maps ``MINION_ID`` and (optionally)
+    ``MINION_ID_2``; minion 2's pillar entries are inert if
+    ``salt_minion_2`` is not requested by a test.
 
-    Resource discovery reads this tree via ``pillar_resources_tree``; the minion
-    must not rely on a static ``resources:`` key in minion opts.
+    Resource discovery reads this tree via ``pillar_resources_tree``; the
+    minion must not rely on a static ``resources:`` key in minion opts.
     """
     top_file = textwrap.dedent(
         f"""
         base:
           '{MINION_ID}':
             - dummy_resources
+          '{MINION_ID_2}':
+            - dummy_resources_2
         """
     )
     pillar_sls = textwrap.dedent(
@@ -44,11 +53,23 @@ def pillar_tree_dummy_resources(salt_master):
               - dummy-03
         """
     )
+    pillar_sls_2 = textwrap.dedent(
+        """
+        resources:
+          dummy:
+            resource_ids:
+              - dummy-04
+              - dummy-05
+        """
+    )
     top_tempfile = salt_master.pillar_tree.base.temp_file("top.sls", top_file)
     sls_tempfile = salt_master.pillar_tree.base.temp_file(
         "dummy_resources.sls", pillar_sls
     )
-    with top_tempfile, sls_tempfile:
+    sls_tempfile_2 = salt_master.pillar_tree.base.temp_file(
+        "dummy_resources_2.sls", pillar_sls_2
+    )
+    with top_tempfile, sls_tempfile, sls_tempfile_2:
         yield
 
 
@@ -114,3 +135,39 @@ def salt_cli(salt_master):
 def salt_call_cli(salt_minion):
     assert salt_minion.is_running()
     return salt_minion.salt_call_cli(timeout=60)
+
+
+@pytest.fixture(scope="module")
+def salt_minion_2(salt_master, pillar_tree_dummy_resources):
+    """
+    Optional second minion managing :data:`DUMMY_RESOURCES_2`.
+
+    Module-scoped so single-minion tests don't pay the bring-up cost.
+    Tests requesting this fixture get a minion whose pillar maps
+    ``dummy-04`` / ``dummy-05`` — disjoint from the package's primary
+    minion — so multi-minion master state can be exercised end-to-end.
+    """
+    config_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        "multiprocessing": False,
+    }
+    factory = salt_master.salt_minion_daemon(
+        MINION_ID_2,
+        overrides=config_overrides,
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+    )
+    factory.after_terminate(
+        pytest.helpers.remove_stale_minion_key, salt_master, factory.id
+    )
+    with factory.started(start_timeout=240):
+        salt_call_cli = factory.salt_call_cli()
+        ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True, _timeout=120)
+        assert ret.returncode == 0, ret
+        ret = salt_call_cli.run("saltutil.sync_all", _timeout=120)
+        assert ret.returncode == 0, ret
+        # Same wait as ``salt_minion``: lets the background
+        # ``_register_resources_with_master`` task land before tests run.
+        time.sleep(3)
+        yield factory

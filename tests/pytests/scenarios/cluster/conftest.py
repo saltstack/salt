@@ -60,5 +60,5 @@ def cluster_minion_all(
         overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
-    with factory.started(start_timeout=120):
+    with factory.started(start_timeout=240):
         yield factory

@@ -1423,6 +1423,184 @@ def test_register_resources_updates_resource_index_when_minion_data_cache_disabl
         salt.utils.resource_registry.reset_registry()
 
 
+def _make_aes_funcs_for_resource_grains(master_opts, tmp_path):
+    """Helper: build an ``AESFuncs`` ready for ``resource_grains`` testing."""
+    import salt.utils.resource_registry
+
+    salt.utils.resource_registry.reset_registry()
+    opts = master_opts.copy()
+    opts["cachedir"] = str(tmp_path)
+    opts["minion_data_cache"] = True
+    opts.setdefault("resource_index_primary_capacity", 4096)
+    opts.setdefault("resource_index_primary_slot_size", 128)
+    return salt.master.AESFuncs(opts), opts
+
+
+def test_register_resources_persists_resource_grains_to_cache(master_opts, tmp_path):
+    """
+    Each ``resource_grains[srn]`` entry in the registration load is written
+    into the master's ``resource_grains`` cache bank so ``-G``/``-P``
+    targeting can later match them.
+    """
+    import salt.utils.resource_registry
+
+    aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+    try:
+        load = {
+            "id": "minion-2",
+            "resources": {"dummy": ["m2-d1", "m2-d2"]},
+            "resource_grains": {
+                "dummy:m2-d1": {"k": "v1", "resource_id": "m2-d1"},
+                "dummy:m2-d2": {"k": "v2", "resource_id": "m2-d2"},
+            },
+        }
+        with patch("salt.utils.minions.update_resource_index", return_value=(2, 0)):
+            aes_funcs._register_resources(load)
+        cache = aes_funcs.masterapi.cache
+        stored_keys = sorted(cache.list("resource_grains") or [])
+        assert stored_keys == ["dummy:m2-d1", "dummy:m2-d2"]
+        assert cache.fetch("resource_grains", "dummy:m2-d1") == {
+            "k": "v1",
+            "resource_id": "m2-d1",
+        }
+        assert cache.fetch("resource_grains", "dummy:m2-d2") == {
+            "k": "v2",
+            "resource_id": "m2-d2",
+        }
+    finally:
+        aes_funcs.destroy()
+        salt.utils.resource_registry.reset_registry()
+
+
+def test_register_resources_flushes_dropped_resource_grain_entry(master_opts, tmp_path):
+    """
+    Re-registering with a smaller resource set must flush the dropped
+    SRN's grain entry from the ``resource_grains`` bank when the registry
+    confirms no other minion now manages it.
+    """
+    import salt.utils.resource_registry
+
+    aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+    try:
+        # First registration: minion owns m2-d1 and m2-d2.
+        load1 = {
+            "id": "minion-2",
+            "resources": {"dummy": ["m2-d1", "m2-d2"]},
+            "resource_grains": {
+                "dummy:m2-d1": {"k": "v1"},
+                "dummy:m2-d2": {"k": "v2"},
+            },
+        }
+        # Real ``update_resource_index`` so the registry actually tracks
+        # ownership for the flush owner-check.
+        aes_funcs._register_resources(load1)
+        cache = aes_funcs.masterapi.cache
+        assert sorted(cache.list("resource_grains") or []) == [
+            "dummy:m2-d1",
+            "dummy:m2-d2",
+        ]
+        # Second registration: minion drops m2-d2.
+        load2 = {
+            "id": "minion-2",
+            "resources": {"dummy": ["m2-d1"]},
+            "resource_grains": {"dummy:m2-d1": {"k": "v1-updated"}},
+        }
+        aes_funcs._register_resources(load2)
+        # The flush must remove the orphaned SRN.
+        remaining = sorted(cache.list("resource_grains") or [])
+        assert remaining == ["dummy:m2-d1"]
+        # And the surviving entry must reflect the most recent payload.
+        assert cache.fetch("resource_grains", "dummy:m2-d1") == {"k": "v1-updated"}
+    finally:
+        aes_funcs.destroy()
+        salt.utils.resource_registry.reset_registry()
+
+
+def test_register_resources_does_not_flush_srn_owned_by_other_minion(
+    master_opts, tmp_path
+):
+    """
+    Two minions managing different SRNs must not stomp on each other's
+    ``resource_grains`` entries during re-registration. When minion-A drops
+    a SRN that minion-B owns (rare but possible if the registry was
+    re-keyed), the flush must skip it.
+    """
+    import salt.utils.resource_registry
+
+    aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+    try:
+        # minion-A registers dummy:shared.
+        aes_funcs._register_resources(
+            {
+                "id": "minion-A",
+                "resources": {"dummy": ["shared"]},
+                "resource_grains": {"dummy:shared": {"who": "A"}},
+            }
+        )
+        # minion-B claims dummy:shared (registry overwrites the SRN's owner).
+        aes_funcs._register_resources(
+            {
+                "id": "minion-B",
+                "resources": {"dummy": ["shared"]},
+                "resource_grains": {"dummy:shared": {"who": "B"}},
+            }
+        )
+        cache = aes_funcs.masterapi.cache
+        assert cache.fetch("resource_grains", "dummy:shared") == {"who": "B"}
+        # minion-A re-registers with no resources. Its flush walk would
+        # consider dummy:shared "stale"; the owner check (registry says B
+        # owns it) must prevent the flush.
+        aes_funcs._register_resources(
+            {
+                "id": "minion-A",
+                "resources": {},
+                "resource_grains": {},
+            }
+        )
+        assert cache.fetch("resource_grains", "dummy:shared") == {"who": "B"}
+    finally:
+        aes_funcs.destroy()
+        salt.utils.resource_registry.reset_registry()
+
+
+def test_register_resources_resource_grains_visible_across_aes_funcs_instances(
+    master_opts, tmp_path
+):
+    """
+    The ``resource_grains`` bank lives on the filesystem (localfs cache)
+    so a second master worker (modelled by a fresh ``AESFuncs`` instance
+    under the same ``cachedir``) sees the entries that the first worker
+    wrote. Without this guarantee, multi-worker masters would silently
+    fail grain-based resource targeting on workers that didn't handle the
+    minion's registration.
+    """
+    import salt.utils.resource_registry
+
+    aes_funcs_a, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+    try:
+        aes_funcs_a._register_resources(
+            {
+                "id": "minion-2",
+                "resources": {"dummy": ["m2-d1"]},
+                "resource_grains": {"dummy:m2-d1": {"env": "prod"}},
+            }
+        )
+    finally:
+        aes_funcs_a.destroy()
+        # Reset only the registry singleton — the localfs cache on disk is
+        # what we're verifying survives.
+        salt.utils.resource_registry.reset_registry()
+
+    # Second worker reads the same on-disk cachedir.
+    aes_funcs_b = salt.master.AESFuncs(opts)
+    try:
+        cache_b = aes_funcs_b.masterapi.cache
+        assert cache_b.fetch("resource_grains", "dummy:m2-d1") == {"env": "prod"}
+    finally:
+        aes_funcs_b.destroy()
+        salt.utils.resource_registry.reset_registry()
+
+
 async def test_collect__auth_to_master_stats():
     """
     Check if master stats is collecting _auth calls while not calling neither _handle_aes nor _handle_clear
@@ -1614,3 +1792,63 @@ def test_auth_funcs_pending_when_new_minion(auth_funcs):
     cache.store.assert_called_once_with(
         "keys", "fresh-minion", {"pub": "fresh-pub", "state": "pending"}
     )
+
+
+def test_register_resources_concurrent_workers_no_data_loss(master_opts, tmp_path):
+    """
+    Two simulated master workers concurrently registering different
+    minions must not stomp on each other's ``resource_grains`` entries.
+    Each worker writes the entry it owns; the flush owner-check defends
+    against the case where one worker's "drop stale" walk encounters an
+    SRN that another worker has just claimed.
+    """
+    import threading
+
+    import salt.utils.resource_registry
+
+    salt.utils.resource_registry.reset_registry()
+    opts = master_opts.copy()
+    opts["cachedir"] = str(tmp_path)
+    opts["minion_data_cache"] = True
+    opts.setdefault("resource_index_primary_capacity", 4096)
+    opts.setdefault("resource_index_primary_slot_size", 128)
+
+    # Two AESFuncs sharing the same on-disk cachedir.
+    aes_a = salt.master.AESFuncs(opts)
+    aes_b = salt.master.AESFuncs(opts)
+    try:
+        errs = []
+        barrier = threading.Barrier(2)
+
+        def _register(aes, minion_id, resource_id, grain_value):
+            try:
+                barrier.wait(timeout=10)
+                aes._register_resources(
+                    {
+                        "id": minion_id,
+                        "resources": {"dummy": [resource_id]},
+                        "resource_grains": {
+                            f"dummy:{resource_id}": {"who": grain_value}
+                        },
+                    }
+                )
+            except Exception as exc:  # pylint: disable=broad-except
+                errs.append(exc)
+
+        t1 = threading.Thread(target=_register, args=(aes_a, "minion-A", "rA", "A"))
+        t2 = threading.Thread(target=_register, args=(aes_b, "minion-B", "rB", "B"))
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
+
+        assert not errs, errs
+        cache = aes_a.masterapi.cache
+        # Both entries must survive: neither worker's flush walk should
+        # have wiped the other's entry.
+        assert cache.fetch("resource_grains", "dummy:rA") == {"who": "A"}
+        assert cache.fetch("resource_grains", "dummy:rB") == {"who": "B"}
+    finally:
+        aes_a.destroy()
+        aes_b.destroy()
+        salt.utils.resource_registry.reset_registry()

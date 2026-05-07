@@ -615,3 +615,242 @@ def test_concurrent_update_resource_index_and_check_minions_glob(opts):
     for t in threads:
         t.join()
     assert not errs, errs
+
+
+# ---------------------------------------------------------------------------
+# _augment_grain_match_with_resource_grains
+# ---------------------------------------------------------------------------
+
+
+def _build_ck_with_resource_grain_cache(opts, entries):
+    """
+    Build a ``CkMinions`` whose ``self.cache`` returns ``entries`` for the
+    ``resource_grains`` bank. Other banks return empty so the standard
+    minion-grain match never matches.
+    """
+    ck = salt.utils.minions.CkMinions(opts)
+    fake = MagicMock()
+    fake.list = MagicMock(
+        side_effect=lambda bank: (
+            list(entries.keys()) if bank == "resource_grains" else []
+        )
+    )
+    fake.fetch = MagicMock(
+        side_effect=lambda bank, key: (
+            entries.get(key) if bank == "resource_grains" else None
+        )
+    )
+    ck.cache = fake
+    return ck
+
+
+def test_augment_grain_match_adds_matched_resource_id(opts):
+    """
+    A grain expression ``key:value`` that matches a per-resource grain dict
+    appends the bare resource id to ``result["minions"]``.
+    """
+    opts["minion_data_cache"] = True
+    entries = {
+        "dummy:dummy-01": {"dummy_grain_1": "one", "resource_id": "dummy-01"},
+        "dummy:dummy-02": {"dummy_grain_1": "one", "resource_id": "dummy-02"},
+        "dummy:other": {"dummy_grain_1": "two", "resource_id": "other"},
+    }
+    ck = _build_ck_with_resource_grain_cache(opts, entries)
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "dummy_grain_1:one", ":", regex_match=False
+    )
+    assert sorted(result["minions"]) == ["dummy-01", "dummy-02"]
+
+
+def test_augment_grain_match_dedups_against_existing_minions(opts):
+    """An id already in ``result["minions"]`` must not be duplicated."""
+    opts["minion_data_cache"] = True
+    entries = {"dummy:dummy-01": {"dummy_grain_1": "one"}}
+    ck = _build_ck_with_resource_grain_cache(opts, entries)
+    result = {"minions": ["dummy-01"], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "dummy_grain_1:one", ":", regex_match=False
+    )
+    assert result["minions"] == ["dummy-01"]
+
+
+def test_augment_grain_match_skips_when_minion_data_cache_disabled(opts):
+    """Disabled :conf_master:`minion_data_cache` short-circuits the augment."""
+    opts["minion_data_cache"] = False
+    entries = {"dummy:dummy-01": {"dummy_grain_1": "one"}}
+    ck = _build_ck_with_resource_grain_cache(opts, entries)
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "dummy_grain_1:one", ":", regex_match=False
+    )
+    assert result["minions"] == []
+
+
+def test_augment_grain_match_handles_missing_bank(opts):
+    """
+    When the ``resource_grains`` bank doesn't exist (no minion has registered
+    yet), the helper must not raise.
+    """
+    opts["minion_data_cache"] = True
+    ck = salt.utils.minions.CkMinions(opts)
+    fake = MagicMock()
+    fake.list = MagicMock(side_effect=Exception("bank not found"))
+    ck.cache = fake
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "any:thing", ":", regex_match=False
+    )
+    assert result["minions"] == []
+
+
+def test_augment_grain_match_pcre_regex_match(opts):
+    """Regex form (``salt -P``) must apply ``regex_match=True`` to subdict_match."""
+    opts["minion_data_cache"] = True
+    entries = {
+        "dummy:dummy-01": {"environment": "production-east"},
+        "dummy:dummy-02": {"environment": "production-west"},
+        "dummy:dummy-03": {"environment": "staging-east"},
+    }
+    ck = _build_ck_with_resource_grain_cache(opts, entries)
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "environment:^production-.*", ":", regex_match=True
+    )
+    assert sorted(result["minions"]) == ["dummy-01", "dummy-02"]
+
+
+def test_augment_grain_match_skips_non_dict_entries(opts):
+    """A corrupted cache entry that isn't a dict must not crash the helper."""
+    opts["minion_data_cache"] = True
+    entries = {
+        "dummy:dummy-01": "not-a-dict",
+        "dummy:dummy-02": {"k": "v"},
+    }
+    ck = _build_ck_with_resource_grain_cache(opts, entries)
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(result, "k:v", ":", regex_match=False)
+    assert result["minions"] == ["dummy-02"]
+
+
+def test_augment_grain_match_invalid_srn_skipped(opts):
+    """SRN keys without a ``:`` separator (corrupt or malformed) are skipped."""
+    opts["minion_data_cache"] = True
+    entries = {
+        "no-colon-here": {"k": "v"},
+        "dummy:valid": {"k": "v"},
+    }
+    ck = _build_ck_with_resource_grain_cache(opts, entries)
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(result, "k:v", ":", regex_match=False)
+    # The "no-colon-here" entry has rid="" after partition → skipped.
+    # Wait — partition(":") on "no-colon-here" returns ("no-colon-here", "", "")
+    # so rid is empty and the entry is skipped.
+    assert result["minions"] == ["valid"]
+
+
+# ---------------------------------------------------------------------------
+# Nodegroup expansion with G@ for resources
+# ---------------------------------------------------------------------------
+
+
+def test_nodegroup_with_grain_term_matches_resources(opts):
+    """
+    A nodegroup whose definition includes a ``G@`` term must match
+    resources via the same augment path. ``_check_compound_minions``
+    expands ``N@<group>`` → the underlying compound expression, then
+    each ``G@`` term flows through ``_check_grain_minions`` →
+    ``_augment_grain_match_with_resource_grains``.
+
+    We verify the wire-up by stuffing a nodegroup definition into opts
+    and confirming the resource id reaches the ``minions`` set in the
+    result.
+    """
+    opts["minion_data_cache"] = True
+    opts["nodegroups"] = {"prod_nodes": "G@env:prod"}
+
+    update_resource_index(opts, "minion-1", {"dummy": ["dummy-01", "dummy-02"]})
+
+    ck = salt.utils.minions.CkMinions(opts)
+    fake = MagicMock()
+    fake.list = MagicMock(
+        side_effect=lambda bank: (
+            ["dummy:dummy-01", "dummy:dummy-02"] if bank == "resource_grains" else []
+        )
+    )
+    fake.fetch = MagicMock(
+        side_effect=lambda bank, key: (
+            {
+                "dummy:dummy-01": {"env": "prod"},
+                "dummy:dummy-02": {"env": "staging"},
+            }.get(key)
+            if bank == "resource_grains"
+            else None
+        )
+    )
+    ck.cache = fake
+
+    got = ck.check_minions("N@prod_nodes", tgt_type="compound", fun="test.ping")
+    assert (
+        "dummy-01" in got["minions"]
+    ), f"Nodegroup compound expansion lost the resource id: {got!r}"
+    assert (
+        "dummy-02" not in got["minions"]
+    ), "Resource not matching the grain expression must not appear"
+
+
+# ---------------------------------------------------------------------------
+# Modest-scale perf: augment over many resources
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.slow_test
+def test_augment_grain_match_handles_thousand_resources_in_under_a_second(opts):
+    """
+    Sanity-check the ``-G`` augment path under a realistic resource count.
+    1000 resource_grains entries × one grain key must scan and match in
+    well under a second on commodity hardware. This isn't a strict perf
+    contract — it's a regression guard that catches accidental O(N²) or
+    per-fetch-per-key blow-ups in the hot read path.
+    """
+    import time
+
+    opts["minion_data_cache"] = True
+
+    n = 1000
+    entries = {
+        f"dummy:r{i:04d}": {"env": "prod" if i % 2 else "staging"} for i in range(n)
+    }
+    # Match half the entries (env:prod for odd indices).
+    expected_match_count = n // 2
+
+    fake = MagicMock()
+    fake.list = MagicMock(
+        side_effect=lambda bank: (
+            list(entries.keys()) if bank == "resource_grains" else []
+        )
+    )
+    fake.fetch = MagicMock(
+        side_effect=lambda bank, key: (
+            entries.get(key) if bank == "resource_grains" else None
+        )
+    )
+    ck = salt.utils.minions.CkMinions(opts)
+    ck.cache = fake
+
+    result = {"minions": [], "missing": []}
+    start = time.perf_counter()
+    ck._augment_grain_match_with_resource_grains(
+        result, "env:prod", ":", regex_match=False
+    )
+    elapsed = time.perf_counter() - start
+
+    assert (
+        len(result["minions"]) == expected_match_count
+    ), f"Expected {expected_match_count} matches, got {len(result['minions'])}"
+    # Generous budget — a 5× overshoot still indicates accidental
+    # quadratic scanning. Local dev runs comfortably finish in < 50 ms.
+    assert elapsed < 1.0, (
+        f"_augment_grain_match_with_resource_grains over {n} entries "
+        f"took {elapsed:.3f}s — likely a perf regression"
+    )
