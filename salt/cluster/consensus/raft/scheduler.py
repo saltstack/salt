@@ -2,9 +2,10 @@
 Timeout scheduling for the Raft node.
 
 Provides manual, threaded, and asynchronous schedulers so election and
-heartbeat timers stay outside the core state machine. Production Salt will
-use a Tornado-backed scheduler in ``salt.cluster.consensus``; tests use
-:class:`ManualTimeoutScheduler` for deterministic time.
+heartbeat timers stay outside the core state machine.  Production Salt
+runs the consensus event loop inside ``MasterPubServerChannel._publish_daemon``
+(Tornado on top of asyncio) and uses :class:`AsyncTimeoutScheduler`; tests
+use :class:`ManualTimeoutScheduler` for deterministic time.
 """
 
 import asyncio

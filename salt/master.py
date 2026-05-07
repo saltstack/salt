@@ -1099,6 +1099,55 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
                 for chan in self.channels:
                     tasks.append(asyncio.create_task(chan.publish(data)))
                 await asyncio.gather(*tasks)
+        elif tag.startswith("salt/job") and "/new" in tag:
+            # Cluster replication of job submissions: when a peer master
+            # publishes a new job, mirror its `minions` list into our
+            # local job cache so any CLI on this master can later look
+            # up the jid without sharing ``cachedir``.
+            peer_id = data.pop("__peer_id", None)
+            if peer_id and self.opts.get("cluster_id"):
+                jid = data.get("jid")
+                minions = data.get("minions") or []
+                if jid:
+                    try:
+                        salt.utils.job.store_minions(self.opts, jid, minions)
+                    except Exception:  # pylint: disable=broad-except
+                        log.exception("Failed to mirror peer job submission %s", jid)
+        elif tag.startswith("salt/job") and "/ret/" in tag:
+            # Cluster replication of job returns: minion responded to a
+            # peer master; persist the return into our local cache so a
+            # CLI on this master can deliver it to the user.
+            peer_id = data.pop("__peer_id", None)
+            if peer_id and self.opts.get("cluster_id"):
+                try:
+                    salt.utils.job.store_job(self.opts, data)
+                except Exception:  # pylint: disable=broad-except
+                    log.exception(
+                        "Failed to mirror peer job return for jid %s",
+                        data.get("jid"),
+                    )
+        elif tag.startswith("salt/key"):
+            # Replicate accepted/rejected/denied/deleted minion key state
+            # across the cluster.  When a minion's key state changes on one
+            # master, ``salt.key.Key.change_state`` fires ``salt/key`` with
+            # the new state and the public key body.  ``MasterPubServerChannel``
+            # forwards the event to peers; here we install the bytes into the
+            # local pki tree so every master agrees on which minions are
+            # accepted without sharing pki_dir over a filesystem.
+            peer_id = data.pop("__peer_id", None)
+            if peer_id and self.opts.get("cluster_id"):
+                act = data.get("act")
+                minion_id = data.get("id")
+                pub = data.get("pub")
+                if minion_id and act:
+                    try:
+                        self._apply_peer_key_change(act, minion_id, pub)
+                    except Exception:  # pylint: disable=broad-except
+                        log.exception(
+                            "Failed to apply peer key change %s for %s",
+                            act,
+                            minion_id,
+                        )
         elif tag == "rotate_cluster_aes_key":
             peer_id = data.pop("__peer_id", None)
             if peer_id:
@@ -1108,6 +1157,52 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
                 )
         else:
             log.trace("Ignore tag %s", tag)
+
+    _PEER_KEY_STATE = {
+        "accept": "accepted",
+        "reject": "rejected",
+        "pend": "pending",
+    }
+
+    def _apply_peer_key_change(self, act, minion_id, pub):
+        """
+        Mirror a peer master's minion-key state change into our local
+        keys cache so this master can authenticate the minion without
+        sharing storage with the other cluster members.
+
+        ``act`` is one of accept/reject/pend/deny/delete; ``pub`` is the
+        public key PEM (None for ``delete``).
+        """
+        cache = salt.cache.Cache(self.opts, driver=self.opts["keys.cache_driver"])
+        if act == "delete":
+            try:
+                cache.flush("keys", minion_id)
+            except Exception:  # pylint: disable=broad-except
+                log.exception("_apply_peer_key_change: flush keys/%s failed", minion_id)
+            try:
+                cache.flush("denied_keys", minion_id)
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "_apply_peer_key_change: flush denied_keys/%s failed",
+                    minion_id,
+                )
+            return
+        if not pub:
+            return
+        if act == "deny":
+            cache.store("denied_keys", minion_id, [pub])
+            log.info("Applied peer key change: deny minion %s", minion_id)
+            return
+        state = self._PEER_KEY_STATE.get(act)
+        if state is None:
+            return
+        cache.store("keys", minion_id, {"state": state, "pub": pub})
+        log.info(
+            "Applied peer key change: %s minion %s (state=%s)",
+            act,
+            minion_id,
+            state,
+        )
 
     def run(self):
         io_loop = asyncio.new_event_loop()
@@ -3012,13 +3107,16 @@ class AuthFuncs(TransportMethods):
 
         # only write to disk if you are adding the file, and in open mode,
         # which implies we accept any key from a minion.
+        key_persisted = False
         if (not key or key["state"] != "accepted") and not self.opts["open_mode"]:
             key = {"pub": load["pub"], "state": "accepted"}
             self.cache.store("keys", load["id"], key)
+            key_persisted = True
         elif self.opts["open_mode"]:
             if load["pub"] and (not key or load["pub"] != key["pub"]):
                 key = {"pub": load["pub"], "state": "accepted"}
                 self.cache.store("keys", load["id"], key)
+                key_persisted = True
             elif not load["pub"]:
                 log.error("Public key is empty: %s", load["id"])
                 if sign_messages:
@@ -3027,6 +3125,20 @@ class AuthFuncs(TransportMethods):
                     )
                 else:
                     return {"enc": "clear", "load": {"ret": False}}
+        # Cluster-wide replication: fire a ``salt/key/accept`` event with
+        # the public key body so peer masters mirror this acceptance into
+        # their own pki_dir without sharing a filesystem.  Standalone
+        # masters ignore the cross-master path; the event is harmless.
+        if key_persisted and self.opts.get("cluster_id"):
+            self.event.fire_event(
+                {
+                    "result": True,
+                    "act": "accept",
+                    "id": load["id"],
+                    "pub": load["pub"],
+                },
+                salt.utils.event.tagify(prefix="key"),
+            )
 
         pub = None
 

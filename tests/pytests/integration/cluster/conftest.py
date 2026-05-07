@@ -352,6 +352,242 @@ def cluster_master_4(
 
 
 @pytest.fixture
+def cluster_pki_path_isolated(tmp_path):
+    """
+    Build per-master ``cluster_pki_dir`` paths so the isolated-FS
+    fixtures below can prove cluster bootstrap works without sharing
+    PKI between masters.  Each master gets its own pki+peers tree.
+    """
+    paths = {}
+    for addr in ("127.0.0.1", "127.0.0.2", "127.0.0.3", "127.0.0.4"):
+        path = tmp_path / "iso" / addr / "pki"
+        path.mkdir(parents=True)
+        (path / "peers").mkdir()
+        paths[addr] = path
+    return paths
+
+
+@pytest.fixture
+def cluster_cache_path_isolated(tmp_path):
+    """Per-master ``cache_dir`` for the isolated-FS fixture set."""
+    paths = {}
+    for addr in ("127.0.0.1", "127.0.0.2", "127.0.0.3", "127.0.0.4"):
+        path = tmp_path / "iso" / addr / "cache"
+        path.mkdir(parents=True)
+        paths[addr] = path
+    return paths
+
+
+@pytest.fixture
+def cluster_file_roots_path_isolated(tmp_path):
+    """
+    Per-master ``file_roots[base]`` path for the isolated-FS fixture set.
+
+    Returned as ``{addr: pathlib.Path}``.  Tests can pre-seed master_1's
+    path with an SLS file and assert state-sync delivers it to other
+    masters' paths during the join handshake.
+    """
+    paths = {}
+    for addr in ("127.0.0.1", "127.0.0.2", "127.0.0.3", "127.0.0.4"):
+        path = tmp_path / "iso" / addr / "file_roots"
+        path.mkdir(parents=True)
+        paths[addr] = path
+    return paths
+
+
+@pytest.fixture
+def cluster_pillar_roots_path_isolated(tmp_path):
+    """Per-master ``pillar_roots[base]`` path for the isolated-FS set."""
+    paths = {}
+    for addr in ("127.0.0.1", "127.0.0.2", "127.0.0.3", "127.0.0.4"):
+        path = tmp_path / "iso" / addr / "pillar_roots"
+        path.mkdir(parents=True)
+        paths[addr] = path
+    return paths
+
+
+def _isolated_master_overrides(
+    addr, peers, pki_paths, cache_paths, file_roots_paths=None, pillar_roots_paths=None
+):
+    overrides = {
+        "interface": addr,
+        "cluster_id": "master_cluster",
+        "cluster_peers": list(peers),
+        "cluster_pki_dir": str(pki_paths[addr]),
+        "cache_dir": str(cache_paths[addr]),
+        # Exercises the no-shared-FS path: keys cache flips to mmap_key
+        # and joiners receive a bulk state-sync inside join-reply before
+        # becoming Raft learners.
+        "cluster_isolated_filesystem": True,
+        "log_granular_levels": {
+            "salt": "info",
+            "salt.transport": "debug",
+            "salt.channel": "debug",
+            "salt.utils.event": "debug",
+        },
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
+    }
+    if file_roots_paths is not None:
+        overrides["file_roots"] = {"base": [str(file_roots_paths[addr])]}
+    if pillar_roots_paths is not None:
+        overrides["pillar_roots"] = {"base": [str(pillar_roots_paths[addr])]}
+    return overrides
+
+
+@pytest.fixture
+def cluster_master_1_isolated(
+    request,
+    salt_factories,
+    cluster_pki_path_isolated,
+    cluster_cache_path_isolated,
+    cluster_file_roots_path_isolated,
+    cluster_pillar_roots_path_isolated,
+):
+    """
+    Like :func:`cluster_master_1` but with a *per-master* ``cluster_pki_dir``
+    and ``cache_dir``.  The founder bootstraps its own keys; joiners must
+    receive ``cluster_aes`` and ``cluster.pem`` over the wire (the
+    no-shared-FS path).
+    """
+    config_defaults = {
+        "open_mode": True,
+        "transport": request.config.getoption("--transport"),
+    }
+    config_overrides = _isolated_master_overrides(
+        "127.0.0.1",
+        ["127.0.0.2", "127.0.0.3"],
+        cluster_pki_path_isolated,
+        cluster_cache_path_isolated,
+        cluster_file_roots_path_isolated,
+        cluster_pillar_roots_path_isolated,
+    )
+    factory = salt_factories.salt_master_daemon(
+        "127.0.0.1",
+        defaults=config_defaults,
+        overrides=config_overrides,
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+    )
+    with factory.started(start_timeout=120):
+        yield factory
+
+
+@pytest.fixture
+def cluster_master_2_isolated(
+    salt_factories,
+    cluster_master_1_isolated,
+    cluster_pki_path_isolated,
+    cluster_cache_path_isolated,
+    cluster_file_roots_path_isolated,
+    cluster_pillar_roots_path_isolated,
+):
+    if salt.utils.platform.is_darwin() or salt.utils.platform.is_freebsd():
+        subprocess.check_output(["ifconfig", "lo0", "alias", "127.0.0.2", "up"])
+    config_defaults = {
+        "open_mode": True,
+        "transport": cluster_master_1_isolated.config["transport"],
+    }
+    config_overrides = _isolated_master_overrides(
+        "127.0.0.2",
+        ["127.0.0.1", "127.0.0.3"],
+        cluster_pki_path_isolated,
+        cluster_cache_path_isolated,
+        cluster_file_roots_path_isolated,
+        cluster_pillar_roots_path_isolated,
+    )
+    for key in ("ret_port", "publish_port"):
+        config_overrides[key] = cluster_master_1_isolated.config[key]
+    factory = salt_factories.salt_master_daemon(
+        "127.0.0.2",
+        defaults=config_defaults,
+        overrides=config_overrides,
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+    )
+    with factory.started(start_timeout=120):
+        yield factory
+
+
+@pytest.fixture
+def cluster_master_3_isolated(
+    salt_factories,
+    cluster_master_1_isolated,
+    cluster_pki_path_isolated,
+    cluster_cache_path_isolated,
+    cluster_file_roots_path_isolated,
+    cluster_pillar_roots_path_isolated,
+):
+    if salt.utils.platform.is_darwin() or salt.utils.platform.is_freebsd():
+        subprocess.check_output(["ifconfig", "lo0", "alias", "127.0.0.3", "up"])
+    config_defaults = {
+        "open_mode": True,
+        "transport": cluster_master_1_isolated.config["transport"],
+    }
+    config_overrides = _isolated_master_overrides(
+        "127.0.0.3",
+        ["127.0.0.1", "127.0.0.2"],
+        cluster_pki_path_isolated,
+        cluster_cache_path_isolated,
+        cluster_file_roots_path_isolated,
+        cluster_pillar_roots_path_isolated,
+    )
+    for key in ("ret_port", "publish_port"):
+        config_overrides[key] = cluster_master_1_isolated.config[key]
+    factory = salt_factories.salt_master_daemon(
+        "127.0.0.3",
+        defaults=config_defaults,
+        overrides=config_overrides,
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+    )
+    with factory.started(start_timeout=120):
+        yield factory
+
+
+@pytest.fixture
+def cluster_master_4_isolated(
+    salt_factories,
+    cluster_master_1_isolated,
+    cluster_master_2_isolated,
+    cluster_master_3_isolated,
+    cluster_pki_path_isolated,
+    cluster_cache_path_isolated,
+    cluster_file_roots_path_isolated,
+    cluster_pillar_roots_path_isolated,
+):
+    """
+    A 4th, late-joining master under the isolated-FS fixture set.  Used to
+    prove ``cluster_isolated_filesystem`` bulk state-sync ships pre-existing
+    minion keys (and any other state delivered in join-reply) to a master
+    that handshakes after the cluster is already running.
+    """
+    if salt.utils.platform.is_darwin() or salt.utils.platform.is_freebsd():
+        subprocess.check_output(["ifconfig", "lo0", "alias", "127.0.0.4", "up"])
+    config_defaults = {
+        "open_mode": True,
+        "transport": cluster_master_1_isolated.config["transport"],
+    }
+    config_overrides = _isolated_master_overrides(
+        "127.0.0.4",
+        ["127.0.0.1", "127.0.0.2", "127.0.0.3"],
+        cluster_pki_path_isolated,
+        cluster_cache_path_isolated,
+        cluster_file_roots_path_isolated,
+        cluster_pillar_roots_path_isolated,
+    )
+    for key in ("ret_port", "publish_port"):
+        config_overrides[key] = cluster_master_1_isolated.config[key]
+    factory = salt_factories.salt_master_daemon(
+        "127.0.0.4",
+        defaults=config_defaults,
+        overrides=config_overrides,
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+    )
+    with factory.started(start_timeout=120):
+        yield factory
+
+
+@pytest.fixture
 def cluster_minion_1(cluster_master_1):
     config_defaults = {
         "transport": cluster_master_1.config["transport"],

@@ -806,7 +806,13 @@ class TestBaseStorageAndStateMachineAbstractBodies:
 
 class TestSaltStorageDictFormatAndSnapshot:
     def test_load_log_dict_format(self, tmp_path):
-        """SaltStorage.load_log handles dict-format entries from cache backends."""
+        """SaltStorage.load_log handles dict-format entries from cache backends.
+
+        Per-entry layout: ``cache.list`` enumerates the log keys (one per
+        Raft index) and ``cache.fetch`` returns each entry's payload.
+        Some backends serialize the payload as a dict instead of a tuple
+        (``localfs_key`` legacy behaviour); the loader must accept both.
+        """
         from salt.cluster.consensus.raft.log import LogEntryType
         from salt.cluster.consensus.storage import SaltStorage
         from tests.support.mock import patch
@@ -827,8 +833,9 @@ class TestSaltStorageDictFormatAndSnapshot:
             "client_id": None,
             "sequence_num": None,
         }
-        # Patch the cache fetch to return dict-format data
-        with patch.object(storage._cache, "fetch", return_value=[dict_entry]):
+        with patch.object(storage._cache, "list", return_value=["0"]), patch.object(
+            storage._cache, "fetch", return_value=dict_entry
+        ):
             entries = storage.load_log()
         assert len(entries) == 1
         assert entries[0].cmd == b"hello"

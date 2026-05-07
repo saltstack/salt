@@ -754,6 +754,18 @@ class Key:
                     self.cache.store("keys", keyname, key)
 
                 eload = {"result": True, "act": self.DIR_MAP[to_state], "id": keyname}
+                # Cluster masters: include the public key body so peer
+                # masters can populate their local ``pki_dir/<bucket>/<id>``
+                # without a shared filesystem.  The bytes are only useful
+                # to other cluster members; they're harmless on standalone
+                # masters that ignore the field.
+                pub_bytes = None
+                if to_state == self.DEN:
+                    pub_bytes = key
+                elif "pub" in (key or {}):
+                    pub_bytes = key["pub"]
+                if pub_bytes:
+                    eload["pub"] = pub_bytes
                 self.event.fire_event(eload, salt.utils.event.tagify(prefix="key"))
 
         for key in invalid_keys:

@@ -208,6 +208,12 @@ VALID_OPTS = immutabletypes.freeze(
         # Shared pre-shared string that authenticates a master joining an
         # existing cluster at runtime.
         "cluster_secret": str,
+        # When True, cluster masters do NOT share ``cluster_pki_dir`` /
+        # ``cachedir`` between members.  In this mode keys.cache_driver
+        # defaults to mmap_key (so cache files are deterministic per-bank
+        # and can be sync'd as opaque blobs) and joining masters request a
+        # bulk state-sync from an existing peer before becoming Raft voters.
+        "cluster_isolated_filesystem": bool,
         # Use a module function to determine the unique identifier. If this is
         # set and 'id' is not set, it will allow invocation of a module function
         # to determine the value of 'id'. For simple invocations without function
@@ -1757,6 +1763,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_pool_port": 4520,
         "cluster_pub_fingerprint": None,
         "cluster_secret": None,
+        "cluster_isolated_filesystem": False,
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
         "cluster_encryption_algorithm": "OAEP-SHA1",
