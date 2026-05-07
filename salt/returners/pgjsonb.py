@@ -396,13 +396,22 @@ def get_fun(fun):
     """
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = """SELECT s.id,s.jid, s.full_ret
-                FROM salt_returns s
-                JOIN ( SELECT MAX(`jid`) as jid
-                    from salt_returns GROUP BY fun, id) max
-                ON s.jid = max.jid
-                WHERE s.fun = %s
-                """
+        # The previous query picked the latest return per minion with
+        # ``MAX(jid)``. That assumed jids are lexicographically sortable
+        # as timestamps (the default ``YYYYMMDDHHMMSSffffff`` format and
+        # the ``nano`` variant), which silently returns the wrong row
+        # for any deployment that overrides ``master_job_cache.gen_jid``
+        # or that has a mix of jid formats in ``salt_returns`` from a
+        # past config change. Use ``alter_time`` -- which Postgres
+        # populates from ``DEFAULT NOW()`` -- as the source of truth
+        # for "latest" instead, and pick one row per minion with
+        # ``DISTINCT ON``.
+        sql = """SELECT DISTINCT ON (id)
+                        id, jid, full_ret
+                 FROM salt_returns
+                 WHERE fun = %s
+                 ORDER BY id, alter_time DESC
+                 """
 
         cur.execute(sql, (fun,))
         data = cur.fetchall()
