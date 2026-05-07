@@ -319,7 +319,7 @@ pygments==2.20.0
     #   -c requirements/static/pkg/py3.14/windows.txt
     #   pytest
     #   rich
-pymssql==2.3.13
+pymssql==2.3.11
     # via
     #   -c requirements/static/pkg/py3.14/windows.txt
     #   -r requirements/base.txt

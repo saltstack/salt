@@ -150,7 +150,7 @@ pycryptodomex==3.23.0
     #   -r requirements/crypto.txt
 pygments==2.20.0
     # via rich
-pymssql==2.3.13 ; sys_platform == 'win32'
+pymssql==2.3.11 ; sys_platform == 'win32'
     # via -r requirements/base.txt
 pyopenssl==26.2.0
     # via
