@@ -14,6 +14,7 @@ def fake_nodegroups(fake_minion_id):
     return {
         "groupA": fake_minion_id,
         "groupB": "another_minion_id",
+        "groupC": [fake_minion_id, "another_minion_id"]
     }
 
 
@@ -48,5 +49,5 @@ def _runner(expected_ret, fake_minion_id, fake_pillar_name, pillar_name=None):
 
 
 def test_succeeds(fake_pillar_name, fake_minion_id):
-    ret = {fake_pillar_name: ["groupA"]}
+    ret = {fake_pillar_name: ["groupA", "groupC"]}
     _runner(ret, fake_minion_id, fake_pillar_name)
