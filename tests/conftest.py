@@ -40,8 +40,13 @@ def _pin_multiprocessing_fork_for_tests() -> None:
     ``ONEDIR_TESTRUN``). Pin the test session to ``fork`` so we keep
     Py3.13 semantics for the test suite while production daemons get the
     same pinning via ``salt/scripts.py``.
+
+    Linux-only on purpose: macOS and Windows have always defaulted to spawn
+    and salt-on-darwin/win is written for that. Forcing fork on Darwin
+    silently corrupts workers via libdispatch's "fork after thread init"
+    rule (symptom: minions accept jobs but never respond).
     """
-    if sys.platform == "win32":
+    if not sys.platform.startswith("linux"):
         return
     try:
         import multiprocessing as _mp
