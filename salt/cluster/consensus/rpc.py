@@ -62,7 +62,9 @@ def pack(tag, src, rpc_id, payload):
     Serialise a Raft RPC into the bytes the pool puller expects.
 
     :param tag:     One of the ``cluster/raft/*`` constants above.
-    :param src:     Sender node-id (``opts["id"]``).
+    :param src:     Sender node-id (``opts["interface"]``) — matches the
+                    cluster-wide identity used by ``RaftService`` and the
+                    ``cluster_peers`` opt; not the daemon's ``opts["id"]``.
     :param rpc_id:  Opaque correlation string chosen by the caller.
     :param payload: Dict of RPC-specific fields.
     :returns:       Raw bytes ready for ``pusher.publish()``.

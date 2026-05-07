@@ -130,6 +130,16 @@ tests/pytests/functional/cluster/consensus/test_raft_service.py::TestOnReady::te
 tests/pytests/functional/cluster/consensus/test_raft_service.py::TestOnReady::test_on_ready_wired_to_membership_sm
 tests/pytests/functional/cluster/consensus/test_raft_service.py::TestOnReady::test_on_ready_not_fired_for_learner_only_entry
 
+# ── INTEGRATION: real cluster bootstrap (deterministic founder, sentinel,
+#    SaltPeer non-blocking publish, TCP pool router) ──────────────────────────
+tests/pytests/integration/cluster/test_basic_cluster.py::test_basic_cluster_minion_1
+tests/pytests/integration/cluster/test_raft_cluster.py::test_raft_election_three_masters
+tests/pytests/integration/cluster/test_raft_cluster.py::test_raft_re_election_after_leader_restart
+
+# ── SCENARIO: notify_peer_joined on receiver, dynamic 4th-master join ────────
+tests/pytests/scenarios/cluster/test_cluster.py::test_cluster_key_rotation
+tests/pytests/scenarios/cluster/test_cluster.py::test_fourth_master_joins_existing_cluster
+
 # ── FUNCTIONAL/INTEGRATION/SCENARIO: cluster-ready gate ──────────────────────
 tests/pytests/functional/cluster/consensus/test_cluster_ready_scenarios.py::TestOnReadyFunctional::test_on_ready_fires_after_founding_config_commits
 tests/pytests/functional/cluster/consensus/test_cluster_ready_scenarios.py::TestOnReadyFunctional::test_on_ready_fires_on_all_founding_nodes

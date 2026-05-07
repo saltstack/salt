@@ -1639,6 +1639,233 @@ class MasterPubServerChannel:
     def gen_token(self):
         return "".join(random.choices(string.ascii_letters + string.digits, k=32))
 
+    async def _send_state_sync_chunks(self, session_id, peer_id):
+        """
+        Stream the four state-sync channels (keys, denied_keys,
+        file_roots, pillar_roots) to a freshly joined peer.
+
+        Each channel runs to completion independently and emits at least
+        one chunk (an empty chunk with ``eof=True`` if the channel has
+        no data).  All chunks are encrypted with the cluster session AES
+        key — the joiner has it from the join-reply we just sent.
+        """
+        from salt.cluster.state_sync import (  # pylint: disable=import-outside-toplevel
+            DENIED_CHANNEL,
+            FILE_ROOTS_CHANNEL,
+            KEYS_CHANNEL,
+            PILLAR_ROOTS_CHANNEL,
+            iter_keys_chunks,
+            iter_root_chunks,
+        )
+
+        pusher = self.pusher(peer_id)
+        crypticle = salt.crypt.Crypticle(
+            self.opts,
+            salt.master.SMaster.secrets["cluster_aes"]["secret"].value,
+        )
+
+        async def send_channel(channel, chunk_iter):
+            chunks = list(chunk_iter)
+            if not chunks:
+                # Defensive: every iter_*_chunks must yield ≥ 1 (empty
+                # for empty data).  Synthesize an eof-only chunk so the
+                # receiver doesn't hang on a missing channel.
+                chunks = [[]]
+            total = len(chunks)
+            for seq, items in enumerate(chunks):
+                payload = {
+                    "session": session_id,
+                    "channel": channel,
+                    "seq": seq,
+                    "total": total,
+                    "eof": seq == total - 1,
+                    "items": items,
+                }
+                event_data = salt.utils.event.SaltEvent.pack(
+                    salt.utils.event.tagify("state-sync-chunk", "peer", "cluster"),
+                    crypticle.dumps(payload),
+                )
+                try:
+                    await pusher.publish(event_data)
+                except Exception:  # pylint: disable=broad-except
+                    log.exception(
+                        "state-sync %s/%s seq=%d publish failed to %s",
+                        session_id,
+                        channel,
+                        seq,
+                        peer_id,
+                    )
+                    return
+            log.info(
+                "state-sync %s/%s sent %d chunks (%d items total) to %s",
+                session_id,
+                channel,
+                total,
+                sum(len(c) for c in chunks),
+                peer_id,
+            )
+
+        # Run the four channels concurrently — each finishes when it
+        # finishes, and a slow file_roots stream does not block keys.
+        try:
+            await asyncio.gather(
+                send_channel(KEYS_CHANNEL, iter_keys_chunks(self.opts, KEYS_CHANNEL)),
+                send_channel(
+                    DENIED_CHANNEL, iter_keys_chunks(self.opts, DENIED_CHANNEL)
+                ),
+                send_channel(
+                    FILE_ROOTS_CHANNEL,
+                    iter_root_chunks(self.opts.get("file_roots")),
+                ),
+                send_channel(
+                    PILLAR_ROOTS_CHANNEL,
+                    iter_root_chunks(self.opts.get("pillar_roots")),
+                ),
+            )
+        except Exception:  # pylint: disable=broad-except
+            log.exception("state-sync session %s aborted unexpectedly", session_id)
+
+    def _apply_state_sync_chunk(self, chunk):
+        """
+        Install one ``cluster/peer/state-sync-chunk`` payload locally.
+
+        The chunk has already been Crypticle-decrypted by the caller.
+        We dispatch to the right install helper by ``chunk["channel"]``,
+        then ping the matching :class:`StateSyncSession` so
+        :meth:`_start_raft_as_learner` fires once all four channels eof.
+        """
+        from salt.cluster.state_sync import (  # pylint: disable=import-outside-toplevel
+            DENIED_CHANNEL,
+            FILE_ROOTS_CHANNEL,
+            KEYS_CHANNEL,
+            PILLAR_ROOTS_CHANNEL,
+            install_keys_chunk,
+            install_root_chunk,
+        )
+
+        if not isinstance(chunk, dict):
+            log.warning("state-sync chunk is not a dict: %r", type(chunk).__name__)
+            return
+        session_id = chunk.get("session")
+        channel = chunk.get("channel")
+        seq = chunk.get("seq", -1)
+        eof = bool(chunk.get("eof"))
+        items = chunk.get("items") or []
+        sessions = getattr(self, "_state_sync_sessions", None) or {}
+        session = sessions.get(session_id)
+        if session is None:
+            log.warning(
+                "state-sync chunk for unknown session %r (channel=%s seq=%s); dropping",
+                session_id,
+                channel,
+                seq,
+            )
+            return
+
+        installed = 0
+        try:
+            if channel in (KEYS_CHANNEL, DENIED_CHANNEL):
+                installed = install_keys_chunk(self.opts, channel, items)
+            elif channel == FILE_ROOTS_CHANNEL:
+                installed = install_root_chunk(self.opts.get("file_roots"), items)
+            elif channel == PILLAR_ROOTS_CHANNEL:
+                installed = install_root_chunk(self.opts.get("pillar_roots"), items)
+            else:
+                log.warning(
+                    "state-sync chunk for unknown channel %r (session=%s seq=%s)",
+                    channel,
+                    session_id,
+                    seq,
+                )
+                return
+        except Exception:  # pylint: disable=broad-except
+            log.exception(
+                "state-sync %s/%s seq=%s install failed",
+                session_id,
+                channel,
+                seq,
+            )
+
+        log.info(
+            "state-sync %s/%s seq=%s installed %d items%s",
+            session_id,
+            channel,
+            seq,
+            installed,
+            " (eof)" if eof else "",
+        )
+        session.record_chunk(channel, seq, eof, installed)
+
+    def _begin_state_sync_session(self, session_id, known_peers, discover_event):
+        """
+        Register a state-sync session and arm its watchdog timer.
+
+        Called from the join-reply handler once we know the responder is
+        running with ``cluster_isolated_filesystem=True`` and intends to
+        push the four chunked channels at us.  The session's
+        ``on_complete`` callback fires
+        :meth:`_start_raft_as_learner` exactly once, either when all four
+        channels report eof or when the deadline expires.
+        """
+        from salt.cluster.state_sync import (  # pylint: disable=import-outside-toplevel
+            DEFAULT_RECEIVE_TIMEOUT,
+            StateSyncSession,
+        )
+
+        if not hasattr(self, "_state_sync_sessions"):
+            self._state_sync_sessions = {}
+
+        if session_id in self._state_sync_sessions:
+            log.warning(
+                "Duplicate state-sync session id %s; ignoring second join-reply",
+                session_id,
+            )
+            return
+
+        completed_holder = {"done": False}
+
+        def _on_complete():
+            if completed_holder["done"]:
+                return
+            completed_holder["done"] = True
+            try:
+                self._start_raft_as_learner(known_peers)
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "state-sync %s: _start_raft_as_learner failed", session_id
+                )
+            if discover_event is not None:
+                discover_event.set()
+            # Cancel the watchdog if it hasn't fired yet.
+            handle = session.watchdog_handle
+            if handle is not None:
+                try:
+                    handle.cancel()
+                except Exception:  # pylint: disable=broad-except
+                    pass
+            # Drop the session from the registry — keep memory bounded.
+            self._state_sync_sessions.pop(session_id, None)
+
+        session = StateSyncSession(session_id, _on_complete)
+        # Stash the watchdog handle on the session so on_complete can
+        # cancel it; created below.
+        session.watchdog_handle = None
+        self._state_sync_sessions[session_id] = session
+
+        try:
+            loop = asyncio.get_event_loop()
+            session.watchdog_handle = loop.call_later(
+                DEFAULT_RECEIVE_TIMEOUT, session.force_complete
+            )
+        except RuntimeError:
+            # No running event loop in this context (defensive — the
+            # join-reply handler runs inside ``_publish_daemon``'s loop,
+            # so this branch should not execute in production).
+            log.warning(
+                "state-sync %s: no event loop for watchdog; running without timeout",
+                session_id,
+            )
+
     def _join_sentinel_path(self):
         """
         Return the path to the per-master join sentinel file.
@@ -1987,6 +2214,23 @@ class MasterPubServerChannel:
                     )
                 return
             log.debug("Incomming from peer %s %r", tag, data)
+            if tag.startswith("cluster/peer/state-sync-chunk"):
+                # Encrypted with the shared cluster_aes the joiner just
+                # installed in the matching join-reply.  Each chunk
+                # belongs to one of four channels; install items
+                # in-order, mark eof when announced, and let the
+                # session's ``on_complete`` fire ``_start_raft_as_learner``.
+                try:
+                    crypticle = salt.crypt.Crypticle(
+                        self.opts,
+                        salt.master.SMaster.secrets["cluster_aes"]["secret"].value,
+                    )
+                    chunk = crypticle.loads(data)
+                except Exception:  # pylint: disable=broad-except
+                    log.exception("Failed to decrypt state-sync-chunk")
+                    return
+                self._apply_state_sync_chunk(chunk)
+                return
             if tag.startswith("cluster/peer/join-notify"):
                 # join-notify is encrypted with the shared cluster AES key.
                 try:
@@ -2031,21 +2275,106 @@ class MasterPubServerChannel:
                 # The join-reply carries a signed, packed inner payload.
                 inner = salt.payload.loads(data["payload"])
                 log.info("Cluster join reply from %s", inner.get("peer_id", "unknown"))
-                # cluster_key is NOT sent over the wire; both sides have access to
-                # it via the shared cluster_pki_dir.  Only the AES session key is
-                # encrypted and delivered here so the joiner can adopt the cluster
-                # session without a restart.
+                # ``cluster_aes`` (the cluster's shared session AES key) is
+                # encrypted to our master pub here so a joiner without access
+                # to a shared ``cluster_pki_dir/.aes`` can adopt the cluster
+                # session.  ``cluster.pem`` (cluster RSA private) is still
+                # expected to be present locally — wire delivery for it is
+                # tracked separately.
+                token = self._discover_token or ""
+                if isinstance(token, str):
+                    token = token.encode()
+                if "cluster_aes" in inner:
+                    try:
+                        salted = salt.crypt.PrivateKey.from_file(
+                            self.master_key.master_rsa_path
+                        ).decrypt(inner["cluster_aes"])
+                        new_cluster_aes = salted[len(token) :]
+                        with salt.master.SMaster.secrets["cluster_aes"][
+                            "secret"
+                        ].get_lock():
+                            salt.master.SMaster.secrets["cluster_aes"][
+                                "secret"
+                            ].value = new_cluster_aes
+                        # Persist locally so the joiner survives restart
+                        # without re-running the join handshake.
+                        aes_path = pathlib.Path(self.opts["cluster_pki_dir"]) / ".aes"
+                        aes_path.parent.mkdir(parents=True, exist_ok=True)
+                        with salt.utils.files.set_umask(0o177):
+                            with salt.utils.files.fopen(aes_path, "wb") as fp:
+                                fp.write(new_cluster_aes)
+                        log.info(
+                            "Installed cluster_aes from join-reply (%d bytes)",
+                            len(new_cluster_aes),
+                        )
+                    except Exception:  # pylint: disable=broad-except
+                        log.exception("Failed to install cluster_aes from join-reply")
+                # Install the cluster RSA key pair (private + public) from
+                # the wire so a joiner without shared ``cluster_pki_dir``
+                # can sign cluster events and serve discover-reply.
+                if "cluster_key_session" in inner and "cluster_pem" in inner:
+                    try:
+                        salted_session = salt.crypt.PrivateKey.from_file(
+                            self.master_key.master_rsa_path
+                        ).decrypt(inner["cluster_key_session"])
+                        session_key_str = salted_session[len(token) :].decode()
+                        cluster_key_crypt = salt.crypt.Crypticle(
+                            self.opts, session_key_str
+                        )
+                        pem_bytes = cluster_key_crypt.decrypt(inner["cluster_pem"])
+                        pub_pem = inner.get("cluster_pub") or ""
+                        if isinstance(pub_pem, bytes):
+                            pub_pem = pub_pem.decode()
+                        cluster_pki = pathlib.Path(self.opts["cluster_pki_dir"])
+                        cluster_pki.mkdir(parents=True, exist_ok=True)
+                        # ``find_or_create_keys`` may have already written a
+                        # locally-generated cluster.pem at mode 0400; unlink
+                        # before writing so the wire-delivered version wins.
+                        pem_path = cluster_pki / "cluster.pem"
+                        pub_path = cluster_pki / "cluster.pub"
+                        for p in (pem_path, pub_path):
+                            try:
+                                p.unlink()
+                            except FileNotFoundError:
+                                pass
+                        with salt.utils.files.set_umask(0o277):
+                            with salt.utils.files.fopen(pem_path, "wb") as fp:
+                                fp.write(pem_bytes)
+                        if pub_pem:
+                            with salt.utils.files.fopen(pub_path, "w") as fp:
+                                fp.write(pub_pem)
+                        log.info(
+                            "Installed cluster.pem (%d bytes) and cluster.pub from join-reply",
+                            len(pem_bytes),
+                        )
+                    except Exception:  # pylint: disable=broad-except
+                        log.exception(
+                            "Failed to install cluster RSA key pair from join-reply"
+                        )
                 event = self._discover_event
                 self._discover_event = None
                 # Write the join sentinel so future restarts skip discover/join.
                 self._mark_joined_cluster()
-                # Start Raft as a non-voting learner now that we have peer keys.
+                # Paged bulk state-sync: the join-reply names a session id
+                # and the responder follows up with chunked
+                # ``cluster/peer/state-sync-chunk`` events, four channels
+                # in parallel (keys, denied_keys, file_roots, pillar_roots).
+                # Defer the Raft-learner start until all four channels eof
+                # (or the per-session deadline elapses).
                 known_peers = {p: inner["peers"][p] for p in inner.get("peers", {})}
-                self._start_raft_as_learner(known_peers)
-                # Signal the main master process to start the rest of the
-                # master service processeses.
-                if event is not None:
-                    event.set()
+                state_sync_session = inner.get("state_sync_session")
+                if state_sync_session and self.opts.get("cluster_isolated_filesystem"):
+                    self._begin_state_sync_session(
+                        state_sync_session, known_peers, event
+                    )
+                else:
+                    # Either the responder isn't running with isolated-FS
+                    # mode or the session announcement is missing.  Fall
+                    # back to immediate learner start; event-driven
+                    # replication will fill any gaps.
+                    self._start_raft_as_learner(known_peers)
+                    if event is not None:
+                        event.set()
             elif tag.startswith("cluster/peer/join"):
 
                 payload = salt.payload.loads(data["payload"])
@@ -2180,13 +2509,32 @@ class MasterPubServerChannel:
                 aes_secret = salt.master.SMaster.secrets["aes"]["secret"].value
                 if isinstance(aes_secret, str):
                     aes_secret = aes_secret.encode()
-                # XXX No-shared-filesystem topology is not yet supported: the
-                # join-reply payload still needs to carry the other peers'
-                # public keys and the minion keys so a joiner without access
-                # to a shared cluster_pki_dir can populate it from the wire.
-                # The cluster private key PEM is too large for direct RSA
-                # encryption; for now we rely on the shared cluster_pki_dir so
-                # the joiner already has the cluster key before this reply lands.
+                cluster_aes_secret = salt.master.SMaster.secrets["cluster_aes"][
+                    "secret"
+                ].value
+                if isinstance(cluster_aes_secret, str):
+                    cluster_aes_secret = cluster_aes_secret.encode()
+                # No-shared-filesystem support: the join-reply carries
+                # ``cluster_aes`` and the cluster RSA key pair so a joiner
+                # without access to a shared ``cluster_pki_dir`` can adopt
+                # the cluster identity from the wire alone.
+                #
+                # ``cluster.pem`` is too large for direct RSA encryption, so
+                # it travels under a fresh Crypticle session key wrapped to
+                # the joiner's RSA pub.  ``cluster.pub`` is not secret so it
+                # rides in the inner payload unencrypted (and the inner
+                # payload is signed with this master's private key).
+                cluster_pem_pem = self.cluster_key() or ""
+                cluster_pub_pem = self.cluster_public_key() or ""
+                cluster_key_session = salt.crypt.Crypticle.generate_key_string()
+                cluster_key_crypt = salt.crypt.Crypticle(self.opts, cluster_key_session)
+                cluster_pem_ciphertext = cluster_key_crypt.encrypt(
+                    cluster_pem_pem.encode()
+                )
+                wrapped_session = joiner_pub.encrypt(
+                    token_bytes + cluster_key_session.encode(),
+                    algorithm=self.opts["cluster_encryption_algorithm"],
+                )
                 inner_payload = {
                     "return_token": payload["token"],
                     "peer_id": self.opts["id"],
@@ -2194,8 +2542,28 @@ class MasterPubServerChannel:
                         token_bytes + aes_secret,
                         algorithm=self.opts["cluster_encryption_algorithm"],
                     ),
+                    "cluster_aes": joiner_pub.encrypt(
+                        token_bytes + cluster_aes_secret,
+                        algorithm=self.opts["cluster_encryption_algorithm"],
+                    ),
+                    "cluster_key_session": wrapped_session,
+                    "cluster_pem": cluster_pem_ciphertext,
+                    "cluster_pub": cluster_pub_pem,
                     "peers": {},
                 }
+                # Isolated-FS bulk state sync: announce a session id in the
+                # join-reply, then push the per-channel chunks separately.
+                # The joiner waits on all four channel eofs before becoming
+                # a Raft learner; per-channel chunking lets each stream
+                # progress independently and isolates failures.
+                state_sync_session_id = None
+                if self.opts.get("cluster_isolated_filesystem"):
+                    from salt.cluster.state_sync import (  # pylint: disable=import-outside-toplevel
+                        new_session_id,
+                    )
+
+                    state_sync_session_id = new_session_id()
+                    inner_payload["state_sync_session"] = state_sync_session_id
                 tosign = salt.payload.package(inner_payload)
                 sig = salt.crypt.PrivateKeyString(self.private_key()).sign(
                     tosign, algorithm=self.opts["publish_signing_algorithm"]
@@ -2208,6 +2576,12 @@ class MasterPubServerChannel:
                     },
                 )
                 await self.pusher(payload["peer_id"]).publish(event_data)
+                if state_sync_session_id is not None:
+                    asyncio.get_event_loop().create_task(
+                        self._send_state_sync_chunks(
+                            state_sync_session_id, payload["peer_id"]
+                        )
+                    )
             elif tag.startswith("cluster/peer/discover-reply"):
                 payload = salt.payload.loads(data["payload"])
 

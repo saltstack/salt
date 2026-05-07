@@ -213,8 +213,14 @@ class HashRing:
 
         This is the intended call site for ``master.py``::
 
-            if not ring.owns(load["jid"], self.opts["id"]):
+            if not ring.owns(load["jid"], self.opts["interface"]):
                 # shunt to cluster bus
+
+        ``opts["interface"]`` is used because that's the cluster-wide node
+        identity throughout the consensus layer (matches ``cluster_peers``
+        and the keys in :class:`HashRing`'s internal node set populated by
+        ``rebuild``).  ``opts["id"]`` is the local hostname which other
+        masters do not share.
         """
         with self._lock:
             if not self._nodes:

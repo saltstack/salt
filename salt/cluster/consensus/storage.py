@@ -6,11 +6,18 @@ Implements :class:`salt.cluster.consensus.raft.BaseStorage` using the
 operator has configured (``localfs`` today, ``mmapcache`` tomorrow) is used
 automatically.
 
-Bank layout under ``cluster/consensus/<node_id>/``::
+Bank layout::
 
-    state     — {"term": int, "voted_for": str|None}
-    log       — [LogEntry.info() tuple, ...]
-    snapshot  — {"data": base64-str, "index": int, "term": int}
+    cluster/consensus/<node_id>/        — state + snapshot
+        state     — {"term": int, "voted_for": str|None}
+        snapshot  — {"data": base64-str, "index": int, "term": int}
+
+    cluster/consensus/<node_id>/log/    — one cache key per log entry
+        <index>   — LogEntry.info() tuple
+
+Per-entry log keys keep ``append_log`` O(1) on a backend whose store
+primitive is O(1) (mmap_cache).  ``save_log`` (used for truncation and
+recovery) flushes the log bank and re-writes each entry.
 """
 
 import base64
@@ -22,9 +29,10 @@ from salt.cluster.consensus.raft.log import BaseStorage, LogEntry, LogEntryType
 
 log = logging.getLogger(__name__)
 
-# Keys written into the cache bank.
+# Keys written into the meta bank (state + snapshot share one bank so a
+# single ``flush`` of the meta bank wipes all metadata; the log lives in
+# its own bank so we can flush it independently for truncation).
 _KEY_STATE = "state"
-_KEY_LOG = "log"
 _KEY_SNAPSHOT = "snapshot"
 
 
@@ -32,9 +40,10 @@ class SaltStorage(BaseStorage):
     """
     Raft persistence backed by ``salt.cache.Cache``.
 
-    All three durable documents (state, log, snapshot) are stored in the
-    bank ``cluster/consensus/<node_id>`` so they share the operator's
-    configured ``cache_driver`` and are co-located with other cluster data.
+    ``state`` and ``snapshot`` share the bank
+    ``cluster/consensus/<node_id>``; log entries live in
+    ``cluster/consensus/<node_id>/log`` with one cache key per entry,
+    keyed by stringified Raft index.
 
     :param node_id: Raft node identifier (the master's interface address).
     :param opts:    Salt master opts dict — passed straight to
@@ -42,7 +51,8 @@ class SaltStorage(BaseStorage):
     """
 
     def __init__(self, node_id, opts):
-        self._bank = f"cluster/consensus/{node_id}"
+        self._meta_bank = f"cluster/consensus/{node_id}"
+        self._log_bank = f"cluster/consensus/{node_id}/log"
         self._cache = salt.cache.Cache(opts)
         self._lock = threading.RLock()
 
@@ -54,71 +64,99 @@ class SaltStorage(BaseStorage):
         """Persist currentTerm and votedFor (Raft §5.2)."""
         with self._lock:
             self._cache.store(
-                self._bank, _KEY_STATE, {"term": term, "voted_for": voted_for}
+                self._meta_bank, _KEY_STATE, {"term": term, "voted_for": voted_for}
             )
 
     def load_state(self):
         """Return persisted state, or defaults if not yet written."""
         with self._lock:
-            data = self._cache.fetch(self._bank, _KEY_STATE)
+            data = self._cache.fetch(self._meta_bank, _KEY_STATE)
         if not data:
             return {"term": 0, "voted_for": None}
         return data
 
     def save_log(self, entries):
-        """Rewrite the entire log (used during truncation and recovery)."""
+        """
+        Rewrite the entire log.
+
+        Used by :class:`~salt.cluster.consensus.raft.log.Log` during
+        truncation (conflict resolution) and after :meth:`Log.clear`.  We
+        flush the log bank to drop any indices not in *entries* and then
+        store each entry under its own key.
+        """
         with self._lock:
-            self._cache.store(self._bank, _KEY_LOG, [e.info() for e in entries])
+            self._cache.flush(self._log_bank)
+            for entry in entries:
+                self._cache.store(self._log_bank, str(entry.index), entry.info())
 
     def append_log(self, entry):
         """
-        Append a single entry.
+        Append a single entry — O(1) on per-key backends.
 
-        ``salt.cache`` has no efficient append primitive, so we do a
-        read-modify-write under the lock.  For the membership-only log that
-        Salt consensus tracks this is fine; the log stays small.
+        Stores under ``log_bank/<entry.index>`` so the hot append path
+        does not read or rewrite any other entry.  Re-appending the same
+        index (rare; only happens on a leader-side overwrite that does
+        not also drive ``save_log``) is a benign overwrite.
         """
         with self._lock:
-            raw = self._cache.fetch(self._bank, _KEY_LOG)
-            existing = raw if isinstance(raw, list) else []
-            existing.append(entry.info())
-            self._cache.store(self._bank, _KEY_LOG, existing)
+            self._cache.store(self._log_bank, str(entry.index), entry.info())
 
     def load_log(self):
         """Return all persisted log entries as :class:`~.LogEntry` objects."""
         with self._lock:
-            raw = self._cache.fetch(self._bank, _KEY_LOG)
-        if not raw or not isinstance(raw, list):
+            keys = self._cache.list(self._log_bank)
+        if not keys:
+            return []
+        try:
+            indices = sorted(int(k) for k in keys)
+        except (TypeError, ValueError):
+            log.warning(
+                "SaltStorage: ignoring non-integer keys in %s: %r",
+                self._log_bank,
+                keys,
+            )
             return []
         entries = []
-        for e in raw:
-            if isinstance(e, (list, tuple)):
-                term = e[0]
-                idx = e[1]
-                cmd = e[2]
-                node_id = e[3] if len(e) > 3 else None
-                entry_type = e[4] if len(e) > 4 else LogEntryType.COMMAND
-                client_id = e[5] if len(e) > 5 else None
-                sequence_num = e[6] if len(e) > 6 else None
-                entries.append(
-                    LogEntry(
-                        term, idx, cmd, node_id, entry_type, client_id, sequence_num
-                    )
+        for idx in indices:
+            with self._lock:
+                raw = self._cache.fetch(self._log_bank, str(idx))
+            if not raw:
+                log.warning(
+                    "SaltStorage: log entry %d missing from %s",
+                    idx,
+                    self._log_bank,
                 )
-            else:
-                # dict format (defensive — cache backends may return dicts)
-                entries.append(
-                    LogEntry(
-                        e["term"],
-                        e["index"],
-                        e["cmd"],
-                        e.get("node_id"),
-                        e.get("type", LogEntryType.COMMAND),
-                        e.get("client_id"),
-                        e.get("sequence_num"),
-                    )
-                )
+                continue
+            entry = self._decode_entry(raw)
+            if entry is not None:
+                entries.append(entry)
         return entries
+
+    @staticmethod
+    def _decode_entry(raw):
+        """Reconstruct a :class:`LogEntry` from a cached ``info()`` payload."""
+        if isinstance(raw, (list, tuple)):
+            term = raw[0]
+            idx = raw[1]
+            cmd = raw[2]
+            node_id = raw[3] if len(raw) > 3 else None
+            entry_type = raw[4] if len(raw) > 4 else LogEntryType.COMMAND
+            client_id = raw[5] if len(raw) > 5 else None
+            sequence_num = raw[6] if len(raw) > 6 else None
+            return LogEntry(
+                term, idx, cmd, node_id, entry_type, client_id, sequence_num
+            )
+        if isinstance(raw, dict):
+            return LogEntry(
+                raw["term"],
+                raw["index"],
+                raw["cmd"],
+                raw.get("node_id"),
+                raw.get("type", LogEntryType.COMMAND),
+                raw.get("client_id"),
+                raw.get("sequence_num"),
+            )
+        return None
 
     def save_snapshot(self, data, index, term):
         """Persist a state-machine snapshot and its metadata."""
@@ -129,7 +167,7 @@ class SaltStorage(BaseStorage):
         encoded = base64.b64encode(bytes(data)).decode("utf-8")
         with self._lock:
             self._cache.store(
-                self._bank,
+                self._meta_bank,
                 _KEY_SNAPSHOT,
                 {"data": encoded, "index": index, "term": term},
             )
@@ -137,7 +175,7 @@ class SaltStorage(BaseStorage):
     def load_snapshot(self):
         """Return the latest snapshot dict, or ``None`` if none exists."""
         with self._lock:
-            raw = self._cache.fetch(self._bank, _KEY_SNAPSHOT)
+            raw = self._cache.fetch(self._meta_bank, _KEY_SNAPSHOT)
         if not raw or "data" not in raw:
             return None
         raw = dict(raw)
