@@ -68,21 +68,31 @@ def test_issue_regression_65265():
         opts, pub_host="127.0.0.1", pub_port=5406, pull_path="/tmp/pull.ipc"
     )
     process_manager.add_process(server.publish_daemon, args=(server.publish_payload,))
-    # Wait some more for the server to start up completely.
-    time.sleep(10)
-    asyncio.run(server.publish(b"asdf"))
-    log.debug("After publish")
-    # Give time for clients to receive thier messages.
-    start = time.time()
-    while time.time() - start < 60:
-        with recieved.get_lock():
-            if recieved.value == 3000:
-                break
-        time.sleep(1)
-
     try:
+        # Wait some more for the server to start up completely.
+        time.sleep(10)
+        asyncio.run(server.publish(b"asdf"))
+        log.debug("After publish")
+        # Give time for clients to receive thier messages.
+        start = time.time()
+        while time.time() - start < 60:
+            with recieved.get_lock():
+                if recieved.value == 3000:
+                    break
+            time.sleep(1)
+
         with recieved.get_lock():
             total = recieved.value
         assert total == 3000
     finally:
+        # The parent ``server.publish()`` call lazily creates a
+        # ``zmq.asyncio.Context()`` that owns libzmq's ``ZMQbg/Reaper`` and
+        # ``ZMQbg/IO/0`` background threads. Without ``server.close()`` those
+        # threads keep the pytest interpreter alive forever after
+        # ``pytest_sessionfinish`` -- in CI the entire scenarios job sits idle
+        # until the workflow timeout fires.
+        try:
+            server.close()
+        except Exception:  # pylint: disable=broad-except
+            log.exception("Failed to close PublishServer cleanly")
         process_manager.kill_children(9)

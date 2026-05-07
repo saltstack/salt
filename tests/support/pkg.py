@@ -994,6 +994,22 @@ class SaltPkgInstall:
         if platform.is_darwin():
             self._refresh_macos_binary_paths()
             self.update_process_path()
+            if stop_services:
+                # The Salt .pkg loads ``com.saltstack.salt.minion`` (and on
+                # some installs also ``master``/``api``/``syndic``) at install
+                # time via ``RunAtLoad=true``. Those daemons start with the
+                # default minion config (``master: salt``, which does not
+                # resolve), so they never authenticate to the test fixture's
+                # master. Worse, saltfactories' ``PkgLaunchdSaltDaemonImpl``
+                # checks the plist label when its own ``salt_minion`` fixture
+                # tries to ``launchctl bootstrap`` -- sees the auto-loaded
+                # daemon, declares the test minion "already running", and
+                # silently uses the misconfigured launchd-managed process
+                # instead. Fan-out then finds zero connected minions and
+                # ``api_request`` returns ``{'return': [{}]}``.
+                # Bootout the auto-installed daemons here so the label is
+                # free when the test fixture brings up its own.
+                self._stop_macos_pkg_daemons()
         if self.distro_id in ("ubuntu", "debian") and stop_services:
             self.stop_services()
         elif (
@@ -1006,6 +1022,34 @@ class SaltPkgInstall:
             # processes until restart; ``salt-call --local test.version`` then
             # still reports the previous release (see upgrade systemd teardown).
             self.restart_services()
+
+    def _stop_macos_pkg_daemons(self):
+        """
+        Bootout each ``com.saltstack.salt.*`` plist the .pkg installed so the
+        labels are free for the test fixtures to load their own configurations.
+        Idempotent: ``launchctl bootout`` on a not-loaded service exits with a
+        non-zero status which we deliberately ignore. Also re-enables the
+        service after bootout so a previous test run that left it disabled
+        (via ``launchctl disable`` in fixture teardown) does not block the
+        next ``launchctl bootstrap`` -- ``disable`` persists on disk in
+        ``/var/db/com.apple.xpc.launchd/disabled.plist`` across reboots.
+        """
+        plist_dir = pathlib.Path("/Library/LaunchDaemons")
+        for service in ("salt-master", "salt-minion", "salt-api", "salt-syndic"):
+            label = f"com.saltstack.{service.replace('-', '.')}"
+            plist = plist_dir / f"{label}.plist"
+            if not plist.exists():
+                continue
+            for cmd in (
+                ("launchctl", "bootout", "system", str(plist)),
+                ("launchctl", "enable", f"system/{label}"),
+            ):
+                try:
+                    subprocess.run(
+                        ["sudo", *cmd], check=False, capture_output=True, timeout=30
+                    )
+                except subprocess.TimeoutExpired:
+                    log.warning("launchctl %s timed out for %s", cmd[1], service)
 
     def stop_services(self):
         """

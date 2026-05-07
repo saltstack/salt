@@ -82,10 +82,15 @@ def _pin_multiprocessing_fork():
     ``multiprocessing.resource_tracker`` before ``check_user()`` drops
     privileges, leaving a root-owned child under the salt user's pid.
 
-    Pin every salt daemon entry point to ``fork`` to keep Py3.13 semantics.
-    Idempotent and a no-op on Windows.
+    Pin every salt daemon entry point to ``fork`` to restore Py3.13 Linux
+    semantics. Strictly Linux-only: macOS and Windows have always defaulted
+    to spawn-based start methods and salt is written for that on those
+    platforms (Darwin's libdispatch makes fork after thread init unsafe and
+    silently corrupts worker processes -- the symptom is minions accepting
+    jobs but never responding because their fork-spawned workers die
+    invisibly). Idempotent on re-entry.
     """
-    if sys.platform == "win32":
+    if not sys.platform.startswith("linux"):
         return
     import multiprocessing
 
