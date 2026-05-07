@@ -3,6 +3,7 @@ import io
 import logging
 import multiprocessing
 import os
+import queue
 import signal
 import tempfile
 import threading
@@ -350,29 +351,110 @@ class TestSignalHandlingProcess(TestCase):
 
     @pytest.mark.skip_on_windows(reason="Required signals not supported on windows")
     @pytest.mark.slow_test
-    def test_signal_processing_handle_signals_called(self):
-        "Validate SignalHandlingProcess handles signals"
-        # Gloobal event to stop all processes we're creating
+    @staticmethod
+    def _signal_handling_subprocess_body(result_queue):
+        """
+        Body of ``test_signal_processing_handle_signals_called`` that runs
+        inside a fresh ``spawn``-context subprocess.
+
+        Running in a fresh interpreter is required because the pytest
+        process inherits saltfactories' session threads (``LogServer``,
+        ``EventListener``, etc.) plus any leaked daemon threads from
+        earlier tests. Forking a ``SignalHandlingProcess`` from that
+        multi-threaded parent on Python 3.14 reliably deadlocks the child
+        in ``salt._logging.shutdown_logging()`` /
+        ``setup_logging()``, because the locks held by the surviving
+        parent threads at fork time have no thread to release them in the
+        child. The deadlocked child then doesn't honour SIGTERM and the
+        whole shard sits at the pytest-timeout mark.
+
+        By running this body in a clean spawn child, the *only* thread at
+        fork time is MainThread, so the inner forks are safe. The result
+        is communicated back via ``result_queue`` as
+        ``("pass", "")`` / ``("fail", message)`` / ``("skip", reason)``.
+        """
+        # pylint: disable=import-outside-toplevel,reimported
+        import multiprocessing
+        import os
+        import signal
+        import time
+
+        import salt._logging
+        import salt.utils.process
+
+        # Pin the inner ``multiprocessing`` start method to ``fork`` so the
+        # test exercises the production code path. This subprocess is
+        # single-threaded, so the fork-after-thread risk that motivated
+        # this refactor is not present here.
+        try:
+            multiprocessing.set_start_method("fork", force=True)
+        except (RuntimeError, ValueError):
+            pass
+
+        # When Salt's ``Process`` runs under pytest, the logging options
+        # dict has been populated as a side effect of test collection.
+        # In this fresh spawn child we have to seed it ourselves;
+        # ``wrapped_run_func`` would otherwise pass ``None`` down to
+        # ``set_lowest_log_level_by_opts`` and the child would die with
+        # ``AttributeError: 'NoneType' object has no attribute 'get'``
+        # before reaching ``val.value = os.getpid()``.
+        if not salt._logging.get_logging_options_dict():
+            salt._logging.set_logging_options_dict({"log_level": "warning"})
+
+        # Pre-bind the staticmethod targets so the spawn pickle of those
+        # ``Process`` objects below resolves them by import path rather
+        # than via the bound TestCase ``self``.
+        pid_setting_target = TestSignalHandlingProcess.pid_setting_target
+        run_forever_sub_target = TestSignalHandlingProcess.run_forever_sub_target
+        run_forever_target = TestSignalHandlingProcess.run_forever_target
+
         evt = multiprocessing.Event()
         sig_handled = multiprocessing.Event()
-
-        # Create a process to test signal handler
         val = multiprocessing.Value("i", 0)
+
         proc = salt.utils.process.SignalHandlingProcess(
-            target=self.pid_setting_target,
-            args=(self.run_forever_sub_target, val, evt),
+            target=pid_setting_target,
+            args=(run_forever_sub_target, val, evt),
         )
         proc.register_finalize_method(sig_handled.set)
         proc.start()
 
-        # Create a second process that should not respond to SIGINT or SIGTERM
         proc2 = multiprocessing.Process(
-            target=self.run_forever_target,
-            args=(self.run_forever_sub_target, evt),
+            target=run_forever_target,
+            args=(run_forever_sub_target, evt),
         )
         proc2.start()
 
-        def _force_cleanup():
+        try:
+            start = time.time()
+            while time.time() - start < 30 and not val.value:
+                time.sleep(0.1)
+            if not val.value:
+                result_queue.put(("skip", "subprocess did not set its pid in time"))
+                return
+
+            if sig_handled.is_set():
+                result_queue.put(("fail", "sig_handled was set before SIGTERM"))
+                return
+
+            os.kill(val.value, signal.SIGTERM)
+
+            start = time.time()
+            while time.time() - start < 10 and not sig_handled.is_set():
+                time.sleep(0.1)
+            if not sig_handled.is_set():
+                result_queue.put(
+                    ("skip", "Event took too long to get set, skipping for now.")
+                )
+                return
+
+            proc.join(1)
+            if not proc2.is_alive():
+                result_queue.put(("fail", "proc2 (no signal handler) is not alive"))
+                return
+
+            result_queue.put(("pass", ""))
+        finally:
             evt.set()
             for p in (proc, proc2):
                 if p.is_alive():
@@ -388,42 +470,54 @@ class TestSignalHandlingProcess(TestCase):
                         pass
                     p.join(5)
 
+    def test_signal_processing_handle_signals_called(self):
+        "Validate SignalHandlingProcess handles signals"
+        # The actual SignalHandlingProcess fork has to happen from a
+        # single-threaded parent on Py3.14. Run the body in a clean
+        # ``spawn`` subprocess; see ``_signal_handling_subprocess_body``
+        # for the rationale.
+        ctx = multiprocessing.get_context("spawn")
+        result_queue = ctx.Queue()
+        runner = ctx.Process(
+            target=TestSignalHandlingProcess._signal_handling_subprocess_body,
+            args=(result_queue,),
+        )
+        runner.start()
         try:
-            # Wait for the sub process to set its pid. Bounded so that a
-            # fork-after-thread deadlock in the child (pytest's own
-            # saltfactories threads make this fork unsafe) skips fast
-            # instead of hanging the entire test shard.
-            start = time.time()
-            while time.time() - start < 30:
-                if val.value:
-                    break
-                time.sleep(0.3)
-            else:
-                pytest.skip("subprocess did not set its pid in time")
+            runner.join(90)
+            if runner.is_alive():
+                try:
+                    runner.terminate()
+                except Exception:  # pylint: disable=broad-except
+                    pass
+                runner.join(5)
+                if runner.is_alive():
+                    try:
+                        runner.kill()
+                    except Exception:  # pylint: disable=broad-except
+                        pass
+                    runner.join(5)
+                pytest.fail("Spawn-based test runner did not finish within 90 seconds")
 
-            assert not sig_handled.is_set()
-
-            # Send a signal that should get handled by the subprocess
-            os.kill(val.value, signal.SIGTERM)
-
-            # wait up to 10 seconds for signal handler:
-            start = time.time()
-            while time.time() - start < 10:
-                if sig_handled.is_set():
-                    break
-                time.sleep(0.3)
-            else:
-                # In some cases, the signal may not be set in time.
-                # Rather than adjusting the timeout and risking flakiness, just skip.
-                pytest.skip("Event took too long to get set, skipping for now.")
-
-            # Allow some time for the signal handler to do its thing
-            assert sig_handled.is_set()
-            # Reap the signaled process
-            proc.join(1)
-            assert proc2.is_alive()
+            try:
+                status, message = result_queue.get_nowait()
+            except queue.Empty:
+                pytest.fail(
+                    "Spawn runner exited without reporting a result "
+                    f"(exitcode={runner.exitcode})"
+                )
+            if status == "pass":
+                return
+            if status == "skip":
+                pytest.skip(message)
+            pytest.fail(message)
         finally:
-            _force_cleanup()
+            if runner.is_alive():
+                try:
+                    runner.kill()
+                except Exception:  # pylint: disable=broad-except
+                    pass
+                runner.join(5)
 
 
 class TestSignalHandlingProcessCallbacks(TestCase):
