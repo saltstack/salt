@@ -2,6 +2,7 @@
 Extract the pillar data for this minion
 """
 
+import contextvars
 import copy
 import logging
 import os
@@ -22,6 +23,12 @@ __proxyenabled__ = ["*"]
 
 log = logging.getLogger(__name__)
 
+# When True (default), pillar output is masked. Template renderers set this to
+# False so that SLS files receive plain values via salt["pillar.get"](…).
+_mask_pillar: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "mask_pillar", default=True
+)
+
 
 def get(
     key,
@@ -31,7 +38,7 @@ def get(
     delimiter=DEFAULT_TARGET_DELIM,
     pillarenv=None,
     saltenv=None,
-    unmask=False,
+    unmask=None,
 ):
     """
     .. versionadded:: 0.14.0
@@ -145,6 +152,9 @@ def get(
         else items(saltenv=saltenv, pillarenv=pillarenv)
     )
 
+    if unmask is None:
+        unmask = not _mask_pillar.get()
+
     if merge:
         if isinstance(default, dict):
             ret = salt.utils.data.traverse_dict_and_list(
@@ -204,7 +214,7 @@ def get(
 
 
 def items(
-    *args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None, unmask=False
+    *args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None, unmask=None
 ):
     """
     Calls the master for a fresh pillar and generates the pillar data on the
@@ -293,6 +303,8 @@ def items(
         pillarenv=pillarenv,
     )
     ret = pillar.compile_pillar()
+    if unmask is None:
+        unmask = not _mask_pillar.get()
     if unmask:
         return salt.utils.secret.expose(ret)
     else:
@@ -301,7 +313,7 @@ def items(
 
 # Allow pillar.data to also be used to return pillar data
 def data(
-    *args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None, unmask=False
+    *args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None, unmask=None
 ):
     """
     Calls the master for a fresh pillar, generates the pillar data on the
@@ -468,7 +480,7 @@ def ls(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
 
 
 def item(
-    *args, default=None, delimiter=None, pillarenv=None, saltenv=None, unmask=False
+    *args, default=None, delimiter=None, pillarenv=None, saltenv=None, unmask=None
 ):
     """
     .. versionadded:: 0.16.2
@@ -540,6 +552,9 @@ def item(
         if all(x is None for x in (saltenv, pillarenv))
         else items(saltenv=saltenv, pillarenv=pillarenv)
     )
+
+    if unmask is None:
+        unmask = not _mask_pillar.get()
 
     try:
         for arg in args:
