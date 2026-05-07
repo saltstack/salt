@@ -2,7 +2,6 @@
 Extract the pillar data for this minion
 """
 
-import contextvars
 import copy
 import logging
 import os
@@ -22,12 +21,6 @@ from salt.exceptions import CommandExecutionError
 __proxyenabled__ = ["*"]
 
 log = logging.getLogger(__name__)
-
-# When True (default), pillar output is masked. Template renderers set this to
-# False so that SLS files receive plain values via salt["pillar.get"](…).
-_mask_pillar: contextvars.ContextVar[bool] = contextvars.ContextVar(
-    "mask_pillar", default=True
-)
 
 
 def get(
@@ -153,7 +146,7 @@ def get(
     )
 
     if unmask is None:
-        unmask = not _mask_pillar.get()
+        unmask = not salt.utils.secret.mask_pillar.get()
 
     if merge:
         if isinstance(default, dict):
@@ -304,7 +297,7 @@ def items(
     )
     ret = pillar.compile_pillar()
     if unmask is None:
-        unmask = not _mask_pillar.get()
+        unmask = not salt.utils.secret.mask_pillar.get()
     if unmask:
         return salt.utils.secret.expose(ret)
     else:
@@ -554,7 +547,7 @@ def item(
     )
 
     if unmask is None:
-        unmask = not _mask_pillar.get()
+        unmask = not salt.utils.secret.mask_pillar.get()
 
     try:
         for arg in args:

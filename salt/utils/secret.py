@@ -30,11 +30,18 @@ Usage::
 
 from __future__ import annotations
 
+import contextvars
 import copy
 import logging
 from collections.abc import Mapping
 
 log = logging.getLogger(__name__)
+
+# When True (default), pillar output is masked. Template renderers set this to
+# False so that SLS files receive plain values via salt["pillar.get"](…).
+mask_pillar: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "mask_pillar", default=True
+)
 
 REDACT_PLACEHOLDER = "**********"
 
