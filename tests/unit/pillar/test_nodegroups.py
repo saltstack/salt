@@ -8,10 +8,10 @@ fake_pillar = {}
 fake_nodegroups = {
     "groupA": fake_minion_id,
     "groupB": "another_minion_id",
+    "groupC": [fake_minion_id, "another_minion_id"]
 }
 fake_opts = {"cache": "localfs", "nodegroups": fake_nodegroups, "id": fake_minion_id}
 fake_pillar_name = "fake_pillar_name"
-
 
 def side_effect(group_sel, t):
     if group_sel.find(fake_minion_id) != -1:
@@ -39,5 +39,6 @@ class NodegroupsPillarTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(actual_ret, expected_ret)
 
     def test_succeeds(self):
-        ret = {fake_pillar_name: ["groupA"]}
+        ret = {fake_pillar_name: ["groupA", "groupC"]}
         self._runner(ret)
+
