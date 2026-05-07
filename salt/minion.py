@@ -1169,7 +1169,7 @@ class MinionManager(MinionBase):
                 self.minions.append(minion)
                 break
             except SaltClientError as exc:
-                minion.destroy()
+                yield minion.destroy_async()
                 failed = True
                 log.error(
                     "Error while bringing up minion for multi-master. Is "
@@ -1182,7 +1182,7 @@ class MinionManager(MinionBase):
                     auth_wait += self.auth_wait
                 yield salt.ext.tornado.gen.sleep(auth_wait)  # TODO: log?
             except SaltMasterUnresolvableError:
-                minion.destroy()
+                yield minion.destroy_async()
                 err = (
                     "Master address: '{}' could not be resolved. Invalid or"
                     " unresolveable address. Set 'master' value in minion config.".format(
@@ -1192,13 +1192,20 @@ class MinionManager(MinionBase):
                 log.error(err)
                 break
             except Exception as e:  # pylint: disable=broad-except
-                minion.destroy()
+                yield minion.destroy_async()
                 failed = True
                 log.critical(
                     "Unexpected error while connecting to %s",
                     minion.opts["master"],
                     exc_info=True,
                 )
+                # Match SaltClientError path: without a delay, connect_master can be
+                # retried in a tight loop and create zmq contexts faster than they are
+                # torn down (libzMQ pthread / EMFILE failures on some hosts).
+                last = time.time()
+                if auth_wait < self.max_auth_wait:
+                    auth_wait += self.auth_wait
+                yield salt.ext.tornado.gen.sleep(auth_wait)
 
     # Multi Master Tune In
     def tune_in(self):
@@ -1255,7 +1262,7 @@ class MinionManager(MinionBase):
             minion.process_manager.send_signal_to_processes(signum)
             # kill any remaining processes
             minion.process_manager.kill_children()
-            minion.destroy()
+            yield minion.destroy_async()
         if self.event_publisher is not None:
             self.event_publisher.close()
             self.event_publisher = None
@@ -4216,6 +4223,30 @@ class Minion(MinionBase):
 
         return True
 
+    @salt.ext.tornado.gen.coroutine
+    def destroy_async(self):
+        """
+        Async teardown for use on the minion I/O loop. Ensures REQ transport
+        ``close_async`` completes before the next connect attempt (see ``connect_master``).
+        """
+        self._running = False
+        if hasattr(self, "process_manager") and self.process_manager is not None:
+            self.process_manager.stop_restarting()
+            self.process_manager.kill_children()
+        if hasattr(self, "schedule"):
+            del self.schedule
+        if hasattr(self, "pub_channel") and self.pub_channel is not None:
+            self.pub_channel.on_recv(None)
+            self.pub_channel.close()
+            self.pub_channel = None
+        if hasattr(self, "req_channel") and self.req_channel is not None:
+            yield self.req_channel.close_async()
+            yield salt.ext.tornado.gen.sleep(0)
+            self.req_channel = None
+        if hasattr(self, "periodic_callbacks"):
+            for cb in self.periodic_callbacks.values():
+                cb.stop()
+
     def destroy(self):
         """
         Tear down the minion
@@ -4392,6 +4423,20 @@ class Syndic(Minion):
             log.info("Minion is ready to receive requests!")
 
         raise salt.ext.tornado.gen.Return(self)
+
+    @salt.ext.tornado.gen.coroutine
+    def destroy_async(self):
+        """
+        Async teardown on the I/O loop (see :meth:`Minion.destroy_async`).
+        """
+        yield Minion.destroy_async(self)
+        if self.local is not None:
+            self.local.destroy()
+            self.local = None
+
+        if self.forward_events is not None:
+            self.forward_events.stop()
+            self.forward_events = None
 
     def destroy(self):
         """
