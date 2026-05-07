@@ -675,17 +675,37 @@ def test_certificate_managed_remote_renew(x509_salt_call_cli, cert_args):
 
 
 def test_certificate_managed_works_with_queued_state_application(
-    x509_salt_master, x509_salt_call_cli, x509_salt_minion, cert_args
+    x509_salt_master, x509_salt_minion, cert_args, tmp_path
 ):
-    sleep_tpl = """
+    """
+    The first state run touches ``start_marker``, then blocks in a shell loop
+    until the test creates ``go_marker``, and only then issues
+    ``x509.certificate_managed``. The test queues a second state run while
+    the first is parked at the wait, asserts that the cert hasn't been
+    written yet (proves the queued run isn't racing the cert state), then
+    releases the wait via ``go_marker``. All synchronization is via file
+    presence -- no sleeps in the assertion path -- so the test no longer
+    depends on jobwait/find_job latency being shorter than a fixed sleep.
+    """
+    start_marker = tmp_path / "queue_test.started"
+    go_marker = tmp_path / "queue_test.go"
+    sleep_sls = """
     Sleep to allow queueing state run:
       module.run:
         - test.sleep:
-          - length: {}
+          - length: 0.1
     """
-    cert_state = (
-        sleep_tpl.format("3")
-        + f"""
+    wait_cmd = f"while [ ! -f {go_marker} ]; do sleep 0.1; done"
+    cert_state = f"""
+    Mark first state started:
+      file.managed:
+        - name: {json.dumps(str(start_marker))}
+        - contents: started
+
+    Wait for go signal from test:
+      cmd.run:
+        - name: {json.dumps(wait_cmd)}
+
     Some private key is present:
       x509.certificate_managed:
         - name: {json.dumps(cert_args['name'])}
@@ -693,38 +713,29 @@ def test_certificate_managed_works_with_queued_state_application(
         - signing_policy: {cert_args['signing_policy']}
         - private_key: {json.dumps(cert_args['private_key'])}
     """
-    )
     tgt = Path(cert_args["name"])
     salt_cli = x509_salt_master.salt_cli()
 
-    def jobwait(jid, exp):
-        cnt = 0
-        while (
-            bool(
-                x509_salt_call_cli.run(
-                    "saltutil.find_job", jid, minion_tgt=x509_salt_minion.id
-                ).data
-            )
-            is not exp
-        ):
-            cnt += 1
-            if cnt > 100:
-                raise AssertionError(
-                    f"Timeout waiting for jid {jid} to {exp and 'start' or 'finish'}"
-                )
-            time.sleep(0.1)
-
     with x509_salt_master.state_tree.base.temp_file(
         "queued_staterun_test.sls", cert_state
-    ), x509_salt_master.state_tree.base.temp_file("sleep.sls", sleep_tpl.format("0.1")):
-        res = salt_cli.run(
+    ), x509_salt_master.state_tree.base.temp_file("sleep.sls", sleep_sls):
+        salt_cli.run(
             "state.apply",
             "queued_staterun_test",
             "--async",
             minion_tgt=x509_salt_minion.id,
         )
-        job_id = res.stdout.rsplit("ID: ", maxsplit=1)[-1].strip()
-        jobwait(job_id, True)  # ensure scheduling order
+
+        # Deterministic synchronization: wait for the first state run to
+        # report it has started by writing the start marker. No timing
+        # assumption -- the file either exists (state running) or it does
+        # not (state has not yet started).
+        deadline = time.monotonic() + 60
+        while time.monotonic() < deadline and not start_marker.exists():
+            time.sleep(0.1)
+        assert start_marker.exists(), "first state run never started"
+
+        # Queue a second state run while the first is parked at the wait.
         salt_cli.run(
             "state.apply",
             "sleep",
@@ -732,8 +743,19 @@ def test_certificate_managed_works_with_queued_state_application(
             "--async",
             minion_tgt=x509_salt_minion.id,
         )
+
+        # First state is still parked at the cmd.run wait, so the
+        # x509.certificate_managed step has not yet run.
         assert not tgt.exists()
-        jobwait(job_id, False)
+
+        # Release the wait so the first state can finish and create the cert.
+        go_marker.touch()
+
+        # Wait for the cert file to appear -- still deterministic, no
+        # reliance on jobwait/find_job latency.
+        deadline = time.monotonic() + 60
+        while time.monotonic() < deadline and not tgt.exists():
+            time.sleep(0.1)
 
     assert tgt.exists()
     assert _get_cert(tgt)
