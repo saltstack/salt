@@ -1483,6 +1483,7 @@ class Minion(MinionBase):
                 self.pub_channel.close()
         if hasattr(self, "req_channel") and self.req_channel:
             yield self.req_channel.close_async()
+            yield salt.ext.tornado.gen.sleep(0)
             self.req_channel = None
 
         # Consider refactoring so that eval_master does not have a subtle side-effect on the contents of the opts array
@@ -3591,6 +3592,7 @@ class Minion(MinionBase):
                         self.pub_channel.close()
                 if hasattr(self, "req_channel") and self.req_channel:
                     yield self.req_channel.close_async()
+                    yield salt.ext.tornado.gen.sleep(0)
                     self.req_channel = None
 
                 # if eval_master finds a new master for us, self.connected
