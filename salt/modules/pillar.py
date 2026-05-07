@@ -300,7 +300,9 @@ def items(
 
 
 # Allow pillar.data to also be used to return pillar data
-def data(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
+def data(
+    *args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None, unmask=False
+):
     """
     Calls the master for a fresh pillar, generates the pillar data on the
     fly (same as :py:func:`items`)
@@ -349,6 +351,7 @@ def data(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
         pillar_enc=pillar_enc,
         pillarenv=pillarenv,
         saltenv=saltenv,
+        unmask=unmask,
     )
 
 
