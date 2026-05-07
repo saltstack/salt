@@ -8,7 +8,6 @@ modules.
 import random
 
 import salt.loader
-import salt.utils.secret
 from salt.exceptions import SaltInvocationError
 
 
@@ -40,9 +39,7 @@ def sdb_get(uri, opts, utils=None, strict=False):
 
     profile = opts.get(uri[sdlen:indx], {})
     if not profile:
-        profile = salt.utils.secret.expose(
-            opts.get("pillar", {}).get(uri[sdlen:indx], {})
-        )
+        profile = opts.get("pillar", {}).get(uri[sdlen:indx], {})
     if "driver" not in profile:
         if strict:
             raise SaltInvocationError(
@@ -80,9 +77,7 @@ def sdb_set(uri, value, opts, utils=None):
 
     profile = opts.get(uri[sdlen:indx], {})
     if not profile:
-        profile = salt.utils.secret.expose(
-            opts.get("pillar", {}).get(uri[sdlen:indx], {})
-        )
+        profile = opts.get("pillar", {}).get(uri[sdlen:indx], {})
     if "driver" not in profile:
         return False
 
@@ -113,9 +108,7 @@ def sdb_delete(uri, opts, utils=None):
 
     profile = opts.get(uri[sdlen:indx], {})
     if not profile:
-        profile = salt.utils.secret.expose(
-            opts.get("pillar", {}).get(uri[sdlen:indx], {})
-        )
+        profile = opts.get("pillar", {}).get(uri[sdlen:indx], {})
     if "driver" not in profile:
         return False
 

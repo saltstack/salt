@@ -377,7 +377,7 @@ def test_issue_50221(
         ext_pillar_file_tree_root_dir / "hosts" / salt_minion.id,
     )
     with sls_tempfile, issue_50221_ext_pillar_tempfile:
-        ret = salt_call_cli.run("pillar.get", "issue-50221", unmask=True)
+        ret = salt_call_cli.run("pillar.get", "issue-50221")
         assert ret.returncode == 0
         assert ret.data
         # The type of new line, ie, `\n` vs `\r\n` is not important

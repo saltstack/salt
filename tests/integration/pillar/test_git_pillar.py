@@ -69,7 +69,6 @@ import sys
 
 import pytest
 
-import salt.utils.secret
 from salt.utils.gitfs import (
     GITPYTHON_MINVER,
     GITPYTHON_VERSION,
@@ -152,7 +151,7 @@ class GitPythonMixin:
             """
         )
         self.assertEqual(
-            salt.utils.secret.expose(ret),
+            ret,
             {
                 "branch": "master",
                 "mylist": ["master"],
@@ -188,7 +187,7 @@ class GitPythonMixin:
             """
         )
         self.assertEqual(
-            salt.utils.secret.expose(ret),
+            ret,
             {
                 "branch": "dev",
                 "mylist": ["dev"],
@@ -225,7 +224,7 @@ class GitPythonMixin:
             """
         )
         self.assertEqual(
-            salt.utils.secret.expose(ret),
+            ret,
             {
                 "branch": "master",
                 "mylist": ["master"],
@@ -262,7 +261,7 @@ class GitPythonMixin:
             """
         )
         self.assertEqual(
-            salt.utils.secret.expose(ret),
+            ret,
             {
                 "branch": "dev",
                 "mylist": ["master", "dev"],
@@ -299,7 +298,7 @@ class GitPythonMixin:
             """
         )
         self.assertEqual(
-            salt.utils.secret.expose(ret),
+            ret,
             {
                 "branch": "master",
                 "mylist": ["dev", "master"],
@@ -332,7 +331,7 @@ class GitPythonMixin:
             """
         )
         self.assertEqual(
-            salt.utils.secret.expose(ret),
+            ret,
             {
                 "branch": "master",
                 "mylist": ["master"],
@@ -366,7 +365,7 @@ class GitPythonMixin:
             """
         )
         self.assertEqual(
-            salt.utils.secret.expose(ret),
+            ret,
             {
                 "branch": "master",
                 "mylist": ["master"],
@@ -404,7 +403,7 @@ class GitPythonMixin:
             """
         )
         self.assertEqual(
-            salt.utils.secret.expose(ret),
+            ret,
             {
                 "branch": "master",
                 "mylist": ["master"],
@@ -446,7 +445,7 @@ class GitPythonMixin:
             """
         )
         self.assertEqual(
-            salt.utils.secret.expose(ret),
+            ret,
             {
                 "branch": "master",
                 "motd": "The force will be with you. Always.",
@@ -481,7 +480,7 @@ class GitPythonMixin:
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_mountpoint_parameter(self):
@@ -505,7 +504,7 @@ class GitPythonMixin:
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_root_and_mountpoint_parameters(self):
@@ -530,7 +529,7 @@ class GitPythonMixin:
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_all_saltenvs(self):
@@ -554,7 +553,7 @@ class GitPythonMixin:
             """
         )
         self.assertEqual(
-            salt.utils.secret.expose(ret),
+            ret,
             {
                 "branch": "dev",
                 "motd": "The force will be with you. Always.",
@@ -588,7 +587,7 @@ class GitPythonMixin:
             """
         )
         self.assertEqual(
-            salt.utils.secret.expose(ret),
+            ret,
             {
                 "branch": "master",
                 "motd": "The force will be with you. Always.",
@@ -624,7 +623,7 @@ class GitPythonMixin:
             """
         )
         self.assertEqual(
-            salt.utils.secret.expose(ret),
+            ret,
             {
                 "branch": "dev",
                 "motd": "The force will be with you. Always.",
@@ -659,7 +658,7 @@ class GitPythonMixin:
             """
         )
         self.assertEqual(
-            salt.utils.secret.expose(ret),
+            ret,
             {
                 "branch": "dev",
                 "motd": "The force will be with you. Always.",
@@ -809,7 +808,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - master {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar(
@@ -826,7 +825,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_nopass}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
@@ -844,7 +843,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - master {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar(
@@ -862,7 +861,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - passphrase: {passphrase}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_multiple_sources_master_dev_no_merge_lists(self):
@@ -901,7 +900,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - dev {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar(
@@ -922,7 +921,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_nopass}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
@@ -942,7 +941,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - dev {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar(
@@ -965,7 +964,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - passphrase: {passphrase}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_multiple_sources_dev_master_no_merge_lists(self):
@@ -1004,7 +1003,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - master {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar(
@@ -1025,7 +1024,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_nopass}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
@@ -1045,7 +1044,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - master {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar(
@@ -1068,7 +1067,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - passphrase: {passphrase}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_multiple_sources_master_dev_merge_lists(self):
@@ -1107,7 +1106,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - dev {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar(
@@ -1128,7 +1127,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_nopass}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
@@ -1148,7 +1147,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - dev {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar(
@@ -1171,7 +1170,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - passphrase: {passphrase}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_multiple_sources_dev_master_merge_lists(self):
@@ -1210,7 +1209,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - master {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar(
@@ -1231,7 +1230,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_nopass}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
@@ -1251,7 +1250,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - master {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar(
@@ -1274,7 +1273,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - passphrase: {passphrase}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_multiple_sources_with_pillarenv(self):
@@ -1308,7 +1307,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - dev {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar(
@@ -1329,7 +1328,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_nopass}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
@@ -1349,7 +1348,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - dev {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar(
@@ -1372,7 +1371,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - passphrase: {passphrase}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_includes_enabled(self):
@@ -1409,7 +1408,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar(
@@ -1430,7 +1429,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
@@ -1450,7 +1449,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar(
@@ -1473,7 +1472,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_includes_disabled(self):
@@ -1516,7 +1515,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar(
@@ -1538,7 +1537,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
@@ -1559,7 +1558,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar(
@@ -1583,7 +1582,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_includes_enabled_solves___env___with_mountpoint(self):
@@ -1651,7 +1650,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar(
@@ -1673,7 +1672,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
@@ -1694,7 +1693,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar(
@@ -1718,7 +1717,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_mountpoint_parameter(self):
@@ -1745,7 +1744,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar(
@@ -1767,7 +1766,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
@@ -1788,7 +1787,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar(
@@ -1812,7 +1811,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_root_and_mountpoint_parameters(self):
@@ -1840,7 +1839,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar(
@@ -1863,7 +1862,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
@@ -1885,7 +1884,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar(
@@ -1910,7 +1909,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_all_saltenvs(self):
@@ -1947,7 +1946,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - mountpoint: nowhere
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar(
@@ -1970,7 +1969,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_nopass}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
@@ -1992,7 +1991,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - mountpoint: nowhere
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar(
@@ -2017,7 +2016,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - passphrase: {passphrase}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_all_saltenvs_base(self):
@@ -2053,7 +2052,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - mountpoint: nowhere
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar(
@@ -2075,7 +2074,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_nopass}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
@@ -2096,7 +2095,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - mountpoint: nowhere
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar(
@@ -2120,7 +2119,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - passphrase: {passphrase}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_fallback(self):
@@ -2158,7 +2157,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - fallback: dev
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar(
@@ -2182,7 +2181,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_nopass}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
@@ -2205,7 +2204,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - fallback: dev
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar(
@@ -2231,7 +2230,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - passphrase: {passphrase}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     @requires_system_grains
@@ -2268,7 +2267,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - base: dev
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar(
@@ -2291,7 +2290,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_nopass}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         if grains["os_family"] == "Debian":
             # passphrase-protected currently does not work here
@@ -2317,7 +2316,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - base: dev
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar(
@@ -2342,7 +2341,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - passphrase: {passphrase}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     def test_base_failhard(self):
         """
@@ -2404,7 +2403,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                 - master {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_multiple_sources_master_dev_no_merge_lists(self):
@@ -2440,7 +2439,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                 - dev {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_multiple_sources_dev_master_no_merge_lists(self):
@@ -2476,7 +2475,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                 - master {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_multiple_sources_master_dev_merge_lists(self):
@@ -2512,7 +2511,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                 - dev {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_multiple_sources_dev_master_merge_lists(self):
@@ -2548,7 +2547,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                 - master {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_multiple_sources_with_pillarenv(self):
@@ -2579,7 +2578,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                 - dev {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_includes_enabled(self):
@@ -2613,7 +2612,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_includes_disabled(self):
@@ -2653,7 +2652,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_includes_enabled_solves___env___with_mountpoint(self):
@@ -2716,7 +2715,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_mountpoint_parameter(self):
@@ -2740,7 +2739,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_root_and_mountpoint_parameters(self):
@@ -2765,7 +2764,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_all_saltenvs(self):
@@ -2977,7 +2976,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                 - master {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with per-repo credential options
         ret = self.get_pillar(
@@ -2995,7 +2994,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - insecure_auth: True
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_multiple_sources_master_dev_no_merge_lists(self):
@@ -3035,7 +3034,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                 - dev {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with per-repo credential options
         ret = self.get_pillar(
@@ -3058,7 +3057,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - insecure_auth: True
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_multiple_sources_dev_master_no_merge_lists(self):
@@ -3098,7 +3097,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                 - master {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with per-repo credential options
         ret = self.get_pillar(
@@ -3121,7 +3120,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - insecure_auth: True
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_multiple_sources_master_dev_merge_lists(self):
@@ -3161,7 +3160,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                 - dev {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with per-repo credential options
         ret = self.get_pillar(
@@ -3184,7 +3183,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - insecure_auth: True
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_multiple_sources_dev_master_merge_lists(self):
@@ -3224,7 +3223,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                 - master {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with per-repo credential options
         ret = self.get_pillar(
@@ -3247,7 +3246,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - insecure_auth: True
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_multiple_sources_with_pillarenv(self):
@@ -3282,7 +3281,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                 - dev {url}
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with per-repo credential options
         ret = self.get_pillar(
@@ -3305,7 +3304,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - insecure_auth: True
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_includes_enabled(self):
@@ -3343,7 +3342,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_mountpoint_parameter(self):
@@ -3370,7 +3369,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_root_parameter(self):
@@ -3397,7 +3396,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with per-repo credential options
         ret = self.get_pillar(
@@ -3421,7 +3420,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_includes_disabled(self):
@@ -3465,7 +3464,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
         # Test with per-repo credential options
         ret = self.get_pillar(
@@ -3489,7 +3488,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_includes_enabled_solves___env___with_mountpoint(self):
@@ -3565,7 +3564,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - env: base
             """
         )
-        self.assertEqual(salt.utils.secret.expose(ret), expected)
+        self.assertEqual(ret, expected)
 
     @pytest.mark.slow_test
     def test_all_saltenvs(self):

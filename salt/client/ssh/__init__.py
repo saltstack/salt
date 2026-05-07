@@ -44,7 +44,6 @@ import salt.utils.network
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.relenv
-import salt.utils.secret
 import salt.utils.stringutils
 import salt.utils.thin
 import salt.utils.timeutil
@@ -1653,7 +1652,7 @@ class Single:
         if grains_updates:
             opts["grains"] = {**opts["grains"], **grains_updates}
 
-        opts["pillar"] = salt.utils.secret.expose(data.get("pillar"))
+        opts["pillar"] = data.get("pillar")
 
         # Restore --wipe. Note: Since it is also a CLI option, it should not
         # be read from cache, hence it is restored here. This is currently only
@@ -1691,9 +1690,7 @@ class Single:
             elif opts["pillar"] and self.fun in opts["pillar"].get(
                 "mine_functions", {}
             ):
-                mine_fun_data = salt.utils.secret.expose(
-                    opts["pillar"]["mine_functions"][self.fun]
-                )
+                mine_fun_data = opts["pillar"]["mine_functions"][self.fun]
             elif self.fun in self.context["master_opts"].get("mine_functions", {}):
                 mine_fun_data = self.context["master_opts"]["mine_functions"][self.fun]
 

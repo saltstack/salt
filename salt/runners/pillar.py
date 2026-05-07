@@ -6,7 +6,6 @@ import logging
 
 import salt.pillar
 import salt.utils.minions
-import salt.utils.secret
 
 log = logging.getLogger(__name__)
 
@@ -97,7 +96,7 @@ def show_pillar(minion="*", **kwargs):
 
     pillar = salt.pillar.Pillar(__opts__, grains, id_, saltenv, pillarenv=pillarenv)
 
-    return salt.utils.secret.expose(pillar.compile_pillar())
+    return pillar.compile_pillar()
 
 
 def clear_pillar_cache(minion="*", **kwargs):
@@ -182,4 +181,4 @@ def show_pillar_cache(minion="*", **kwargs):
         if pillar:
             pillar_cache[tgt] = pillar
 
-    return salt.utils.secret.expose(pillar_cache)
+    return pillar_cache

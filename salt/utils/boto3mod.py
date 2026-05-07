@@ -30,7 +30,6 @@ import sys
 from functools import partial
 
 import salt.loader.context
-import salt.utils.secret
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
@@ -79,7 +78,7 @@ def _option(value):
     if value in master_opts:
         return master_opts[value]
     if value in __pillar__:
-        return salt.utils.secret.expose(__pillar__[value])
+        return __pillar__[value]
 
 
 def _get_profile(service, region, key, keyid, profile):

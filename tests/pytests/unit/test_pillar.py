@@ -17,8 +17,6 @@ import pytest
 import salt.config
 import salt.exceptions
 import salt.fileclient
-import salt.utils.json
-import salt.utils.secret
 import salt.utils.stringutils
 from salt.utils.files import fopen
 from tests.support.mock import ANY, MagicMock, call, patch
@@ -552,10 +550,7 @@ def test_ext_pillar_first(tmp_path):
         ),
     ):
         pillar = salt.pillar.Pillar(opts, grains, "mocked-minion", "base")
-        assert (
-            salt.utils.secret.expose(pillar.compile_pillar())["generic"]["key1"]
-            == "value1"
-        )
+        assert pillar.compile_pillar()["generic"]["key1"] == "value1"
 
 
 @patch("salt.fileclient.Client.list_states")
@@ -771,9 +766,7 @@ def test_topfile_order():
                 pillar = salt.pillar.Pillar(opts, grains, "mocked-minion", "base")
                 # Make sure that confirm_top.confirm_top returns True
                 pillar.matchers["confirm_top.confirm_top"] = lambda *x, **y: True
-                assert (
-                    salt.utils.secret.expose(pillar.compile_pillar())["ssh"] == expected
-                )
+                assert pillar.compile_pillar()["ssh"] == expected
         finally:
             shutil.rmtree(tempdir, ignore_errors=True)
 
@@ -934,15 +927,14 @@ def test_relative_include(tmp_path):
     # Act
     compiled_pillar = pillar.compile_pillar()
 
-    # Assert (semantic equality on exposed tree)
-    exp = salt.utils.secret.expose(compiled_pillar)
-    assert exp["this"] == "is all good"
-    assert exp["that"] == "is also all good"
-    assert exp["simple"] == "simon"
-    assert exp["super simple"] == "a caveman"
-    assert exp["mordor"] == "has dark depths"
-    assert exp["found"] == "my precious"
-    assert exp["mojo"] == "bad risin'"
+    # Assert
+    assert compiled_pillar["this"] == "is all good"
+    assert compiled_pillar["that"] == "is also all good"
+    assert compiled_pillar["simple"] == "simon"
+    assert compiled_pillar["super simple"] == "a caveman"
+    assert compiled_pillar["mordor"] == "has dark depths"
+    assert compiled_pillar["found"] == "my precious"
+    assert compiled_pillar["mojo"] == "bad risin'"
 
 
 def test_missing_include(tmp_path):
@@ -1003,11 +995,9 @@ def test_missing_include(tmp_path):
     compiled_pillar = pillar.compile_pillar()
 
     # Assert
-    exp = salt.utils.secret.expose(compiled_pillar)
-    assert exp["simple_include"] == "is ok"
+    assert compiled_pillar["simple_include"] == "is ok"
     assert "_errors" in compiled_pillar
-    err0 = salt.utils.secret.expose(compiled_pillar["_errors"][0])
-    assert "simple_include.missing_include" in err0
+    assert "simple_include.missing_include" in compiled_pillar["_errors"][0]
 
 
 def test_get_opts_in_pillar_override_call(minion_opts, grains):
@@ -1184,12 +1174,11 @@ def test_include(tmp_path):
         # Make sure that confirm_top.confirm_top returns True
         pillar.matchers["confirm_top.confirm_top"] = lambda *x, **y: True
         compiled_pillar = pillar.compile_pillar()
-        exp = salt.utils.secret.expose(compiled_pillar)
-        assert exp["foo_wildcard"] == "bar_wildcard"
-        assert exp["foo1"] == "bar1"
-        assert exp["foo2"] == "bar2"
-        assert exp["sub_with_slashes"] == "sub_slashes_worked"
-        assert exp["sub_init_dot"] == "sub_with_init_dot_worked"
+        assert compiled_pillar["foo_wildcard"] == "bar_wildcard"
+        assert compiled_pillar["foo1"] == "bar1"
+        assert compiled_pillar["foo2"] == "bar2"
+        assert compiled_pillar["sub_with_slashes"] == "sub_slashes_worked"
+        assert compiled_pillar["sub_init_dot"] == "sub_with_init_dot_worked"
 
 
 def test_compile_pillar_cache(master_opts):

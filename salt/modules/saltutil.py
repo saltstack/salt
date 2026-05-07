@@ -33,7 +33,6 @@ import salt.utils.functools
 import salt.utils.minion
 import salt.utils.path
 import salt.utils.process
-import salt.utils.secret
 import salt.utils.url
 import salt.wheel
 from salt.exceptions import (
@@ -79,9 +78,7 @@ def _get_top_file_envs():
     try:
         return __context__[TOP_ENVS_CKEY]
     except KeyError:
-        with salt.state.HighState(
-            __opts__, initial_pillar=salt.utils.secret.expose(__pillar__.value())
-        ) as st_:
+        with salt.state.HighState(__opts__, initial_pillar=__pillar__.value()) as st_:
             try:
                 top = st_.get_top()
                 if top:

@@ -45,10 +45,7 @@ def get_module_environment(env=None, function=None):
     result = {}
     if not env:
         env = {}
-    for env_src in [
-        env.get("__opts__", {}),
-        env.get("__pillar__", {}),
-    ]:
+    for env_src in [env.get("__opts__", {}), env.get("__pillar__", {})]:
         fname = env.get("__file__", "")
         physical_name = os.path.basename(fname).split(".")[0]
         section = os.path.basename(os.path.dirname(fname))

@@ -1,129 +1,342 @@
 """
-Tests for salt.utils.secret (SecretDict, SecretList, SecretStr wrapping, redaction).
+Tests for salt.utils.secret (MaskedDict, MaskedList, hide/expose/serial/mask_output).
 """
 
 import copy
 
-import pytest
-
 import salt.utils.secret as secret
-import salt.utils.versions
+
+# ---------------------------------------------------------------------------
+# MaskedDict behaviour
+# ---------------------------------------------------------------------------
 
 
-def test_secret_dict_wraps_string_and_nested_dict():
-    d = secret.hide({})
-    d["k"] = "secret"
-    assert isinstance(d["k"], secret.SecretStr)
-    assert d["k"].get_secret_value() == "secret"
-    d["n"] = {"a": "x"}
-    assert isinstance(d["n"], secret.SecretDict)
-    assert isinstance(d["n"]["a"], secret.SecretStr)
+def test_masked_dict_stores_plain_scalars():
+    d = secret.MaskedDict({"k": "value", "n": 42})
+    # __getitem__ returns the plain stored value
+    assert d["k"] == "value"
+    assert d["n"] == 42
 
 
-def test_secret_dict_errors_key_values_still_wrapped():
-    """_errors entries are wrapped like other string leaves (no SafeDict skip)."""
-    d = secret.hide({})
-    d["_errors"] = ["plain error"]
-    assert isinstance(d["_errors"][0], secret.SecretStr)
-    assert d["_errors"][0].get_secret_value() == "plain error"
+def test_masked_dict_repr_redacts_strings():
+    d = secret.MaskedDict({"password": "hunter2", "count": 3})
+    r = repr(d)
+    assert secret.REDACT_PLACEHOLDER in r
+    assert "hunter2" not in r
+    assert "3" in r  # integers are not redacted
 
 
-def test_secret_list_append_and_extend():
-    lst = secret.SecretList([])
-    lst.append("a")
-    assert isinstance(lst[0], secret.SecretStr)
-    lst.extend(["b", "c"])
-    assert lst[1].get_secret_value() == "b"
-    lst += ["d"]
-    assert lst[-1].get_secret_value() == "d"
+def test_masked_dict_str_redacts_strings():
+    d = secret.MaskedDict({"k": "secret"})
+    assert secret.REDACT_PLACEHOLDER in str(d)
+    assert "secret" not in str(d)
 
 
-def test_secret_list_setitem_and_insert():
-    lst = secret.SecretList(["a", "b"])
-    lst[0] = "z"
-    assert lst[0].get_secret_value() == "z"
-    lst.insert(1, "mid")
-    assert lst[1].get_secret_value() == "mid"
+def test_masked_dict_wraps_nested_dict():
+    d = secret.MaskedDict({"outer": {"inner": "val"}})
+    assert isinstance(d["outer"], secret.MaskedDict)
+    assert d["outer"]["inner"] == "val"
 
 
-def test_wrap_pillar_tree_idempotent():
-    inner = {"x": "y"}
-    w1 = secret.hide(inner)
-    w2 = secret.hide(w1)
-    assert w1 is w2
+def test_masked_dict_wraps_nested_list():
+    d = secret.MaskedDict({"items": [1, "x"]})
+    assert isinstance(d["items"], secret.MaskedList)
+    assert d["items"][0] == 1
+    assert d["items"][1] == "x"
 
 
-def test_unwrap_roundtrip():
-    raw = {"a": "v", "b": [1, "s", {"c": "d"}]}
-    wrapped = secret.hide(copy.deepcopy(raw))
-    back = secret.expose(copy.deepcopy(wrapped))
+def test_masked_dict_is_a_dict():
+    d = secret.MaskedDict({"k": "v"})
+    assert isinstance(d, dict)
+
+
+def test_masked_dict_setitem_wraps():
+    d = secret.MaskedDict()
+    d["sub"] = {"a": "b"}
+    assert isinstance(d["sub"], secret.MaskedDict)
+    d["lst"] = ["x"]
+    assert isinstance(d["lst"], secret.MaskedList)
+    d["s"] = "plain"
+    assert d["s"] == "plain"  # scalars stored as-is
+
+
+def test_masked_dict_update_wraps():
+    d = secret.MaskedDict()
+    d.update({"x": {"y": 1}})
+    assert isinstance(d["x"], secret.MaskedDict)
+
+
+def test_masked_dict_copy_is_masked():
+    d = secret.MaskedDict({"k": "v"})
+    d2 = d.copy()
+    assert isinstance(d2, secret.MaskedDict)
+    assert d2["k"] == "v"
+
+
+def test_masked_dict_deepcopy_is_masked():
+    d = secret.MaskedDict({"k": "v", "sub": {"a": 1}})
+    d2 = copy.deepcopy(d)
+    assert isinstance(d2, secret.MaskedDict)
+    assert isinstance(d2["sub"], secret.MaskedDict)
+    assert d2["k"] == "v"
+
+
+def test_masked_dict_isinstance_dict_subclass():
+    d = secret.MaskedDict({"k": "v"})
+    assert isinstance(d, dict)
+    assert issubclass(secret.MaskedDict, dict)
+
+
+# ---------------------------------------------------------------------------
+# MaskedList behaviour
+# ---------------------------------------------------------------------------
+
+
+def test_masked_list_stores_plain_scalars():
+    lst = secret.MaskedList([1, "hello", True])
+    assert lst[0] == 1
+    assert lst[1] == "hello"
+    assert lst[2] is True
+
+
+def test_masked_list_repr_redacts_strings():
+    lst = secret.MaskedList(["secret", 42])
+    r = repr(lst)
+    assert secret.REDACT_PLACEHOLDER in r
+    assert "secret" not in r
+    assert "42" in r
+
+
+def test_masked_list_wraps_nested_dict():
+    lst = secret.MaskedList([{"k": "v"}])
+    assert isinstance(lst[0], secret.MaskedDict)
+    assert lst[0]["k"] == "v"
+
+
+def test_masked_list_is_a_list():
+    lst = secret.MaskedList([1, 2])
+    assert isinstance(lst, list)
+
+
+def test_masked_list_append_wraps():
+    lst = secret.MaskedList([])
+    lst.append({"a": "b"})
+    assert isinstance(lst[0], secret.MaskedDict)
+    lst.append("plain")
+    assert lst[1] == "plain"
+
+
+def test_masked_list_extend_wraps():
+    lst = secret.MaskedList([])
+    lst.extend([{"x": 1}, "y"])
+    assert isinstance(lst[0], secret.MaskedDict)
+    assert lst[1] == "y"
+
+
+def test_masked_list_insert_wraps():
+    lst = secret.MaskedList(["a"])
+    lst.insert(0, {"k": "v"})
+    assert isinstance(lst[0], secret.MaskedDict)
+
+
+def test_masked_list_setitem_wraps():
+    lst = secret.MaskedList(["a", "b"])
+    lst[0] = {"k": "v"}
+    assert isinstance(lst[0], secret.MaskedDict)
+
+
+def test_masked_list_iadd_wraps():
+    lst = secret.MaskedList(["a"])
+    lst += [{"k": "v"}, "b"]
+    assert isinstance(lst[1], secret.MaskedDict)
+    assert lst[2] == "b"
+
+
+def test_masked_list_in_operator():
+    lst = secret.MaskedList(["test.ping", "test.fib"])
+    assert "test.ping" in lst
+    assert "missing" not in lst
+
+
+def test_masked_list_isinstance_list_subclass():
+    lst = secret.MaskedList([])
+    assert isinstance(lst, list)
+    assert issubclass(secret.MaskedList, list)
+
+
+# ---------------------------------------------------------------------------
+# hide()
+# ---------------------------------------------------------------------------
+
+
+def test_hide_dict_returns_masked_dict():
+    d = secret.hide({"k": "v"})
+    assert isinstance(d, secret.MaskedDict)
+
+
+def test_hide_list_returns_masked_list():
+    lst = secret.hide(["a", "b"])
+    assert isinstance(lst, secret.MaskedList)
+
+
+def test_hide_scalar_is_noop():
+    assert secret.hide("string") == "string"
+    assert secret.hide(42) == 42
+    assert secret.hide(None) is None
+
+
+def test_hide_already_masked_dict_is_idempotent():
+    d = secret.MaskedDict({"k": "v"})
+    d2 = secret.hide(d)
+    assert d2 is d
+
+
+def test_hide_already_masked_list_is_idempotent():
+    lst = secret.MaskedList(["a"])
+    lst2 = secret.hide(lst)
+    assert lst2 is lst
+
+
+# ---------------------------------------------------------------------------
+# expose()
+# ---------------------------------------------------------------------------
+
+
+def test_expose_masked_dict_returns_plain_dict():
+    d = secret.MaskedDict({"k": "v", "n": 1})
+    result = secret.expose(d)
+    assert type(result) is dict
+    assert result == {"k": "v", "n": 1}
+
+
+def test_expose_masked_list_returns_plain_list():
+    lst = secret.MaskedList(["a", 1])
+    result = secret.expose(lst)
+    assert type(result) is list
+    assert result == ["a", 1]
+
+
+def test_expose_nested():
+    d = secret.MaskedDict({"sub": {"a": "b"}, "lst": ["x"]})
+    result = secret.expose(d)
+    assert type(result) is dict
+    assert type(result["sub"]) is dict
+    assert type(result["lst"]) is list
+    assert result["sub"]["a"] == "b"
+    assert result["lst"][0] == "x"
+
+
+def test_expose_plain_scalar_passthrough():
+    assert secret.expose("abc") == "abc"
+    assert secret.expose(99) == 99
+    assert secret.expose(None) is None
+
+
+def test_expose_roundtrip():
+    raw = {"a": "v", "b": [1, "s", {"c": "d"}], "n": 42}
+    masked = secret.hide(copy.deepcopy(raw))
+    back = secret.expose(masked)
     assert back == raw
 
 
-def test_unwrap_blackout_whitelist_for_str_membership():
-    wrapped = secret.hide({"minion_blackout_whitelist": ["test.ping", "test.fib"]})
-    wl = wrapped["minion_blackout_whitelist"]
-    assert "test.ping" in wl
-    plain = secret.expose(wl)
-    assert plain == ["test.ping", "test.fib"]
-    assert "test.ping" in plain
+# ---------------------------------------------------------------------------
+# serial()  — aggressive redaction
+# ---------------------------------------------------------------------------
 
 
-def test_apply_no_log_mask_changes():
-    ret = {"comment": "x", "changes": {"a": "asdf", "b": 1}, "result": True}
+def test_serial_redacts_plain_string():
+    assert secret.serial("hunter2") == secret.REDACT_PLACEHOLDER
+
+
+def test_serial_leaves_empty_string():
+    assert secret.serial("") == ""
+
+
+def test_serial_leaves_non_string_scalars():
+    assert secret.serial(42) == 42
+    assert secret.serial(True) is True
+    assert secret.serial(None) is None
+
+
+def test_serial_redacts_masked_dict_strings():
+    d = secret.MaskedDict({"password": "hunter2", "count": 3})
+    result = secret.serial(d)
+    assert result == {"password": secret.REDACT_PLACEHOLDER, "count": 3}
+
+
+def test_serial_redacts_plain_dict_strings():
+    # serial is aggressive — also redacts strings in plain dicts
+    d = {"k": "v", "n": 1}
+    result = secret.serial(d)
+    assert result == {"k": secret.REDACT_PLACEHOLDER, "n": 1}
+
+
+def test_serial_redacts_nested():
+    d = secret.MaskedDict({"sub": {"s": "secret"}, "lst": ["a", 1]})
+    result = secret.serial(d)
+    assert result["sub"]["s"] == secret.REDACT_PLACEHOLDER
+    assert result["lst"][0] == secret.REDACT_PLACEHOLDER
+    assert result["lst"][1] == 1
+
+
+# ---------------------------------------------------------------------------
+# mask_output()  — gentle redaction (safety net)
+# ---------------------------------------------------------------------------
+
+
+def test_mask_output_plain_dict_is_noop():
+    d = {"comment": "State worked fine", "result": True}
+    assert secret.mask_output(d) == d
+
+
+def test_mask_output_plain_string_is_noop():
+    assert secret.mask_output("normal output") == "normal output"
+
+
+def test_mask_output_redacts_masked_dict():
+    d = {"pillar_data": secret.MaskedDict({"password": "secret"})}
+    result = secret.mask_output(d)
+    assert result["pillar_data"]["password"] == secret.REDACT_PLACEHOLDER
+
+
+def test_mask_output_redacts_masked_list():
+    d = {"items": secret.MaskedList(["sensitive", 1])}
+    result = secret.mask_output(d)
+    assert result["items"][0] == secret.REDACT_PLACEHOLDER
+    assert result["items"][1] == 1
+
+
+def test_mask_output_nested_plain_dicts_not_redacted():
+    d = {"result": {"changes": {"before": "old", "after": "new"}}}
+    result = secret.mask_output(d)
+    # plain nested dicts should not be redacted
+    assert result["result"]["changes"]["before"] == "old"
+
+
+# ---------------------------------------------------------------------------
+# no_log_mask()
+# ---------------------------------------------------------------------------
+
+
+def test_no_log_mask_redacts_comment():
+    ret = {"comment": "Executed command", "changes": {}, "result": True}
     secret.no_log_mask(ret)
-    assert str(ret["comment"]) == secret.REDACT_PLACEHOLDER
-    assert str(ret["changes"]) == str({"a": secret.REDACT_PLACEHOLDER, "b": 1})
+    assert ret["comment"] == secret.REDACT_PLACEHOLDER
+    assert ret["result"] is True  # result is not touched
 
 
-def test_apply_no_log_mask_no_changes():
-    ret = {"comment": "x", "changes": None, "result": True}
+def test_no_log_mask_redacts_changes():
+    ret = {
+        "comment": "ok",
+        "changes": {"before": "plaintext_password", "after": "new_pass"},
+        "result": True,
+    }
     secret.no_log_mask(ret)
-    assert str(ret["comment"]) == secret.REDACT_PLACEHOLDER
-    assert ret["changes"] is None
+    assert ret["changes"]["before"] == secret.REDACT_PLACEHOLDER
+    assert ret["changes"]["after"] == secret.REDACT_PLACEHOLDER
 
 
-def test_secret_str_redacted_str_and_equal_to_plain_str():
-    s = secret.SecretStr("xyzzy")
-    assert str(s) == secret.REDACT_PLACEHOLDER
-    assert secret.REDACT_PLACEHOLDER in repr(s)
-    assert s.get_secret_value() == "xyzzy"
-    assert s == "xyzzy"
-    assert "xyzzy" in s
-    assert "xyzzy" not in str(s)
-
-
-def test_secret_str_equality_and_deepcopy():
-    a = secret.SecretStr("same")
-    b = secret.SecretStr("same")
-    c = secret.SecretStr("other")
-    assert a == b
-    assert a != c
-    d = copy.deepcopy(a)
-    assert d.get_secret_value() == "same"
-    assert d == a
-
-
-def test_secret_bytes_equal_to_plain_bytes():
-    s = secret.SecretBytes(b"secret")
-    assert s == b"secret"
-    assert s.get_secret_value() == b"secret"
-
-
-def test_secret_dict_bytes():
-    d = secret.hide({})
-    d["b"] = b"bin"
-    assert isinstance(d["b"], secret.SecretBytes)
-    assert d["b"].get_secret_value() == b"bin"
-
-
-@pytest.mark.parametrize(
-    "container",
-    [
-        pytest.param({"type": "dict"}, id="dict"),
-        pytest.param({"type": "list", "items": [1, "two"]}, id="nested_list"),
-    ],
-)
-def test_hide_yamlish_structures(container):
-    w = secret.hide(container)
-    assert isinstance(w, secret.SecretDict)
+def test_no_log_mask_empty_comment():
+    ret = {"comment": "", "changes": {}, "result": True}
+    secret.no_log_mask(ret)
+    assert ret["comment"] == ""  # empty string not redacted

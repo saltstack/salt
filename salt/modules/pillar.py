@@ -152,9 +152,12 @@ def get(
             )
             if isinstance(ret, Mapping):
                 default = copy.deepcopy(default)
-                return salt.utils.dictupdate.update(
+                merged = salt.utils.dictupdate.update(
                     default, ret, merge_lists=opt_merge_lists
                 )
+                if unmask:
+                    return salt.utils.secret.expose(merged)
+                return salt.utils.secret.serial(merged)
             else:
                 log.error(
                     "pillar.get: Default (%s) is a dict, but the returned "
@@ -171,7 +174,9 @@ def get(
             if isinstance(ret, list):
                 default = copy.deepcopy(default)
                 default.extend([x for x in ret if x not in default])
-                return default
+                if unmask:
+                    return salt.utils.secret.expose(default)
+                return salt.utils.secret.serial(default)
             else:
                 log.error(
                     "pillar.get: Default (%s) is a list, but the returned "
@@ -195,8 +200,7 @@ def get(
 
     if unmask:
         return salt.utils.secret.expose(ret)
-    else:
-        return salt.utils.secret.serial(ret)
+    return salt.utils.secret.serial(ret)
 
 
 def items(
@@ -356,8 +360,6 @@ def _obfuscate_inner(var):
     Known collection types trigger recursion.
     In the special case of mapping types, keys are not obfuscated
     """
-    if isinstance(var, salt.utils.secret.Secret):
-        return var
     if isinstance(var, (dict, OrderedDict)):
         return var.__class__((key, _obfuscate_inner(val)) for key, val in var.items())
     elif isinstance(var, (list, set, tuple)):

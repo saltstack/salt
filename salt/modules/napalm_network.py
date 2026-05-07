@@ -24,7 +24,6 @@ import time
 
 import salt.utils.files
 import salt.utils.napalm
-import salt.utils.secret
 import salt.utils.templates
 import salt.utils.versions
 
@@ -812,9 +811,7 @@ def cli(*commands, cli_kwargs=None, **kwargs):  # pylint: disable=unused-argumen
                 textfsm_template = textfsm_template_dict[command]
             log.debug("Using %s to process the command: %s", textfsm_template, command)
             processed_cli_output = __salt__["textfsm.extract"](
-                salt.utils.secret.expose(textfsm_template),
-                raw_text=command_output,
-                saltenv=saltenv,
+                textfsm_template, raw_text=command_output, saltenv=saltenv
             )
             log.debug("Processed CLI output:")
             log.debug(processed_cli_output)
