@@ -113,7 +113,9 @@ multidict==6.1.0
     # via
     #   aiohttp
     #   yarl
-packaging==24.0
+packaging==24.0 ; python_full_version >= '3.11' and python_full_version < '3.14'
+    # via -r requirements/base.txt
+packaging==26.2 ; python_full_version < '3.11' or python_full_version >= '3.14'
     # via -r requirements/base.txt
 platformdirs==4.9.4
     # via
@@ -138,9 +140,9 @@ pycryptodomex==3.19.1
     # via
     #   -r requirements/base.txt
     #   -r requirements/crypto.txt
-pymssql==2.3.11 ; python_full_version >= '3.11' and sys_platform == 'win32'
+pymssql==2.3.11 ; python_full_version >= '3.11' and python_full_version < '3.14' and sys_platform == 'win32'
     # via -r requirements/base.txt
-pymssql==2.3.13 ; python_full_version < '3.11' and sys_platform == 'win32'
+pymssql==2.3.13 ; (python_full_version < '3.11' and sys_platform == 'win32') or (python_full_version >= '3.14' and sys_platform == 'win32')
     # via -r requirements/base.txt
 pyopenssl==26.1.0
     # via
