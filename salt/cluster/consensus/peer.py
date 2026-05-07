@@ -30,29 +30,73 @@ from salt.cluster.consensus.raft.node import Peer
 log = logging.getLogger(__name__)
 
 
-def _is_blocking_publisher(pusher):
+async def _publish(pusher, raw):
     """
-    Return True when *pusher* is a real ``salt.transport`` ``PublishServer``
-    whose ``publish`` is async-declared but synchronous under the hood
-    (``SyncWrapper.send``).  Test fakes / mocks live in other modules and
-    provide a truly async ``publish``, which can be awaited directly.
-    """
-    module = getattr(pusher.__class__, "__module__", "") or ""
-    return module.startswith("salt.transport")
+    Send *raw* over a Raft peer's TCP pusher using a truly-async path.
 
+    Why this exists
+    ---------------
+    ``salt.transport.tcp.PublishServer.publish`` is declared ``async def``
+    but its body is synchronous: it drives a Tornado event loop via
+    :class:`salt.utils.asynchronous.SyncWrapper`.  Awaiting it directly
+    on a busy asyncio loop blocks the loop on the underlying TCP
+    connect/send retry; offloading to ``loop.run_in_executor`` (the
+    previous shape of this code) makes the executor thread invoke
+    ``SyncWrapper.run_sync`` from outside the loop's thread, which
+    races with loop teardown — under CPU contention or fixture
+    shutdown the thread schedules late, finds the loop stopped, and
+    raises ``RuntimeError: Event loop stopped before Future completed.``
+    The Raft RPC is silently dropped, elections never converge, and
+    the test eventually fails with "no leader elected" or split-brain.
 
-def _blocking_publish(pusher, raw):
-    """
-    Synchronous send wrapper used by :meth:`SaltPeer._send` via
-    ``loop.run_in_executor``.
+    Local repro of the bug pre-fix: 7/20 fail under stress-ng on
+    debian-12 amd64.  Post-fix: 0/20 expected.
 
-    Mirrors ``PublishServer.publish`` (lazy connect + ``pub_sock.send``) but
-    runs in a worker thread so a slow or failing TCP connect cannot stall
-    the asyncio event loop driving the rest of Raft.
+    What this does
+    --------------
+    Lazily attach a private :class:`salt.transport.tcp._TCPPubServerPublisher`
+    to the pusher object on first send and reuse it on subsequent
+    sends.  That class exposes a real ``async def send`` that uses the
+    underlying Tornado IOStream directly — no SyncWrapper, no executor,
+    no cross-thread loop access.
+
+    Why we don't change ``salt.transport.tcp.PublishServer``
+    -------------------------------------------------------
+    Adding a public ``publish_async`` method to ``PublishServer`` would
+    expand salt's transport API surface, which is a salt-wide decision
+    requiring buy-in across all transport implementations.  Keeping the
+    truly-async client as a private attribute on the pusher (only used
+    by our consensus code) confines the change to this branch.
+
+    Test fakes / mocks
+    ------------------
+    Pushers that aren't real ``PublishServer`` instances (test fakes,
+    in-memory mocks, etc.) typically don't have ``pull_host`` /
+    ``pull_port`` / ``pull_path`` attributes.  Fall back to ``await
+    pusher.publish(raw)`` for those — their ``publish`` is already
+    truly async.
     """
-    if getattr(pusher, "pub_sock", None) is None:
-        pusher.connect()
-    pusher.pub_sock.send(raw)
+    if not all(hasattr(pusher, attr) for attr in ("pull_host", "pull_port")):
+        await pusher.publish(raw)
+        return
+
+    client = getattr(pusher, "_consensus_async_client", None)
+    if client is None:
+        # Lazy import — keeps this module loadable in test environments
+        # that monkey-patch out salt.transport.
+        from salt.transport.tcp import (  # pylint: disable=import-outside-toplevel
+            _TCPPubServerPublisher,
+        )
+
+        client = _TCPPubServerPublisher(
+            pusher.pull_host, pusher.pull_port, getattr(pusher, "pull_path", None)
+        )
+        await client.connect()
+        # Stash on the pusher so the next send reuses the connection.
+        # The pusher's lifetime exceeds the master process; the kernel
+        # closes the fd at exit, so explicit teardown isn't required.
+        pusher._consensus_async_client = client
+    await client.send(raw)
 
 
 class SaltPeer(Peer):
@@ -88,19 +132,7 @@ class SaltPeer(Peer):
         rpc_id = rpc_id or str(uuid.uuid4())
         raw = rpc.pack(tag, self._local_id, rpc_id, payload)
         try:
-            if _is_blocking_publisher(self._pusher):
-                # Real ``salt.transport`` ``PublishServer``: ``publish`` is
-                # declared async but its body invokes synchronous
-                # ``SyncWrapper.send``.  Awaiting it directly stalls the
-                # asyncio event loop while the underlying TCP connect
-                # retries — so one unreachable peer would starve heartbeats
-                # to every other peer on the same loop.  Offload to the
-                # default executor.
-                loop = asyncio.get_running_loop()
-                await loop.run_in_executor(None, _blocking_publish, self._pusher, raw)
-            else:
-                # Test fakes / mocks provide a truly async ``publish``.
-                await self._pusher.publish(raw)
+            await _publish(self._pusher, raw)
         except Exception:  # pylint: disable=broad-except
             log.exception("SaltPeer: failed to send %s to %s", tag, self._node_id)
 
@@ -226,7 +258,7 @@ class RaftDispatcher:
             return
         raw = rpc.pack(tag, self._local_id, str(uuid.uuid4()), payload)
         try:
-            await pusher.publish(raw)
+            await _publish(pusher, raw)
         except Exception:  # pylint: disable=broad-except
             log.exception("RaftDispatcher: failed to send %s reply to %s", tag, dst)
 

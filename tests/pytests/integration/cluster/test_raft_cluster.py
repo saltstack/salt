@@ -115,12 +115,18 @@ def test_raft_election_three_masters(
     Three masters with cluster_id + cluster_peers should elect exactly one
     Raft leader within the election timeout window.
     """
+    from tests.pytests.integration.cluster.conftest import assert_no_election_storm
+
     masters = [cluster_master_1, cluster_master_2, cluster_master_3]
     count, leaders = _wait_for_election(masters)
     assert count == 1, (
         f"Expected exactly 1 Raft leader, got {count}: {leaders}. "
         f"Check that 'BECOMING LEADER' appears in exactly one master log."
     )
+    # If the test "passed" only because some watchdog rescued a stuck
+    # pre-vote / candidacy loop, surface that loudly instead of silently
+    # accepting it.  See ``assert_no_election_storm`` for the rationale.
+    assert_no_election_storm(masters)
 
 
 def test_raft_service_started_on_all_masters(
@@ -147,6 +153,8 @@ def test_raft_re_election_after_leader_restart(
     After the leader master is stopped, the remaining two masters should
     elect a new leader within the election timeout.
     """
+    from tests.pytests.integration.cluster.conftest import assert_no_election_storm
+
     masters = [cluster_master_1, cluster_master_2, cluster_master_3]
     count, leaders = _wait_for_election(masters)
     assert count == 1, f"No initial leader elected: {leaders}"
@@ -155,14 +163,20 @@ def test_raft_re_election_after_leader_restart(
     leader_master = next(m for m in masters if m.config["interface"] == leader_addr)
     survivors = [m for m in masters if m.config["interface"] != leader_addr]
 
-    # Stop the leader
-    leader_master.terminate()
-
-    # Clear BECOMING LEADER from survivor logs so we can detect the new one
-    # (we can't clear the file, but we record how many times it appeared before)
+    # Snapshot the survivors' BECOMING LEADER counts BEFORE terminating the
+    # leader.  Under CPU contention, ``leader_master.terminate()`` can block
+    # several seconds waiting for the SIGTERM-reaped process to actually
+    # exit; during that window the survivors notice heartbeats stopping,
+    # fire their election timers, and re-elect — logging a fresh
+    # ``BECOMING LEADER for term N`` line *before* this snapshot if it ran
+    # post-terminate.  Then ``after - before == 0`` and the assertion fails
+    # even though re-election succeeded perfectly.  Snapshot first.
     before = {
         m.config["interface"]: _read_log(m).count("BECOMING LEADER") for m in survivors
     }
+
+    # Stop the leader
+    leader_master.terminate()
 
     new_count, new_leaders = _wait_for_election(survivors, timeout=_ELECTION_TIMEOUT)
 
@@ -174,4 +188,11 @@ def test_raft_re_election_after_leader_restart(
     assert any(v > 0 for v in new_elections.values()), (
         f"No re-election detected after leader {leader_addr} stopped. "
         f"New election counts: {new_elections}"
+    )
+    # Re-election + initial election may legitimately bump the survivors'
+    # CANDIDATE/FOLLOWER counts a bit more than the standard fixture; raise
+    # the per-master cap accordingly but still fail loudly if we're seeing
+    # 10+ rounds (the slow-runner CI failure mode).
+    assert_no_election_storm(
+        survivors, max_candidate_per_master=8, max_follower_per_master=8
     )
