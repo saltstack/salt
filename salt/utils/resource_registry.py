@@ -37,6 +37,46 @@ Architecture (Strategy 1 of ``mmap-compaction-design.md`` §"Secondaries"):
 Cache-bank layout (complementary to this on-disk mmap index) is documented in
 ``resources-registry-design.md`` and consists of three ``salt.cache`` banks
 (``grains``, ``pillar``, ``resources``) keyed by bare resource ID.
+
+The ``resource_grains`` cache bank
+---------------------------------
+
+Independent of the on-disk mmap registry above, the master also maintains a
+``resource_grains`` :class:`salt.cache` bank (default driver: ``localfs``)
+that backs grain-based targeting of resources (``salt -G``, ``salt -P``,
+``salt -C 'G@…'``).
+
+Schema:
+
+* **Bank name**: ``"resource_grains"``.
+* **Key**: composite SRN of the form ``"<resource_type>:<resource_id>"`` —
+  same shape produced by :func:`resource_index_srn_key` and used by the
+  primary mmap index. Composite keying lets two resources share a bare id
+  across types without colliding (e.g. ``"dummy:web-01"`` and
+  ``"ssh:web-01"`` are distinct entries).
+* **Value**: the per-resource grain dict returned by
+  ``resource_funcs[f"{type}.grains"]()`` on the managing minion — collected
+  by :meth:`salt.minion.Minion._collect_resource_grains` and shipped to the
+  master as part of the ``_register_resources`` payload.
+
+Lifecycle:
+
+* **Write**: master ``_register_resources`` handler stores entries on every
+  registration (intra-process visibility immediate, cross-process via the
+  filesystem-backed cache).
+* **Flush**: when a minion re-registers with a smaller resource set, SRNs
+  that disappear from the payload are flushed *only if* the registry shows
+  they're no longer owned by anyone. Multi-minion safe by design.
+* **Match**: :meth:`salt.utils.minions.CkMinions._augment_grain_match_with_resource_grains`
+  walks the bank for every grain/grain-pcre check and appends matched bare
+  resource ids to the response wait set.
+
+Freshness: the bank is refreshed only when the minion calls
+``_register_resources_with_master``. Triggers for that are minion start,
+the ``resource_refresh`` event, and ``saltutil.refresh_pillar``. A
+per-resource ``<type>.grains_refresh()`` invocation does **not**
+auto-propagate to the master; the operator-level recipe is to fire
+``resource_refresh`` on the minion event bus.
 """
 
 import json
@@ -55,6 +95,16 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 RESOURCE_BANK = "resources"
+
+#: Cache bank holding per-resource grain dicts indexed by composite SRN
+#: ``"<type>:<id>"``. Populated by the master's ``_register_resources``
+#: handler from the load shipped by
+#: :meth:`salt.minion.Minion._collect_resource_grains`. Consumed by
+#: :meth:`salt.utils.minions.CkMinions._augment_grain_match_with_resource_grains`
+#: to make ``salt -G ...`` / ``salt -P ...`` / ``salt -C 'G@...'`` match
+#: resources alongside minions. See the module docstring for the full
+#: lifecycle and freshness model.
+RESOURCE_GRAINS_BANK = "resource_grains"
 
 #: Filename (relative to the cache dir) of the primary ``by_id`` mmap file.
 PRIMARY_INDEX_FILENAME = "resource_index.by_id.mmap"

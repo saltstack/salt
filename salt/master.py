@@ -55,6 +55,7 @@ import salt.utils.master
 import salt.utils.minions
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.resource_registry
 import salt.utils.schedule
 import salt.utils.ssdp
 import salt.utils.stringutils
@@ -2060,6 +2061,51 @@ class AESFuncs(TransportMethods):
             n_put,
             n_del,
         )
+        # Persist per-resource grains in the ``resource_grains`` cache bank
+        # so ``salt -G '<key>:<value>' …`` can match resources alongside
+        # minions. Stale entries (resource removed from this minion since
+        # last registration) are flushed first so a shrinking inventory
+        # doesn't leave ghost entries.
+        if self.opts.get("minion_data_cache", False):
+            resource_grains = load.get("resource_grains") or {}
+            try:
+                cache = self.masterapi.cache
+                current_srns = set(resource_grains.keys())
+                # Walk existing entries and drop ones tied to this minion
+                # that aren't in the new payload. Owner identification piggy
+                # backs on the registry: each SRN is owned by exactly one
+                # minion at a time.
+                for srn in list(
+                    cache.list(salt.utils.resource_registry.RESOURCE_GRAINS_BANK) or []
+                ):
+                    rtype, _, rid = srn.partition(":")
+                    if not rid:
+                        continue
+                    if srn in current_srns:
+                        continue
+                    owners = self.ckminions.registry.get_managing_minions_for_srn(
+                        rtype, rid
+                    )
+                    if load["id"] in owners or not owners:
+                        try:
+                            cache.flush(
+                                salt.utils.resource_registry.RESOURCE_GRAINS_BANK, srn
+                            )
+                        except Exception as exc:  # pylint: disable=broad-except
+                            log.debug("resource_grains flush %s failed: %s", srn, exc)
+                for srn, gdict in resource_grains.items():
+                    if isinstance(gdict, dict):
+                        cache.store(
+                            salt.utils.resource_registry.RESOURCE_GRAINS_BANK,
+                            srn,
+                            gdict,
+                        )
+            except Exception as exc:  # pylint: disable=broad-except
+                log.warning(
+                    "Failed to persist resource_grains for minion '%s': %s",
+                    load["id"],
+                    exc,
+                )
         return True
 
     def _file_recv(self, load):

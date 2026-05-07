@@ -610,17 +610,80 @@ class CkMinions:
         """
         Return the minions found by looking via grains
         """
-        return self._check_cache_minions(
+        result = self._check_cache_minions(
             expr, delimiter, greedy, "grains", minions=minions
         )
+        self._augment_grain_match_with_resource_grains(
+            result, expr, delimiter, regex_match=False
+        )
+        return result
 
     def _check_grain_pcre_minions(self, expr, delimiter, greedy, minions=None):
         """
         Return the minions found by looking via grains with PCRE
         """
-        return self._check_cache_minions(
+        result = self._check_cache_minions(
             expr, delimiter, greedy, "grains", regex_match=True, minions=minions
         )
+        self._augment_grain_match_with_resource_grains(
+            result, expr, delimiter, regex_match=True
+        )
+        return result
+
+    def _augment_grain_match_with_resource_grains(
+        self, result, expr, delimiter, regex_match
+    ):
+        """
+        Append matching resource IDs to ``result["minions"]`` for grain
+        targeting.
+
+        Per-resource grain dicts live in the ``resource_grains`` cache bank
+        (populated by the master's ``_register_resources`` handler from the
+        minion-side ``Minion._collect_resource_grains``). We walk the bank
+        in-place rather than going through :meth:`_check_cache_minions`,
+        because the SRN composite key (``"<type>:<id>"``) needs to be split
+        back to a bare resource ID for the response wait-set.
+
+        :meth:`_check_cache_minions` may return ``result["minions"]`` as
+        either a list or a ``set`` depending on which early-return branch
+        fired (e.g. an empty ``grains`` cache returns the upstream
+        ``set`` from ``_pki_minions``). We normalise to a list before
+        appending so the downstream consumers in
+        :meth:`_check_compound_minions` get the same shape regardless of
+        which branch was hit.
+        """
+        if not self.opts.get("minion_data_cache", False):
+            return
+        bank = salt.utils.resource_registry.RESOURCE_GRAINS_BANK
+        try:
+            srns = list(self.cache.list(bank) or [])
+        except Exception:  # pylint: disable=broad-except
+            return
+        if not srns:
+            return
+        existing = result.get("minions", [])
+        seen = set(existing)
+        # Normalise to list; preserve any existing order.
+        if not isinstance(existing, list):
+            result["minions"] = list(existing)
+        for srn in srns:
+            try:
+                gdict = self.cache.fetch(bank, srn)
+            except Exception:  # pylint: disable=broad-except
+                continue
+            if not isinstance(gdict, dict):
+                continue
+            try:
+                if not salt.utils.data.subdict_match(
+                    gdict, expr, delimiter=delimiter, regex_match=regex_match
+                ):
+                    continue
+            except Exception:  # pylint: disable=broad-except
+                continue
+            _rtype, _, rid = srn.partition(":")
+            if rid and rid not in seen:
+                result["minions"].append(rid)
+                seen.add(rid)
 
     def _check_pillar_minions(self, expr, delimiter, greedy, minions=None):
         """

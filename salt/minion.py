@@ -3527,6 +3527,49 @@ class Minion(MinionBase):
             include_startup_grains=include_grains,
         )
 
+    def _collect_resource_grains(self):
+        """
+        Render per-resource grain dicts for every resource this minion manages.
+
+        For each ``(resource_type, resource_id)`` pair, sets the per-call
+        :data:`salt.loader.context.resource_ctxvar` and invokes
+        ``resource_funcs[f"{type}.grains"]()``. Returns a mapping keyed by
+        composite SRN ``"<type>:<id>"`` → grain dict, suitable for shipping
+        to the master in :meth:`_register_resources_with_master`.
+
+        Resource types without a ``grains`` callable are skipped silently.
+        Per-resource grain failures are logged and skipped; a single broken
+        resource never blocks registration of the others.
+
+        :rtype: dict[str, dict]
+        """
+        import salt.loader.context as _loader_ctx  # noqa: PLC0415
+
+        resource_grains = {}
+        resources = self.opts.get("resources", {})
+        for rtype, rids in (resources or {}).items():
+            grains_fn = f"{rtype}.grains"
+            if grains_fn not in getattr(self, "resource_funcs", {}):
+                continue
+            for rid in rids or ():
+                target = {"id": rid, "type": rtype}
+                tok = _loader_ctx.resource_ctxvar.set(target)
+                try:
+                    gdict = self.resource_funcs[grains_fn]()
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.warning(
+                        "Failed to collect grains for resource %s:%s: %s",
+                        rtype,
+                        rid,
+                        exc,
+                    )
+                    gdict = None
+                finally:
+                    _loader_ctx.resource_ctxvar.reset(tok)
+                if isinstance(gdict, dict):
+                    resource_grains[f"{rtype}:{rid}"] = gdict
+        return resource_grains
+
     async def _register_resources_with_master(self):
         """
         Send this minion's resource list to the master for registry population.
@@ -3536,15 +3579,63 @@ class Minion(MinionBase):
         :class:`salt.utils.minions.CkMinions` to include resource IDs when
         expanding glob / non-compound targets (e.g. ``salt '*' test.ping``).
 
+        Also ships a per-resource ``resource_grains`` mapping so the master
+        can populate its ``resource_grains`` cache bank for ``-G`` /
+        ``salt -G`` grain-based targeting of resources.
+
+        **Freshness model.** The ``resource_grains`` snapshot is taken at
+        the moment of this call by :meth:`_collect_resource_grains`. A
+        per-resource ``<type>.grains_refresh()`` invocation that mutates
+        the underlying state does **not** automatically propagate to the
+        master — the master's view is refreshed only when this method runs
+        again. The triggers that re-run it are:
+
+        * minion start / reconnect (``tune_in``);
+        * the ``resource_refresh`` event on the minion event bus (see
+          ``manage_event_iter``); and
+        * a successful ``saltutil.refresh_pillar`` / ``module_refresh``
+          (because :meth:`_post_master_init` re-discovers resources).
+
+        Operators who need the master to see fresh resource grains after
+        an out-of-band state change should fire ``resource_refresh`` or
+        run ``salt-call saltutil.refresh_pillar``.
+
         An empty resource dict is sent deliberately when the minion has no
         resources — this clears any stale entries left by a previous
         registration (e.g. after a resource type is removed from the pillar).
         """
         resources = self.opts.get("resources", {})
+        if resources and not getattr(self, "resource_funcs", None):
+            # ``resource_funcs`` is the loader for ``salt/resource/<type>.py``
+            # connection modules. Unlike ``functions``/``returners`` (built
+            # by :meth:`_setup_core` during :meth:`_post_master_init`), the
+            # resource loaders are normally materialised lazily on the
+            # **first job dispatch** by :meth:`_thread_return.gen_modules`.
+            # Resource registration runs **before** any job has been
+            # dispatched, so without this eager call ``resource_funcs`` is
+            # an empty :class:`LazyLoader` and
+            # :meth:`_collect_resource_grains` finds no ``<type>.grains``
+            # callables to invoke — the master ends up with an empty
+            # ``resource_grains`` bank and ``salt -G ...`` silently fails
+            # to match resources. The cost is paid once per registration;
+            # subsequent calls hit the populated loader and skip this
+            # branch.
+            try:
+                self.gen_modules()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.warning(
+                    "Failed to gen_modules before resource grain collection: %s",
+                    exc,
+                )
+        resource_grains = self._collect_resource_grains() if resources else {}
+        # Cache locally so :meth:`_resolve_resource_targets` can resolve
+        # ``tgt_type == "grain"`` without re-rendering.
+        self._resource_grains_cache = resource_grains
         load = {
             "cmd": "_register_resources",
             "id": self.opts["id"],
             "resources": resources,
+            "resource_grains": resource_grains,
             "tok": self.tok,
         }
         try:
@@ -4693,6 +4784,109 @@ class Minion(MinionBase):
             return "_|-".join(parts)
         return f"no_|-{rid}_|-{rid}_|-None"
 
+    def _resource_term_matches(self, term, rtype, rid, gdict, resources):
+        """
+        Evaluate a single compound-expression term against one resource.
+
+        Used by :meth:`_resource_matches_compound` to render each term in
+        a compound expression to ``True``/``False`` before evaluating the
+        boolean combinators.
+
+        Supported engines (everything else returns ``False`` because it
+        targets minions, not resources):
+
+        * ``T@type[:id]`` — resource-type / resource-id match.
+        * ``G@key:value`` — per-resource grain ``subdict_match``.
+        * ``P@key:regex`` — per-resource grain regex match.
+        * ``L@a,b,c`` — bare-id list membership.
+        * ``E@regex`` — bare-id regex match.
+        """
+        if term.startswith("T@"):
+            pattern = term[2:]
+            if ":" in pattern:
+                t, _, r = pattern.partition(":")
+                if not r:
+                    return rtype == t and rid in resources.get(t, [])
+                return rtype == t and rid == r and rid in resources.get(t, [])
+            return rtype == pattern and rid in resources.get(pattern, [])
+        if term.startswith("G@"):
+            try:
+                return bool(
+                    salt.utils.data.subdict_match(
+                        gdict,
+                        term[2:],
+                        delimiter=DEFAULT_TARGET_DELIM,
+                        regex_match=False,
+                    )
+                )
+            except Exception:  # pylint: disable=broad-except
+                return False
+        if term.startswith("P@"):
+            try:
+                return bool(
+                    salt.utils.data.subdict_match(
+                        gdict,
+                        term[2:],
+                        delimiter=DEFAULT_TARGET_DELIM,
+                        regex_match=True,
+                    )
+                )
+            except Exception:  # pylint: disable=broad-except
+                return False
+        if term.startswith("L@"):
+            return rid in [t.strip() for t in term[2:].split(",") if t.strip()]
+        if term.startswith("E@"):
+            try:
+                import re as _re  # noqa: PLC0415
+
+                return bool(_re.match(term[2:], rid))
+            except _re.error:
+                return False
+        # M@, I@, J@, S@, N@, R@, plain glob — these target minions or
+        # operate on data resources don't carry. Treated as non-matching
+        # so that compounds like ``G@a:1 and not S@10/8`` evaluate against
+        # a resource purely on its grains (the ``S@`` term contributes
+        # ``False`` and ``not False`` is ``True``, leaving the grain term
+        # to decide).
+        return False
+
+    def _resource_matches_compound(self, tgt, srn, gdict, resources):
+        """
+        Evaluate a full compound expression against one resource.
+
+        Tokenises ``tgt``, replaces every non-operator token with the
+        ``True``/``False`` literal produced by :meth:`_resource_term_matches`,
+        and evaluates the resulting Python boolean expression. The eval
+        environment is restricted to no builtins and no locals, so only
+        operator semantics (``and``, ``or``, ``not``, ``(``, ``)``) are
+        available — there is no path for tokens to inject arbitrary Python.
+
+        :returns: ``True`` if the compound expression matches this
+            resource, ``False`` otherwise (including malformed input).
+        """
+        rtype, _, rid = srn.partition(":")
+        if not rid:
+            return False
+        words = tgt.split() if isinstance(tgt, str) else list(tgt)
+        if not words:
+            return False
+        parts = []
+        for word in words:
+            if word in ("and", "or", "not", "(", ")"):
+                parts.append(word)
+                continue
+            matched = self._resource_term_matches(word, rtype, rid, gdict, resources)
+            parts.append("True" if matched else "False")
+        expression = " ".join(parts).strip()
+        if not expression:
+            return False
+        try:
+            return bool(
+                eval(expression, {"__builtins__": {}}, {})  # pylint: disable=eval-used
+            )
+        except Exception:  # pylint: disable=broad-except
+            return False
+
     def _resolve_resource_targets(self, load):
         """
         Return the list of per-resource dicts ``{"id": ..., "type": ...}`` that
@@ -4722,25 +4916,29 @@ class Minion(MinionBase):
         tgt_type = load.get("tgt_type", "glob")
 
         if tgt_type == "compound":
-            words = tgt.split() if isinstance(tgt, str) else list(tgt)
-            opers = {"and", "or", "not", "(", ")"}
+            # Per-resource boolean evaluation of the compound expression.
+            # Each resource is treated as an independent target whose
+            # identity (``type``, ``id``) and grain dict drive the truth
+            # value of every term; ``and`` / ``or`` / ``not`` / parens are
+            # evaluated using Python's boolean operators after rendering
+            # each term to ``True``/``False``.
+            rg = getattr(self, "_resource_grains_cache", None)
+            if rg is None:
+                rg = self._collect_resource_grains()
+                self._resource_grains_cache = rg
+            # Include every managed resource even if it has no grain entry
+            # — so plain ``T@type`` / ``T@type:id`` compounds still match
+            # for resources whose connection module exposes no ``grains``.
+            all_srns = dict(rg)
+            for rtype, rids in (resources or {}).items():
+                for rid in rids or ():
+                    all_srns.setdefault(f"{rtype}:{rid}", {})
             targets = []
-            for word in words:
-                if word in opers:
-                    continue
-                if word.startswith("T@"):
-                    pattern = word[2:]
-                    if ":" in pattern:
-                        rtype, rid = pattern.split(":", 1)
-                        if not rid:
-                            # "T@type:" with trailing colon — treat as bare type
-                            for r in resources.get(rtype, []):
-                                targets.append({"id": r, "type": rtype})
-                        elif rid in resources.get(rtype, []):
-                            targets.append({"id": rid, "type": rtype})
-                    else:
-                        for rid in resources.get(pattern, []):
-                            targets.append({"id": rid, "type": pattern})
+            for srn, gdict in all_srns.items():
+                if self._resource_matches_compound(tgt, srn, gdict, resources):
+                    rtype, _, rid = srn.partition(":")
+                    if rid:
+                        targets.append({"id": rid, "type": rtype})
             return targets
 
         if tgt_type == "list":
@@ -4754,6 +4952,28 @@ class Minion(MinionBase):
                 for rtype, rids in resources.items():
                     if token in rids:
                         targets.append({"id": token, "type": rtype})
+            return targets
+
+        if tgt_type in ("grain", "grain_pcre"):
+            # Match each managed resource's per-resource grains against
+            # ``tgt`` (a ``key:value`` expression). Uses the cache populated
+            # by :meth:`_register_resources_with_master`; refreshes on miss
+            # so a never-registered minion still resolves its own targets.
+            rg = getattr(self, "_resource_grains_cache", None)
+            if rg is None:
+                rg = self._collect_resource_grains()
+                self._resource_grains_cache = rg
+            targets = []
+            for srn, gdict in rg.items():
+                if salt.utils.data.subdict_match(
+                    gdict,
+                    tgt,
+                    delimiter=DEFAULT_TARGET_DELIM,
+                    regex_match=(tgt_type == "grain_pcre"),
+                ):
+                    rtype, _, rid = srn.partition(":")
+                    if rid:
+                        targets.append({"id": rid, "type": rtype})
             return targets
 
         # For glob targets, only dispatch to resources when the pattern

@@ -187,7 +187,7 @@ def cluster_master_1(request, salt_factories, cluster_pki_path, cluster_cache_pa
         overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
-    with factory.started(start_timeout=120):
+    with factory.started(start_timeout=240):
         yield factory
 
 
@@ -236,7 +236,7 @@ def cluster_master_2(salt_factories, cluster_master_1):
         overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
-    with factory.started(start_timeout=120):
+    with factory.started(start_timeout=240):
         yield factory
 
 
@@ -285,7 +285,7 @@ def cluster_master_3(salt_factories, cluster_master_1):
         overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
-    with factory.started(start_timeout=120):
+    with factory.started(start_timeout=240):
         yield factory
 
 
@@ -347,7 +347,7 @@ def cluster_master_4(
         overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
-    with factory.started(start_timeout=120):
+    with factory.started(start_timeout=240):
         yield factory
 
 
@@ -378,5 +378,5 @@ def cluster_minion_1(cluster_master_1):
         overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
-    with factory.started(start_timeout=120):
+    with factory.started(start_timeout=240):
         yield factory

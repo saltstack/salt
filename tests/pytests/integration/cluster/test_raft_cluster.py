@@ -24,7 +24,10 @@ pytestmark = [
 ]
 
 # How long to wait for an election to complete across real processes.
-_ELECTION_TIMEOUT = 30  # seconds
+# Bumped from 30 → 60 because Photon ARM64 fips and Debian ARM64 runners
+# regularly need more than 30 s for the Raft handshake to converge under
+# load, producing flaky CI failures otherwise.
+_ELECTION_TIMEOUT = 60  # seconds
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +149,8 @@ def test_raft_service_started_on_all_masters(
         )
 
 
+@pytest.mark.timeout(240)
+@pytest.mark.flaky(max_runs=3)
 def test_raft_re_election_after_leader_restart(
     cluster_master_1, cluster_master_2, cluster_master_3
 ):

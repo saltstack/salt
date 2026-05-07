@@ -205,3 +205,143 @@ def test_unknown_resource_function_fails_loudly(salt_minion, salt_cli):
         and isinstance(ret.data.get("dummy-01"), str)
         and "nonexistent" in ret.data["dummy-01"].lower()
     ), f"Expected error for unknown resource function, got: {ret.data!r}"
+
+
+def test_grain_targeting_matches_resources(salt_minion, salt_cli):
+    """
+    ``salt -G '<key>:<value>' test.ping`` must match resources whose own
+    grains satisfy the expression. Every dummy resource publishes
+    ``dummy_grain_1: one`` (see ``salt.resource.dummy.grains``), so the
+    response must include all three dummy resource IDs.
+
+    End-to-end pipeline this exercises:
+
+    * Minion ``_register_resources_with_master`` ships per-resource grain
+      dicts to the master alongside the registry payload.
+    * Master ``_register_resources`` writes them into the
+      ``resource_grains`` cache bank.
+    * Master ``CkMinions._check_grain_minions`` augments its result with
+      bare resource IDs from any ``resource_grains`` entry whose dict
+      satisfies the expression.
+    * Minion ``_resolve_resource_targets`` handles ``tgt_type == "grain"``
+      by matching the expression against the cached per-resource grains
+      and dispatching to the matched resources.
+    """
+    ret = salt_cli.run("-G", "test.ping", minion_tgt="dummy_grain_1:one")
+    assert ret.returncode == 0, ret
+
+    data = ret.data
+    assert isinstance(data, dict), f"Expected dict, got: {data!r}"
+
+    for rid in DUMMY_RESOURCES:
+        assert (
+            rid in data
+        ), f"Resource '{rid}' missing from grain-target response: {list(data)}"
+        assert data[rid] is True
+
+    # The managing minion does NOT have ``dummy_grain_1`` in its own
+    # grains, so it must not appear in the response — the only way to land
+    # in this response is via the per-resource grain match.
+    assert salt_minion.id not in data, (
+        f"Managing minion '{salt_minion.id}' unexpectedly matched "
+        f"a resource grain expression: {list(data)}"
+    )
+
+
+def test_grain_targeting_only_matching_resource(salt_minion, salt_cli):
+    """
+    ``salt -G 'resource_id:dummy-02' test.ping`` matches only dummy-02
+    because the per-resource ``resource_id`` grain is unique to that
+    resource (see ``salt.resource.dummy.grains``).
+    """
+    ret = salt_cli.run("-G", "test.ping", minion_tgt="resource_id:dummy-02")
+    assert ret.returncode == 0, ret
+
+    data = _salt_cli_json_dict(ret)
+    # Salt-factories may unwrap a single-key envelope when the response
+    # has only one entry; accept both shapes.
+    if "dummy-02" in data:
+        assert data["dummy-02"] is True
+    else:
+        # Unwrapped: ``data`` IS dummy-02's return value.
+        assert data is True or data == {}, f"Unexpected response shape: {data!r}"
+
+
+def test_grains_items_returns_resource_grains_not_minion_grains(salt_minion, salt_cli):
+    """
+    ``salt 'dummy-01' grains.items`` must return the dummy resource's grains
+    (produced by ``salt.resource.dummy.grains``), not the managing minion's
+    grains. This exercises the end-to-end grain-swap pipeline:
+
+    * Master targeting matches the bare resource id ``dummy-01`` and
+      dispatches a job whose payload includes ``resource_target`` for the
+      ``dummy`` type.
+    * Minion ``_thread_return`` packs ``__grains__`` from
+      ``resource_funcs["dummy.grains"]()`` before the function runs.
+    * The function (``grains.items``) returns the resource grain dict.
+    * Master ``_return`` re-keys ``resource_id`` → response key ``dummy-01``.
+    """
+    ret = salt_cli.run("grains.items", minion_tgt="dummy-01")
+    assert ret.returncode == 0, ret
+
+    data = _salt_cli_json_dict(ret)
+    assert isinstance(data, dict), f"Expected dict, got: {data!r}"
+    # Salt-factories unwraps the single-key envelope when ``minion_tgt`` is
+    # the only response key, so ``data`` may be either the grains dict itself
+    # or ``{"dummy-01": grains_dict}``. Accept both shapes.
+    grains = data.get("dummy-01") if "dummy-01" in data else data
+    assert isinstance(
+        grains, dict
+    ), f"Expected dict for dummy-01 grains, got: {grains!r}"
+
+    # The resource grains must be present.
+    assert grains.get("dummy_grain_1") == "one"
+    assert grains.get("dummy_grain_2") == "two"
+    assert grains.get("dummy_grain_3") == "three"
+    assert grains.get("resource_id") == "dummy-01"
+
+    # The managing minion's grains must NOT bleed through. ``os`` is a stock
+    # core grain on every supported Linux/macOS test target; if it appears
+    # the swap didn't take effect.
+    assert "os" not in grains, (
+        "Managing minion's 'os' grain leaked into resource grains response — "
+        "the dispatch path is returning minion grains instead of resource grains"
+    )
+
+
+def test_grain_pcre_targeting_matches_resources(salt_minion, salt_cli):
+    """
+    ``salt -P '<key>:<regex>' test.ping`` must match resources whose own
+    grains satisfy the regex. ``resource_id`` for each dummy is
+    ``dummy-NN``; the regex ``^dummy-0[12]$`` selects exactly two.
+    """
+    ret = salt_cli.run("-P", "test.ping", minion_tgt=r"resource_id:^dummy-0[12]$")
+    assert ret.returncode == 0, ret
+
+    data = ret.data
+    assert isinstance(data, dict), f"Expected dict, got: {data!r}"
+    assert set(data.keys()) == {
+        "dummy-01",
+        "dummy-02",
+    }, f"PCRE-grain target matched unexpected set: {list(data)}"
+    assert all(v is True for v in data.values())
+
+
+def test_compound_grain_targeting_matches_resources(salt_minion, salt_cli):
+    """
+    ``salt -C 'G@<key>:<value>' test.ping`` must match resources via the
+    compound parser dispatching to the same per-resource grain match path.
+    """
+    ret = salt_cli.run("-C", "test.ping", minion_tgt="G@dummy_grain_1:one")
+    assert ret.returncode == 0, ret
+
+    data = ret.data
+    assert isinstance(data, dict), f"Expected dict, got: {data!r}"
+    for rid in DUMMY_RESOURCES:
+        assert (
+            rid in data
+        ), f"Resource {rid!r} missing from compound G@ response: {list(data)}"
+        assert data[rid] is True
+    assert (
+        salt_minion.id not in data
+    ), f"Managing minion '{salt_minion.id}' must not match a resource grain"

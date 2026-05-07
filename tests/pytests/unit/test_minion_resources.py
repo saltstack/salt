@@ -255,6 +255,99 @@ def test_resource_ctxvar_concurrent_threads_isolated():
 
 
 # ---------------------------------------------------------------------------
+# Per-resource grain swap in _thread_return
+# ---------------------------------------------------------------------------
+
+
+class _PackOnly:
+    """Minimal stand-in for a resource loader: exposes only ``.pack``."""
+
+    def __init__(self):
+        self.pack = {}
+
+
+def _grain_swap(resource_target, resource_funcs, functions_to_use):
+    """
+    Mirror the grain-swap branch of ``salt.minion.Minion._thread_return``
+    (the four lines following ``resource_ctxvar.set(resource_target)``).
+    A regression in those lines should cause this helper to diverge from
+    the real method, which the source-inspection test below catches.
+    """
+    resource_type = resource_target["type"]
+    grains_fn = f"{resource_type}.grains"
+    if grains_fn in resource_funcs:
+        functions_to_use.pack["__grains__"] = resource_funcs[grains_fn]()
+
+
+def test_thread_return_grain_swap_packs_resource_grains():
+    """
+    When a resource job dispatches with ``resource_target`` and the resource
+    loader exposes ``<type>.grains``, the swap must pack that function's
+    return value into ``functions_to_use.pack["__grains__"]`` so the job
+    sees the resource's grains, not the managing minion's.
+    """
+    expected = {
+        "dummy_grain_1": "one",
+        "dummy_grain_2": "two",
+        "dummy_grain_3": "three",
+        "resource_id": "dummy-01",
+    }
+    resource_funcs = {"dummy.grains": lambda: expected}
+    functions_to_use = _PackOnly()
+    target = {"id": "dummy-01", "type": "dummy"}
+    _grain_swap(target, resource_funcs, functions_to_use)
+    assert functions_to_use.pack["__grains__"] is expected
+
+
+def test_thread_return_grain_swap_skipped_without_grains_fn():
+    """
+    If the resource loader has no ``<type>.grains`` callable, the swap must
+    leave ``functions_to_use.pack`` untouched — no ``__grains__`` key
+    appears, so the loader's pre-existing pack still drives the job.
+    """
+    resource_funcs = {"dummy.ping": lambda: True}  # no .grains
+    functions_to_use = _PackOnly()
+    target = {"id": "dummy-01", "type": "dummy"}
+    _grain_swap(target, resource_funcs, functions_to_use)
+    assert "__grains__" not in functions_to_use.pack
+
+
+def test_thread_return_grain_swap_uses_resource_target_type():
+    """
+    Two resource types share one ``resource_funcs`` mapping; the swap must
+    pick the function keyed on ``resource_target["type"]``, not any global
+    default. Targeting an SSH resource must call ``ssh.grains``, not
+    ``dummy.grains`` even when both are registered.
+    """
+    resource_funcs = {
+        "dummy.grains": lambda: {"who": "dummy"},
+        "ssh.grains": lambda: {"who": "ssh"},
+    }
+    functions_to_use = _PackOnly()
+    _grain_swap({"id": "node1", "type": "ssh"}, resource_funcs, functions_to_use)
+    assert functions_to_use.pack["__grains__"] == {"who": "ssh"}
+
+
+def test_thread_return_grain_swap_source_inspection():
+    """
+    Catch a regression where someone removes the grain-swap from
+    ``_thread_return``. The local helper above mirrors those lines; if the
+    real method drops them, this test fails and the helper drifts out of
+    sync with reality.
+    """
+    import inspect
+
+    source = inspect.getsource(salt.minion.Minion._thread_return)
+    # All four anchor lines must be present in order, in the same scope as
+    # ``resource_ctxvar.set(resource_target)``.
+    assert "resource_ctxvar.set(resource_target)" in source
+    assert 'grains_fn = f"{resource_type}.grains"' in source
+    assert "if grains_fn in minion_instance.resource_funcs:" in source
+    assert 'functions_to_use.pack["__grains__"] =' in source
+    assert "minion_instance.resource_funcs[grains_fn]()" in source
+
+
+# ---------------------------------------------------------------------------
 # _discover_resources tests
 # ---------------------------------------------------------------------------
 
@@ -581,3 +674,379 @@ def test_merge_block_string_return_produces_false_entry(minion_with_resources):
     assert ret["return"][key]["result"] is False
     assert ret["retcode"] != 0
     assert ret["success"] is False
+
+
+# ---------------------------------------------------------------------------
+# _collect_resource_grains
+# ---------------------------------------------------------------------------
+
+
+def _patch_resource_funcs(minion, funcs_by_name):
+    """Replace ``minion.resource_funcs`` with a plain dict of callables."""
+    minion.resource_funcs = funcs_by_name
+
+
+def test_collect_resource_grains_returns_srn_keyed_dict(minion_with_resources):
+    """
+    ``_collect_resource_grains`` walks ``opts["resources"]`` and packs each
+    resource's grains under the SRN composite key ``"<type>:<id>"``.
+    """
+    seen_targets = []
+
+    def grains_fn():
+        target = salt.loader.context.resource_ctxvar.get()
+        seen_targets.append(target)
+        return {"who": target["id"]}
+
+    _patch_resource_funcs(minion_with_resources, {"dummy.grains": grains_fn})
+    result = minion_with_resources._collect_resource_grains()
+    # ssh.grains is absent → ssh resources skipped.
+    assert sorted(result.keys()) == [
+        "dummy:dummy-01",
+        "dummy:dummy-02",
+        "dummy:dummy-03",
+    ]
+    assert result["dummy:dummy-01"] == {"who": "dummy-01"}
+    # The function saw the right resource_ctxvar each call.
+    assert {t["id"] for t in seen_targets} == {"dummy-01", "dummy-02", "dummy-03"}
+
+
+def test_collect_resource_grains_skips_types_without_grains(minion_with_resources):
+    """
+    Resource types whose loader has no ``<type>.grains`` callable are
+    silently skipped — they don't appear in the result and don't raise.
+    """
+    _patch_resource_funcs(minion_with_resources, {})  # nothing
+    assert minion_with_resources._collect_resource_grains() == {}
+
+
+def test_collect_resource_grains_swallows_per_resource_failure(minion_with_resources):
+    """
+    A resource whose ``grains()`` raises is logged and skipped — the rest of
+    the resources still produce entries.
+    """
+
+    def grains_fn():
+        target = salt.loader.context.resource_ctxvar.get()
+        if target["id"] == "dummy-02":
+            raise RuntimeError("boom")
+        return {"who": target["id"]}
+
+    _patch_resource_funcs(minion_with_resources, {"dummy.grains": grains_fn})
+    result = minion_with_resources._collect_resource_grains()
+    assert "dummy:dummy-01" in result
+    assert "dummy:dummy-02" not in result, "broken resource must not block siblings"
+    assert "dummy:dummy-03" in result
+
+
+def test_collect_resource_grains_skips_non_dict_returns(minion_with_resources):
+    """
+    A ``grains()`` that returns something other than a dict (string, None,
+    etc.) is dropped — the resource_grains payload must only contain dicts.
+    """
+
+    def grains_fn():
+        return "not a dict"
+
+    _patch_resource_funcs(minion_with_resources, {"dummy.grains": grains_fn})
+    assert minion_with_resources._collect_resource_grains() == {}
+
+
+def test_collect_resource_grains_resets_ctxvar_on_failure(minion_with_resources):
+    """
+    Even when ``grains()`` raises, ``resource_ctxvar`` must be reset to its
+    prior value — a leak would corrupt later jobs in the same thread.
+    """
+    sentinel = {"id": "outer", "type": "outer"}
+    tok = salt.loader.context.resource_ctxvar.set(sentinel)
+    try:
+
+        def grains_fn():
+            raise RuntimeError("boom")
+
+        _patch_resource_funcs(minion_with_resources, {"dummy.grains": grains_fn})
+        minion_with_resources._collect_resource_grains()
+        assert salt.loader.context.resource_ctxvar.get() is sentinel
+    finally:
+        salt.loader.context.resource_ctxvar.reset(tok)
+
+
+# ---------------------------------------------------------------------------
+# _resolve_resource_targets — grain / grain_pcre branches
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_resource_targets_grain_match(minion_with_resources):
+    """
+    ``tgt_type == "grain"`` walks the cached resource grain dicts and
+    returns the matching ``{id, type}`` dicts.
+    """
+    minion_with_resources._resource_grains_cache = {
+        "dummy:dummy-01": {"k": "v", "id": "dummy-01"},
+        "dummy:dummy-02": {"k": "x", "id": "dummy-02"},
+        "ssh:node1": {"k": "v", "id": "node1"},
+    }
+    load = {"tgt": "k:v", "tgt_type": "grain", "fun": "test.ping", "arg": []}
+    targets = minion_with_resources._resolve_resource_targets(load)
+    ids_types = {(t["id"], t["type"]) for t in targets}
+    assert ids_types == {("dummy-01", "dummy"), ("node1", "ssh")}
+
+
+def test_resolve_resource_targets_grain_no_match(minion_with_resources):
+    """A grain expression that no resource satisfies returns no targets."""
+    minion_with_resources._resource_grains_cache = {
+        "dummy:dummy-01": {"k": "v"},
+    }
+    load = {"tgt": "nope:nothing", "tgt_type": "grain", "fun": "test.ping"}
+    assert minion_with_resources._resolve_resource_targets(load) == []
+
+
+def test_resolve_resource_targets_grain_pcre_uses_regex(minion_with_resources):
+    """``tgt_type == "grain_pcre"`` enables regex matching on values."""
+    minion_with_resources._resource_grains_cache = {
+        "dummy:dummy-01": {"env": "production-east"},
+        "dummy:dummy-02": {"env": "staging-east"},
+    }
+    load = {
+        "tgt": "env:^production-.*",
+        "tgt_type": "grain_pcre",
+        "fun": "test.ping",
+    }
+    targets = minion_with_resources._resolve_resource_targets(load)
+    ids = {t["id"] for t in targets}
+    assert ids == {"dummy-01"}
+
+
+def test_resolve_resource_targets_grain_lazy_collects_when_cache_missing(
+    minion_with_resources,
+):
+    """
+    If the grain cache has never been populated (e.g. registration hasn't
+    happened yet), the resolver falls back to ``_collect_resource_grains``
+    so a freshly-started minion still acts on grain targets.
+    """
+    minion_with_resources._resource_grains_cache = None
+    seen = []
+
+    def grains_fn():
+        target = salt.loader.context.resource_ctxvar.get()
+        seen.append(target["id"])
+        return {"freshly_loaded": True, "id": target["id"]}
+
+    minion_with_resources.resource_funcs = {"dummy.grains": grains_fn}
+    load = {
+        "tgt": "freshly_loaded:True",
+        "tgt_type": "grain",
+        "fun": "test.ping",
+    }
+    targets = minion_with_resources._resolve_resource_targets(load)
+    ids = {t["id"] for t in targets}
+    assert ids == {"dummy-01", "dummy-02", "dummy-03"}
+    # Cache populated on the fly, persisted for the next call.
+    assert minion_with_resources._resource_grains_cache is not None
+
+
+def test_resolve_resource_targets_compound_G_at_grain(minion_with_resources):
+    """
+    A compound expression containing ``G@key:value`` must dispatch to every
+    managed resource whose own grains satisfy the term. Boolean operators
+    are intentionally ignored — the union of matches is dispatched and the
+    master's CkMinions arbitrates the final response wait set.
+    """
+    minion_with_resources._resource_grains_cache = {
+        "dummy:dummy-01": {"environment": "prod"},
+        "dummy:dummy-02": {"environment": "prod"},
+        "dummy:dummy-03": {"environment": "staging"},
+        "ssh:node1": {"environment": "prod"},
+    }
+    load = {
+        "tgt": "G@environment:prod",
+        "tgt_type": "compound",
+        "fun": "test.ping",
+    }
+    targets = minion_with_resources._resolve_resource_targets(load)
+    ids = {(t["id"], t["type"]) for t in targets}
+    assert ids == {
+        ("dummy-01", "dummy"),
+        ("dummy-02", "dummy"),
+        ("node1", "ssh"),
+    }
+
+
+def test_resolve_resource_targets_compound_P_at_grain_pcre(minion_with_resources):
+    """``P@key:regex`` in compound applies the regex against resource grains."""
+    minion_with_resources._resource_grains_cache = {
+        "dummy:dummy-01": {"env": "production-east"},
+        "dummy:dummy-02": {"env": "production-west"},
+        "dummy:dummy-03": {"env": "staging-east"},
+    }
+    load = {
+        "tgt": "P@env:^production-.*",
+        "tgt_type": "compound",
+        "fun": "test.ping",
+    }
+    targets = minion_with_resources._resolve_resource_targets(load)
+    ids = {t["id"] for t in targets}
+    assert ids == {"dummy-01", "dummy-02"}
+
+
+def test_resolve_resource_targets_compound_T_and_G_intersection(minion_with_resources):
+    """
+    ``T@... and G@...`` is a true conjunction — only resources matched by
+    BOTH terms qualify. dummy-02 satisfies the T@ but not the grain;
+    dummy-01 satisfies the grain but not the T@. Neither satisfies both,
+    so the result is empty.
+    """
+    minion_with_resources._resource_grains_cache = {
+        "dummy:dummy-01": {"env": "prod"},
+        "dummy:dummy-02": {"env": "staging"},
+        "dummy:dummy-03": {"env": "staging"},
+    }
+    load = {
+        "tgt": "T@dummy:dummy-02 and G@env:prod",
+        "tgt_type": "compound",
+        "fun": "test.ping",
+    }
+    targets = minion_with_resources._resolve_resource_targets(load)
+    assert targets == [], "AND must require both terms; got resources matching only one"
+
+
+def test_resolve_resource_targets_compound_T_or_G_union(minion_with_resources):
+    """``T@... or G@...`` is a true disjunction — match either term."""
+    minion_with_resources._resource_grains_cache = {
+        "dummy:dummy-01": {"env": "prod"},
+        "dummy:dummy-02": {"env": "staging"},
+        "dummy:dummy-03": {"env": "staging"},
+    }
+    load = {
+        "tgt": "T@dummy:dummy-02 or G@env:prod",
+        "tgt_type": "compound",
+        "fun": "test.ping",
+    }
+    targets = minion_with_resources._resolve_resource_targets(load)
+    ids = {t["id"] for t in targets}
+    assert ids == {"dummy-01", "dummy-02"}
+
+
+def test_resolve_resource_targets_compound_G_and_G_intersection(minion_with_resources):
+    """Two G@ terms with ``and`` must intersect, not union."""
+    minion_with_resources._resource_grains_cache = {
+        "dummy:dummy-01": {"env": "prod", "role": "web"},
+        "dummy:dummy-02": {"env": "prod", "role": "db"},
+        "dummy:dummy-03": {"env": "staging", "role": "web"},
+    }
+    load = {
+        "tgt": "G@env:prod and G@role:web",
+        "tgt_type": "compound",
+        "fun": "test.ping",
+    }
+    targets = minion_with_resources._resolve_resource_targets(load)
+    ids = {t["id"] for t in targets}
+    assert ids == {"dummy-01"}, f"AND of two grain terms must intersect; got {ids}"
+
+
+def test_resolve_resource_targets_compound_not_negation(minion_with_resources):
+    """
+    ``not G@…`` selects every resource whose grains do NOT satisfy the
+    term — including resources that have no entry for that grain key at
+    all. This mirrors how Salt's minion-side grain matching treats
+    missing grains as a non-match.
+    """
+    minion_with_resources._resource_grains_cache = {
+        "dummy:dummy-01": {"env": "prod"},
+        "dummy:dummy-02": {"env": "staging"},
+        "dummy:dummy-03": {"env": "staging"},
+        # ssh resources from the fixture have no grain entry at all.
+    }
+    load = {
+        "tgt": "not G@env:prod",
+        "tgt_type": "compound",
+        "fun": "test.ping",
+    }
+    targets = minion_with_resources._resolve_resource_targets(load)
+    ids = {t["id"] for t in targets}
+    # dummy-02 / dummy-03 don't have env:prod; ssh resources have no
+    # ``env`` grain at all, so they also satisfy ``not env:prod``.
+    assert ids == {"dummy-02", "dummy-03", "node1", "localhost"}
+
+
+def test_resolve_resource_targets_compound_T_and_not_G(minion_with_resources):
+    """
+    ``T@type and not G@…`` — combine type filter with grain negation.
+    Useful for "all dummy resources except those with env:prod".
+    """
+    minion_with_resources._resource_grains_cache = {
+        "dummy:dummy-01": {"env": "prod"},
+        "dummy:dummy-02": {"env": "staging"},
+        "dummy:dummy-03": {"env": "staging"},
+    }
+    load = {
+        "tgt": "T@dummy and not G@env:prod",
+        "tgt_type": "compound",
+        "fun": "test.ping",
+    }
+    targets = minion_with_resources._resolve_resource_targets(load)
+    ids = {t["id"] for t in targets}
+    assert ids == {"dummy-02", "dummy-03"}
+
+
+def test_resolve_resource_targets_compound_parens_precedence(minion_with_resources):
+    """Parens override default left-to-right precedence."""
+    minion_with_resources._resource_grains_cache = {
+        "dummy:dummy-01": {"env": "prod", "tier": "1"},
+        "dummy:dummy-02": {"env": "prod", "tier": "2"},
+        "dummy:dummy-03": {"env": "staging", "tier": "1"},
+    }
+    # ``(env:prod or env:staging) and tier:1`` → dummy-01 + dummy-03 only.
+    load = {
+        "tgt": "( G@env:prod or G@env:staging ) and G@tier:1",
+        "tgt_type": "compound",
+        "fun": "test.ping",
+    }
+    targets = minion_with_resources._resolve_resource_targets(load)
+    ids = {t["id"] for t in targets}
+    assert ids == {"dummy-01", "dummy-03"}
+
+
+def test_resolve_resource_targets_compound_eval_safe_with_garbage(
+    minion_with_resources,
+):
+    """
+    A malformed compound term must not crash or expose the eval. The
+    helper renders unknown engines as ``False`` and any eval failure
+    swallows to ``False``.
+    """
+    minion_with_resources._resource_grains_cache = {
+        "dummy:dummy-01": {"env": "prod"},
+    }
+    # ``Z@something`` is an unknown engine; ``__import__`` would be a
+    # malicious payload if eval were unrestricted. Both must render to
+    # False without raising.
+    load = {
+        "tgt": "Z@__import__('os').system('echo pwned')",
+        "tgt_type": "compound",
+        "fun": "test.ping",
+    }
+    assert minion_with_resources._resolve_resource_targets(load) == []
+
+
+def test_resolve_resource_targets_compound_T_works_without_grains(
+    minion_with_resources,
+):
+    """
+    Resources without any cached grain dict must still resolve via T@
+    (the loader may not have a ``<type>.grains`` callable yet). The
+    compound walk seeds an empty dict for SRNs missing from the grain
+    cache.
+    """
+    # Grain cache is intentionally missing the ssh resources entirely.
+    minion_with_resources._resource_grains_cache = {
+        "dummy:dummy-01": {"env": "prod"},
+    }
+    load = {
+        "tgt": "T@ssh:node1",
+        "tgt_type": "compound",
+        "fun": "test.ping",
+    }
+    targets = minion_with_resources._resolve_resource_targets(load)
+    assert targets == [{"id": "node1", "type": "ssh"}]
