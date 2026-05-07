@@ -454,7 +454,7 @@ def test_pillar_items_masterless(salt_minion, salt_call_cli):
     )
 
     with top_tempfile, basic_tempfile:
-        ret = salt_call_cli.run("--local", "pillar.items")
+        ret = salt_call_cli.run("--local", "pillar.items", unmask=True)
         assert ret.returncode == 0
         assert "knights" in ret.data
         assert sorted(ret.data["knights"]) == sorted(
