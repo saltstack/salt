@@ -4,7 +4,6 @@ import pytest
 
 from salt.pillar.git_pillar import ext_pillar
 from salt.utils.immutabletypes import ImmutableDict, ImmutableList
-from salt.utils.secret import expose
 from tests.support.mock import patch
 
 pytestmark = [
@@ -69,7 +68,7 @@ def _test_simple(pillar_opts, grains):
         grains,
         "https://github.com/saltstack/salt-test-pillar-gitfs.git",
     )
-    assert expose(data) == {"key": "value"}
+    assert data == {"key": "value"}
 
 
 @skipif_no_gitpython
@@ -93,7 +92,7 @@ def _test_missing_env(pillar_opts, grains):
             ]
         },
     )
-    assert expose(data) == {}
+    assert data == {}
 
 
 @skipif_no_gitpython
@@ -117,7 +116,7 @@ def _test_env(pillar_opts, grains):
             ]
         },
     )
-    assert expose(data) == {"other": "env"}
+    assert data == {"other": "env"}
 
 
 @skipif_no_gitpython
@@ -137,7 +136,7 @@ def _test_branch(pillar_opts, grains):
         grains,
         "branch https://github.com/saltstack/salt-test-pillar-gitfs.git",
     )
-    assert expose(data) == {"key": "data"}
+    assert data == {"key": "data"}
 
 
 @skipif_no_gitpython
@@ -157,7 +156,7 @@ def _test_simple_dynamic(pillar_opts, grains):
         grains,
         "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git",
     )
-    assert expose(data) == {"key": "value"}
+    assert data == {"key": "value"}
 
 
 @skipif_no_gitpython
@@ -181,7 +180,7 @@ def _test_missing_env_dynamic(pillar_opts, grains):
             ]
         },
     )
-    assert expose(data) == {}
+    assert data == {}
 
 
 @skipif_no_gitpython
@@ -202,7 +201,7 @@ def _test_pillarenv_dynamic(pillar_opts, grains):
         grains,
         "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git",
     )
-    assert expose(data) == {"key": "data"}
+    assert data == {"key": "data"}
 
 
 @skipif_no_gitpython
@@ -224,7 +223,7 @@ def _test_multiple(pillar_opts, grains):
         "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git",
         "other https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
     )
-    assert expose(data) == {"key": "data"}
+    assert data == {"key": "data"}
 
 
 @skipif_no_gitpython
@@ -245,7 +244,7 @@ def _test_multiple_2(pillar_opts, grains):
         "https://github.com/saltstack/salt-test-pillar-gitfs.git",
         "https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
     )
-    assert expose(data) == {
+    assert data == {
         "key": "value",
         "key1": "value1",
         "key2": "value2",
@@ -274,7 +273,7 @@ def _test_multiple_slash_in_branch_name(pillar_opts, grains):
         "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git",
         "other https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
     )
-    assert expose(data) == {
+    assert data == {
         "key": "data",
         "foo": OrderedDict(
             [

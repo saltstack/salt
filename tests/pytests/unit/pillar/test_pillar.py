@@ -7,7 +7,6 @@ import pytest
 import salt.loader
 import salt.pillar
 import salt.utils.cache
-import salt.utils.secret
 from tests.support.mock import MagicMock, patch
 
 
@@ -158,7 +157,7 @@ def test_pillar_get_cache_disk(temp_salt_minion, caplog):
         )
         fresh_pillar = pillar.compile_pillar()
         assert "Unpack failed: incomplete input" not in caplog.messages
-        assert fresh_pillar.get_secret_value() == {}
+        assert fresh_pillar == {}
 
 
 def test_pillar_fetch_pillar_override_skipped(temp_salt_minion, caplog):
@@ -191,7 +190,6 @@ def test_pillar_fetch_pillar_override_skipped(temp_salt_minion, caplog):
 
         pillar_cache = pillar.cache.fetch("pillar", f"{temp_salt_minion.id}:base")
         assert "inline_pillar" not in pillar_cache
-        assert pillar.functions["pillar.get"]("inline_pillar") is True
 
 
 def test_remote_pillar_timeout(temp_salt_minion, tmp_path):
@@ -223,21 +221,22 @@ def test_ext_pillar_dunder_in_modules_in_pillar(temp_salt_minion):
     grains = salt.loader.grains(opts)
     pillar = salt.pillar.Pillar(opts, grains, temp_salt_minion.id, "base")
     # Pillar should be empty to start with
-    assert pillar.functions.pack["__pillar__"].get_secret_value() == {}
+    assert pillar.functions.pack["__pillar__"] == {}
 
     ext_value = {"ext": "some ext value"}
     pil_value = {"pillar": "some pillar value"}
     with patch.object(pillar, "ext_pillar", return_value=(ext_value, [])):
         with patch.object(pillar, "render_pillar", return_value=(pil_value, [])):
             compiled = pillar.compile_pillar()
-            expected = dict(**ext_value, **pil_value)
-            assert salt.utils.secret.expose(compiled) == expected
+            assert compiled == dict(**ext_value, **pil_value)
 
     # Loader should pack the opts pillar dict from the ext_pillar() call
     # and the rendered pillar data
-    pack_pillar = pillar.functions.pack["__pillar__"]
-    expected = dict(**ext_value, **pil_value)
-    assert salt.utils.secret.expose(pack_pillar) == expected
+    assert pillar.functions.pack["__pillar__"] == dict(**ext_value, **pil_value)
+
+    # Ensure a module function can access the pillar data
+    assert pillar.functions["pillar.get"]("ext", unmask=True) == "some ext value"
+    assert pillar.functions["pillar.get"]("pillar", unmask=True) == "some pillar value"
 
 
 def test_pillar_opts_in_dunder_pillar(temp_salt_minion):
@@ -257,15 +256,19 @@ def test_pillar_opts_in_dunder_pillar(temp_salt_minion):
     with patch.object(pillar, "render_pillar", return_value=(pil_value, [])):
         compiled = pillar.compile_pillar()
         # Compiled pillar should include master opts nested under "master" when pillar_opts=True
-        exposed = salt.utils.secret.expose(compiled)
-        assert "master" in exposed
-        assert exposed["master"]["master_key"] == "master_secret"
-        assert exposed["pillar_key"] == "pillar_value"
+        assert "master" in compiled
+        assert compiled["master"]["master_key"] == "master_secret"
+        assert compiled["pillar_key"] == "pillar_value"
 
     # The loader pack should also contain the master opts
-    pack_pillar = pillar.functions.pack["__pillar__"]
-    assert "master" in pack_pillar
-    assert pack_pillar["master"]["master_key"] == "master_secret"
+    assert "master" in pillar.functions.pack["__pillar__"]
+    assert (
+        pillar.functions.pack["__pillar__"]["master"]["master_key"] == "master_secret"
+    )
+    assert (
+        pillar.functions["pillar.get"]("master:master_key", unmask=True)
+        == "master_secret"
+    )
 
 
 def test_ssh_merge_pillar_in_dunder_pillar(temp_salt_minion):
@@ -282,14 +285,12 @@ def test_ssh_merge_pillar_in_dunder_pillar(temp_salt_minion):
     pil_value = {"normal_key": "normal_value"}
     with patch.object(pillar, "render_pillar", return_value=(pil_value, [])):
         compiled = pillar.compile_pillar()
-        exposed = salt.utils.secret.expose(compiled)
-        assert exposed["ssh_key"] == "ssh_value"
-        assert exposed["normal_key"] == "normal_value"
+        assert compiled["ssh_key"] == "ssh_value"
+        assert compiled["normal_key"] == "normal_value"
 
     # The loader pack should contain the merged SSH pillar
-    assert (
-        pillar.functions.pack["__pillar__"]["ssh_key"].get_secret_value() == "ssh_value"
-    )
+    assert pillar.functions.pack["__pillar__"]["ssh_key"] == "ssh_value"
+    assert pillar.functions["pillar.get"]("ssh_key", unmask=True) == "ssh_value"
 
 
 def test_decrypt_pillar_in_dunder_pillar(temp_salt_minion):
@@ -313,14 +314,11 @@ def test_decrypt_pillar_in_dunder_pillar(temp_salt_minion):
             side_effect=lambda p: p.update(decrypted_pil) or [],
         ):
             compiled = pillar.compile_pillar()
-            assert compiled["secret"].get_secret_value() == "decrypted_value"
+            assert compiled["secret"] == "decrypted_value"
 
     # The loader pack should contain the decrypted pillar
-    assert (
-        pillar.functions.pack["__pillar__"]["secret"].get_secret_value()
-        == "decrypted_value"
-    )
-    assert pillar.functions["pillar.raw"]("secret") == "decrypted_value"
+    assert pillar.functions.pack["__pillar__"]["secret"] == "decrypted_value"
+    assert pillar.functions["pillar.get"]("secret", unmask=True) == "decrypted_value"
 
 
 def test_ext_pillar_after_dunder_pillar(temp_salt_minion):
@@ -340,10 +338,11 @@ def test_ext_pillar_after_dunder_pillar(temp_salt_minion):
         with patch.object(pillar, "ext_pillar", return_value=(ext_value, [])):
             compiled = pillar.compile_pillar()
             # Verify both are present in the final result
-            assert compiled["normal"].get_secret_value() == "value"
-            assert compiled["ext"].get_secret_value() == "value"
+            assert compiled["normal"] == "value"
+            assert compiled["ext"] == "value"
 
     # Loader should have both
-    pack_exp = pillar.functions.pack["__pillar__"]
-    assert pack_exp["normal"].get_secret_value() == "value"
-    assert pack_exp["ext"].get_secret_value() == "value"
+    assert pillar.functions.pack["__pillar__"]["normal"] == "value"
+    assert pillar.functions.pack["__pillar__"]["ext"] == "value"
+    assert pillar.functions["pillar.get"]("ext", unmask=True) == "value"
+    assert pillar.functions["pillar.get"]("normal", unmask=True) == "value"

@@ -38,7 +38,6 @@ from pathlib import Path
 import salt.client.ssh
 import salt.fileclient
 import salt.utils.files
-import salt.utils.secret
 import salt.utils.stringutils
 import salt.utils.templates
 from salt.exceptions import CommandExecutionError
@@ -206,7 +205,7 @@ def get_template(
     if "salt" not in kwargs:
         kwargs["salt"] = __salt__.value()
     if "pillar" not in kwargs:
-        kwargs["pillar"] = salt.utils.secret.expose(__pillar__.value())
+        kwargs["pillar"] = __pillar__.value()
     if "grains" not in kwargs:
         kwargs["grains"] = __grains__.value()
     if "opts" not in kwargs:
@@ -828,7 +827,7 @@ def _gather_pillar(pillarenv, pillar_override):
         pillar_override=pillar_override,
         pillarenv=pillarenv,
     )
-    return salt.utils.secret.expose(pillar.compile_pillar())
+    return pillar.compile_pillar()
 
 
 def _render_filenames(path, dest, saltenv, template, **kw):
@@ -852,7 +851,7 @@ def _render_filenames(path, dest, saltenv, template, **kw):
         pillarenv = kw.get("pillarenv", __opts__.get("pillarenv"))
         kwargs["pillar"] = _gather_pillar(pillarenv, kw.get("pillar"))
     else:
-        kwargs["pillar"] = salt.utils.secret.expose(__pillar__.value())
+        kwargs["pillar"] = __pillar__.value()
     kwargs["grains"] = __grains__.value()
     kwargs["opts"] = __opts__
     kwargs["saltenv"] = saltenv

@@ -1,306 +1,278 @@
 """
-Pillar containers that wrap string/bytes leaves with secret-safe types
-(:class:`SecretStr` / :class:`SecretBytes`) and use SecretDict/SecretList so later
-mutations stay protected.
+Pillar masking: MaskedDict and MaskedList subclasses that store plain values
+internally but redact them in their string representations.
+
+Internal Salt operations (merge, msgpack, isinstance checks, Jinja) all work
+on the plain stored values because MaskedDict is-a dict and MaskedList is-a list.
+Only __repr__ / __str__ display redacted values.
+
+Usage::
+
+    from salt.utils.secret import hide, expose, serial, mask_output
+
+    # Wrap pillar at the receive boundary (RemotePillarMixin.compile_pillar)
+    opts["pillar"] = hide(compiled_pillar)
+
+    # Access works normally — returns plain values
+    value = opts["pillar"]["password"]           # "hunter2" (plain str)
+    for k, v in opts["pillar"].items(): ...      # plain iteration
+
+    # Repr/logging is masked
+    log.debug("pillar: %s", opts["pillar"])      # {'password': '**********'}
+
+    # Explicit output boundary (pillar.get CLI)
+    serial(opts["pillar"]["password"])           # '**********'
+    expose(opts["pillar"]["password"])           # 'hunter2'
+
+    # Safety net for general output (output/__init__.py)
+    mask_output(state_return_data)              # no-op for plain data
 """
 
 from __future__ import annotations
 
+import copy
 import logging
-from collections.abc import Iterable, Mapping, MutableMapping, MutableSequence
-from typing import Any, ClassVar, Generic, TypeVar
+from collections.abc import Mapping
 
 log = logging.getLogger(__name__)
 
 REDACT_PLACEHOLDER = "**********"
 
-SecretType_co = TypeVar("SecretType_co", covariant=True)
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
 
 
-class Secret(Generic[SecretType_co]):
-    def __init__(self, secret_value) -> None:
-        self._secret_value = secret_value
-
-    def get_secret_value(self) -> Any:
-        """Get the secret value.
-
-        Returns:
-            The secret value.
-        """
-        return self._secret_value
-
-    def __eq__(self, other: Any) -> bool:
-        return self.get_secret_value() == other
-
-    def __instancecheck__(self, instance: Any) -> bool:
-        return isinstance(instance, self.__class__) or isinstance(
-            instance, self.get_secret_value().__class__
-        )
-
-    def __issubclasscheck__(self, subclass: Any) -> bool:
-        return issubclass(subclass, self.__class__) or issubclass(
-            subclass, self.get_secret_value().__class__
-        )
-
-    def __hash__(self) -> int:
-        return hash(self.get_secret_value())
-
-    def __str__(self) -> str:
-        return str(self._display())
-
-    def __contains__(self, item: Any) -> bool:
-        return item in self.get_secret_value()
-
-    def __bool__(self) -> bool:
-        return bool(self.get_secret_value())
-
-    def __len__(self) -> int:
-        return len(self.get_secret_value())
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self._display()!r})"
-
-    def _display(self):
-        raise NotImplementedError
+def _mask_wrap(value):
+    """Wrap nested containers; leave scalar values (str, int, bool …) plain."""
+    if isinstance(value, (MaskedDict, MaskedList)):
+        return value
+    if isinstance(value, dict):
+        return MaskedDict(value)
+    if isinstance(value, list):
+        return MaskedList(value)
+    return value
 
 
-class SecretStr(Secret[str]):
-    """A string used for storing sensitive information that you do not want to be visible in logging or tracebacks.
+def _masked_repr(value):
+    """Build a redacted repr string for a MaskedDict or MaskedList."""
+    if isinstance(value, dict):
+        pairs = ", ".join(f"{k!r}: {_masked_repr(v)}" for k, v in value.items())
+        return "{" + pairs + "}"
+    if isinstance(value, list):
+        return "[" + ", ".join(_masked_repr(v) for v in value) + "]"
+    if isinstance(value, str) and value:
+        return repr(REDACT_PLACEHOLDER)
+    return repr(value)
 
-    When the secret value is nonempty, it is displayed as `'**********'` instead of the underlying value in
-    calls to `repr()` and `str()`. If the value _is_ empty, it is displayed as `''`.
 
-    ```python
-    from pydantic import BaseModel, SecretStr
+# ---------------------------------------------------------------------------
+# Public container types
+# ---------------------------------------------------------------------------
 
-    class User(BaseModel):
-        username: str
-        password: SecretStr
 
-    user = User(username='scolvin', password='password1')
+class MaskedDict(dict):
+    """A dict subclass whose __repr__ / __str__ redacts string leaf values.
 
-    print(user)
-    #> username='scolvin' password=SecretStr('**********')
-    print(user.password.get_secret_value())
-    #> password1
-    print((SecretStr('password'), SecretStr('')))
-    #> (SecretStr('**********'), SecretStr(''))
-    ```
-
-    As seen above, by default, [`SecretStr`][pydantic.types.SecretStr] (and [`SecretBytes`][pydantic.types.SecretBytes])
-    will be serialized as `**********` when serializing to json.
-
-    You can use the [`field_serializer`][pydantic.functional_serializers.field_serializer] to dump the
-    secret as plain-text when serializing to json.
-
-    ```python
-    from pydantic import BaseModel, SecretBytes, SecretStr, field_serializer
-
-    class Model(BaseModel):
-        password: SecretStr
-        password_bytes: SecretBytes
-
-        @field_serializer('password', 'password_bytes', when_used='json')
-        def dump_secret(self, v):
-            return v.get_secret_value()
-
-    model = Model(password='IAmSensitive', password_bytes=b'IAmSensitiveBytes')
-    print(model)
-    #> password=SecretStr('**********') password_bytes=SecretBytes(b'**********')
-    print(model.password)
-    #> **********
-    print(model.model_dump())
-    '''
-    {
-        'password': SecretStr('**********'),
-        'password_bytes': SecretBytes(b'**********'),
-    }
-    '''
-    print(model.model_dump_json())
-    #> {"password":"IAmSensitive","password_bytes":"IAmSensitiveBytes"}
-    ```
+    All standard dict operations (iteration, item access, isinstance checks,
+    msgpack serialisation, dictupdate.merge) work on the plain stored values.
+    Nested dicts and lists are automatically wrapped in MaskedDict / MaskedList.
     """
 
-    _error_kind: ClassVar[str] = "string_type"
-
-    def _display(self) -> str:
-        return REDACT_PLACEHOLDER if self._secret_value else ""
-
-
-class SecretBytes(Secret[bytes]):
-    """A bytes used for storing sensitive information that you do not want to be visible in logging or tracebacks.
-
-    It displays `b'**********'` instead of the string value on `repr()` and `str()` calls.
-    When the secret value is nonempty, it is displayed as `b'**********'` instead of the underlying value in
-    calls to `repr()` and `str()`. If the value _is_ empty, it is displayed as `b''`.
-
-    ```python
-    from pydantic import BaseModel, SecretBytes
-
-    class User(BaseModel):
-        username: str
-        password: SecretBytes
-
-    user = User(username='scolvin', password=b'password1')
-    #> username='scolvin' password=SecretBytes(b'**********')
-    print(user.password.get_secret_value())
-    #> b'password1'
-    print((SecretBytes(b'password'), SecretBytes(b'')))
-    #> (SecretBytes(b'**********'), SecretBytes(b''))
-    ```
-    """
-
-    _error_kind: ClassVar[str] = "bytes_type"
-
-    def _display(self) -> bytes:
-        return REDACT_PLACEHOLDER.encode() if self._secret_value else b""
-
-
-class SecretIterable(Secret[SecretType_co]):
-    def __getitem__(self, key):
-        return hide(self._secret_value[key])
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self.update(*args, **kwargs)
 
     def __setitem__(self, key, value):
-        self._secret_value[key] = value
+        dict.__setitem__(self, key, _mask_wrap(value))
 
-    def __delitem__(self, key):
-        del self._secret_value[key]
+    def update(self, other=None, **kwargs):
+        if other is not None:
+            items = other.items() if isinstance(other, Mapping) else other
+            for k, v in items:
+                self[k] = v
+        for k, v in kwargs.items():
+            self[k] = v
 
-    def __iter__(self):
-        return iter(self._secret_value)
+    def __repr__(self):
+        return _masked_repr(self)
 
-    def _display(self):
-        return [v._display() if isinstance(v, Secret) else v for v in self]
-
-
-class SecretDict(SecretIterable[dict], MutableMapping[str, Any]):
-    def __init__(self, secret_value: dict, exclude: tuple[str, ...] = ()):
-        self._exclude = exclude
-        super().__init__(secret_value)
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        self._secret_value[key] = value
-
-    def __getitem__(self, key: str):
-        if key in self._exclude:
-            return self._secret_value[key]
-        return hide(self._secret_value[key], exclude=self._exclude)
-
-    def get(self, key, default=None):
-        return hide(self._secret_value.get(key, default))
-
-    def update(self, *args, **kwargs):
-        self._secret_value.update(*args, **kwargs)
-
-    def setdefault(self, key, default=None):
-        return self._secret_value.setdefault(key, default)
+    def __str__(self):
+        return _masked_repr(self)
 
     def copy(self):
-        return SecretDict(self.get_secret_value().copy())
+        return MaskedDict(dict.copy(self))
 
     def __copy__(self):
         return self.copy()
 
     def __deepcopy__(self, memo):
-        return SecretDict(copy.deepcopy(self.get_secret_value(), memo))
-
-    def _display(self) -> dict:
-        return {
-            k: v._display() if isinstance(v, Secret) else v for k, v in self.items()
-        }
+        return MaskedDict({k: copy.deepcopy(v, memo) for k, v in dict.items(self)})
 
 
-class SecretList(SecretIterable[list], MutableSequence[Any]):
-    def insert(self, index: int, value):
-        self._secret_value.insert(index, hide(value))
+class MaskedList(list):
+    """A list subclass whose __repr__ / __str__ redacts string leaf values.
 
-
-class SecretTuple(SecretIterable[tuple]):
-    def _display(self) -> tuple:
-        return tuple(v._display() if isinstance(v, Secret) else v for v in self)
-
-
-def hide(value: Any, exclude: tuple[str, ...] = ()) -> Secret:
+    All standard list operations work on plain stored values.
+    Nested dicts and lists are automatically wrapped.
     """
-    Morph a leaf value into a secret-safe container.
-    Args:
-        value: The value to morph.
-        exclude: A list of keys to exclude from redaction.
-    Returns:
-        The morphed value.
-    """
-    if isinstance(value, Secret):
-        return value
-    elif isinstance(value, str):
-        return SecretStr(value)
-    elif isinstance(value, bytes):
-        return SecretBytes(value)
-    elif isinstance(value, dict):
-        return SecretDict(value, exclude=exclude)
-    elif isinstance(value, tuple):
-        return SecretTuple(value)
-    elif isinstance(value, Iterable):
-        return SecretList(value)
-    else:
-        return value
+
+    def __init__(self, iterable=()):
+        super().__init__(_mask_wrap(v) for v in iterable)
+
+    def __setitem__(self, idx, value):
+        list.__setitem__(self, idx, _mask_wrap(value))
+
+    def append(self, value):
+        list.append(self, _mask_wrap(value))
+
+    def extend(self, iterable):
+        for v in iterable:
+            self.append(v)
+
+    def insert(self, idx, value):
+        list.insert(self, idx, _mask_wrap(value))
+
+    def __iadd__(self, iterable):
+        self.extend(iterable)
+        return self
+
+    def __repr__(self):
+        return _masked_repr(self)
+
+    def __str__(self):
+        return _masked_repr(self)
+
+    def copy(self):
+        return MaskedList(list.__iter__(self))
+
+    def __copy__(self):
+        return self.copy()
+
+    def __deepcopy__(self, memo):
+        return MaskedList(copy.deepcopy(v, memo) for v in list.__iter__(self))
 
 
-def expose(value: Secret, _seen: set[int] = None) -> Any:
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
+
+def hide(value):
+    """Wrap a pillar dict/list in MaskedDict/MaskedList for display masking.
+
+    Scalar values (str, int, bool, None …) are returned unchanged — they are
+    stored plain inside the container and only redacted in the container's repr.
+    Already-wrapped values are returned as-is (idempotent).
     """
-    If the value is a secret, return the secret value.
+    return _mask_wrap(value)
+
+
+def expose(value, _seen=None):
+    """Recursively unwrap MaskedDict / MaskedList to plain Python types.
+
+    Use at ``unmask=True`` pillar output boundaries so callers receive the
+    real values (e.g. ``pillar.get(key, unmask=True)``).
     """
-    if isinstance(value, Secret):
-        value = value.get_secret_value()
-    if isinstance(value, (str, bytes, int, float, bool)):
-        return value
-    if not value:
-        return value
-    if isinstance(value, Iterable):
+    if isinstance(value, MaskedDict):
         if _seen is None:
             _seen = set()
-        if id(value) in _seen:
+        vid = id(value)
+        if vid in _seen:
             return value
-        _seen.add(id(value))
+        _seen.add(vid)
         try:
-            if isinstance(value, Mapping):
-                return {k: expose(v, _seen) for k, v in value.items()}
-            else:
-                return [expose(v, _seen) for v in value]
+            return {k: expose(v, _seen) for k, v in dict.items(value)}
         finally:
-            _seen.discard(id(value))
+            _seen.discard(vid)
+    if isinstance(value, MaskedList):
+        if _seen is None:
+            _seen = set()
+        vid = id(value)
+        if vid in _seen:
+            return value
+        _seen.add(vid)
+        try:
+            return [expose(v, _seen) for v in list.__iter__(value)]
+        finally:
+            _seen.discard(vid)
     return value
 
 
-def serial(value, _seen: set[int] = None):
+def serial(value, _seen=None):
+    """Aggressively redact: replace ALL non-empty strings with REDACT_PLACEHOLDER.
+
+    Use at explicit pillar output boundaries (``pillar.get``, ``pillar.items``,
+    ``pillar.item``, ``pillar.ext``) and inside ``no_log_mask``.
+
+    Because ``MaskedDict.__getitem__`` returns plain strings (the scalar leaves
+    are stored unwrapped), this function must handle plain str/dict/list values
+    in addition to MaskedDict / MaskedList containers.
     """
-    Keep secrets redacted while serializing the structure to native python types.
-    """
-    if isinstance(value, Secret):
-        value = value._display()
-    if isinstance(value, (str, bytes, int, float, bool)):
+    if _seen is None:
+        _seen = set()
+    if isinstance(value, str) and value:
+        return REDACT_PLACEHOLDER
+    if not isinstance(value, (dict, list)):
+        # int, float, bool, None, empty string, bytes — pass through
         return value
-    if not value:
+    vid = id(value)
+    if vid in _seen:
         return value
-    if isinstance(value, Iterable):
-        if _seen is None:
-            _seen = set()
-        if id(value) in _seen:
-            return value
-        _seen.add(id(value))
-        try:
-            if isinstance(value, Mapping):
-                return {k: serial(v, _seen) for k, v in value.items()}
-            else:
-                return [serial(v, _seen) for v in value]
-        finally:
-            _seen.discard(id(value))
-    return value
+    _seen.add(vid)
+    try:
+        if isinstance(value, dict):
+            return {
+                k: serial(v, _seen)
+                for k, v in (
+                    dict.items(value)
+                    if isinstance(value, MaskedDict)
+                    else value.items()
+                )
+            }
+        return [
+            serial(v, _seen)
+            for v in (
+                list.__iter__(value) if isinstance(value, MaskedList) else iter(value)
+            )
+        ]
+    finally:
+        _seen.discard(vid)
 
 
-def no_log_mask(state_ret: dict[str, Any]):
+def mask_output(value, _seen=None):
+    """Gently redact: only redact values *inside* MaskedDict / MaskedList containers.
+
+    Plain dicts, plain lists, and plain scalars pass through unchanged.
+    Use as a safety net in ``output/__init__.py`` to prevent accidental pillar
+    leakage in general Salt output without redacting ordinary result strings
+    (state comments, module names, etc.).
     """
-    Replace comment and changes in a state return dict when no_log is enabled.
-    Mutates ret in place.
+    if _seen is None:
+        _seen = set()
+    if isinstance(value, (MaskedDict, MaskedList)):
+        # Hand off to serial() which fully redacts the masked container
+        return serial(value, _seen)
+    if not isinstance(value, (dict, list)):
+        return value
+    vid = id(value)
+    if vid in _seen:
+        return value
+    _seen.add(vid)
+    try:
+        if isinstance(value, dict):
+            return {k: mask_output(v, _seen) for k, v in value.items()}
+        return [mask_output(v, _seen) for v in value]
+    finally:
+        _seen.discard(vid)
+
+
+def no_log_mask(state_ret):
+    """Replace ``comment`` and ``changes`` in a state return with redacted values.
+
+    Called by ``salt/state.py`` when a state has ``no_log: True``.
+    Mutates *state_ret* in place.
     """
-    state_ret["comment"] = serial(hide(state_ret["comment"]))
-    state_ret["changes"] = serial(hide(state_ret["changes"]))
+    state_ret["comment"] = serial(state_ret["comment"])
+    state_ret["changes"] = serial(state_ret["changes"])

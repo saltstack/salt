@@ -36,7 +36,6 @@ import salt.client
 import salt.loader
 import salt.pillar
 import salt.utils.args
-import salt.utils.secret
 from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
@@ -86,15 +85,13 @@ def cmd(fun, *args, **kwargs):
     opts["grains"] = salt.loader.grains(opts)
 
     if with_pillar:
-        opts["pillar"] = salt.utils.secret.expose(
-            salt.pillar.get_pillar(
-                opts,
-                opts["grains"],
-                opts["id"],
-                saltenv=opts["saltenv"],
-                pillarenv=opts.get("pillarenv"),
-            ).compile_pillar()
-        )
+        opts["pillar"] = salt.pillar.get_pillar(
+            opts,
+            opts["grains"],
+            opts["id"],
+            saltenv=opts["saltenv"],
+            pillarenv=opts.get("pillarenv"),
+        ).compile_pillar()
     else:
         opts["pillar"] = {}
 

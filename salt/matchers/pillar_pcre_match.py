@@ -34,7 +34,6 @@ def match(tgt, delimiter=DEFAULT_TARGET_DELIM, opts=None, minion_id=None):
     else:
         pillar = {}
 
-    pillar = salt.utils.secret.expose(pillar)
     return salt.utils.data.subdict_match(
         pillar, tgt, delimiter=delimiter, regex_match=True
     )

@@ -6,8 +6,6 @@ import types
 import attr
 import pytest
 
-import salt.utils.secret
-
 log = logging.getLogger(__name__)
 
 
@@ -75,17 +73,6 @@ def test_data(salt_call_cli, pillar_tree):
     assert ret.returncode == 0
     assert ret.data
     pillar = ret.data
-    assert pillar["os"] == salt.utils.secret.REDACT_PLACEHOLDER
-    assert pillar["monty"] == salt.utils.secret.REDACT_PLACEHOLDER
-    if grains["os"] == "Fedora":
-        assert pillar["class"] == salt.utils.secret.REDACT_PLACEHOLDER
-    else:
-        assert pillar["class"] == salt.utils.secret.REDACT_PLACEHOLDER
-
-    ret = salt_call_cli.run("pillar.raw")
-    assert ret.returncode == 0
-    assert ret.data
-    pillar = ret.data
     assert pillar["os"] == grains["os"]
     assert pillar["monty"] == "python"
     if grains["os"] == "Fedora":
@@ -122,12 +109,6 @@ def test_ext_cmd_yaml(salt_call_cli, pillar_tree):
     assert ret.returncode == 0
     assert ret.data
     pillar = ret.data
-    assert pillar["ext_spam"] == salt.utils.secret.REDACT_PLACEHOLDER
-
-    ret = salt_call_cli.run("pillar.raw")
-    assert ret.returncode == 0
-    assert ret.data
-    pillar = ret.data
     assert pillar["ext_spam"] == "eggs"
 
 
@@ -156,7 +137,7 @@ def test_pillar_items(salt_call_cli, pillar_tree):
     assert ret.data
     pillar_items = ret.data
     assert "monty" in pillar_items
-    assert pillar_items["monty"] == salt.utils.secret.REDACT_PLACEHOLDER
+    assert pillar_items["monty"] == "python"
     assert "knights" in pillar_items
     assert pillar_items["knights"] == ["Lancelot", "Galahad", "Bedevere", "Robin"]
 
@@ -173,7 +154,7 @@ def test_pillar_command_line(salt_call_cli, pillar_tree):
     assert ret.data
     pillar_items = ret.data
     assert "monty" in pillar_items
-    assert pillar_items["monty"] == salt.utils.secret.REDACT_PLACEHOLDER
+    assert pillar_items["monty"] == "overwrite"
 
     # test when using additional pillar
     ret = salt_call_cli.run("pillar.items", pillar={"new": "additional"})
@@ -181,7 +162,7 @@ def test_pillar_command_line(salt_call_cli, pillar_tree):
     assert ret.data
     pillar_items = ret.data
     assert "new" in pillar_items
-    assert pillar_items["new"] == salt.utils.secret.REDACT_PLACEHOLDER
+    assert pillar_items["new"] == "additional"
 
 
 def test_pillar_get_integer_key(salt_call_cli, pillar_tree):
@@ -202,13 +183,6 @@ def test_pillar_get_integer_key(salt_call_cli, pillar_tree):
     pillar_get = ret.data
     assert "code" in pillar_get
     assert "luggage" in pillar_get["code"]
-
-    ret = salt_call_cli.run("pillar.raw")
-    assert ret.returncode == 0
-    assert ret.data
-    pillar_items = ret.data
-    assert "12345" in pillar_items
-    assert pillar_items["12345"] == {"code": ["luggage"]}
 
 
 @attr.s

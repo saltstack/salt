@@ -30,17 +30,6 @@ from salt.version import __version__
 
 log = logging.getLogger(__name__)
 
-PILLAR_SECRET_EXCLUDE = (
-    "_errors",
-    "beacons",
-    "ext_pillar_opts",
-    "master",
-    "mine_functions",
-    "mine_interval",
-    "proxy",
-    "schedule",
-)
-
 
 def get_pillar(
     opts,
@@ -290,7 +279,7 @@ class AsyncRemotePillar(RemotePillarMixin):
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
-        ret_pillar = salt.utils.secret.hide(ret_pillar, exclude=PILLAR_SECRET_EXCLUDE)
+        ret_pillar = salt.utils.secret.hide(ret_pillar)
         return ret_pillar
 
     def destroy(self):
@@ -382,8 +371,7 @@ class RemotePillar(RemotePillarMixin):
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
-        ret_pillar = salt.utils.secret.hide(ret_pillar, exclude=PILLAR_SECRET_EXCLUDE)
-        return ret_pillar
+        return salt.utils.secret.hide(ret_pillar)
 
     def destroy(self):
         if hasattr(self, "_closing") and self._closing:
@@ -427,16 +415,12 @@ class Pillar:
         self.client = salt.fileclient.get_file_client(self.opts, True)
         self.fileclient = salt.fileclient.get_file_client(self.opts, False)
         self.avail = self.__gather_avail()
-        pillar_data = self.opts.get("pillar", {})
-        if not isinstance(pillar_data, dict):
-            pillar_data = {}
+        self.pillar_data = self.opts.get("pillar", {})
+        if not isinstance(self.pillar_data, dict):
+            self.pillar_data = {}
         else:
             # Ensure we have a plain dict and not a proxy into opts
-            pillar_data = dict(pillar_data)
-
-        self.pillar_data = salt.utils.secret.hide(
-            pillar_data, exclude=PILLAR_SECRET_EXCLUDE
-        )
+            self.pillar_data = dict(self.pillar_data)
 
         if opts.get("file_client", "") == "local" and not opts.get(
             "use_master_when_local", False
@@ -1096,7 +1080,7 @@ class Pillar:
         # Bring in CLI pillar data
         if self.pillar_override:
             pillar = salt.utils.dictupdate.merge(
-                salt.utils.secret.expose(pillar),
+                pillar,
                 self.pillar_override,
                 self.merge_strategy,
                 self.opts.get("renderer", "yaml"),
@@ -1134,7 +1118,7 @@ class Pillar:
                     )
             if ext:
                 pillar = salt.utils.dictupdate.merge(
-                    salt.utils.secret.expose(pillar),
+                    pillar,
                     ext,
                     self.merge_strategy,
                     self.opts.get("renderer", "yaml"),
@@ -1194,7 +1178,7 @@ class Pillar:
                     continue
                 mopts[key] = val
             mopts["saltversion"] = __version__
-            pillar.get_secret_value()["master"] = mopts
+            pillar["master"] = mopts
         if "pillar" in self.opts and self.opts.get("ssh_merge_pillar", False):
             pillar = salt.utils.dictupdate.merge(
                 self.opts["pillar"],
@@ -1206,7 +1190,7 @@ class Pillar:
         if errors:
             for error in errors:
                 log.critical("Pillar render error: %s", error)
-            pillar.get_secret_value()["_errors"] = errors
+            pillar["_errors"] = errors
 
         if self.pillar_override:
             pillar = salt.utils.dictupdate.merge(
@@ -1298,8 +1282,6 @@ class Pillar:
                 if ptr is None:
                     log.debug("Pillar key %s not present", key)
                     continue
-                if isinstance(ptr, salt.utils.secret.Secret):
-                    ptr = ptr.get_secret_value()
                 try:
                     hash(ptr)
                     immutable = True
@@ -1457,9 +1439,7 @@ class PillarCache(Pillar):
             )
             pillar_data = super().compile_pillar(*args, **kwargs)
 
-            self.cache.store(
-                "pillar", self.pillar_key, salt.utils.secret.expose(pillar_data)
-            )
+            self.cache.store("pillar", self.pillar_key, pillar_data)
 
         # we dont want the pillar_override baked into the cached compile_pillar from above
         if self.pillar_override:

@@ -32,7 +32,7 @@ def try_printout(data, out, opts, **kwargs):
     Safely get the string to print out, try the configured outputter, then
     fall back to nested and then to raw
     """
-    data = salt.utils.secret.serial(data)
+    data = salt.utils.secret.mask_output(data)
     try:
         printout = get_printout(out, opts)(data, **kwargs)
         if printout is not None:

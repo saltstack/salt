@@ -14,7 +14,6 @@ import salt.defaults.exitcodes
 import salt.utils.files
 import salt.utils.json
 import salt.utils.platform
-import salt.utils.secret
 import salt.utils.yaml
 import tests.conftest
 import tests.support.helpers
@@ -458,15 +457,8 @@ def test_pillar_items_masterless(salt_minion, salt_call_cli):
         ret = salt_call_cli.run("--local", "pillar.items")
         assert ret.returncode == 0
         assert "knights" in ret.data
-        assert ret.data["knights"] == ["Lancelot", "Galahad", "Bedevere", "Robin"]
-        assert "monty" in ret.data
-        assert ret.data["monty"] == salt.utils.secret.REDACT_PLACEHOLDER
-
-        ret = salt_call_cli.run("--local", "pillar.raw")
-        assert ret.returncode == 0
-        assert "knights" in ret.data
         assert sorted(ret.data["knights"]) == sorted(
-            ("Lancelot", "Galahad", "Bedevere", "Robin")
+            ["Lancelot", "Galahad", "Bedevere", "Robin"]
         )
         assert "monty" in ret.data
         assert ret.data["monty"] == "python"

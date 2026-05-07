@@ -42,7 +42,7 @@ def get_storage_id(kwargs):
     return ("localfs", __cachedir(kwargs))
 
 
-def store(bank, key, data, cachedir, **kwargs):
+def store(bank, key, data, cachedir):
     """
     Store information in a file.
     """

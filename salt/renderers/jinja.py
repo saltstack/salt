@@ -7,7 +7,6 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 import logging
 from io import StringIO
 
-import salt.utils.secret
 import salt.utils.templates
 from salt.exceptions import SaltRenderError
 from salt.loader.context import NamedLoaderContext
@@ -65,7 +64,7 @@ def render(
         salt=_split_module_dicts(),
         grains=__grains__,
         opts=__opts__,
-        pillar=salt.utils.secret.expose(__pillar__),
+        pillar=__pillar__,
         saltenv=saltenv,
         sls=sls,
         context=context,

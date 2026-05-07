@@ -60,7 +60,6 @@ import salt.utils.network
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.schedule
-import salt.utils.secret
 import salt.utils.ssdp
 import salt.utils.state
 import salt.utils.user
@@ -989,9 +988,7 @@ class SMinion(MinionBase):
             cache_sls = os.path.join(pdir, "cache.sls")
             with salt.utils.files.fopen(cache_sls, "wb") as fp_:
                 salt.utils.yaml.safe_dump(
-                    salt.utils.secret.expose(self.opts["pillar"]),
-                    fp_,
-                    encoding=SLS_ENCODING,
+                    self.opts["pillar"], fp_, encoding=SLS_ENCODING
                 )
                 os.chmod(cache_sls, 0o600)
 
@@ -2470,9 +2467,7 @@ class Minion(MinionBase):
         """
         minion_blackout_violation = False
         if self.connected and self.opts["pillar"].get("minion_blackout", False):
-            whitelist = salt.utils.secret.expose(
-                self.opts["pillar"].get("minion_blackout_whitelist", [])
-            )
+            whitelist = self.opts["pillar"].get("minion_blackout_whitelist", [])
             # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
             if (
                 function_name != "saltutil.refresh_pillar"

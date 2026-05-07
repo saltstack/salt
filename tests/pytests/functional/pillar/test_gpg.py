@@ -9,7 +9,6 @@ import pytest
 from pytestshellutils.utils.processes import ProcessResult
 
 import salt.pillar
-import salt.utils.secret
 import salt.utils.stringutils
 
 pytestmark = [
@@ -366,7 +365,7 @@ def test_decrypt_pillar_default_renderer(
     opts["decrypt_pillar"] = ["secrets:vault"]
     pillar_obj = salt.pillar.Pillar(opts, grains, "test", "base")
     ret = pillar_obj.compile_pillar()
-    assert salt.utils.secret.expose(ret) == gpg_pillar_decrypted
+    assert ret == gpg_pillar_decrypted
 
 
 @pytest.mark.slow_test
@@ -386,7 +385,7 @@ def test_decrypt_pillar_alternate_delimiter(
     opts["decrypt_pillar_delimiter"] = "|"
     pillar_obj = salt.pillar.Pillar(opts, grains, "test", "base")
     ret = pillar_obj.compile_pillar()
-    assert salt.utils.secret.expose(ret) == gpg_pillar_decrypted
+    assert ret == gpg_pillar_decrypted
 
 
 def test_decrypt_pillar_deeper_nesting(
@@ -407,7 +406,6 @@ def test_decrypt_pillar_deeper_nesting(
     expected["secrets"]["vault"]["qux"][-1] = gpg_pillar_decrypted["secrets"]["vault"][
         "qux"
     ][-1]
-    ret = salt.utils.secret.expose(ret)
     assert ret == expected
 
 
@@ -432,7 +430,7 @@ def test_decrypt_pillar_explicit_renderer(
     opts["decrypt_pillar_renderers"] = ["asdf", "gpg"]
     pillar_obj = salt.pillar.Pillar(opts, grains, "test", "base")
     ret = pillar_obj.compile_pillar()
-    assert salt.utils.secret.expose(ret) == gpg_pillar_decrypted
+    assert ret == gpg_pillar_decrypted
 
 
 def test_decrypt_pillar_missing_renderer(
@@ -453,7 +451,7 @@ def test_decrypt_pillar_missing_renderer(
     opts["decrypt_pillar_default"] = "asdf"
     opts["decrypt_pillar_renderers"] = ["asdf"]
     pillar_obj = salt.pillar.Pillar(opts, grains, "test", "base")
-    ret = salt.utils.secret.expose(pillar_obj.compile_pillar())
+    ret = pillar_obj.compile_pillar()
     expected = copy.deepcopy(gpg_pillar_encrypted)
     expected["_errors"] = [
         "Failed to decrypt pillar key 'secrets:vault': Decryption renderer 'asdf' is"
@@ -486,7 +484,7 @@ def test_decrypt_pillar_invalid_renderer(
     opts["decrypt_pillar_default"] = "foo"
     opts["decrypt_pillar_renderers"] = ["foo", "bar"]
     pillar_obj = salt.pillar.Pillar(opts, grains, "test", "base")
-    ret = salt.utils.secret.expose(pillar_obj.compile_pillar())
+    ret = pillar_obj.compile_pillar()
     expected = copy.deepcopy(gpg_pillar_encrypted)
     expected["_errors"] = [
         "Failed to decrypt pillar key 'secrets:vault': 'gpg' is not a valid decryption"
@@ -514,7 +512,7 @@ def test_gpg_decrypt_must_succeed(
     opts["gpg_decrypt_must_succeed"] = True
     opts["decrypt_pillar"] = ["fail"]
     pillar_obj = salt.pillar.Pillar(opts, grains, "test", "base")
-    ret = salt.utils.secret.expose(pillar_obj.compile_pillar())
+    ret = pillar_obj.compile_pillar()
     expected = copy.deepcopy(gpg_pillar_encrypted_bad)
     expected_error = "Failed to decrypt pillar key 'fail': Could not decrypt cipher "
 
@@ -540,7 +538,7 @@ def test_gpg_decrypt_may_succeed(
     opts["gpg_decrypt_must_succeed"] = False
     opts["decrypt_pillar"] = ["fail"]
     pillar_obj = salt.pillar.Pillar(opts, grains, "test", "base")
-    ret = salt.utils.secret.expose(pillar_obj.compile_pillar())
+    ret = pillar_obj.compile_pillar()
     expected = copy.deepcopy(gpg_pillar_encrypted_bad)
 
     assert "_errors" not in ret
