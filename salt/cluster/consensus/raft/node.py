@@ -814,12 +814,31 @@ class Node:
     def pre_request_vote(
         self, address, term, last_log_term=None, last_log_index=None, **kwargs
     ):
+        """
+        Evaluate a pre-vote request *without* mutating local state.
+
+        Pre-vote is the disturb-protection layer of Raft (Ongaro
+        thesis §9.6): a candidate asks "would you grant a real vote?"
+        before bumping the term and disrupting the cluster.  The
+        receiver MUST answer with a hypothetical decision without
+        changing its own term, voted_for, leader, or follower-timer
+        state — otherwise the very disturbance pre-vote is supposed
+        to prevent leaks back in.
+
+        Concrete failure mode of the previous (state-mutating) version:
+        under CPU stress one survivor's election timer fires
+        repeatedly, each pre-vote bumps the other survivor's term and
+        called ``become_follower()``, which reset ``last_followed``
+        and restarted the follower timer.  The other survivor then
+        never fired its OWN election timer (it was being kept "fresh"
+        by the disturb), so two survivors both stayed quiet → no
+        re-election → test fails.  Reproduced 5/20 fail under
+        stress-ng on debian-12; with this fix it's expected to
+        converge.
+        """
         llt = last_log_term if last_log_term is not None else kwargs.get("last_term")
         lli = last_log_index if last_log_index is not None else kwargs.get("last_index")
 
-        if term > self.term + 1:
-            self.term = term
-            self.become_follower()
         now = self.get_now()
         lease_active = (now - self.last_followed) < self._follower_min * 0.001
 
@@ -829,7 +848,16 @@ class Node:
             llt_val == self.log.last_term and lli_val >= self.log.index
         )
 
-        granted = (term == self.term + 1) and log_ok and not lease_active
+        # Grant if (a) the proposed term is in the future relative to
+        # ours and (b) the candidate's log is at least as up-to-date
+        # and (c) we haven't heard from a leader recently (the
+        # disturb-protection lease).  Note: we deliberately use
+        # ``term > self.term`` rather than the previous ``term ==
+        # self.term + 1`` because we don't update term here — the
+        # candidate may legitimately be one or several terms ahead of
+        # us if we were partitioned, and the question is just whether
+        # we'd grant if asked for real.
+        granted = (term > self.term) and log_ok and not lease_active
         return granted, self.term, self.leader_client_address
 
     @lock
