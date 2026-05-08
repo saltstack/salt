@@ -1313,11 +1313,19 @@ def refresh_modules(**kwargs):
     until the module refresh is complete, set the 'async' flag
     to False.
 
+    async : True
+        When ``False``, block until module refresh completes (or until
+        ``timeout`` seconds elapse waiting for the completion event).
+
+    timeout : 30
+        Seconds to wait for the completion event when ``async`` is ``False``.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' saltutil.refresh_modules
+        salt '*' saltutil.refresh_modules async=False timeout=60
     """
     asynchronous = bool(kwargs.get("async", True))
     timeout = int(kwargs.get("timeout", 30))
