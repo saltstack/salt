@@ -50,7 +50,6 @@ repos:
     rev: "0.20.5"
     hooks:
       - id: tools
-        language_version: python3.10
         alias: check-changelog-entries
         name: Check Changelog Entries
         args:
@@ -59,7 +58,6 @@ repos:
           - pre-commit-checks
 
       - id: tools
-        language_version: python3.10
         alias: generate-workflows
         name: Generate GitHub Workflow Templates
         files: ^(cicd/shared-gh-workflows-context\.yml|tools/utils/__init__.py|tools/precommit/workflows\.py|.github/workflows/.*)$
@@ -70,7 +68,6 @@ repos:
           - generate-workflows
 
       - id: tools
-        language_version: python3.10
         alias: actionlint
         name: Lint GitHub Actions Workflows
         files: "^.github/workflows/"
@@ -82,7 +79,6 @@ repos:
           - actionlint
 
       - id: tools
-        language_version: python3.10
         alias: check-docs
         name: Check Docs
         files: ^(salt/.*\.py|doc/ref/.*\.rst)$
@@ -92,7 +88,6 @@ repos:
           - check
 
       - id: tools
-        language_version: python3.10
         alias: check-docstrings
         name: Check docstrings
         files: salt/.*\.py$
@@ -107,7 +102,6 @@ repos:
           - check
 
       - id: tools
-        language_version: python3.10
         alias: check-known-missing-docstrings
         name: Check Known Missing Docstrings
         stages: [manual]
@@ -123,7 +117,6 @@ repos:
           - check
 
       - id: tools
-        language_version: python3.10
         alias: loader-check-virtual
         name: Check loader modules __virtual__
         files: salt/.*\.py$
@@ -138,7 +131,6 @@ repos:
           - check-virtual
 
       - id: tools
-        language_version: python3.10
         alias: check-filemap
         name: Check Filename Map Change Matching
         files: ^tests/(filename_map\.yml|.*\.py)$
