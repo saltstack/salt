@@ -4,7 +4,9 @@
 #   pytest $(grep -v '^#' tests/pytests/functional/cluster/consensus/smoke.txt | tr '\n' ' ')
 #
 # Covers one representative test per critical path at each layer.
-# Target: < 10s, catches regressions across the full stack.
+# Unit + functional layers target < 10s; the cluster-level
+# integration/scenario tests at the bottom add several minutes
+# (real masters), so the full smoke run is multi-minute.
 
 # ── UNIT: core data structures ────────────────────────────────────────────────
 
@@ -38,6 +40,21 @@ tests/pytests/unit/cluster/consensus/test_raft_node.py::TestNodeMembershipSM::te
 
 tests/pytests/unit/cluster/consensus/test_raft_exactly_once.py
 tests/pytests/unit/cluster/consensus/test_raft_scheduler.py
+
+# ── UNIT: peer + dispatcher (publish path / mock detection) ──────────────────
+
+# SaltPeer fire-and-forget RPC publishing
+tests/pytests/unit/cluster/consensus/test_peer.py::TestSaltPeer::test_request_vote_sends_correct_tag
+tests/pytests/unit/cluster/consensus/test_peer.py::TestSaltPeer::test_pre_request_vote_sends_correct_tag
+tests/pytests/unit/cluster/consensus/test_peer.py::TestSaltPeer::test_append_entries_sends_correct_tag
+tests/pytests/unit/cluster/consensus/test_peer.py::TestSaltPeer::test_append_entries_with_entries
+tests/pytests/unit/cluster/consensus/test_peer.py::TestSaltPeer::test_install_snapshot_encodes_bytes
+
+# RaftDispatcher reply publishing
+tests/pytests/unit/cluster/consensus/test_peer.py::TestRaftDispatcher::test_dispatch_request_vote_sends_reply
+tests/pytests/unit/cluster/consensus/test_peer.py::TestRaftDispatcher::test_dispatch_pre_request_vote_sends_reply
+tests/pytests/unit/cluster/consensus/test_peer.py::TestRaftDispatcher::test_dispatch_append_entries_sends_reply
+tests/pytests/unit/cluster/consensus/test_peer.py::TestRaftDispatcher::test_dispatch_install_snapshot_sends_reply
 
 # ── FUNCTIONAL: transport + dispatcher ───────────────────────────────────────
 
@@ -126,3 +143,21 @@ tests/pytests/functional/cluster/consensus/test_cluster_ready_scenarios.py::Test
 tests/pytests/functional/cluster/consensus/test_cluster_ready_scenarios.py::TestLearnerReadinessScenario::test_founding_nodes_ready_before_learner
 tests/pytests/functional/cluster/consensus/test_cluster_ready_scenarios.py::TestLearnerReadinessScenario::test_node_never_added_to_voters_never_ready
 tests/pytests/functional/cluster/consensus/test_cluster_ready_scenarios.py::TestLearnerReadinessScenario::test_ready_event_stays_set_after_subsequent_configs
+
+# ── INTEGRATION: cluster-level Raft over real masters ────────────────────────
+# Slow (real master processes); these exercise the actual transport
+# path that the SaltPeer/_publish fix is meant to protect.
+tests/pytests/integration/cluster/test_raft_cluster.py::test_raft_election_three_masters
+tests/pytests/integration/cluster/test_raft_cluster.py::test_raft_service_started_on_all_masters
+tests/pytests/integration/cluster/test_raft_cluster.py::test_raft_re_election_after_leader_restart
+
+# ── INTEGRATION: basic 3-master cluster operation ────────────────────────────
+tests/pytests/integration/cluster/test_basic_cluster.py::test_basic_cluster_setup
+tests/pytests/integration/cluster/test_basic_cluster.py::test_basic_cluster_event
+tests/pytests/integration/cluster/test_basic_cluster.py::test_basic_cluster_minion_1
+tests/pytests/integration/cluster/test_basic_cluster.py::test_basic_cluster_minion_1_from_master_2
+tests/pytests/integration/cluster/test_basic_cluster.py::test_basic_cluster_minion_1_from_master_3
+
+# ── SCENARIO: cluster lifecycle (key rotation, dynamic join) ─────────────────
+tests/pytests/scenarios/cluster/test_cluster.py::test_cluster_key_rotation
+tests/pytests/scenarios/cluster/test_cluster.py::test_fourth_master_joins_existing_cluster
