@@ -71,12 +71,14 @@ async def _publish(pusher, raw):
     Test fakes / mocks
     ------------------
     Pushers that aren't real ``PublishServer`` instances (test fakes,
-    in-memory mocks, etc.) typically don't have ``pull_host`` /
-    ``pull_port`` / ``pull_path`` attributes.  Fall back to ``await
-    pusher.publish(raw)`` for those — their ``publish`` is already
-    truly async.
+    in-memory mocks, etc.) are detected by class module — their
+    ``publish`` is already truly async, so just await it directly.
+    ``MagicMock`` auto-creates any attribute on access, so a
+    ``hasattr`` probe for ``pull_host`` / ``pull_port`` would falsely
+    classify a mock as a real publisher; the module check avoids that.
     """
-    if not all(hasattr(pusher, attr) for attr in ("pull_host", "pull_port")):
+    module = getattr(type(pusher), "__module__", "") or ""
+    if not module.startswith("salt.transport"):
         await pusher.publish(raw)
         return
 
