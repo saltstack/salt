@@ -101,14 +101,14 @@ Setup a container for testing (decompress dependencies, create relenv symlink).
 **Parameters:**
 - `container_name` (required): Name of container to setup
 - `arch` (optional): Architecture (x86_64 or arm64, defaults to x86_64)
-- `python_version` (optional): Python version (e.g., "3.11") - determines if relenv symlink is needed
+- `python_version` (optional): Python version (e.g., "3.14") - determines if relenv symlink is needed
 
 **Example:**
 ```json
 {
   "container_name": "salt-test-debian-11",
   "arch": "x86_64",
-  "python_version": "3.11"
+  "python_version": "3.14"
 }
 ```
 
@@ -166,7 +166,7 @@ List available CI container platforms.
 
 2. Download artifacts (use existing tools container create/ts setup)
 
-3. ci_setup_container(container_name="salt-test-debian-11", python_version="3.11")
+3. ci_setup_container(container_name="salt-test-debian-11", python_version="3.14")
 
 4. ci_run_test(
      container_name="salt-test-debian-11",
@@ -210,7 +210,7 @@ Once configured, you can ask Claude:
 
 ## Requirements
 
-- Python 3.10 and 3.11 installed
+- Python 3.10 and 3.14 installed
 - MCP Python SDK (`pip install mcp`)
 - Salt repository with tools/ infrastructure
 - **Virtual environments setup** (see below)
@@ -221,7 +221,7 @@ Once configured, you can ask Claude:
 
 The Salt repository requires **two** virtual environments:
 - **venv310 (Python 3.10)**: For running tests on 3006.x and 3007.x branches
-- **venv311 (Python 3.11)**: For running tests on master branch AND pre-commit hooks
+- **venv314 (Python 3.14)**: For running tests on master branch AND pre-commit hooks
 
 **Setup venv310 (Python 3.10) - For Testing:**
 ```bash
@@ -248,20 +248,20 @@ pip install -e .
 deactivate
 ```
 
-**Setup venv311 (Python 3.11) - For Master Branch Testing & Pre-commit:**
+**Setup venv314 (Python 3.14) - For Master Branch Testing & Pre-commit:**
 ```bash
-python3.11 -m venv venv311
-source venv311/bin/activate
+python3.14 -m venv venv314
+source venv314/bin/activate
 pip install --upgrade pip setuptools wheel
 
 # Install platform-specific dependencies (choose your OS):
-pip install -r requirements/static/pkg/py3.11/linux.txt      # Linux
-pip install -r requirements/static/pkg/py3.11/darwin.txt     # macOS
-pip install -r requirements/static/pkg/py3.11/windows.txt    # Windows
+pip install -r requirements/static/pkg/py3.14/linux.txt      # Linux
+pip install -r requirements/static/pkg/py3.14/darwin.txt     # macOS
+pip install -r requirements/static/pkg/py3.14/windows.txt    # Windows
 
 # Install pytest and tools requirements:
 pip install -r requirements/pytest.txt
-pip install -r requirements/static/ci/py3.11/tools.txt
+pip install -r requirements/static/ci/py3.14/tools.txt
 
 # Install pre-commit and python-tools-scripts:
 pip install pre-commit python-tools-scripts
@@ -277,7 +277,7 @@ deactivate
 
 **Environment Usage:**
 - **venv310**: For running tests on 3006.x/3007.x branches, pytest, tools commands
-- **venv311**: For running tests on master branch, pre-commit hooks, code formatting, linting
+- **venv314**: For running tests on master branch, pre-commit hooks, code formatting, linting
 
 **Verify setup:**
 ```bash
