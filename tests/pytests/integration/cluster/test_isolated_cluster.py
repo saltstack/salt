@@ -69,42 +69,6 @@ def test_isolated_cluster_aes_converges(
     )
 
 
-@pytest.fixture
-def cluster_minion_1_isolated(cluster_master_1_isolated):
-    """
-    A minion connected only to the isolated master_1.  The other
-    masters never share a ``pki_dir`` with master_1, so they must
-    receive the minion's accepted public key over the cluster event
-    bus to be able to authenticate it.
-    """
-    config_defaults = {
-        "transport": cluster_master_1_isolated.config["transport"],
-    }
-    port = cluster_master_1_isolated.config["ret_port"]
-    addr = cluster_master_1_isolated.config["interface"]
-    config_overrides = {
-        "master": f"{addr}:{port}",
-        "test.foo": "baz",
-        "log_granular_levels": {
-            "salt": "info",
-            "salt.transport": "debug",
-            "salt.channel": "debug",
-            "salt.utils.event": "debug",
-        },
-        "fips_mode": FIPS_TESTRUN,
-        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
-        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
-    }
-    factory = cluster_master_1_isolated.salt_minion_daemon(
-        "cluster-minion-1-iso",
-        defaults=config_defaults,
-        overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
-    )
-    with factory.started(start_timeout=120):
-        yield factory
-
-
 def _make_isolated_minion(master, minion_id):
     """Spawn a minion attached only to *master* under the isolated-FS set."""
     config_defaults = {"transport": master.config["transport"]}
