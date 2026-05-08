@@ -2183,7 +2183,7 @@ class MasterPubServerChannel:
                 }
             )
             key = salt.crypt.PrivateKeyString(self.private_key())
-            sig = key.sign(tosign)
+            sig = key.sign(tosign, algorithm=self.opts["publish_signing_algorithm"])
             data = {
                 "sig": sig,
                 "payload": tosign,
@@ -2213,7 +2213,9 @@ class MasterPubServerChannel:
                     hashlib.sha256(aes).hexdigest()
                 )
                 data["peers"][peer] = {
-                    "aes": pub.encrypt(aes, algorithm="OAEP-SHA224"),
+                    "aes": pub.encrypt(
+                        aes, algorithm=self.opts["cluster_encryption_algorithm"]
+                    ),
                     "sig": self.master_key.master_key.encrypt(digest),
                 }
             else:
@@ -2545,14 +2547,21 @@ class MasterPubServerChannel:
                     log.warning("Cluster join, token does not not match")
                     return
                 pubk = salt.crypt.PublicKeyString(payload["pub"])
-                if not pubk.verify(data["payload"], data["sig"]):
+                if not pubk.verify(
+                    data["payload"],
+                    data["sig"],
+                    algorithm=self.opts["publish_signing_algorithm"],
+                ):
                     log.warning("Cluster join signature invalid.")
                     return
 
                 log.info("Cluster join from %s", payload["peer_id"])
                 salted_secret = (
                     salt.crypt.PrivateKey.from_file(self.master_key.master_rsa_path)
-                    .decrypt(payload["secret"])
+                    .decrypt(
+                        payload["secret"],
+                        algorithm=self.opts["cluster_encryption_algorithm"],
+                    )
                     .decode()
                 )
 
@@ -2565,7 +2574,10 @@ class MasterPubServerChannel:
                 log.info("Peer %s joined cluster", payload["peer_id"])
                 salted_aes = (
                     salt.crypt.PrivateKey.from_file(self.master_key.master_rsa_path)
-                    .decrypt(payload["key"])
+                    .decrypt(
+                        payload["key"],
+                        algorithm=self.opts["cluster_encryption_algorithm"],
+                    )
                     .decode()
                 )
 
@@ -2666,11 +2678,16 @@ class MasterPubServerChannel:
                 inner_payload = {
                     "return_token": payload["token"],
                     "peer_id": self.opts["id"],
-                    "aes": joiner_pub.encrypt(token_bytes + aes_secret),
+                    "aes": joiner_pub.encrypt(
+                        token_bytes + aes_secret,
+                        algorithm=self.opts["cluster_encryption_algorithm"],
+                    ),
                     "peers": {},
                 }
                 tosign = salt.payload.package(inner_payload)
-                sig = salt.crypt.PrivateKeyString(self.private_key()).sign(tosign)
+                sig = salt.crypt.PrivateKeyString(self.private_key()).sign(
+                    tosign, algorithm=self.opts["publish_signing_algorithm"]
+                )
                 event_data = salt.utils.event.SaltEvent.pack(
                     salt.utils.event.tagify("join-reply", "peer", "cluster"),
                     {
@@ -2693,7 +2710,11 @@ class MasterPubServerChannel:
                     return
 
                 cluster_pub = salt.crypt.PublicKeyString(payload["cluster_pub"])
-                if not cluster_pub.verify(data["payload"], data["sig"]):
+                if not cluster_pub.verify(
+                    data["payload"],
+                    data["sig"],
+                    algorithm=self.opts["publish_signing_algorithm"],
+                ):
                     log.warning("Invalid signature of cluster discover payload")
                     return
 
@@ -2714,16 +2735,20 @@ class MasterPubServerChannel:
                         "peer_id": self.opts["id"],
                         "secret": key.encrypt(
                             payload["token"].encode()
-                            + (self.opts.get("cluster_secret") or "").encode()
+                            + (self.opts.get("cluster_secret") or "").encode(),
+                            algorithm=self.opts["cluster_encryption_algorithm"],
                         ),
                         "key": key.encrypt(
                             payload["token"].encode()
-                            + salt.master.SMaster.secrets["aes"]["secret"].value
+                            + salt.master.SMaster.secrets["aes"]["secret"].value,
+                            algorithm=self.opts["cluster_encryption_algorithm"],
                         ),
                         "pub": self.public_key(),
                     }
                 )
-                sig = salt.crypt.PrivateKeyString(self.private_key()).sign(tosign)
+                sig = salt.crypt.PrivateKeyString(self.private_key()).sign(
+                    tosign, algorithm=self.opts["publish_signing_algorithm"]
+                )
                 self.cluster_peers.append(payload["peer_id"])
                 event_data = salt.utils.event.SaltEvent.pack(
                     salt.utils.event.tagify("join", "peer", "cluster"),
@@ -2763,7 +2788,11 @@ class MasterPubServerChannel:
             elif tag.startswith("cluster/peer/discover"):
                 payload = salt.payload.loads(data["payload"])
                 peer_key = salt.crypt.PublicKeyString(payload["pub"])
-                if not peer_key.verify(data["payload"], data["sig"]):
+                if not peer_key.verify(
+                    data["payload"],
+                    data["sig"],
+                    algorithm=self.opts["publish_signing_algorithm"],
+                ):
                     log.warning("Invalid signature of cluster discover payload")
                     return
                 log.info("Cluster discovery from %s", payload["peer_id"])
@@ -2781,7 +2810,7 @@ class MasterPubServerChannel:
                     }
                 )
                 key = salt.crypt.PrivateKeyString(self.cluster_key())
-                sig = key.sign(tosign)
+                sig = key.sign(tosign, algorithm=self.opts["publish_signing_algorithm"])
                 _ = salt.payload.package(
                     {
                         "sig": sig,
@@ -2801,7 +2830,7 @@ class MasterPubServerChannel:
                 aes = data["peers"][self.opts["id"]]["aes"]
                 sig = data["peers"][self.opts["id"]]["sig"]
                 key_str = self.master_key.master_key.decrypt(
-                    aes, algorithm="OAEP-SHA224"
+                    aes, algorithm=self.opts["cluster_encryption_algorithm"]
                 )
                 digest = salt.utils.stringutils.to_bytes(
                     hashlib.sha256(key_str).hexdigest()
