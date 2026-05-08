@@ -183,7 +183,10 @@ class LoadBalancerServer(SignalHandlingProcess):
                 # ECONNABORTED indicates that there was a connection
                 # but it was closed while still in the accept queue.
                 # (observed on FreeBSD).
-                name = self._socket.getsockname()
+                sock = self._socket
+                if sock is None:
+                    break
+                name = sock.getsockname()
                 if isinstance(name, tuple):
                     name = name[0]
                 if salt.ext.tornado.util.errno_from_exception(e) == errno.ECONNABORTED:

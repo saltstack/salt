@@ -1177,7 +1177,6 @@ class MinionManager(MinionBase):
                     minion.opts["master"],
                     exc,
                 )
-                last = time.time()
                 if auth_wait < self.max_auth_wait:
                     auth_wait += self.auth_wait
                 yield salt.ext.tornado.gen.sleep(auth_wait)  # TODO: log?
@@ -1202,7 +1201,6 @@ class MinionManager(MinionBase):
                 # Match SaltClientError path: without a delay, connect_master can be
                 # retried in a tight loop and create zmq contexts faster than they are
                 # torn down (libzMQ pthread / EMFILE failures on some hosts).
-                last = time.time()
                 if auth_wait < self.max_auth_wait:
                     auth_wait += self.auth_wait
                 yield salt.ext.tornado.gen.sleep(auth_wait)
@@ -4557,7 +4555,6 @@ class SyndicManager(MinionBase):
                     "master at %s responding?",
                     opts["master"],
                 )
-                last = time.time()
                 if auth_wait < self.max_auth_wait:
                     auth_wait += self.auth_wait
                 yield salt.ext.tornado.gen.sleep(auth_wait)  # TODO: log?
