@@ -185,7 +185,6 @@ a return like::
 .. |500| replace:: internal server error
 """
 
-import cgi  # pylint: disable=deprecated-module
 import fnmatch
 import logging
 import time
@@ -197,6 +196,7 @@ import salt.client
 import salt.ext.tornado.escape
 import salt.ext.tornado.gen
 import salt.ext.tornado.httpserver
+import salt.ext.tornado.httputil
 import salt.ext.tornado.ioloop
 import salt.ext.tornado.web
 import salt.netapi
@@ -473,7 +473,8 @@ class BaseSaltAPIHandler(salt.ext.tornado.web.RequestHandler):  # pylint: disabl
         accept_header = self.request.headers.get("Accept", "*/*")
         # Ignore any parameter, including q (quality) one
         parsed_accept_header = [
-            cgi.parse_header(h)[0] for h in accept_header.split(",")
+            salt.ext.tornado.httputil._parse_header(h)[0]
+            for h in accept_header.split(",")
         ]
 
         def find_acceptable_content_type(parsed_accept_header):
@@ -556,8 +557,10 @@ class BaseSaltAPIHandler(salt.ext.tornado.web.RequestHandler):  # pylint: disabl
         }
 
         try:
-            # Use cgi.parse_header to correctly separate parameters from value
-            value, parameters = cgi.parse_header(self.request.headers["Content-Type"])
+            # Use _parse_header to correctly separate parameters from value
+            value, parameters = salt.ext.tornado.httputil._parse_header(
+                self.request.headers["Content-Type"]
+            )
             return ct_in_map[value](salt.ext.tornado.escape.native_str(data))
         except KeyError:
             self.send_error(406)
