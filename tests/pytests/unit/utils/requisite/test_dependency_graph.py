@@ -533,3 +533,40 @@ def test_get_dependencies_when_aggregated():
             for (req_type, chunk) in depend_graph.get_dependencies(low)
         ]
         assert expected_dependency_tuples == depend_tuples
+
+
+def test_to_dot():
+    sls = "test"
+    env = "base"
+    chunks = [
+        {
+            "__id__": "pkg_install",
+            "name": "vim",
+            "state": "pkg",
+            "fun": "installed",
+        },
+        {
+            "__id__": "conf_file",
+            "name": "/etc/vimrc",
+            "state": "file",
+            "fun": "managed",
+            "require": [{"pkg": "vim"}],
+        },
+    ]
+    depend_graph = salt.utils.requisite.DependencyGraph()
+    for low in chunks:
+        low.update(
+            {
+                "__env__": env,
+                "__sls__": sls,
+            }
+        )
+        depend_graph.add_chunk(low, allow_aggregate=False)
+    for low in chunks:
+        depend_graph.add_requisites(low, [])
+
+    dot = depend_graph.to_dot()
+    assert "digraph G {" in dot
+    assert "pkg_install" in dot
+    assert "conf_file" in dot
+    assert "require" in dot
