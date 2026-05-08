@@ -1818,6 +1818,70 @@ def show_highstate(queue=None, **kwargs):
         return ret
 
 
+def graph_highstate(queue=None, **kwargs):
+    """
+    Retrieve the highstate data from the salt master and display it as a
+    dependency graph in DOT format.
+
+    Custom Pillar data can be passed with the ``pillar`` kwarg.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.graph_highstate
+    """
+    conflict = _check_queue(queue, kwargs)
+    if conflict is not None:
+        return conflict
+    pillar_override = kwargs.get("pillar")
+    pillar_enc = kwargs.get("pillar_enc")
+    if (
+        pillar_enc is None
+        and pillar_override is not None
+        and not isinstance(pillar_override, dict)
+    ):
+        raise SaltInvocationError(
+            "Pillar data must be formatted as a dictionary, unless pillar_enc "
+            "is specified."
+        )
+
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
+    try:
+        st_ = salt.state.HighState(
+            opts,
+            pillar_override,
+            pillar_enc=pillar_enc,
+            proxy=__proxy__,
+            initial_pillar=_get_initial_pillar(opts),
+        )
+    except NameError:
+        st_ = salt.state.HighState(
+            opts,
+            pillar_override,
+            pillar_enc=pillar_enc,
+            initial_pillar=_get_initial_pillar(opts),
+        )
+
+    with st_:
+        errors = _get_pillar_errors(kwargs, pillar=st_.opts["pillar"])
+        if errors:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
+            raise CommandExecutionError("Pillar failed to render", info=errors)
+
+        st_.push_active()
+        try:
+            high = st_.compile_highstate()
+        finally:
+            st_.pop_active()
+
+        if not isinstance(high, dict):
+            return high
+
+        st_.state.compile_high_data(high)
+        return st_.state.dependency_dag.to_dot()
+
+
 def show_lowstate(queue=None, **kwargs):
     """
     List out the low data that will be applied to this minion
@@ -2267,6 +2331,51 @@ def show_sls(mods, test=None, queue=None, **kwargs):
             __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
         return high_
+
+
+def graph(mods, test=None, queue=None, **kwargs):
+    """
+    Display the dependency graph from a specific sls or list of sls files on the
+    master. The output is in DOT format.
+
+    Custom Pillar data can be passed with the ``pillar`` kwarg.
+
+    saltenv
+        Specify a salt fileserver environment to be used when applying states
+
+    pillarenv
+        Specify a Pillar environment to be used when applying states. This
+        can also be set in the minion config file using the
+        :conf_minion:`pillarenv` option. When neither the
+        :conf_minion:`pillarenv` minion config option nor this CLI argument is
+        used, all Pillar environments will be merged together.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.graph core,edit.vim saltenv=dev
+    """
+    high = show_sls(mods, test=test, queue=queue, **kwargs)
+    if not isinstance(high, dict):
+        return high
+
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
+    try:
+        st_ = salt.state.State(
+            opts,
+            proxy=dict(__proxy__),
+            context=dict(__context__),
+            initial_pillar=_get_initial_pillar(opts),
+        )
+    except NameError:
+        st_ = salt.state.State(
+            opts,
+            initial_pillar=_get_initial_pillar(opts),
+        )
+
+    st_.compile_high_data(high)
+    return st_.dependency_dag.to_dot()
 
 
 def sls_exists(mods, test=None, queue=None, **kwargs):
