@@ -1053,6 +1053,8 @@ VALID_OPTS = immutabletypes.freeze(
         "signing_algorithm": str,
         # Master publish channel signing
         "publish_signing_algorithm": str,
+        # RSA encryption used for cluster peer-to-peer messages
+        "cluster_encryption_algorithm": str,
         # the cache driver to be used to manage keys for both minion and master
         "keys.cache_driver": (type(None), str),
         "request_server_ttl": int,
@@ -1766,6 +1768,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_secret": None,
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
+        "cluster_encryption_algorithm": "OAEP-SHA1",
         "keys.cache_driver": "localfs_key",
         "request_server_aes_session": 0,
         "request_server_ttl": 0,
@@ -4346,6 +4349,15 @@ def apply_master_config(overrides=None, defaults=None):
         raise salt.exceptions.SaltConfigurationError(
             f"The  publish signging algorithm '{opts['publish_signing_algorithm']}' is not valid. "
             f"Please specify one of {','.join(salt.crypt.VALID_SIGNING_ALGORITHMS)}."
+        )
+
+    if (
+        opts["cluster_encryption_algorithm"]
+        not in salt.crypt.VALID_ENCRYPTION_ALGORITHMS
+    ):
+        raise salt.exceptions.SaltConfigurationError(
+            f"The cluster encryption algorithm '{opts['cluster_encryption_algorithm']}' is not valid. "
+            f"Please specify one of {','.join(salt.crypt.VALID_ENCRYPTION_ALGORITHMS)}."
         )
 
     salt.features.setup_features(opts)
