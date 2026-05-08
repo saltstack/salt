@@ -353,7 +353,7 @@ def generate_hashes(ctx: Context, files: list[pathlib.Path]):
                 try:
                     digest = hashlib.file_digest(rfh, hash_name)  # type: ignore[attr-defined]
                 except AttributeError:
-                    # Python < 3.11
+                    # Python < 3.14
                     buf = bytearray(2**18)  # Reusable buffer to reduce allocations.
                     view = memoryview(buf)
                     digest = getattr(hashlib, hash_name)()
