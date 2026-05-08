@@ -1,10 +1,14 @@
 import getpass
+import logging
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 
 import pytest
+
+log = logging.getLogger(__name__)
 
 try:
     import virtualenv
@@ -33,11 +37,16 @@ if shutil.which("gcc") is None and shutil.which("cc") is None:
 @pytest.fixture(scope="module")
 def test_venv(tmp_path_factory):
     venv_dir = tmp_path_factory.mktemp("venv")
+    log.info("Creating test venv at %s", venv_dir)
     virtualenv.cli_run([str(venv_dir)])
     python_bin = venv_dir / "bin" / "python"
-    # Install the current salt package
-    # We use the root of the repo which is 3 levels up from this file's directory
     repo_root = Path(__file__).resolve().parents[3]
+    log.info("pip-installing salt from %s into %s", repo_root, venv_dir)
+    # ``stdout``/``stderr`` are inherited so pip output reaches the CI log
+    # even if pytest's stdout capture is enabled.  ``timeout`` keeps a
+    # wedged build (cryptography rust compile, dependency resolver loop,
+    # virtualenv bootstrap on a fresh interpreter) from hanging the whole
+    # chunk past the workflow timeout.
     subprocess.run(
         [
             str(python_bin),
@@ -47,7 +56,11 @@ def test_venv(tmp_path_factory):
             str(repo_root),
         ],
         check=True,
+        stdout=sys.stdout,
+        stderr=sys.stderr,
+        timeout=600,
     )
+    log.info("pip-install done")
     return venv_dir
 
 
