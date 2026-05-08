@@ -27,6 +27,7 @@ import salt.cache
 import salt.channel.server
 import salt.client
 import salt.client.ssh.client
+import salt.cluster.healthchecks
 import salt.crypt
 import salt.daemons.masterapi
 import salt.defaults.exitcodes
@@ -869,6 +870,11 @@ class Master(SMaster):
         self._pre_flight()
         log.info("salt-master is starting as user '%s'", salt.utils.user.get_user())
 
+        # Wipe stale health-probe sentinels from any previous run before
+        # subprocesses come up, so a probe cannot pass on data from the
+        # last incarnation.  Failures are logged but non-fatal.
+        salt.cluster.healthchecks.reset_health_dir(self.opts)
+
         enable_sigusr1_handler()
         enable_sigusr2_handler()
 
@@ -1053,7 +1059,54 @@ class Master(SMaster):
             # No custom signal handling was added, install our own
             signal.signal(signal.SIGTERM, self._handle_signals)
 
-        asyncio.run(self.process_manager.run())
+        # Mark startup complete now that every subprocess has been
+        # registered with the process manager.  For a non-cluster master
+        # mark readiness here as well — there is no Raft gate to wait
+        # for, so the master is immediately willing to serve traffic.
+        # For cluster masters the readiness sentinel is written from
+        # ``MasterPubServerChannel._signal_cluster_ready`` once the
+        # founding/promotion CONFIG entry commits.
+        salt.cluster.healthchecks.mark_startup_complete(self.opts)
+        if not salt.cluster.healthchecks.is_clustered(self.opts):
+            salt.cluster.healthchecks.mark_cluster_ready(self.opts)
+
+        asyncio.run(self._run_with_heartbeat())
+
+    async def _run_with_heartbeat(self):
+        """
+        Run the process manager alongside a periodic liveness heartbeat.
+
+        The heartbeat task runs in this same asyncio loop, so if the
+        loop wedges (the prototypical liveness-failure case) the
+        ``alive`` sentinel's mtime stops advancing and Kubernetes
+        restarts the pod.  Spawning the heartbeat as a subprocess would
+        miss this — a deadlocked parent could keep an unrelated child
+        ticking.
+
+        ``asynchronous=True`` is required: the default branch of
+        ``ProcessManager.run`` uses blocking ``time.sleep(10)`` which
+        would starve the heartbeat task.
+        """
+        heartbeat_task = asyncio.create_task(self._heartbeat_loop())
+        try:
+            await self.process_manager.run(asynchronous=True)
+        finally:
+            heartbeat_task.cancel()
+            try:
+                await heartbeat_task
+            except (asyncio.CancelledError, Exception):  # pylint: disable=broad-except
+                pass
+
+    async def _heartbeat_loop(self):
+        """Touch the liveness sentinel every ``DEFAULT_ALIVE_INTERVAL`` seconds."""
+        interval = salt.cluster.healthchecks.DEFAULT_ALIVE_INTERVAL
+        while True:
+            try:
+                salt.cluster.healthchecks.touch_alive(self.opts)
+            except Exception:  # pylint: disable=broad-except
+                # Never let a probe-write mishap kill the master.
+                log.exception("healthchecks: heartbeat write failed")
+            await asyncio.sleep(interval)
 
     def _handle_signals(self, signum, sigframe):
         # escalate the signals to the process manager

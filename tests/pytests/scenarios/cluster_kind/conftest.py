@@ -73,7 +73,27 @@ _DEFAULT_DEADLINE = 360
 
 
 def _have(binary):
-    return shutil.which(binary) is not None
+    """
+    True iff *binary* is on ``PATH`` *and* actually runs.
+
+    ``shutil.which`` alone is not enough: some CI images (notably
+    Photon OS 5 Arm64) ship a stub or a wrong-arch ``kind`` /
+    ``kubectl`` / ``docker`` binary that ``which`` happily finds but
+    that fails ``execve`` with ``FileNotFoundError``.  Invoking
+    ``--version`` proves the binary is loadable on this arch.
+    """
+    if shutil.which(binary) is None:
+        return False
+    try:
+        subprocess.run(
+            [binary, "--version"],
+            capture_output=True,
+            check=True,
+            timeout=10,
+        )
+        return True
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
+        return False
 
 
 def _docker_reachable():
@@ -172,25 +192,32 @@ def kind_cluster(tmp_path_factory):
     )
 
     log.info("Creating kind cluster %s", name)
-    create_proc = subprocess.run(
-        [
-            "kind",
-            "create",
-            "cluster",
-            "--name",
-            name,
-            "--config",
-            str(kind_config),
-            "--kubeconfig",
-            str(kubeconfig),
-            "--wait",
-            "120s",
-        ],
-        capture_output=True,
-        text=True,
-        timeout=300,
-        check=False,  # we inspect returncode + skip on non-zero below
-    )
+    try:
+        create_proc = subprocess.run(
+            [
+                "kind",
+                "create",
+                "cluster",
+                "--name",
+                name,
+                "--config",
+                str(kind_config),
+                "--kubeconfig",
+                str(kubeconfig),
+                "--wait",
+                "120s",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=300,
+            check=False,  # we inspect returncode + skip on non-zero below
+        )
+    except (FileNotFoundError, OSError) as exc:
+        # ``_have`` checks at import time should have already skipped
+        # the test when these binaries aren't available, but a CI image
+        # could remove them between collection and execution.  Treat
+        # the same as an unmet dependency.
+        pytest.skip(f"kind binary unavailable at fixture time: {exc}")
     if create_proc.returncode != 0:
         pytest.skip(
             f"kind create cluster failed (likely no nested-Docker support): "
@@ -375,11 +402,59 @@ def _master_pod_manifest(name, image, headless_fqdn, expected_peers, namespace):
                         {"name": "pub", "containerPort": 4505},
                         {"name": "cluster-pool", "containerPort": 55596},
                     ],
-                    "readinessProbe": {
-                        "tcpSocket": {"port": 4506},
-                        "initialDelaySeconds": 30,
+                    # Three probes per the 2026 Kubernetes guidance for
+                    # consensus-based services (etcd's lesson: liveness
+                    # must NOT reflect cluster state, or kubelet kills
+                    # pods mid-election and prevents recovery).
+                    #
+                    # * startupProbe: blocks the other probes until the
+                    #   master finished init.  failureThreshold * period
+                    #   = 5 minutes, generous enough for slow joiners
+                    #   on isolated-FS state-sync.
+                    # * readinessProbe: ``health/ready`` lands when the
+                    #   Raft commit gate fires; until then the headless
+                    #   Service should not route to this master.
+                    # * livenessProbe: ``health/alive`` mtime advances
+                    #   from the parent's asyncio loop every 5 s; if it
+                    #   ages past 30 s the loop is wedged and only a
+                    #   restart will fix it.
+                    "startupProbe": {
+                        "exec": {
+                            "command": [
+                                "test",
+                                "-f",
+                                "/var/cache/salt/master/health/startup",
+                            ]
+                        },
                         "periodSeconds": 5,
                         "failureThreshold": 60,
+                    },
+                    "readinessProbe": {
+                        "exec": {
+                            "command": [
+                                "test",
+                                "-f",
+                                "/var/cache/salt/master/health/ready",
+                            ]
+                        },
+                        "periodSeconds": 5,
+                        "failureThreshold": 3,
+                    },
+                    "livenessProbe": {
+                        "exec": {
+                            "command": [
+                                "/bin/sh",
+                                "-c",
+                                # Stale mtime → unhealthy.  Threshold is
+                                # 6× DEFAULT_ALIVE_INTERVAL so a
+                                # transient stall doesn't trip a restart.
+                                'test "$(($(date +%s) - $(stat -c %Y '
+                                '/var/cache/salt/master/health/alive)))" '
+                                "-lt 30",
+                            ]
+                        },
+                        "periodSeconds": 15,
+                        "failureThreshold": 3,
                     },
                 }
             ],
