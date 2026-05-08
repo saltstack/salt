@@ -325,3 +325,102 @@ def test_session_status_snapshot():
     snap = s.status()
     assert snap[KEYS_CHANNEL] == {"eof": True, "chunks": 2, "items": 15}
     assert snap[DENIED_CHANNEL] == {"eof": False, "chunks": 0, "items": 0}
+
+
+# ---------------------------------------------------------------------------
+# Wire-level chunk-drop simulation (asyncio watchdog wiring)
+# ---------------------------------------------------------------------------
+#
+# Mirrors the join-reply receiver wiring in
+# ``MasterPubServerChannel._begin_state_sync_session`` — a session is
+# created, ``loop.call_later(deadline, session.force_complete)`` schedules
+# a watchdog, then chunks arrive.  The tests below prove that under a
+# chunk-drop scenario (some seq numbers never arrive) the watchdog fires
+# ``on_complete`` with the partial state rather than leaving the joiner
+# stuck, and that a complete delivery cancels the watchdog cleanly.
+
+
+def test_watchdog_fires_on_complete_when_chunks_dropped():
+    """
+    Asyncio-driven failure-mode rehearsal: schedule a real ``call_later``
+    watchdog (matching production), feed only some channels' chunks,
+    advance the loop, and verify ``on_complete`` ran with the partial
+    state.
+    """
+    import asyncio  # pylint: disable=import-outside-toplevel
+
+    loop = asyncio.new_event_loop()
+    try:
+        fired = []
+        session = StateSyncSession("drop-test-1", lambda: fired.append("complete"))
+        # Pretend the cluster_aes / cluster.pem channels arrived; the
+        # roots channels were dropped on the wire.
+        session.record_chunk(KEYS_CHANNEL, 0, eof=True, items_installed=12)
+        session.record_chunk(DENIED_CHANNEL, 0, eof=True, items_installed=0)
+        # No FILE_ROOTS_CHANNEL or PILLAR_ROOTS_CHANNEL chunks — drop.
+        assert not session.completed
+        assert fired == []
+
+        # Schedule the watchdog the same way ``_begin_state_sync_session``
+        # does in production.  Use a tight deadline so the test runs fast.
+        loop.call_later(0.05, session.force_complete)
+
+        # Drive the loop until the watchdog fires.  Cap the wait so a
+        # broken implementation cannot hang the suite.
+        async def _wait():
+            deadline = loop.time() + 1.0
+            while loop.time() < deadline and not session.completed:
+                await asyncio.sleep(0.01)
+
+        loop.run_until_complete(_wait())
+        assert session.completed, (
+            "Watchdog did not force-complete the session within 1s of the "
+            "scheduled deadline; production joiners would hang here"
+        )
+        assert fired == ["complete"]
+        # Status must still reflect the partial delivery so the join-reply
+        # logger / debug runners can describe what was missing.
+        snap = session.status()
+        assert snap[KEYS_CHANNEL]["eof"] is True
+        assert snap[FILE_ROOTS_CHANNEL]["eof"] is False
+        assert snap[PILLAR_ROOTS_CHANNEL]["eof"] is False
+    finally:
+        loop.close()
+
+
+def test_watchdog_cancelled_when_all_channels_complete_in_time():
+    """
+    The complementary case: all chunks arrive before the deadline.  The
+    natural ``on_complete`` runs once; the watchdog handle, if cancelled
+    by the caller (matching ``_begin_state_sync_session`` behaviour),
+    must not re-fire ``on_complete``.
+    """
+    import asyncio  # pylint: disable=import-outside-toplevel
+
+    loop = asyncio.new_event_loop()
+    try:
+        fired = []
+        session = StateSyncSession("drop-test-2", lambda: fired.append("complete"))
+        handle = loop.call_later(0.05, session.force_complete)
+
+        # All chunks arrive before the deadline.
+        for ch in ALL_CHANNELS:
+            session.record_chunk(ch, 0, eof=True, items_installed=1)
+        assert session.completed
+        assert fired == ["complete"]
+
+        # Cancel the watchdog (production code does this in the
+        # ``_on_complete`` callback) and let the loop spin past the
+        # original deadline.  ``on_complete`` must remain at one call.
+        handle.cancel()
+
+        async def _settle():
+            await asyncio.sleep(0.1)
+
+        loop.run_until_complete(_settle())
+        assert fired == ["complete"], (
+            f"Watchdog must not double-fire on_complete after natural "
+            f"completion, got {fired!r}"
+        )
+    finally:
+        loop.close()
