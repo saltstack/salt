@@ -12,47 +12,109 @@ import salt.transport.zeromq
 
 log = logging.getLogger(__name__)
 
-
-_REQ_DRAIN_POLLS = 300
-_REQ_DRAIN_SLEEP_S = 0.01
 _REQ_DRAIN_TIMEOUT_S = 10
-
+_REQ_POLL_S = 0.01
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
 ]
 
 
-def _sync_finalize_req_client(cli, io_loop):
+def _blocking_teardown_req_message_client(cli):
     """
-    Explicit REQ close plus bounded wait for AsyncReqMessageClient teardown.
+    When ``close_future`` cannot finish, release ZMQ resources.
 
-    When close() is deferred onto the loop (#68637), dropping the REQ client immediately
-    can leave Zeromq sockets until GC and trigger noisy ``Socket.__del__`` tracebacks at
-    process exit unless we drain ``message_client.socket is None``.
+    ``AsyncReqMessageClient.close()`` is a no-op if ``close_future()`` already
+    started teardown but ``finalize()`` never ran (stuck loop, half-finished
+    ``_send_recv``, etc.). ``_close_zmq_only`` matches the resource release in
+    ``finalize`` without re-entering ``_initiate_async_req_close``.
+    """
+    try:
+        mc = cli.message_client
+        if getattr(mc, "socket", None) is not None:
+            try:
+                mc.close()
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "REQ MessageClient synchronous close failed during cleanup",
+                    exc_info=True,
+                )
+        if getattr(mc, "socket", None) is not None:
+            mc._close_zmq_only()
+        mc._mark_teardown_finished()
+    except Exception:  # pylint: disable=broad-except
+        log.debug(
+            "REQ MessageClient synchronous teardown fallback failed during cleanup",
+            exc_info=True,
+        )
+    finally:
+        # ``Transport.__del__`` warns unless ``_closing`` is set; when the owning
+        # ``IOLoop`` is stopped we never yield ``cli.close_future()`` (#68637).
+        setattr(cli, "_closing", True)
+
+
+def _sync_yield_req_client_close_future(cli, io_loop):
+    """
+    Block until zeromq RequestClient asynchronous teardown completes (#68637).
+
+    Uses ``RequestClient.close_future()``—same completion contract as
+    ``AsyncReqChannel.close_async`` / ``Minion.destroy_async``—rather than polling
+    ``message_client.socket is None``. If the loop is stopped or ``run_sync`` fails,
+    fall back to synchronous ``AsyncReqMessageClient.close()`` (covers tests that stop
+    the ``IOLoop`` before teardown).
     """
 
     @salt.ext.tornado.gen.coroutine
-    def _runner():
-        cli.close()
-        for _ in range(_REQ_DRAIN_POLLS):
-            if cli.message_client.socket is None:
-                break
-            yield salt.ext.tornado.gen.sleep(_REQ_DRAIN_SLEEP_S)
+    def _wait():
+        fut = cli.close_future()
+        yield fut
 
+    ok = False
     try:
-        io_loop.run_sync(_runner, timeout=_REQ_DRAIN_TIMEOUT_S)
+        if getattr(io_loop, "_running", False):
+            io_loop.run_sync(_wait, timeout=_REQ_DRAIN_TIMEOUT_S)
+            ok = True
     except Exception:  # pylint: disable=broad-except
-        log.debug("REQ client teardown drain aborted during cleanup", exc_info=True)
+        log.debug(
+            "REQ client close_future waiter aborted during cleanup", exc_info=True
+        )
+    if not ok or getattr(cli.message_client, "socket", None) is not None:
+        _blocking_teardown_req_message_client(cli)
+
+
+def _sync_finalize_req_client(cli, io_loop):
+    """Explicit teardown for fixtures (wait on ``close_future``)."""
+    _sync_yield_req_client_close_future(cli, io_loop)
 
 
 async def async_finalize_req_client(cli):
-    """Async equivalent of :func:`_sync_finalize_req_client`."""
-    cli.close()
-    for _ in range(_REQ_DRAIN_POLLS):
-        if cli.message_client.socket is None:
-            break
-        await salt.ext.tornado.gen.sleep(_REQ_DRAIN_SLEEP_S)
+    """
+    Async cleanup: spin the I/O loop via ``gen.sleep`` until ``close_future`` completes.
+
+    Plain ``await`` on a Tornado ``Future`` does not drive ``cli.io_loop`` in this
+    test harness (#68637).
+    """
+    await _async_wait_close_future(cli, "fixture REQ close_future did not finish")
+
+
+async def _await_req_teardown_after_close(cli):
+    """After ``RequestClient.close()`` in-test, wait for deferred teardown."""
+    await _async_wait_close_future(
+        cli, "REQ message client did not finish teardown after RequestClient.close()"
+    )
+
+
+async def _async_wait_close_future(cli, fail_msg):
+    fut = cli.close_future()
+    n = max(1, int(_REQ_DRAIN_TIMEOUT_S / _REQ_POLL_S))
+    for _ in range(n):
+        if fut.done():
+            fut.result()
+            return
+        await salt.ext.tornado.gen.sleep(_REQ_POLL_S)
+    _blocking_teardown_req_message_client(cli)
+    if getattr(cli.message_client, "socket", None) is not None:
+        pytest.fail(fail_msg)
 
 
 def _zmq_teardown_rep(stream=None, rep_socket=None, ctx=None):
@@ -96,7 +158,7 @@ async def test_request_channel_issue_64627(io_loop, request_client, minion_opts,
     Validate socket is preserved until request channel is explicitly closed.
 
     When ``AsyncReqMessageClient.close()`` runs on an active ``IOLoop``, teardown is
-    scheduled on the loop (#68637); yield until ``socket`` is cleared before asserting.
+    scheduled on the loop (#68637); yield ``close_future`` before asserting the socket is gone.
     """
     minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
 
@@ -117,15 +179,7 @@ async def test_request_channel_issue_64627(io_loop, request_client, minion_opts,
         rep = await request_client.send(b"foo")
         assert req_socket is request_client.message_client.socket
         request_client.close()
-        for _ in range(300):
-            if request_client.message_client.socket is None:
-                break
-            await salt.ext.tornado.gen.sleep(0.01)
-        else:
-            pytest.fail(
-                "REQ message client socket not cleared after RequestClient.close() "
-                "(deferred teardown on running IOLoop; see #68637)"
-            )
+        await _await_req_teardown_after_close(request_client)
         assert request_client.message_client.socket is None
 
     finally:
@@ -221,15 +275,7 @@ async def test_request_client_send_recv_socket_closed(
 
         with caplog.at_level(logging.TRACE):
             request_client.close()
-            for _ in range(300):
-                if request_client.message_client.socket is None:
-                    break
-                await salt.ext.tornado.gen.sleep(0.01)
-            else:
-                pytest.fail(
-                    "REQ message client socket not cleared after RequestClient.close() "
-                    "(deferred teardown on running IOLoop; see #68637)"
-                )
+            await _await_req_teardown_after_close(request_client)
 
             assert any(
                 "Send and receive coroutine ending" in msg and "closed" in msg
