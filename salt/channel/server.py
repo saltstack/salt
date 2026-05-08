@@ -2138,13 +2138,18 @@ class MasterPubServerChannel:
 
         Called exactly once by ``RaftService._on_membership_change`` when the
         founding or promotion CONFIG entry commits with this node in the voter set.
+
+        Also writes the Kubernetes readiness sentinel so an exec probe
+        can route traffic to this master.
         """
+        import salt.cluster.healthchecks  # pylint: disable=import-outside-toplevel
         import salt.master  # pylint: disable=import-outside-toplevel
 
         entry = salt.master.SMaster.secrets.get("cluster_ready")
         if entry is not None:
             log.info("MasterPubServerChannel: cluster ready — opening request gate")
             entry["event"].set()
+        salt.cluster.healthchecks.mark_cluster_ready(self.opts)
 
     def private_key(self):
         """
