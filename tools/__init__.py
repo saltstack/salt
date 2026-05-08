@@ -16,6 +16,7 @@ CI_REQUIREMENTS_FILES_PATH = (
 DEFAULT_REQS_CONFIG = DefaultPipConfig(
     install_args=[
         f"--constraint={REQUIREMENTS_FILES_PATH / 'constraints.txt'}",
+        "--ignore-installed",
     ],
     requirements_files=[
         CI_REQUIREMENTS_FILES_PATH / "tools.txt",
@@ -25,6 +26,7 @@ RELEASE_VENV_CONFIG = VirtualEnvPipConfig(
     pip_requirement="pip>=24.2",
     install_args=[
         f"--constraint={REQUIREMENTS_FILES_PATH / 'constraints.txt'}",
+        "--ignore-installed",
     ],
     requirements_files=[
         CI_REQUIREMENTS_FILES_PATH / "tools-virustotal.txt",
