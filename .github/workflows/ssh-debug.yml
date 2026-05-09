@@ -23,7 +23,7 @@ on:
       ci-python-version:
         type: string
         required: false
-        default: "3.11"
+        default: "3.14"
         description: >
           Python version to use for workflow run
 
