@@ -1201,15 +1201,28 @@ class MmapCache:
         """
         Overwrite bytes in-place in the heap segment encoded in *packed_offset*.
 
-        When ``verify_checksums=True`` rewrites the CRC prefix as well so the
-        stored checksum stays consistent with the (possibly shorter) value.
+        Writes ``CRC + value_bytes`` (or just ``value_bytes`` when
+        ``verify_checksums=False``).  Callers that overwrite a shorter
+        value into a previously-larger heap region must NOT pre-pad
+        ``value_bytes`` — pass the actual value bytes only.  Any bytes
+        beyond ``len(value_bytes)`` in the previously-allocated region
+        are left in place as unreferenced garbage and reclaimed by the
+        next ``atomic_rebuild``; the slot's ``LENGTH`` field is
+        authoritative for the next read so the garbage tail is never
+        observed.
+
+        Pre-padding with NULs (the prior implementation) plus a
+        ``rstrip`` digest computation here corrupted any binary value
+        whose final byte was ``\\x00`` — the read-side digest was
+        computed over the (still-padded) read bytes while the stored
+        digest was computed over the rstripped version, so the CRC
+        check failed and the entry was reported missing.  See BUG.md.
         """
         seg_id, seg_offset = self._unpack_offset(packed_offset)
         seg_path = self._segment_path(seg_id)
 
         if self.verify_checksums:
-            true_value = value_bytes.rstrip(b"\x00")
-            digest = xxhash.xxh3_64_intdigest(true_value)
+            digest = xxhash.xxh3_64_intdigest(value_bytes)
             record = struct.pack(_CRC_FMT, digest) + value_bytes
         else:
             record = value_bytes
@@ -1274,10 +1287,19 @@ class MmapCache:
                             s_offset
                         )
                         if len(val_bytes) <= existing_len:
-                            # Pad value to existing_len; _overwrite_in_heap
-                            # prepends the fresh CRC itself.
-                            padded = val_bytes.ljust(existing_len, b"\x00")
-                            if not self._overwrite_in_heap(existing_heap_off, padded):
+                            # In-place overwrite: hand the actual value
+                            # bytes to ``_overwrite_in_heap`` (no NUL
+                            # padding).  The slot's LENGTH field becomes
+                            # authoritative for reads; trailing bytes
+                            # from the previous, larger value remain in
+                            # the heap as unreferenced garbage that
+                            # ``atomic_rebuild`` reclaims.  Padding here
+                            # plus a rstrip CRC inside _overwrite_in_heap
+                            # corrupted binary values whose final byte
+                            # was NUL — see BUG.md.
+                            if not self._overwrite_in_heap(
+                                existing_heap_off, val_bytes
+                            ):
                                 return False
                             struct.pack_into(
                                 _LENGTH_FMT,
@@ -1369,7 +1391,11 @@ class MmapCache:
                 if raw is None:
                     return default
 
-                raw = raw.rstrip(b"\x00") or b""
+                # ``_read_from_heap`` returns exactly ``length`` value bytes
+                # (CRC verified separately).  Do NOT rstrip NUL bytes — that
+                # would corrupt any binary value whose serialised form ends
+                # in ``\x00`` (e.g. a msgpack-encoded dict with a trailing
+                # zero integer).  See BUG.md.
                 if not raw:
                     return True
 

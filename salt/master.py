@@ -28,6 +28,7 @@ import salt.channel.server
 import salt.client
 import salt.client.ssh.client
 import salt.cluster.healthchecks
+import salt.cluster.ring_membership
 import salt.crypt
 import salt.daemons.masterapi
 import salt.defaults.exitcodes
@@ -1157,11 +1158,17 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
             # publishes a new job, mirror its `minions` list into our
             # local job cache so any CLI on this master can later look
             # up the jid without sharing ``cachedir``.
+            #
+            # Stage 0 ring gating: ``ring_membership.owns(opts, jid)`` is
+            # the durable hook a future ring config flip will use to
+            # shard job state.  In stage 0 the per-process ring stays
+            # empty in this subprocess, so ``owns`` returns ``True`` and
+            # we mirror everything (today's behaviour).
             peer_id = data.pop("__peer_id", None)
             if peer_id and self.opts.get("cluster_id"):
                 jid = data.get("jid")
                 minions = data.get("minions") or []
-                if jid:
+                if jid and salt.cluster.ring_membership.owns(self.opts, jid):
                     try:
                         salt.utils.job.store_minions(self.opts, jid, minions)
                     except Exception:  # pylint: disable=broad-except
@@ -1170,15 +1177,21 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
             # Cluster replication of job returns: minion responded to a
             # peer master; persist the return into our local cache so a
             # CLI on this master can deliver it to the user.
+            #
+            # Same ring-gating as the /new branch above.  Once stage 1
+            # ships, the ring will only let the jid's owner write the
+            # return; today every master writes every return.
             peer_id = data.pop("__peer_id", None)
             if peer_id and self.opts.get("cluster_id"):
-                try:
-                    salt.utils.job.store_job(self.opts, data)
-                except Exception:  # pylint: disable=broad-except
-                    log.exception(
-                        "Failed to mirror peer job return for jid %s",
-                        data.get("jid"),
-                    )
+                jid = data.get("jid")
+                if salt.cluster.ring_membership.owns(self.opts, jid):
+                    try:
+                        salt.utils.job.store_job(self.opts, data)
+                    except Exception:  # pylint: disable=broad-except
+                        log.exception(
+                            "Failed to mirror peer job return for jid %s",
+                            jid,
+                        )
         elif tag.startswith("salt/key"):
             # Replicate accepted/rejected/denied/deleted minion key state
             # across the cluster.  When a minion's key state changes on one
@@ -1187,6 +1200,13 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
             # forwards the event to peers; here we install the bytes into the
             # local pki tree so every master agrees on which minions are
             # accepted without sharing pki_dir over a filesystem.
+            #
+            # Ring gating note: even when ring mode flips to voter
+            # sharding in stage 1, every master still needs the public
+            # key bytes to *verify* a minion's signature (latency-
+            # sensitive on every auth), so we keep replicating the bytes
+            # everywhere.  The "is this key accepted/denied" *metadata*
+            # is what stage 2+ will shard; that's a separate gate.
             peer_id = data.pop("__peer_id", None)
             if peer_id and self.opts.get("cluster_id"):
                 act = data.get("act")

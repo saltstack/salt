@@ -13,6 +13,7 @@ runner modules
     auth
     batch
     cache
+    cluster
     config
     doc
     error

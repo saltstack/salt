@@ -162,11 +162,22 @@ def _get_cache(bank, cachedir):
     index_path = os.path.join(bank_dir, ".mmap_cache.idx")
 
     size, slot_size, key_size = tuning
+    # Heap segment cap controls "how big can a single .heap-N file get
+    # before the next append rolls a new segment".  Pulled from opts
+    # rather than hardcoded so operators can tune for filesystems or
+    # backup tools that struggle past a given size.  Not part of the
+    # ``tuning`` tuple because changing it does not invalidate
+    # already-written segments — it only affects future appends.
+    max_segment_bytes = __opts__.get(
+        "mmap_cache_max_segment_bytes",
+        salt.utils.mmap_cache.DEFAULT_MAX_SEGMENT_BYTES,
+    )
     cache_obj = salt.utils.mmap_cache.MmapCache(
         path=index_path,
         size=size,
         slot_size=slot_size,
         key_size=key_size,
+        max_segment_bytes=max_segment_bytes,
     )
     _caches[key] = (tuning, cache_obj)
     return cache_obj

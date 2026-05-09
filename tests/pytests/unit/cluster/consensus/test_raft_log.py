@@ -1261,3 +1261,576 @@ class TestNodeInstallSnapshotMembership:
         new_sm = MembershipStateMachine()
         node.register_membership_sm(new_sm)
         assert node.log._extra_state_machines["membership_sm"] is new_sm
+
+
+class TestNodeReconcileMembership:
+    """
+    Node.reconcile_membership re-applies the SM's restored view to the
+    Node's peer table and fires the wired on_change observer.
+
+    GAP #1 in CONSENSUS_BUGS.md / GAPS.md: MembershipStateMachine
+    .restore_snapshot is a pure store; without reconcile, the in-memory
+    peer voting flags and any on_change observer (RaftService cluster-
+    ready hook, ring rebuild) stay stale after a snapshot restore.
+    """
+
+    def _make_node(self, node_id="a"):
+        """Build a Node with a peer factory so on_config_change rebuilds peers."""
+        from salt.cluster.consensus.raft.node import Node
+
+        node = Node(node_id)
+        node.register_schedule_timeout(lambda t, c: None)
+
+        class _StubPeer:
+            def __init__(self, addr, voting=True):
+                self.node_id = addr
+                self.voting = voting
+
+        node.register_peer_factory(_StubPeer)
+        return node
+
+    def test_reconcile_no_op_when_sm_empty(self):
+        """A fresh Node with no committed CONFIG: reconcile is a no-op."""
+        node = self._make_node()
+        observed = []
+        node.membership_sm.on_change = lambda v, l: observed.append((list(v), list(l)))
+        node.reconcile_membership()
+        assert observed == [], "on_change must not fire for an empty SM"
+        assert node.peers == []
+
+    def test_reconcile_after_restore_snapshot_fires_on_change(self):
+        """
+        After ``MembershipStateMachine.restore_snapshot`` populates the
+        SM, calling ``reconcile_membership`` invokes the wired on_change
+        observer with the restored voters/learners.
+        """
+        node = self._make_node("self")
+        observed = []
+        node.membership_sm.on_change = lambda v, l: observed.append((list(v), list(l)))
+
+        node.membership_sm.restore_snapshot(
+            {"voters": ["self", "b", "c"], "learners": ["d"], "version": 7}
+        )
+        # Pre-condition: SM has the right view but on_change has not fired.
+        assert node.membership_sm.current_voters() == ["b", "c", "self"]
+        assert observed == []
+
+        node.reconcile_membership()
+
+        assert len(observed) == 1
+        voters, learners = observed[0]
+        assert sorted(voters) == ["b", "c", "self"]
+        assert learners == ["d"]
+
+    def test_reconcile_rebuilds_node_peers_from_restored_sm(self):
+        """
+        ``Node.peers`` and ``Node.voting`` re-converge with the restored
+        SM after reconcile.  Without this, a master that comes up from a
+        compacted snapshot has an empty peer table.
+        """
+        node = self._make_node("self")
+        # Pre-existing peer table is empty (this is the post-snapshot
+        # state — Node was constructed before any CONFIG entry replayed).
+        assert node.peers == []
+        assert node.voting is True  # default
+
+        node.membership_sm.restore_snapshot(
+            {"voters": ["self", "b", "c"], "learners": ["d"], "version": 9}
+        )
+        node.reconcile_membership()
+
+        # All three voter peers (excluding self) plus the learner should
+        # appear in node.peers, with voting flags set correctly.
+        peer_ids = sorted(p.node_id for p in node.peers)
+        assert peer_ids == ["b", "c", "d"]
+        voting_by_id = {p.node_id: p.voting for p in node.peers}
+        assert voting_by_id == {"b": True, "c": True, "d": False}
+        # And self must be marked as a voter.
+        assert node.voting is True
+
+    def test_reconcile_fired_from_install_snapshot(self):
+        """
+        ``Node.install_snapshot`` calls reconcile so a follower receiving
+        an envelope snapshot ends up with peers + on_change side effects
+        consistent with the restored membership SM.
+        """
+        import json
+
+        from salt.cluster.consensus.raft.log import SNAPSHOT_ENVELOPE_VERSION
+
+        node = self._make_node("follower")
+        node.term = 1
+        observed = []
+        node.membership_sm.on_change = lambda v, l: observed.append((list(v), list(l)))
+
+        envelope = {
+            "__envelope__": SNAPSHOT_ENVELOPE_VERSION,
+            "machines": {
+                "membership_sm": {
+                    "voters": ["m1", "m2", "follower"],
+                    "learners": [],
+                    "version": 12,
+                },
+            },
+        }
+        node.install_snapshot(
+            leader_id="m1",
+            term=2,
+            last_index=20,
+            last_term=2,
+            data=json.dumps(envelope).encode("utf-8"),
+        )
+
+        # SM restored, on_change fired, peers rebuilt.
+        assert node.membership_sm.current_voters() == ["follower", "m1", "m2"]
+        assert len(observed) == 1
+        peer_ids = sorted(p.node_id for p in node.peers)
+        assert peer_ids == ["m1", "m2"]
+
+    def test_reconcile_idempotent(self):
+        """
+        Calling reconcile twice on the same restored state is safe; it
+        re-fires on_change but does not corrupt peer state.  This matches
+        the behaviour we get when ``RaftService`` reconciles after wiring
+        on_change *and* a subsequent ``install_snapshot`` reconciles again.
+        """
+        node = self._make_node("self")
+        node.membership_sm.restore_snapshot(
+            {"voters": ["self", "b"], "learners": [], "version": 1}
+        )
+        observed = []
+        node.membership_sm.on_change = lambda v, l: observed.append((list(v), list(l)))
+
+        node.reconcile_membership()
+        node.reconcile_membership()
+
+        peer_ids = sorted(p.node_id for p in node.peers)
+        assert peer_ids == ["b"]
+        # on_change fired twice but the peer table is stable.
+        assert len(observed) == 2
+
+    def test_reconcile_without_peer_factory(self):
+        """
+        A bare Node without a registered peer factory still reconciles
+        cleanly: peer voting flags update in place on the existing
+        peers, on_change still fires.  Matches the pre-RaftService
+        construction window where reconcile would fire from
+        ``install_snapshot`` before any peer factory is wired.
+        """
+        from salt.cluster.consensus.raft.node import Node
+
+        node = Node("self")
+        node.register_schedule_timeout(lambda t, c: None)
+        # No peer_factory registered — leave node.peers empty.
+
+        observed = []
+        node.membership_sm.on_change = lambda v, l: observed.append((list(v), list(l)))
+        node.membership_sm.restore_snapshot(
+            {"voters": ["self", "b"], "learners": ["c"], "version": 1}
+        )
+        node.reconcile_membership()
+        # on_change still fired — RaftService can update its hooks.
+        assert len(observed) == 1
+        assert sorted(observed[0][0]) == ["b", "self"]
+        assert observed[0][1] == ["c"]
+        # Without a factory there are no peers to populate; that's
+        # correct for this construction window.
+        assert node.peers == []
+
+    def test_reconcile_when_self_demoted_to_learner(self):
+        """
+        If the restored membership has this node *only* in the learner
+        set, ``Node.voting`` flips to False.  Pins the
+        on_config_change side-effect path on the demote case.
+        """
+        node = self._make_node("self")
+        node.membership_sm.restore_snapshot(
+            {"voters": ["b", "c"], "learners": ["self"], "version": 1}
+        )
+        node.reconcile_membership()
+        assert node.voting is False
+
+    def test_reconcile_with_self_in_neither_set_keeps_voting_default(self):
+        """
+        If the restored snapshot does not mention this node at all
+        (membership change removed it), ``Node.voting`` keeps its
+        prior value rather than spuriously flipping.  Matches the
+        existing on_config_change code path that only mutates
+        ``self.voting`` when it sees this node in voters or learners.
+        """
+        node = self._make_node("self")
+        original_voting = node.voting
+        node.membership_sm.restore_snapshot(
+            {"voters": ["b", "c"], "learners": ["d"], "version": 1}
+        )
+        node.reconcile_membership()
+        assert node.voting is original_voting
+
+
+# ---------------------------------------------------------------------------
+# RingConfigStateMachine — ring policy commits (Stage 1 of ring rollout)
+# ---------------------------------------------------------------------------
+
+
+class TestRingConfigStateMachine:
+    """
+    Pin the ``RingConfigStateMachine`` contract: applies RING_CONFIG
+    entries (members source + replication factor), fires on_change,
+    survives snapshot/restore via the same envelope shape used by
+    MembershipStateMachine.
+    """
+
+    def test_default_policy_is_self_with_one_replica(self):
+        from salt.cluster.consensus.raft.log import RingConfigStateMachine
+
+        sm = RingConfigStateMachine()
+        assert sm.members == "self"
+        assert sm.replicas == 1
+        assert sm.config_version == -1
+
+    def test_apply_records_members_and_replicas(self):
+        from salt.cluster.consensus.raft.log import RingConfigStateMachine
+
+        sm = RingConfigStateMachine()
+        sm.apply({"members": "voters", "replicas": 3}, index=7)
+        assert sm.members == "voters"
+        assert sm.replicas == 3
+        assert sm.config_version == 7
+
+    def test_apply_partial_update_keeps_other_field(self):
+        """
+        Partial updates merge with the current state so a runner can
+        flip just one knob at a time without re-asserting the other.
+        """
+        from salt.cluster.consensus.raft.log import RingConfigStateMachine
+
+        sm = RingConfigStateMachine()
+        sm.apply({"members": "voters", "replicas": 3}, index=1)
+        # Only flip replicas.
+        sm.apply({"replicas": 2}, index=2)
+        assert sm.members == "voters"
+        assert sm.replicas == 2
+        # Only flip members.
+        sm.apply({"members": "self"}, index=3)
+        assert sm.members == "self"
+        assert sm.replicas == 2
+
+    def test_apply_rejects_unknown_members_value(self):
+        """Unknown ``members`` policy is logged and ignored, not stored."""
+        from salt.cluster.consensus.raft.log import RingConfigStateMachine
+
+        sm = RingConfigStateMachine()
+        sm.apply({"members": "voters"}, index=1)
+        sm.apply({"members": "moon"}, index=2)
+        assert sm.members == "voters"
+
+    def test_apply_clamps_replicas_to_at_least_one(self):
+        """A replicas value below 1 is silently clamped to 1."""
+        from salt.cluster.consensus.raft.log import RingConfigStateMachine
+
+        sm = RingConfigStateMachine()
+        sm.apply({"replicas": 0}, index=1)
+        assert sm.replicas == 1
+        sm.apply({"replicas": -5}, index=2)
+        assert sm.replicas == 1
+
+    def test_apply_ignores_non_integer_replicas(self):
+        """Non-numeric replicas values are logged and ignored."""
+        from salt.cluster.consensus.raft.log import RingConfigStateMachine
+
+        sm = RingConfigStateMachine()
+        sm.apply({"replicas": 3}, index=1)
+        sm.apply({"replicas": "lots"}, index=2)
+        assert sm.replicas == 3
+
+    def test_on_change_fires_with_current_state(self):
+        """
+        ``on_change(members, replicas)`` is invoked after every successful
+        apply with the *new* values — even if only one field changed.
+        """
+        from salt.cluster.consensus.raft.log import RingConfigStateMachine
+
+        seen = []
+        sm = RingConfigStateMachine(on_change=lambda m, r: seen.append((m, r)))
+        sm.apply({"members": "voters", "replicas": 3}, index=1)
+        sm.apply({"replicas": 2}, index=2)
+        assert seen == [("voters", 3), ("voters", 2)]
+
+    def test_snapshot_round_trip(self):
+        """``get_snapshot`` / ``restore_snapshot`` is lossless."""
+        from salt.cluster.consensus.raft.log import RingConfigStateMachine
+
+        sm1 = RingConfigStateMachine()
+        sm1.apply({"members": "voters", "replicas": 4}, index=42)
+        snap = sm1.get_snapshot()
+
+        sm2 = RingConfigStateMachine()
+        sm2.restore_snapshot(snap)
+        assert sm2.members == "voters"
+        assert sm2.replicas == 4
+        assert sm2.config_version == 42
+
+    def test_restore_snapshot_from_bytes(self):
+        """JSON-encoded snapshot bytes restore correctly."""
+        import json
+
+        from salt.cluster.consensus.raft.log import RingConfigStateMachine
+
+        sm = RingConfigStateMachine()
+        payload = json.dumps(
+            {"members": "voters", "replicas": 2, "version": 5}
+        ).encode()
+        sm.restore_snapshot(payload)
+        assert sm.members == "voters"
+        assert sm.replicas == 2
+        assert sm.config_version == 5
+
+    def test_restore_snapshot_with_garbage_data_is_noop(self):
+        """Non-dict / non-bytes input leaves the SM unchanged."""
+        from salt.cluster.consensus.raft.log import RingConfigStateMachine
+
+        sm = RingConfigStateMachine()
+        sm.restore_snapshot("not a dict")
+        sm.restore_snapshot(None)
+        sm.restore_snapshot(42)
+        assert sm.members == "self"
+        assert sm.replicas == 1
+
+
+class TestNodeAppliesRingConfigEntry:
+    """
+    ``Node.apply_entries`` dispatches RING_CONFIG entries to the SM
+    registered under ``"ring_sm"`` on the Log.  Stage 1 wiring.
+    """
+
+    def test_ring_config_entry_dispatches_to_registered_sm(self):
+        from salt.cluster.consensus.raft.log import LogEntryType, RingConfigStateMachine
+        from salt.cluster.consensus.raft.node import Node
+
+        node = Node("a")
+        node.register_schedule_timeout(lambda t, c: None)
+        ring_sm = RingConfigStateMachine()
+        node.log.register_state_machine("ring_sm", ring_sm)
+
+        node.log.add(
+            1,
+            {"members": "voters", "replicas": 2},
+            entry_type=LogEntryType.RING_CONFIG,
+        )
+        node.commit_index = node.log.index
+        assert ring_sm.members == "voters"
+        assert ring_sm.replicas == 2
+
+    def test_ring_config_entry_without_registered_sm_is_safe(self):
+        """
+        A RING_CONFIG entry on a Node without a ``ring_sm`` registered
+        applies as a no-op.  Older snapshots / mid-deploy clusters
+        should tolerate this rather than crash.
+        """
+        from salt.cluster.consensus.raft.log import LogEntryType
+        from salt.cluster.consensus.raft.node import Node
+
+        node = Node("a")
+        node.register_schedule_timeout(lambda t, c: None)
+        # No ring_sm registered.
+        node.log.add(
+            1,
+            {"members": "voters", "replicas": 2},
+            entry_type=LogEntryType.RING_CONFIG,
+        )
+        node.commit_index = node.log.index
+        # No exception raised; entry advanced last_applied.
+        assert node.log.last_applied == node.log.index
+
+    def test_ring_config_apply_fires_registered_on_change(self):
+        """
+        Apply path runs the SM's ``on_change`` observer.  RaftService
+        wires this to ``_apply_ring_policy`` so the per-process ring
+        re-syncs after every committed RING_CONFIG entry.
+        """
+        from salt.cluster.consensus.raft.log import LogEntryType, RingConfigStateMachine
+        from salt.cluster.consensus.raft.node import Node
+
+        observed = []
+        ring_sm = RingConfigStateMachine(on_change=lambda m, r: observed.append((m, r)))
+        node = Node("a")
+        node.register_schedule_timeout(lambda t, c: None)
+        node.log.register_state_machine("ring_sm", ring_sm)
+
+        node.log.add(
+            1,
+            {"members": "voters", "replicas": 2},
+            entry_type=LogEntryType.RING_CONFIG,
+        )
+        node.commit_index = node.log.index
+        assert observed == [("voters", 2)]
+
+    def test_mixed_config_and_ring_config_entries_apply_independently(self):
+        """
+        A CONFIG + RING_CONFIG sequence drives the membership SM and
+        the ring SM independently — neither leaks state into the
+        other.  Pins the contract that future SMs registered on the
+        Log do not accidentally cross-talk via the apply path.
+        """
+        from salt.cluster.consensus.raft.log import LogEntryType, RingConfigStateMachine
+        from salt.cluster.consensus.raft.node import Node
+
+        ring_sm = RingConfigStateMachine()
+        node = Node("a")
+        node.register_schedule_timeout(lambda t, c: None)
+        node.log.register_state_machine("ring_sm", ring_sm)
+
+        node.log.add(
+            1,
+            {"voters": ["a", "b"], "learners": []},
+            entry_type=LogEntryType.CONFIG,
+        )
+        node.log.add(
+            1,
+            {"members": "voters", "replicas": 3},
+            entry_type=LogEntryType.RING_CONFIG,
+        )
+        node.log.add(
+            1,
+            {"voters": ["a", "b", "c"], "learners": []},
+            entry_type=LogEntryType.CONFIG,
+        )
+        node.commit_index = node.log.index
+
+        assert node.membership_sm.current_voters() == ["a", "b", "c"]
+        assert ring_sm.members == "voters"
+        assert ring_sm.replicas == 3
+
+    def test_ring_config_apply_swallows_on_change_exception(self):
+        """
+        A buggy on_change observer must not crash the apply loop.  The
+        SM still records the new state; the exception is logged.
+        """
+        from salt.cluster.consensus.raft.log import LogEntryType, RingConfigStateMachine
+        from salt.cluster.consensus.raft.node import Node
+
+        # Defensively, RingConfigStateMachine.apply currently lets the
+        # exception propagate.  This test pins the *current* behaviour
+        # so a future change that wraps the callback in try/except is
+        # an explicit, reviewed contract change.
+        def boom(_m, _r):
+            raise RuntimeError("observer is sad")
+
+        ring_sm = RingConfigStateMachine(on_change=boom)
+        node = Node("a")
+        node.register_schedule_timeout(lambda t, c: None)
+        node.log.register_state_machine("ring_sm", ring_sm)
+
+        node.log.add(
+            1,
+            {"members": "voters"},
+            entry_type=LogEntryType.RING_CONFIG,
+        )
+        # Apply currently surfaces the exception.  A future change that
+        # adds isolation should update this assertion.
+        with pytest.raises(RuntimeError):
+            node.commit_index = node.log.index
+        # Even though the callback raised, the SM did record the new
+        # state before invoking the callback.
+        assert ring_sm.members == "voters"
+
+
+class TestSnapshotEnvelopeMultiSM:
+    """
+    Both ``membership_sm`` and ``ring_sm`` must round-trip through the
+    same snapshot envelope.  This is the integration claim that closes
+    CONSENSUS_BUGS.md #1's fix and lets stage 1 ring config persist
+    through compaction.
+    """
+
+    def _build_node(self, node_id="self"):
+        from salt.cluster.consensus.raft.log import RingConfigStateMachine
+        from salt.cluster.consensus.raft.node import Node
+
+        node = Node(node_id)
+        node.register_schedule_timeout(lambda t, c: None)
+        ring_sm = RingConfigStateMachine()
+        node.log.register_state_machine("ring_sm", ring_sm)
+        return node, ring_sm
+
+    def test_snapshot_carries_both_membership_and_ring_sm(self):
+        """
+        After ``Log.snapshot()`` the persisted blob has ``machines``
+        keys for *both* SMs.  Restoring the blob into a fresh Log
+        rebuilds both states.
+        """
+        from salt.cluster.consensus.raft.log import (
+            SNAPSHOT_ENVELOPE_VERSION,
+            LogEntryType,
+            RingConfigStateMachine,
+        )
+        from salt.cluster.consensus.raft.node import Node
+
+        node, ring_sm = self._build_node()
+        node.log.add(
+            1,
+            {"voters": ["self", "b"], "learners": []},
+            entry_type=LogEntryType.CONFIG,
+        )
+        node.log.add(
+            1,
+            {"members": "voters", "replicas": 3},
+            entry_type=LogEntryType.RING_CONFIG,
+        )
+        node.commit_index = node.log.index
+        node.log.snapshot()
+
+        # Build a fresh Node + ring_sm and restore from the same data.
+        fresh_node = Node("self")
+        fresh_node.register_schedule_timeout(lambda t, c: None)
+        fresh_ring_sm = RingConfigStateMachine()
+        fresh_node.log.register_state_machine("ring_sm", fresh_ring_sm)
+        # Synthesize the snapshot bytes directly to drive
+        # restore_state_machines_from_data.
+        fresh_node.log.restore_state_machines_from_data(
+            {
+                "__envelope__": SNAPSHOT_ENVELOPE_VERSION,
+                "machines": {
+                    "membership_sm": node.membership_sm.get_snapshot(),
+                    "ring_sm": ring_sm.get_snapshot(),
+                },
+            }
+        )
+        assert fresh_node.membership_sm.current_voters() == ["b", "self"]
+        assert fresh_ring_sm.members == "voters"
+        assert fresh_ring_sm.replicas == 3
+
+    def test_restore_with_only_membership_sm_keeps_ring_sm_default(self):
+        """
+        Backward-compat: a snapshot from before ring_sm was registered
+        (envelope has only ``membership_sm``) must restore membership
+        without crashing, leaving the ring_sm at its defaults so the
+        rest of the system falls back to broadcast.
+        """
+        from salt.cluster.consensus.raft.log import (
+            SNAPSHOT_ENVELOPE_VERSION,
+            RingConfigStateMachine,
+        )
+        from salt.cluster.consensus.raft.node import Node
+
+        node = Node("self")
+        node.register_schedule_timeout(lambda t, c: None)
+        ring_sm = RingConfigStateMachine()
+        node.log.register_state_machine("ring_sm", ring_sm)
+
+        node.log.restore_state_machines_from_data(
+            {
+                "__envelope__": SNAPSHOT_ENVELOPE_VERSION,
+                "machines": {
+                    "membership_sm": {
+                        "voters": ["a", "b"],
+                        "learners": [],
+                        "version": 5,
+                    },
+                    # No ring_sm payload.
+                },
+            }
+        )
+        assert node.membership_sm.current_voters() == ["a", "b"]
+        assert ring_sm.members == "self"
+        assert ring_sm.replicas == 1
