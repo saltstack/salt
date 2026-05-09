@@ -207,76 +207,6 @@ following the Filesystem Hierarchy Standard (FHS) might set it to
     pki_dir: /etc/salt/pki/master
 
 
-.. conf_master:: pki_index_enabled
-
-``pki_index_enabled``
----------------------
-
-.. versionadded:: 3009.0
-
-Default: ``False``
-
-Enable the O(1) PKI index optimization. This uses a memory-mapped hash table
-to speed up minion public key lookups, which can substantially decrease
-master publish times and authentication overhead in large environments.
-
-.. code-block:: yaml
-
-    pki_index_enabled: True
-
-.. conf_master:: pki_index_size
-
-``pki_index_size``
-------------------
-
-.. versionadded:: 3009.0
-
-Default: ``1000000``
-
-The number of slots in the PKI index. For best performance and minimal
-collisions, this should be set to approximately 2x your total minion count.
-This value applies to each shard if sharding is enabled.
-
-.. code-block:: yaml
-
-    pki_index_size: 1000000
-
-.. conf_master:: pki_index_shards
-
-``pki_index_shards``
---------------------
-
-.. versionadded:: 3009.0
-
-Default: ``1``
-
-The number of shards to split the PKI index across. Sharding allows the index
-to span multiple memory-mapped files, which can improve concurrency and
-performance in extremely large environments or on filesystems with specific
-locking characteristics.
-
-.. code-block:: yaml
-
-    pki_index_shards: 1
-
-.. conf_master:: pki_index_slot_size
-
-``pki_index_slot_size``
------------------------
-
-.. versionadded:: 3009.0
-
-Default: ``128``
-
-The size in bytes of each slot in the PKI index. This must be large enough
-to hold your longest minion ID plus approximately 10 bytes of internal
-overhead (state information and separators).
-
-.. code-block:: yaml
-
-    pki_index_slot_size: 128
-
-
 .. conf_master:: cluster_id
 
 ``cluster_id``
@@ -786,11 +716,26 @@ are expected to reply from executions.
 
 Default: ``localfs``
 
-Cache subsystem module to use for minion data cache.
+Cache subsystem module to use for minion data cache.  Common values:
+
+* ``localfs`` — file-per-entry under :conf_master:`cachedir`.  The default;
+  fine for small deployments.
+* ``mmap_cache`` — fast memory-mapped hash-table backend.  Drop-in for
+  ``localfs`` with an O(1) get/contains/updated and O(occupied) bulk
+  listing.  On large fleets ``salt-key -L`` and grain/pillar target
+  matching can run **orders of magnitude faster** than ``localfs``.
+  Migrate existing data with ``salt-run cache.migrate``.  See
+  :ref:`mmap-cache` for benchmarks, sizing, and durability notes.
+* ``consul``, ``redis``, ``etcd``, ``mysql`` — networked backends, useful
+  for sharing cache across multiple masters.
+
+The minion-key store is selected separately via ``keys.cache_driver``
+(``localfs_key`` by default; set to ``mmap_key`` for the memory-mapped
+variant).
 
 .. code-block:: yaml
 
-    cache: consul
+    cache: mmap_cache
 
 .. conf_master:: memcache_expire_seconds
 
