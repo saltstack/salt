@@ -187,7 +187,6 @@ building_man_only = "man" in sys.argv and "html" not in sys.argv
 # External dependencies that Salt imports at module level
 # These need to be available for full HTML docs (autodoc) but can be mocked for man pages
 _SALT_DEPENDENCIES = [
-    "backports",  # Not available in Python 3.13+
     "distro",
     "jinja2",
     "looseversion",
@@ -195,6 +194,9 @@ _SALT_DEPENDENCIES = [
     "packaging",
     "yaml",
 ]
+
+if sys.version_info < (3, 13):
+    _SALT_DEPENDENCIES.append("backports")
 
 _missing_deps = []
 for dep in _SALT_DEPENDENCIES:
