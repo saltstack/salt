@@ -60,6 +60,11 @@ class LogEntryType:
     COMMAND = 0
     CONFIG = 1
     SNAPSHOT = 2
+    # Ring policy commit (members source + replication factor).  Driven
+    # by a salt-run cluster.ring runner in stage 1; applied to a
+    # ``RingConfigStateMachine`` registered on the Log so its state
+    # survives compaction in the same envelope as ``membership_sm``.
+    RING_CONFIG = 3
 
 
 class LogEntry(NamedTuple):
@@ -620,6 +625,142 @@ class MembershipStateMachine(BaseStateMachine):
         return (
             f"<MembershipStateMachine voters={sorted(self._voters)} "
             f"learners={sorted(self._learners)} version={self._membership_version}>"
+        )
+
+
+# ---------------------------------------------------------------------------
+# RingConfigStateMachine
+# ---------------------------------------------------------------------------
+
+
+# Valid values for the ring's ``members`` policy.
+RING_MEMBERS_SELF = "self"
+RING_MEMBERS_VOTERS = "voters"
+RING_MEMBERS_VALID = (RING_MEMBERS_SELF, RING_MEMBERS_VOTERS)
+
+
+class RingConfigStateMachine(BaseStateMachine):
+    """
+    State machine for the cluster's :class:`~salt.cluster.ring.HashRing`
+    policy — *what* the ring contains and *how many replicas* per key.
+
+    Two committable knobs:
+
+    * ``members`` — ``"self"`` (default; ring contains only this master so
+      every key is owned locally — preserves today's broadcast behaviour)
+      or ``"voters"`` (ring is rebuilt from the committed Raft voter set
+      so writes shard across the cluster).
+    * ``replicas`` — replication factor.  ``1`` (default) means each key
+      has exactly one owner with no backups.  Higher values request the
+      ring to keep the top-N nodes as replicas; the runner validates
+      against ``len(voters)``.
+
+    Driven by a ``LogEntryType.RING_CONFIG`` entry proposed through
+    Raft (typically by a ``cluster.ring`` runner).  Operators flip from
+    self-only to cluster-wide sharding by committing a single entry; no
+    code changes required.
+
+    The ``on_change`` callback (if set) runs after every successful
+    ``apply`` with ``(members, replicas)``.  ``RaftService`` wires this
+    to update :func:`salt.cluster.ring_membership.rebuild` so the
+    process-local ring re-syncs to the new policy.
+
+    Snapshot/restore round-trips through the same envelope shape used by
+    ``MembershipStateMachine`` (registered under name ``"ring_sm"``), so
+    ring config survives log compaction.
+    """
+
+    def __init__(self, on_change=None):
+        self._members = RING_MEMBERS_SELF
+        self._replicas = 1
+        self._version = -1
+        self.on_change = on_change
+
+    # ------------------------------------------------------------------
+    # BaseStateMachine interface
+    # ------------------------------------------------------------------
+
+    def apply(self, cmd, client_id=None, sequence_num=None, index=-1):
+        """
+        Apply a committed RING_CONFIG entry.
+
+        :param cmd:   ``dict`` with keys ``"members"`` (str, one of
+                      ``RING_MEMBERS_VALID``) and ``"replicas"`` (int).
+                      Either may be omitted to keep the existing value
+                      — useful for partial updates that only flip one
+                      knob.  Unknown keys are ignored.
+        :param index: Raft log index of this entry; stored as the
+                      version stamp visible via :attr:`config_version`.
+        """
+        if isinstance(cmd, dict):
+            new_members = cmd.get("members", self._members)
+            new_replicas = cmd.get("replicas", self._replicas)
+            if new_members in RING_MEMBERS_VALID:
+                self._members = new_members
+            else:
+                log.warning(
+                    "RingConfigStateMachine: ignoring unknown members policy %r "
+                    "(expected one of %s)",
+                    new_members,
+                    RING_MEMBERS_VALID,
+                )
+            try:
+                self._replicas = max(1, int(new_replicas))
+            except (TypeError, ValueError):
+                log.warning(
+                    "RingConfigStateMachine: ignoring non-integer replicas %r",
+                    new_replicas,
+                )
+        self._version = index
+        if self.on_change is not None:
+            self.on_change(self._members, self._replicas)
+
+    def get_snapshot(self):
+        """Return the JSON-serialisable ring policy."""
+        return {
+            "members": self._members,
+            "replicas": self._replicas,
+            "version": self._version,
+        }
+
+    def restore_snapshot(self, data):
+        """Restore from a snapshot dict (as produced by :meth:`get_snapshot`)."""
+        if isinstance(data, (bytes, bytearray)):
+            data = json.loads(data.decode())
+        if not isinstance(data, dict):
+            return
+        members = data.get("members", self._members)
+        if members in RING_MEMBERS_VALID:
+            self._members = members
+        try:
+            self._replicas = max(1, int(data.get("replicas", self._replicas)))
+        except (TypeError, ValueError):
+            pass
+        self._version = data.get("version", -1)
+
+    # ------------------------------------------------------------------
+    # Query API
+    # ------------------------------------------------------------------
+
+    @property
+    def members(self):
+        """Current members policy (``"self"`` or ``"voters"``)."""
+        return self._members
+
+    @property
+    def replicas(self):
+        """Current replication factor (>= 1)."""
+        return self._replicas
+
+    @property
+    def config_version(self):
+        """Log index of the most recently applied RING_CONFIG entry, or -1 if none."""
+        return self._version
+
+    def __repr__(self):
+        return (
+            f"<RingConfigStateMachine members={self._members!r} "
+            f"replicas={self._replicas} version={self._version}>"
         )
 
 

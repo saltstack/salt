@@ -171,3 +171,64 @@ tests/pytests/integration/cluster/test_basic_cluster.py::test_basic_cluster_mini
 # ── SCENARIO: cluster lifecycle (key rotation, dynamic join) ─────────────────
 tests/pytests/scenarios/cluster/test_cluster.py::test_cluster_key_rotation
 tests/pytests/scenarios/cluster/test_cluster.py::test_fourth_master_joins_existing_cluster
+
+# ── UNIT: snapshot envelope + reconcile (CONSENSUS_BUGS.md #1 + GAPS #1) ─────
+# Membership SM survives compaction; restored Node reconciles peer table
+# and on_change observers post-restore.
+tests/pytests/unit/cluster/consensus/test_raft_log.py::TestSnapshotEnvelopeMultiSM
+tests/pytests/unit/cluster/consensus/test_raft_log.py::TestNodeReconcileMembership
+
+# ── FUNCTIONAL: 3-master compaction scenarios (Gap #4) ──────────────────────
+# Membership + ring policy survive log compaction and Node rebuild.
+tests/pytests/functional/cluster/consensus/test_raft_compaction.py
+
+# ── UNIT: ring membership + ownership gating (Stage 0) ──────────────────────
+# Per-process HashRing singleton, owns/rebuild/reset semantics.
+tests/pytests/unit/cluster/test_ring_membership.py
+
+# ── UNIT: master.py gate sites drop writes when ring populated ──────────────
+# EventMonitor handle_event paths only mirror peer events for owned keys.
+tests/pytests/unit/test_event_monitor_ring_gating.py
+
+# ── UNIT: RingConfigStateMachine + RING_CONFIG entry dispatch (Stage 1) ─────
+tests/pytests/unit/cluster/consensus/test_raft_log.py::TestRingConfigStateMachine
+tests/pytests/unit/cluster/consensus/test_raft_log.py::TestNodeAppliesRingConfigEntry
+
+# ── FUNCTIONAL: ring rebuild hook + policy plumbing through RaftService ─────
+tests/pytests/functional/cluster/consensus/test_raft_service.py::TestRingRebuildHook
+tests/pytests/functional/cluster/consensus/test_raft_service.py::TestRingPolicyPlumbing
+
+# ── UNIT: cluster.ring runner (read-only ring_info, deferred ring_set) ──────
+tests/pytests/unit/runners/test_cluster_runner.py
+
+# ── UNIT: mmap_cache_max_segment_bytes plumbing + multi-segment compaction ──
+# Operator-tunable heap segment cap reaches MmapCache; atomic_rebuild
+# handles cross-segment input and cleans up stale segment files.
+tests/pytests/unit/cache/test_mmap_cache.py::test_max_segment_bytes_opt_is_passed_through
+tests/pytests/unit/cache/test_mmap_cache.py::test_max_segment_bytes_default_when_opt_missing
+tests/pytests/unit/cache/test_mmap_cache.py::test_segment_actually_rolls_at_configured_cap
+tests/pytests/unit/cache/test_mmap_key.py::test_max_segment_bytes_opt_is_passed_through
+tests/pytests/unit/cache/test_mmap_key.py::test_max_segment_bytes_falls_back_to_mmap_cache_opt
+tests/pytests/unit/cache/test_mmap_key.py::test_max_segment_bytes_default_when_unset
+tests/pytests/unit/cache/test_mmap_key.py::test_mmap_key_specific_opt_wins_over_generic
+tests/pytests/unit/utils/test_mmap_cache_segments.py::TestAtomicRebuildSegmented::test_rebuild_multi_segment_input_into_different_segment_count
+tests/pytests/unit/utils/test_mmap_cache_segments.py::TestAtomicRebuildSegmented::test_rebuild_records_consistent_offsets_in_packed_field
+
+# ── UNIT: BUG.md regression — NUL-tail binary values round-trip ─────────────
+# MmapCache.get and _overwrite_in_heap both unconditionally rstripped
+# trailing NULs; binary payloads (msgpack, protobuf, BSON) ending in
+# \x00 corrupted on read.  Both call sites now trust the slot LENGTH.
+tests/pytests/unit/cache/test_mmap_cache.py::test_get_preserves_every_trailing_byte
+tests/pytests/unit/cache/test_mmap_cache.py::test_msgpack_zero_tail_dict_round_trips_through_cache_backend
+tests/pytests/unit/cache/test_mmap_cache.py::test_overwrite_with_shorter_nul_tailed_value_round_trips
+tests/pytests/unit/cache/test_mmap_cache.py::test_overwrite_then_grow_then_shrink_with_nul_tails
+
+# ── INTEGRATION: Kubernetes health-probe sentinels ──────────────────────────
+# startup / ready / alive sentinels under <cachedir>/health/ wired to
+# Master.start, _signal_cluster_ready, and the parent asyncio heartbeat.
+tests/pytests/integration/cluster/test_health_probes.py
+
+# ── INTEGRATION: cluster failure modes (Gap audit) ──────────────────────────
+# Storage-loss recovery via state-sync; isolated master with unreachable
+# peers self-elects; placeholder for the disruptive-candidate test.
+tests/pytests/integration/cluster/test_failure_modes.py

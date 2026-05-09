@@ -510,6 +510,45 @@ class Node:
         if self.log is not None:
             self.log.register_state_machine("membership_sm", sm)
 
+    def reconcile_membership(self):
+        """
+        Re-apply the current ``membership_sm`` voter/learner state to the rest
+        of the Node.
+
+        :meth:`MembershipStateMachine.restore_snapshot` is a pure store
+        operation — it does not invoke ``on_change``.  After a snapshot
+        restore (Node startup with a saved snapshot, or
+        :meth:`install_snapshot` from a leader) the SM holds the right
+        committed view but ``Node.peers`` / ``Node.voting`` and any
+        downstream ``on_change`` hook (e.g. ``RaftService._on_ready`` /
+        ring rebuild) are stale because the CONFIG entries that originally
+        flipped them have been compacted away.
+
+        Calling this after every restore re-runs ``on_config_change`` for
+        the side-effects on the local peer table, then invokes the wired
+        ``on_change`` hook so RaftService and any future SM observers see
+        the same committed view they would see after a fresh CONFIG apply.
+
+        Idempotent: calling it on a Node whose peer table already matches
+        the SM is a no-op modulo a redundant ``on_change`` fire.  When the
+        SM is empty (no compacted snapshot, no apply yet) it is a no-op
+        because there's nothing to reconcile.
+        """
+        if self.membership_sm is None:
+            return
+        voters = self.membership_sm.current_voters()
+        learners = self.membership_sm.current_learners()
+        if not voters and not learners:
+            # Nothing committed yet (e.g. fresh node before founding CONFIG).
+            return
+        # Update Node.peers / Node.voting in place from the restored view.
+        self.on_config_change(voters, learners)
+        # Also notify the SM's on_change observer (RaftService wires this
+        # for the cluster-ready hook and, post-ring-stage-0, ring rebuild).
+        on_change = getattr(self.membership_sm, "on_change", None)
+        if on_change is not None:
+            on_change(voters, learners)
+
     def schedule_timeout(self, delay, callback):
         if not self._schedule_timeout_method:
             raise RuntimeError("Register a scheduling method first")
@@ -725,6 +764,14 @@ class Node:
                     if entry.index >= self._applied_config_index:
                         self._applied_config_index = entry.index
                         self.on_config_change(voters, learners)
+                elif entry.type == LogEntryType.RING_CONFIG:
+                    # Ring policy commit (members source + replication
+                    # factor).  Applied to the registered ``ring_sm``
+                    # if any; on_change inside the SM drives
+                    # ``ring_membership.rebuild`` via RaftService.
+                    ring_sm = self.log._extra_state_machines.get("ring_sm")
+                    if ring_sm is not None:
+                        ring_sm.apply(entry.cmd, index=entry.index)
             self.log.last_applied = new_applied
 
     @lock
@@ -1105,6 +1152,12 @@ class Node:
             # Legacy single-SM payloads still flow to state_machine via
             # restore_state_machines_from_data's fallback path.
             self.log.restore_state_machines_from_data(data)
+
+            # restore_snapshot is a pure store; reconcile so Node.peers /
+            # Node.voting and any wired on_change hook re-converge with the
+            # restored membership SM (CONFIG entries it derived from were
+            # compacted away).
+            self.reconcile_membership()
 
             self.log.commit_index = max(self.log.commit_index, last_index)
             self.log.last_applied = max(self.log.last_applied, last_index)

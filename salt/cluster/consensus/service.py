@@ -38,6 +38,12 @@ import logging
 
 from salt.cluster.consensus.peer import RaftDispatcher, SaltPeer
 from salt.cluster.consensus.raft import AsyncTimeoutScheduler, Node
+from salt.cluster.consensus.raft.log import (
+    RING_MEMBERS_SELF,
+    RING_MEMBERS_VOTERS,
+    LogEntryType,
+    RingConfigStateMachine,
+)
 from salt.cluster.consensus.raft.node import NodeState
 from salt.cluster.consensus.storage import SaltStorage
 
@@ -84,12 +90,21 @@ class RaftService:
         # ``cluster_election_max`` opts let deployments tune further.
         election_min = opts.get("cluster_election_min", 750)
         election_max = opts.get("cluster_election_max", 1500)
+        # ``cluster_max_log_size`` (default ``None``) gates Raft log
+        # compaction.  When unset, the log keeps every committed entry
+        # forever and snapshots never fire — fine for small clusters
+        # but pathological for any long-running deployment.  When set,
+        # the membership SM round-trips through the snapshot envelope
+        # (raft.snapshot.v1); CONSENSUS_BUGS.md #1's fix and the
+        # reconcile_membership hook ensure peer state survives.
+        max_log_size = opts.get("cluster_max_log_size")
         self._node = Node(
             node_id,
             storage=storage,
             voting=voting,
             _follower_min=election_min,
             _follower_max=election_max,
+            max_log_size=max_log_size,
         )
         self._scheduler = AsyncTimeoutScheduler(loop=loop)
         self._node.register_schedule_timeout(self._scheduler.schedule)
@@ -97,6 +112,17 @@ class RaftService:
         # Wire the membership SM's on_change so we can fire on_ready once
         # this node appears in the committed voter set.
         self._node.membership_sm.on_change = self._on_membership_change
+
+        # Ring config SM: tracks the cluster's ring policy (members
+        # source + replication factor).  Registered on the Log so its
+        # state survives compaction.  Default policy ("self", 1) means
+        # the per-process ring contains only this master and writes
+        # broadcast as they do today; an operator flips to ("voters",
+        # N) by committing a RING_CONFIG entry through Raft.
+        self._ring_config_sm = RingConfigStateMachine(
+            on_change=self._on_ring_config_change
+        )
+        self._node.log.register_state_machine("ring_sm", self._ring_config_sm)
 
         # Build SaltPeer objects - one per cluster peer (all voting at start).
         peers = [
@@ -112,6 +138,12 @@ class RaftService:
         # callback_node field written into RPC envelopes.
         self._dispatcher = RaftDispatcher(self._node, node_id, self._peer_pushers)
 
+        # If Node started from a saved snapshot the membership SM was
+        # restored before this on_change wiring existed, so the cluster-
+        # ready / peer-table side effects never fired.  Reconcile now so
+        # _on_ready and on_config_change run for the restored view.
+        self._node.reconcile_membership()
+
         self._heartbeat_handle = None
 
     # ------------------------------------------------------------------
@@ -125,7 +157,14 @@ class RaftService:
         Fires ``on_ready`` (once) when this node's address first appears in the
         committed voter set, signalling that it is a full participant and may
         begin serving minion/CLI traffic.
+
+        Also reapplies the current ring policy: when ``members=voters`` the
+        ring contents track the new voter set.  In ``members=self`` (default)
+        the ring stays self-only regardless of voters, which preserves the
+        broadcast-everywhere stage-0 behaviour.
         """
+        self._apply_ring_policy()
+
         if self._on_ready is None:
             return
         node_id = self._node.node_id
@@ -136,6 +175,90 @@ class RaftService:
             )
             self._on_ready()
             self._on_ready = None  # fire only once
+
+    def _on_ring_config_change(self, members, replicas):
+        """
+        Called by ``RingConfigStateMachine`` after every committed
+        RING_CONFIG entry.  Rebuilds this process's ring with the new
+        policy applied to the current voter set.
+
+        Replication factor is tracked in the SM but not yet honoured by
+        the rebuild — stage 1 ships the policy plumbing; stage 2 will
+        teach the ring to use ``replicas > 1`` for fault tolerance.
+        """
+        log.info(
+            "RaftService: ring policy committed — members=%s replicas=%d",
+            members,
+            replicas,
+        )
+        self._apply_ring_policy()
+
+    def _apply_ring_policy(self):
+        """
+        Rebuild the per-process ring from current SM state.
+
+        Resolves ``ring_config_sm.members``:
+
+        * ``"self"`` — ring contains only this master; ``owns`` returns
+          True for every key.  Default; matches today's broadcast.
+        * ``"voters"`` — ring contains the current Raft voter set
+          (``membership_sm.current_voters()``); ``owns`` shards by
+          consistent hash.
+
+        Called from both the membership-change and ring-config-change
+        paths because either can shift the ring's contents under the
+        ``"voters"`` policy.
+        """
+        # Lazy import keeps the consensus package independent of the
+        # ring module's load order.
+        import salt.cluster.ring_membership  # pylint: disable=import-outside-toplevel
+
+        if self._ring_config_sm.members == RING_MEMBERS_VOTERS:
+            voters = self._node.membership_sm.current_voters()
+            salt.cluster.ring_membership.rebuild(voters)
+        else:  # RING_MEMBERS_SELF (default)
+            # Self-only ring: contains just this master so owns()
+            # answers True for everything.  Empty ring would also do —
+            # we use the explicit single-node form so logs are clear.
+            salt.cluster.ring_membership.rebuild([self._node.node_id])
+
+    def propose_ring_config(self, members=None, replicas=None):
+        """
+        Propose a RING_CONFIG entry through Raft.
+
+        Only valid on the leader; followers will see a future commit
+        once the leader replicates the entry.  Either argument can be
+        omitted to keep the existing value (the SM merges partial
+        updates).
+
+        :param members: ``"self"`` or ``"voters"`` (or ``None`` to
+                        keep current).
+        :param replicas: integer >= 1 (or ``None`` to keep current).
+        :raises ValueError: if *members* is set to an unknown value.
+        :raises RuntimeError: if this node is not currently the
+                              leader (the entry would not commit).
+        """
+        if members is not None and members not in (
+            RING_MEMBERS_SELF,
+            RING_MEMBERS_VOTERS,
+        ):
+            raise ValueError(
+                f"Unknown ring members policy {members!r}; "
+                f"expected 'self' or 'voters'"
+            )
+        if self._node.state != NodeState.LEADER:
+            raise RuntimeError(
+                "propose_ring_config must run on the Raft leader; "
+                f"this node is in state {self._node.state}"
+            )
+        cmd = {}
+        if members is not None:
+            cmd["members"] = members
+        if replicas is not None:
+            cmd["replicas"] = int(replicas)
+        if not cmd:
+            return  # no-op
+        self._node.log_add(cmd, entry_type=LogEntryType.RING_CONFIG)
 
     # ------------------------------------------------------------------
     # Peer factory (used by Node.on_config_change)

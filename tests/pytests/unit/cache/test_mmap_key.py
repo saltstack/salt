@@ -352,3 +352,48 @@ def test_rebuild_from_localfs(module, pki_dir, opts):
     assert module.fetch("keys", "pend1", pki_dir)["state"] == "pending"
     denied = module.fetch("denied_keys", "bad1", pki_dir)
     assert isinstance(denied, list)
+
+
+# ---------------------------------------------------------------------------
+# Heap segment cap plumbing
+# ---------------------------------------------------------------------------
+
+
+def test_max_segment_bytes_opt_is_passed_through(module, pki_dir, opts):
+    """
+    ``mmap_key_max_segment_bytes`` must reach the underlying
+    ``MmapCache`` so an operator can size below the 1 GiB default.
+    """
+    opts["mmap_key_max_segment_bytes"] = 8192
+    cache_obj = module._get_cache("keys", pki_dir)
+    assert cache_obj.max_segment_bytes == 8192
+
+
+def test_max_segment_bytes_falls_back_to_mmap_cache_opt(module, pki_dir, opts):
+    """
+    For operators who already set ``mmap_cache_max_segment_bytes`` for
+    the generic backend, the mmap_key backend honours it as a fallback
+    so the same cap applies cluster-wide without duplicate config.
+    """
+    opts.pop("mmap_key_max_segment_bytes", None)
+    opts["mmap_cache_max_segment_bytes"] = 16384
+    cache_obj = module._get_cache("keys", pki_dir)
+    assert cache_obj.max_segment_bytes == 16384
+
+
+def test_max_segment_bytes_default_when_unset(module, pki_dir):
+    """No opt set → 1 GiB default."""
+    import salt.utils.mmap_cache  # local import keeps test independent of import order
+
+    cache_obj = module._get_cache("keys", pki_dir)
+    assert (
+        cache_obj.max_segment_bytes == salt.utils.mmap_cache.DEFAULT_MAX_SEGMENT_BYTES
+    )
+
+
+def test_mmap_key_specific_opt_wins_over_generic(module, pki_dir, opts):
+    """If both opts are set, the mmap_key-specific one takes precedence."""
+    opts["mmap_cache_max_segment_bytes"] = 16384
+    opts["mmap_key_max_segment_bytes"] = 4096
+    cache_obj = module._get_cache("keys", pki_dir)
+    assert cache_obj.max_segment_bytes == 4096

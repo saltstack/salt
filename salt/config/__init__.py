@@ -214,6 +214,14 @@ VALID_OPTS = immutabletypes.freeze(
         # and can be sync'd as opaque blobs) and joining masters request a
         # bulk state-sync from an existing peer before becoming Raft voters.
         "cluster_isolated_filesystem": bool,
+        # Maximum number of in-memory Raft log entries before the log
+        # compacts into a snapshot.  ``None`` (the default) disables
+        # compaction — fine for small clusters but unbounded growth at
+        # scale.  Setting to a positive integer triggers
+        # ``Log.snapshot()`` whenever the log reaches the threshold;
+        # the snapshot envelope (``raft.snapshot.v1``) carries every
+        # registered state machine so membership survives compaction.
+        "cluster_max_log_size": (type(None), int),
         # Use a module function to determine the unique identifier. If this is
         # set and 'id' is not set, it will allow invocation of a module function
         # to determine the value of 'id'. For simple invocations without function
@@ -1764,6 +1772,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_pub_fingerprint": None,
         "cluster_secret": None,
         "cluster_isolated_filesystem": False,
+        "cluster_max_log_size": None,
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
         "cluster_encryption_algorithm": "OAEP-SHA1",
