@@ -1830,6 +1830,14 @@ def graph_highstate(queue=None, **kwargs):
     .. code-block:: bash
 
         salt '*' state.graph_highstate
+
+    **Generating an Image:**
+
+    The DOT output can be rendered to an image using Graphviz:
+
+    .. code-block:: bash
+
+        salt '*' state.graph_highstate --out=txt | dot -Tpng -o highstate.png
     """
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
@@ -2355,6 +2363,14 @@ def graph(mods, test=None, queue=None, **kwargs):
     .. code-block:: bash
 
         salt '*' state.graph core,edit.vim saltenv=dev
+
+    **Generating an Image:**
+
+    The DOT output can be rendered to an image using Graphviz:
+
+    .. code-block:: bash
+
+        salt '*' state.graph core --out=txt | dot -Tpng -o state_graph.png
     """
     high = show_sls(mods, test=test, queue=queue, **kwargs)
     if not isinstance(high, dict):
