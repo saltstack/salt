@@ -142,7 +142,7 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/pkg/py3.12/darwin.txt
     #   gitpython
-gitpython==3.1.46
+gitpython==3.1.50
     # via
     #   -c requirements/static/pkg/py3.12/darwin.txt
     #   -r requirements/base.txt
