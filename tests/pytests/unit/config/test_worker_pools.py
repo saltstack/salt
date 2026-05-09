@@ -17,8 +17,17 @@ class TestWorkerPoolsConfig:
     def test_default_worker_pools_structure(self):
         """Test that DEFAULT_WORKER_POOLS has correct structure"""
         assert isinstance(DEFAULT_WORKER_POOLS, dict)
+        # Auth gets a dedicated single-worker pool so a slow workload in the
+        # default pool cannot starve minion authentication.  See the comment
+        # in salt/config/worker_pools.py for the cache-race rationale behind
+        # worker_count=1.
+        assert "auth" in DEFAULT_WORKER_POOLS
+        assert DEFAULT_WORKER_POOLS["auth"]["worker_count"] == 1
+        assert DEFAULT_WORKER_POOLS["auth"]["commands"] == ["_auth"]
+        # Default pool: 4 workers (5 total minus 1 auth) keeps the historical
+        # default worker_threads count.
         assert "default" in DEFAULT_WORKER_POOLS
-        assert DEFAULT_WORKER_POOLS["default"]["worker_count"] == 5
+        assert DEFAULT_WORKER_POOLS["default"]["worker_count"] == 4
         assert DEFAULT_WORKER_POOLS["default"]["commands"] == ["*"]
 
     def test_get_worker_pools_config_default(self):
