@@ -292,6 +292,49 @@ def list_(bank, cachedir, **kwargs):
     return cache.list_keys()
 
 
+def list_all(bank, cachedir, include_data=False, **kwargs):
+    """
+    Return ``{minion_id: data}`` for every entry in *bank* in a single pass.
+
+    Faster than ``list_(bank) + fetch(bank, k)`` per minion: walks the
+    mmap roster once (O(occupied)) and decodes each heap entry inline,
+    rather than re-probing the index for every key.
+
+    For the ``keys`` bank the value shape matches ``localfs_key.list_all``:
+
+    * ``include_data=False`` (default) — ``{"state": str}`` per minion;
+      cheaper to deserialise but still requires reading the heap entry
+      because state is the first byte of the packed value.
+    * ``include_data=True`` — ``{"state": str, "pub": str}``.
+
+    For ``denied_keys`` the value is always ``[pub_str]`` (denied
+    payloads are small enough that the ``include_data`` distinction
+    doesn't pay back).
+
+    ``master_keys`` is intentionally unsupported — callers that need
+    master-side keys should iterate ``list_`` and ``fetch`` explicitly.
+    """
+    if bank not in ("keys", "denied_keys"):
+        raise SaltCacheError(f"mmap_key: list_all unsupported for bank {bank!r}")
+
+    cache = _get_cache(bank, cachedir)
+    ret = {}
+    for k, raw in cache.list_items():
+        if isinstance(raw, str):
+            raw = raw.encode("utf-8")
+        if not isinstance(raw, (bytes, bytearray)) or not raw:
+            continue
+        if bank == "keys":
+            entry = _decode_key_entry(bytes(raw))
+            if entry is None:
+                log.warning("mmap_key list_all: skipping invalid keys entry %r", k)
+                continue
+            ret[k] = entry if include_data else {"state": entry["state"]}
+        else:  # denied_keys
+            ret[k] = [bytes(raw).decode("utf-8", errors="replace").rstrip("\x00")]
+    return ret
+
+
 def contains(bank, key, cachedir, **kwargs):
     """
     Return ``True`` if *bank* contains *key*.

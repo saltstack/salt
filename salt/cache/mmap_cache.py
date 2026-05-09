@@ -270,6 +270,46 @@ def list_(bank, cachedir, **kwargs):
     return cache.list_keys()
 
 
+def list_all(bank, cachedir, include_data=False, **kwargs):
+    """
+    Return ``{key: data}`` for every entry in *bank* in a single pass.
+
+    Walks the mmap roster once (O(occupied)) and msgpack-decodes each
+    heap entry inline, avoiding the per-key hash probe that
+    ``list_(bank) + fetch(bank, k)`` would do.
+
+    With ``include_data=False`` the data slot is ``{}`` so callers can
+    use this purely to enumerate keys without paying msgpack
+    deserialisation; with ``include_data=True`` (default behaviour for
+    contract parity with other backends) each value is the
+    ``msgpack.unpackb`` round-trip of what ``store`` wrote.
+    """
+    cache = _get_cache(bank, cachedir)
+    if not include_data:
+        return {k: {} for k in cache.list_keys()}
+    ret = {}
+    for k, raw in cache.list_items():
+        if raw is True:
+            ret[k] = {}
+            continue
+        if isinstance(raw, str):
+            raw = raw.encode()
+        if not isinstance(raw, (bytes, bytearray)) or not raw:
+            ret[k] = {}
+            continue
+        try:
+            ret[k] = msgpack.unpackb(bytes(raw), **_UNPACK_OPTS)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.warning(
+                "mmap_cache list_all: skipping undeserialisable entry "
+                "bank=%r key=%r: %s",
+                bank,
+                k,
+                exc,
+            )
+    return ret
+
+
 def contains(bank, key, cachedir, **kwargs):
     """
     Return ``True`` if *bank* contains *key* (or, if *key* is ``None``,
