@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import pathlib
 import sys
 import textwrap
@@ -13,24 +14,36 @@ STATIC_REQUIREMENTS_PATH = REQUIREMENTS_FILES_PATH / "static"
 CI_REQUIREMENTS_FILES_PATH = (
     STATIC_REQUIREMENTS_PATH / "ci" / "py{}.{}".format(*sys.version_info)
 )
-DEFAULT_REQS_CONFIG = DefaultPipConfig(
-    install_args=[
-        f"--constraint={REQUIREMENTS_FILES_PATH / 'constraints.txt'}",
-    ],
-    requirements_files=[
-        STATIC_REQUIREMENTS_PATH / "ci" / "tools.in",
-    ],
-)
-RELEASE_VENV_CONFIG = VirtualEnvPipConfig(
-    pip_requirement="pip>=24.2",
-    install_args=[
-        f"--constraint={REQUIREMENTS_FILES_PATH / 'constraints.txt'}",
-    ],
-    requirements_files=[
-        STATIC_REQUIREMENTS_PATH / "ci" / "tools-virustotal.in",
-    ],
-    add_as_extra_site_packages=True,
-)
+if os.environ.get("PRE_COMMIT") == "1":
+    DEFAULT_REQS_CONFIG = DefaultPipConfig(
+        requirements=["pip"],
+    )
+else:
+    DEFAULT_REQS_CONFIG = DefaultPipConfig(
+        install_args=[
+            f"--constraint={REQUIREMENTS_FILES_PATH / 'constraints.txt'}",
+        ],
+        requirements_files=[
+            STATIC_REQUIREMENTS_PATH / "ci" / "tools.in",
+        ],
+    )
+if os.environ.get("PRE_COMMIT") == "1":
+    RELEASE_VENV_CONFIG = VirtualEnvPipConfig(
+        pip_requirement="pip>=24.2",
+        requirements=["pip"],
+        add_as_extra_site_packages=True,
+    )
+else:
+    RELEASE_VENV_CONFIG = VirtualEnvPipConfig(
+        pip_requirement="pip>=24.2",
+        install_args=[
+            f"--constraint={REQUIREMENTS_FILES_PATH / 'constraints.txt'}",
+        ],
+        requirements_files=[
+            STATIC_REQUIREMENTS_PATH / "ci" / "tools-virustotal.in",
+        ],
+        add_as_extra_site_packages=True,
+    )
 ptscripts.set_default_config(DEFAULT_REQS_CONFIG)
 ptscripts.register_tools_module("tools.changelog")
 ptscripts.register_tools_module("tools.ci")

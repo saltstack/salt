@@ -52,6 +52,12 @@ repos:
       - id: tools
         alias: check-changelog-entries
         name: Check Changelog Entries
+        additional_dependencies:
+          - boto3
+          - pyyaml
+          - jinja2
+          - MarkupSafe<3.0.0
+          - packaging
         args:
           - pre-commit
           - changelog
@@ -62,6 +68,12 @@ repos:
         name: Generate GitHub Workflow Templates
         files: ^(cicd/shared-gh-workflows-context\.yml|tools/utils/__init__.py|tools/precommit/workflows\.py|.github/workflows/.*)$
         pass_filenames: false
+        additional_dependencies:
+          - boto3
+          - pyyaml
+          - jinja2
+          - MarkupSafe<3.0.0
+          - packaging
         args:
           - pre-commit
           - workflows
@@ -73,6 +85,12 @@ repos:
         files: "^.github/workflows/"
         types:
           - yaml
+        additional_dependencies:
+          - boto3
+          - pyyaml
+          - jinja2
+          - MarkupSafe<3.0.0
+          - packaging
         args:
           - pre-commit
           - workflows
@@ -82,6 +100,12 @@ repos:
         alias: check-docs
         name: Check Docs
         files: ^(salt/.*\.py|doc/ref/.*\.rst)$
+        additional_dependencies:
+          - boto3
+          - pyyaml
+          - jinja2
+          - MarkupSafe<3.0.0
+          - packaging
         args:
           - pre-commit
           - docs
@@ -96,6 +120,12 @@ repos:
                 templates/.*|
                 salt/ext/.*|
             )$
+        additional_dependencies:
+          - boto3
+          - pyyaml
+          - jinja2
+          - MarkupSafe<3.0.0
+          - packaging
         args:
           - pre-commit
           - docstrings
@@ -111,6 +141,12 @@ repos:
                 templates/.*|
                 salt/ext/.*|
             )$
+        additional_dependencies:
+          - boto3
+          - pyyaml
+          - jinja2
+          - MarkupSafe<3.0.0
+          - packaging
         args:
           - pre-commit
           - docstrings
@@ -125,6 +161,12 @@ repos:
                 templates/.*|
                 salt/ext/.*|
             )$
+        additional_dependencies:
+          - boto3
+          - pyyaml
+          - jinja2
+          - MarkupSafe<3.0.0
+          - packaging
         args:
           - pre-commit
           - salt-loaders
@@ -135,6 +177,12 @@ repos:
         name: Check Filename Map Change Matching
         files: ^tests/(filename_map\.yml|.*\.py)$
         pass_filenames: false
+        additional_dependencies:
+          - boto3
+          - pyyaml
+          - jinja2
+          - MarkupSafe<3.0.0
+          - packaging
         args:
           - pre-commit
           - filemap
