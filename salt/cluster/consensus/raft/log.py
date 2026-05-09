@@ -9,11 +9,17 @@ algorithm stays testable without real disks or networks.  The production
 implementation lives in :mod:`salt.cluster.consensus.storage`.
 """
 
+import base64
 import json
 import logging
 from typing import NamedTuple
 
 log = logging.getLogger(__name__)
+
+# Envelope marker for multi-state-machine snapshots.  See
+# Log.snapshot / Log.restore_state_machines_from_data.  Bumping this
+# version is a breaking change for on-disk snapshot compatibility.
+SNAPSHOT_ENVELOPE_VERSION = "raft.snapshot.v1"
 
 
 class LogEntryCommitStatus:
@@ -163,6 +169,10 @@ class Log:
         self.last_included_term = 0
         self._cached_index = -1
         self.state_machine = kwargs.get("state_machine")
+        # Additional named state machines (e.g. ``membership_sm``) whose state
+        # must also survive log compaction.  Snapshot/restore dispatches
+        # through this registry on top of ``self.state_machine``.
+        self._extra_state_machines = dict(kwargs.get("state_machines") or {})
         self.max_log_size = kwargs.get("max_log_size")
         self.commit_index = -1
         self.last_applied = -1
@@ -173,12 +183,23 @@ class Log:
             if snapshot:
                 self.last_included_index = snapshot["index"]
                 self.last_included_term = snapshot["term"]
-                if self.state_machine:
-                    self.state_machine.restore_snapshot(snapshot["data"])
+                self.restore_state_machines_from_data(snapshot["data"])
             state = self.storage.load_state()
             self._term = state.get("term", 0) if isinstance(state, dict) else state[0]
 
         self._update_cached_index()
+
+    def register_state_machine(self, name, sm):
+        """
+        Register an additional named state machine.
+
+        The SM's ``get_snapshot()`` / ``restore_snapshot()`` are wired into
+        :meth:`snapshot` and :meth:`restore_state_machines_from_data` so its
+        state survives log compaction along with the application state
+        machine.  ``name`` keys the SM inside the snapshot envelope and must
+        be stable across restarts.
+        """
+        self._extra_state_machines[name] = sm
 
     def _update_cached_index(self):
         """Update the cached index based on current entries and snapshot."""
@@ -317,23 +338,110 @@ class Log:
         )
 
     def snapshot(self):
-        """Compact the log by creating a snapshot of the state machine."""
+        """
+        Compact the log by snapshotting every registered state machine.
+
+        Writes a versioned envelope::
+
+            {"__envelope__": "raft.snapshot.v1",
+             "machines": {"state_machine": ..., "membership_sm": ..., ...}}
+
+        Each SM's payload is the value of its ``get_snapshot()``; bytes
+        payloads are base64-wrapped so the envelope stays JSON-safe.  Older
+        single-SM snapshots written before this format are still recognised
+        on load (see :meth:`restore_state_machines_from_data`).
+        """
         if not self.entries:
             return
         last_entry = self.entries[-1]
         self.last_included_index = last_entry.index
         self.last_included_term = last_entry.term
 
+        machines = {}
         if self.state_machine:
-            data = self.state_machine.get_snapshot()
-            if self.storage:
-                self.storage.save_snapshot(
-                    data, self.last_included_index, self.last_included_term
-                )
+            machines["state_machine"] = self._encode_sm_payload(
+                self.state_machine.get_snapshot()
+            )
+        for name, sm in self._extra_state_machines.items():
+            machines[name] = self._encode_sm_payload(sm.get_snapshot())
+
+        if machines and self.storage:
+            envelope = {
+                "__envelope__": SNAPSHOT_ENVELOPE_VERSION,
+                "machines": machines,
+            }
+            self.storage.save_snapshot(
+                envelope, self.last_included_index, self.last_included_term
+            )
 
         # Discard entries up to last_included_index
         self.entries = []
         self._update_cached_index()
+
+    def restore_state_machines_from_data(self, data):
+        """
+        Restore every registered state machine from snapshot ``data``.
+
+        Recognises three input shapes:
+
+        * Envelope dict (or JSON bytes containing one) with the
+          ``__envelope__`` marker — dispatches each ``machines[name]``
+          payload to the SM registered under that name.
+        * Anything else — legacy single-SM payload; passed straight through
+          to ``self.state_machine.restore_snapshot``.  Extra SMs keep their
+          current state; the post-snapshot log replay rebuilds them.
+
+        Missing keys are silently ignored so a snapshot written by an older
+        node (or a node that didn't yet register a particular SM) restores
+        cleanly.
+        """
+        envelope = self._maybe_envelope(data)
+        if envelope is not None:
+            machines = envelope.get("machines", {}) or {}
+            sm_payload = machines.get("state_machine")
+            if sm_payload is not None and self.state_machine:
+                self.state_machine.restore_snapshot(self._decode_sm_payload(sm_payload))
+            for name, sm in self._extra_state_machines.items():
+                if name in machines:
+                    sm.restore_snapshot(self._decode_sm_payload(machines[name]))
+            return
+        if self.state_machine is not None:
+            self.state_machine.restore_snapshot(data)
+
+    @staticmethod
+    def _maybe_envelope(data):
+        """Return *data* as an envelope dict, or ``None`` if it isn't one."""
+        if isinstance(data, dict):
+            if data.get("__envelope__") == SNAPSHOT_ENVELOPE_VERSION:
+                return data
+            return None
+        if isinstance(data, (bytes, bytearray, memoryview)):
+            try:
+                obj = json.loads(bytes(data).decode("utf-8"))
+            except (ValueError, UnicodeDecodeError):
+                return None
+            if (
+                isinstance(obj, dict)
+                and obj.get("__envelope__") == SNAPSHOT_ENVELOPE_VERSION
+            ):
+                return obj
+        return None
+
+    @staticmethod
+    def _encode_sm_payload(payload):
+        """Make an SM ``get_snapshot()`` value safe to embed in a JSON envelope."""
+        if isinstance(payload, (bytes, bytearray, memoryview)):
+            return {
+                "__bytes__": base64.b64encode(bytes(payload)).decode("ascii"),
+            }
+        return payload
+
+    @staticmethod
+    def _decode_sm_payload(payload):
+        """Inverse of :meth:`_encode_sm_payload`."""
+        if isinstance(payload, dict) and len(payload) == 1 and "__bytes__" in payload:
+            return base64.b64decode(payload["__bytes__"])
+        return payload
 
     def commit(self, index):
         self.commit_index = max(getattr(self, "commit_index", -1), index)

@@ -11,7 +11,6 @@ for I/O where we control it, and adapt into these callbacks.
 """
 
 import functools
-import json
 import logging
 import threading
 import time
@@ -372,12 +371,6 @@ class Node:
         # True if this node participates in quorum; False means learner/observer.
         self.voting = voting
 
-        # Use local variable to avoid property collision
-        sm = state_machine or (
-            getattr(self.storage, "state_machine", None) if storage else None
-        )
-        self.log = Log(storage=storage, state_machine=sm, max_log_size=max_log_size)
-
         # Membership state machine: applies CONFIG entries to track the committed
         # voter/learner sets.  It is the authoritative query store for committed
         # membership; it does NOT drive on_config_change (that is called directly
@@ -385,6 +378,20 @@ class Node:
         if membership_sm is None:
             membership_sm = MembershipStateMachine()
         self.membership_sm = membership_sm
+
+        # Use local variable to avoid property collision.  ``membership_sm`` is
+        # registered alongside the application SM so its state survives log
+        # compaction (otherwise CONFIG entries that were truncated would leave
+        # the membership SM empty after restart).
+        sm = state_machine or (
+            getattr(self.storage, "state_machine", None) if storage else None
+        )
+        self.log = Log(
+            storage=storage,
+            state_machine=sm,
+            max_log_size=max_log_size,
+            state_machines={"membership_sm": self.membership_sm},
+        )
 
         self.state = NodeState()
         self._term = 0
@@ -498,6 +505,10 @@ class Node:
         ``on_change`` callback, to avoid double-applying eager leader updates.
         """
         self.membership_sm = sm
+        # Keep the Log's snapshot registry in sync so future snapshots include
+        # the replacement SM rather than the one set up at __init__.
+        if self.log is not None:
+            self.log.register_state_machine("membership_sm", sm)
 
     def schedule_timeout(self, delay, callback):
         if not self._schedule_timeout_method:
@@ -1090,14 +1101,10 @@ class Node:
             self.log.last_included_index = last_index
             self.log.last_included_term = last_term
 
-            if self.state_machine:
-                # Handle bytes vs dict
-                sd = (
-                    data
-                    if not isinstance(data, (bytes, memoryview))
-                    else json.loads(data.decode())
-                )
-                self.state_machine.restore_snapshot(sd)
+            # Dispatch to every registered SM (state_machine + membership_sm).
+            # Legacy single-SM payloads still flow to state_machine via
+            # restore_state_machines_from_data's fallback path.
+            self.log.restore_state_machines_from_data(data)
 
             self.log.commit_index = max(self.log.commit_index, last_index)
             self.log.last_applied = max(self.log.last_applied, last_index)

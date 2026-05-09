@@ -499,3 +499,96 @@ class TestDispatcherEdgeCases:
             "last_log_index": -1,
         }
         _run(d.dispatch(rpc.REQUEST_VOTE, "2", "rid", payload))
+
+
+# ---------------------------------------------------------------------------
+# Membership SM survives log compaction (regression: CONSENSUS_BUGS.md #1)
+# ---------------------------------------------------------------------------
+
+
+class TestMembershipSurvivesSnapshot:
+    """
+    Regression for CONSENSUS_BUGS.md #1.
+
+    Before the fix, ``Log.snapshot()`` only persisted the application SM, so
+    a node that compacted its log lost the committed voter/learner set.  These
+    tests pin the round-trip:
+
+    * ``snapshot()`` followed by a fresh ``Log`` on the same storage must
+      restore membership state (compaction + restart).
+    * ``install_snapshot`` carrying an envelope must restore the receiver's
+      membership SM (catch-up via leader snapshot).
+    """
+
+    def test_membership_survives_compaction_and_restart(self, tmp_path):
+        """Apply a CONFIG entry, snapshot, rebuild a Node from storage."""
+        from salt.cluster.consensus.raft.log import LogEntryType
+        from salt.cluster.consensus.storage import SaltStorage
+
+        opts = {"cachedir": str(tmp_path), "cluster_id": "test", "cluster_peers": []}
+        storage = SaltStorage("master-1", opts)
+
+        node = Node("master-1", storage=storage)
+        node.register_schedule_timeout(lambda t, c: None)
+
+        # Apply a CONFIG entry as the leader would
+        node.membership_sm.apply(
+            {"voters": ["master-1", "master-2", "master-3"], "learners": []}, index=0
+        )
+        node.log.add(1, b"app-cmd")
+        node.log.add(
+            1,
+            {"voters": ["master-1", "master-2", "master-3"], "learners": []},
+            entry_type=LogEntryType.CONFIG,
+        )
+        node.log.commit(1)
+        # Force a snapshot — simulates compaction firing
+        node.log.snapshot()
+        assert node.log.entries == []
+
+        # Simulate restart: build a fresh Node on the same storage
+        restarted = Node("master-1", storage=storage)
+        restarted.register_schedule_timeout(lambda t, c: None)
+
+        info = restarted.info()
+        assert info["membership"]["voters"] == [
+            "master-1",
+            "master-2",
+            "master-3",
+        ]
+        assert info["membership"]["version"] == 0
+
+    def test_install_snapshot_envelope_restores_membership(self):
+        """A follower that receives an envelope snapshot rebuilds membership."""
+        import json
+
+        from salt.cluster.consensus.raft.log import SNAPSHOT_ENVELOPE_VERSION
+
+        follower = Node("follower")
+        follower.register_schedule_timeout(lambda t, c: None)
+        follower.term = 1
+
+        envelope = {
+            "__envelope__": SNAPSHOT_ENVELOPE_VERSION,
+            "machines": {
+                "membership_sm": {
+                    "voters": ["m1", "m2", "m3"],
+                    "learners": ["m4"],
+                    "version": 7,
+                },
+            },
+        }
+
+        follower.install_snapshot(
+            leader_id="m1",
+            term=2,
+            last_index=12,
+            last_term=2,
+            data=json.dumps(envelope).encode("utf-8"),
+        )
+
+        info = follower.info()
+        assert info["membership"]["voters"] == ["m1", "m2", "m3"]
+        assert info["membership"]["learners"] == ["m4"]
+        assert info["membership"]["version"] == 7
+        assert info["last_index"] == 12
