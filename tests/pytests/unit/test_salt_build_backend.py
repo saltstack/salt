@@ -23,6 +23,8 @@ def salt_build_backend():
 
 
 def test_build_editable(salt_build_backend):
+    if salt_build_backend.setuptools_build_editable is None:
+        pytest.skip("setuptools does not support build_editable")
     with patch(
         "salt_build_backend.setuptools_build_editable", return_value="wheel.whl"
     ) as mock_setuptools_build_editable:
@@ -31,13 +33,27 @@ def test_build_editable(salt_build_backend):
         mock_setuptools_build_editable.assert_called_once_with("wheel_dir", None, None)
 
 
+def test_build_editable_unsupported(salt_build_backend):
+    with patch("salt_build_backend.setuptools_build_editable", None):
+        with pytest.raises(NotImplementedError):
+            salt_build_backend.build_editable("wheel_dir")
+
+
 def test_prepare_metadata_for_build_editable(salt_build_backend):
+    if salt_build_backend.setuptools_prepare_metadata is None:
+        pytest.skip("setuptools does not support prepare_metadata_for_build_editable")
     with patch(
         "salt_build_backend.setuptools_prepare_metadata", return_value="metadata_dir"
     ) as mock_setuptools_prepare_metadata:
         ret = salt_build_backend.prepare_metadata_for_build_editable("metadata_dir")
         assert ret == "metadata_dir"
         mock_setuptools_prepare_metadata.assert_called_once_with("metadata_dir", None)
+
+
+def test_prepare_metadata_for_build_editable_unsupported(salt_build_backend):
+    with patch("salt_build_backend.setuptools_prepare_metadata", None):
+        with pytest.raises(NotImplementedError):
+            salt_build_backend.prepare_metadata_for_build_editable("metadata_dir")
 
 
 def test_prepare_metadata_for_build_wheel(salt_build_backend):

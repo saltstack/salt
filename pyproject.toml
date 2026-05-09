@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=62.0",
+    "setuptools>=64.0",
     "wheel",
     "looseversion",
     "packaging",
