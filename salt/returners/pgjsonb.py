@@ -161,7 +161,6 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 """
 
 import logging
-import sys
 import time
 from contextlib import contextmanager
 
@@ -273,9 +272,8 @@ def _get_serv(ret=None, commit=False):
 
     try:
         yield cursor
-    except psycopg2.DatabaseError as err:
-        error = err.args
-        sys.stderr.write(str(error))
+    except psycopg2.DatabaseError:
+        log.exception("pgjsonb: database error inside _get_serv block")
         cursor.execute("ROLLBACK")
         raise
     else:
@@ -469,31 +467,28 @@ def _purge_jobs(timestamp):
             )
             cursor.execute(sql, (timestamp,))
             cursor.execute("COMMIT")
-        except psycopg2.DatabaseError as err:
-            error = err.args
-            sys.stderr.write(str(error))
+        except psycopg2.DatabaseError:
+            log.exception("pgjsonb: failed to purge jids")
             cursor.execute("ROLLBACK")
-            raise err
+            raise
 
         try:
             sql = "delete from salt_returns where alter_time < %s"
             cursor.execute(sql, (timestamp,))
             cursor.execute("COMMIT")
-        except psycopg2.DatabaseError as err:
-            error = err.args
-            sys.stderr.write(str(error))
+        except psycopg2.DatabaseError:
+            log.exception("pgjsonb: failed to purge salt_returns")
             cursor.execute("ROLLBACK")
-            raise err
+            raise
 
         try:
             sql = "delete from salt_events where alter_time < %s"
             cursor.execute(sql, (timestamp,))
             cursor.execute("COMMIT")
-        except psycopg2.DatabaseError as err:
-            error = err.args
-            sys.stderr.write(str(error))
+        except psycopg2.DatabaseError:
+            log.exception("pgjsonb: failed to purge salt_events")
             cursor.execute("ROLLBACK")
-            raise err
+            raise
 
     return True
 
@@ -517,11 +512,12 @@ def _archive_jobs(timestamp):
                 cursor.execute(sql)
                 cursor.execute("COMMIT")
                 target_tables[table_name] = tmp_table_name
-            except psycopg2.DatabaseError as err:
-                error = err.args
-                sys.stderr.write(str(error))
+            except psycopg2.DatabaseError:
+                log.exception(
+                    "pgjsonb: failed to create archive table for %s", table_name
+                )
                 cursor.execute("ROLLBACK")
-                raise err
+                raise
 
         try:
             sql = (
@@ -532,13 +528,12 @@ def _archive_jobs(timestamp):
             )
             cursor.execute(sql, (timestamp,))
             cursor.execute("COMMIT")
-        except psycopg2.DatabaseError as err:
-            error = err.args
-            sys.stderr.write(str(error))
+        except psycopg2.DatabaseError:
+            log.exception("pgjsonb: failed to archive jids")
             cursor.execute("ROLLBACK")
-            raise err
-        except Exception as e:  # pylint: disable=broad-except
-            log.error(e)
+            raise
+        except Exception:  # pylint: disable=broad-except
+            log.exception("pgjsonb: unexpected error archiving jids")
             raise
 
         try:
@@ -547,11 +542,10 @@ def _archive_jobs(timestamp):
             )
             cursor.execute(sql, (timestamp,))
             cursor.execute("COMMIT")
-        except psycopg2.DatabaseError as err:
-            error = err.args
-            sys.stderr.write(str(error))
+        except psycopg2.DatabaseError:
+            log.exception("pgjsonb: failed to archive salt_returns")
             cursor.execute("ROLLBACK")
-            raise err
+            raise
 
         try:
             sql = "insert into {} select * from {} where alter_time < %s".format(
@@ -559,11 +553,10 @@ def _archive_jobs(timestamp):
             )
             cursor.execute(sql, (timestamp,))
             cursor.execute("COMMIT")
-        except psycopg2.DatabaseError as err:
-            error = err.args
-            sys.stderr.write(str(error))
+        except psycopg2.DatabaseError:
+            log.exception("pgjsonb: failed to archive salt_events")
             cursor.execute("ROLLBACK")
-            raise err
+            raise
 
     return _purge_jobs(timestamp)
 
