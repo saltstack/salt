@@ -854,3 +854,118 @@ def test_augment_grain_match_handles_thousand_resources_in_under_a_second(opts):
         f"_augment_grain_match_with_resource_grains over {n} entries "
         f"took {elapsed:.3f}s — likely a perf regression"
     )
+
+
+def _run_check_minions_grain_perf(opts, minion_count, resources_per_minion, budget):
+    """
+    Drive :meth:`CkMinions.check_minions` against a synthetic fleet of
+    ``minion_count`` minions × ``resources_per_minion`` resources and return
+    the elapsed wall-clock seconds. Half of each population is tagged
+    ``env=prod`` so a ``-G env:prod`` query matches exactly half of both.
+    """
+    import time
+
+    opts["minion_data_cache"] = True
+
+    minion_ids = [f"minion-{i:06d}" for i in range(minion_count)]
+    minion_grains = {
+        mid: {"env": "prod" if idx % 2 == 0 else "staging", "os": "Linux"}
+        for idx, mid in enumerate(minion_ids)
+    }
+    resource_grains = {}
+    for m_idx, mid in enumerate(minion_ids):
+        for r_idx in range(resources_per_minion):
+            srn = f"dummy:r-{m_idx:06d}-{r_idx:04d}"
+            resource_grains[srn] = {
+                "env": "prod" if r_idx % 2 == 0 else "staging",
+                "managed_by": mid,
+            }
+
+    expected_minions = sum(1 for g in minion_grains.values() if g["env"] == "prod")
+    expected_resources = sum(1 for g in resource_grains.values() if g["env"] == "prod")
+
+    fake = MagicMock()
+
+    def _list(bank):
+        if bank == "grains":
+            return list(minion_grains)
+        if bank == "resource_grains":
+            return list(resource_grains)
+        return []
+
+    def _fetch(bank, key):
+        if bank == "grains":
+            return minion_grains.get(key)
+        if bank == "resource_grains":
+            return resource_grains.get(key)
+        return None
+
+    fake.list = MagicMock(side_effect=_list)
+    fake.fetch = MagicMock(side_effect=_fetch)
+
+    ck = salt.utils.minions.CkMinions(opts)
+    ck.cache = fake
+    # Bypass PKI listing — we are exercising cache-driven grain matching only.
+    with patch.object(ck, "_pki_minions", return_value=set(minion_ids)):
+        start = time.perf_counter()
+        result = ck.check_minions("env:prod", tgt_type="grain")
+        elapsed = time.perf_counter() - start
+
+    matched = result["minions"]
+    matched_minions = [m for m in matched if m in minion_grains]
+    matched_resources = [m for m in matched if m not in minion_grains]
+
+    msg = (
+        f"\n[perf] check_minions(-G env:prod) over "
+        f"{minion_count} minions × {resources_per_minion} resources "
+        f"({len(resource_grains)} resource_grains entries): "
+        f"{elapsed * 1000:.1f} ms — matched "
+        f"{len(matched_minions)} minions + {len(matched_resources)} resources"
+    )
+    # Always surface the timing on stdout so ``pytest -s`` shows it; the
+    # assertion failure path also embeds it for ``-v`` inspection.
+    print(msg)
+
+    assert len(matched_minions) == expected_minions, (
+        f"expected {expected_minions} minions matched, got "
+        f"{len(matched_minions)}: {sorted(matched_minions)[:5]}…"
+    )
+    assert len(matched_resources) == expected_resources, (
+        f"expected {expected_resources} resources matched, got "
+        f"{len(matched_resources)}"
+    )
+    assert elapsed < budget, msg
+    return elapsed
+
+
+@pytest.mark.slow_test
+def test_check_minions_grain_target_100_minions_100_resources_each(opts):
+    """
+    End-to-end :meth:`CkMinions.check_minions` timing for grain targeting:
+    100 minions × 100 resources (10,000 entries) — small fleet baseline.
+    A ``-G env:prod`` query matches 50 minions + 5,000 resource IDs.
+    """
+    # Local dev finishes in ~75 ms; CI ARM/FIPS ~3-5x slower; 5 s leaves
+    # headroom while still catching an accidental O(N²) regression.
+    _run_check_minions_grain_perf(opts, 100, 100, budget=5.0)
+
+
+@pytest.mark.slow_test
+def test_check_minions_grain_target_1000_minions_100_resources_each(opts):
+    """
+    End-to-end :meth:`CkMinions.check_minions` timing for grain targeting:
+    1,000 minions × 100 resources (100,000 entries) — large-fleet stress.
+    A ``-G env:prod`` query matches 500 minions + 50,000 resource IDs.
+    """
+    _run_check_minions_grain_perf(opts, 1000, 100, budget=30.0)
+
+
+@pytest.mark.slow_test
+def test_check_minions_grain_target_10000_minions_100_resources_each(opts):
+    """
+    End-to-end :meth:`CkMinions.check_minions` timing for grain targeting:
+    10,000 minions × 100 resources (1,000,000 entries) — million-resource
+    stress test for the in-process scan path.
+    A ``-G env:prod`` query matches 5,000 minions + 500,000 resource IDs.
+    """
+    _run_check_minions_grain_perf(opts, 10000, 100, budget=180.0)
