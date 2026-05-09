@@ -119,9 +119,9 @@ def test_collect_multiple_roots_per_env_first_wins(tmp_path):
     a.mkdir()
     b = tmp_path / "b"
     b.mkdir()
-    (a / "shared.sls").write_text("from-a\n")
-    (b / "shared.sls").write_text("from-b\n")
-    (b / "only-b.sls").write_text("only-b\n")
+    (a / "shared.sls").write_bytes(b"from-a\n")
+    (b / "shared.sls").write_bytes(b"from-b\n")
+    (b / "only-b.sls").write_bytes(b"only-b\n")
 
     dump = collect_root_tree({"base": [str(a), str(b)]})
 
