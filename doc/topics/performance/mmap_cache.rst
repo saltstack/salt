@@ -57,18 +57,37 @@ Performance characteristics
 All numbers below are for a 10 000-minion fleet on a single master with
 warm page cache; treat them as relative shape, not absolutes.
 
-============================  =============  ================
-Operation                     ``localfs``    ``mmap_cache``
-============================  =============  ================
-``store`` small               ~25 µs         ~8 µs
-``store`` large (10 KB)       ~35 µs         ~10 µs
-``fetch`` warm                ~20 µs         ~6 µs
-``fetch`` large               ~25 µs         ~10 µs
-``updated`` (mtime probe)     ~7 µs          ~2 µs
-``list`` whole bank           O(N) ``listdir`` + N stat   O(occupied) roster pass
-``salt-key -L`` (10 k keys)   ~10 s          ~5–10 ms
-Grain target match (10 k)     ~10 s          ~250 ms
-============================  =============  ================
+.. list-table::
+   :header-rows: 1
+   :widths: 30 30 30
+
+   * - Operation
+     - ``localfs``
+     - ``mmap_cache``
+   * - ``store`` small
+     - ~25 µs
+     - ~8 µs
+   * - ``store`` large (10 KB)
+     - ~35 µs
+     - ~10 µs
+   * - ``fetch`` warm
+     - ~20 µs
+     - ~6 µs
+   * - ``fetch`` large
+     - ~25 µs
+     - ~10 µs
+   * - ``updated`` (mtime probe)
+     - ~7 µs
+     - ~2 µs
+   * - ``list`` whole bank
+     - O(N) ``listdir`` + N stat
+     - O(occupied) roster pass
+   * - ``salt-key -L`` (10 k keys)
+     - ~10 s
+     - ~5–10 ms
+   * - Grain target match (10 k)
+     - ~10 s
+     - ~250 ms
 
 Scaling shape:
 
