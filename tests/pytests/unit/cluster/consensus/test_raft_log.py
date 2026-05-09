@@ -900,3 +900,364 @@ class TestCounterStateMachineRestoreNonBytesNonDict:
         sm.count = 7
         sm.restore_snapshot([1, 2, 3])  # neither dict nor bytes
         assert sm.count == 0
+
+
+# ---------------------------------------------------------------------------
+# Regression: multi-state-machine snapshot envelope.
+#
+# Bug: Log.snapshot() used to serialise only the application state machine,
+# so a CONFIG entry that had been compacted away left MembershipStateMachine
+# empty after restart / install_snapshot.  These tests pin down the envelope
+# shape and the round-trip via storage so the membership SM (and any future
+# named SM) survives compaction.
+# ---------------------------------------------------------------------------
+
+
+class TestSnapshotEnvelope:
+    """Envelope encoding/decoding helpers and round-trip behaviour."""
+
+    def test_envelope_marker_is_v1(self):
+        from salt.cluster.consensus.raft.log import SNAPSHOT_ENVELOPE_VERSION
+
+        assert SNAPSHOT_ENVELOPE_VERSION == "raft.snapshot.v1"
+
+    def test_encode_bytes_payload_is_json_safe(self):
+        import json
+
+        from salt.cluster.consensus.raft.log import Log
+
+        encoded = Log._encode_sm_payload(b"\x00\x01\xff")
+        # Must be JSON-serialisable so the storage layer can dump the envelope
+        json.dumps(encoded)
+        assert "__bytes__" in encoded
+        assert Log._decode_sm_payload(encoded) == b"\x00\x01\xff"
+
+    def test_encode_dict_payload_passthrough(self):
+        from salt.cluster.consensus.raft.log import Log
+
+        payload = {"voters": ["m1"], "learners": [], "version": 3}
+        # Dicts are already JSON-safe — should not be wrapped
+        assert Log._encode_sm_payload(payload) is payload
+        assert Log._decode_sm_payload(payload) is payload
+
+    def test_decode_bytes_marker_dict(self):
+        import base64
+
+        from salt.cluster.consensus.raft.log import Log
+
+        encoded = {"__bytes__": base64.b64encode(b"abc").decode("ascii")}
+        assert Log._decode_sm_payload(encoded) == b"abc"
+
+    def test_maybe_envelope_recognises_dict(self):
+        from salt.cluster.consensus.raft.log import SNAPSHOT_ENVELOPE_VERSION, Log
+
+        env = {"__envelope__": SNAPSHOT_ENVELOPE_VERSION, "machines": {}}
+        assert Log._maybe_envelope(env) is env
+
+    def test_maybe_envelope_recognises_json_bytes(self):
+        import json
+
+        from salt.cluster.consensus.raft.log import SNAPSHOT_ENVELOPE_VERSION, Log
+
+        env = {"__envelope__": SNAPSHOT_ENVELOPE_VERSION, "machines": {}}
+        assert Log._maybe_envelope(json.dumps(env).encode()) == env
+
+    def test_maybe_envelope_rejects_legacy_dict(self):
+        from salt.cluster.consensus.raft.log import Log
+
+        # Pre-fix payloads (e.g. CounterStateMachine.get_snapshot()) have no
+        # __envelope__ key — must be treated as legacy single-SM data
+        assert Log._maybe_envelope({"count": 5, "sessions": {}}) is None
+
+    def test_maybe_envelope_rejects_unparseable_bytes(self):
+        from salt.cluster.consensus.raft.log import Log
+
+        assert Log._maybe_envelope(b"not-json-at-all") is None
+
+
+class TestLogSnapshotMultiSM:
+    """``Log.snapshot()`` must serialise every registered state machine."""
+
+    def _make_storage(self, tmp_path):
+        from salt.cluster.consensus.storage import SaltStorage
+
+        opts = {"cachedir": str(tmp_path), "cluster_id": "test", "cluster_peers": []}
+        return SaltStorage("n1", opts)
+
+    def test_snapshot_envelope_contains_membership_sm(self, tmp_path):
+        """A Log with both app SM and membership SM writes both into one snapshot."""
+        import json
+
+        from salt.cluster.consensus.raft.log import (
+            SNAPSHOT_ENVELOPE_VERSION,
+            CounterStateMachine,
+            Log,
+            LogEntryType,
+            MembershipStateMachine,
+        )
+
+        storage = self._make_storage(tmp_path)
+        app_sm = CounterStateMachine()
+        mem_sm = MembershipStateMachine()
+        lg = Log(
+            storage=storage,
+            state_machine=app_sm,
+            state_machines={"membership_sm": mem_sm},
+        )
+
+        # Apply some app commands and a CONFIG entry → SM state is non-empty.
+        app_sm.apply(b"a")
+        app_sm.apply(b"b")
+        mem_sm.apply({"voters": ["m1", "m2", "m3"], "learners": []}, index=2)
+
+        # Append entries so snapshot has something to discard
+        lg.add(1, b"a")
+        lg.add(1, b"b")
+        lg.add(1, {"voters": ["m1", "m2", "m3"]}, entry_type=LogEntryType.CONFIG)
+        lg.commit(2)
+
+        lg.snapshot()
+        raw = storage.load_snapshot()
+        assert raw is not None
+
+        envelope = json.loads(raw["data"].decode("utf-8"))
+        assert envelope["__envelope__"] == SNAPSHOT_ENVELOPE_VERSION
+        assert "state_machine" in envelope["machines"]
+        assert "membership_sm" in envelope["machines"]
+        assert envelope["machines"]["membership_sm"] == {
+            "voters": ["m1", "m2", "m3"],
+            "learners": [],
+            "version": 2,
+        }
+
+    def test_snapshot_restore_preserves_membership(self, tmp_path):
+        """Round-trip: snapshot, build a fresh Log on the same storage, membership intact."""
+        from salt.cluster.consensus.raft.log import (
+            CounterStateMachine,
+            Log,
+            LogEntryType,
+            MembershipStateMachine,
+        )
+
+        storage = self._make_storage(tmp_path)
+        app_sm = CounterStateMachine()
+        mem_sm = MembershipStateMachine()
+        lg = Log(
+            storage=storage,
+            state_machine=app_sm,
+            state_machines={"membership_sm": mem_sm},
+        )
+        app_sm.apply(b"a")
+        mem_sm.apply({"voters": ["m1", "m2"], "learners": ["m3"]}, index=4)
+        lg.add(1, b"a")
+        lg.add(
+            1,
+            {"voters": ["m1", "m2"], "learners": ["m3"]},
+            entry_type=LogEntryType.CONFIG,
+        )
+        lg.commit(1)
+        lg.snapshot()
+        # Sanity: snapshot truncated the in-memory log
+        assert lg.entries == []
+
+        # Fresh Log on the same storage simulates a restart
+        app_sm2 = CounterStateMachine()
+        mem_sm2 = MembershipStateMachine()
+        lg2 = Log(
+            storage=storage,
+            state_machine=app_sm2,
+            state_machines={"membership_sm": mem_sm2},
+        )
+        # last_included_* picked up from the saved snapshot
+        assert lg2.last_included_index == 1
+        # And both state machines were restored
+        assert app_sm2.count == 1
+        assert mem_sm2.current_voters() == ["m1", "m2"]
+        assert mem_sm2.current_learners() == ["m3"]
+        assert mem_sm2.membership_version == 4
+
+    def test_register_state_machine_after_init(self, tmp_path):
+        """SMs registered post-init are still serialised on the next snapshot."""
+        import json
+
+        from salt.cluster.consensus.raft.log import (
+            CounterStateMachine,
+            Log,
+            MembershipStateMachine,
+        )
+
+        storage = self._make_storage(tmp_path)
+        lg = Log(storage=storage, state_machine=CounterStateMachine())
+        late_sm = MembershipStateMachine()
+        late_sm.apply({"voters": ["m1"], "learners": []}, index=0)
+        lg.register_state_machine("membership_sm", late_sm)
+
+        lg.add(1, b"x")
+        lg.commit(0)
+        lg.snapshot()
+
+        raw = storage.load_snapshot()
+        envelope = json.loads(raw["data"].decode("utf-8"))
+        assert "membership_sm" in envelope["machines"]
+
+    def test_legacy_snapshot_bytes_restore_state_machine(self, tmp_path):
+        """A pre-fix snapshot (raw JSON bytes, no envelope) still restores app SM."""
+        import json
+
+        from salt.cluster.consensus.raft.log import CounterStateMachine, Log
+
+        storage = self._make_storage(tmp_path)
+        # Simulate a pre-fix on-disk snapshot: just the SM blob, no envelope
+        storage.save_snapshot(
+            json.dumps({"count": 7, "sessions": {}}).encode(), index=3, term=1
+        )
+
+        app_sm = CounterStateMachine()
+        mem_sm = __import__(
+            "salt.cluster.consensus.raft.log", fromlist=["MembershipStateMachine"]
+        ).MembershipStateMachine()
+        lg = Log(
+            storage=storage,
+            state_machine=app_sm,
+            state_machines={"membership_sm": mem_sm},
+        )
+
+        # App SM was restored from the legacy payload
+        assert app_sm.count == 7
+        # Membership SM stays at its initial state — pre-fix snapshots had no
+        # membership data; the post-snapshot log replay would rebuild it
+        assert mem_sm.current_voters() == []
+        assert lg.last_included_index == 3
+
+    def test_snapshot_without_extras_has_state_machine_key(self, tmp_path):
+        """A Log with only an app SM still writes envelope format."""
+        import json
+
+        from salt.cluster.consensus.raft.log import (
+            SNAPSHOT_ENVELOPE_VERSION,
+            CounterStateMachine,
+            Log,
+        )
+
+        storage = self._make_storage(tmp_path)
+        lg = Log(storage=storage, state_machine=CounterStateMachine())
+        lg.add(1, b"a")
+        lg.commit(0)
+        lg.snapshot()
+
+        raw = storage.load_snapshot()
+        envelope = json.loads(raw["data"].decode("utf-8"))
+        assert envelope["__envelope__"] == SNAPSHOT_ENVELOPE_VERSION
+        assert list(envelope["machines"].keys()) == ["state_machine"]
+
+
+class TestNodeInstallSnapshotMembership:
+    """Node.install_snapshot must restore membership_sm from the envelope."""
+
+    def test_install_snapshot_restores_membership(self):
+        """A follower receiving an envelope snapshot rebuilds its membership SM."""
+        import json
+
+        from salt.cluster.consensus.raft.log import SNAPSHOT_ENVELOPE_VERSION
+        from salt.cluster.consensus.raft.node import Node
+
+        node = Node("follower")
+        node.register_schedule_timeout(lambda t, c: None)
+        node.term = 1
+
+        envelope = {
+            "__envelope__": SNAPSHOT_ENVELOPE_VERSION,
+            "machines": {
+                "membership_sm": {
+                    "voters": ["m1", "m2", "m3"],
+                    "learners": [],
+                    "version": 5,
+                },
+            },
+        }
+        data = json.dumps(envelope).encode("utf-8")
+
+        node.install_snapshot(
+            leader_id="m1",
+            term=2,
+            last_index=10,
+            last_term=2,
+            data=data,
+        )
+
+        assert node.membership_sm.current_voters() == ["m1", "m2", "m3"]
+        assert node.membership_sm.membership_version == 5
+        assert node.log.last_included_index == 10
+
+    def test_install_snapshot_legacy_payload_falls_through(self):
+        """A pre-fix snapshot blob (no envelope marker) leaves membership SM untouched."""
+        import json
+
+        from salt.cluster.consensus.raft.node import Node
+
+        node = Node("follower")
+        node.register_schedule_timeout(lambda t, c: None)
+        node.term = 1
+        # Membership SM starts empty; legacy payload is for the app SM, which
+        # is None by default — test verifies no crash and no spurious changes.
+        legacy = json.dumps({"count": 9, "sessions": {}}).encode()
+
+        node.install_snapshot(
+            leader_id="m1",
+            term=2,
+            last_index=4,
+            last_term=2,
+            data=legacy,
+        )
+
+        assert node.membership_sm.current_voters() == []
+        assert node.log.last_included_index == 4
+
+    def test_install_snapshot_envelope_with_dict_data(self):
+        """install_snapshot also accepts an already-decoded envelope dict."""
+        from salt.cluster.consensus.raft.log import SNAPSHOT_ENVELOPE_VERSION
+        from salt.cluster.consensus.raft.node import Node
+
+        node = Node("follower")
+        node.register_schedule_timeout(lambda t, c: None)
+        node.term = 1
+
+        envelope = {
+            "__envelope__": SNAPSHOT_ENVELOPE_VERSION,
+            "machines": {
+                "membership_sm": {
+                    "voters": ["m1"],
+                    "learners": ["m2"],
+                    "version": 1,
+                },
+            },
+        }
+
+        node.install_snapshot(
+            leader_id="m1",
+            term=2,
+            last_index=2,
+            last_term=2,
+            data=envelope,
+        )
+
+        assert node.membership_sm.current_voters() == ["m1"]
+        assert node.membership_sm.current_learners() == ["m2"]
+
+    def test_node_log_registers_membership_sm(self):
+        """Node wires its membership_sm into Log so snapshots include it."""
+        from salt.cluster.consensus.raft.node import Node
+
+        node = Node("a")
+        assert "membership_sm" in node.log._extra_state_machines
+        assert node.log._extra_state_machines["membership_sm"] is node.membership_sm
+
+    def test_register_membership_sm_updates_log(self):
+        """Replacing the membership SM keeps the Log registry in sync."""
+        from salt.cluster.consensus.raft.log import MembershipStateMachine
+        from salt.cluster.consensus.raft.node import Node
+
+        node = Node("a")
+        new_sm = MembershipStateMachine()
+        node.register_membership_sm(new_sm)
+        assert node.log._extra_state_machines["membership_sm"] is new_sm
