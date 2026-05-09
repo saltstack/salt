@@ -2293,7 +2293,10 @@ class MasterPubServerChannel:
                     try:
                         salted = salt.crypt.PrivateKey.from_file(
                             self.master_key.master_rsa_path
-                        ).decrypt(inner["cluster_aes"])
+                        ).decrypt(
+                            inner["cluster_aes"],
+                            algorithm=self.opts["cluster_encryption_algorithm"],
+                        )
                         new_cluster_aes = salted[len(token) :]
                         with salt.master.SMaster.secrets["cluster_aes"][
                             "secret"
@@ -2321,7 +2324,10 @@ class MasterPubServerChannel:
                     try:
                         salted_session = salt.crypt.PrivateKey.from_file(
                             self.master_key.master_rsa_path
-                        ).decrypt(inner["cluster_key_session"])
+                        ).decrypt(
+                            inner["cluster_key_session"],
+                            algorithm=self.opts["cluster_encryption_algorithm"],
+                        )
                         session_key_str = salted_session[len(token) :].decode()
                         cluster_key_crypt = salt.crypt.Crypticle(
                             self.opts, session_key_str
