@@ -284,6 +284,14 @@ def graph(
         salt-run state.graph webserver
         salt-run state.graph webserver tgt='*'
         salt-run state.graph webserver tgt=minion1 timeout=60
+
+    **Generating an Image:**
+
+    The DOT output can be rendered to an image using Graphviz:
+
+    .. code-block:: bash
+
+        salt-run state.graph webserver | dot -Tpng -o state_graph.png
     """
     if pillar is not None and not isinstance(pillar, dict):
         raise SaltInvocationError("Pillar data must be formatted as a dictionary")
@@ -342,6 +350,14 @@ def graph_highstate(
         salt-run state.graph_highstate
         salt-run state.graph_highstate tgt='*'
         salt-run state.graph_highstate tgt=minion1 timeout=60
+
+    **Generating an Image:**
+
+    The DOT output can be rendered to an image using Graphviz:
+
+    .. code-block:: bash
+
+        salt-run state.graph_highstate | dot -Tpng -o highstate.png
     """
     if pillar is not None and not isinstance(pillar, dict):
         raise SaltInvocationError("Pillar data must be formatted as a dictionary")
