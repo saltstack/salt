@@ -11,6 +11,7 @@ import salt.crypt
 import salt.master
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.stringutils
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 
@@ -1413,3 +1414,171 @@ async def test_collect__auth_to_master_stats():
         assert mworker.stats["_auth"]["mean"] < 0.04
         handle_aes_mock.assert_not_called()
         handle_clear_mock.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# AuthFuncs
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def auth_funcs(master_opts):
+    """
+    A real :class:`salt.master.AuthFuncs` instance backed by tmp_path-rooted
+    opts.  Used for tests that exercise the auth handler directly without
+    going through the channel layer.
+    """
+    SMaster = salt.master.SMaster
+    if "aes" not in SMaster.secrets:
+        import ctypes
+        import multiprocessing
+
+        SMaster.secrets["aes"] = {
+            "secret": multiprocessing.Array(
+                ctypes.c_char,
+                salt.utils.stringutils.to_bytes(
+                    salt.crypt.Crypticle.generate_key_string()
+                ),
+            ),
+            "reload": salt.crypt.Crypticle.generate_key_string,
+        }
+    af = salt.master.AuthFuncs(master_opts)
+    yield af
+    if af.event is not None:
+        af.event.destroy()
+
+
+def test_auth_funcs_exposes_only_auth():
+    """
+    Only ``_auth`` is exposed to the transport layer.  Adding methods to the
+    class without updating this test would silently expand the master's
+    cleartext API surface.
+    """
+    assert salt.master.AuthFuncs.expose_methods == ("_auth",)
+
+
+def test_auth_funcs_get_method_only_auth(auth_funcs):
+    """
+    :meth:`TransportMethods.get_method` returns ``_auth`` and nothing else.
+    """
+    assert auth_funcs.get_method("_auth") is not None
+    # Helpers must not be reachable from the transport layer.
+    assert auth_funcs.get_method("_clear_signed") is None
+    assert auth_funcs.get_method("session_key") is None
+    assert auth_funcs.get_method("destroy") is None
+
+
+def test_auth_funcs_compare_keys_normalizes(tmp_path):
+    """
+    :meth:`AuthFuncs.compare_keys` must treat keys with mismatched line
+    endings or trailing whitespace as equal.  The classmethod is the only
+    other auth-relevant utility, mirrored from the legacy implementation
+    on :class:`ReqServerChannel`.
+    """
+    unix = "-----BEGIN PUBLIC KEY-----\nABC\n-----END PUBLIC KEY-----\n"
+    dos = "-----BEGIN PUBLIC KEY-----\r\nABC\r\n-----END PUBLIC KEY-----\r\n"
+    padded = unix + "   \n"
+    assert salt.master.AuthFuncs.compare_keys(unix, dos) is True
+    assert salt.master.AuthFuncs.compare_keys(unix, padded) is True
+
+
+def test_auth_funcs_rejects_invalid_id(auth_funcs):
+    """
+    An auth load whose ``id`` fails :func:`salt.utils.verify.valid_id` is
+    rejected without touching the cache or firing an event.
+    """
+    auth_funcs.cache = MagicMock()
+    auth_funcs.event = MagicMock()
+    load = {
+        "id": "../escape",
+        "pub": "stub",
+        "nonce": "n",
+        "enc_algo": salt.crypt.OAEP_SHA1,
+        "sig_algo": salt.crypt.PKCS1v15_SHA1,
+    }
+    ret = auth_funcs._auth(load, sign_messages=False, version=2)
+    assert ret == {"enc": "clear", "load": {"ret": False}}
+    auth_funcs.cache.fetch.assert_not_called()
+    auth_funcs.event.fire_event.assert_not_called()
+
+
+def test_auth_funcs_rejects_when_max_minions_full(auth_funcs):
+    """
+    When ``max_minions`` is reached and the requesting id is unknown, the
+    handler returns ``{"ret": "full"}`` and does not store any key state.
+    """
+    auth_funcs.opts["max_minions"] = 1
+    auth_funcs.opts["auth_events"] = False
+    auth_funcs.cache = MagicMock()
+    auth_funcs.cache_cli = False
+    ckminions = MagicMock()
+    # Two existing minions, max_minions=1 ⇒ pool full.  The newcomer is not
+    # already-connected so they should be rejected with ``ret: "full"``.
+    ckminions.connected_ids.return_value = {"already-here", "another"}
+    auth_funcs.ckminions = ckminions
+    load = {
+        "id": "newcomer",
+        "pub": "stub",
+        "nonce": "n",
+        "enc_algo": salt.crypt.OAEP_SHA1,
+        "sig_algo": salt.crypt.PKCS1v15_SHA1,
+    }
+    ret = auth_funcs._auth(load, sign_messages=False, version=2)
+    assert ret == {"enc": "clear", "load": {"ret": "full"}}
+    auth_funcs.cache.store.assert_not_called()
+
+
+def test_auth_funcs_rejected_key_state(auth_funcs):
+    """
+    A minion whose stored key state is ``rejected`` gets
+    ``{"ret": False}`` and the handler must not overwrite the rejection.
+    """
+    auth_funcs.opts["max_minions"] = 0
+    auth_funcs.opts["auth_events"] = False
+    auth_funcs.opts["open_mode"] = False
+    auth_funcs.auto_key = MagicMock()
+    auth_funcs.auto_key.check_autoreject.return_value = False
+    auth_funcs.auto_key.check_autosign.return_value = False
+    cache = MagicMock()
+    cache.fetch.side_effect = lambda bucket, key: (
+        {"pub": "stored-pub", "state": "rejected"} if bucket == "keys" else None
+    )
+    auth_funcs.cache = cache
+    load = {
+        "id": "rejected-minion",
+        "pub": "incoming-pub",
+        "nonce": "n",
+        "enc_algo": salt.crypt.OAEP_SHA1,
+        "sig_algo": salt.crypt.PKCS1v15_SHA1,
+    }
+    ret = auth_funcs._auth(load, sign_messages=False, version=2)
+    assert ret == {"enc": "clear", "load": {"ret": False}}
+    cache.store.assert_not_called()
+
+
+def test_auth_funcs_pending_when_new_minion(auth_funcs):
+    """
+    A previously-unseen minion (no stored key, no auto-sign) is placed in
+    ``pending`` and the handler reports ``{"ret": True}``.
+    """
+    auth_funcs.opts["max_minions"] = 0
+    auth_funcs.opts["auth_events"] = False
+    auth_funcs.opts["open_mode"] = False
+    auth_funcs.auto_key = MagicMock()
+    auth_funcs.auto_key.check_autoreject.return_value = False
+    auth_funcs.auto_key.check_autosign.return_value = False
+    cache = MagicMock()
+    cache.fetch.return_value = None
+    auth_funcs.cache = cache
+    load = {
+        "id": "fresh-minion",
+        "pub": "fresh-pub",
+        "nonce": "n",
+        "enc_algo": salt.crypt.OAEP_SHA1,
+        "sig_algo": salt.crypt.PKCS1v15_SHA1,
+    }
+    ret = auth_funcs._auth(load, sign_messages=False, version=2)
+    assert ret == {"enc": "clear", "load": {"ret": True}}
+    cache.store.assert_called_once_with(
+        "keys", "fresh-minion", {"pub": "fresh-pub", "state": "pending"}
+    )
