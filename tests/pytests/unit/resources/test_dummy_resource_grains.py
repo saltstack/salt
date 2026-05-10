@@ -1,5 +1,5 @@
 """
-Unit tests for ``salt.resource.dummy``'s per-resource grain plugin.
+Unit tests for ``salt.resources.dummy``'s per-resource grain plugin.
 
 Each individual dummy resource has its own ``grains`` function (the resource
 analogue of a minion grain plugin). The minion's ``_thread_return`` swaps
@@ -12,7 +12,7 @@ import contextlib
 
 import pytest
 
-import salt.resource.dummy as dummy_mod
+import salt.resources.dummy as dummy_mod
 from tests.support.mock import patch
 
 _RESOURCE_ID = "dummy-01"

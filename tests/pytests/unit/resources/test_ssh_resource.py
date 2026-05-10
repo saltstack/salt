@@ -1,5 +1,5 @@
 """
-Unit tests for salt.resource.ssh.
+Unit tests for salt.resources.ssh.
 
 Covers the _make_single() helper which constructs a salt.client.ssh.Single
 from inside a minion job thread — a code path that salt-ssh itself never
@@ -70,7 +70,7 @@ class TestMakeSingle:
     def test_single_receives_fsclient(self):
         import contextlib
 
-        import salt.resource.ssh as mod
+        import salt.resources.ssh as mod
 
         mock_fsclient = MagicMock()
         mock_single_cls = MagicMock()

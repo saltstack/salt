@@ -34,9 +34,6 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    # Yield to resource-type override modules (e.g. sshresource_test.py).
-    if __opts__.get("resource_type"):  # pylint: disable=undefined-variable
-        return False, "test: not loaded in resource-type loaders"
     return True
 
 

@@ -39,23 +39,15 @@ from salt.client.ssh.wrapper.state import (
     _cleanup_slsmod_low_data,
     _merge_extra_filerefs,
 )
-from salt.resource.ssh import CONTEXT_KEY
+from salt.resources.ssh import CONTEXT_KEY
 
 log = logging.getLogger(__name__)
-log.info("sshresource_state: module imported, __name__=%s", __name__)
+log.info("ssh.state override: module imported, __name__=%s", __name__)
 
-__virtualname__ = "state"
+# Filename ``state.py`` matches the slot name; directory location
+# (``salt/resources/ssh/modules/``) gates loading to the ssh per-resource
+# loader.  __func_alias__ still applies (apply_ → apply).
 __func_alias__ = {"apply_": "apply"}
-
-
-def __virtual__():
-    if __opts__.get("resource_type") == "ssh":  # pylint: disable=undefined-variable
-        log.info(
-            "sshresource_state: LOADING for ssh resource type (opts id=%s)",
-            __opts__.get("id"),
-        )  # pylint: disable=undefined-variable
-        return __virtualname__
-    return False, "sshresource_state: only loads in an ssh-resource-type loader."
 
 
 # ---------------------------------------------------------------------------
@@ -146,7 +138,7 @@ def _thin_dir():
     """
     Return the remote working directory for the salt-thin bundle.
 
-    Mirrors the logic in ``salt.resource.ssh._thin_dir``: uses the per-host
+    Mirrors the logic in ``salt.resources.ssh._thin_dir``: uses the per-host
     ``thin_dir`` config key when set, otherwise builds a path under ``/tmp/``
     (always world-writable) to avoid ``/var/tmp/`` which may be root-only.
     """

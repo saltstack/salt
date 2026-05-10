@@ -34,7 +34,7 @@ def test_grain_targeting_matches_resources_across_two_minions(
     ``salt -G 'dummy_grain_1:one' test.ping`` must include the dummy
     resources managed by **both** minions in a single response. Every
     dummy resource statically reports ``dummy_grain_1: one`` (see
-    ``salt.resource.dummy.grains``), so the grain match should hit all
+    ``salt.resources.dummy.grains``), so the grain match should hit all
     five resources (3 on minion-1 + 2 on minion-2) and exclude the
     managing minions themselves.
     """

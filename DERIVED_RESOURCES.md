@@ -5,7 +5,22 @@ real-world states against a VCF starting-state environment.
 
 ---
 
-## Gap 4 — Resource context replaces standard Salt modules instead of augmenting them (OPEN)
+## Gap 4 — Resource context replaces standard Salt modules instead of augmenting them (FIXED)
+
+**Status:** fixed via the per-type directory layout introduced for Gap 2.
+See ``RESOURCE_STATE_GAPS.md`` for the canonical write-up.  The short
+version: standard ``salt/modules/`` no longer has ``__virtual__``
+opt-out gates on ``resource_type``; the per-resource loader includes
+both standard modules and per-type overrides under
+``salt/resources/<rtype>/modules/``, with overrides winning their slot
+via directory-order priority.  ``__minion__`` is a new dunder packed
+into resource-context loaders for explicit escape-hatch access to the
+managing minion's loader.
+
+The remaining content of this section documents the original analysis
+and proposal for historical reference.
+
+### Original framing
 
 ### What happened
 
@@ -104,7 +119,10 @@ fetches resource data first, then applies the SLS with `--local` (no `-r`)
 with the data injected as Pillar.  This works but defeats the goal of a
 single `state.apply` driving the full workflow.
 
-**Status:** open.
+**Status:** fixed (see top of this section).  ``__salt__`` in resource
+context now contains the merged set of standard salt modules plus
+per-type overrides — operators can mix ``ss_env.*`` and
+``pkg.installed`` in one ``.sls`` and run it with ``-r`` directly.
 
 ---
 

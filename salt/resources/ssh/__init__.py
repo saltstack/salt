@@ -198,7 +198,7 @@ def _relenv_path():
     """
     Return the path to a pre-built relenv tarball if one exists locally, otherwise
     ``None`` so ``Single.__init__`` can detect the remote arch and fetch the right
-    tarball (same strategy as :func:`salt.modules.sshresource_state._relenv_path`).
+    tarball (same strategy as :func:`salt.resources.ssh.modules.state._relenv_path`).
 
     Pre-resolving an existing local path avoids an extra SSH round-trip during
     ``Single`` construction when ``Single`` was instantiated inside a minion job

@@ -3,7 +3,7 @@ Fixtures for SSH resource integration tests.
 
 Spins up the shared session master, a module-scoped sshd, Pillar declaring one
 SSH resource (``ssh-int-01``) pointing at that sshd, and a minion that manages
-it.  This exercises :mod:`salt.resource.ssh` — including ``Single`` built from
+it.  This exercises :mod:`salt.resources.ssh` — including ``Single`` built from
 minion opts, relenv, and ``cmd_block()`` — which plain salt-ssh integration
 tests never touch (they run on the master only).
 """
@@ -60,7 +60,7 @@ def relenv_tarball_for_ssh_resource():
     """
     Pre-resolve a relenv tarball path for populating the minion cache.
 
-    ``salt.resource.ssh._relenv_path`` looks under
+    ``salt.resources.ssh._relenv_path`` looks under
     ``<cachedir>/relenv/linux/<arch>/salt-relenv.tar.xz`` for ``x86_64`` or ``arm64``.
     """
     shared_cache = os.path.join(tempfile.gettempdir(), "salt_ssh_resource_int_relenv")

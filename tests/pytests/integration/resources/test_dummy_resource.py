@@ -211,7 +211,7 @@ def test_grain_targeting_matches_resources(salt_minion, salt_cli):
     """
     ``salt -G '<key>:<value>' test.ping`` must match resources whose own
     grains satisfy the expression. Every dummy resource publishes
-    ``dummy_grain_1: one`` (see ``salt.resource.dummy.grains``), so the
+    ``dummy_grain_1: one`` (see ``salt.resources.dummy.grains``), so the
     response must include all three dummy resource IDs.
 
     End-to-end pipeline this exercises:
@@ -252,7 +252,7 @@ def test_grain_targeting_only_matching_resource(salt_minion, salt_cli):
     """
     ``salt -G 'resource_id:dummy-02' test.ping`` matches only dummy-02
     because the per-resource ``resource_id`` grain is unique to that
-    resource (see ``salt.resource.dummy.grains``).
+    resource (see ``salt.resources.dummy.grains``).
     """
     ret = salt_cli.run("-G", "test.ping", minion_tgt="resource_id:dummy-02")
     assert ret.returncode == 0, ret
@@ -270,7 +270,7 @@ def test_grain_targeting_only_matching_resource(salt_minion, salt_cli):
 def test_grains_items_returns_resource_grains_not_minion_grains(salt_minion, salt_cli):
     """
     ``salt 'dummy-01' grains.items`` must return the dummy resource's grains
-    (produced by ``salt.resource.dummy.grains``), not the managing minion's
+    (produced by ``salt.resources.dummy.grains``), not the managing minion's
     grains. This exercises the end-to-end grain-swap pipeline:
 
     * Master targeting matches the bare resource id ``dummy-01`` and
