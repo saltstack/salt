@@ -792,7 +792,7 @@ class CkMinions:
                 return {"minions": [], "missing": []}
 
     def _check_compound_pillar_exact_minions(
-        self, expr, delimiter, greedy, minions=None
+        self, expr, delimiter, greedy, minions=None, fun=None
     ):
         """
         Return the minions found by looking via compound matcher
@@ -800,11 +800,11 @@ class CkMinions:
         Disable pillar glob matching
         """
         return self._check_compound_minions(
-            expr, delimiter, greedy, pillar_exact=True, minions=minions
+            expr, delimiter, greedy, pillar_exact=True, minions=minions, fun=fun
         )
 
     def _check_compound_minions(
-        self, expr, delimiter, greedy, pillar_exact=False, minions=None
+        self, expr, delimiter, greedy, pillar_exact=False, minions=None, fun=None
     ):  # pylint: disable=unused-argument
         """
         Return the minions found by looking via compound matcher
@@ -940,7 +940,15 @@ class CkMinions:
                     # a 'not'
                     if "L" == target_info["engine"]:
                         engine_args.append(results and results[-1] == "-")
-                    _results = engine(*engine_args, minions=minions)
+                    # Resource-engine matchers need the function name so that
+                    # merge-mode functions (state.apply etc.) wait for the
+                    # managing minion's combined response instead of the
+                    # individual resource ids that never produce a separate
+                    # return.
+                    engine_kwargs = {"minions": minions}
+                    if target_info["engine"] == "T":
+                        engine_kwargs["fun"] = fun
+                    _results = engine(*engine_args, **engine_kwargs)
                     results.append(str(set(_results["minions"])))
                     missing.extend(_results["missing"])
                     if unmatched and unmatched[-1] == "-":
@@ -1036,18 +1044,26 @@ class CkMinions:
 
         return {"minions": minions, "missing": []}
 
-    def _check_resource_minions(self, expr, greedy, minions=None):
+    def _check_resource_minions(self, expr, greedy, minions=None, fun=None):
         """
-        Return the resource IDs that match the ``T@`` pattern ``expr``.
+        Return the IDs that match the ``T@`` pattern ``expr``.
 
         ``expr`` is either a bare resource type (``dummy``) or a full SRN
         (``dummy:dummy-01``).
 
-        Unlike other ``_check_*_minions`` methods, the returned IDs are
-        **resource IDs**, not managing-minion IDs. This is intentional: the
-        CLI uses this list to know which return IDs to expect, and resource
-        returns are keyed by resource ID (remapped by the master's
+        Normally (and historically) the returned IDs are **resource IDs**:
+        the CLI uses this list to know which return IDs to expect, and
+        resource returns are keyed by resource ID (remapped by the master's
         ``_return`` handler after the transport security check passes).
+
+        For merge-mode functions (``state.apply``, ``state.highstate``,
+        ``state.sls``, ``state.sls_id``, ``state.single``) the managing
+        minion runs every targeted resource inline and returns ONE combined
+        response under its own minion id — no per-resource ``_return`` is
+        ever emitted, so waiting on resource ids would time out with
+        ``ERROR: Minion did not return``. When ``fun`` is in
+        :data:`_MERGE_RESOURCE_FUNS` we therefore remap the wait list to
+        the managing minion id(s) of the targeted resources.
 
         Job delivery is handled separately: the job is published with the
         original ``T@`` target expression and ``tgt_type=compound``; managing
@@ -1067,6 +1083,8 @@ class CkMinions:
         if resource_type is None:
             return {"minions": [], "missing": []}
 
+        is_merge_fun = isinstance(fun, str) and fun in _MERGE_RESOURCE_FUNS
+
         if resource_id is not None:
             # Full SRN: echo the resource ID back. The managing minion will
             # filter locally via ``resource_match.match()``. We log if the
@@ -1084,9 +1102,34 @@ class CkMinions:
                     "T@%s not in resource registry; using resource ID from expression",
                     expr,
                 )
+            if is_merge_fun:
+                try:
+                    minion_ids = (
+                        self.registry.get_managing_minions_for_srn(
+                            resource_type, resource_id
+                        )
+                        or []
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    log.error(
+                        "Managing-minion lookup failed for T@%s",
+                        expr,
+                        exc_info=True,
+                    )
+                    minion_ids = []
+                return {"minions": list(minion_ids), "missing": []}
             return {"minions": [resource_id], "missing": []}
 
-        # Bare type: return every registered resource id of this type.
+        # Bare type: return every registered resource id of this type, or
+        # the managing minion ids for merge-mode functions.
+        if is_merge_fun:
+            try:
+                _res = self.registry.get_managing_minions_by_type(resource_type)
+            except Exception:  # pylint: disable=broad-except
+                log.error("Managing-minion lookup failed for T@%s", expr, exc_info=True)
+                _res = {"minions": [], "missing": []}
+            return _res
+
         try:
             rids = self.registry.get_resource_ids_by_type(resource_type)
         except Exception:  # pylint: disable=broad-except
@@ -1173,7 +1216,10 @@ class CkMinions:
                 "compound_pillar_exact",
             ):
                 # pylint: disable=not-callable
-                _res = check_func(expr, delimiter, greedy)
+                if tgt_type in ("compound", "compound_pillar_exact"):
+                    _res = check_func(expr, delimiter, greedy, fun=fun)
+                else:
+                    _res = check_func(expr, delimiter, greedy)
                 # pylint: enable=not-callable
             else:
                 _res = check_func(expr, greedy)  # pylint: disable=not-callable

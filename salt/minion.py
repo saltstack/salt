@@ -2726,6 +2726,23 @@ class Minion(MinionBase):
                         functions_to_use.pack["__grains__"] = (
                             minion_instance.resource_funcs[grains_fn]()
                         )
+            elif (
+                function_name in cls._MERGE_RESOURCE_FUNS
+                and data.get("resource_targets")
+                and data.get("pure_resource_target")
+            ):
+                # Pure resource target with a merge-mode function: the
+                # operator addressed only resources, the managing minion
+                # is a passthrough that runs the merge. Skip the regular
+                # function execution so the managing minion's own state
+                # tree (which won't contain resource-only state modules)
+                # doesn't taint the result with a "not found" entry. The
+                # merge block below populates ret["return"] from each
+                # resource's own loader.
+                functions_to_use = None
+                ret["return"] = {}
+                ret["retcode"] = salt.defaults.exitcodes.EX_OK
+                ret["success"] = True
             else:
                 functions_to_use = minion_instance.functions
             if (
@@ -2858,6 +2875,16 @@ class Minion(MinionBase):
                     ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
                     ret["out"] = "nested"
                 # else: no-loader case already populated ret above
+            elif (
+                function_name in cls._MERGE_RESOURCE_FUNS
+                and data.get("resource_targets")
+                and data.get("pure_resource_target")
+            ):
+                # Pure-resource merge case set ret["return"]={} earlier; the
+                # merge block below will fold each resource's results in.
+                # Skip the missing-function fallback so we don't overwrite
+                # the seed dict with "'state.apply' is not available."
+                pass
             else:
                 docs = minion_instance.functions["sys.doc"](f"{function_name}*")
                 if docs:
@@ -3508,6 +3535,32 @@ class Minion(MinionBase):
                 }
             )
 
+    def _spawn_background(self, coro):
+        """
+        Schedule a fire-and-forget coroutine on ``self.io_loop`` while
+        keeping a strong reference to the resulting :class:`asyncio.Task`
+        until it completes.
+
+        Without this, ``self.io_loop.create_task(coro)`` returns a Task
+        whose only reference is held by the event loop's scheduling weak
+        reference. CPython's garbage collector can then destroy the Task
+        before it runs, producing the asyncio "Task was destroyed but it
+        is pending!" error and silently dropping the coroutine. This was
+        the root cause of resource registration intermittently failing —
+        ``_register_resources_with_master`` would never reach the master,
+        leaving its registry empty and breaking every ``T@`` / ``-L`` /
+        bare-id resource targeting test that depended on registration.
+
+        Tasks are stored on a per-instance set and removed via a
+        ``add_done_callback`` so the set doesn't grow unbounded.
+        """
+        if not hasattr(self, "_background_tasks"):
+            self._background_tasks = set()
+        task = self.io_loop.create_task(coro)
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+        return task
+
     async def _fire_master_minion_start(self):
         include_grains = False
         if self.opts["start_event_grains"]:
@@ -3989,7 +4042,7 @@ class Minion(MinionBase):
             _minion.matchers_refresh()
         elif tag.startswith("resource_refresh"):
             _minion.opts["resources"] = _minion._discover_resources()
-            _minion.io_loop.create_task(_minion._register_resources_with_master())
+            _minion._spawn_background(_minion._register_resources_with_master())
         elif tag.startswith("manage_schedule"):
             _minion.manage_schedule(tag, data)
         elif tag.startswith("manage_beacons"):
@@ -4565,8 +4618,8 @@ class Minion(MinionBase):
                 self.setup_scheduler(before_connect=True)
             self.sync_connect_master()
         if self.connected:
-            self.io_loop.create_task(self._fire_master_minion_start())
-            self.io_loop.create_task(self._register_resources_with_master())
+            self._spawn_background(self._fire_master_minion_start())
+            self._spawn_background(self._register_resources_with_master())
             log.info("Minion is ready to receive requests!")
 
         # Make sure to gracefully handle SIGUSR1
@@ -4712,9 +4765,20 @@ class Minion(MinionBase):
 
         resource_targets = self._resolve_resource_targets(load)
         load["resource_targets"] = resource_targets
-        load["minion_is_target"] = bool(
-            minion_matches
-        ) and not self._is_pure_resource_target(load)
+        # For pure resource targets (e.g. ``T@dummy:dummy-01``) the managing
+        # minion would normally NOT count as a target — the operator is
+        # addressing resources, not the minion.  But merge-mode functions
+        # (state.apply, state.highstate, …) run resources INLINE inside the
+        # managing minion's own job and produce ONE combined response.  The
+        # managing minion therefore has to execute the function (its
+        # ``_thread_return`` is what folds resource results into the parent
+        # state dict); skipping it here would silently drop the entire job.
+        is_merge_fun = load.get("fun") in self._MERGE_RESOURCE_FUNS
+        is_pure_resource = self._is_pure_resource_target(load)
+        load["pure_resource_target"] = is_pure_resource
+        load["minion_is_target"] = bool(minion_matches) and (
+            is_merge_fun or not is_pure_resource
+        )
 
         if not load["minion_is_target"] and not resource_targets:
             return False
@@ -5828,3 +5892,24 @@ class SProxyMinion(SMinion):
         self.functions["saltutil.sync_grains"](saltenv="base")
         self.grains_cache = self.opts["grains"]
         self.ready = True
+
+
+# Expose the resource targeting helpers on MinionBase so SMinion (used by
+# salt-call) can dispatch to resources via the same logic the full Minion
+# uses for master-driven jobs. The methods only depend on self.opts /
+# self.resource_funcs / self._resource_grains_cache, all of which SMinion
+# also provides via MinionBase.gen_modules(). This rebind keeps a single
+# implementation on Minion while making it reachable through the SMinion
+# MRO without a 250-line code move.
+for _attr in (
+    "_NO_RESOURCE_FUNS",
+    "_MERGE_RESOURCE_FUNS",
+    "_prefix_resource_state_key",
+    "_resource_term_matches",
+    "_resource_matches_compound",
+    "_resolve_resource_targets",
+    "_is_pure_resource_target",
+    "_collect_resource_grains",
+):
+    setattr(MinionBase, _attr, getattr(Minion, _attr))
+del _attr
