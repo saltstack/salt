@@ -71,108 +71,68 @@ modules.
 
 ---
 
-## Gap 2 — `State` throws away resource context (FIXED)
+## Gap 2 — `State` throws away resource context (RETRACTED)
 
-### What we *thought* the gap was
+### Original framing
 
-`salt.loader.states` packs only six dunders into every state module:
+`salt.loader.states` packs only six dunders into every state module;
+`__resource_funcs__` is not among them.  An earlier attempt fixed this by
+making `State.load_modules` switch to `salt.loader.resource_modules(...)`
+when `opts["resource_type"]` was set, so state modules' `__salt__` would
+dispatch through per-resource overrides.
 
-```python
-# salt/loader/__init__.py – states()
-pack={
-    "__salt__":        functions,
-    "__proxy__":       proxy or {},
-    "__utils__":       utils,
-    "__serializers__": serializers,
-    "__context__":     context,
-    "__file_client__": file_client,
-}
+### Why this was reverted
+
+The fix made one narrow case work (the dummy demo state module
+calling `__salt__["test.ping"]` and getting `dummyresource_test.ping`)
+but introduced a broad regression for any standard state module
+(`pkg.installed`, `service.running`, `file.managed`, `host.present`)
+that internally calls helpers like `__salt__["cmd.run_stdout"]`:
+
+```
+KeyError: 'cmd.run_stdout'
 ```
 
-`__resource_funcs__` is **not** in that list.  We initially assumed the fix
-was to pack `__resource_funcs__` into states/ too so state modules could call
-`__resource_funcs__["..."]` directly.
+In a per-resource loader, `cmd.py` virtuals out (it has an opt-out gate
+for `resource_type`), and unless the resource type ships a
+`<rtype>resource_cmd.py` override, the slot is empty.  SSH happens to
+have the override; ``dummy``, ``starting_state``, and any new resource
+type does not.  The fix silently traded a wrong-target bug for a
+loud-but-broader missing-function bug.
 
-### Why that framing was wrong
+### The deeper issue
 
-State modules already have `__salt__`.  In a resource context, `__salt__`
-**should** resolve to the per-resource execution loader — and that loader
-already routes resource-aware module calls correctly.  Specifically:
+The Gap 2 framing assumed a state module could be transparently
+resource-aware via the implicit `__salt__` rewrite.  That assumption is
+unsafe: a state module written for the managing minion might call
+``__salt__["pkg.install"]`` thinking it operates on the local system;
+silently routing it to a per-resource loader (or worse, to a logical
+resource that has no shell at all) leads to the wrong action on the
+wrong target.
 
-* The per-resource loader (`salt.loader.resource_modules`) is itself a
-  `__salt__`-style loader scanning `salt/modules/`.  It just sets
-  `opts["resource_type"]` and packs `pack_self="__salt__"`.
-* Resource-aware modules (e.g. `salt/modules/dummyresource_test.py`)
-  gate their `__virtual__` on `resource_type` and override the standard
-  module slot (`test`, etc.).  Standard modules (e.g. `salt/modules/test.py`)
-  yield via `__virtual__` when `resource_type` is set.
+### Path forward
 
-So a state module that calls `__salt__["test.ping"]` in a dummy-resource
-context naturally dispatches to `dummyresource_test.ping`.  No new dunder
-required.
+Resource-aware state context comes from **explicit resource-aware state
+functions** — the pattern documented in `DERIVED_RESOURCES.md`:
 
-### What the actual gap was
+* `ssh_host.state_applied`, `ss_env.deployed`, `ssh_host.fetch_file`,
+  etc. are state functions that internally manage the resource context
+  (compile, ship, execute via the resource's transport).
+* State authors call those explicitly when they want resource-context
+  behaviour.
+* `__salt__` in any state module always means "managing minion" — same
+  as a regular minion, no surprises.
+* No automatic loader rewriting.
 
-`State.load_modules` (`salt/state.py:1355`) unconditionally rebuilt
-`self.functions` from `salt.loader.minion_mods(self.opts, ...)`, regardless
-of whether `self.opts["resource_type"]` was set.  This silently dropped
-the resource context: state modules ended up with `__salt__` pointing at
-the managing minion's modules, even when the surrounding execution
-function (`salt.modules.state.apply_`) had been dispatched into a
-per-resource loader.
+Gap 4 in `DERIVED_RESOURCES.md` covers the related concern that
+resource execution-module override sets need to be comprehensive enough
+for state functions targeting transport-based resources (SSH) to work
+without slot gaps.
 
-So the chain was:
-
-1. `_thread_return` dispatches `state.apply` into `resource_loaders["dummy"]`.
-   ✓ Per-resource loader is the function set.
-2. Inside `state.apply`, `__opts__["resource_type"] == "dummy"`.  ✓
-3. `salt.state.HighState(__opts__, ...)` carries the per-resource opts.  ✓
-4. `State.load_modules` calls `salt.loader.minion_mods(self.opts, ...)`.
-   ✗ — fresh load with no resource awareness.  State modules' `__salt__`
-   is now the managing minion's modules.
-5. `__salt__["test.ping"]` in a state module → managing minion's `test.ping`,
-   not `dummyresource_test.ping`.
-
-### Fix
-
-In `State.load_modules`, when `self.opts.get("resource_type")` is set, build
-`self.functions` via `salt.loader.resource_modules(...)` (with a freshly
-built `salt.loader.resource(...)` for the connection-module loader) instead
-of `minion_mods`.  All other paths are unchanged.
-
-```python
-def load_modules(self, data=None, proxy=None):
-    log.info("Loading fresh modules for state activity")
-    self.utils = salt.loader.utils(self.opts, file_client=self.file_client)
-    resource_type = self.opts.get("resource_type")
-    if resource_type:
-        self.resource_funcs = salt.loader.resource(
-            self.opts, utils=self.utils, context=self.state_con
-        )
-        self.functions = salt.loader.resource_modules(
-            self.opts,
-            resource_type,
-            resource_funcs=self.resource_funcs,
-            utils=self.utils,
-            context=self.state_con,
-        )
-    else:
-        self.functions = salt.loader.minion_mods(...)
-    ...
-```
-
-State modules then dispatch resource-aware automatically.  `saltext-opsdev`
-can author state functions in `states/` like any other Salt extension —
-no `__resource_funcs__` dunder needed.
-
-A demonstrating state module ships at `salt/states/dummyresource_test.py`:
-its `present(name)` function calls `__salt__["test.ping"]` and gets
-`True` from `salt.resource.dummy.ping` (via the per-resource override).
-
-Verified end-to-end in
-`tests/pytests/unit/state/test_resource_aware_loader.py`.
-
-**Status:** fixed.
+**Status:** retracted; reverted commit-by-commit.  See
+`tests/pytests/unit/cli/test_caller_resources.py::test_r_state_apply_against_logical_resource_fails_loudly`
+for the loud-failure test that captures the new expected behaviour for
+logical resource types.
 
 ---
 
@@ -200,9 +160,12 @@ received`.
 
 There was a related secondary issue: even with the wait-list fixed, the
 managing minion's own `state.apply` would still try to apply the SLS
-against itself, which fails for resource-only state modules
-(`dummy_test.present` virtuals out unless `resource_type` is set),
-producing a noisy `result: false` entry in the merged output.
+against itself.  For resource types whose state module (e.g.
+`sshresource_state`) takes over the ``state`` slot, the dispatch goes
+where it should, but the managing minion's standard `state.apply`
+would also fire and produce noisy failure entries against any
+resource-only state functions.  The `pure_resource_target` skip in
+`_thread_return` suppresses that.
 
 ### Fix
 
@@ -234,9 +197,11 @@ The merge-mode return keys still encode the resource ID via
 `_prefix_resource_state_key`, so operators see per-resource provenance
 in the rendered state output.
 
-Verified end-to-end in
-`tests/pytests/integration/resources/test_dummy_resource_state.py` —
-full integration smoke suite green (292 passed, 0 failed).
+Applies to resource types that ship a `<rtype>resource_state.py`
+override (today: SSH).  For resource types without one (dummy,
+starting_state, etc.) `state.apply` against a resource is correctly
+unsupported — the per-resource loader has no `state.apply` slot and
+the operator gets a "not supported for resource type 'dummy'" error.
 
 **Status:** fixed.
 
@@ -246,11 +211,11 @@ full integration smoke suite green (292 passed, 0 failed).
 
 | Scenario | Works today? | Notes |
 |---|---|---|
-| `salt-call -r state.apply` hits resources | **Yes** | Gap 1 — fixed via `-r/--tgt/--tgt-type` |
-| `salt-call -r --tgt 'T@dummy' state.apply` (specific resource) | **Yes** | Gap 1 — fixed |
-| `salt-call -r test.ping` (managing minion + all resources) | **Yes** | Gap 1 — fixed |
-| `salt -C 'T@dummy' state.apply` hits resources | **Yes** | Gap 3 — fixed (managing-minion remap on master) |
-| `salt -C 'T@dummy:dummy-01' state.apply` (specific resource by id) | **Yes** | Gap 3 — fixed |
+| `salt-call -r test.ping` (managing minion + all resources) | **Yes** | Gap 1 — fixed via `-r/--tgt/--tgt-type` |
+| `salt-call -r --tgt dummy-01 test.ping` (specific resource) | **Yes** | Gap 1 — fixed |
+| `salt-call -r --tgt dummy-01 grains.items` (per-resource grains) | **Yes** | Gap 1 — fixed |
+| `salt -C 'T@ssh:hostA' state.apply` (transport-based resource) | **Yes** | Gap 3 — fixed (managing-minion remap on master) |
+| `salt-call -r state.apply` against a logical resource | Loud failure | Logical resources don't ship `<rtype>resource_state.py`; "not supported" error returned |
 | `salt resources-minion state.apply` (merge auto-dispatches) | No (resource_targets empty) | needs fun-aware target widening on minion |
-| State functions in `states/` using `__salt__` in resource context | **Yes** | Gap 2 — fixed |
+| State functions in `states/` using `__salt__` in resource context | Managing minion's `__salt__` | Gap 2 retracted; use explicit resource-aware state functions instead (see DERIVED_RESOURCES.md) |
 | `.sls` files using resource execution functions via `module.run` | Yes (via master dispatch) | unchanged |
