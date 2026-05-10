@@ -1362,13 +1362,46 @@ class State:
         """
         log.info("Loading fresh modules for state activity")
         self.utils = salt.loader.utils(self.opts, file_client=self.file_client)
-        self.functions = salt.loader.minion_mods(
-            self.opts,
-            self.state_con,
-            utils=self.utils,
-            proxy=self.proxy,
-            file_client=salt.fileclient.ContextlessFileClient(self.file_client),
-        )
+        resource_type = self.opts.get("resource_type")
+        if resource_type:
+            # Resource context: load execution modules through the per-resource
+            # loader so __salt__ in state modules dispatches to the resource's
+            # own modules (e.g. dummyresource_test) instead of the managing
+            # minion's. State modules under salt/states/ then work unchanged
+            # in a resource context.
+            self.resource_funcs = salt.loader.resource(
+                self.opts, utils=self.utils, context=self.state_con
+            )
+            # Call init() so __context__ is populated before any state or
+            # execution module function tries to read connection data from it.
+            # The minion calls init() at startup on its own resource_funcs
+            # loader, but State.load_modules creates a fresh loader with a
+            # new context (self.state_con), so init() must be called again here.
+            init_fn = f"{resource_type}.init"
+            if init_fn in self.resource_funcs:
+                try:
+                    self.resource_funcs[init_fn](self.opts)
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.error(
+                        "Failed to initialize resource type '%s' in state loader: %s",
+                        resource_type,
+                        exc,
+                    )
+            self.functions = salt.loader.resource_modules(
+                self.opts,
+                resource_type,
+                resource_funcs=self.resource_funcs,
+                utils=self.utils,
+                context=self.state_con,
+            )
+        else:
+            self.functions = salt.loader.minion_mods(
+                self.opts,
+                self.state_con,
+                utils=self.utils,
+                proxy=self.proxy,
+                file_client=salt.fileclient.ContextlessFileClient(self.file_client),
+            )
         if isinstance(data, dict):
             if data.get("provider", False):
                 if isinstance(data["provider"], str):
