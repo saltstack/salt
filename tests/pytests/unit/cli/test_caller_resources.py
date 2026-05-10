@@ -187,10 +187,17 @@ def test_r_grains_items_per_resource_for_each_target(call_opts):
         assert payload[rid].get("resource_id") == rid, (rid, payload[rid])
 
 
-def test_r_state_apply_merge_dispatches_per_resource(call_opts):
+def test_r_state_apply_against_logical_resource_fails_loudly(call_opts):
     """
-    -r state.apply against all resources merges into one master-style dict
-    with state IDs prefixed by the resource id (matches the master flow).
+    state.apply against a logical resource type (no per-resource state
+    override module) must surface a clear "not supported" error rather
+    than silently running on the managing minion.
+
+    Dummy resources don't ship a ``dummyresource_state.py``, so
+    ``state.apply`` is absent from the per-resource loader. The merge
+    dispatch in ``_call_with_resources`` records the per-resource error
+    in the merged result so the operator sees one entry per targeted
+    resource explaining why no state ran.
     """
     call_opts["resources_dispatch"] = True
     call_opts["fun"] = "state.apply"
@@ -198,20 +205,15 @@ def test_r_state_apply_merge_dispatches_per_resource(call_opts):
     caller = _build_caller(call_opts)
     payload = caller._call_with_resources()["return"]
     assert isinstance(payload, dict), payload
-    # One state-prefixed key per resource — payload also contains the
-    # managing minion's "state not found" entry, which we don't assert on.
-    expected_substrings = {
-        "dummy-01 ping the resource",
-        "dummy-02 ping the resource",
-        "dummy-03 ping the resource",
-    }
-    for substr in expected_substrings:
-        assert any(
-            substr in key for key in payload
-        ), f"Missing prefixed state key for {substr!r}: {list(payload)}"
-    # Each resource result was True (dummy.ping always returns True).
-    for key, value in payload.items():
-        if "ping the resource" in key and isinstance(value, dict):
-            if any(rid in key for rid in ("dummy-01", "dummy-02", "dummy-03")):
-                assert value["result"] is True, (key, value)
-                assert "ping returned True" in value["comment"]
+    # Each targeted dummy resource should produce a "not supported" entry
+    # in the merged dict (master merge format keys errors as
+    # ``no_|-{rid}_|-{rid}_|-None``).
+    error_keys = [k for k in payload if k.startswith("no_|-dummy-0")]
+    assert len(error_keys) == 3, payload
+    for key in error_keys:
+        entry = payload[key]
+        assert entry["result"] is False, (key, entry)
+        assert "not supported for resource type 'dummy'" in entry["comment"], (
+            key,
+            entry,
+        )
