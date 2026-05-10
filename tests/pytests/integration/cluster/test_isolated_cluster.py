@@ -52,10 +52,23 @@ def test_isolated_cluster_aes_converges(
         cluster_master_2_isolated,
         cluster_master_3_isolated,
     ]
-    aes_values = []
-    for m in masters:
-        aes_path = pathlib.Path(m.config["cluster_pki_dir"]) / ".aes"
-        aes_values.append(_read(aes_path))
+
+    # Convergence is asynchronous: each master writes its initial random
+    # ``.aes`` during ``populate_secrets``, then masters 2 and 3 receive
+    # the founder's value via ``cluster/peer/join-reply`` and overwrite
+    # their local file.  The fixture's ``factory.started()`` waits for
+    # ``ret_port`` to bind, not for the join handshake to complete, so
+    # we poll until all three files match (or the deadline expires).
+    aes_values = [None, None, None]
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        aes_values = [
+            _read(pathlib.Path(m.config["cluster_pki_dir"]) / ".aes") for m in masters
+        ]
+        if all(v is not None for v in aes_values) and len(set(aes_values)) == 1:
+            break
+        time.sleep(0.5)
+
     assert all(v is not None for v in aes_values), (
         f"Some masters never wrote .aes: "
         f"{[m.config['interface'] for m, v in zip(masters, aes_values) if v is None]}"
