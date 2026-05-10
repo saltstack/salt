@@ -3,8 +3,8 @@ Functional tests for the Raft-over-cluster-channel transport layer.
 
 These tests exercise the full round-trip:
 
-    Node  →  SaltPeer  →  rpc.pack  →  FakePusher.sent
-          ←  rpc.unpack  ←  RaftDispatcher  ←  Node method
+    Node  ->  SaltPeer  ->  rpc.pack  ->  FakePusher.sent
+          <-  rpc.unpack  <-  RaftDispatcher  <-  Node method
 
 No real TCP; no running Salt master.  Real asyncio event loop, real
 ``salt.utils.event`` framing, real Raft state machines.
@@ -290,7 +290,7 @@ class TestLogReplication:
             leader_cn.node.log_add("commit-me")
             await asyncio.sleep(0)
             await _deliver_all(cluster, rounds=6)
-            # Leader has a majority ack → commit_index == 0 (first entry)
+            # Leader has a majority ack -> commit_index == 0 (first entry)
             assert leader_cn.node.commit_index == 0
 
         _run(_body())

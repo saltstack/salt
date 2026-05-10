@@ -906,7 +906,7 @@ class Master(SMaster):
             ipc_publisher.send_aes_key_event()
 
             # If this master has no cluster private key yet, it has not
-            # completed a join handshake and needs to run the discover→join
+            # completed a join handshake and needs to run the discover->join
             # protocol so existing peers add it as a Raft learner.
             #
             # The designated founder (lowest interface address among

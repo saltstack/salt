@@ -54,7 +54,7 @@ log = logging.getLogger(__name__)
 
 __func_alias__ = {"list_": "list", "flush_": "flush"}
 
-# Module-level registry: (cachedir, bank) → (tuning_tuple, MmapCache).
+# Module-level registry: (cachedir, bank) -> (tuning_tuple, MmapCache).
 # When ``__opts__`` mmap tuning changes (e.g. tests patch opts after an early
 # cache miss vs hit), evict and rebuild so we never reuse an ``MmapCache``
 # sized for stale configuration over the same bank directory.

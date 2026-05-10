@@ -186,7 +186,7 @@ def test_isolated_master_with_unreachable_peers_self_elects(
         # bound; the kernel returns ECONNREFUSED *immediately* rather
         # than waiting on the TCP connect timeout.  RFC 5737 TEST-NET
         # addresses look attractive but black-hole packets, so the
-        # master would hang for the full SYN retry budget (≥ 120s)
+        # master would hang for the full SYN retry budget (>= 120s)
         # instead of bouncing fast and falling through to the
         # founding-voter timer.
         "cluster_peers": ["127.0.0.50", "127.0.0.51"],

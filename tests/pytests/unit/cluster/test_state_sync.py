@@ -77,7 +77,7 @@ def test_iter_keys_chunks_empty_yields_one_empty_chunk(monkeypatch):
 
 
 def test_iter_keys_chunks_count_based_split(monkeypatch):
-    """A 250-entry bank with default 200-count chunks → 2 chunks (200 + 50)."""
+    """A 250-entry bank with default 200-count chunks -> 2 chunks (200 + 50)."""
     bank = {f"m{i:03d}": {"state": "accepted", "pub": "p"} for i in range(250)}
     opts = _keys_opts(monkeypatch, {KEYS_CHANNEL: bank})
     chunks = list(iter_keys_chunks(opts, KEYS_CHANNEL))
@@ -109,7 +109,7 @@ def test_iter_keys_chunks_unknown_channel_raises(monkeypatch):
 
 
 def test_iter_root_chunks_empty_yields_one_empty_chunk():
-    """No roots → single empty chunk so the eof flag still fires."""
+    """No roots -> single empty chunk so the eof flag still fires."""
     assert list(iter_root_chunks(None)) == [[]]
     assert list(iter_root_chunks({})) == [[]]
 
@@ -140,7 +140,7 @@ def test_iter_root_chunks_byte_budget_splits(tmp_path):
 
     chunks = list(iter_root_chunks({"base": [str(base)]}, byte_budget=1000))
 
-    # First chunk holds one file (600 ≤ 1000), adding a second (600+600=1200)
+    # First chunk holds one file (600 <= 1000), adding a second (600+600=1200)
     # crosses the budget so the second file starts a new chunk; same for
     # the third.  Result: 3 chunks of one file each, in directory order.
     assert len(chunks) == 3
