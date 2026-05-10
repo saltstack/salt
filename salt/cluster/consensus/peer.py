@@ -248,7 +248,7 @@ class RaftDispatcher:
     :param node:      The local ``salt.cluster.consensus.raft.Node``.
     :param local_id:  This master's node-id (``opts["interface"]``) — used as
                       ``src`` in outbound RPC envelopes.
-    :param pushers:   Dict mapping peer node-id (interface address) →
+    :param pushers:   Dict mapping peer node-id (interface address) ->
                       ``PublishServer`` pusher.
     """
 

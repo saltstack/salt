@@ -1,7 +1,7 @@
 """
 Paged bulk state-sync for cluster joiners.
 
-The cluster join handshake (``cluster/peer/join`` →
+The cluster join handshake (``cluster/peer/join`` ->
 ``cluster/peer/join-reply``) carries the cluster's identity material
 (``cluster_aes``, ``cluster.pem``, peer pubs), but the joining master
 also needs the *content* the cluster has accumulated: accepted /
@@ -80,7 +80,7 @@ ALL_CHANNELS = (
 )
 
 # Default count per chunk for cache-key channels.  Tuned so a 200-entry
-# minion-key chunk (avg pub key ~500 bytes → ~100 KB) fits comfortably in
+# minion-key chunk (avg pub key ~500 bytes -> ~100 KB) fits comfortably in
 # one Crypticle-encrypted message without dominating heartbeat bandwidth.
 DEFAULT_KEY_CHUNK_COUNT = 200
 

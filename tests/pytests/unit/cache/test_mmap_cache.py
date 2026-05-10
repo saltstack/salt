@@ -235,7 +235,7 @@ def test_max_segment_bytes_opt_is_passed_through(cachedir):
 
 
 def test_max_segment_bytes_default_when_opt_missing(cachedir):
-    """No opt set → MmapCache uses the documented 1 GiB default."""
+    """No opt set -> MmapCache uses the documented 1 GiB default."""
     import salt.utils.mmap_cache  # local import keeps test independent of import order
 
     mmap_cache.store("bank", "key", {"v": 1}, cachedir=cachedir)

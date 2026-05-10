@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 # next layer of bug surfaces as a real assertion rather than another
 # "must be timing" timeout bump.
 #
-# Healthy bring-up: ≤ 1 CANDIDATE per master, 1 LEADER total, ≤ 1 FOLLOWER
+# Healthy bring-up: <= 1 CANDIDATE per master, 1 LEADER total, <= 1 FOLLOWER
 # per master per election round.  An election storm shows up as 10+
 # CANDIDATE/FOLLOWER per master.
 
@@ -78,11 +78,11 @@ def assert_no_election_storm(
 
     Healthy upper bounds for one cluster bring-up + at most one re-election:
 
-    * ``BECOMING CANDIDATE`` ≤ 5 per master  (initial election + a re-run
+    * ``BECOMING CANDIDATE`` <= 5 per master  (initial election + a re-run
       or two if pre-votes raced + at most one re-election)
-    * ``BECOMING FOLLOWER`` ≤ 5 per master   (initial + re-election +
+    * ``BECOMING FOLLOWER`` <= 5 per master   (initial + re-election +
       slack for a stepdown if a higher term arrives)
-    * ``BECOMING LEADER`` ≤ 4 cluster-wide   (one initial leader + at
+    * ``BECOMING LEADER`` <= 4 cluster-wide   (one initial leader + at
       most one re-election leader, ×2 slack for a contested round)
 
     Higher counts mean masters are stuck in a pre-vote / candidacy /

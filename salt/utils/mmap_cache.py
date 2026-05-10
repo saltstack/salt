@@ -237,7 +237,7 @@ class MmapCache:
         self._roster_cache = None  # cached list of slot indices
         self._roster_mtime = None  # mtime of roster when last read
         self._roster_wfd = None  # append-mode write fd for fast roster appends
-        # slot → byte offset in the roster file for O(1) tombstone writes
+        # slot -> byte offset in the roster file for O(1) tombstone writes
         self._roster_slot_offsets: dict = {}
         self._lock_fd = None  # persistent lock file fd (avoid re-open per op)
         # Per-instance RLock: fcntl is per-process; this covers threads too.
@@ -441,7 +441,7 @@ class MmapCache:
         Segments are named ``<heap_path>`` (seg 0), ``<heap_path>.1``,
         ``<heap_path>.2``, …  Scanning stops at the first gap.
 
-        Returns the number of segments found (≥ 1 if segment-0 exists).
+        Returns the number of segments found (>= 1 if segment-0 exists).
         """
         self._close_seg_mmaps()
         seg_id = 0
@@ -817,7 +817,7 @@ class MmapCache:
         """
         Close mmaps, heap fds, and roster write fd — but NOT the lock fd.
 
-        Used by ``open()`` (when staleness or read→write upgrade forces a
+        Used by ``open()`` (when staleness or read->write upgrade forces a
         re-map) and ``atomic_rebuild``. Both code paths call this **while the
         cross-process flock is held**: closing the lock fd would release that
         flock as a side effect (POSIX flock is keyed to the open file
@@ -1246,7 +1246,7 @@ class MmapCache:
 
     def put(self, key, value=None):
         """
-        Store *key* → *value* in the cache.
+        Store *key* -> *value* in the cache.
 
         *value* may be ``None`` (set/presence mode), a ``str``, or ``bytes``.
         Returns ``True`` on success, ``False`` on failure.
@@ -1801,7 +1801,7 @@ class MmapCache:
                         rf.flush()
                         os.fsync(rf.fileno())
 
-                    # Remove old extra segments (seg ≥ 1) before swapping.
+                    # Remove old extra segments (seg >= 1) before swapping.
                     old_extra = 1
                     while True:
                         old_p = self._segment_path(old_extra)
@@ -1820,7 +1820,7 @@ class MmapCache:
                     # Close mmaps but keep the lock fd — still inside _lock().
                     self._close_mmaps_and_fds()
 
-                    # Swap order: heap segments → index → roster.
+                    # Swap order: heap segments -> index -> roster.
                     # Extra segments get their final names before the pivot.
                     for tmp_seg_path in tmp_heap_segs[1:]:
                         seg_num = int(tmp_seg_path.split(".")[-1])

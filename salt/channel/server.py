@@ -634,14 +634,14 @@ class PoolRoutingChannel:
 
     Architecture::
 
-        External Transport → PoolRoutingChannel → RequestClient (IPC) →
-        Pool RequestServer (IPC) → MWorkers
+        External Transport -> PoolRoutingChannel -> RequestClient (IPC) ->
+        Pool RequestServer (IPC) -> MWorkers
 
     ``_auth`` handling
     ------------------
     Under a fully started master, ``_auth`` is looked up in the routing table
     and forwarded to the mapped pool's IPC RequestServer, then handled in a
-    worker by :meth:`~salt.master.MWorker._handle_clear` →
+    worker by :meth:`~salt.master.MWorker._handle_clear` ->
     :meth:`~salt.master.ClearFuncs._auth`.
 
     If the pool's IPC client is not connected yet (e.g. tests calling
@@ -1667,7 +1667,7 @@ class MasterPubServerChannel:
         async def send_channel(channel, chunk_iter):
             chunks = list(chunk_iter)
             if not chunks:
-                # Defensive: every iter_*_chunks must yield ≥ 1 (empty
+                # Defensive: every iter_*_chunks must yield >= 1 (empty
                 # for empty data).  Synthesize an eof-only chunk so the
                 # receiver doesn't hang on a missing channel.
                 chunks = [[]]

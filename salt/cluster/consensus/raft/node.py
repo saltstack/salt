@@ -501,7 +501,7 @@ class Node:
         The SM is the authoritative query store for committed membership
         (``current_voters()``, ``current_learners()``).  Side-effects on
         ``Node.peers`` / ``Node.voting`` are driven directly by
-        ``apply_entries`` → ``on_config_change``, not by the SM's
+        ``apply_entries`` -> ``on_config_change``, not by the SM's
         ``on_change`` callback, to avoid double-applying eager leader updates.
         """
         self.membership_sm = sm
@@ -889,8 +889,8 @@ class Node:
         called ``become_follower()``, which reset ``last_followed``
         and restarted the follower timer.  The other survivor then
         never fired its OWN election timer (it was being kept "fresh"
-        by the disturb), so two survivors both stayed quiet → no
-        re-election → test fails.  Reproduced 5/20 fail under
+        by the disturb), so two survivors both stayed quiet -> no
+        re-election -> test fails.  Reproduced 5/20 fail under
         stress-ng on debian-12; with this fix it's expected to
         converge.
         """

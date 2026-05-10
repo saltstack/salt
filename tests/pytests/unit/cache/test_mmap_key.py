@@ -382,7 +382,7 @@ def test_max_segment_bytes_falls_back_to_mmap_cache_opt(module, pki_dir, opts):
 
 
 def test_max_segment_bytes_default_when_unset(module, pki_dir):
-    """No opt set → 1 GiB default."""
+    """No opt set -> 1 GiB default."""
     import salt.utils.mmap_cache  # local import keeps test independent of import order
 
     cache_obj = module._get_cache("keys", pki_dir)

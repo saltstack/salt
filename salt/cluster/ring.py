@@ -13,7 +13,7 @@ Ring position encoding
 Positions are 64-bit unsigned integers derived from
 ``xxhash.xxh3_64_intdigest``.  The ring is modelled as the integer range
 ``[0, 2**64)``, wrapping around.  A key is owned by the first node whose
-position is ≥ the key's hash (clockwise successor), with wrap-around to the
+position is >= the key's hash (clockwise successor), with wrap-around to the
 lowest-position node when no successor exists.
 
 VNode token derivation
@@ -74,21 +74,21 @@ class HashRing:
                     Higher values improve distribution at the cost of memory
                     (``len(nodes) * vnodes * ~50 bytes``).
     :param replicas: Number of distinct owners returned by ``get_replicas``.
-                    Must be ≤ number of physical nodes in the ring.
+                    Must be <= number of physical nodes in the ring.
     """
 
     def __init__(self, nodes=(), vnodes=DEFAULT_VNODES, replicas=1):
         if vnodes < 1:
-            raise ValueError(f"vnodes must be ≥ 1, got {vnodes}")
+            raise ValueError(f"vnodes must be >= 1, got {vnodes}")
         if replicas < 1:
-            raise ValueError(f"replicas must be ≥ 1, got {replicas}")
+            raise ValueError(f"replicas must be >= 1, got {replicas}")
         self._vnodes = vnodes
         self._replicas = replicas
         self._lock = threading.RLock()
 
         # Sorted list of token positions (int).
         self._ring: list[int] = []
-        # token position → physical node ID
+        # token position -> physical node ID
         self._token_map: dict[int, str] = {}
         # set of physical node IDs currently in the ring
         self._nodes: set[str] = set()

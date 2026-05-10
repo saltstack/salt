@@ -435,7 +435,7 @@ class TestLogEdgeCases:
         lg = Log(storage=storage)
         lg.add(1, b"a")  # index 0, term 1
         lg.add(1, b"b")  # index 1, term 1
-        # Overwrite index 1 with a different term → conflict truncation + storage save
+        # Overwrite index 1 with a different term -> conflict truncation + storage save
         lg.add(2, b"c", index=1)
         assert lg.entries[-1].cmd == b"c"
         assert lg.entries[-1].term == 2
@@ -893,7 +893,7 @@ class TestCounterStateMachineRestoreSnapshotBytes:
 
 class TestCounterStateMachineRestoreNonBytesNonDict:
     def test_restore_snapshot_non_dict_non_bytes_falls_back_to_empty(self):
-        """Non-dict, non-bytes input (e.g. a list) → falls back to empty state."""
+        """Non-dict, non-bytes input (e.g. a list) -> falls back to empty state."""
         from salt.cluster.consensus.raft.log import CounterStateMachine
 
         sm = CounterStateMachine()
@@ -1005,7 +1005,7 @@ class TestLogSnapshotMultiSM:
             state_machines={"membership_sm": mem_sm},
         )
 
-        # Apply some app commands and a CONFIG entry → SM state is non-empty.
+        # Apply some app commands and a CONFIG entry -> SM state is non-empty.
         app_sm.apply(b"a")
         app_sm.apply(b"b")
         mem_sm.apply({"voters": ["m1", "m2", "m3"], "learners": []}, index=2)

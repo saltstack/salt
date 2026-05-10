@@ -85,7 +85,7 @@ class RaftService:
         # multi-process Salt masters running over real sockets — a single
         # delayed heartbeat in CI can cause a follower to step up and fight
         # the existing leader for the term.  At ``_HEARTBEAT_INTERVAL`` =
-        # 50 ms the rule of thumb is election ≥ 10× heartbeat, so default
+        # 50 ms the rule of thumb is election >= 10× heartbeat, so default
         # to 750–1500 ms here.  ``cluster_election_min`` /
         # ``cluster_election_max`` opts let deployments tune further.
         election_min = opts.get("cluster_election_min", 750)

@@ -84,7 +84,7 @@ def ring_set(members=None, replicas=None):  # pylint: disable=unused-argument
     * *members*: ``"self"`` (default ring contents — every master a
       single-node ring, broadcast everywhere) or ``"voters"`` (ring
       tracks the Raft voter set so writes shard).
-    * *replicas*: integer ≥ 1.  ``1`` (default) means each key has
+    * *replicas*: integer >= 1.  ``1`` (default) means each key has
       exactly one owner; higher values request additional replica
       owners for fault tolerance.
 

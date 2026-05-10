@@ -445,7 +445,7 @@ def _master_pod_manifest(name, image, headless_fqdn, expected_peers, namespace):
                             "command": [
                                 "/bin/sh",
                                 "-c",
-                                # Stale mtime → unhealthy.  Threshold is
+                                # Stale mtime -> unhealthy.  Threshold is
                                 # 6× DEFAULT_ALIVE_INTERVAL so a
                                 # transient stall doesn't trip a restart.
                                 'test "$(($(date +%s) - $(stat -c %Y '

@@ -78,7 +78,7 @@ _DEFAULT_SIZE = 1_000_000
 _DEFAULT_SLOT_SIZE = 96
 _DEFAULT_ID_SIZE = 64
 
-# Module-level registry: (cachedir, bank) → MmapCache
+# Module-level registry: (cachedir, bank) -> MmapCache
 _caches: dict = {}
 
 
