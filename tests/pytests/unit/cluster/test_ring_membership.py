@@ -138,3 +138,49 @@ def test_reset_swaps_singleton_identity():
     # The pre-reset reference still holds the populated ring; it's
     # detached from the module singleton.
     assert pre.node_count() == 2
+
+
+# ---------------------------------------------------------------------------
+# Optional xxhash: master must still start when the package is missing
+# ---------------------------------------------------------------------------
+
+
+def test_ring_module_imports_without_xxhash(monkeypatch):
+    """
+    Windows NSIS upgrades from 3007.14 don't carry xxhash forward.
+    ``salt.master`` always imports ``salt.cluster.ring_membership``
+    which imports ``salt.cluster.ring``; if that import fails the
+    master can't start at all.
+
+    Pin the contract: with xxhash absent, the empty/self-only ring's
+    ``owns()`` still returns True without hashing, and any operation
+    that needs xxhash raises a clear ``RuntimeError`` pointing at the
+    missing dependency.
+
+    Implementation note: we don't actually re-import the modules
+    under an import blocker -- that path would leak ``_xxhash = None``
+    into the live module's namespace, and the ``HashRing`` class's
+    ``__globals__`` still points at that namespace for the lifetime
+    of the test process.  Subsequent tests in the same suite would
+    then trip the RuntimeError.  Instead, ``monkeypatch.setattr``
+    swaps the module's ``_xxhash`` attribute to ``None`` for the
+    test's lifetime; pytest restores the original on teardown.
+    """
+    from salt.cluster import ring as ring_mod
+
+    monkeypatch.setattr(ring_mod, "_xxhash", None)
+
+    # Empty ring works without xxhash.
+    ring = ring_mod.HashRing()
+    assert ring.owns("anything", "me") is True
+    assert ring.node_count() == 0
+
+    # add_node / rebuild / get_owner raise a clear message.
+    with pytest.raises(RuntimeError, match="xxhash"):
+        ring.add_node("m1")
+    with pytest.raises(RuntimeError, match="xxhash"):
+        ring.rebuild(["m1", "m2"])
+    with pytest.raises(RuntimeError, match="xxhash"):
+        ring_mod._key_hash("anything")
+    with pytest.raises(RuntimeError, match="xxhash"):
+        ring_mod._token("m1", 0)

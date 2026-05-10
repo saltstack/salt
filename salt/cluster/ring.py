@@ -41,7 +41,18 @@ import bisect
 import logging
 import threading
 
-import xxhash
+# ``xxhash`` is the canonical ring-hash backend.  Importing optionally
+# keeps ``salt.master`` startable on installs where xxhash is missing
+# (notably Windows NSIS upgrades from 3007.14, which never shipped
+# xxhash and don't pull it in on upgrade): an empty/self-only ring's
+# ``owns()`` returns ``True`` without ever hashing, so the broadcast
+# path keeps working.  Cluster sharding (``add_node``, ``get_owner``,
+# ``get_replicas``, ``rebuild``) raises a clear error if xxhash is
+# genuinely needed but missing.
+try:
+    import xxhash as _xxhash
+except ImportError:  # pragma: no cover - exercised on Windows upgrade only
+    _xxhash = None
 
 log = logging.getLogger(__name__)
 
@@ -50,19 +61,29 @@ log = logging.getLogger(__name__)
 # sizes (1-20 nodes).
 DEFAULT_VNODES = 150
 
-_RING_SIZE = 1 << 64  # 2**64 — hash space
+_RING_SIZE = 1 << 64  # 2**64 hash space
+
+_XXHASH_MISSING_MSG = (
+    "salt.cluster.ring requires the 'xxhash' Python package for ring "
+    "operations beyond a single-node ring.  Install xxhash (>=3.0) and "
+    "restart the master."
+)
 
 
 def _token(node_id: str, replica: int) -> int:
     """Return the ring position for *node_id* replica *replica*."""
-    return xxhash.xxh3_64_intdigest(f"{node_id}#vnode{replica}".encode())
+    if _xxhash is None:
+        raise RuntimeError(_XXHASH_MISSING_MSG)
+    return _xxhash.xxh3_64_intdigest(f"{node_id}#vnode{replica}".encode())
 
 
 def _key_hash(key) -> int:
     """Hash an arbitrary key to a ring position."""
+    if _xxhash is None:
+        raise RuntimeError(_XXHASH_MISSING_MSG)
     if isinstance(key, str):
         key = key.encode()
-    return xxhash.xxh3_64_intdigest(key)
+    return _xxhash.xxh3_64_intdigest(key)
 
 
 class HashRing:
