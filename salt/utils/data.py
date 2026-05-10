@@ -243,9 +243,9 @@ def decode(
 
     One good use case for normalization is in the test suite. For example, on
     some platforms such as Mac OS, os.listdir() will produce the first of the
-    two strings above, in which "й" is represented as two code points (i.e. one
-    for the base character, and one for the breve mark). Normalizing allows for
-    a more reliable test case.
+    two strings above, in which the Cyrillic letter (U+0439) is represented as
+    two code points (i.e. one for the base character, and one for the breve
+    mark). Normalizing allows for a more reliable test case.
 
     """
     # Clean data object before decoding to avoid circular references
