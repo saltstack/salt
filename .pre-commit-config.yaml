@@ -104,6 +104,20 @@ repos:
           - check
 
       - id: tools
+        alias: check-cp1252-docstrings
+        name: Check docstrings encode in cp1252 (Windows stdout)
+        files: salt/.*\.py$
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+            )$
+        args:
+          - pre-commit
+          - docstrings
+          - check-cp1252
+
+      - id: tools
         alias: check-known-missing-docstrings
         name: Check Known Missing Docstrings
         stages: [manual]
