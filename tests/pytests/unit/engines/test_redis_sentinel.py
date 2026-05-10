@@ -145,3 +145,38 @@ def test_start_default_password_is_none(patched_localclient_and_listener):
     )
     call = fake_listener_class.call_args
     assert call.kwargs.get("password") is None
+
+
+def test_start_logs_and_returns_when_no_minions_match(caplog):
+    """
+    When the ``matching`` target hits zero minions, ``local.cmd`` returns
+    an empty dict. The engine must log a clear error and return rather
+    than dereferencing the empty result -- the previous code crashed with
+    ``IndexError`` from ``.pop()``, which gave operators no hint that the
+    real problem was a misconfigured target pattern.
+    """
+    fake_local = MagicMock()
+    fake_local.cmd.return_value = {}
+    fake_listener_class = MagicMock(name="Listener")
+
+    with patch("salt.client.LocalClient") as lc_mock, patch.object(
+        redis_sentinel, "Listener", fake_listener_class
+    ):
+        lc_mock.return_value.__enter__.return_value = fake_local
+        with caplog.at_level("ERROR", logger="salt.engines.redis_sentinel"):
+            redis_sentinel.start(
+                hosts={
+                    "matching": "no-such-minion-*",
+                    "port": 26379,
+                    "interface": "eth0",
+                },
+                channels=["+switch-master"],
+            )
+
+    fake_listener_class.assert_not_called()
+    assert any(
+        "no minions matched" in rec.message and "no-such-minion-*" in rec.message
+        for rec in caplog.records
+    ), "expected an ERROR log explaining the empty match; got: {}".format(
+        [rec.message for rec in caplog.records]
+    )
