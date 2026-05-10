@@ -5,7 +5,7 @@ This module is loaded into the per-type execution-module loader whenever the
 ``resource_type`` in opts is ``"ssh"``.  It shadows the standard
 ``salt.modules.cmdmod`` and ``salt.modules.test`` functions for jobs that
 are dispatched to SSH resources, delegating the actual work to
-:mod:`salt.resource.ssh` via ``__resource_funcs__``.
+:mod:`salt.resources.ssh` via ``__resource_funcs__``.
 
 Because this loader is **only ever used for resource jobs**, there is no need
 for the call-time proxy-style guard (``if salt.utils.platform.is_proxy()``).
@@ -38,17 +38,10 @@ import logging
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = "cmd"
-
-
-def __virtual__():
-    """
-    Load only when this execution-module loader is scoped to the ``ssh``
-    resource type.
-    """
-    if __opts__.get("resource_type") == "ssh":  # pylint: disable=undefined-variable
-        return __virtualname__
-    return False, "sshresource_cmd: only loads in an ssh-resource-type loader."
+# Filename ``cmd.py`` matches the slot name; directory location
+# (``salt/resources/ssh/modules/``) gates loading to the ssh per-resource
+# loader via the per-type prepend in :func:`salt.loader._module_dirs`.
+# No __virtualname__ or __virtual__ gate needed.
 
 
 # ---------------------------------------------------------------------------

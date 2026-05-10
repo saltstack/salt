@@ -3,7 +3,13 @@
 Discovered: 2026-05-10, during `salt-call -r --tgt dwozniak-91-ss state.sls starting_state.vcf-91-dev`
 after adding a second resource type (`ssh`) to the Pillar alongside `starting_state`.
 
-**Status: fixed** (commit `d28f8d2e981` + `saltext-opsdev` `starting_stateresource_state` module).
+**Status: fixed via the per-type directory layout** (`salt/resources/<rtype>/modules/`).
+The broad `__virtual__` guard in `salt/modules/state.py` was deleted entirely;
+the standard ``state.py`` now loads in every context.  Per-type ``state.py``
+overrides under ``salt/resources/<rtype>/modules/`` (or under any
+extension's ``saltext/<ext>/resources/<rtype>/modules/``) win their slot
+via directory-order priority in :func:`salt.loader._module_dirs`.  See
+``RESOURCE_STATE_GAPS.md`` for the full picture.
 
 ---
 

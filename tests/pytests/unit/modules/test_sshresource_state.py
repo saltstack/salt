@@ -1,5 +1,5 @@
 """
-Unit tests for salt.modules.sshresource_state.
+Unit tests for salt.resources.ssh.modules.state.
 
 Covers:
 - highstate(): empty chunks → returns the 'no top file' state dict with
@@ -51,7 +51,7 @@ class TestRelenvPath:
     """_relenv_path() returns the first existing tarball or None."""
 
     def _run(self, existing_files=()):
-        import salt.modules.sshresource_state as mod
+        import salt.resources.ssh.modules.state as mod
 
         opts = _BASE_OPTS.copy()
         with patch.object(mod, "__opts__", opts, create=True), patch.object(
@@ -98,7 +98,7 @@ class TestHighstateEmptyChunks:
     """highstate() with no top-file match must return a proper state dict."""
 
     def _run_highstate(self):
-        import salt.modules.sshresource_state as mod
+        import salt.resources.ssh.modules.state as mod
 
         opts = _BASE_OPTS.copy()
 
@@ -163,7 +163,7 @@ class TestExecStatePkg:
         Run _exec_state_pkg with a mocked Single that raises SSHCommandExecutionError.
         Returns (result, context_dict).
         """
-        import salt.modules.sshresource_state as mod
+        import salt.resources.ssh.modules.state as mod
 
         opts = _BASE_OPTS.copy()
         context = {}
@@ -223,7 +223,7 @@ class TestExecStatePkg:
 
     def test_reraises_when_parsed_is_none(self):
         import salt.client.ssh.wrapper
-        import salt.modules.sshresource_state as mod
+        import salt.resources.ssh.modules.state as mod
 
         opts = _BASE_OPTS.copy()
         context = {}
@@ -271,7 +271,7 @@ class TestExecStatePkgNormalPath:
     """_exec_state_pkg must unwrap the envelope dict returned by parse_ret."""
 
     def _run(self, envelope):
-        import salt.modules.sshresource_state as mod
+        import salt.resources.ssh.modules.state as mod
 
         opts = _BASE_OPTS.copy()
         context = {}
@@ -323,7 +323,7 @@ class TestExecStatePkgNormalPath:
 
     def test_single_receives_fsclient(self):
         """Single must be constructed with a fsclient so cmd_block can call mod_data."""
-        import salt.modules.sshresource_state as mod
+        import salt.resources.ssh.modules.state as mod
 
         opts = _BASE_OPTS.copy()
         mock_fsclient = MagicMock()

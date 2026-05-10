@@ -18,13 +18,9 @@ import logging
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = "pkg"
-
-
-def __virtual__():
-    if __opts__.get("resource_type") == "ssh":  # pylint: disable=undefined-variable
-        return __virtualname__
-    return False, "sshresource_pkg: only loads in an ssh-resource-type loader."
+# Filename ``pkg.py`` matches the slot name; directory location
+# (``salt/resources/ssh/modules/``) gates loading to the ssh per-resource
+# loader.  No __virtualname__ or __virtual__ gate needed.
 
 
 # ---------------------------------------------------------------------------

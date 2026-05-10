@@ -43,7 +43,7 @@ def test_ssh_resource_T_at_test_ping(
 ):
     """
     ``salt --compound T@ssh:… test.ping`` runs ``sshresource_test.ping`` →
-    :func:`salt.resource.ssh.ping` (shell to the SSH resource).  The minion
+    :func:`salt.resources.ssh.ping` (shell to the SSH resource).  The minion
     preloads ``ssh.grains`` for ``__grains__`` in the resource loader; that path
     must have a usable FSClient (``master_opts`` including ``cachedir``).
     """

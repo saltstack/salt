@@ -4,7 +4,7 @@ Unit tests for ``salt-call -r/--resources`` resource dispatch
 
 The dispatch path runs entirely in-process against an ``SMinion`` whose
 ``resources`` config is populated from Pillar.  These tests use the dummy
-resource type (``salt.resource.dummy``) so they exercise the real loader
+resource type (``salt.resources.dummy``) so they exercise the real loader
 and matcher code without needing an actual master/minion daemon.
 
 Coverage:
@@ -187,17 +187,21 @@ def test_r_grains_items_per_resource_for_each_target(call_opts):
         assert payload[rid].get("resource_id") == rid, (rid, payload[rid])
 
 
-def test_r_state_apply_against_logical_resource_fails_loudly(call_opts):
+def test_r_state_apply_logical_resource_no_state_module(call_opts):
     """
     state.apply against a logical resource type (no per-resource state
-    override module) must surface a clear "not supported" error rather
-    than silently running on the managing minion.
+    override module) routes through the standard ``state.py`` (the
+    narrow guard in ``salt/modules/state.py`` only opts out for
+    ``ssh``).  The state run finds no matching state module for the
+    .sls referenced state (dummy resources don't ship a
+    ``dummy_test`` state module), and produces ``result: False``
+    state entries — one per resource — keyed in the master merge
+    format with the resource id prefixed onto each state id.
 
-    Dummy resources don't ship a ``dummyresource_state.py``, so
-    ``state.apply`` is absent from the per-resource loader. The merge
-    dispatch in ``_call_with_resources`` records the per-resource error
-    in the merged result so the operator sees one entry per targeted
-    resource explaining why no state ran.
+    This is the expected behaviour for logical resources: the dispatch
+    succeeds (no caller-level rejection), the state machinery runs,
+    and the operator sees per-resource provenance for whatever the
+    state run produced.
     """
     call_opts["resources_dispatch"] = True
     call_opts["fun"] = "state.apply"
@@ -205,15 +209,20 @@ def test_r_state_apply_against_logical_resource_fails_loudly(call_opts):
     caller = _build_caller(call_opts)
     payload = caller._call_with_resources()["return"]
     assert isinstance(payload, dict), payload
-    # Each targeted dummy resource should produce a "not supported" entry
-    # in the merged dict (master merge format keys errors as
-    # ``no_|-{rid}_|-{rid}_|-None``).
-    error_keys = [k for k in payload if k.startswith("no_|-dummy-0")]
-    assert len(error_keys) == 3, payload
-    for key in error_keys:
-        entry = payload[key]
-        assert entry["result"] is False, (key, entry)
-        assert "not supported for resource type 'dummy'" in entry["comment"], (
-            key,
-            entry,
-        )
+    # Master merge format prefixes each state id with the rid; e.g.
+    # ``dummy_test_|-dummy-01 ping the resource_|-...``
+    rid_keys = {
+        rid: [k for k in payload if isinstance(payload[k], dict) and f"{rid} " in k]
+        for rid in ("dummy-01", "dummy-02", "dummy-03")
+    }
+    for rid, keys in rid_keys.items():
+        assert keys, f"No prefixed state entries for {rid}: {list(payload)}"
+        for k in keys:
+            entry = payload[k]
+            assert entry["result"] is False, (k, entry)
+            assert (
+                "not available" in entry["comment"] or "not found" in entry["comment"]
+            ), (
+                k,
+                entry,
+            )

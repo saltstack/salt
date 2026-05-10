@@ -1354,6 +1354,11 @@ class State:
                 context=self.state_con,
                 proxy=self.proxy,
                 file_client=salt.fileclient.ContextlessFileClient(self.file_client),
+                # Expose ``__minion__`` to state modules in resource context
+                # as the escape hatch back to the managing minion's loader.
+                # In non-resource context this is None and the dunder isn't
+                # packed.
+                minion_mods=self.minion_functions,
             )
 
     def load_modules(self, data=None, proxy=None):
@@ -1363,6 +1368,13 @@ class State:
         log.info("Loading fresh modules for state activity")
         self.utils = salt.loader.utils(self.opts, file_client=self.file_client)
         resource_type = self.opts.get("resource_type")
+        # ``self.minion_functions`` is the managing minion's standard module
+        # set, exposed to resource-context state modules and execution
+        # overrides as ``__minion__`` so they can escape-hatch back to the
+        # underlying minion when needed (e.g. a resource override calling
+        # ``ssh-keygen`` locally before pushing the key over SSH).  In the
+        # non-resource case it is None.
+        self.minion_functions = None
         if resource_type:
             # Resource context: load execution modules through the per-resource
             # loader so __salt__ in state modules dispatches to the resource's
@@ -1387,12 +1399,25 @@ class State:
                         resource_type,
                         exc,
                     )
+            # Build the managing minion's loader as the ``__minion__``
+            # escape hatch.  Built without ``resource_type`` so its
+            # __virtual__ checks behave normally (not the resource gate).
+            minion_opts = dict(self.opts)
+            minion_opts.pop("resource_type", None)
+            self.minion_functions = salt.loader.minion_mods(
+                minion_opts,
+                self.state_con,
+                utils=self.utils,
+                proxy=self.proxy,
+                file_client=salt.fileclient.ContextlessFileClient(self.file_client),
+            )
             self.functions = salt.loader.resource_modules(
                 self.opts,
                 resource_type,
                 resource_funcs=self.resource_funcs,
                 utils=self.utils,
                 context=self.state_con,
+                minion_mods=self.minion_functions,
             )
         else:
             self.functions = salt.loader.minion_mods(
