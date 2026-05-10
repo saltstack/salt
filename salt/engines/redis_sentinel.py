@@ -104,17 +104,18 @@ def start(hosts, channels, tag=None, password=None):
     if tag is None:
         tag = "salt/engine/redis_sentinel"
     with salt.client.LocalClient() as local:
-        # ``.values()`` returns a Python 3 ``dict_values`` view; wrap in
-        # ``list`` so ``.pop()`` is available. Without the wrapper the
-        # engine raises ``AttributeError`` the first time it starts and
-        # has therefore never actually run on Python 3.
-        ips = list(
-            local.cmd(
-                hosts["matching"], "network.ip_addrs", [hosts["interface"]]
-            ).values()
+        ip_results = local.cmd(
+            hosts["matching"], "network.ip_addrs", [hosts["interface"]]
         )
+    if not ip_results:
+        log.error(
+            "redis_sentinel: no minions matched %r; cannot pick a listener "
+            "host. Check the 'matching' target in the engine config.",
+            hosts["matching"],
+        )
+        return
     client = Listener(
-        host=ips.pop()[0],
+        host=next(reversed(ip_results.values()))[0],
         port=hosts["port"],
         channels=channels,
         tag=tag,
