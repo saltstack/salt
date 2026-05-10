@@ -69,16 +69,25 @@ log = logging.getLogger(__name__)
 __virtualname__ = "state"
 
 
+_RESOURCE_TYPES_WITH_STATE_OVERRIDE = frozenset({"ssh"})
+
+
 def __virtual__():
     """
     Set the virtualname
     """
-    # Resource-type loaders (resource_modules) use per-type override modules
-    # such as sshresource_state.py.  Returning False here yields the "state"
-    # virtualname slot to those overrides so they are dispatched correctly
-    # when jobs are targeted at resources.
-    if __opts__.get("resource_type"):  # pylint: disable=undefined-variable
-        return False, "state: not loaded in resource-type loaders"
+    # Resource types whose state operations are handled by per-type override
+    # execution modules (e.g. ``sshresource_state.py``) own the ``state``
+    # virtualname slot in their per-resource loader.  For every other
+    # resource type the standard ``state.apply`` is correct: the per-resource
+    # loader is the State's ``__salt__``, so state modules naturally
+    # dispatch to resource-aware execution functions.
+    rtype = __opts__.get("resource_type")  # pylint: disable=undefined-variable
+    if rtype in _RESOURCE_TYPES_WITH_STATE_OVERRIDE:
+        return (
+            False,
+            f"state: resource type {rtype!r} uses an override module",
+        )
     # Update global namespace with functions that are cloned in this module
     global _orchestrate
     _orchestrate = salt.utils.functools.namespaced_function(_orchestrate, globals())

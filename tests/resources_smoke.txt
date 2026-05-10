@@ -20,12 +20,20 @@ tests/pytests/unit/matchers/test_resource_matchers.py
 tests/pytests/unit/client/ssh/test_ssh_classes.py
 tests/pytests/unit/modules/test_sshresource_state.py
 tests/pytests/unit/loader/test_context.py
+# State.load_modules switches to per-resource execution loader when
+# opts['resource_type'] is set (Gap 2 fix).
+tests/pytests/unit/state/test_resource_aware_loader.py
+# salt-call -r/--resources dispatch (Gap 1 fix).
+tests/pytests/unit/cli/test_caller_resources.py
 
 # --- Integration (slow; require salt-factories master/minion) ---
 tests/pytests/integration/resources/test_dummy_resource.py
 tests/pytests/integration/resources/test_multi_minion_grain_targeting.py
 tests/pytests/integration/resources/test_cli_offline_expands_resource_targets.py
 tests/pytests/integration/resources_ssh/test_ssh_resource_integration.py
+# state.apply via master compound T@ targeting against a dummy resource
+# (currently fails on Gap 3; included so the suite tracks progress).
+tests/pytests/integration/resources/test_dummy_resource_state.py
 
 # --- Functional ---
 # (none yet)
