@@ -814,7 +814,7 @@ typing-extensions==4.15.0
     #   pylint
     #   pyopenssl
     #   virtualenv
-urllib3==1.26.20
+urllib3==2.7.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -c requirements/static/pkg/py3.9/linux.txt
