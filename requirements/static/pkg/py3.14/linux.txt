@@ -196,7 +196,7 @@ typer==0.25.1
     # via typer-slim
 typer-slim==0.24.0
     # via jaraco-text
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   -r requirements/base.txt
     #   requests
