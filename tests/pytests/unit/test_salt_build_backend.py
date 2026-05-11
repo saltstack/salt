@@ -5,6 +5,7 @@
     Tests for Salt's custom build backend tools/pkg/salt_build_backend.py
 """
 
+import os
 import sys
 
 import pytest
@@ -15,11 +16,22 @@ from tests.support.mock import MagicMock, patch
 @pytest.fixture
 def salt_build_backend():
     with patch("sys.path", ["tools/pkg"] + sys.path):
-        import salt_build_backend
+        # Onedir test interpreters bundle stdlib ``distutils`` on ``sys.path`` before
+        # setuptools finishes its ``_distutils_hack`` shim, which can raise
+        # ``AssertionError`` when importing ``setuptools.build_meta``. Prefer stdlib
+        # distutils for this import only; evict any cached ``distutils`` tree so the
+        # env var is honored from a clean state.
+        with patch.dict(
+            os.environ, {"SETUPTOOLS_USE_DISTUTILS": "stdlib"}, clear=False
+        ):
+            for modname in list(sys.modules):
+                if modname == "distutils" or modname.startswith("distutils."):
+                    sys.modules.pop(modname, None)
+            import salt_build_backend
 
-        yield salt_build_backend
-        if "salt_build_backend" in sys.modules:
-            del sys.modules["salt_build_backend"]
+            yield salt_build_backend
+            if "salt_build_backend" in sys.modules:
+                del sys.modules["salt_build_backend"]
 
 
 def test_build_editable(salt_build_backend):
