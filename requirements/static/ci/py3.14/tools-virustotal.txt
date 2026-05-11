@@ -16,7 +16,7 @@ requests==2.33.1
     # via
     #   -c requirements/static/ci/py3.14/tools.txt
     #   virustotal3
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   -c requirements/static/ci/py3.14/tools.txt
     #   requests

@@ -332,7 +332,7 @@ typer-slim==0.24.0
     #   jaraco-text
 uc-micro-py==2.0.0
     # via linkify-it-py
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   -c requirements/static/ci/py3.14/linux.txt
     #   -r requirements/base.txt

@@ -755,7 +755,7 @@ typing-extensions==4.15.0
     # via
     #   -c requirements/static/ci/py3.14/linux.txt
     #   pytest-system-statistics
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   -c requirements/static/ci/py3.14/linux.txt
     #   -c requirements/static/pkg/py3.14/linux.txt

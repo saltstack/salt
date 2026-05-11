@@ -742,7 +742,7 @@ typer-slim==0.24.0
     #   -c requirements/static/ci/py3.14/linux.txt
     #   -c requirements/static/pkg/py3.14/linux.txt
     #   jaraco-text
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   -c requirements/static/ci/py3.14/linux.txt
     #   -c requirements/static/pkg/py3.14/linux.txt
