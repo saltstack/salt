@@ -1895,7 +1895,7 @@ class Minion(MinionBase):
             if ret:
                 log.trace("Reply from main %s", request_id)
                 return ret["ret"]
-            raise TimeoutError("Request timed out")
+            raise SaltReqTimeoutError("Request timed out")
 
     async def _send_req_async(self, load, timeout):
         # XXX: Signing should happen in RequestChannel to be fixed in 3008
@@ -1924,7 +1924,7 @@ class Minion(MinionBase):
                     break
                 await asyncio.sleep(0.3)
             else:
-                raise TimeoutError("Did not recieve return event")
+                raise SaltReqTimeoutError("Did not recieve return event")
             log.trace("Reply from main %s", request_id)
             return ret["ret"]
 
@@ -4712,7 +4712,9 @@ class Minion(MinionBase):
                 # managing minion's own response.  Dispatching them as
                 # separate jobs would send duplicate responses the master is
                 # no longer waiting for.
-                if load.get("fun") not in self._MERGE_RESOURCE_FUNS:
+                fun = load.get("fun")
+                is_merge_fun = isinstance(fun, str) and fun in self._MERGE_RESOURCE_FUNS
+                if not is_merge_fun:
                     for resource in load.get("resource_targets", []):
                         resource_load = dict(load)
                         resource_load["resource_target"] = resource
@@ -4773,7 +4775,8 @@ class Minion(MinionBase):
         # managing minion therefore has to execute the function (its
         # ``_thread_return`` is what folds resource results into the parent
         # state dict); skipping it here would silently drop the entire job.
-        is_merge_fun = load.get("fun") in self._MERGE_RESOURCE_FUNS
+        fun = load.get("fun")
+        is_merge_fun = isinstance(fun, str) and fun in self._MERGE_RESOURCE_FUNS
         is_pure_resource = self._is_pure_resource_target(load)
         load["pure_resource_target"] = is_pure_resource
         load["minion_is_target"] = bool(minion_matches) and (
@@ -4973,7 +4976,12 @@ class Minion(MinionBase):
         if not resources:
             return []
 
-        if load.get("fun") in self._NO_RESOURCE_FUNS:
+        fun = load.get("fun")
+        # Multi-fun jobs (``fun`` is a list) bypass resource dispatch — the
+        # multifun execution path doesn't fold per-resource returns.
+        if not isinstance(fun, str):
+            return []
+        if fun in self._NO_RESOURCE_FUNS:
             return []
 
         tgt = load.get("tgt", "")
