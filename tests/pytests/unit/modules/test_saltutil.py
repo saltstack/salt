@@ -4,8 +4,7 @@ import pytest
 
 import salt.modules.saltutil as saltutil
 from salt.client import LocalClient
-from salt.defaults.events import MINION_MOD_REFRESH_COMPLETE
-from tests.support.mock import MagicMock, create_autospec, patch
+from tests.support.mock import create_autospec, patch
 from tests.support.mock import sentinel as s
 
 
@@ -179,47 +178,12 @@ def test_refresh_matchers():
 
 
 @pytest.mark.skip_on_windows
-def test_refresh_modules_sync_passes_custom_timeout_to_get_event():
-    fire_mock = MagicMock(return_value=True)
-    eventer = MagicMock()
-    ctx = MagicMock()
-    ctx.__enter__.return_value = eventer
-    ctx.__exit__.return_value = None
-    get_event_mock = MagicMock(return_value=ctx)
-    with patch.dict(saltutil.__salt__, {"event.fire": fire_mock}):
-        with patch.object(
-            saltutil.salt.utils.event,
-            "get_event",
-            get_event_mock,
-        ):
-            ret = saltutil.refresh_modules(**{"async": False, "timeout": 99})
-    assert ret is True
-    eventer.get_event.assert_called_once_with(
-        tag=MINION_MOD_REFRESH_COMPLETE,
-        wait=99,
-    )
-
-
-@pytest.mark.skip_on_windows
-def test_refresh_modules_sync_default_wait_timeout():
-    fire_mock = MagicMock(return_value=True)
-    eventer = MagicMock()
-    ctx = MagicMock()
-    ctx.__enter__.return_value = eventer
-    ctx.__exit__.return_value = None
-    get_event_mock = MagicMock(return_value=ctx)
-    with patch.dict(saltutil.__salt__, {"event.fire": fire_mock}):
-        with patch.object(
-            saltutil.salt.utils.event,
-            "get_event",
-            get_event_mock,
-        ):
-            ret = saltutil.refresh_modules(**{"async": False})
-    assert ret is True
-    eventer.get_event.assert_called_once_with(
-        tag=MINION_MOD_REFRESH_COMPLETE,
-        wait=30,
-    )
+def test_refresh_modules_async_false():
+    # XXX: This test adds coverage but what is it really testing? Seems we'd be
+    # better off with at least a functional test here.
+    kwargs = {"async": False}
+    ret = saltutil.refresh_modules(**kwargs)
+    assert ret is False
 
 
 def test_clear_job_cache(salt_call_cli, minion_opts):

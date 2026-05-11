@@ -73,9 +73,6 @@ def _patch_psutil_pidfd_open_einval() -> None:
     out of fixture teardown and shows up as ``ERROR at teardown of <test>``
     even when the test itself was skipped or passed. Treat ``EINVAL`` the
     same as ``ESRCH``.
-
-    When ``wait_pid_pidfd_open`` is absent (psutil releases before the pidfd
-    path existed), skip patching entirely.
     """
     try:
         import errno as _errno
@@ -83,12 +80,9 @@ def _patch_psutil_pidfd_open_einval() -> None:
         from psutil import _psposix
     except ImportError:
         return
-    wait_pid_pidfd_open = getattr(_psposix, "wait_pid_pidfd_open", None)
-    if wait_pid_pidfd_open is None:
+    if getattr(_psposix.wait_pid_pidfd_open, "_salt_einval_wrap", False):
         return
-    if getattr(wait_pid_pidfd_open, "_salt_einval_wrap", False):
-        return
-    original = wait_pid_pidfd_open
+    original = _psposix.wait_pid_pidfd_open
 
     def wrapper(pid, timeout=None):
         try:
