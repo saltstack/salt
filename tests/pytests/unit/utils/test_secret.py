@@ -23,7 +23,7 @@ def test_masked_dict_repr_redacts_strings():
     r = repr(d)
     assert secret.REDACT_PLACEHOLDER in r
     assert "hunter2" not in r
-    assert "3" in r  # integers are not redacted
+    assert "3" not in r
 
 
 def test_masked_dict_str_redacts_strings():
@@ -104,7 +104,7 @@ def test_masked_list_repr_redacts_strings():
     r = repr(lst)
     assert secret.REDACT_PLACEHOLDER in r
     assert "secret" not in r
-    assert "42" in r
+    assert "42" not in r
 
 
 def test_masked_list_wraps_nested_dict():
