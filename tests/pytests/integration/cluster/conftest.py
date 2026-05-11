@@ -429,6 +429,9 @@ def _isolated_master_overrides(
         "publish_signing_algorithm": (
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
+        "cluster_encryption_algorithm": (
+            "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1"
+        ),
     }
     if file_roots_paths is not None:
         overrides["file_roots"] = {"base": [str(file_roots_paths[addr])]}
