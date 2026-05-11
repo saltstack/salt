@@ -21,7 +21,12 @@ import salt.utils.jid
 import salt.utils.platform
 import salt.utils.process
 from salt._compat import ipaddress
-from salt.exceptions import SaltClientError, SaltMasterUnresolvableError, SaltSystemExit
+from salt.exceptions import (
+    SaltClientError,
+    SaltMasterUnresolvableError,
+    SaltReqTimeoutError,
+    SaltSystemExit,
+)
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
@@ -201,7 +206,7 @@ async def test_send_req_async_regression_62453(minion_opts):
 
         with patch("salt.utils.event.get_event", get_event):
             # We are just validating no exception is raised
-            with pytest.raises(TimeoutError):
+            with pytest.raises(SaltReqTimeoutError):
                 rtn = await minion._send_req_async(load, timeout)
 
 
