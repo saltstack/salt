@@ -534,7 +534,7 @@ trustme==1.2.1
     # via -r requirements/pytest.txt
 typing-extensions==4.15.0
     # via pytest-system-statistics
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
