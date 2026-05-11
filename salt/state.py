@@ -127,6 +127,7 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "__pub_minion_is_target",
         "__pub_resource_target",
         "__pub_resource_job",
+        "__pub_pure_resource_target",
         "__prereq__",
         "__prerequiring__",
         "__umask__",
