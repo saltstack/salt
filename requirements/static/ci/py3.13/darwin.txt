@@ -484,7 +484,7 @@ trustme==1.2.1
     # via -r requirements/pytest.txt
 typing-extensions==4.14.1
     # via pytest-system-statistics
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   -c requirements/static/pkg/py3.13/darwin.txt
     #   -r requirements/base.txt

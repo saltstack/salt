@@ -486,7 +486,7 @@ typing-extensions==4.14.1
     #   pyopenssl
     #   pytest-system-statistics
     #   referencing
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   -c requirements/static/pkg/py3.12/darwin.txt
     #   -r requirements/base.txt
