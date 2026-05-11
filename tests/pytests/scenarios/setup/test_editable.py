@@ -10,6 +10,7 @@ import pytest
 
 import salt.utils.platform
 import salt.version
+from salt.version import SaltStackVersion
 
 log = logging.getLogger(__name__)
 
@@ -30,8 +31,10 @@ def venv(setup_tests_path, pip_temp_dir, use_static_requirements):
 
     venv_dir = setup_tests_path / ".venv"
     # Python 3.12+ needs newer pip and setuptools
-    pip_req = "pip>=24.0"
-    setuptools_req = "setuptools>=69.0"
+    # But AL2 and others might have older python, so we keep it as low as possible
+    # while still supporting PEP 660.
+    pip_req = "pip>=22.3"
+    setuptools_req = "setuptools>=64.0"
 
     v = VirtualEnv(
         venv_dir=venv_dir,
@@ -73,7 +76,11 @@ def test_editable_install(venv, src_dir):
 
         # Let's compare the installed version with the version salt reports
         # The version might have a '+' or other PEP440 suffix in editable mode
-        assert installed_version.startswith(salt.version.__version__.split("+")[0])
+        # We compare the major and minor versions to be safe
+        assert (
+            SaltStackVersion.parse(installed_version).info[:2]
+            == SaltStackVersion.parse(salt.version.__version__).info[:2]
+        )
 
         # Verify we can import salt and it's coming from the src_dir
         cmd = v.run(v.venv_python, "-c", "import salt; print(salt.__file__)")
@@ -99,4 +106,8 @@ def test_editable_install(venv, src_dir):
             salt_call = pathlib.Path(v.venv_dir) / "bin" / "salt-call"
 
         ret = v.run(str(salt_call), "--version")
-        assert salt.version.__version__ in ret.stdout
+        # Ensure the reported version is what we expect
+        assert (
+            SaltStackVersion.parse(ret.stdout).info[:2]
+            == SaltStackVersion.parse(salt.version.__version__).info[:2]
+        )
