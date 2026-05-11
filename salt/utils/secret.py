@@ -62,7 +62,7 @@ def _mask_wrap(value):
     return value
 
 
-def _masked_repr(value):
+def _masked_repr(value) -> str:
     """Build a redacted repr string for a MaskedDict or MaskedList."""
     if isinstance(value, dict):
         pairs = ", ".join(f"{k!r}: {_masked_repr(v)}" for k, v in value.items())
@@ -70,6 +70,10 @@ def _masked_repr(value):
     if isinstance(value, list):
         return "[" + ", ".join(_masked_repr(v) for v in value) + "]"
     if isinstance(value, str) and value:
+        return repr(REDACT_PLACEHOLDER)
+    if isinstance(value, bytes) and value:
+        return repr(REDACT_PLACEHOLDER.encode())
+    if isinstance(value, (int, float, bool)) and value:
         return repr(REDACT_PLACEHOLDER)
     return repr(value)
 
@@ -108,14 +112,29 @@ class MaskedDict(dict):
     def __str__(self):
         return _masked_repr(self)
 
+    def __dict__(self):
+        return self
+
     def copy(self):
         return MaskedDict(dict.copy(self))
 
     def __copy__(self):
         return self.copy()
 
+    def __add__(self, other):
+        return MaskedDict(dict.__add__(self, other))
+
+    def __mul__(self, other):
+        return MaskedDict(dict.__mul__(self, other))
+
+    def __imul__(self, other):
+        return MaskedDict(dict.__imul__(self, other))
+
     def __deepcopy__(self, memo):
         return MaskedDict({k: copy.deepcopy(v, memo) for k, v in dict.items(self)})
+
+    def setdefault(self, key, default=None):
+        return dict.setdefault(self, key, _mask_wrap(default))
 
 
 class MaskedList(list):
@@ -144,6 +163,15 @@ class MaskedList(list):
     def __iadd__(self, iterable):
         self.extend(iterable)
         return self
+
+    def __add__(self, other):
+        return MaskedList(list.__add__(self, other))
+
+    def __mul__(self, other):
+        return MaskedList(list.__mul__(self, other))
+
+    def __imul__(self, other):
+        return MaskedList(list.__imul__(self, other))
 
     def __repr__(self):
         return _masked_repr(self)
