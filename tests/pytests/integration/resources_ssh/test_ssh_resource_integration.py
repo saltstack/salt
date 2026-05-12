@@ -30,7 +30,12 @@ def test_minion_pillar_lists_ssh_resource(
     salt_minion_ssh_resources, salt_call_ssh_resource
 ):
     """Pillar must expose ``resources.ssh.hosts`` for the SSH resource ID."""
-    ret = salt_call_ssh_resource.run("pillar.get", "resources:ssh:hosts", _timeout=120)
+    # ``unmask=True`` is required since 3008.0: ``pillar.get`` from the CLI
+    # redacts string values by default; this test inspects the raw values to
+    # verify the SSH resource pillar plumbing populated them correctly.
+    ret = salt_call_ssh_resource.run(
+        "pillar.get", "resources:ssh:hosts", "unmask=True", _timeout=120
+    )
     assert ret.returncode == 0, ret
     hosts = ret.data
     assert isinstance(hosts, dict), hosts
