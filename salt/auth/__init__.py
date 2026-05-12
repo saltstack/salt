@@ -250,7 +250,7 @@ class LoadAuth:
             # around makes every subsequent ``get_tok`` for the same
             # id keep failing.
             log.warning(
-                "Token %r could not be deserialized; removing it from the " "store.",
+                "Token %r could not be deserialized; removing it from the store.",
                 tok,
             )
             self.rm_token(tok)
