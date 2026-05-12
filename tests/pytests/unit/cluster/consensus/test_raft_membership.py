@@ -273,6 +273,130 @@ class TestLearnerPromotion:
 
 
 # ---------------------------------------------------------------------------
+# cluster_max_voters: leader holds learner promotion when cap is reached
+# ---------------------------------------------------------------------------
+
+
+class TestMaxVotersCap:
+    """
+    ``cluster_max_voters`` puts an upper bound on the auto-promotion path.
+
+    The leader still replicates the log to learners that arrive after the
+    cap is hit — they just stay non-voting indefinitely (no CONFIG entry
+    is proposed) so quorum size stays bounded.
+    """
+
+    def _setup(self, max_voters):
+        """Leader + 1 voting peer + 1 learner; cap is configurable."""
+        scheduler = ManualTimeoutScheduler()
+
+        v2 = _node("v2", scheduler)
+        v2_peer = ManualPeer(v2, node_id="v2")
+
+        learner_node = _node("learner", scheduler, voting=False)
+        learner_peer = ManualPeer(learner_node, node_id="learner", voting=False)
+
+        leader = Node(
+            "leader",
+            voting=True,
+            peers=[v2_peer, learner_peer],
+            max_voters=max_voters,
+        )
+        leader.register_schedule_timeout(scheduler.schedule)
+        leader.become_follower()
+        leader.become_candidate()
+        v2_peer.handle_all_requests()
+        leader.request_vote_reply("v2", True, leader.term)
+        assert leader.state == NodeState.LEADER, "leader did not win election"
+        return leader
+
+    def test_caught_up_learner_not_promoted_when_at_cap(self):
+        """
+        With ``max_voters=2`` and the leader already counting itself + v2 as
+        the two voters, a caught-up learner must NOT generate a CONFIG entry.
+        """
+        leader = self._setup(max_voters=2)
+        leader.log_add("cmd1")
+        log_idx = leader.log.index
+
+        # Both peers acknowledge the command — learner is at log.index now.
+        leader.append_entries_reply(
+            leader.term, None, -1, log_idx, "v2", leader.term, True, log_idx, None
+        )
+        leader.append_entries_reply(
+            leader.term, None, -1, log_idx, "learner", leader.term, True, log_idx, None
+        )
+
+        config_entries = [
+            e for e in leader.log.entries if e.type == LogEntryType.CONFIG
+        ]
+        assert config_entries == [], (
+            "No CONFIG promotion expected once cluster_max_voters has been "
+            f"reached; got {config_entries!r}"
+        )
+
+        learner_peer_obj = next(
+            (p for p in leader.peers if p.node_id == "learner"), None
+        )
+        assert learner_peer_obj is not None
+        assert (
+            learner_peer_obj.voting is False
+        ), "Learner peer must remain non-voting when cap blocks promotion"
+
+    def test_opt_plumbs_into_node(self):
+        """
+        ``cluster_max_voters`` in opts must reach ``Node.max_voters`` via
+        ``RaftService.__init__``.  This guards the plumbing from opts ->
+        service -> Node so a future refactor of either layer can't
+        silently drop the cap.
+        """
+        import asyncio
+
+        from salt.cluster.consensus.service import RaftService
+
+        tmpdir = tempfile.mkdtemp()
+        opts = salt.config.master_config("/dev/null")
+        opts["interface"] = "127.0.0.1"
+        opts["cluster_peers"] = ["127.0.0.2"]
+        opts["cluster_port"] = 55597
+        opts["cachedir"] = tmpdir
+        opts["cluster_max_voters"] = 3
+
+        loop = asyncio.new_event_loop()
+        try:
+            svc = RaftService(opts, loop, {"127.0.0.2": MagicMock()})
+            assert svc.node.max_voters == 3
+        finally:
+            loop.close()
+
+    def test_caught_up_learner_promoted_under_cap(self):
+        """
+        With ``max_voters=3`` (leader + v2 + room for one more), the
+        caught-up learner is still promoted as in the uncapped path.  This
+        is the regression guard that ensures the cap doesn't accidentally
+        block normal promotion below the threshold.
+        """
+        leader = self._setup(max_voters=3)
+        leader.log_add("cmd1")
+        log_idx = leader.log.index
+
+        leader.append_entries_reply(
+            leader.term, None, -1, log_idx, "v2", leader.term, True, log_idx, None
+        )
+        leader.append_entries_reply(
+            leader.term, None, -1, log_idx, "learner", leader.term, True, log_idx, None
+        )
+
+        config_entries = [
+            e for e in leader.log.entries if e.type == LogEntryType.CONFIG
+        ]
+        assert (
+            len(config_entries) == 1
+        ), "Expected exactly one CONFIG promotion entry below cap"
+        assert "learner" in config_entries[0].cmd.get("voters", [])
+
+
+# ---------------------------------------------------------------------------
 # Node.on_config_change updates self.voting
 # ---------------------------------------------------------------------------
 

@@ -98,6 +98,11 @@ class RaftService:
         # (raft.snapshot.v1); CONSENSUS_BUGS.md #1's fix and the
         # reconcile_membership hook ensure peer state survives.
         max_log_size = opts.get("cluster_max_log_size")
+        # ``cluster_max_voters`` (default ``None``) caps how many peers
+        # the leader will auto-promote out of the learner pool.  When
+        # the cap is hit, additional joiners stay as non-voting log
+        # replicas indefinitely.
+        max_voters = opts.get("cluster_max_voters")
         self._node = Node(
             node_id,
             storage=storage,
@@ -105,6 +110,7 @@ class RaftService:
             _follower_min=election_min,
             _follower_max=election_max,
             max_log_size=max_log_size,
+            max_voters=max_voters,
         )
         self._scheduler = AsyncTimeoutScheduler(loop=loop)
         self._node.register_schedule_timeout(self._scheduler.schedule)

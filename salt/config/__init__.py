@@ -222,6 +222,16 @@ VALID_OPTS = immutabletypes.freeze(
         # the snapshot envelope (``raft.snapshot.v1``) carries every
         # registered state machine so membership survives compaction.
         "cluster_max_log_size": (type(None), int),
+        # Upper bound on the number of voting peers in the cluster Raft
+        # group.  ``None`` (the default) preserves today's behaviour:
+        # every master that joins is promoted to a voter once its log
+        # catches up.  Setting a positive integer caps the voter set;
+        # late joiners that arrive after the cap is hit stay as
+        # non-voting learners indefinitely.  Learners still receive
+        # log replication and cluster events, so they remain useful
+        # for handling minion traffic — they just don't count toward
+        # election or commit quorum.
+        "cluster_max_voters": (type(None), int),
         # Use a module function to determine the unique identifier. If this is
         # set and 'id' is not set, it will allow invocation of a module function
         # to determine the value of 'id'. For simple invocations without function
@@ -1773,6 +1783,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_secret": None,
         "cluster_isolated_filesystem": False,
         "cluster_max_log_size": None,
+        "cluster_max_voters": None,
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
         "cluster_encryption_algorithm": "OAEP-SHA1",
