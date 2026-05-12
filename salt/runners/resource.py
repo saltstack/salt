@@ -1,7 +1,7 @@
 """
 Operator-facing helpers for inspecting Salt Resources state on the master.
 
-.. versionadded:: 3009.0
+.. versionadded:: 3008.0
 
 The mmap-backed registry (``salt.utils.resource_registry``) is the master's
 authority for *which* minions manage which resources. The

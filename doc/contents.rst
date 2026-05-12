@@ -26,6 +26,7 @@ Salt Table of Contents
     topics/thorium/index
     topics/cloud/index
     topics/proxyminion/index
+    topics/resources/index
     topics/network_automation/index
     topics/virt/index
     topics/packaging/index
