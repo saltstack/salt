@@ -1,7 +1,10 @@
 """Tests for ``salt.cluster.consensus.raft`` log and storage."""
 
+import os
+
 import pytest
 
+import salt.cluster.consensus.storage as storage_module
 import salt.config
 from salt.cluster.consensus.raft import (
     CounterStateMachine,
@@ -11,6 +14,7 @@ from salt.cluster.consensus.raft import (
     LogEntryType,
 )
 from salt.cluster.consensus.storage import SaltStorage
+from tests.support.mock import patch
 
 
 @pytest.fixture
@@ -1834,3 +1838,77 @@ class TestSnapshotEnvelopeMultiSM:
         assert node.membership_sm.current_voters() == ["a", "b"]
         assert ring_sm.members == "self"
         assert ring_sm.replicas == 1
+
+
+# ---------------------------------------------------------------------------
+# SaltStorage fsync — cluster Raft consensus is correctness-critical and the
+# write rate is low, so we always durable committed state.  These tests pin
+# the contract: every persisted write triggers an os.fsync.
+# ---------------------------------------------------------------------------
+
+
+class _FsyncSpy:
+    """Records the file descriptors handed to ``os.fsync`` during a write."""
+
+    def __init__(self):
+        self.calls = 0
+
+    def __call__(self, fd):
+        # Validate the fd is a real, currently-open one.  os.fstat raises
+        # OSError if not -- a regression that passes a stale fd would surface
+        # here rather than as a mysterious silent miss.
+        os.fstat(fd)
+        self.calls += 1
+
+
+def test_save_state_fsyncs_to_disk(storage):
+    """save_state must fsync the persisted (term, voted_for) record."""
+    spy = _FsyncSpy()
+    with patch.object(storage_module.os, "fsync", spy):
+        storage.save_state(term=7, voted_for="m1")
+    assert spy.calls >= 1, "save_state did not call os.fsync"
+
+
+def test_append_log_fsyncs_each_entry(storage):
+    """append_log must fsync after every entry — cluster log is the durable line."""
+    spy = _FsyncSpy()
+    entries = [
+        LogEntry(term=1, index=0, cmd={"x": 1}),
+        LogEntry(term=1, index=1, cmd={"x": 2}),
+        LogEntry(term=1, index=2, cmd={"x": 3}),
+    ]
+    with patch.object(storage_module.os, "fsync", spy):
+        for entry in entries:
+            storage.append_log(entry)
+    # At minimum one fsync per entry (data fsync); dir fsync may add more.
+    assert spy.calls >= len(entries), (
+        f"expected >= {len(entries)} fsyncs across {len(entries)} appends, "
+        f"got {spy.calls}"
+    )
+
+
+def test_save_snapshot_fsyncs_to_disk(storage):
+    """Snapshot writes are infrequent but membership-critical — also fsync."""
+    spy = _FsyncSpy()
+    with patch.object(storage_module.os, "fsync", spy):
+        storage.save_snapshot({"voters": ["m1"], "learners": []}, index=10, term=2)
+    assert spy.calls >= 1, "save_snapshot did not call os.fsync"
+
+
+def test_fsync_skipped_for_non_localfs_driver(tmp_path):
+    """Non-localfs drivers fall through silently — durability is their concern."""
+    from tests.support.mock import MagicMock
+
+    opts = salt.config.master_config("/dev/null")
+    opts["cachedir"] = str(tmp_path)
+    storage = SaltStorage("test-node", opts)
+    # Replace the cache with a stub so the unknown driver name never
+    # reaches the salt.cache loader; this isolates the test to the
+    # SaltStorage._fsync_bank_key driver-gating branch.
+    storage._cache = MagicMock()
+    storage._cache.driver = "memory"
+
+    spy = _FsyncSpy()
+    with patch.object(storage_module.os, "fsync", spy):
+        storage.save_state(term=1, voted_for=None)
+    assert spy.calls == 0, "fsync must be skipped for non-localfs cache drivers"
