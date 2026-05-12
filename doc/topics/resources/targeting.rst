@@ -1,10 +1,11 @@
 .. _targeting-resources:
+.. _resources-targeting:
 
 ================================
 Targeting Salt Resources
 ================================
 
-.. versionadded:: 3009.0
+.. versionadded:: 3008.0
 
 A *Salt resource* is something a minion manages on behalf of the master —
 an SSH host, a virtual appliance, an external API endpoint — addressed
@@ -12,8 +13,9 @@ by an id of the operator's choosing. Resources extend Salt's targeting
 system: every targeting expression that selects minions can also select
 resources.
 
-This page is the targeting reference. For the data model and registration
-plumbing see :py:mod:`salt.utils.resource_registry`.
+This page is the targeting reference. For the conceptual introduction
+see :ref:`resources`; for the registry and dispatch plumbing see
+:ref:`resources-architecture`.
 
 
 Targeting forms

@@ -111,7 +111,8 @@ There are many ways to target individual minions or groups of minions in Salt:
     nodegroups
     batch
     range
-    resources
+    Salt Resources <../resources/targeting>
+
 
 
 Loadable Matchers

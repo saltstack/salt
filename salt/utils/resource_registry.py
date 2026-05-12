@@ -39,7 +39,7 @@ Cache-bank layout (complementary to this on-disk mmap index) is documented in
 (``grains``, ``pillar``, ``resources``) keyed by bare resource ID.
 
 The ``resource_grains`` cache bank
----------------------------------
+----------------------------------
 
 Independent of the on-disk mmap registry above, the master also maintains a
 ``resource_grains`` :class:`salt.cache` bank (default driver: ``localfs``)
