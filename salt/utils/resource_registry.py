@@ -154,8 +154,8 @@ def parse_srn(expression):
     A full Salt Resource Name (SRN) has the form ``<type>:<id>``. A bare
     expression contains only a type with no colon.
 
-    ``parse_srn("vcf_host")``          → ``{"type": "vcf_host", "id": None}``
-    ``parse_srn("vcf_host:esxi-01")``  → ``{"type": "vcf_host", "id": "esxi-01"}``
+    ``parse_srn("vcf_host")``          -> ``{"type": "vcf_host", "id": None}``
+    ``parse_srn("vcf_host:esxi-01")``  -> ``{"type": "vcf_host", "id": "esxi-01"}``
 
     :param str expression: A bare resource type or a full SRN.
     :rtype: dict
@@ -242,7 +242,7 @@ class _ResourceIndexStore:
     — writers bump the file's ``mtime`` on every ``put``/``delete`` (see
     :meth:`MmapCache._touch_mtime`), so the signal catches both:
 
-    * compactions (``os.replace`` → new inode), and
+    * compactions (``os.replace`` -> new inode), and
     * in-place mutations from other worker processes (same inode, fresh mtime).
 
     Rebuilds are serialised under an internal lock so concurrent readers

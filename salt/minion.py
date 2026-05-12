@@ -3587,7 +3587,7 @@ class Minion(MinionBase):
         For each ``(resource_type, resource_id)`` pair, sets the per-call
         :data:`salt.loader.context.resource_ctxvar` and invokes
         ``resource_funcs[f"{type}.grains"]()``. Returns a mapping keyed by
-        composite SRN ``"<type>:<id>"`` → grain dict, suitable for shipping
+        composite SRN ``"<type>:<id>"`` -> grain dict, suitable for shipping
         to the master in :meth:`_register_resources_with_master`.
 
         Resource types without a ``grains`` callable are skipped silently.
