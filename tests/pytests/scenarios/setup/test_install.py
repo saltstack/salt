@@ -44,29 +44,11 @@ def use_static_requirements(request):
 
 
 @pytest.fixture
-def virtualenv(setup_tests_path, pip_temp_dir, use_static_requirements):
-    from tests.support.helpers import VirtualEnv
-
-    venv_dir = setup_tests_path / ".venv"
-    # Python 3.12+ needs newer pip and setuptools
-    pip_req = "pip>=22.3"
-    setuptools_req = "setuptools>=64.0"
-
-    v = VirtualEnv(
-        venv_dir=venv_dir,
-        env={
-            "TMPDIR": str(pip_temp_dir),
-            "USE_STATIC_REQUIREMENTS": "1" if use_static_requirements else "0",
-        },
-        pip_requirement=pip_req,
-        setuptools_requirement=setuptools_req,
+def virtualenv(virtualenv, use_static_requirements):
+    virtualenv.environ["USE_STATIC_REQUIREMENTS"] = (
+        "1" if use_static_requirements else "0"
     )
-    try:
-        yield v
-    finally:
-        import shutil
-
-        shutil.rmtree(str(venv_dir), ignore_errors=True)
+    return virtualenv
 
 
 @pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
@@ -480,10 +462,17 @@ def test_setup_install(virtualenv, cache_dir, use_static_requirements, src_dir):
         site_packages_dir = pathlib.Path(venv.venv_dir)
         site_packages_dir = site_packages_dir.joinpath(*subdir)
         assert site_packages_dir.is_dir()
+
+        # Depending on setuptools version, it might be an egg or a direct install
         installed_salt_path = list(site_packages_dir.glob("salt*.egg"))
-        if not installed_salt_path:
+        if installed_salt_path:
+            installed_salt_path = installed_salt_path[0] / "salt"
+        else:
+            installed_salt_path = site_packages_dir / "salt"
+
+        if not installed_salt_path.is_dir():
             pytest.fail("Failed to find the installed salt path")
-        installed_salt_path = installed_salt_path[0] / "salt"
+
         salt_generated_version_file_path = installed_salt_path / "_version.txt"
         assert salt_generated_version_file_path.is_file()
 

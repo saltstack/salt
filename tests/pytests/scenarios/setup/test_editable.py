@@ -26,31 +26,11 @@ def use_static_requirements(request):
 
 
 @pytest.fixture
-def venv(setup_tests_path, pip_temp_dir, use_static_requirements):
-    from tests.support.helpers import VirtualEnv
-
-    venv_dir = setup_tests_path / ".venv"
-    # Python 3.12+ needs newer pip and setuptools
-    # But AL2 and others might have older python, so we keep it as low as possible
-    # while still supporting PEP 660.
-    pip_req = "pip>=22.3"
-    setuptools_req = "setuptools>=64.0"
-
-    v = VirtualEnv(
-        venv_dir=venv_dir,
-        env={
-            "TMPDIR": str(pip_temp_dir),
-            "USE_STATIC_REQUIREMENTS": "1" if use_static_requirements else "0",
-        },
-        pip_requirement=pip_req,
-        setuptools_requirement=setuptools_req,
+def venv(virtualenv, use_static_requirements):
+    virtualenv.environ["USE_STATIC_REQUIREMENTS"] = (
+        "1" if use_static_requirements else "0"
     )
-    try:
-        yield v
-    finally:
-        import shutil
-
-        shutil.rmtree(str(venv_dir), ignore_errors=True)
+    return virtualenv
 
 
 def test_editable_install(venv, src_dir):

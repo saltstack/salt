@@ -26,8 +26,15 @@ def setup_tests_path(tmp_path_factory):
 @pytest.fixture
 def virtualenv(setup_tests_path, pip_temp_dir):
     venv_dir = setup_tests_path / ".venv"
+    pip_req = "pip>=22.3"
+    setuptools_req = "setuptools>=64.0"
     try:
-        yield VirtualEnv(venv_dir=venv_dir, env={"TMPDIR": str(pip_temp_dir)})
+        yield VirtualEnv(
+            venv_dir=venv_dir,
+            env={"TMPDIR": str(pip_temp_dir)},
+            pip_requirement=pip_req,
+            setuptools_requirement=setuptools_req,
+        )
     finally:
         shutil.rmtree(str(venv_dir), ignore_errors=True)
 
