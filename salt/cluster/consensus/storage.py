@@ -22,9 +22,11 @@ recovery) flushes the log bank and re-writes each entry.
 
 import base64
 import logging
+import os
 import threading
 
 import salt.cache
+import salt.syspaths
 from salt.cluster.consensus.raft.log import BaseStorage, LogEntry, LogEntryType
 
 log = logging.getLogger(__name__)
@@ -54,7 +56,56 @@ class SaltStorage(BaseStorage):
         self._meta_bank = f"cluster/consensus/{node_id}"
         self._log_bank = f"cluster/consensus/{node_id}/log"
         self._cache = salt.cache.Cache(opts)
+        # Retained so the localfs fsync helper can resolve the on-disk
+        # path of each bank/key.  Cluster Raft consensus is correctness-
+        # critical and infrequent, so we always fsync committed writes;
+        # a knob would just invite a wrong setting.  See _fsync_bank_key.
+        self._cachedir = opts.get("cachedir") or salt.syspaths.CACHE_DIR
         self._lock = threading.RLock()
+
+    # ------------------------------------------------------------------
+    # Durability helper
+    # ------------------------------------------------------------------
+
+    def _fsync_bank_key(self, bank, key):
+        """
+        Force the just-written ``cache.store(bank, key, ...)`` to disk.
+
+        The cluster Raft log is correctness-critical (a voter that
+        crashes after voting must not re-vote in the same term; an
+        entry the leader has acked must survive a power loss).  Write
+        volume is low, so we always fsync — there is no opt to flip.
+
+        Currently only the ``localfs`` cache driver is supported here;
+        other drivers fall through silently (their durability profile
+        is up to the driver).  ``localfs`` writes
+        ``<cachedir>/<bank>/<key>.p`` via temp-file + atomic rename, so
+        we fsync the file (its data) and the parent directory (the
+        rename's metadata).  Directory fsync is a no-op on Windows;
+        the OSError is swallowed there.
+        """
+        if getattr(self._cache, "driver", None) != "localfs":
+            return
+        bank_dir = os.path.join(self._cachedir, *bank.split("/"))
+        file_path = os.path.join(bank_dir, f"{key}.p")
+        try:
+            fd = os.open(file_path, os.O_RDONLY)
+            try:
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+        except OSError as exc:
+            log.warning("SaltStorage: file fsync(%s) failed: %s", file_path, exc)
+        try:
+            dfd = os.open(bank_dir, os.O_RDONLY)
+            try:
+                os.fsync(dfd)
+            finally:
+                os.close(dfd)
+        except OSError as exc:
+            # Directory fsync is unsupported on Windows; data fsync above
+            # is the load-bearing call there.
+            log.debug("SaltStorage: dir fsync(%s) skipped: %s", bank_dir, exc)
 
     # ------------------------------------------------------------------
     # BaseStorage implementation
@@ -66,6 +117,7 @@ class SaltStorage(BaseStorage):
             self._cache.store(
                 self._meta_bank, _KEY_STATE, {"term": term, "voted_for": voted_for}
             )
+            self._fsync_bank_key(self._meta_bank, _KEY_STATE)
 
     def load_state(self):
         """Return persisted state, or defaults if not yet written."""
@@ -88,6 +140,7 @@ class SaltStorage(BaseStorage):
             self._cache.flush(self._log_bank)
             for entry in entries:
                 self._cache.store(self._log_bank, str(entry.index), entry.info())
+                self._fsync_bank_key(self._log_bank, str(entry.index))
 
     def append_log(self, entry):
         """
@@ -100,6 +153,7 @@ class SaltStorage(BaseStorage):
         """
         with self._lock:
             self._cache.store(self._log_bank, str(entry.index), entry.info())
+            self._fsync_bank_key(self._log_bank, str(entry.index))
 
     def load_log(self):
         """Return all persisted log entries as :class:`~.LogEntry` objects."""
@@ -171,6 +225,7 @@ class SaltStorage(BaseStorage):
                 _KEY_SNAPSHOT,
                 {"data": encoded, "index": index, "term": term},
             )
+            self._fsync_bank_key(self._meta_bank, _KEY_SNAPSHOT)
 
     def load_snapshot(self):
         """Return the latest snapshot dict, or ``None`` if none exists."""
