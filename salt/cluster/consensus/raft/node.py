@@ -360,6 +360,7 @@ class Node:
         state_machine=None,
         membership_sm=None,
         max_log_size=None,
+        max_voters=None,
         voting=True,
         **kwargs,
     ):
@@ -370,6 +371,12 @@ class Node:
         self.storage = storage
         # True if this node participates in quorum; False means learner/observer.
         self.voting = voting
+        # Optional upper bound on voter count.  ``None`` preserves the
+        # original behaviour where every caught-up learner is promoted
+        # to voter.  When set, the leader's auto-promotion path checks
+        # the cap before proposing the CONFIG entry; learners that
+        # arrive after the cap is reached stay non-voting indefinitely.
+        self.max_voters = max_voters
 
         # Membership state machine: applies CONFIG entries to track the committed
         # voter/learner sets.  It is the authoritative query store for committed
@@ -703,9 +710,23 @@ class Node:
             # Learner promotion: once a learner has caught up to the leader's
             # log, propose a CONFIG entry to promote it.  The peer stays
             # non-voting until that entry is *applied* (see apply_entries).
+            #
+            # When ``max_voters`` is set, hold the promotion once the cap
+            # is reached.  The learner keeps receiving log entries and
+            # cluster events; it just doesn't count toward quorum.  An
+            # operator (or a future auto-replacement path) can later
+            # demote a voter to make room.
             for p in self.peers:
                 if p.node_id == peer_id and not p.voting:
                     if self.match_index[peer_id] >= self.log.index:
+                        current_voter_count = 1 + sum(
+                            1 for px in self.peers if px.voting
+                        )
+                        if (
+                            self.max_voters is not None
+                            and current_voter_count >= self.max_voters
+                        ):
+                            break
                         voters = (
                             [self.node_id]
                             + [px.node_id for px in self.peers if px.voting]
