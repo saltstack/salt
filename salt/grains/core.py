@@ -3323,18 +3323,20 @@ def _hw_data(osdata):
     ):
         # On SmartOS (possibly SunOS also) smbios only works in the global zone
         # smbios is also not compatible with linux's smbios (smbios -s = print summarized)
+        uuid = __salt__["smbios.get"]("system-uuid")
+        if uuid is not None:
+            uuid = uuid.lower()
+        else:
+            uuid = grains.get("uuid")
         grains = {
             "biosversion": __salt__["smbios.get"]("bios-version"),
             "biosvendor": __salt__["smbios.get"]("bios-vendor"),
             "productname": __salt__["smbios.get"]("system-product-name"),
             "manufacturer": __salt__["smbios.get"]("system-manufacturer"),
             "biosreleasedate": __salt__["smbios.get"]("bios-release-date"),
-            "uuid": __salt__["smbios.get"]("system-uuid"),
+            "uuid": uuid,
         }
         grains = {key: val for key, val in grains.items() if val is not None}
-        uuid = __salt__["smbios.get"]("system-uuid")
-        if uuid is not None:
-            grains["uuid"] = uuid.lower()
         for serial in (
             "system-serial-number",
             "chassis-serial-number",
